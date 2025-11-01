@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 
 // Extend Request interface to include user
 declare global {
@@ -108,7 +109,7 @@ export class QueryResultCachingMiddleware {
         await this.interceptAndCacheResponse(req, res, next, cacheKey, config, startTime);
 
       } catch (error) {
-        console.error('Cache middleware error:', error);
+        safeLogger.error('Cache middleware error:', error);
         // Continue without caching on error
         next();
       }
@@ -204,7 +205,7 @@ export class QueryResultCachingMiddleware {
     try {
       return await cacheService.get<CachedResponse>(cacheKey);
     } catch (error) {
-      console.error('Error getting cached response:', error);
+      safeLogger.error('Error getting cached response:', error);
       return null;
     }
   }
@@ -335,7 +336,7 @@ export class QueryResultCachingMiddleware {
     // Check response size
     const dataSize = JSON.stringify(data).length;
     if (config.maxSize && dataSize > config.maxSize) {
-      console.warn(`Response too large to cache: ${dataSize} bytes`);
+      safeLogger.warn(`Response too large to cache: ${dataSize} bytes`);
       return false;
     }
 
@@ -389,7 +390,7 @@ export class QueryResultCachingMiddleware {
       this.metrics.cacheSize += compressedSize;
 
     } catch (error) {
-      console.error('Error caching response:', error);
+      safeLogger.error('Error caching response:', error);
     }
   }
 
@@ -443,7 +444,7 @@ export class QueryResultCachingMiddleware {
     try {
       return await cacheService.invalidatePattern(`query_result:*${pattern}*`);
     } catch (error) {
-      console.error('Error invalidating cache:', error);
+      safeLogger.error('Error invalidating cache:', error);
       return 0;
     }
   }
@@ -484,19 +485,19 @@ export class QueryResultCachingMiddleware {
    * Warm cache for popular endpoints
    */
   async warmCache(endpoints: Array<{ path: string; params?: any }>): Promise<void> {
-    console.log('🔥 Starting query result cache warming...');
+    safeLogger.info('🔥 Starting query result cache warming...');
     
     for (const endpoint of endpoints) {
       try {
         // This would make requests to warm the cache
         // Implementation depends on your HTTP client setup
-        console.log(`Warming cache for ${endpoint.path}`);
+        safeLogger.info(`Warming cache for ${endpoint.path}`);
       } catch (error) {
-        console.error(`Failed to warm cache for ${endpoint.path}:`, error);
+        safeLogger.error(`Failed to warm cache for ${endpoint.path}:`, error);
       }
     }
     
-    console.log('✅ Query result cache warming completed');
+    safeLogger.info('✅ Query result cache warming completed');
   }
 
   /**

@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { ExchangeRateService } from './exchangeRateService';
 import { NotificationService } from './notificationService';
 import { UserProfileService } from './userProfileService';
@@ -206,7 +207,7 @@ export class EnhancedFiatPaymentService {
         updatedAt: transaction.updatedAt
       };
     } catch (error) {
-      console.error('Enhanced fiat payment processing failed:', error);
+      safeLogger.error('Enhanced fiat payment processing failed:', error);
       throw error;
     }
   }
@@ -268,7 +269,7 @@ export class EnhancedFiatPaymentService {
         restrictions
       };
     } catch (error) {
-      console.error('Error getting available payment methods:', error);
+      safeLogger.error('Error getting available payment methods:', error);
       throw error;
     }
   }
@@ -318,7 +319,7 @@ export class EnhancedFiatPaymentService {
 
       return paymentMethod;
     } catch (error) {
-      console.error('Error setting up payment method:', error);
+      safeLogger.error('Error setting up payment method:', error);
       throw error;
     }
   }
@@ -362,7 +363,7 @@ export class EnhancedFiatPaymentService {
       };
 
       // In a real implementation, execute the conversion
-      console.log(`Converting ${request.amount} ${request.currency} to ${finalAmount} ${targetToken}`);
+      safeLogger.info(`Converting ${request.amount} ${request.currency} to ${finalAmount} ${targetToken}`);
       
       // Simulate conversion completion
       conversion.status = 'completed';
@@ -370,7 +371,7 @@ export class EnhancedFiatPaymentService {
 
       return conversion;
     } catch (error) {
-      console.error('Error processing crypto conversion:', error);
+      safeLogger.error('Error processing crypto conversion:', error);
       throw error;
     }
   }
@@ -403,7 +404,7 @@ export class EnhancedFiatPaymentService {
 
       return receipt;
     } catch (error) {
-      console.error('Error generating receipt:', error);
+      safeLogger.error('Error generating receipt:', error);
       throw error;
     }
   }
@@ -444,7 +445,7 @@ export class EnhancedFiatPaymentService {
 
       return transaction;
     } catch (error) {
-      console.error('Error processing refund:', error);
+      safeLogger.error('Error processing refund:', error);
       throw error;
     }
   }
@@ -494,7 +495,7 @@ export class EnhancedFiatPaymentService {
         processingTimes
       };
     } catch (error) {
-      console.error('Error getting payment method selection data:', error);
+      safeLogger.error('Error getting payment method selection data:', error);
       throw error;
     }
   }
@@ -549,7 +550,7 @@ export class EnhancedFiatPaymentService {
 
   private async createPaymentIntent(request: FiatPaymentRequest, fees: PaymentFees): Promise<any> {
     // Mock implementation - in production, use actual provider APIs
-    console.log(`Creating ${request.provider} payment intent for ${request.amount} ${request.currency}`);
+    safeLogger.info(`Creating ${request.provider} payment intent for ${request.amount} ${request.currency}`);
     
     return {
       id: `pi_${Math.random().toString(36).substr(2, 9)}`,
@@ -648,7 +649,7 @@ export class EnhancedFiatPaymentService {
 
   private async savePaymentMethod(userAddress: string, paymentMethod: PaymentMethodInfo): Promise<void> {
     // Mock implementation - in production, save to database
-    console.log(`Saving payment method for ${userAddress}:`, paymentMethod);
+    safeLogger.info(`Saving payment method for ${userAddress}:`, paymentMethod);
   }
 
   private async generateReceiptPDF(receipt: FiatPaymentReceipt): Promise<string> {
@@ -672,7 +673,7 @@ export class EnhancedFiatPaymentService {
 
   private async createRefundRecord(transaction: any, amount: number, reason?: string, refundResult?: any): Promise<void> {
     // Mock implementation
-    console.log(`Creating refund record for ${transaction.id}: ${amount} ${transaction.currency}`);
+    safeLogger.info(`Creating refund record for ${transaction.id}: ${amount} ${transaction.currency}`);
   }
 
   private async sendPaymentNotifications(transaction: any): Promise<void> {
@@ -688,7 +689,7 @@ export class EnhancedFiatPaymentService {
         }
       );
     } catch (error) {
-      console.error('Error sending payment notifications:', error);
+      safeLogger.error('Error sending payment notifications:', error);
     }
   }
 
@@ -705,7 +706,7 @@ export class EnhancedFiatPaymentService {
         }
       );
     } catch (error) {
-      console.error('Error sending refund notifications:', error);
+      safeLogger.error('Error sending refund notifications:', error);
     }
   }
 }

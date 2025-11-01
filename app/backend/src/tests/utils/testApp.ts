@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import cors from 'cors';
 import { jest } from '@jest/globals';
 
@@ -286,7 +287,7 @@ export function trackMemoryUsage(testName: string) {
     },
     logMemoryUsage: () => {
       const delta = trackMemoryUsage(testName).getMemoryDelta();
-      console.log(`[${testName}] Memory Delta:`, delta);
+      safeLogger.info(`[${testName}] Memory Delta:`, delta);
     },
   };
 }

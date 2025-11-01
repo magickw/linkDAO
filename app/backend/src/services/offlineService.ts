@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   offlineContentCache, 
   offlineActionQueue,
@@ -64,7 +65,7 @@ export class OfflineService {
 
       return true;
     } catch (error) {
-      console.error('Error caching content:', error);
+      safeLogger.error('Error caching content:', error);
       return false;
     }
   }
@@ -101,7 +102,7 @@ export class OfflineService {
 
       return null;
     } catch (error) {
-      console.error('Error getting cached content:', error);
+      safeLogger.error('Error getting cached content:', error);
       return null;
     }
   }
@@ -125,7 +126,7 @@ export class OfflineService {
 
       return results;
     } catch (error) {
-      console.error('Error getting all cached content:', error);
+      safeLogger.error('Error getting all cached content:', error);
       return [];
     }
   }
@@ -149,7 +150,7 @@ export class OfflineService {
 
       return true;
     } catch (error) {
-      console.error('Error removing cached content:', error);
+      safeLogger.error('Error removing cached content:', error);
       return false;
     }
   }
@@ -165,7 +166,7 @@ export class OfflineService {
           offlineContentCache.expiresAt ? lt(offlineContentCache.expiresAt, new Date()) : undefined
         ));
     } catch (error) {
-      console.error('Error cleaning up expired content:', error);
+      safeLogger.error('Error cleaning up expired content:', error);
     }
   }
 
@@ -189,7 +190,7 @@ export class OfflineService {
 
       return result.id;
     } catch (error) {
-      console.error('Error queuing offline action:', error);
+      safeLogger.error('Error queuing offline action:', error);
       return null;
     }
   }
@@ -210,7 +211,7 @@ export class OfflineService {
 
       return results;
     } catch (error) {
-      console.error('Error getting pending actions:', error);
+      safeLogger.error('Error getting pending actions:', error);
       return [];
     }
   }
@@ -246,7 +247,7 @@ export class OfflineService {
 
       return true;
     } catch (error) {
-      console.error('Error updating action status:', error);
+      safeLogger.error('Error updating action status:', error);
       return false;
     }
   }
@@ -292,7 +293,7 @@ export class OfflineService {
         totalSize: actionSize + contentSize,
       };
     } catch (error) {
-      console.error('Error getting storage usage:', error);
+      safeLogger.error('Error getting storage usage:', error);
       return {
         totalActions: 0,
         pendingActions: 0,
@@ -321,7 +322,7 @@ export class OfflineService {
 
       return true;
     } catch (error) {
-      console.error('Error clearing completed actions:', error);
+      safeLogger.error('Error clearing completed actions:', error);
       return false;
     }
   }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { monitoringDashboardService } from '../services/monitoringDashboardService';
 import { asyncHandler } from '../middleware/globalErrorHandler';
 import { successResponse, errorResponse } from '../utils/apiResponse';
@@ -100,7 +101,7 @@ router.get('/alerts', asyncHandler(async (req, res) => {
 }));
 
 // Acknowledge alert
-router.post('/alerts/:alertId/acknowledge', asyncHandler(async (req, res) => {
+router.post('/alerts/:alertId/acknowledge', csrfProtection,  asyncHandler(async (req, res) => {
   const { alertId } = req.params;
   const success = monitoringDashboardService.acknowledgeAlert(alertId);
   
@@ -116,7 +117,7 @@ router.post('/alerts/:alertId/acknowledge', asyncHandler(async (req, res) => {
 }));
 
 // Resolve alert
-router.post('/alerts/:alertId/resolve', asyncHandler(async (req, res) => {
+router.post('/alerts/:alertId/resolve', csrfProtection,  asyncHandler(async (req, res) => {
   const { alertId } = req.params;
   const success = monitoringDashboardService.resolveAlert(alertId);
   
@@ -151,7 +152,7 @@ router.get('/rules', asyncHandler(async (req, res) => {
 }));
 
 // Update alert rule
-router.put('/rules/:ruleId', asyncHandler(async (req, res) => {
+router.put('/rules/:ruleId', csrfProtection,  asyncHandler(async (req, res) => {
   const { ruleId } = req.params;
   const updates = req.body;
   

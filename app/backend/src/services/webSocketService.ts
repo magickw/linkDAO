@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { safeLogger } from '../utils/safeLogger';
 import { Server as HttpServer } from 'http';
 
 interface WebSocketUser {
@@ -69,7 +70,7 @@ export class WebSocketService {
 
   private setupEventHandlers() {
     this.io.on('connection', (socket) => {
-      console.log(`Client connected: ${socket.id}`);
+      safeLogger.info(`Client connected: ${socket.id}`);
 
       // Handle user authentication
       socket.on('authenticate', (data: { walletAddress: string; reconnecting?: boolean }) => {
@@ -133,7 +134,7 @@ export class WebSocketService {
         // Broadcast user online status
         this.broadcastUserStatus(walletAddress, 'online');
 
-        console.log(`User authenticated: ${walletAddress} (${socket.id}) - Reconnecting: ${reconnecting}`);
+        safeLogger.info(`User authenticated: ${walletAddress} (${socket.id}) - Reconnecting: ${reconnecting}`);
       });
 
       // Handle subscription management
@@ -178,7 +179,7 @@ export class WebSocketService {
           target: data.target
         });
 
-        console.log(`User ${user.walletAddress} subscribed to ${data.type}:${data.target}`);
+        safeLogger.info(`User ${user.walletAddress} subscribed to ${data.type}:${data.target}`);
       });
 
       // Handle unsubscription
@@ -209,7 +210,7 @@ export class WebSocketService {
 
         socket.emit('unsubscribed', { subscriptionId: data.subscriptionId });
 
-        console.log(`User ${user.walletAddress} unsubscribed from ${subscription.type}:${subscription.target}`);
+        safeLogger.info(`User ${user.walletAddress} unsubscribed from ${subscription.type}:${subscription.target}`);
       });
 
       // Handle joining community rooms (legacy support)
@@ -217,7 +218,7 @@ export class WebSocketService {
         const { communityId } = data;
         socket.join(`community:${communityId}`);
         socket.emit('joined_community', { communityId });
-        console.log(`Socket ${socket.id} joined community: ${communityId}`);
+        safeLogger.info(`Socket ${socket.id} joined community: ${communityId}`);
       });
 
       // Handle leaving community rooms (legacy support)
@@ -225,7 +226,7 @@ export class WebSocketService {
         const { communityId } = data;
         socket.leave(`community:${communityId}`);
         socket.emit('left_community', { communityId });
-        console.log(`Socket ${socket.id} left community: ${communityId}`);
+        safeLogger.info(`Socket ${socket.id} left community: ${communityId}`);
       });
 
       // Handle joining conversation rooms (legacy support)
@@ -233,7 +234,7 @@ export class WebSocketService {
         const { conversationId } = data;
         socket.join(`conversation:${conversationId}`);
         socket.emit('joined_conversation', { conversationId });
-        console.log(`Socket ${socket.id} joined conversation: ${conversationId}`);
+        safeLogger.info(`Socket ${socket.id} joined conversation: ${conversationId}`);
       });
 
       // Handle leaving conversation rooms (legacy support)
@@ -241,7 +242,7 @@ export class WebSocketService {
         const { conversationId } = data;
         socket.leave(`conversation:${conversationId}`);
         socket.emit('left_conversation', { conversationId });
-        console.log(`Socket ${socket.id} left conversation: ${conversationId}`);
+        safeLogger.info(`Socket ${socket.id} left conversation: ${conversationId}`);
       });
 
       // Handle typing indicators
@@ -311,9 +312,9 @@ export class WebSocketService {
           // Remove from connected users
           this.connectedUsers.delete(socket.id);
           
-          console.log(`User disconnected: ${user.walletAddress} (${socket.id}) - Reason: ${reason}`);
+          safeLogger.info(`User disconnected: ${user.walletAddress} (${socket.id}) - Reason: ${reason}`);
         } else {
-          console.log(`Client disconnected: ${socket.id} - Reason: ${reason}`);
+          safeLogger.info(`Client disconnected: ${socket.id} - Reason: ${reason}`);
         }
       });
 
@@ -376,7 +377,7 @@ export class WebSocketService {
         // Clear message queue
         this.messageQueue.delete(walletAddress);
         
-        console.log(`Cleaned up subscriptions for disconnected user: ${walletAddress}`);
+        safeLogger.info(`Cleaned up subscriptions for disconnected user: ${walletAddress}`);
       }
       
       this.reconnectionTimeouts.delete(walletAddress);
@@ -426,7 +427,7 @@ export class WebSocketService {
     // Clear the queue
     this.messageQueue.delete(walletAddress);
     
-    console.log(`Delivered ${queue.length} queued messages to ${walletAddress}`);
+    safeLogger.info(`Delivered ${queue.length} queued messages to ${walletAddress}`);
   }
 
   // Heartbeat system
@@ -686,7 +687,7 @@ export class WebSocketService {
     // Clean up stale users
     this.connectedUsers.forEach((user, socketId) => {
       if (now.getTime() - user.lastSeen.getTime() > staleThreshold) {
-        console.log(`Cleaning up stale connection: ${user.walletAddress} (${socketId})`);
+        safeLogger.info(`Cleaning up stale connection: ${user.walletAddress} (${socketId})`);
         
         // Remove from tracking
         this.connectedUsers.delete(socketId);
@@ -727,7 +728,7 @@ export class WebSocketService {
 
   // Graceful shutdown with cleanup
   close() {
-    console.log('Shutting down WebSocket service...');
+    safeLogger.info('Shutting down WebSocket service...');
     
     // Clear intervals
     if (this.heartbeatInterval) {
@@ -747,7 +748,7 @@ export class WebSocketService {
     // Close server
     this.io.close();
     
-    console.log('WebSocket service shut down complete');
+    safeLogger.info('WebSocket service shut down complete');
   }
 }
 
@@ -765,7 +766,7 @@ export const initializeWebSocket = (httpServer: HttpServer): WebSocketService =>
       }
     }, 10 * 60 * 1000);
     
-    console.log('WebSocket service initialized with real-time infrastructure');
+    safeLogger.info('WebSocket service initialized with real-time infrastructure');
   }
   return webSocketService;
 };

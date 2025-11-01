@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { UniswapV3Service } from '../services/uniswapV3Service';
 import { MultiChainDEXService } from '../services/multiChainDEXService';
 import { SwapParams, TokenInfo } from '../types/uniswapV3';
@@ -78,7 +80,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting swap quote:', error);
+      safeLogger.error('Error getting swap quote:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get swap quote',
@@ -143,7 +145,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting token price:', error);
+      safeLogger.error('Error getting token price:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get token price',
@@ -178,7 +180,7 @@ export class DEXTradingController {
         data: liquidityInfo
       });
     } catch (error) {
-      console.error('Error getting liquidity info:', error);
+      safeLogger.error('Error getting liquidity info:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get liquidity information',
@@ -213,7 +215,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error monitoring liquidity pools:', error);
+      safeLogger.error('Error monitoring liquidity pools:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to monitor liquidity pools',
@@ -268,7 +270,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting gas estimate:', error);
+      safeLogger.error('Error getting gas estimate:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get gas estimate',
@@ -325,7 +327,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting alternative routes:', error);
+      safeLogger.error('Error getting alternative routes:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get alternative routes',
@@ -360,7 +362,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error validating token:', error);
+      safeLogger.error('Error validating token:', error);
       res.status(400).json({
         success: false,
         message: 'Invalid token address',
@@ -400,7 +402,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error switching network:', error);
+      safeLogger.error('Error switching network:', error);
       res.status(400).json({
         success: false,
         message: 'Failed to switch network',
@@ -426,7 +428,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting supported networks:', error);
+      safeLogger.error('Error getting supported networks:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get supported networks',
@@ -501,7 +503,7 @@ export class DEXTradingController {
         }
       });
     } catch (error) {
-      console.error('Error comparing chain prices:', error);
+      safeLogger.error('Error comparing chain prices:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to compare chain prices',
@@ -564,7 +566,7 @@ export class DEXTradingController {
         data: crossChainQuote
       });
     } catch (error) {
-      console.error('Error getting cross-chain quote:', error);
+      safeLogger.error('Error getting cross-chain quote:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get cross-chain quote',
@@ -588,7 +590,7 @@ export class DEXTradingController {
         data: gasFees
       });
     } catch (error) {
-      console.error('Error getting network gas fees:', error);
+      safeLogger.error('Error getting network gas fees:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get network gas fees',
@@ -637,7 +639,7 @@ export class DEXTradingController {
         data: bestChain
       });
     } catch (error) {
-      console.error('Error getting best chain for swap:', error);
+      safeLogger.error('Error getting best chain for swap:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get best chain for swap',

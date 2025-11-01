@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { users, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -137,7 +138,7 @@ export class AutomatedInsightService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(prioritizedInsights));
       return prioritizedInsights;
     } catch (error) {
-      console.error('Error generating insights:', error);
+      safeLogger.error('Error generating insights:', error);
       throw new Error('Failed to generate AI insights');
     }
   }
@@ -167,7 +168,7 @@ export class AutomatedInsightService {
         contextualInformation
       };
     } catch (error) {
-      console.error('Error generating natural language insight:', error);
+      safeLogger.error('Error generating natural language insight:', error);
       throw new Error('Failed to generate natural language insight');
     }
   }
@@ -196,7 +197,7 @@ export class AutomatedInsightService {
       // Sort by priority score (highest first)
       return scoredInsights.sort((a, b) => b.priority - a.priority);
     } catch (error) {
-      console.error('Error prioritizing insights:', error);
+      safeLogger.error('Error prioritizing insights:', error);
       return insights;
     }
   }
@@ -217,7 +218,7 @@ export class AutomatedInsightService {
 
       return recommendations.sort((a, b) => b.priority - a.priority);
     } catch (error) {
-      console.error('Error generating recommendations:', error);
+      safeLogger.error('Error generating recommendations:', error);
       throw new Error('Failed to generate recommendations');
     }
   }
@@ -241,7 +242,7 @@ export class AutomatedInsightService {
       // Update insight effectiveness metrics
       await this.updateInsightEffectiveness(tracking);
     } catch (error) {
-      console.error('Error tracking insight outcome:', error);
+      safeLogger.error('Error tracking insight outcome:', error);
       throw new Error('Failed to track insight outcome');
     }
   }
@@ -351,7 +352,7 @@ export class AutomatedInsightService {
         }
       };
     } catch (error) {
-      console.error('Error getting insight analytics:', error);
+      safeLogger.error('Error getting insight analytics:', error);
       throw new Error('Failed to get insight analytics');
     }
   }
@@ -388,7 +389,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating trend insights:', error);
+      safeLogger.error('Error generating trend insights:', error);
       return [];
     }
   }
@@ -428,7 +429,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating anomaly insights:', error);
+      safeLogger.error('Error generating anomaly insights:', error);
       return [];
     }
   }
@@ -474,7 +475,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating performance insights:', error);
+      safeLogger.error('Error generating performance insights:', error);
       return [];
     }
   }
@@ -507,7 +508,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating user behavior insights:', error);
+      safeLogger.error('Error generating user behavior insights:', error);
       return [];
     }
   }
@@ -542,7 +543,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating business insights:', error);
+      safeLogger.error('Error generating business insights:', error);
       return [];
     }
   }
@@ -575,7 +576,7 @@ export class AutomatedInsightService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating opportunity insights:', error);
+      safeLogger.error('Error generating opportunity insights:', error);
       return [];
     }
   }
@@ -791,7 +792,7 @@ export class AutomatedInsightService {
         )
       `);
     } catch (error) {
-      console.error('Error storing insight:', error);
+      safeLogger.error('Error storing insight:', error);
     }
   }
 

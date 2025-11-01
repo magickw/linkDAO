@@ -6,6 +6,7 @@ import {
   ProductSearchResult 
 } from '../models/Product';
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { priceOracleService } from './priceOracleService';
 import { eq, and, or, like, gte, lte, inArray, desc, asc, sql, isNull } from 'drizzle-orm';
@@ -423,7 +424,7 @@ export class SearchService {
         recommendationsPrecomputed: true,
       };
     } catch (error) {
-      console.error('Search performance optimization failed:', error);
+      safeLogger.error('Search performance optimization failed:', error);
       return {
         cacheWarmedUp: false,
         slowQueriesOptimized: 0,
@@ -595,7 +596,7 @@ export class SearchService {
         growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
       }));
     } catch (error) {
-      console.error('Error getting trending communities:', error);
+      safeLogger.error('Error getting trending communities:', error);
       return [];
     }
   }
@@ -746,7 +747,7 @@ export class SearchService {
       
       // Radius-based search would require geospatial calculations
       if (filters.location.coordinates && filters.location.radius) {
-        console.log(`Geospatial search requested: ${filters.location.coordinates.lat}, ${filters.location.coordinates.lng} within ${filters.location.radius}km`);
+        safeLogger.info(`Geospatial search requested: ${filters.location.coordinates.lat}, ${filters.location.coordinates.lng} within ${filters.location.radius}km`);
       }
     }
     
@@ -1191,7 +1192,7 @@ export class SearchService {
         type: 'collaborative' as const,
       }));
     } catch (error) {
-      console.error('Error getting collaborative recommendations:', error);
+      safeLogger.error('Error getting collaborative recommendations:', error);
       return [];
     }
   }
@@ -1202,7 +1203,7 @@ export class SearchService {
       // TODO: Implement getPostsByUser method in DatabaseService
       return [];
     } catch (error) {
-      console.error('Error getting user preferred categories:', error);
+      safeLogger.error('Error getting user preferred categories:', error);
       return [];
     }
   }
@@ -1280,7 +1281,7 @@ export class SearchService {
           lastUpdated: new Date()
         };
       } catch (error) {
-        console.error('Failed to convert product price:', error);
+        safeLogger.error('Failed to convert product price:', error);
         // Continue with original price data
       }
     }

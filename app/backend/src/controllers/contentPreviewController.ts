@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { contentPreviewService } from '../services/contentPreviewService';
 import { securityScanService } from '../services/securityScanService';
 import { linkScraperService } from '../services/linkScraperService';
@@ -29,7 +31,7 @@ export class ContentPreviewController {
         preview
       });
     } catch (error) {
-      console.error('Preview generation failed:', error);
+      safeLogger.error('Preview generation failed:', error);
       res.status(500).json({
         error: 'Failed to generate preview',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -52,7 +54,7 @@ export class ContentPreviewController {
         preview: cachedPreview
       });
     } catch (error) {
-      console.error('Cache retrieval failed:', error);
+      safeLogger.error('Cache retrieval failed:', error);
       res.status(500).json({
         error: 'Failed to retrieve cached preview',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -69,7 +71,7 @@ export class ContentPreviewController {
         message: 'Preview cache cleared successfully'
       });
     } catch (error) {
-      console.error('Cache clearing failed:', error);
+      safeLogger.error('Cache clearing failed:', error);
       res.status(500).json({
         error: 'Failed to clear cache',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -86,7 +88,7 @@ export class ContentPreviewController {
         stats
       });
     } catch (error) {
-      console.error('Cache stats retrieval failed:', error);
+      safeLogger.error('Cache stats retrieval failed:', error);
       res.status(500).json({
         error: 'Failed to retrieve cache stats',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -109,7 +111,7 @@ export class ContentPreviewController {
         scanResult
       });
     } catch (error) {
-      console.error('Security scan failed:', error);
+      safeLogger.error('Security scan failed:', error);
       res.status(500).json({
         error: 'Security scan failed',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -132,7 +134,7 @@ export class ContentPreviewController {
         data: linkData
       });
     } catch (error) {
-      console.error('Link preview generation failed:', error);
+      safeLogger.error('Link preview generation failed:', error);
       res.status(500).json({
         error: 'Failed to generate link preview',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -155,7 +157,7 @@ export class ContentPreviewController {
         data: nftData
       });
     } catch (error) {
-      console.error('OpenSea NFT fetch failed:', error);
+      safeLogger.error('OpenSea NFT fetch failed:', error);
       res.status(500).json({
         error: 'Failed to fetch NFT from OpenSea',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -178,7 +180,7 @@ export class ContentPreviewController {
         data: nftData
       });
     } catch (error) {
-      console.error('Alchemy NFT fetch failed:', error);
+      safeLogger.error('Alchemy NFT fetch failed:', error);
       res.status(500).json({
         error: 'Failed to fetch NFT from Alchemy',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -201,7 +203,7 @@ export class ContentPreviewController {
         data: tokenData
       });
     } catch (error) {
-      console.error('Token info fetch failed:', error);
+      safeLogger.error('Token info fetch failed:', error);
       res.status(500).json({
         error: 'Failed to fetch token information',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -224,7 +226,7 @@ export class ContentPreviewController {
         data: proposalData
       });
     } catch (error) {
-      console.error('Proposal info fetch failed:', error);
+      safeLogger.error('Proposal info fetch failed:', error);
       res.status(500).json({
         error: 'Failed to fetch proposal information',
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -6,6 +6,7 @@
  */
 
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { expect } from '@jest/globals';
 
 export interface ContractCoverage {
@@ -29,7 +30,7 @@ export class SmartContractTestSuite {
   }
 
   async testMarketplaceEscrow(): Promise<ContractCoverage> {
-    console.log('Testing MarketplaceEscrow contract...');
+    safeLogger.info('Testing MarketplaceEscrow contract...');
     
     const coverage: ContractCoverage = {
       contractName: 'MarketplaceEscrow',
@@ -82,7 +83,7 @@ export class SmartContractTestSuite {
   }
 
   async testReputationSystem(): Promise<ContractCoverage> {
-    console.log('Testing ReputationSystem contract...');
+    safeLogger.info('Testing ReputationSystem contract...');
     
     const coverage: ContractCoverage = {
       contractName: 'ReputationSystem',
@@ -125,7 +126,7 @@ export class SmartContractTestSuite {
   }
 
   async testNFTMarketplace(): Promise<ContractCoverage> {
-    console.log('Testing NFTMarketplace contract...');
+    safeLogger.info('Testing NFTMarketplace contract...');
     
     const coverage: ContractCoverage = {
       contractName: 'NFTMarketplace',
@@ -168,7 +169,7 @@ export class SmartContractTestSuite {
   }
 
   async testGovernance(): Promise<ContractCoverage> {
-    console.log('Testing Governance contract...');
+    safeLogger.info('Testing Governance contract...');
     
     const coverage: ContractCoverage = {
       contractName: 'Governance',
@@ -211,7 +212,7 @@ export class SmartContractTestSuite {
   }
 
   async testPlatformToken(): Promise<ContractCoverage> {
-    console.log('Testing Platform Token contract...');
+    safeLogger.info('Testing Platform Token contract...');
     
     const coverage: ContractCoverage = {
       contractName: 'PlatformToken',

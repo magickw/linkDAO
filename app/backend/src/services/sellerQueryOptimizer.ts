@@ -5,6 +5,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface SellerQueryMetrics {
@@ -372,7 +373,7 @@ export class SellerQueryOptimizer {
       }
     } catch (error) {
       // Don't throw on tracking errors, just log
-      console.error('Failed to track query performance:', error);
+      safeLogger.error('Failed to track query performance:', error);
     }
   }
 
@@ -481,7 +482,7 @@ export class SellerQueryOptimizer {
         client.release();
       }
     } catch (error) {
-      console.error('Failed to invalidate seller cache:', error);
+      safeLogger.error('Failed to invalidate seller cache:', error);
       throw error;
     }
   }
@@ -501,7 +502,7 @@ export class SellerQueryOptimizer {
         client.release();
       }
     } catch (error) {
-      console.error('Failed to update seller performance metrics:', error);
+      safeLogger.error('Failed to update seller performance metrics:', error);
       throw error;
     }
   }
@@ -656,7 +657,7 @@ export class SellerQueryOptimizer {
         client.release();
       }
     } catch (error) {
-      console.error('Failed to refresh seller performance dashboard:', error);
+      safeLogger.error('Failed to refresh seller performance dashboard:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, query, param } from 'express-validator';
 import { PaymentValidationController } from '../controllers/paymentValidationController';
 import { validateRequest } from '../middleware/validateRequest';
@@ -19,7 +20,7 @@ router.use(rateLimiter({
  * @desc Validate a payment request
  * @access Public
  */
-router.post('/validate',
+router.post('/validate', csrfProtection, 
   [
     body('paymentMethod')
       .isIn(['crypto', 'fiat', 'escrow'])
@@ -56,7 +57,7 @@ router.post('/validate',
  * @desc Check crypto balance for a user
  * @access Public
  */
-router.post('/check-balance',
+router.post('/check-balance', csrfProtection, 
   [
     body('userAddress')
       .isString()
@@ -82,7 +83,7 @@ router.post('/check-balance',
  * @desc Get payment alternatives when primary method fails
  * @access Public
  */
-router.post('/alternatives',
+router.post('/alternatives', csrfProtection, 
   [
     body('paymentRequest')
       .isObject()
@@ -101,7 +102,7 @@ router.post('/alternatives',
  * @desc Estimate payment fees for different methods
  * @access Public
  */
-router.post('/estimate-fees',
+router.post('/estimate-fees', csrfProtection, 
   [
     body('paymentMethod')
       .isIn(['crypto', 'fiat', 'escrow'])
@@ -275,7 +276,7 @@ router.get('/exchange-rate',
  * @desc Get multiple exchange rates
  * @access Public
  */
-router.post('/exchange-rates',
+router.post('/exchange-rates', csrfProtection, 
   [
     body('pairs')
       .isArray({ min: 1 })
@@ -298,7 +299,7 @@ router.post('/exchange-rates',
  * @desc Convert currency amount
  * @access Public
  */
-router.post('/convert',
+router.post('/convert', csrfProtection, 
   [
     body('amount')
       .isFloat({ min: 0.01 })

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { ProductService } from '../services/productService';
 import { sellerService } from '../services/sellerService';
 import { databaseService } from '../services/databaseService';
@@ -45,7 +47,7 @@ export class MarketplaceController {
       try {
         sellerProfile = await sellerService.getSellerProfile(product.sellerId);
       } catch (sellerError) {
-        console.warn('Could not fetch seller profile:', sellerError);
+        safeLogger.warn('Could not fetch seller profile:', sellerError);
         // Continue without seller profile if there's an error
       }
 
@@ -109,7 +111,7 @@ export class MarketplaceController {
           .set({ views: product.views + 1 })
           .where(eq(schema.products.id, id));
       } catch (viewError) {
-        console.warn('Could not update view count:', viewError);
+        safeLogger.warn('Could not update view count:', viewError);
       }
 
       return res.json({
@@ -120,7 +122,7 @@ export class MarketplaceController {
         }
       });
     } catch (error) {
-      console.error('Error fetching product details:', error);
+      safeLogger.error('Error fetching product details:', error);
       
       return res.status(500).json({
         success: false,
@@ -216,7 +218,7 @@ export class MarketplaceController {
         }
       });
     } catch (error) {
-      console.error('Error fetching product listings:', error);
+      safeLogger.error('Error fetching product listings:', error);
       
       return res.status(500).json({
         success: false,
@@ -294,7 +296,7 @@ export class MarketplaceController {
         }
       });
     } catch (error) {
-      console.error('Error fetching seller profile:', error);
+      safeLogger.error('Error fetching seller profile:', error);
       
       return res.status(500).json({
         success: false,
@@ -380,7 +382,7 @@ export class MarketplaceController {
         }
       });
     } catch (error) {
-      console.error('Error fetching seller listings:', error);
+      safeLogger.error('Error fetching seller listings:', error);
       
       return res.status(500).json({
         success: false,
@@ -489,7 +491,7 @@ export class MarketplaceController {
         }
       });
     } catch (error) {
-      console.error('Error searching marketplace:', error);
+      safeLogger.error('Error searching marketplace:', error);
       
       return res.status(500).json({
         success: false,

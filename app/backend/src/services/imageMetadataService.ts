@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { safeLogger } from '../utils/safeLogger';
 import { imageStorage } from '../db/schema';
 import { eq, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
 import { createHash } from 'crypto';
@@ -89,7 +90,7 @@ class ImageMetadataService {
       return records[0].id;
 
     } catch (error) {
-      console.error('Error storing image metadata:', error);
+      safeLogger.error('Error storing image metadata:', error);
       throw new Error('Failed to store image metadata');
     }
   }
@@ -134,7 +135,7 @@ class ImageMetadataService {
       };
 
     } catch (error) {
-      console.error('Error getting image metadata:', error);
+      safeLogger.error('Error getting image metadata:', error);
       return null;
     }
   }
@@ -167,7 +168,7 @@ class ImageMetadataService {
       return true;
 
     } catch (error) {
-      console.error('Error updating image metadata:', error);
+      safeLogger.error('Error updating image metadata:', error);
       return false;
     }
   }
@@ -200,14 +201,14 @@ class ImageMetadataService {
 
       // In a full implementation, you would also store detailed access logs
       // in a separate table for analytics purposes
-      console.log('Image access tracked:', {
+      safeLogger.info('Image access tracked:', {
         imageId,
         ...accessInfo,
         timestamp: new Date()
       });
 
     } catch (error) {
-      console.error('Error tracking image access:', error);
+      safeLogger.error('Error tracking image access:', error);
     }
   }
 
@@ -254,7 +255,7 @@ class ImageMetadataService {
       };
 
     } catch (error) {
-      console.error('Error getting image analytics:', error);
+      safeLogger.error('Error getting image analytics:', error);
       throw error;
     }
   }
@@ -308,7 +309,7 @@ class ImageMetadataService {
       }));
 
     } catch (error) {
-      console.error('Error getting images by usage type:', error);
+      safeLogger.error('Error getting images by usage type:', error);
       return [];
     }
   }
@@ -353,7 +354,7 @@ class ImageMetadataService {
       };
 
     } catch (error) {
-      console.error('Error checking backup status:', error);
+      safeLogger.error('Error checking backup status:', error);
       return null;
     }
   }
@@ -433,7 +434,7 @@ class ImageMetadataService {
       };
 
     } catch (error) {
-      console.error('Error getting storage usage stats:', error);
+      safeLogger.error('Error getting storage usage stats:', error);
       return {
         totalImages: 0,
         totalSize: 0,
@@ -501,7 +502,7 @@ class ImageMetadataService {
       }));
 
     } catch (error) {
-      console.error('Error finding duplicate images:', error);
+      safeLogger.error('Error finding duplicate images:', error);
       return [];
     }
   }
@@ -555,7 +556,7 @@ class ImageMetadataService {
       };
 
     } catch (error) {
-      console.error('Error cleaning up orphaned images:', error);
+      safeLogger.error('Error cleaning up orphaned images:', error);
       return {
         orphanedCount: 0,
         orphanedImages: [],
@@ -611,7 +612,7 @@ class ImageMetadataService {
         gps: null
       };
     } catch (error) {
-      console.error('Error extracting EXIF data:', error);
+      safeLogger.error('Error extracting EXIF data:', error);
       return null;
     }
   }

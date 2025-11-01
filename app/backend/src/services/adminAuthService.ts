@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { safeLogger } from '../utils/safeLogger';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -164,7 +165,7 @@ export class AdminAuthService {
 
       return decoded;
     } catch (error) {
-      console.error('Session validation error:', error);
+      safeLogger.error('Session validation error:', error);
       return null;
     }
   }
@@ -294,7 +295,7 @@ export class AdminAuthService {
         },
       };
     } catch (error) {
-      console.error('Admin login error:', error);
+      safeLogger.error('Admin login error:', error);
       return {
         success: false,
         message: 'Login failed due to server error',
@@ -360,7 +361,7 @@ export class AdminAuthService {
         userId: result[0].id,
       };
     } catch (error) {
-      console.error('Create admin user error:', error);
+      safeLogger.error('Create admin user error:', error);
       return {
         success: false,
         message: 'Failed to create admin user',

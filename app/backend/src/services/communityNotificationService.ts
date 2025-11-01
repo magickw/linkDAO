@@ -1,4 +1,5 @@
 import emailService, { CommunityNotificationEmailData } from './emailService';
+import { safeLogger } from '../utils/safeLogger';
 import pushNotificationService, { CommunityPushNotification } from './pushNotificationService';
 import { db } from '../db';
 import { users, notificationPreferences } from '../db/schema';
@@ -67,7 +68,7 @@ export class CommunityNotificationService {
 
       // Check if user wants notifications for this type
       if (!this.shouldSendNotification(preferences, payload.type)) {
-        console.log(`[CommunityNotification] User ${payload.userAddress} has disabled ${payload.type} notifications`);
+        safeLogger.info(`[CommunityNotification] User ${payload.userAddress} has disabled ${payload.type} notifications`);
         return;
       }
 
@@ -83,7 +84,7 @@ export class CommunityNotificationService {
 
       // In-app notifications are handled separately by the real-time notification service
     } catch (error) {
-      console.error('[CommunityNotification] Error sending notification:', error);
+      safeLogger.error('[CommunityNotification] Error sending notification:', error);
     }
   }
 
@@ -95,7 +96,7 @@ export class CommunityNotificationService {
       const promises = payloads.map((payload) => this.sendNotification(payload));
       await Promise.allSettled(promises);
     } catch (error) {
-      console.error('[CommunityNotification] Error sending bulk notifications:', error);
+      safeLogger.error('[CommunityNotification] Error sending bulk notifications:', error);
     }
   }
 
@@ -107,7 +108,7 @@ export class CommunityNotificationService {
       // Get user email
       const user = await this.getUserEmail(payload.userAddress);
       if (!user?.email) {
-        console.log(`[CommunityNotification] No email found for user ${payload.userAddress}`);
+        safeLogger.info(`[CommunityNotification] No email found for user ${payload.userAddress}`);
         return;
       }
 
@@ -162,7 +163,7 @@ export class CommunityNotificationService {
           });
       }
     } catch (error) {
-      console.error('[CommunityNotification] Error sending email:', error);
+      safeLogger.error('[CommunityNotification] Error sending email:', error);
     }
   }
 
@@ -189,7 +190,7 @@ export class CommunityNotificationService {
         pushNotification
       );
     } catch (error) {
-      console.error('[CommunityNotification] Error sending push notification:', error);
+      safeLogger.error('[CommunityNotification] Error sending push notification:', error);
     }
   }
 
@@ -202,7 +203,7 @@ export class CommunityNotificationService {
     try {
       // TODO: Add email field to users table when user profiles are expanded
       // For now, return null as users table doesn't have email field
-      console.log(`[CommunityNotification] Email field not yet available in users table for ${userAddress}`);
+      safeLogger.info(`[CommunityNotification] Email field not yet available in users table for ${userAddress}`);
       return null;
 
       /* Future implementation when email field is added:
@@ -215,7 +216,7 @@ export class CommunityNotificationService {
       return result.length > 0 ? result[0] : null;
       */
     } catch (error) {
-      console.error('[CommunityNotification] Error getting user email:', error);
+      safeLogger.error('[CommunityNotification] Error getting user email:', error);
       return null;
     }
   }
@@ -249,7 +250,7 @@ export class CommunityNotificationService {
         types: this.getAllNotificationTypes(),
       };
     } catch (error) {
-      console.error('[CommunityNotification] Error getting user preferences:', error);
+      safeLogger.error('[CommunityNotification] Error getting user preferences:', error);
       // Return default preferences on error
       return {
         email: true,

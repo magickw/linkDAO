@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { aiContentModerationService, ContentModerationReport } from '../services/aiContentModerationService';
 import { z } from 'zod';
 
@@ -32,7 +34,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error in content moderation:', error);
+      safeLogger.error('Error in content moderation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -88,7 +90,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error in batch content moderation:', error);
+      safeLogger.error('Error in batch content moderation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -139,7 +141,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving spam detection:', error);
+      safeLogger.error('Error retrieving spam detection:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving spam detection data'
@@ -181,7 +183,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving content policy:', error);
+      safeLogger.error('Error retrieving content policy:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving content policy data'
@@ -222,7 +224,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving toxicity detection:', error);
+      safeLogger.error('Error retrieving toxicity detection:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving toxicity detection data'
@@ -263,7 +265,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving copyright detection:', error);
+      safeLogger.error('Error retrieving copyright detection:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving copyright detection data'
@@ -294,7 +296,7 @@ export class AIContentModerationController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import Redis from 'ioredis';
 import { securityConfig } from '../config/securityConfig';
 
@@ -81,9 +82,9 @@ export class IPBlockingService {
       // Load existing blocks from Redis
       this.loadBlockedEntries();
 
-      console.log('IP blocking service initialized');
+      safeLogger.info('IP blocking service initialized');
     } catch (error) {
-      console.error('Failed to initialize IP blocking service:', error);
+      safeLogger.error('Failed to initialize IP blocking service:', error);
     }
   }
 
@@ -161,7 +162,7 @@ export class IPBlockingService {
 
         next();
       } catch (error) {
-        console.error('Error in blocking middleware:', error);
+        safeLogger.error('Error in blocking middleware:', error);
         // Fail open - allow request if blocking service is down
         next();
       }
@@ -211,10 +212,10 @@ export class IPBlockingService {
       // Log the block
       await this.logBlockAction('block_ip', blockEntry);
 
-      console.warn(`IP blocked: ${ip} - ${reason}`);
+      safeLogger.warn(`IP blocked: ${ip} - ${reason}`);
       return blockId;
     } catch (error) {
-      console.error('Error blocking IP:', error);
+      safeLogger.error('Error blocking IP:', error);
       throw error;
     }
   }
@@ -259,10 +260,10 @@ export class IPBlockingService {
       // Log the block
       await this.logBlockAction('block_user', blockEntry);
 
-      console.warn(`User blocked: ${userId} - ${reason}`);
+      safeLogger.warn(`User blocked: ${userId} - ${reason}`);
       return blockId;
     } catch (error) {
-      console.error('Error blocking user:', error);
+      safeLogger.error('Error blocking user:', error);
       throw error;
     }
   }
@@ -281,10 +282,10 @@ export class IPBlockingService {
       // Log the unblock
       await this.logBlockAction('unblock_ip', { ip, reason: 'Manual unblock' });
 
-      console.info(`IP unblocked: ${ip}`);
+      safeLogger.info(`IP unblocked: ${ip}`);
       return result > 0;
     } catch (error) {
-      console.error('Error unblocking IP:', error);
+      safeLogger.error('Error unblocking IP:', error);
       return false;
     }
   }
@@ -303,10 +304,10 @@ export class IPBlockingService {
       // Log the unblock
       await this.logBlockAction('unblock_user', { userId, reason: 'Manual unblock' });
 
-      console.info(`User unblocked: ${userId}`);
+      safeLogger.info(`User unblocked: ${userId}`);
       return result > 0;
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      safeLogger.error('Error unblocking user:', error);
       return false;
     }
   }
@@ -345,7 +346,7 @@ export class IPBlockingService {
 
       return false;
     } catch (error) {
-      console.error('Error checking IP block status:', error);
+      safeLogger.error('Error checking IP block status:', error);
       return false;
     }
   }
@@ -378,7 +379,7 @@ export class IPBlockingService {
 
       return false;
     } catch (error) {
-      console.error('Error checking user block status:', error);
+      safeLogger.error('Error checking user block status:', error);
       return false;
     }
   }
@@ -397,7 +398,7 @@ export class IPBlockingService {
       
       return null;
     } catch (error) {
-      console.error('Error getting block info:', error);
+      safeLogger.error('Error getting block info:', error);
       return null;
     }
   }
@@ -414,7 +415,7 @@ export class IPBlockingService {
     };
 
     this.blockRules.set(ruleId, blockRule);
-    console.info(`Block rule added: ${rule.name}`);
+    safeLogger.info(`Block rule added: ${rule.name}`);
     return ruleId;
   }
 
@@ -424,7 +425,7 @@ export class IPBlockingService {
   static removeBlockRule(ruleId: string): boolean {
     const removed = this.blockRules.delete(ruleId);
     if (removed) {
-      console.info(`Block rule removed: ${ruleId}`);
+      safeLogger.info(`Block rule removed: ${ruleId}`);
     }
     return removed;
   }
@@ -543,9 +544,9 @@ export class IPBlockingService {
         this.blockedUsers.add(userId);
       }
 
-      console.log(`Loaded ${this.blockedIPs.size} blocked IPs and ${this.blockedUsers.size} blocked users`);
+      safeLogger.info(`Loaded ${this.blockedIPs.size} blocked IPs and ${this.blockedUsers.size} blocked users`);
     } catch (error) {
-      console.error('Error loading blocked entries:', error);
+      safeLogger.error('Error loading blocked entries:', error);
     }
   }
 
@@ -563,7 +564,7 @@ export class IPBlockingService {
       await this.redis.lpush('block_log', JSON.stringify(logEntry));
       await this.redis.ltrim('block_log', 0, 999); // Keep last 1000 entries
     } catch (error) {
-      console.error('Error logging block action:', error);
+      safeLogger.error('Error logging block action:', error);
     }
   }
 
@@ -587,7 +588,7 @@ export class IPBlockingService {
         recentBlocks
       };
     } catch (error) {
-      console.error('Error getting blocking stats:', error);
+      safeLogger.error('Error getting blocking stats:', error);
       return {
         blockedIPs: 0,
         blockedUsers: 0,
@@ -624,7 +625,7 @@ export class IPBlockingService {
 
       return cleaned;
     } catch (error) {
-      console.error('Error during blocking cleanup:', error);
+      safeLogger.error('Error during blocking cleanup:', error);
       return 0;
     }
   }

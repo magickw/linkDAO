@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface SecurityScanRule {
   ruleId: string;
@@ -146,7 +147,7 @@ class AutomatedSecurityScanningService extends EventEmitter {
       this.emit('initialized');
       
     } catch (error) {
-      console.error('Failed to initialize automated security scanning service:', error);
+      safeLogger.error('Failed to initialize automated security scanning service:', error);
       throw error;
     }
   }
@@ -276,7 +277,7 @@ class AutomatedSecurityScanningService extends EventEmitter {
       return scanResult;
       
     } catch (error) {
-      console.error('Code scanning failed:', error);
+      safeLogger.error('Code scanning failed:', error);
       throw error;
     }
   }
@@ -495,7 +496,7 @@ class AutomatedSecurityScanningService extends EventEmitter {
       }
       
     } catch (error) {
-      console.error(`Error applying content rule ${rule.ruleId}:`, error);
+      safeLogger.error(`Error applying content rule ${rule.ruleId}:`, error);
     }
     
     return findings;
@@ -539,7 +540,7 @@ class AutomatedSecurityScanningService extends EventEmitter {
       }
       
     } catch (error) {
-      console.error(`Error applying code rule ${rule.ruleId}:`, error);
+      safeLogger.error(`Error applying code rule ${rule.ruleId}:`, error);
     }
     
     return findings;

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { EnhancedSearchService } from '../services/enhancedSearchService';
 
 export class EnhancedSearchController {
@@ -64,7 +66,7 @@ export class EnhancedSearchController {
 
       res.json(results);
     } catch (error) {
-      console.error('Enhanced search error:', error);
+      safeLogger.error('Enhanced search error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Enhanced search failed' 
       });
@@ -92,7 +94,7 @@ export class EnhancedSearchController {
 
       res.json(suggestions);
     } catch (error) {
-      console.error('Enhanced suggestions error:', error);
+      safeLogger.error('Enhanced suggestions error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get suggestions' 
       });
@@ -113,7 +115,7 @@ export class EnhancedSearchController {
 
       res.json(content);
     } catch (error) {
-      console.error('Discovery content error:', error);
+      safeLogger.error('Discovery content error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get discovery content' 
       });
@@ -137,7 +139,7 @@ export class EnhancedSearchController {
 
       res.json(result);
     } catch (error) {
-      console.error('Hashtag discovery error:', error);
+      safeLogger.error('Hashtag discovery error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get hashtag discovery' 
       });
@@ -160,7 +162,7 @@ export class EnhancedSearchController {
 
       res.json(result);
     } catch (error) {
-      console.error('Topic discovery error:', error);
+      safeLogger.error('Topic discovery error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get topic discovery' 
       });
@@ -210,7 +212,7 @@ export class EnhancedSearchController {
 
       res.json(results);
     } catch (error) {
-      console.error('Community search error:', error);
+      safeLogger.error('Community search error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Community search failed' 
       });
@@ -233,7 +235,7 @@ export class EnhancedSearchController {
 
       res.json(recommendations);
     } catch (error) {
-      console.error('Community recommendations error:', error);
+      safeLogger.error('Community recommendations error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get community recommendations' 
       });
@@ -255,7 +257,7 @@ export class EnhancedSearchController {
 
       res.json(recommendations);
     } catch (error) {
-      console.error('User recommendations error:', error);
+      safeLogger.error('User recommendations error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to get user recommendations' 
       });
@@ -286,7 +288,7 @@ export class EnhancedSearchController {
 
       res.json(bookmark);
     } catch (error) {
-      console.error('Bookmark error:', error);
+      safeLogger.error('Bookmark error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to bookmark item' 
       });
@@ -312,7 +314,7 @@ export class EnhancedSearchController {
 
       res.json(followAction);
     } catch (error) {
-      console.error('Follow error:', error);
+      safeLogger.error('Follow error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to follow item' 
       });
@@ -330,7 +332,7 @@ export class EnhancedSearchController {
 
       res.json(joinAction);
     } catch (error) {
-      console.error('Join community error:', error);
+      safeLogger.error('Join community error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to join community' 
       });
@@ -349,7 +351,7 @@ export class EnhancedSearchController {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Update learning data error:', error);
+      safeLogger.error('Update learning data error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to update learning data' 
       });
@@ -367,7 +369,7 @@ export class EnhancedSearchController {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Track search analytics error:', error);
+      safeLogger.error('Track search analytics error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to track search analytics' 
       });
@@ -393,7 +395,7 @@ export class EnhancedSearchController {
 
       res.json({ success: true });
     } catch (error) {
-      console.error('Track click-through error:', error);
+      safeLogger.error('Track click-through error:', error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to track click-through' 
       });

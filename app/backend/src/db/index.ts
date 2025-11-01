@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import * as schema from "./schema";
 import dotenv from "dotenv";
@@ -18,14 +19,14 @@ if (connectionString) {
     // Disable prefetch as it's not supported in production environments
     client = postgres(connectionString, { prepare: false });
     db = drizzle(client, { schema });
-    console.log('✅ Database connection established successfully');
+    safeLogger.info('✅ Database connection established successfully');
   } catch (error) {
-    console.error('❌ Failed to establish database connection:', error);
+    safeLogger.error('❌ Failed to establish database connection:', error);
     client = null;
     db = null;
   }
 } else {
-  console.warn('⚠️  No DATABASE_URL provided. Database operations will be disabled.');
+  safeLogger.warn('⚠️  No DATABASE_URL provided. Database operations will be disabled.');
   client = null;
   db = null;
 }

@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationAuditLog } from '../db/schema';
 import { ModerationAuditLog } from '../models/ModerationModels';
 import evidenceStorageService from './evidenceStorageService';
@@ -102,7 +103,7 @@ class AuditLoggingService {
         reasoning: auditLog.reasoning, // Return original reasoning without IPFS hash
       } as unknown as ModerationAuditLog;
     } catch (error) {
-      console.error('Error creating audit log:', error);
+      safeLogger.error('Error creating audit log:', error);
       throw new Error(`Failed to create audit log: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -170,7 +171,7 @@ class AuditLoggingService {
         hasMore: (query.offset || 0) + logs.length < total,
       };
     } catch (error) {
-      console.error('Error retrieving audit trail:', error);
+      safeLogger.error('Error retrieving audit trail:', error);
       throw new Error(`Failed to retrieve audit trail: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -223,7 +224,7 @@ class AuditLoggingService {
         isValid: exists,
       };
     } catch (error) {
-      console.error('Error verifying audit log integrity:', error);
+      safeLogger.error('Error verifying audit log integrity:', error);
       throw new Error(`Failed to verify audit log integrity: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -337,7 +338,7 @@ class AuditLoggingService {
         if (result.status === 'fulfilled') {
           results.push(result.value);
         } else {
-          console.error('Failed to create audit log in batch:', result.reason);
+          safeLogger.error('Failed to create audit log in batch:', result.reason);
         }
       }
     }
@@ -400,7 +401,7 @@ class AuditLoggingService {
         averageLogsPerDay: logs.length / daysDiff,
       };
     } catch (error) {
-      console.error('Error getting audit statistics:', error);
+      safeLogger.error('Error getting audit statistics:', error);
       throw new Error(`Failed to get audit statistics: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -427,7 +428,7 @@ class AuditLoggingService {
 
       return JSON.stringify(auditTrail.logs, null, 2);
     } catch (error) {
-      console.error('Error exporting audit trail:', error);
+      safeLogger.error('Error exporting audit trail:', error);
       throw new Error(`Failed to export audit trail: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import fs from 'fs';
 
@@ -92,8 +93,8 @@ class IntegrationTestRunner {
     parallel?: boolean;
     bail?: boolean;
   } = {}): Promise<TestReport> {
-    console.log('🚀 Backend API Integration Test Suite');
-    console.log('═'.repeat(60));
+    safeLogger.info('🚀 Backend API Integration Test Suite');
+    safeLogger.info('═'.repeat(60));
     
     this.startTime = Date.now();
     
@@ -131,25 +132,25 @@ class IntegrationTestRunner {
     options: { verbose?: boolean; coverage?: boolean; bail?: boolean }
   ): Promise<void> {
     for (const suite of suites) {
-      console.log(`\n🧪 Running ${suite.name}...`);
-      console.log(`📝 ${suite.description}`);
-      console.log('─'.repeat(60));
+      safeLogger.info(`\n🧪 Running ${suite.name}...`);
+      safeLogger.info(`📝 ${suite.description}`);
+      safeLogger.info('─'.repeat(60));
 
       const result = await this.runSingleTest(suite, options);
       this.results.push(result);
 
       if (!result.passed) {
-        console.error(`❌ ${suite.name} failed`);
+        safeLogger.error(`❌ ${suite.name} failed`);
         if (options.verbose && result.error) {
-          console.error(result.error);
+          safeLogger.error(result.error);
         }
         
         if (options.bail && suite.critical) {
-          console.error('💥 Critical test failed, stopping execution');
+          safeLogger.error('💥 Critical test failed, stopping execution');
           break;
         }
       } else {
-        console.log(`✅ ${suite.name} passed (${result.duration}ms)`);
+        safeLogger.info(`✅ ${suite.name} passed (${result.duration}ms)`);
       }
     }
   }
@@ -158,7 +159,7 @@ class IntegrationTestRunner {
     suites: TestSuite[], 
     options: { verbose?: boolean; coverage?: boolean }
   ): Promise<void> {
-    console.log(`\n🔄 Running ${suites.length} test suites in parallel...`);
+    safeLogger.info(`\n🔄 Running ${suites.length} test suites in parallel...`);
     
     const promises = suites.map(suite => this.runSingleTest(suite, options));
     const results = await Promise.allSettled(promises);
@@ -252,13 +253,13 @@ class IntegrationTestRunner {
         return coverage.total?.statements?.pct || 0;
       }
     } catch (error) {
-      console.warn('Could not read coverage data:', error);
+      safeLogger.warn('Could not read coverage data:', error);
     }
     return 0;
   }
 
   private async setupTestEnvironment(): Promise<void> {
-    console.log('🔧 Setting up test environment...');
+    safeLogger.info('🔧 Setting up test environment...');
     
     try {
       // Set test environment variables
@@ -274,15 +275,15 @@ class IntegrationTestRunner {
         execSync('npm run db:test:setup', { stdio: 'pipe' });
       }
       
-      console.log('✅ Test environment ready');
+      safeLogger.info('✅ Test environment ready');
     } catch (error) {
-      console.error('❌ Failed to setup test environment:', error);
+      safeLogger.error('❌ Failed to setup test environment:', error);
       throw error;
     }
   }
 
   private async cleanupTestEnvironment(): Promise<void> {
-    console.log('\n🧹 Cleaning up test environment...');
+    safeLogger.info('\n🧹 Cleaning up test environment...');
     
     try {
       // Cleanup test database
@@ -296,9 +297,9 @@ class IntegrationTestRunner {
         fs.rmSync(cacheDir, { recursive: true, force: true });
       }
       
-      console.log('✅ Test environment cleaned up');
+      safeLogger.info('✅ Test environment cleaned up');
     } catch (error) {
-      console.warn('⚠️  Cleanup warning:', error);
+      safeLogger.warn('⚠️  Cleanup warning:', error);
     }
   }
 
@@ -331,38 +332,38 @@ class IntegrationTestRunner {
   }
 
   private printReport(report: TestReport): void {
-    console.log('\n' + '═'.repeat(60));
-    console.log('📊 Integration Test Results Summary');
-    console.log('─'.repeat(60));
-    console.log(`✅ Passed: ${report.passedSuites}/${report.totalSuites} test suites`);
-    console.log(`❌ Failed: ${report.failedSuites}/${report.totalSuites} test suites`);
-    console.log(`⏱️  Total Duration: ${(report.totalDuration / 1000).toFixed(2)}s`);
+    safeLogger.info('\n' + '═'.repeat(60));
+    safeLogger.info('📊 Integration Test Results Summary');
+    safeLogger.info('─'.repeat(60));
+    safeLogger.info(`✅ Passed: ${report.passedSuites}/${report.totalSuites} test suites`);
+    safeLogger.info(`❌ Failed: ${report.failedSuites}/${report.totalSuites} test suites`);
+    safeLogger.info(`⏱️  Total Duration: ${(report.totalDuration / 1000).toFixed(2)}s`);
     
     if (report.overallCoverage > 0) {
-      console.log(`📈 Overall Coverage: ${report.overallCoverage.toFixed(1)}%`);
+      safeLogger.info(`📈 Overall Coverage: ${report.overallCoverage.toFixed(1)}%`);
     }
 
     if (report.failedSuites > 0) {
-      console.log('\n❌ Failed Test Suites:');
+      safeLogger.info('\n❌ Failed Test Suites:');
       report.results
         .filter(r => !r.passed)
         .forEach(result => {
-          console.log(`  • ${result.suite}: ${result.error}`);
+          safeLogger.info(`  • ${result.suite}: ${result.error}`);
         });
     }
 
-    console.log('\n📋 Detailed Results:');
+    safeLogger.info('\n📋 Detailed Results:');
     report.results.forEach(result => {
       const status = result.passed ? '✅' : '❌';
       const duration = `${result.duration}ms`;
       const coverage = result.coverage ? ` (${result.coverage.toFixed(1)}% coverage)` : '';
-      console.log(`  ${status} ${result.suite} - ${duration}${coverage}`);
+      safeLogger.info(`  ${status} ${result.suite} - ${duration}${coverage}`);
     });
 
     if (report.passedSuites === report.totalSuites) {
-      console.log('\n🎉 All integration tests passed!');
+      safeLogger.info('\n🎉 All integration tests passed!');
     } else {
-      console.log('\n💥 Some integration tests failed!');
+      safeLogger.info('\n💥 Some integration tests failed!');
     }
   }
 
@@ -376,9 +377,9 @@ class IntegrationTestRunner {
       const reportFile = path.join(reportsDir, `integration-test-report-${Date.now()}.json`);
       fs.writeFileSync(reportFile, JSON.stringify(report, null, 2));
       
-      console.log(`\n📄 Test report saved: ${reportFile}`);
+      safeLogger.info(`\n📄 Test report saved: ${reportFile}`);
     } catch (error) {
-      console.warn('⚠️  Could not save test report:', error);
+      safeLogger.warn('⚠️  Could not save test report:', error);
     }
   }
 }
@@ -406,7 +407,7 @@ function parseArgs(): {
 }
 
 function showHelp(): void {
-  console.log(`
+  safeLogger.info(`
 🧪 Backend API Integration Test Runner
 
 Usage:
@@ -453,7 +454,7 @@ async function main(): Promise<void> {
     // Exit with appropriate code
     process.exit(report.failedSuites > 0 ? 1 : 0);
   } catch (error) {
-    console.error('❌ Test runner failed:', error);
+    safeLogger.error('❌ Test runner failed:', error);
     process.exit(1);
   }
 }
@@ -463,5 +464,5 @@ export { IntegrationTestRunner, TestSuite, TestResult, TestReport };
 
 // Run if called directly
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch(safeLogger.error);
 }

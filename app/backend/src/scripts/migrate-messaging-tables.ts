@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -9,29 +10,29 @@ async function main() {
   const connectionString = process.env.DATABASE_URL || "postgresql://username:password@localhost:5432/linkdao";
   const client = postgres(connectionString, { prepare: false });
 
-  console.log("Running messaging tables migration...");
+  safeLogger.info("Running messaging tables migration...");
 
   try {
     // Read the messaging migration SQL file
     const migrationPath = path.join(__dirname, "../../drizzle/0047_marketplace_messaging.sql");
     const migrationSQL = fs.readFileSync(migrationPath, "utf-8");
 
-    console.log(`Executing migration: 0047_marketplace_messaging.sql`);
+    safeLogger.info(`Executing migration: 0047_marketplace_messaging.sql`);
 
     // Execute the migration
     await client.unsafe(migrationSQL);
 
-    console.log("✅ Messaging tables migration completed successfully!");
-    console.log("\nCreated/Updated tables:");
-    console.log("  - conversation_participants");
-    console.log("  - message_templates");
-    console.log("  - quick_replies");
-    console.log("  - conversation_analytics");
-    console.log("  - message_attachments");
-    console.log("  - auto_response_rules");
+    safeLogger.info("✅ Messaging tables migration completed successfully!");
+    safeLogger.info("\nCreated/Updated tables:");
+    safeLogger.info("  - conversation_participants");
+    safeLogger.info("  - message_templates");
+    safeLogger.info("  - quick_replies");
+    safeLogger.info("  - conversation_analytics");
+    safeLogger.info("  - message_attachments");
+    safeLogger.info("  - auto_response_rules");
 
     // Verify tables were created
-    console.log("\nVerifying tables...");
+    safeLogger.info("\nVerifying tables...");
     const tables = await client`
       SELECT table_name
       FROM information_schema.tables
@@ -40,22 +41,22 @@ async function main() {
       ORDER BY table_name
     `;
 
-    console.log("\nTables found in database:");
+    safeLogger.info("\nTables found in database:");
     tables.forEach((table: any) => {
-      console.log(`  ✓ ${table.table_name}`);
+      safeLogger.info(`  ✓ ${table.table_name}`);
     });
 
     if (tables.length === 0) {
-      console.warn("\n⚠️  Warning: No messaging tables found. Migration may not have run successfully.");
+      safeLogger.warn("\n⚠️  Warning: No messaging tables found. Migration may not have run successfully.");
     }
 
   } catch (error: any) {
-    console.error("Error running messaging tables migration:");
-    console.error(error.message);
+    safeLogger.error("Error running messaging tables migration:");
+    safeLogger.error(error.message);
 
     // If error is "already exists", that's actually OK
     if (error.message && error.message.includes("already exists")) {
-      console.log("\n✅ Tables already exist - migration is idempotent, this is OK!");
+      safeLogger.info("\n✅ Tables already exist - migration is idempotent, this is OK!");
     } else {
       throw error;
     }
@@ -65,6 +66,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  safeLogger.error("Fatal error:", error);
   process.exit(1);
 });

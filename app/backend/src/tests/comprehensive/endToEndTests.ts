@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { Browser, Page } from 'playwright';
 
 export interface E2ETestResults {
@@ -46,7 +47,7 @@ export class EndToEndTestSuite {
   }
 
   async testPurchaseWorkflow(): Promise<E2ETestResults> {
-    console.log('Testing complete purchase workflow...');
+    safeLogger.info('Testing complete purchase workflow...');
     
     const results: E2ETestResults = {
       productDiscoveryTested: false,
@@ -105,7 +106,7 @@ export class EndToEndTestSuite {
   }
 
   async testSellerOnboarding(): Promise<E2ETestResults> {
-    console.log('Testing seller onboarding workflow...');
+    safeLogger.info('Testing seller onboarding workflow...');
     
     const results: E2ETestResults = this.getDefaultResults();
 
@@ -139,7 +140,7 @@ export class EndToEndTestSuite {
   }
 
   async testDisputeResolution(): Promise<E2ETestResults> {
-    console.log('Testing dispute resolution workflow...');
+    safeLogger.info('Testing dispute resolution workflow...');
     
     const results: E2ETestResults = this.getDefaultResults();
 
@@ -170,7 +171,7 @@ export class EndToEndTestSuite {
   }
 
   async testNFTTrading(): Promise<E2ETestResults> {
-    console.log('Testing NFT trading workflow...');
+    safeLogger.info('Testing NFT trading workflow...');
     
     const results: E2ETestResults = this.getDefaultResults();
 
@@ -201,7 +202,7 @@ export class EndToEndTestSuite {
   }
 
   async testGovernance(): Promise<E2ETestResults> {
-    console.log('Testing governance participation workflow...');
+    safeLogger.info('Testing governance participation workflow...');
     
     const results: E2ETestResults = this.getDefaultResults();
 

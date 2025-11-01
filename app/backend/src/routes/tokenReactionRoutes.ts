@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { tokenReactionController } from '../controllers/tokenReactionController';
 import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';

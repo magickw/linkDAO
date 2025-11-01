@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { safeLogger } from '../utils/safeLogger';
 import { createHash } from 'crypto';
 import { performance } from 'perf_hooks';
 import { db } from '../db/index';
@@ -94,7 +95,7 @@ class ImageStorageService {
         this.cdnService = new CDNIntegrationService(cdnConfig, redisUrl);
       }
     } catch (error) {
-      console.warn('CDN service initialization failed:', error);
+      safeLogger.warn('CDN service initialization failed:', error);
     }
   }
 
@@ -164,7 +165,7 @@ class ImageStorageService {
       };
 
     } catch (error) {
-      console.error('Image validation error:', error);
+      safeLogger.error('Image validation error:', error);
       return {
         isValid: false,
         errors: ['Failed to validate image file']
@@ -254,11 +255,11 @@ class ImageStorageService {
       const result = await pipeline.toBuffer();
       
       const duration = performance.now() - startTime;
-      console.log(`Image optimization completed in ${duration.toFixed(2)}ms, size reduced from ${buffer.length} to ${result.length} bytes`);
+      safeLogger.info(`Image optimization completed in ${duration.toFixed(2)}ms, size reduced from ${buffer.length} to ${result.length} bytes`);
       
       return result;
     } catch (error) {
-      console.error('Image optimization error:', error);
+      safeLogger.error('Image optimization error:', error);
       throw new Error('Failed to optimize image');
     }
   }
@@ -302,11 +303,11 @@ class ImageStorageService {
       const thumbnails = await Promise.all(thumbnailPromises);
       
       const duration = performance.now() - startTime;
-      console.log(`Generated ${thumbnails.length} thumbnails in ${duration.toFixed(2)}ms`);
+      safeLogger.info(`Generated ${thumbnails.length} thumbnails in ${duration.toFixed(2)}ms`);
       
       return thumbnails;
     } catch (error) {
-      console.error('Thumbnail generation error:', error);
+      safeLogger.error('Thumbnail generation error:', error);
       throw new Error('Failed to generate thumbnails');
     }
   }
@@ -370,7 +371,7 @@ class ImageStorageService {
           await this.cdnService.uploadAsset(cdnKey, optimizedBuffer, metadata.format === 'png' ? 'image/png' : 'image/jpeg');
           cdnUrl = this.cdnService.generateCDNUrl(cdnKey);
         } catch (cdnError) {
-          console.warn('CDN upload failed, using IPFS URL:', cdnError);
+          safeLogger.warn('CDN upload failed, using IPFS URL:', cdnError);
         }
       }
 
@@ -408,7 +409,7 @@ class ImageStorageService {
       };
 
     } catch (error) {
-      console.error('Image upload error:', error);
+      safeLogger.error('Image upload error:', error);
       throw error;
     }
   }
@@ -454,7 +455,7 @@ class ImageStorageService {
       };
 
     } catch (error) {
-      console.error('Get image error:', error);
+      safeLogger.error('Get image error:', error);
       return null;
     }
   }
@@ -484,7 +485,7 @@ class ImageStorageService {
       try {
         await ipfsService.unpinContent(record.ipfsHash);
       } catch (unpinError) {
-        console.warn('Failed to unpin from IPFS:', unpinError);
+        safeLogger.warn('Failed to unpin from IPFS:', unpinError);
       }
 
       // Delete from CDN
@@ -493,7 +494,7 @@ class ImageStorageService {
           const cdnKey = `images/${record.ipfsHash}/${record.originalFilename}`;
           await this.cdnService.deleteAsset(cdnKey);
         } catch (cdnError) {
-          console.warn('Failed to delete from CDN:', cdnError);
+          safeLogger.warn('Failed to delete from CDN:', cdnError);
         }
       }
 
@@ -505,7 +506,7 @@ class ImageStorageService {
       return true;
 
     } catch (error) {
-      console.error('Delete image error:', error);
+      safeLogger.error('Delete image error:', error);
       return false;
     }
   }
@@ -540,7 +541,7 @@ class ImageStorageService {
       }));
 
     } catch (error) {
-      console.error('Get images by usage error:', error);
+      safeLogger.error('Get images by usage error:', error);
       return [];
     }
   }
@@ -587,7 +588,7 @@ class ImageStorageService {
 
       return null;
     } catch (error) {
-      console.error('Duplicate detection error:', error);
+      safeLogger.error('Duplicate detection error:', error);
       return null;
     }
   }
@@ -649,7 +650,7 @@ class ImageStorageService {
       };
 
     } catch (error) {
-      console.error('Storage stats error:', error);
+      safeLogger.error('Storage stats error:', error);
       return {
         totalImages: 0,
         totalSize: 0,

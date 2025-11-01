@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -109,7 +110,7 @@ export const healthCheckHandler = async (req: Request, res: Response) => {
 
 // Graceful shutdown handler
 export const gracefulShutdown = (signal: string) => {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  safeLogger.info(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
   
   // Update health status to unhealthy
   const healthService = HealthCheckService.getInstance();
@@ -118,7 +119,7 @@ export const gracefulShutdown = (signal: string) => {
   
   // Give some time for ongoing requests to complete
   setTimeout(() => {
-    console.log('✅ Graceful shutdown completed');
+    safeLogger.info('✅ Graceful shutdown completed');
     process.exit(0);
   }, 5000);
 };

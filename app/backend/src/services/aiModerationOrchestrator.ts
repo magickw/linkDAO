@@ -1,4 +1,5 @@
 import { OpenAIModerationService } from './vendors/openaiModerationService';
+import { safeLogger } from '../utils/safeLogger';
 import { PerspectiveAPIService } from './vendors/perspectiveApiService';
 import { GoogleVisionService } from './vendors/googleVisionService';
 import { gracefulDegradationService } from './gracefulDegradationService';
@@ -119,7 +120,7 @@ export class AIModerationOrchestrator {
       );
 
     } catch (error) {
-      console.error('Error in AI moderation orchestrator:', error);
+      safeLogger.error('Error in AI moderation orchestrator:', error);
       
       // Update service health
       systemHealthMonitoringService.updateServiceHealth('ai-moderation-orchestrator', false);

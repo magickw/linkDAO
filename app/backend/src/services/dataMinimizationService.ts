@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface DataMinimizationRule {
   ruleId: string;
@@ -106,7 +107,7 @@ class DataMinimizationService extends EventEmitter {
       this.emit('initialized');
       
     } catch (error) {
-      console.error('Failed to initialize data minimization service:', error);
+      safeLogger.error('Failed to initialize data minimization service:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { systemHealthMonitoringService, HealthMetrics } from './systemHealthMonitoringService';
 import { monitoringDashboardService } from './monitoringDashboardService';
 
@@ -164,7 +165,7 @@ export class EnhancedSystemHealthService extends EventEmitter {
         await this.updatePerformanceTrends();
         await this.detectAnomalies();
       } catch (error) {
-        console.error('Enhanced monitoring error:', error);
+        safeLogger.error('Enhanced monitoring error:', error);
         this.emit('monitoringError', error);
       }
     }, 30000);

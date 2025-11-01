@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { securityConfig } from '../config/securityConfig';
 import { securityMonitoringService, SecurityEvent, SecuritySeverity } from './securityMonitoringService';
@@ -211,7 +212,7 @@ class SecurityAnalyticsService extends EventEmitter {
       this.generateRecommendations();
     }, 6 * 60 * 60 * 1000); // Every 6 hours
 
-    console.log('Security analytics service initialized');
+    safeLogger.info('Security analytics service initialized');
   }
 
   /**

@@ -5,10 +5,11 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 
 async function runMigration() {
-  console.log('🔄 Running migration: Add Bookmarks and Shares Tables...\n');
+  safeLogger.info('🔄 Running migration: Add Bookmarks and Shares Tables...\n');
 
   try {
     // Create bookmarks table
@@ -23,7 +24,7 @@ async function runMigration() {
         CONSTRAINT fk_bookmarks_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
       )
     `);
-    console.log('✅ Created bookmarks table');
+    safeLogger.info('✅ Created bookmarks table');
 
     // Create bookmark indexes
     await db.execute(sql`
@@ -32,7 +33,7 @@ async function runMigration() {
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS bookmark_post_idx ON bookmarks(post_id)
     `);
-    console.log('✅ Created bookmark indexes');
+    safeLogger.info('✅ Created bookmark indexes');
 
     // Create shares table
     await db.execute(sql`
@@ -49,7 +50,7 @@ async function runMigration() {
         CONSTRAINT fk_shares_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    console.log('✅ Created shares table');
+    safeLogger.info('✅ Created shares table');
 
     // Create share indexes
     await db.execute(sql`
@@ -58,7 +59,7 @@ async function runMigration() {
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS share_post_created_idx ON shares(post_id, created_at)
     `);
-    console.log('✅ Created share indexes');
+    safeLogger.info('✅ Created share indexes');
 
     // Add comments
     await db.execute(sql`
@@ -67,12 +68,12 @@ async function runMigration() {
     await db.execute(sql`
       COMMENT ON TABLE shares IS 'Tracks when and how users share posts'
     `);
-    console.log('✅ Added table comments');
+    safeLogger.info('✅ Added table comments');
 
-    console.log('\n✅ Migration completed successfully!\n');
+    safeLogger.info('\n✅ Migration completed successfully!\n');
     process.exit(0);
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    safeLogger.error('\n❌ Migration failed:', error);
     process.exit(1);
   }
 }

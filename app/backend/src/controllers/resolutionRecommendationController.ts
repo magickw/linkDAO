@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { resolutionRecommendationService } from '../services/resolutionRecommendationService';
 
 export class ResolutionRecommendationController {
@@ -24,7 +26,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error generating resolution recommendation:', error);
+      safeLogger.error('Error generating resolution recommendation:', error);
       res.status(500).json({ 
         error: 'Failed to generate resolution recommendation',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -60,7 +62,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error finding precedent cases:', error);
+      safeLogger.error('Error finding precedent cases:', error);
       res.status(500).json({ 
         error: 'Failed to find precedent cases',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -103,7 +105,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error checking policy compliance:', error);
+      safeLogger.error('Error checking policy compliance:', error);
       res.status(500).json({ 
         error: 'Failed to check policy compliance',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -147,7 +149,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error getting impact assessment:', error);
+      safeLogger.error('Error getting impact assessment:', error);
       res.status(500).json({ 
         error: 'Failed to get impact assessment',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -193,7 +195,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error comparing resolution options:', error);
+      safeLogger.error('Error comparing resolution options:', error);
       res.status(500).json({ 
         error: 'Failed to compare resolution options',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -238,7 +240,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error calculating resolution confidence:', error);
+      safeLogger.error('Error calculating resolution confidence:', error);
       res.status(500).json({ 
         error: 'Failed to calculate resolution confidence',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -300,7 +302,7 @@ export class ResolutionRecommendationController {
       });
 
     } catch (error) {
-      console.error('Error getting resolution analytics:', error);
+      safeLogger.error('Error getting resolution analytics:', error);
       res.status(500).json({ 
         error: 'Failed to get resolution analytics',
         details: error instanceof Error ? error.message : 'Unknown error'

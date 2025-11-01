@@ -6,6 +6,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { authenticateToken } from '../middleware/auth';
 import { securityController } from '../controllers/securityController';
 import { apiRateLimit, authRateLimit } from '../middleware/securityMiddleware';
@@ -23,27 +24,27 @@ router.get('/events', apiRateLimit, securityController.getSecurityEvents.bind(se
 
 // Security Alerts Routes
 router.get('/alerts', apiRateLimit, securityController.getSecurityAlerts.bind(securityController));
-router.post('/alerts/:alertId/acknowledge', apiRateLimit, securityController.acknowledgeAlert.bind(securityController));
-router.post('/alerts/:alertId/resolve', apiRateLimit, securityController.resolveAlert.bind(securityController));
+router.post('/alerts/:alertId/acknowledge', csrfProtection,  apiRateLimit, securityController.acknowledgeAlert.bind(securityController));
+router.post('/alerts/:alertId/resolve', csrfProtection,  apiRateLimit, securityController.resolveAlert.bind(securityController));
 
 // Vulnerability Management Routes
-router.post('/vulnerabilities/scan', authRateLimit, securityController.startVulnerabilityScan.bind(securityController));
+router.post('/vulnerabilities/scan', csrfProtection,  authRateLimit, securityController.startVulnerabilityScan.bind(securityController));
 router.get('/vulnerabilities/reports', apiRateLimit, securityController.getVulnerabilityReports.bind(securityController));
-router.put('/vulnerabilities/:vulnerabilityId/status', apiRateLimit, securityController.updateVulnerabilityStatus.bind(securityController));
+router.put('/vulnerabilities/:vulnerabilityId/status', csrfProtection,  apiRateLimit, securityController.updateVulnerabilityStatus.bind(securityController));
 
 // Compliance Routes
 router.get('/compliance/dashboard', apiRateLimit, securityController.getComplianceDashboard.bind(securityController));
-router.post('/compliance/reports', apiRateLimit, securityController.generateComplianceReport.bind(securityController));
-router.post('/compliance/data-export', authRateLimit, securityController.requestDataExport.bind(securityController));
-router.post('/compliance/data-deletion', authRateLimit, securityController.requestDataDeletion.bind(securityController));
-router.post('/compliance/opt-out', authRateLimit, securityController.requestOptOut.bind(securityController));
-router.post('/compliance/consent', apiRateLimit, securityController.recordConsent.bind(securityController));
+router.post('/compliance/reports', csrfProtection,  apiRateLimit, securityController.generateComplianceReport.bind(securityController));
+router.post('/compliance/data-export', csrfProtection,  authRateLimit, securityController.requestDataExport.bind(securityController));
+router.post('/compliance/data-deletion', csrfProtection,  authRateLimit, securityController.requestDataDeletion.bind(securityController));
+router.post('/compliance/opt-out', csrfProtection,  authRateLimit, securityController.requestOptOut.bind(securityController));
+router.post('/compliance/consent', csrfProtection,  apiRateLimit, securityController.recordConsent.bind(securityController));
 
 // Key Management Routes
 router.get('/keys/dashboard', apiRateLimit, securityController.getKeyManagementDashboard.bind(securityController));
-router.post('/keys/generate', authRateLimit, securityController.generateKey.bind(securityController));
-router.post('/keys/:keyId/rotate', authRateLimit, securityController.rotateKey.bind(securityController));
-router.post('/keys/:keyId/revoke', authRateLimit, securityController.revokeKey.bind(securityController));
+router.post('/keys/generate', csrfProtection,  authRateLimit, securityController.generateKey.bind(securityController));
+router.post('/keys/:keyId/rotate', csrfProtection,  authRateLimit, securityController.rotateKey.bind(securityController));
+router.post('/keys/:keyId/revoke', csrfProtection,  authRateLimit, securityController.revokeKey.bind(securityController));
 
 // Audit Logging Routes
 router.get('/audit/logs', apiRateLimit, securityController.getAuditLogs.bind(securityController));

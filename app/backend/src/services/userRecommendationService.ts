@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users, follows, posts, reactions, tips, communities } from '../db/schema';
 import { eq, desc, sql, and, or, ne, count, avg, sum, inArray } from 'drizzle-orm';
 
@@ -106,7 +107,7 @@ export class UserRecommendationService {
       recommendations.sort((a, b) => b.score - a.score);
       return recommendations.slice(0, limit);
     } catch (error) {
-      console.error('Error in collaborative filtering:', error);
+      safeLogger.error('Error in collaborative filtering:', error);
       return [];
     }
   }
@@ -155,7 +156,7 @@ export class UserRecommendationService {
       recommendations.sort((a, b) => b.score - a.score);
       return recommendations.slice(0, limit);
     } catch (error) {
-      console.error('Error in content-based filtering:', error);
+      safeLogger.error('Error in content-based filtering:', error);
       return [];
     }
   }
@@ -216,7 +217,7 @@ export class UserRecommendationService {
       finalRecs.sort((a, b) => b.score - a.score);
       return finalRecs.slice(0, limit);
     } catch (error) {
-      console.error('Error in hybrid recommendation:', error);
+      safeLogger.error('Error in hybrid recommendation:', error);
       return [];
     }
   }
@@ -264,7 +265,7 @@ export class UserRecommendationService {
         similarity: user.commonFollows / currentFollowingIds.length,
       }));
     } catch (error) {
-      console.error('Error finding similar users:', error);
+      safeLogger.error('Error finding similar users:', error);
       return [];
     }
   }
@@ -300,7 +301,7 @@ export class UserRecommendationService {
 
       return Array.from(interests).slice(0, 10);
     } catch (error) {
-      console.error('Error getting user interests:', error);
+      safeLogger.error('Error getting user interests:', error);
       return [];
     }
   }
@@ -367,7 +368,7 @@ export class UserRecommendationService {
 
       return results;
     } catch (error) {
-      console.error('Error finding users by interests:', error);
+      safeLogger.error('Error finding users by interests:', error);
       return [];
     }
   }
@@ -456,7 +457,7 @@ export class UserRecommendationService {
 
       return result.count || 0;
     } catch (error) {
-      console.error('Error calculating mutual connections:', error);
+      safeLogger.error('Error calculating mutual connections:', error);
       return 0;
     }
   }
@@ -483,7 +484,7 @@ export class UserRecommendationService {
 
       return (postCount.count || 0) * 5 + (reactionCount.count || 0) * 2 + (tipCount.count || 0) * 3;
     } catch (error) {
-      console.error('Error calculating activity score:', error);
+      safeLogger.error('Error calculating activity score:', error);
       return 0;
     }
   }
@@ -520,7 +521,7 @@ export class UserRecommendationService {
 
       return !!result;
     } catch (error) {
-      console.error('Error checking community membership:', error);
+      safeLogger.error('Error checking community membership:', error);
       return false;
     }
   }

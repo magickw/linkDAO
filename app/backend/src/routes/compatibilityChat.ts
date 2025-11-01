@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { requireJwt } from '../middleware/authJwt';
 // Import Drizzle DB and table bindings for typed queries
 import { db } from '../db';
@@ -74,7 +76,7 @@ router.get('/api/chat/conversations', requireJwt, (_req: Request, res: Response)
 
         return res.json({ conversations: rows });
       } catch (err) {
-        console.error('[compatibilityChat] DB error fetching conversations', err);
+        safeLogger.error('[compatibilityChat] DB error fetching conversations', err);
         const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
         return res.json({ conversations: list });
       }
@@ -93,7 +95,7 @@ router.get('/api/conversations', requireJwt, (_req: Request, res: Response) => {
 });
 
 // Create a DM conversation
-router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/conversations/dm', csrfProtection,  requireJwt, (req: Request, res: Response) => {
   const { participants } = req.body || {};
   if (!Array.isArray(participants) || participants.length === 0) {
     return res.status(400).json({ error: 'participants (string[]) required' });
@@ -116,7 +118,7 @@ router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Respon
   messages[String(created.id)] = [];
   return res.status(201).json({ conversation: created });
       } catch (err) {
-        console.error('[compatibilityChat] DB error creating conversation', err);
+        safeLogger.error('[compatibilityChat] DB error creating conversation', err);
         // fallback to in-memory
         const id = genId();
         const conv: Conversation = {
@@ -171,7 +173,7 @@ router.get('/api/chat/history/:conversationId', requireJwt, (req: Request, res: 
         const convRow = convRows[0];
         return res.json({ conversation: convRow || inMemoryConversations[conversationId], messages: msgs });
       } catch (err) {
-        console.error('[compatibilityChat] DB error fetching history', err);
+        safeLogger.error('[compatibilityChat] DB error fetching history', err);
         const msgs = messages[conversationId] || [];
         return res.json({ conversation: inMemoryConversations[conversationId], messages: msgs });
       }
@@ -184,7 +186,7 @@ router.get('/api/chat/history/:conversationId', requireJwt, (req: Request, res: 
 });
 
 // Post a message
-router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/messages', csrfProtection,  requireJwt, (req: Request, res: Response) => {
   const { conversation_id, sender_address, content } = req.body || {};
   if (!conversation_id || !inMemoryConversations[conversation_id]) {
     return res.status(400).json({ error: 'valid conversation_id required' });
@@ -228,7 +230,7 @@ router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
         });
         return res.status(201).json({ message: created });
       } catch (err) {
-        console.error('[compatibilityChat] DB error creating message', err);
+        safeLogger.error('[compatibilityChat] DB error creating message', err);
         // fallback to in-memory
         const msg: Message = {
           id: genId(),
@@ -268,7 +270,7 @@ router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
 });
 
 // Mark messages as read for a conversation
-router.post('/api/chat/messages/read', requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/messages/read', csrfProtection,  requireJwt, (req: Request, res: Response) => {
   const { conversation_id } = req.body || {};
   if (!conversation_id) {
     return res.status(400).json({ error: 'valid conversation_id required' });
@@ -282,7 +284,7 @@ router.post('/api/chat/messages/read', requireJwt, (req: Request, res: Response)
         if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
         return res.json({ ok: true });
       } catch (err) {
-        console.error('[compatibilityChat] DB error marking read', err);
+        safeLogger.error('[compatibilityChat] DB error marking read', err);
         if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
         return res.json({ ok: true });
       }

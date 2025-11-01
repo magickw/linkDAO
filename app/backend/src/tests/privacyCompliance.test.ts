@@ -3,22 +3,18 @@ import {
   PIIDetectionService, 
   piiDetectionService 
 } from '../services/piiDetectionService';
-import { 
   GeofencingComplianceService,
   geofencingComplianceService,
   ComplianceContext 
 } from '../services/geofencingComplianceService';
-import { 
   DataRetentionService,
   dataRetentionService 
 } from '../services/dataRetentionService';
-import { 
   UserConsentService,
   userConsentService,
   ConsentType,
   ConsentStatus 
 } from '../services/userConsentService';
-import { 
   PrivacyEvidenceStorageService,
   privacyEvidenceStorageService 
 } from '../services/privacyEvidenceStorageService';

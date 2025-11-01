@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
 import { FollowService } from './followService';
 import { PostService } from './postService';
@@ -56,11 +57,11 @@ export class IndexingService {
   }
 
   async start(): Promise<void> {
-    console.log('Starting blockchain indexer...');
+    safeLogger.info('Starting blockchain indexer...');
     
     // Get the current block number
     this.lastBlock = await this.provider.getBlockNumber();
-    console.log(`Current block number: ${this.lastBlock}`);
+    safeLogger.info(`Current block number: ${this.lastBlock}`);
     
     // Set up event listeners
     this.setupEventListeners();
@@ -72,49 +73,49 @@ export class IndexingService {
   private setupEventListeners(): void {
     // Profile events
     this.profileRegistry.on('ProfileCreated', (owner, tokenId, handle, createdAt, event) => {
-      console.log(`Profile created: ${owner} with handle ${handle}`);
+      safeLogger.info(`Profile created: ${owner} with handle ${handle}`);
       // In a real implementation, we would update our database
       // this.profileService.createProfile(owner, handle, tokenId.toString());
     });
 
     this.profileRegistry.on('ProfileUpdated', (tokenId, handle, avatarCid, bioCid, event) => {
-      console.log(`Profile updated: ${tokenId}`);
+      safeLogger.info(`Profile updated: ${tokenId}`);
       // In a real implementation, we would update our database
       // this.profileService.updateProfile(tokenId.toString(), avatarCid, bioCid);
     });
 
     // Follow events
     this.followModule.on('Followed', (follower, following, event) => {
-      console.log(`${follower} followed ${following}`);
+      safeLogger.info(`${follower} followed ${following}`);
       // In a real implementation, we would update our database
       // this.followService.follow(follower, following);
     });
 
     this.followModule.on('Unfollowed', (follower, following, event) => {
-      console.log(`${follower} unfollowed ${following}`);
+      safeLogger.info(`${follower} unfollowed ${following}`);
       // In a real implementation, we would update our database
       // this.followService.unfollow(follower, following);
     });
 
     // Payment events
     this.paymentRouter.on('PaymentSent', (from, to, token, amount, fee, memo, event) => {
-      console.log(`Payment sent: ${from} -> ${to}, ${amount.toString()} tokens`);
+      safeLogger.info(`Payment sent: ${from} -> ${to}, ${amount.toString()} tokens`);
       // In a real implementation, we would update our database
     });
 
     // Governance events
     this.governance.on('ProposalCreated', (id, proposer, title, description, startBlock, endBlock, event) => {
-      console.log(`Proposal created: ${id} by ${proposer}`);
+      safeLogger.info(`Proposal created: ${id} by ${proposer}`);
       // In a real implementation, we would update our database
     });
 
     this.governance.on('VoteCast', (voter, proposalId, support, votes, reason, event) => {
-      console.log(`Vote cast: ${voter} on proposal ${proposalId}`);
+      safeLogger.info(`Vote cast: ${voter} on proposal ${proposalId}`);
       // In a real implementation, we would update our database
     });
 
     this.governance.on('ProposalExecuted', (id, event) => {
-      console.log(`Proposal executed: ${id}`);
+      safeLogger.info(`Proposal executed: ${id}`);
       // In a real implementation, we would update our database
     });
   }
@@ -124,16 +125,16 @@ export class IndexingService {
       const currentBlock = await this.provider.getBlockNumber();
       
       if (currentBlock > this.lastBlock) {
-        console.log(`Processing blocks ${this.lastBlock + 1} to ${currentBlock}`);
+        safeLogger.info(`Processing blocks ${this.lastBlock + 1} to ${currentBlock}`);
         this.lastBlock = currentBlock;
       }
     } catch (error) {
-      console.error('Error polling new blocks:', error);
+      safeLogger.error('Error polling new blocks:', error);
     }
   }
 
   async stop(): Promise<void> {
-    console.log('Stopping blockchain indexer...');
+    safeLogger.info('Stopping blockchain indexer...');
     // Remove event listeners
     this.profileRegistry.removeAllListeners();
     this.followModule.removeAllListeners();

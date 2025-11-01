@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { PerformanceOptimizationService, ContentInput } from '../services/performanceOptimizationService';
 import { PerceptualHashingService } from '../services/perceptualHashingService';
 import { TextHashingService } from '../services/textHashingService';
@@ -28,19 +29,19 @@ describe('Performance Benchmarking Tests', () => {
     await performanceService.cleanup();
     
     // Log benchmark results
-    console.log('\n=== Performance Benchmark Results ===');
+    safeLogger.info('\n=== Performance Benchmark Results ===');
     benchmarkResults.forEach(result => {
-      console.log(`${result.operation}:`);
-      console.log(`  Total Time: ${result.totalTime}ms`);
-      console.log(`  Average Time: ${result.averageTime.toFixed(2)}ms`);
-      console.log(`  Throughput: ${result.throughput.toFixed(2)} ops/sec`);
+      safeLogger.info(`${result.operation}:`);
+      safeLogger.info(`  Total Time: ${result.totalTime}ms`);
+      safeLogger.info(`  Average Time: ${result.averageTime.toFixed(2)}ms`);
+      safeLogger.info(`  Throughput: ${result.throughput.toFixed(2)} ops/sec`);
       if (result.cacheHitRate !== undefined) {
-        console.log(`  Cache Hit Rate: ${(result.cacheHitRate * 100).toFixed(1)}%`);
+        safeLogger.info(`  Cache Hit Rate: ${(result.cacheHitRate * 100).toFixed(1)}%`);
       }
       if (result.errorRate !== undefined) {
-        console.log(`  Error Rate: ${(result.errorRate * 100).toFixed(1)}%`);
+        safeLogger.info(`  Error Rate: ${(result.errorRate * 100).toFixed(1)}%`);
       }
-      console.log('');
+      safeLogger.info('');
     });
   });
 
@@ -497,7 +498,7 @@ describe('Performance Benchmarking Tests', () => {
       
       if (gcStats.length > 0) {
         const avgFreed = gcStats.reduce((sum, stat) => sum + stat.freed, 0) / gcStats.length;
-        console.log(`Average memory freed per GC: ${(avgFreed / 1024 / 1024).toFixed(2)}MB`);
+        safeLogger.info(`Average memory freed per GC: ${(avgFreed / 1024 / 1024).toFixed(2)}MB`);
       }
     });
   });

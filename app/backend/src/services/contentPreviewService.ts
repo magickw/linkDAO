@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import { linkScraperService } from './linkScraperService';
 import { nftDataService } from './nftDataService';
 import { tokenDataService } from './tokenDataService';
@@ -87,7 +88,7 @@ export class ContentPreviewService {
 
       return preview;
     } catch (error) {
-      console.error('Preview generation failed:', error);
+      safeLogger.error('Preview generation failed:', error);
       throw new Error(`Failed to generate preview for ${url}: ${error.message}`);
     }
   }
@@ -152,7 +153,7 @@ export class ContentPreviewService {
         securityStatus: 'safe'
       };
     } catch (error) {
-      console.error('Failed to fetch NFT data:', error);
+      safeLogger.error('Failed to fetch NFT data:', error);
       throw new Error('Unable to fetch NFT information');
     }
   }

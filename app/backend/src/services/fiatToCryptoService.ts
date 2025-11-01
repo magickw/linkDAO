@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface ExchangeRate {
   from: string;
@@ -77,7 +78,7 @@ export class FiatToCryptoService {
 
       return null;
     } catch (error) {
-      console.error('Exchange rate fetch error:', error);
+      safeLogger.error('Exchange rate fetch error:', error);
       return cached || null; // Return cached if available, even if expired
     }
   }
@@ -109,7 +110,7 @@ export class FiatToCryptoService {
 
       return null;
     } catch (error) {
-      console.error('CoinGecko API error:', error);
+      safeLogger.error('CoinGecko API error:', error);
       return null;
     }
   }
@@ -135,7 +136,7 @@ export class FiatToCryptoService {
 
       return null;
     } catch (error) {
-      console.error('Coinbase API error:', error);
+      safeLogger.error('Coinbase API error:', error);
       return null;
     }
   }
@@ -190,7 +191,7 @@ export class FiatToCryptoService {
         transactionId: `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
     } catch (error) {
-      console.error('Fiat to crypto conversion error:', error);
+      safeLogger.error('Fiat to crypto conversion error:', error);
       return {
         success: false,
         fromAmount: request.fromAmount,
@@ -224,7 +225,7 @@ export class FiatToCryptoService {
 
       return guarantee;
     } catch (error) {
-      console.error('Price guarantee creation error:', error);
+      safeLogger.error('Price guarantee creation error:', error);
       return null;
     }
   }
@@ -276,7 +277,7 @@ export class FiatToCryptoService {
         transactionId: `gconv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
     } catch (error) {
-      console.error('Guaranteed conversion execution error:', error);
+      safeLogger.error('Guaranteed conversion execution error:', error);
       return {
         success: false,
         fromAmount: 0,
@@ -299,7 +300,7 @@ export class FiatToCryptoService {
         refundId: `refund_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       };
     } catch (error) {
-      console.error('Refund processing error:', error);
+      safeLogger.error('Refund processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Refund processing failed',
@@ -309,7 +310,7 @@ export class FiatToCryptoService {
 
   public async handleConversionFailure(transactionId: string, reason: string): Promise<void> {
     try {
-      console.log(`Conversion failure for transaction ${transactionId}: ${reason}`);
+      safeLogger.info(`Conversion failure for transaction ${transactionId}: ${reason}`);
       
       // In a real implementation, this would:
       // 1. Log the failure
@@ -320,7 +321,7 @@ export class FiatToCryptoService {
 
       // For now, just log the failure
     } catch (error) {
-      console.error('Conversion failure handling error:', error);
+      safeLogger.error('Conversion failure handling error:', error);
     }
   }
 

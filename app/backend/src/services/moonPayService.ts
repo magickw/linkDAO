@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 
 export interface MoonPayConfig {
@@ -110,7 +111,7 @@ export class MoonPayService {
 
       return null;
     } catch (error) {
-      console.error('MoonPay quote error:', error);
+      safeLogger.error('MoonPay quote error:', error);
       return null;
     }
   }
@@ -143,7 +144,7 @@ export class MoonPayService {
 
       return response.data;
     } catch (error) {
-      console.error('MoonPay transaction creation error:', error);
+      safeLogger.error('MoonPay transaction creation error:', error);
       return null;
     }
   }
@@ -160,7 +161,7 @@ export class MoonPayService {
 
       return response.data;
     } catch (error) {
-      console.error('MoonPay transaction retrieval error:', error);
+      safeLogger.error('MoonPay transaction retrieval error:', error);
       return null;
     }
   }
@@ -189,7 +190,7 @@ export class MoonPayService {
 
       return { fiat, crypto };
     } catch (error) {
-      console.error('MoonPay supported currencies error:', error);
+      safeLogger.error('MoonPay supported currencies error:', error);
       return { fiat: ['USD', 'EUR', 'GBP'], crypto: ['ETH', 'BTC', 'USDC'] };
     }
   }
@@ -206,14 +207,14 @@ export class MoonPayService {
         Buffer.from(expectedSignature, 'hex')
       );
     } catch (error) {
-      console.error('MoonPay webhook verification error:', error);
+      safeLogger.error('MoonPay webhook verification error:', error);
       return false;
     }
   }
 
   public async processWebhookEvent(event: MoonPayWebhookEvent): Promise<void> {
     try {
-      console.log(`Processing MoonPay webhook event: ${event.type}`);
+      safeLogger.info(`Processing MoonPay webhook event: ${event.type}`);
 
       switch (event.type) {
         case 'transaction_completed':
@@ -226,15 +227,15 @@ export class MoonPayService {
           await this.handleTransactionPending(event.data);
           break;
         default:
-          console.log(`Unhandled MoonPay event type: ${event.type}`);
+          safeLogger.info(`Unhandled MoonPay event type: ${event.type}`);
       }
     } catch (error) {
-      console.error('MoonPay webhook processing error:', error);
+      safeLogger.error('MoonPay webhook processing error:', error);
     }
   }
 
   private async handleTransactionCompleted(transaction: MoonPayTransaction): Promise<void> {
-    console.log('MoonPay transaction completed:', transaction.id);
+    safeLogger.info('MoonPay transaction completed:', transaction.id);
     
     // In a real implementation, this would:
     // 1. Update database with completed transaction
@@ -244,7 +245,7 @@ export class MoonPayService {
   }
 
   private async handleTransactionFailed(transaction: MoonPayTransaction): Promise<void> {
-    console.log('MoonPay transaction failed:', transaction.id);
+    safeLogger.info('MoonPay transaction failed:', transaction.id);
     
     // In a real implementation, this would:
     // 1. Update database with failed transaction
@@ -254,7 +255,7 @@ export class MoonPayService {
   }
 
   private async handleTransactionPending(transaction: MoonPayTransaction): Promise<void> {
-    console.log('MoonPay transaction pending:', transaction.id);
+    safeLogger.info('MoonPay transaction pending:', transaction.id);
     
     // In a real implementation, this would:
     // 1. Update database with pending status
@@ -277,7 +278,7 @@ export class MoonPayService {
         max: response.data.maxAmount || 10000,
       };
     } catch (error) {
-      console.error('MoonPay transaction limits error:', error);
+      safeLogger.error('MoonPay transaction limits error:', error);
       return { min: 10, max: 10000 }; // Default limits
     }
   }
@@ -323,7 +324,7 @@ export class MoonPayService {
 
       return response.status === 200;
     } catch (error) {
-      console.error('MoonPay transaction cancellation error:', error);
+      safeLogger.error('MoonPay transaction cancellation error:', error);
       return false;
     }
   }
@@ -343,7 +344,7 @@ export class MoonPayService {
 
       return response.data || [];
     } catch (error) {
-      console.error('MoonPay transaction history error:', error);
+      safeLogger.error('MoonPay transaction history error:', error);
       return [];
     }
   }

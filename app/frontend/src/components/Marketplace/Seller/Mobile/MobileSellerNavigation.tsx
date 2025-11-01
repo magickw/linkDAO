@@ -26,12 +26,12 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
   const [notifications, setNotifications] = useState(0);
 
   const navigationItems: NavigationItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/seller/dashboard' },
-    { id: 'listings', label: 'Listings', icon: '📝', path: '/seller/listings' },
-    { id: 'orders', label: 'Orders', icon: '📦', badge: notifications, path: '/seller/orders' },
-    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/seller/analytics' },
-    { id: 'profile', label: 'Profile', icon: '👤', path: '/seller/profile' },
-    { id: 'settings', label: 'Settings', icon: '⚙️', path: '/seller/settings' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊', path: '/marketplace' },
+    { id: 'listings', label: 'Listings', icon: '📝', path: '/marketplace/seller/listings' },
+    { id: 'orders', label: 'Orders', icon: '📦', badge: notifications, path: '/marketplace/seller/orders' },
+    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/marketplace/seller/analytics' },
+    { id: 'profile', label: 'Profile', icon: '👤', path: '/marketplace/seller/profile' },
+    { id: 'settings', label: 'Settings', icon: '⚙️', path: '/marketplace/seller/settings' },
   ];
 
   // Close menu when clicking outside

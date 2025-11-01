@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { sellerAnalyticsService } from '../services/sellerAnalyticsService';
 import { z } from 'zod';
 
@@ -50,7 +52,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller performance metrics:', error);
+      safeLogger.error('Error getting seller performance metrics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -84,7 +86,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller tier progression:', error);
+      safeLogger.error('Error getting seller tier progression:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -118,7 +120,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller performance insights:', error);
+      safeLogger.error('Error getting seller performance insights:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -152,7 +154,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error detecting performance bottlenecks:', error);
+      safeLogger.error('Error detecting performance bottlenecks:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -192,7 +194,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error tracking seller performance:', error);
+      safeLogger.error('Error tracking seller performance:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -237,7 +239,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller performance trends:', error);
+      safeLogger.error('Error getting seller performance trends:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -276,7 +278,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error generating seller report:', error);
+      safeLogger.error('Error generating seller report:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -333,7 +335,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller analytics dashboard:', error);
+      safeLogger.error('Error getting seller analytics dashboard:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -388,7 +390,7 @@ export class SellerAnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller performance comparison:', error);
+      safeLogger.error('Error getting seller performance comparison:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -446,7 +448,7 @@ export class SellerAnalyticsController {
         res.json(report);
       }
     } catch (error) {
-      console.error('Error exporting seller analytics:', error);
+      safeLogger.error('Error exporting seller analytics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({

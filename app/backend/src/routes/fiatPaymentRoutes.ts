@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { PurchaseRequest } from '../types/ldaoAcquisition';
 
@@ -6,7 +8,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   const router = express.Router();
 
   // Create payment intent
-  router.post('/create-payment-intent', async (req, res) => {
+  router.post('/create-payment-intent', csrfProtection,  async (req, res) => {
     try {
       const { amount, userAddress } = req.body;
 
@@ -44,7 +46,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
         });
       }
     } catch (error) {
-      console.error('Payment intent creation error:', error);
+      safeLogger.error('Payment intent creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create payment intent',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -53,7 +55,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   });
 
   // Confirm payment
-  router.post('/confirm-payment', async (req, res) => {
+  router.post('/confirm-payment', csrfProtection,  async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
 
@@ -67,7 +69,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Payment confirmation error:', error);
+      safeLogger.error('Payment confirmation error:', error);
       res.status(500).json({ 
         error: 'Failed to confirm payment',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -90,7 +92,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json(paymentIntent);
     } catch (error) {
-      console.error('Payment intent retrieval error:', error);
+      safeLogger.error('Payment intent retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve payment intent',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -99,7 +101,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   });
 
   // Create setup intent for saving payment methods
-  router.post('/create-setup-intent', async (req, res) => {
+  router.post('/create-setup-intent', csrfProtection,  async (req, res) => {
     try {
       const { customerId } = req.body;
 
@@ -107,7 +109,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Setup intent creation error:', error);
+      safeLogger.error('Setup intent creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create setup intent',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -116,7 +118,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   });
 
   // Create customer
-  router.post('/create-customer', async (req, res) => {
+  router.post('/create-customer', csrfProtection,  async (req, res) => {
     try {
       const { email, name } = req.body;
 
@@ -130,7 +132,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json({ customerId });
     } catch (error) {
-      console.error('Customer creation error:', error);
+      safeLogger.error('Customer creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create customer',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -147,7 +149,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json({ paymentMethods });
     } catch (error) {
-      console.error('Payment methods retrieval error:', error);
+      safeLogger.error('Payment methods retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve payment methods',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -156,7 +158,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   });
 
   // Process refund
-  router.post('/refund', async (req, res) => {
+  router.post('/refund', csrfProtection,  async (req, res) => {
     try {
       const { paymentIntentId, amount } = req.body;
 
@@ -170,7 +172,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Refund processing error:', error);
+      safeLogger.error('Refund processing error:', error);
       res.status(500).json({ 
         error: 'Failed to process refund',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -179,7 +181,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
   });
 
   // Retry payment
-  router.post('/retry-payment', async (req, res) => {
+  router.post('/retry-payment', csrfProtection,  async (req, res) => {
     try {
       const { paymentIntentId } = req.body;
 
@@ -193,7 +195,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Payment retry error:', error);
+      safeLogger.error('Payment retry error:', error);
       res.status(500).json({ 
         error: 'Failed to retry payment',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -207,7 +209,7 @@ export function createFiatPaymentRoutes(stripeService: StripePaymentService): ex
       const methods = stripeService.getSupportedMethods();
       res.status(200).json({ methods });
     } catch (error) {
-      console.error('Supported methods retrieval error:', error);
+      safeLogger.error('Supported methods retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve supported methods',
         message: error instanceof Error ? error.message : 'Unknown error'

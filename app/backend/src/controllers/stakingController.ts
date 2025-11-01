@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { validationResult } from 'express-validator';
 import { Pool } from 'pg';
 
@@ -42,7 +44,7 @@ export class StakingController {
         minStake: parseFloat(row.min_stake_amount) / 1e18, // Convert from wei
         lockPeriod: row.lock_period === 0 ? 'Flexible' : `${row.lock_period / 86400} days`,
         risk: row.lock_period === 0 ? 'low' : row.lock_period < 2592000 ? 'medium' : 'high',
-        contractAddress: '0x0000000000000000000000000000000000000000', // Placeholder
+        contractAddress: process.env.STAKING_CONTRACT_ADDRESS || null,
         rewardsToken: 'LDAO',
         rewardRate: row.base_apr_rate / 10000 // Convert basis points to decimal
       }));
@@ -52,7 +54,7 @@ export class StakingController {
         data: pools
       });
     } catch (error) {
-      console.error('Error getting staking pools:', error);
+      safeLogger.error('Error getting staking pools:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get staking pools',
@@ -117,7 +119,7 @@ export class StakingController {
         data: positions
       });
     } catch (error) {
-      console.error('Error getting user staking info:', error);
+      safeLogger.error('Error getting user staking info:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user staking info',
@@ -155,7 +157,7 @@ export class StakingController {
         }
       });
     } catch (error) {
-      console.error('Error getting pool APR:', error);
+      safeLogger.error('Error getting pool APR:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get pool APR',
@@ -187,7 +189,7 @@ export class StakingController {
         }
       });
     } catch (error) {
-      console.error('Error getting pool TVL:', error);
+      safeLogger.error('Error getting pool TVL:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get pool TVL',

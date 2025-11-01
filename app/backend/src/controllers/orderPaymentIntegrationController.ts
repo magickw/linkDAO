@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { OrderPaymentIntegrationService, PaymentTransactionStatus } from '../services/orderPaymentIntegrationService';
 
 export class OrderPaymentIntegrationController {
@@ -56,7 +58,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error creating payment transaction:', error);
+      safeLogger.error('Error creating payment transaction:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create payment transaction'
@@ -96,7 +98,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error updating payment transaction status:', error);
+      safeLogger.error('Error updating payment transaction status:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update payment transaction status'
@@ -130,7 +132,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error getting order payment status:', error);
+      safeLogger.error('Error getting order payment status:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get order payment status'
@@ -175,7 +177,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error starting blockchain transaction monitoring:', error);
+      safeLogger.error('Error starting blockchain transaction monitoring:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to start blockchain transaction monitoring'
@@ -201,7 +203,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error generating payment receipt:', error);
+      safeLogger.error('Error generating payment receipt:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to generate payment receipt'
@@ -240,7 +242,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error retrying payment:', error);
+      safeLogger.error('Error retrying payment:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to retry payment'
@@ -288,7 +290,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error processing refund:', error);
+      safeLogger.error('Error processing refund:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process refund'
@@ -328,7 +330,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error syncing order with payment status:', error);
+      safeLogger.error('Error syncing order with payment status:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to sync order with payment status'
@@ -366,7 +368,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error getting order payment transactions:', error);
+      safeLogger.error('Error getting order payment transactions:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get payment transactions'
@@ -401,7 +403,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error getting order payment receipts:', error);
+      safeLogger.error('Error getting order payment receipts:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get payment receipts'
@@ -416,7 +418,7 @@ export class OrderPaymentIntegrationController {
     try {
       const { provider, eventType, data } = req.body;
 
-      console.log(`📨 Received payment webhook from ${provider}: ${eventType}`);
+      safeLogger.info(`📨 Received payment webhook from ${provider}: ${eventType}`);
 
       // Handle different payment providers
       switch (provider) {
@@ -427,7 +429,7 @@ export class OrderPaymentIntegrationController {
           await this.handleBlockchainWebhook(eventType, data);
           break;
         default:
-          console.warn(`Unknown payment provider: ${provider}`);
+          safeLogger.warn(`Unknown payment provider: ${provider}`);
       }
 
       res.status(200).json({
@@ -436,7 +438,7 @@ export class OrderPaymentIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error handling payment webhook:', error);
+      safeLogger.error('Error handling payment webhook:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process webhook'
@@ -466,7 +468,7 @@ export class OrderPaymentIntegrationController {
           break;
       }
     } catch (error) {
-      console.error('Error handling Stripe webhook:', error);
+      safeLogger.error('Error handling Stripe webhook:', error);
     }
   }
 
@@ -485,7 +487,7 @@ export class OrderPaymentIntegrationController {
           break;
       }
     } catch (error) {
-      console.error('Error handling blockchain webhook:', error);
+      safeLogger.error('Error handling blockchain webhook:', error);
     }
   }
 
@@ -501,7 +503,7 @@ export class OrderPaymentIntegrationController {
         { stripeEvent: data }
       );
     } catch (error) {
-      console.error('Error updating payment from Stripe event:', error);
+      safeLogger.error('Error updating payment from Stripe event:', error);
     }
   }
 
@@ -517,7 +519,7 @@ export class OrderPaymentIntegrationController {
         { blockchainEvent: data }
       );
     } catch (error) {
-      console.error('Error updating payment from blockchain event:', error);
+      safeLogger.error('Error updating payment from blockchain event:', error);
     }
   }
 }

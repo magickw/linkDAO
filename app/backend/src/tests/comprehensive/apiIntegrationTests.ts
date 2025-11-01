@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import request from 'supertest';
 import { Application } from 'express';
 
@@ -35,7 +36,7 @@ export class APIIntegrationTestSuite {
   }
 
   async testProductAPI(): Promise<APITestResults> {
-    console.log('Testing Product Management API...');
+    safeLogger.info('Testing Product Management API...');
     
     const results: APITestResults = {
       allEndpointsTested: false,
@@ -95,7 +96,7 @@ export class APIIntegrationTestSuite {
   }
 
   async testOrderAPI(): Promise<APITestResults> {
-    console.log('Testing Order Management API...');
+    safeLogger.info('Testing Order Management API...');
     
     const results: APITestResults = {
       allEndpointsTested: false,
@@ -149,7 +150,7 @@ export class APIIntegrationTestSuite {
   }
 
   async testUserAPI(): Promise<APITestResults> {
-    console.log('Testing User Management API...');
+    safeLogger.info('Testing User Management API...');
     
     const results: APITestResults = {
       allEndpointsTested: false,
@@ -202,7 +203,7 @@ export class APIIntegrationTestSuite {
   }
 
   async testPaymentAPI(): Promise<APITestResults> {
-    console.log('Testing Payment Processing API...');
+    safeLogger.info('Testing Payment Processing API...');
     
     const results: APITestResults = {
       allEndpointsTested: false,
@@ -263,7 +264,7 @@ export class APIIntegrationTestSuite {
   }
 
   async testReviewAPI(): Promise<APITestResults> {
-    console.log('Testing Review and Reputation API...');
+    safeLogger.info('Testing Review and Reputation API...');
     
     const results: APITestResults = {
       allEndpointsTested: false,

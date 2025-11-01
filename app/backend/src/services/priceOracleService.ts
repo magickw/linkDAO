@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import { tokenDataService } from './tokenDataService';
 import { ExchangeRateService } from './exchangeRateService';
 import { RedisService } from './redisService';
@@ -94,7 +95,7 @@ export class PriceOracleService {
         source: `CoinGecko + ${exchangeRate.source}`
       };
     } catch (error) {
-      console.error('Crypto to fiat conversion failed:', error);
+      safeLogger.error('Crypto to fiat conversion failed:', error);
       throw new Error(`Failed to convert ${amount} ${cryptoSymbol} to ${fiatCurrency}`);
     }
   }
@@ -132,7 +133,7 @@ export class PriceOracleService {
         source: `CoinGecko + ${exchangeRate.source}`
       };
     } catch (error) {
-      console.error('Fiat to crypto conversion failed:', error);
+      safeLogger.error('Fiat to crypto conversion failed:', error);
       throw new Error(`Failed to convert ${amount} ${fiatCurrency} to ${cryptoSymbol}`);
     }
   }
@@ -165,7 +166,7 @@ export class PriceOracleService {
       
       return priceData;
     } catch (error) {
-      console.error(`Failed to fetch price for ${symbol}:`, error);
+      safeLogger.error(`Failed to fetch price for ${symbol}:`, error);
       throw new Error(`Unable to fetch price for ${symbol}`);
     }
   }
@@ -188,7 +189,7 @@ export class PriceOracleService {
           prices[batch[index].toUpperCase()] = priceData;
         });
       } catch (error) {
-        console.error('Batch price fetch failed:', error);
+        safeLogger.error('Batch price fetch failed:', error);
         // Continue with other batches
       }
     }
@@ -247,14 +248,14 @@ export class PriceOracleService {
           const fiatValue = usdValue * exchangeRate.rate;
           conversions[fiat] = fiatValue.toFixed(2);
         } catch (error) {
-          console.error(`Failed to convert to ${fiat}:`, error);
+          safeLogger.error(`Failed to convert to ${fiat}:`, error);
           conversions[fiat] = 'N/A';
         }
       }
 
       return conversions;
     } catch (error) {
-      console.error('Product price conversion failed:', error);
+      safeLogger.error('Product price conversion failed:', error);
       throw new Error(`Failed to convert product price from ${cryptoSymbol}`);
     }
   }
@@ -288,7 +289,7 @@ export class PriceOracleService {
 
       return prices;
     } catch (error) {
-      console.error(`Failed to fetch price trend for ${symbol}:`, error);
+      safeLogger.error(`Failed to fetch price trend for ${symbol}:`, error);
       return [];
     }
   }
@@ -302,7 +303,7 @@ export class PriceOracleService {
       const tokenData = await tokenDataService.getTokenInfo('ethereum', symbol);
       return tokenData;
     } catch (error) {
-      console.error(`Failed to fetch market data for ${symbol}:`, error);
+      safeLogger.error(`Failed to fetch market data for ${symbol}:`, error);
       return null;
     }
   }
@@ -313,7 +314,7 @@ export class PriceOracleService {
   async clearPriceCache(): Promise<void> {
     // This would require implementing a method to clear all price-related cache keys
     // For now, we'll just log that this functionality could be implemented
-    console.log('Price cache clearing functionality would be implemented here');
+    safeLogger.info('Price cache clearing functionality would be implemented here');
   }
 }
 

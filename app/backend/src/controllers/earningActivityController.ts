@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { earningActivityService, EarningActivityData } from '../services/earningActivityService';
 import { z } from 'zod';
 
@@ -72,7 +74,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error processing earning activity:', error);
+      safeLogger.error('Error processing earning activity:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -105,7 +107,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error getting user activity metrics:', error);
+      safeLogger.error('Error getting user activity metrics:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -145,7 +147,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error getting user activity feed:', error);
+      safeLogger.error('Error getting user activity feed:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -178,7 +180,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error marking activity feed as read:', error);
+      safeLogger.error('Error marking activity feed as read:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -210,7 +212,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error getting earning leaderboard:', error);
+      safeLogger.error('Error getting earning leaderboard:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -242,7 +244,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error getting user earning stats:', error);
+      safeLogger.error('Error getting user earning stats:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -260,7 +262,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error getting earning configuration:', error);
+      safeLogger.error('Error getting earning configuration:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -302,7 +304,7 @@ export class EarningActivityController {
       });
 
     } catch (error) {
-      console.error('Error triggering daily login reward:', error);
+      safeLogger.error('Error triggering daily login reward:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

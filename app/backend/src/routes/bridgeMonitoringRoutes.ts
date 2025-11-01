@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { BridgeMonitoringController } from '../controllers/bridgeMonitoringController';
 import { BridgeMonitoringService } from '../services/bridgeMonitoringService';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -54,10 +55,10 @@ router.get('/validators/:validatorAddress/performance', authMiddleware, bridgeMo
 router.get('/alerts', authMiddleware, bridgeMonitoringController.getBridgeAlerts);
 
 // Admin routes (require admin authentication)
-router.post('/monitoring/start', adminAuthMiddleware, bridgeMonitoringController.startMonitoring);
-router.post('/monitoring/stop', adminAuthMiddleware, bridgeMonitoringController.stopMonitoring);
-router.post('/alerts', adminAuthMiddleware, bridgeMonitoringController.createBridgeAlert);
-router.patch('/alerts/:alertId/resolve', adminAuthMiddleware, bridgeMonitoringController.resolveBridgeAlert);
+router.post('/monitoring/start', csrfProtection,  adminAuthMiddleware, bridgeMonitoringController.startMonitoring);
+router.post('/monitoring/stop', csrfProtection,  adminAuthMiddleware, bridgeMonitoringController.stopMonitoring);
+router.post('/alerts', csrfProtection,  adminAuthMiddleware, bridgeMonitoringController.createBridgeAlert);
+router.patch('/alerts/:alertId/resolve', csrfProtection,  adminAuthMiddleware, bridgeMonitoringController.resolveBridgeAlert);
 
 // WebSocket endpoint for real-time updates (if needed)
 // This would be implemented separately with Socket.IO

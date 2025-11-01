@@ -6,6 +6,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { comprehensiveAuditService } from '../services/comprehensiveAuditService';
 
@@ -83,7 +85,7 @@ export class ComprehensiveAuditController {
         data: dashboard,
       });
     } catch (error) {
-      console.error('Error getting audit dashboard:', error);
+      safeLogger.error('Error getting audit dashboard:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get audit dashboard',
@@ -145,7 +147,7 @@ export class ComprehensiveAuditController {
         },
       });
     } catch (error) {
-      console.error('Error searching audit events:', error);
+      safeLogger.error('Error searching audit events:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to search audit events',
@@ -181,7 +183,7 @@ export class ComprehensiveAuditController {
         data: visualization,
       });
     } catch (error) {
-      console.error('Error generating audit visualization:', error);
+      safeLogger.error('Error generating audit visualization:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate audit visualization',
@@ -203,7 +205,7 @@ export class ComprehensiveAuditController {
         data: analytics,
       });
     } catch (error) {
-      console.error('Error generating audit analytics:', error);
+      safeLogger.error('Error generating audit analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate audit analytics',
@@ -246,7 +248,7 @@ export class ComprehensiveAuditController {
         data: report,
       });
     } catch (error) {
-      console.error('Error generating compliance report:', error);
+      safeLogger.error('Error generating compliance report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate compliance report',
@@ -283,7 +285,7 @@ export class ComprehensiveAuditController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(exportData);
     } catch (error) {
-      console.error('Error exporting audit data:', error);
+      safeLogger.error('Error exporting audit data:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to export audit data',
@@ -303,7 +305,7 @@ export class ComprehensiveAuditController {
         data: validation,
       });
     } catch (error) {
-      console.error('Error validating audit integrity:', error);
+      safeLogger.error('Error validating audit integrity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to validate audit integrity',
@@ -352,7 +354,7 @@ export class ComprehensiveAuditController {
         data: auditEvent,
       });
     } catch (error) {
-      console.error('Error recording audit event:', error);
+      safeLogger.error('Error recording audit event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to record audit event',
@@ -388,7 +390,7 @@ export class ComprehensiveAuditController {
         data: event,
       });
     } catch (error) {
-      console.error('Error getting audit event:', error);
+      safeLogger.error('Error getting audit event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get audit event',
@@ -448,7 +450,7 @@ export class ComprehensiveAuditController {
         data: statistics,
       });
     } catch (error) {
-      console.error('Error getting audit statistics:', error);
+      safeLogger.error('Error getting audit statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get audit statistics',
@@ -488,7 +490,7 @@ export class ComprehensiveAuditController {
         data: filters,
       });
     } catch (error) {
-      console.error('Error getting filter options:', error);
+      safeLogger.error('Error getting filter options:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get filter options',
@@ -526,7 +528,7 @@ export class ComprehensiveAuditController {
         },
       });
     } catch (error) {
-      console.error('Error getting resource audit trail:', error);
+      safeLogger.error('Error getting resource audit trail:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get resource audit trail',
@@ -580,7 +582,7 @@ export class ComprehensiveAuditController {
         data: response,
       });
     } catch (error) {
-      console.error('Error getting actor activity:', error);
+      safeLogger.error('Error getting actor activity:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get actor activity',

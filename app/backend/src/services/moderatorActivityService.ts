@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { ModeratorProfile } from './moderatorAuthService';
 
@@ -105,7 +106,7 @@ export class ModeratorActivityService {
       await this.updateRealTimeMetrics(moderatorId, action, details);
 
     } catch (error) {
-      console.error('Error logging moderator activity:', error);
+      safeLogger.error('Error logging moderator activity:', error);
     }
   }
 
@@ -242,7 +243,7 @@ export class ModeratorActivityService {
         peakHours
       };
     } catch (error) {
-      console.error('Error getting performance metrics:', error);
+      safeLogger.error('Error getting performance metrics:', error);
       return this.getEmptyMetrics();
     }
   }
@@ -291,7 +292,7 @@ export class ModeratorActivityService {
         recommendations
       };
     } catch (error) {
-      console.error('Error generating performance report:', error);
+      safeLogger.error('Error generating performance report:', error);
       throw error;
     }
   }
@@ -342,7 +343,7 @@ export class ModeratorActivityService {
         alerts
       };
     } catch (error) {
-      console.error('Error getting real-time dashboard:', error);
+      safeLogger.error('Error getting real-time dashboard:', error);
       throw error;
     }
   }
@@ -390,7 +391,7 @@ export class ModeratorActivityService {
       // Set expiry for metrics (7 days)
       await redisService.expire(metricsKey, 7 * 24 * 60 * 60);
     } catch (error) {
-      console.error('Error updating real-time metrics:', error);
+      safeLogger.error('Error updating real-time metrics:', error);
     }
   }
 
@@ -412,7 +413,7 @@ export class ModeratorActivityService {
           updated_at = NOW()
       `, [moderatorId, today, decisionTime]);
     } catch (error) {
-      console.error('Error updating daily metrics:', error);
+      safeLogger.error('Error updating daily metrics:', error);
     }
   }
 
@@ -441,7 +442,7 @@ export class ModeratorActivityService {
 
       return result.rows.map(row => `${row.hour}:00`);
     } catch (error) {
-      console.error('Error getting peak hours:', error);
+      safeLogger.error('Error getting peak hours:', error);
       return [];
     }
   }
@@ -538,7 +539,7 @@ export class ModeratorActivityService {
         }
       };
     } catch (error) {
-      console.error('Error getting team averages:', error);
+      safeLogger.error('Error getting team averages:', error);
       return { average: this.getEmptyMetrics() };
     }
   }
@@ -590,7 +591,7 @@ export class ModeratorActivityService {
         total: parseInt(row.total) || 1
       };
     } catch (error) {
-      console.error('Error getting moderator rank:', error);
+      safeLogger.error('Error getting moderator rank:', error);
       return { rank: 1, total: 1 };
     }
   }
@@ -667,7 +668,7 @@ export class ModeratorActivityService {
         userAgent: row.user_agent
       }));
     } catch (error) {
-      console.error('Error getting recent activity:', error);
+      safeLogger.error('Error getting recent activity:', error);
       return [];
     }
   }

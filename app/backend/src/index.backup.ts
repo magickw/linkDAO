@@ -1,4 +1,5 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';
@@ -110,10 +111,10 @@ try {
   // app.use('/api/services', serviceRoutes);
   // app.use('/api/project-management', projectManagementRoutes);
   
-  console.log('✅ All route modules loaded successfully');
+  safeLogger.info('✅ All route modules loaded successfully');
 } catch (error) {
-  console.warn('⚠️ Some route modules failed to load:', error);
-  console.log('🔄 Falling back to emergency mock endpoints');
+  safeLogger.warn('⚠️ Some route modules failed to load:', error);
+  safeLogger.info('🔄 Falling back to emergency mock endpoints');
 }
 
 // Catch all API routes - fallback for any unhandled API endpoints
@@ -128,7 +129,7 @@ app.use('/api/*', (req, res) => {
 
 // Error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', error);
+  safeLogger.error('Error:', error);
   res.status(500).json({
     error: 'Internal Server Error',
     message: error.message,
@@ -147,10 +148,10 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Emergency LinkDAO Backend running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 API ready: http://localhost:${PORT}/`);
+  safeLogger.info(`🚀 Emergency LinkDAO Backend running on port ${PORT}`);
+  safeLogger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  safeLogger.info(`🌐 Health check: http://localhost:${PORT}/health`);
+  safeLogger.info(`📡 API ready: http://localhost:${PORT}/`);
 });
 
 export default app;

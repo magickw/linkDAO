@@ -1,4 +1,5 @@
 import { OpenAI } from 'openai';
+import { safeLogger } from '../utils/safeLogger';
 import * as tf from '@tensorflow/tfjs-node';
 import sharp from 'sharp';
 import crypto from 'crypto';
@@ -90,15 +91,15 @@ export class AIEvidenceAnalysisService {
     try {
       // In production, load pre-trained models for manipulation detection
       // For now, we'll use mock models
-      console.log('Initializing AI models for evidence analysis...');
+      safeLogger.info('Initializing AI models for evidence analysis...');
       
       // Mock model initialization
       this.imageModel = await this.createMockImageModel();
       this.textModel = await this.createMockTextModel();
       
-      console.log('AI models initialized successfully');
+      safeLogger.info('AI models initialized successfully');
     } catch (error) {
-      console.error('Error initializing AI models:', error);
+      safeLogger.error('Error initializing AI models:', error);
     }
   }
 
@@ -133,7 +134,7 @@ export class AIEvidenceAnalysisService {
 
       return analysisResult;
     } catch (error) {
-      console.error('Error analyzing evidence:', error);
+      safeLogger.error('Error analyzing evidence:', error);
       throw error;
     }
   }
@@ -197,7 +198,7 @@ export class AIEvidenceAnalysisService {
         recommendations: this.generateImageRecommendations(authenticityScore, relevanceScore)
       };
     } catch (error) {
-      console.error('Error analyzing image evidence:', error);
+      safeLogger.error('Error analyzing image evidence:', error);
       throw error;
     }
   }
@@ -250,7 +251,7 @@ export class AIEvidenceAnalysisService {
         recommendations: this.generateTextRecommendations(authenticityAnalysis, relevanceAnalysis)
       };
     } catch (error) {
-      console.error('Error analyzing text evidence:', error);
+      safeLogger.error('Error analyzing text evidence:', error);
       throw error;
     }
   }
@@ -303,7 +304,7 @@ export class AIEvidenceAnalysisService {
         ]
       };
     } catch (error) {
-      console.error('Error analyzing document evidence:', error);
+      safeLogger.error('Error analyzing document evidence:', error);
       throw error;
     }
   }
@@ -341,7 +342,7 @@ export class AIEvidenceAnalysisService {
       
       return similarities.sort((a, b) => b.similarity - a.similarity);
     } catch (error) {
-      console.error('Error finding similar evidence:', error);
+      safeLogger.error('Error finding similar evidence:', error);
       return [];
     }
   }
@@ -356,7 +357,7 @@ export class AIEvidenceAnalysisService {
         .jpeg({ quality: 90 })
         .toBuffer();
     } catch (error) {
-      console.error('Error preprocessing image:', error);
+      safeLogger.error('Error preprocessing image:', error);
       throw error;
     }
   }
@@ -389,7 +390,7 @@ export class AIEvidenceAnalysisService {
 
       return mockAnalysis;
     } catch (error) {
-      console.error('Error detecting image manipulation:', error);
+      safeLogger.error('Error detecting image manipulation:', error);
       throw error;
     }
   }
@@ -409,7 +410,7 @@ export class AIEvidenceAnalysisService {
         inappropriate: false
       };
     } catch (error) {
-      console.error('Error analyzing image content:', error);
+      safeLogger.error('Error analyzing image content:', error);
       throw error;
     }
   }
@@ -430,7 +431,7 @@ export class AIEvidenceAnalysisService {
         }
       };
     } catch (error) {
-      console.error('Error analyzing image metadata:', error);
+      safeLogger.error('Error analyzing image metadata:', error);
       return { metadata: {} };
     }
   }
@@ -487,7 +488,7 @@ export class AIEvidenceAnalysisService {
         categories
       };
     } catch (error) {
-      console.error('Error calculating image relevance:', error);
+      safeLogger.error('Error calculating image relevance:', error);
       return { score: 0.5, keywords: [], categories: [] };
     }
   }
@@ -516,7 +517,7 @@ export class AIEvidenceAnalysisService {
         authenticity: this.calculateTextAuthenticity(text)
       };
     } catch (error) {
-      console.error('Error performing NLP analysis:', error);
+      safeLogger.error('Error performing NLP analysis:', error);
       throw error;
     }
   }
@@ -699,7 +700,7 @@ export class AIEvidenceAnalysisService {
       
       return { score: Math.min(1.0, score), categories };
     } catch (error) {
-      console.error('Error analyzing text relevance:', error);
+      safeLogger.error('Error analyzing text relevance:', error);
       return { score: 0.5, categories: [] };
     }
   }
@@ -733,7 +734,7 @@ export class AIEvidenceAnalysisService {
       // Take first and last sentences as summary
       return `${sentences[0].trim()}. ${sentences[sentences.length - 1].trim()}.`;
     } catch (error) {
-      console.error('Error generating text summary:', error);
+      safeLogger.error('Error generating text summary:', error);
       return text.substring(0, 200) + '...';
     }
   }
@@ -758,7 +759,7 @@ export class AIEvidenceAnalysisService {
         }
       };
     } catch (error) {
-      console.error('Error processing document:', error);
+      safeLogger.error('Error processing document:', error);
       throw error;
     }
   }
@@ -917,7 +918,7 @@ export class AIEvidenceAnalysisService {
       
       return union.length > 0 ? intersection.length / union.length : 0;
     } catch (error) {
-      console.error('Error calculating evidence similarity:', error);
+      safeLogger.error('Error calculating evidence similarity:', error);
       return 0;
     }
   }
@@ -928,13 +929,13 @@ export class AIEvidenceAnalysisService {
   ): Promise<void> {
     try {
       // In production, store in a dedicated analysis results table
-      console.log(`Storing analysis results for evidence ${evidenceId}:`, {
+      safeLogger.info(`Storing analysis results for evidence ${evidenceId}:`, {
         authenticity: analysisResult.authenticity.score,
         relevance: analysisResult.relevance.score,
         riskFactors: analysisResult.riskFactors.length
       });
     } catch (error) {
-      console.error('Error storing analysis results:', error);
+      safeLogger.error('Error storing analysis results:', error);
     }
   }
 

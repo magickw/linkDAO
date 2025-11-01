@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sellers, orders, products, reviews } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -191,7 +192,7 @@ class AutomatedTierUpgradeService {
       this.runBatchTierEvaluation();
     }, this.EVALUATION_INTERVAL);
 
-    console.log('Automated tier upgrade service started');
+    safeLogger.info('Automated tier upgrade service started');
   }
 
   /**
@@ -199,7 +200,7 @@ class AutomatedTierUpgradeService {
    */
   async runBatchTierEvaluation(): Promise<void> {
     try {
-      console.log('Starting batch tier evaluation...');
+      safeLogger.info('Starting batch tier evaluation...');
 
       // Get all active sellers
       const activeSellers = await db
@@ -210,7 +211,7 @@ class AutomatedTierUpgradeService {
         })
         .from(sellers);
 
-      console.log(`Evaluating ${activeSellers.length} sellers for tier upgrades`);
+      safeLogger.info(`Evaluating ${activeSellers.length} sellers for tier upgrades`);
 
       const evaluationPromises = activeSellers.map(seller =>
         this.evaluateSellerTier(seller.walletAddress)
@@ -228,11 +229,11 @@ class AutomatedTierUpgradeService {
             upgradesProcessed++;
           }
         } else {
-          console.error(`Tier evaluation failed for seller ${activeSellers[index].walletAddress}:`, result.reason);
+          safeLogger.error(`Tier evaluation failed for seller ${activeSellers[index].walletAddress}:`, result.reason);
         }
       });
 
-      console.log(`Batch tier evaluation completed: ${evaluationsCompleted} evaluations, ${upgradesProcessed} upgrades processed`);
+      safeLogger.info(`Batch tier evaluation completed: ${evaluationsCompleted} evaluations, ${upgradesProcessed} upgrades processed`);
 
       // Cache batch evaluation results
       await this.redis.setex(
@@ -246,7 +247,7 @@ class AutomatedTierUpgradeService {
       );
 
     } catch (error) {
-      console.error('Error in batch tier evaluation:', error);
+      safeLogger.error('Error in batch tier evaluation:', error);
     }
   }
 
@@ -320,7 +321,7 @@ class AutomatedTierUpgradeService {
       return evaluationResult;
 
     } catch (error) {
-      console.error(`Error evaluating seller tier for ${walletAddress}:`, error);
+      safeLogger.error(`Error evaluating seller tier for ${walletAddress}:`, error);
       throw error;
     }
   }
@@ -375,7 +376,7 @@ class AutomatedTierUpgradeService {
       };
 
     } catch (error) {
-      console.error('Error calculating seller metrics:', error);
+      safeLogger.error('Error calculating seller metrics:', error);
       return {
         salesVolume: 0,
         totalOrders: 0,
@@ -465,7 +466,7 @@ class AutomatedTierUpgradeService {
     toTier: TierEvaluationCriteria
   ): Promise<void> {
     try {
-      console.log(`Processing automated upgrade for ${walletAddress}: ${fromTier} -> ${toTier.tierId}`);
+      safeLogger.info(`Processing automated upgrade for ${walletAddress}: ${fromTier} -> ${toTier.tierId}`);
 
       // Update seller tier in database
       await db
@@ -506,10 +507,10 @@ class AutomatedTierUpgradeService {
       await this.redis.del(`tier:evaluation:${walletAddress}`);
       await this.redis.del(`seller:tier:${sellerId}`);
 
-      console.log(`Automated upgrade completed for ${walletAddress}`);
+      safeLogger.info(`Automated upgrade completed for ${walletAddress}`);
 
     } catch (error) {
-      console.error(`Error processing automated upgrade for ${walletAddress}:`, error);
+      safeLogger.error(`Error processing automated upgrade for ${walletAddress}:`, error);
       throw error;
     }
   }
@@ -521,12 +522,12 @@ class AutomatedTierUpgradeService {
     try {
       // Update seller benefits in database (we'll add these columns later)
       // For now, just update the tier
-      console.log(`Tier benefits would be activated for seller ${sellerId}:`, tier.benefits);
+      safeLogger.info(`Tier benefits would be activated for seller ${sellerId}:`, tier.benefits);
 
-      console.log(`Tier benefits activated for seller ${sellerId}`);
+      safeLogger.info(`Tier benefits activated for seller ${sellerId}`);
 
     } catch (error) {
-      console.error(`Error activating tier benefits for seller ${sellerId}:`, error);
+      safeLogger.error(`Error activating tier benefits for seller ${sellerId}:`, error);
       throw error;
     }
   }
@@ -549,10 +550,10 @@ class AutomatedTierUpgradeService {
         }
       );
 
-      console.log(`Tier upgrade notification sent to ${notification.walletAddress}`);
+      safeLogger.info(`Tier upgrade notification sent to ${notification.walletAddress}`);
 
     } catch (error) {
-      console.error(`Error sending tier upgrade notification:`, error);
+      safeLogger.error(`Error sending tier upgrade notification:`, error);
     }
   }
 
@@ -628,7 +629,7 @@ class AutomatedTierUpgradeService {
       return progression;
 
     } catch (error) {
-      console.error(`Error getting tier progression tracking for ${walletAddress}:`, error);
+      safeLogger.error(`Error getting tier progression tracking for ${walletAddress}:`, error);
       throw error;
     }
   }
@@ -660,7 +661,7 @@ class AutomatedTierUpgradeService {
    * Manual tier evaluation trigger (for testing or admin use)
    */
   async triggerManualEvaluation(walletAddress: string): Promise<TierEvaluationResult> {
-    console.log(`Manual tier evaluation triggered for ${walletAddress}`);
+    safeLogger.info(`Manual tier evaluation triggered for ${walletAddress}`);
     return await this.evaluateSellerTier(walletAddress);
   }
 
@@ -679,7 +680,7 @@ class AutomatedTierUpgradeService {
       const stats = await this.redis.get('tier:batch:last_evaluation');
       return stats ? JSON.parse(stats) : null;
     } catch (error) {
-      console.error('Error getting evaluation statistics:', error);
+      safeLogger.error('Error getting evaluation statistics:', error);
       return null;
     }
   }

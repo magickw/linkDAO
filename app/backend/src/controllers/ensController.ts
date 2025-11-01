@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { ensService } from '../services/ensService';
 
 export class ENSController {
@@ -24,7 +26,7 @@ export class ENSController {
         error: result.error
       });
     } catch (error) {
-      console.error('ENS validation error:', error);
+      safeLogger.error('ENS validation error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error during ENS validation'
@@ -57,7 +59,7 @@ export class ENSController {
         error: result.error
       });
     } catch (error) {
-      console.error('ENS ownership verification error:', error);
+      safeLogger.error('ENS ownership verification error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error during ownership verification'
@@ -90,7 +92,7 @@ export class ENSController {
         error: result.error
       });
     } catch (error) {
-      console.error('ENS availability check error:', error);
+      safeLogger.error('ENS availability check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error during availability check'
@@ -119,7 +121,7 @@ export class ENSController {
         data: { suggestions }
       });
     } catch (error) {
-      console.error('ENS suggestions error:', error);
+      safeLogger.error('ENS suggestions error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error while generating suggestions'
@@ -139,7 +141,7 @@ export class ENSController {
         data: status
       });
     } catch (error) {
-      console.error('ENS service status error:', error);
+      safeLogger.error('ENS service status error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error while checking service status'
@@ -159,7 +161,7 @@ export class ENSController {
         data: health
       });
     } catch (error) {
-      console.error('ENS health check error:', error);
+      safeLogger.error('ENS health check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Internal server error during health check'

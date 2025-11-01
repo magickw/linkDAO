@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface ENSValidationResult {
   isValid: boolean;
@@ -53,7 +54,7 @@ export class ENSService {
         etherscan: process.env.ETHERSCAN_API_KEY,
       });
     } catch (error) {
-      console.warn('Failed to initialize custom provider, using default:', error);
+      safeLogger.warn('Failed to initialize custom provider, using default:', error);
       return ethers.getDefaultProvider('mainnet');
     }
   }
@@ -110,7 +111,7 @@ export class ENSService {
       const address = await this.provider.resolveName(ensName);
       return address;
     } catch (error) {
-      console.error('ENS resolution failed:', error);
+      safeLogger.error('ENS resolution failed:', error);
       return null;
     }
   }
@@ -130,7 +131,7 @@ export class ENSService {
         
         // Check if this is a permanent error that shouldn't be retried
         if (this.isPermanentError(error)) {
-          console.error(`ENS resolution failed with permanent error:`, error);
+          safeLogger.error(`ENS resolution failed with permanent error:`, error);
           return null;
         }
 
@@ -141,12 +142,12 @@ export class ENSService {
 
         // Wait before retrying with exponential backoff
         const delay = this.retryDelay * Math.pow(2, attempt - 1);
-        console.warn(`ENS resolution attempt ${attempt} failed, retrying in ${delay}ms:`, error);
+        safeLogger.warn(`ENS resolution attempt ${attempt} failed, retrying in ${delay}ms:`, error);
         await this.sleep(delay);
       }
     }
 
-    console.error(`ENS resolution failed after ${this.retryAttempts} attempts:`, lastError);
+    safeLogger.error(`ENS resolution failed after ${this.retryAttempts} attempts:`, lastError);
     return null;
   }
 
@@ -162,7 +163,7 @@ export class ENSService {
       const ensName = await this.provider.lookupAddress(address);
       return ensName;
     } catch (error) {
-      console.error('Reverse ENS resolution failed:', error);
+      safeLogger.error('Reverse ENS resolution failed:', error);
       return null;
     }
   }
@@ -297,13 +298,13 @@ export class ENSService {
           });
         } catch (error) {
           // Continue with other suggestions if one fails
-          console.warn(`Failed to check availability for ${alternative}:`, error);
+          safeLogger.warn(`Failed to check availability for ${alternative}:`, error);
         }
       }
 
       return suggestions;
     } catch (error) {
-      console.error('Failed to generate ENS suggestions:', error);
+      safeLogger.error('Failed to generate ENS suggestions:', error);
       return [];
     }
   }

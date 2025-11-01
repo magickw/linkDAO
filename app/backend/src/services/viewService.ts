@@ -7,6 +7,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { views, posts } from '../db/schema';
 import { eq, and, sql, gt } from 'drizzle-orm';
 
@@ -34,7 +35,7 @@ class ViewService {
         .limit(1);
 
       if (post.length === 0) {
-        console.warn(`Post ${postId} not found for view tracking`);
+        safeLogger.warn(`Post ${postId} not found for view tracking`);
         return false;
       }
 
@@ -84,7 +85,7 @@ class ViewService {
 
       return true;
     } catch (error) {
-      console.error('Error tracking view:', error);
+      safeLogger.error('Error tracking view:', error);
       throw new Error('Failed to track view');
     }
   }
@@ -101,7 +102,7 @@ class ViewService {
 
       return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting view count:', error);
+      safeLogger.error('Error getting view count:', error);
       return 0;
     }
   }
@@ -127,7 +128,7 @@ class ViewService {
 
       return countsMap;
     } catch (error) {
-      console.error('Error getting view counts:', error);
+      safeLogger.error('Error getting view counts:', error);
       return new Map();
     }
   }
@@ -146,7 +147,7 @@ class ViewService {
 
       return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting unique viewer count:', error);
+      safeLogger.error('Error getting unique viewer count:', error);
       return 0;
     }
   }
@@ -180,7 +181,7 @@ class ViewService {
         anonymousViews: anonymousViews[0]?.count || 0
       };
     } catch (error) {
-      console.error('Error getting view analytics:', error);
+      safeLogger.error('Error getting view analytics:', error);
       throw new Error('Failed to retrieve view analytics');
     }
   }

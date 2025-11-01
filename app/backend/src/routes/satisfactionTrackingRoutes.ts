@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { satisfactionTrackingController } from '../controllers/satisfactionTrackingController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';

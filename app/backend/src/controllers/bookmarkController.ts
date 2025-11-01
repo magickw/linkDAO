@@ -5,6 +5,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { bookmarkService } from '../services/bookmarkService';
 
 class BookmarkController {
@@ -33,7 +35,7 @@ class BookmarkController {
         message: result.bookmarked ? 'Post bookmarked' : 'Bookmark removed'
       });
     } catch (error) {
-      console.error('Error in toggleBookmark:', error);
+      safeLogger.error('Error in toggleBookmark:', error);
       res.status(500).json({ error: 'Failed to toggle bookmark' });
     }
   }
@@ -56,7 +58,7 @@ class BookmarkController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error in getUserBookmarks:', error);
+      safeLogger.error('Error in getUserBookmarks:', error);
       res.status(500).json({ error: 'Failed to retrieve bookmarks' });
     }
   }
@@ -82,7 +84,7 @@ class BookmarkController {
 
       res.json({ postId, bookmarked });
     } catch (error) {
-      console.error('Error in checkBookmark:', error);
+      safeLogger.error('Error in checkBookmark:', error);
       res.status(500).json({ error: 'Failed to check bookmark status' });
     }
   }
@@ -103,7 +105,7 @@ class BookmarkController {
 
       res.json({ postId, bookmarkCount: count });
     } catch (error) {
-      console.error('Error in getBookmarkCount:', error);
+      safeLogger.error('Error in getBookmarkCount:', error);
       res.status(500).json({ error: 'Failed to get bookmark count' });
     }
   }

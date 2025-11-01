@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { moderationWorkflowOptimizationController } from '../controllers/moderationWorkflowOptimizationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -27,7 +28,7 @@ router.use(optimizationRateLimit);
  * @access Admin
  * @body OptimizationRequestSchema
  */
-router.post('/optimize', moderationWorkflowOptimizationController.optimizeQueue);
+router.post('/optimize', csrfProtection,  moderationWorkflowOptimizationController.optimizeQueue);
 
 /**
  * @route GET /api/moderation-workflow/metrics
@@ -50,7 +51,7 @@ router.get('/bottlenecks', moderationWorkflowOptimizationController.analyzeBottl
  * @access Admin
  * @body WorkloadBalancingSchema
  */
-router.post('/balance-workload', moderationWorkflowOptimizationController.balanceWorkload);
+router.post('/balance-workload', csrfProtection,  moderationWorkflowOptimizationController.balanceWorkload);
 
 /**
  * @route GET /api/moderation-workflow/efficiency

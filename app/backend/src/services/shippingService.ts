@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import { ShippingInfo, TrackingInfo, TrackingEvent, ShippingAddress } from '../models/Order';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
@@ -77,7 +78,7 @@ export class ShippingService {
           throw new Error(`Unsupported carrier: ${input.carrier}`);
       }
     } catch (error) {
-      console.error('Error creating shipment:', error);
+      safeLogger.error('Error creating shipment:', error);
       throw error;
     }
   }
@@ -99,7 +100,7 @@ export class ShippingService {
         .map(result => (result as PromiseFulfilledResult<any>).value)
         .flat();
     } catch (error) {
-      console.error('Error getting shipping rates:', error);
+      safeLogger.error('Error getting shipping rates:', error);
       throw error;
     }
   }
@@ -122,7 +123,7 @@ export class ShippingService {
           throw new Error(`Unsupported carrier for tracking: ${carrier}`);
       }
     } catch (error) {
-      console.error('Error tracking shipment:', error);
+      safeLogger.error('Error tracking shipment:', error);
       throw error;
     }
   }
@@ -138,7 +139,7 @@ export class ShippingService {
       // Set up periodic tracking updates
       this.scheduleTrackingUpdates(orderId, trackingNumber, carrier);
     } catch (error) {
-      console.error('Error starting delivery tracking:', error);
+      safeLogger.error('Error starting delivery tracking:', error);
       throw error;
     }
   }
@@ -157,7 +158,7 @@ export class ShippingService {
         suggestions: isValid ? undefined : []
       };
     } catch (error) {
-      console.error('Error validating address:', error);
+      safeLogger.error('Error validating address:', error);
       return { valid: false };
     }
   }
@@ -238,7 +239,7 @@ export class ShippingService {
         cost: shipment.shipmentRating?.totalNetCharge || '0'
       };
     } catch (error) {
-      console.error('FedEx shipment creation error:', error);
+      safeLogger.error('FedEx shipment creation error:', error);
       throw new Error('Failed to create FedEx shipment');
     }
   }
@@ -338,7 +339,7 @@ export class ShippingService {
         cost: shipment.ShipmentCharges?.TotalCharges?.MonetaryValue || '0'
       };
     } catch (error) {
-      console.error('UPS shipment creation error:', error);
+      safeLogger.error('UPS shipment creation error:', error);
       throw new Error('Failed to create UPS shipment');
     }
   }
@@ -417,7 +418,7 @@ export class ShippingService {
         cost: '0'
       };
     } catch (error) {
-      console.error('DHL shipment creation error:', error);
+      safeLogger.error('DHL shipment creation error:', error);
       throw new Error('Failed to create DHL shipment');
     }
   }
@@ -476,7 +477,7 @@ export class ShippingService {
         cost: '0'
       };
     } catch (error) {
-      console.error('USPS shipment creation error:', error);
+      safeLogger.error('USPS shipment creation error:', error);
       throw new Error('Failed to create USPS shipment');
     }
   }
@@ -520,7 +521,7 @@ export class ShippingService {
         })) || []
       };
     } catch (error) {
-      console.error('FedEx tracking error:', error);
+      safeLogger.error('FedEx tracking error:', error);
       throw new Error('Failed to track FedEx shipment');
     }
   }
@@ -555,7 +556,7 @@ export class ShippingService {
         })) || []
       };
     } catch (error) {
-      console.error('UPS tracking error:', error);
+      safeLogger.error('UPS tracking error:', error);
       throw new Error('Failed to track UPS shipment');
     }
   }
@@ -588,7 +589,7 @@ export class ShippingService {
         })) || []
       };
     } catch (error) {
-      console.error('DHL tracking error:', error);
+      safeLogger.error('DHL tracking error:', error);
       throw new Error('Failed to track DHL shipment');
     }
   }
@@ -624,7 +625,7 @@ export class ShippingService {
         }]
       };
     } catch (error) {
-      console.error('USPS tracking error:', error);
+      safeLogger.error('USPS tracking error:', error);
       throw new Error('Failed to track USPS shipment');
     }
   }
@@ -669,7 +670,7 @@ export class ShippingService {
 
       return response.data.access_token;
     } catch (error) {
-      console.error('FedEx token error:', error);
+      safeLogger.error('FedEx token error:', error);
       throw new Error('Failed to get FedEx token');
     }
   }
@@ -691,7 +692,7 @@ export class ShippingService {
 
       return response.data.access_token;
     } catch (error) {
-      console.error('UPS token error:', error);
+      safeLogger.error('UPS token error:', error);
       throw new Error('Failed to get UPS token');
     }
   }
@@ -718,7 +719,7 @@ export class ShippingService {
           );
         }
       } catch (error) {
-        console.error('Error updating tracking info:', error);
+        safeLogger.error('Error updating tracking info:', error);
       }
     }, 60 * 60 * 1000); // Update every hour
 

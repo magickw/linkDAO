@@ -1,4 +1,5 @@
 import { ProductService } from '../services/productService';
+import { safeLogger } from '../utils/safeLogger';
 import { CreateCategoryInput, CreateProductInput } from '../models/Product';
 
 // Simple integration test for product service
@@ -18,9 +19,9 @@ describe('ProductService Integration Test', () => {
         description: 'Test category for electronics'
       };
 
-      console.log('Creating category...');
+      safeLogger.info('Creating category...');
       const category = await productService.createCategory(categoryInput);
-      console.log('Category created:', category.id);
+      safeLogger.info('Category created:', category.id);
 
       // Create a test product
       const productInput: CreateProductInput = {
@@ -42,9 +43,9 @@ describe('ProductService Integration Test', () => {
         tags: ['smartphone', 'apple', 'test']
       };
 
-      console.log('Creating product...');
+      safeLogger.info('Creating product...');
       const product = await productService.createProduct(productInput);
-      console.log('Product created:', product.id);
+      safeLogger.info('Product created:', product.id);
 
       // Verify the product was created correctly
       expect(product.title).toBe('Test iPhone');
@@ -52,9 +53,9 @@ describe('ProductService Integration Test', () => {
       expect(product.category.name).toBe('Test Electronics');
       expect(product.tags).toContain('smartphone');
 
-      console.log('✅ Product service integration test passed!');
+      safeLogger.info('✅ Product service integration test passed!');
     } catch (error) {
-      console.error('❌ Product service integration test failed:', error);
+      safeLogger.error('❌ Product service integration test failed:', error);
       throw error;
     }
   }, 30000); // 30 second timeout

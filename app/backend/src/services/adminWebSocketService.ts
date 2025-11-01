@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { safeLogger } from '../utils/safeLogger';
 import { Server as HttpServer } from 'http';
 import { getWebSocketService } from './webSocketService';
 
@@ -103,7 +104,7 @@ export class AdminWebSocketService {
     const adminNamespace = this.io.of('/admin');
 
     adminNamespace.on('connection', (socket) => {
-      console.log(`Admin client connected: ${socket.id}`);
+      safeLogger.info(`Admin client connected: ${socket.id}`);
 
       // Handle admin authentication
       socket.on('admin_authenticate', async (data: { 
@@ -176,7 +177,7 @@ export class AdminWebSocketService {
         // Start real-time data stream for this admin
         this.startAdminDataStream(socket, adminUser);
 
-        console.log(`Admin authenticated: ${email} (${role}) - ${socket.id}`);
+        safeLogger.info(`Admin authenticated: ${email} (${role}) - ${socket.id}`);
       });
 
       // Handle dashboard configuration updates
@@ -197,7 +198,7 @@ export class AdminWebSocketService {
           timestamp: new Date().toISOString()
         });
 
-        console.log(`Dashboard config updated for admin: ${admin.adminId}`);
+        safeLogger.info(`Dashboard config updated for admin: ${admin.adminId}`);
       });
 
       // Handle real-time metric subscriptions
@@ -233,7 +234,7 @@ export class AdminWebSocketService {
           timestamp: new Date().toISOString()
         });
 
-        console.log(`Admin ${admin.adminId} subscribed to metrics: ${data.categories.join(', ')}`);
+        safeLogger.info(`Admin ${admin.adminId} subscribed to metrics: ${data.categories.join(', ')}`);
       });
 
       // Handle alert acknowledgment
@@ -250,7 +251,7 @@ export class AdminWebSocketService {
           timestamp: new Date().toISOString()
         });
 
-        console.log(`Alert ${data.alertId} acknowledged by admin: ${admin.adminId}`);
+        safeLogger.info(`Alert ${data.alertId} acknowledged by admin: ${admin.adminId}`);
       });
 
       // Handle connection health monitoring
@@ -328,7 +329,7 @@ export class AdminWebSocketService {
           // Remove from connected admins
           this.connectedAdmins.delete(socket.id);
           
-          console.log(`Admin disconnected: ${admin.email} (${socket.id}) - Reason: ${reason}`);
+          safeLogger.info(`Admin disconnected: ${admin.email} (${socket.id}) - Reason: ${reason}`);
         }
       });
     });
@@ -381,7 +382,7 @@ export class AdminWebSocketService {
         config: admin.dashboardConfig
       });
     } catch (error) {
-      console.error('Error sending initial dashboard data:', error);
+      safeLogger.error('Error sending initial dashboard data:', error);
       socket.emit('dashboard_error', { 
         message: 'Failed to load initial dashboard data',
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -399,7 +400,7 @@ export class AdminWebSocketService {
         connectionHealth: admin.connectionHealth
       });
     } catch (error) {
-      console.error('Error sending dashboard update:', error);
+      safeLogger.error('Error sending dashboard update:', error);
     }
   }
 
@@ -571,7 +572,7 @@ export class AdminWebSocketService {
       // Clean up queued data for disconnected admin
       this.metricsBuffer.delete(adminId);
       this.alertQueue.delete(adminId);
-      console.log(`Cleaned up data for disconnected admin: ${adminId}`);
+      safeLogger.info(`Cleaned up data for disconnected admin: ${adminId}`);
     }, 5 * 60 * 1000); // 5 minutes
   }
 
@@ -604,7 +605,7 @@ export class AdminWebSocketService {
         const metrics = await this.generateDashboardUpdate(admin);
         this.sendToAdminSocket(admin.socketId, 'metrics_update', metrics);
       } catch (error) {
-        console.error('Error broadcasting metrics to admin:', admin.adminId, error);
+        safeLogger.error('Error broadcasting metrics to admin:', admin.adminId, error);
       }
     });
   }
@@ -643,17 +644,17 @@ export class AdminWebSocketService {
 
   private persistDashboardConfig(adminId: string, config: DashboardConfig) {
     // This would integrate with database to persist admin preferences
-    console.log(`Persisting dashboard config for admin: ${adminId}`);
+    safeLogger.info(`Persisting dashboard config for admin: ${adminId}`);
   }
 
   private logAdminAction(admin: AdminUser, action: any) {
     // This would integrate with audit logging system
-    console.log(`Admin action logged: ${admin.adminId} - ${action.action}`);
+    safeLogger.info(`Admin action logged: ${admin.adminId} - ${action.action}`);
   }
 
   private acknowledgeAlert(alertId: string, adminId: string) {
     // This would update alert status in database
-    console.log(`Alert ${alertId} acknowledged by ${adminId}`);
+    safeLogger.info(`Alert ${alertId} acknowledged by ${adminId}`);
   }
 
   private getServerLoad(): Record<string, any> {
@@ -734,7 +735,7 @@ export class AdminWebSocketService {
     // Clean up stale admin connections
     this.connectedAdmins.forEach((admin, socketId) => {
       if (now.getTime() - admin.lastSeen.getTime() > staleThreshold) {
-        console.log(`Cleaning up stale admin connection: ${admin.adminId} (${socketId})`);
+        safeLogger.info(`Cleaning up stale admin connection: ${admin.adminId} (${socketId})`);
         this.connectedAdmins.delete(socketId);
         
         const adminSessionSet = this.adminSessions.get(admin.adminId);
@@ -749,7 +750,7 @@ export class AdminWebSocketService {
   }
 
   public close() {
-    console.log('Shutting down Admin WebSocket service...');
+    safeLogger.info('Shutting down Admin WebSocket service...');
     
     // Clear intervals
     if (this.heartbeatInterval) {
@@ -768,7 +769,7 @@ export class AdminWebSocketService {
       timestamp: new Date().toISOString()
     });
 
-    console.log('Admin WebSocket service shut down complete');
+    safeLogger.info('Admin WebSocket service shut down complete');
   }
 }
 
@@ -777,7 +778,7 @@ let adminWebSocketService: AdminWebSocketService | null = null;
 export const initializeAdminWebSocket = (httpServer: HttpServer): AdminWebSocketService => {
   if (!adminWebSocketService) {
     adminWebSocketService = new AdminWebSocketService(httpServer);
-    console.log('Admin WebSocket service initialized');
+    safeLogger.info('Admin WebSocket service initialized');
   }
   return adminWebSocketService;
 };

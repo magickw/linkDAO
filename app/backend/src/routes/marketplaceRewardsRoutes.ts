@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { marketplaceRewardsController } from '../controllers/marketplaceRewardsController';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -40,14 +41,14 @@ router.get('/tiers', marketplaceRewardsController.getVolumeTiers.bind(marketplac
  * @desc Create marketplace challenge (Admin only)
  * @access Private (Admin)
  */
-router.post('/challenges', marketplaceRewardsController.createMarketplaceChallenge.bind(marketplaceRewardsController));
+router.post('/challenges', csrfProtection,  marketplaceRewardsController.createMarketplaceChallenge.bind(marketplaceRewardsController));
 
 /**
  * @route POST /api/marketplace-rewards/process-transaction
  * @desc Process marketplace transaction rewards (Internal API)
  * @access Private (Internal)
  */
-router.post('/process-transaction', marketplaceRewardsController.processMarketplaceTransaction.bind(marketplaceRewardsController));
+router.post('/process-transaction', csrfProtection,  marketplaceRewardsController.processMarketplaceTransaction.bind(marketplaceRewardsController));
 
 /**
  * @route GET /api/marketplace-rewards/analytics

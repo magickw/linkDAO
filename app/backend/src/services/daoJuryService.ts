@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   moderationAppeals, 
   appealJurors, 
@@ -147,7 +148,7 @@ export class DaoJuryService {
         reason
       };
     } catch (error) {
-      console.error('Error checking juror eligibility:', error);
+      safeLogger.error('Error checking juror eligibility:', error);
       return {
         userId,
         isEligible: false,
@@ -251,7 +252,7 @@ export class DaoJuryService {
         }
       };
     } catch (error) {
-      console.error('Error selecting jurors:', error);
+      safeLogger.error('Error selecting jurors:', error);
       if (error instanceof z.ZodError) {
         return { success: false, error: 'Invalid selection parameters: ' + error.errors.map(e => e.message).join(', ') };
       }
@@ -333,7 +334,7 @@ export class DaoJuryService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error submitting vote commitment:', error);
+      safeLogger.error('Error submitting vote commitment:', error);
       if (error instanceof z.ZodError) {
         return { success: false, error: 'Invalid commitment data: ' + error.errors.map(e => e.message).join(', ') };
       }
@@ -423,7 +424,7 @@ export class DaoJuryService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error revealing vote:', error);
+      safeLogger.error('Error revealing vote:', error);
       if (error instanceof z.ZodError) {
         return { success: false, error: 'Invalid reveal data: ' + error.errors.map(e => e.message).join(', ') };
       }
@@ -522,7 +523,7 @@ export class DaoJuryService {
 
       return { success: true, result };
     } catch (error) {
-      console.error('Error finalizing voting:', error);
+      safeLogger.error('Error finalizing voting:', error);
       return { success: false, error: 'Failed to finalize voting' };
     }
   }
@@ -599,7 +600,7 @@ export class DaoJuryService {
 
       return rewards;
     } catch (error) {
-      console.error('Error processing juror rewards:', error);
+      safeLogger.error('Error processing juror rewards:', error);
       return [];
     }
   }
@@ -622,7 +623,7 @@ export class DaoJuryService {
         updatedAt: new Date()
       });
     } catch (error) {
-      console.error('Error initializing juror eligibility:', error);
+      safeLogger.error('Error initializing juror eligibility:', error);
     }
   }
 
@@ -676,7 +677,7 @@ export class DaoJuryService {
         totalStake: parseFloat(j.totalStake || '0')
       }));
     } catch (error) {
-      console.error('Error getting eligible jurors:', error);
+      safeLogger.error('Error getting eligible jurors:', error);
       return [];
     }
   }
@@ -848,7 +849,7 @@ export class DaoJuryService {
         .set(updates)
         .where(eq(jurorEligibility.userId, jurorId));
     } catch (error) {
-      console.error('Error updating juror stats:', error);
+      safeLogger.error('Error updating juror stats:', error);
     }
   }
 
@@ -871,7 +872,7 @@ export class DaoJuryService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error logging jury activity:', error);
+      safeLogger.error('Error logging jury activity:', error);
     }
   }
 }

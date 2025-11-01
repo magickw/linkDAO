@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import helmet from 'helmet';
 
 // Security Headers
@@ -97,7 +98,7 @@ export const securityLogger = (req: Request, res: Response, next: NextFunction) 
   });
 
   if (shouldLog) {
-    console.log('[SECURITY]', {
+    safeLogger.info('[SECURITY]', {
       method: req.method,
       path: req.path,
       ip: req.ip,

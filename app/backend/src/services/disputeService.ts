@@ -1,4 +1,5 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { disputes, escrows, users, orders } from '../db/schema';
 import { NotificationService } from './notificationService';
@@ -147,7 +148,7 @@ export class DisputeService {
 
       return dispute.id;
     } catch (error) {
-      console.error('Error creating dispute:', error);
+      safeLogger.error('Error creating dispute:', error);
       throw error;
     }
   }
@@ -212,7 +213,7 @@ export class DisputeService {
       );
 
     } catch (error) {
-      console.error('Error submitting evidence:', error);
+      safeLogger.error('Error submitting evidence:', error);
       throw error;
     }
   }
@@ -254,7 +255,7 @@ export class DisputeService {
       }
 
     } catch (error) {
-      console.error('Error proceeding to arbitration:', error);
+      safeLogger.error('Error proceeding to arbitration:', error);
       throw error;
     }
   }
@@ -311,7 +312,7 @@ export class DisputeService {
       await this.logDisputeEvent(vote.disputeId, 'community_vote_cast', vote.voterId);
 
     } catch (error) {
-      console.error('Error casting community vote:', error);
+      safeLogger.error('Error casting community vote:', error);
       throw error;
     }
   }
@@ -349,7 +350,7 @@ export class DisputeService {
       );
 
     } catch (error) {
-      console.error('Error resolving dispute as arbitrator:', error);
+      safeLogger.error('Error resolving dispute as arbitrator:', error);
       throw error;
     }
   }
@@ -382,7 +383,7 @@ export class DisputeService {
       };
 
     } catch (error) {
-      console.error('Error getting dispute details:', error);
+      safeLogger.error('Error getting dispute details:', error);
       throw error;
     }
   }
@@ -451,7 +452,7 @@ export class DisputeService {
       };
 
     } catch (error) {
-      console.error('Error getting dispute analytics:', error);
+      safeLogger.error('Error getting dispute analytics:', error);
       throw error;
     }
   }
@@ -468,7 +469,7 @@ export class DisputeService {
 
       return userDisputes;
     } catch (error) {
-      console.error('Error getting user dispute history:', error);
+      safeLogger.error('Error getting user dispute history:', error);
       throw error;
     }
   }
@@ -647,15 +648,15 @@ export class DisputeService {
     switch (verdict) {
       case VerdictType.FAVOR_BUYER:
         // In a real implementation, would update seller reputation negatively
-        console.log(`Updating seller ${escrow.sellerId} reputation negatively for losing dispute`);
+        safeLogger.info(`Updating seller ${escrow.sellerId} reputation negatively for losing dispute`);
         break;
       case VerdictType.FAVOR_SELLER:
         // In a real implementation, would update buyer reputation negatively
-        console.log(`Updating buyer ${escrow.buyerId} reputation negatively for losing dispute`);
+        safeLogger.info(`Updating buyer ${escrow.buyerId} reputation negatively for losing dispute`);
         break;
       case VerdictType.PARTIAL_REFUND:
         // In a real implementation, would update both parties slightly negatively
-        console.log(`Updating both parties reputation slightly negatively for partial dispute`);
+        safeLogger.info(`Updating both parties reputation slightly negatively for partial dispute`);
         break;
       case VerdictType.NO_FAULT:
         // No reputation change
@@ -665,7 +666,7 @@ export class DisputeService {
 
   private async logDisputeEvent(disputeId: number, eventType: string, userId: string): Promise<void> {
     // Log dispute events for analytics and audit trail
-    console.log(`Dispute ${disputeId}: ${eventType} by ${userId} at ${new Date().toISOString()}`);
+    safeLogger.info(`Dispute ${disputeId}: ${eventType} by ${userId} at ${new Date().toISOString()}`);
   }
 }
 

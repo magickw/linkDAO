@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { serviceController } from '../controllers/serviceController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validateRequest';
@@ -10,7 +11,7 @@ const router = Router();
 router.get('/categories', serviceController.getCategories);
 
 // Service Management
-router.post('/services',
+router.post('/services', csrfProtection, 
   authMiddleware,
   [
     body('categoryId').isUUID().withMessage('Valid category ID is required'),
@@ -29,7 +30,7 @@ router.post('/services',
   serviceController.createService
 );
 
-router.put('/services/:serviceId',
+router.put('/services/:serviceId', csrfProtection, 
   authMiddleware,
   [
     param('serviceId').isUUID().withMessage('Valid service ID is required')
@@ -66,7 +67,7 @@ router.get('/services/:serviceId',
 );
 
 // Service Availability
-router.post('/services/:serviceId/availability',
+router.post('/services/:serviceId/availability', csrfProtection, 
   authMiddleware,
   [
     param('serviceId').isUUID().withMessage('Valid service ID is required'),
@@ -89,7 +90,7 @@ router.get('/services/:serviceId/availability',
 );
 
 // Booking Management
-router.post('/bookings',
+router.post('/bookings', csrfProtection, 
   authMiddleware,
   [
     body('serviceId').isUUID().withMessage('Valid service ID is required'),
@@ -122,7 +123,7 @@ router.get('/bookings',
   serviceController.getUserBookings
 );
 
-router.patch('/bookings/:bookingId/status',
+router.patch('/bookings/:bookingId/status', csrfProtection, 
   authMiddleware,
   [
     param('bookingId').isUUID().withMessage('Valid booking ID is required'),
@@ -133,7 +134,7 @@ router.patch('/bookings/:bookingId/status',
 );
 
 // Provider Profile Management
-router.post('/provider-profile',
+router.post('/provider-profile', csrfProtection, 
   authMiddleware,
   [
     body('businessName').optional().isLength({ max: 255 }),
@@ -150,7 +151,7 @@ router.post('/provider-profile',
   serviceController.createProviderProfile
 );
 
-router.put('/provider-profile',
+router.put('/provider-profile', csrfProtection, 
   authMiddleware,
   serviceController.updateProviderProfile
 );
@@ -164,7 +165,7 @@ router.get('/provider-profile/:userId',
 );
 
 // Milestone Management
-router.patch('/milestones/:milestoneId',
+router.patch('/milestones/:milestoneId', csrfProtection, 
   authMiddleware,
   [
     param('milestoneId').isUUID().withMessage('Valid milestone ID is required'),

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
@@ -50,7 +52,7 @@ class AuthController {
           return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
         }
       } catch (error) {
-        console.error('Signature verification error:', error);
+        safeLogger.error('Signature verification error:', error);
         return errorResponse(res, 'SIGNATURE_ERROR', 'Invalid signature format', 400);
       }
 
@@ -104,7 +106,7 @@ class AuthController {
       }, 200);
 
     } catch (error) {
-      console.error('Wallet connect error:', error);
+      safeLogger.error('Wallet connect error:', error);
       errorResponse(res, 'AUTHENTICATION_ERROR', 'Authentication failed', 500);
     }
   }
@@ -166,7 +168,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Get profile error:', error);
+      safeLogger.error('Get profile error:', error);
       errorResponse(res, 'PROFILE_ERROR', 'Failed to get profile', 500);
     }
   }
@@ -215,7 +217,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Update profile error:', error);
+      safeLogger.error('Update profile error:', error);
       errorResponse(res, 'UPDATE_ERROR', 'Failed to update profile', 500);
     }
   }
@@ -234,7 +236,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('Logout error:', error);
+      safeLogger.error('Logout error:', error);
       errorResponse(res, 'LOGOUT_ERROR', 'Failed to logout', 500);
     }
   }

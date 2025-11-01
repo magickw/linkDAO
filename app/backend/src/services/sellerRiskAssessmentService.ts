@@ -1,4 +1,5 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   sellerRiskAssessments, 
@@ -94,7 +95,7 @@ class SellerRiskAssessmentService {
         lastAssessedAt: assessment.lastAssessedAt || new Date()
       };
     } catch (error) {
-      console.error('Error assessing seller risk:', error);
+      safeLogger.error('Error assessing seller risk:', error);
       throw new Error('Failed to assess seller risk');
     }
   }
@@ -138,7 +139,7 @@ class SellerRiskAssessmentService {
       // Calculate new assessment
       return await this.assessSellerRisk(sellerWalletAddress);
     } catch (error) {
-      console.error('Error getting seller risk assessment:', error);
+      safeLogger.error('Error getting seller risk assessment:', error);
       return null;
     }
   }
@@ -219,7 +220,7 @@ class SellerRiskAssessmentService {
         responseTimeVariability: 0.3 // Mock data - would need message response tracking
       };
     } catch (error) {
-      console.error('Error getting risk metrics:', error);
+      safeLogger.error('Error getting risk metrics:', error);
       return {
         disputeRate: 0,
         averageOrderValue: 0,
@@ -501,7 +502,7 @@ class SellerRiskAssessmentService {
 
       return mean > 0 ? stdDev / mean : 0;
     } catch (error) {
-      console.error('Error calculating order volatility:', error);
+      safeLogger.error('Error calculating order volatility:', error);
       return 0;
     }
   }
@@ -539,7 +540,7 @@ class SellerRiskAssessmentService {
 
       return Math.min(100, score);
     } catch (error) {
-      console.error('Error calculating verification level:', error);
+      safeLogger.error('Error calculating verification level:', error);
       return 0;
     }
   }
@@ -605,7 +606,7 @@ class SellerRiskAssessmentService {
         return created[0];
       }
     } catch (error) {
-      console.error('Error saving risk assessment:', error);
+      safeLogger.error('Error saving risk assessment:', error);
       throw error;
     }
   }
@@ -650,7 +651,7 @@ class SellerRiskAssessmentService {
         changePercent: Math.round(changePercent * 100) / 100
       };
     } catch (error) {
-      console.error('Error getting risk trend analysis:', error);
+      safeLogger.error('Error getting risk trend analysis:', error);
       return {
         currentRisk: 0,
         previousRisk: 0,

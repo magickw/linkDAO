@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import { createWriteStream, WriteStream } from 'fs';
 import { Transform } from 'stream';
@@ -64,9 +65,9 @@ class LogAggregationService {
   private async initializeLogDirectory(): Promise<void> {
     try {
       await fs.mkdir(this.config.logDir, { recursive: true });
-      console.log(`📁 Log directory initialized: ${this.config.logDir}`);
+      safeLogger.info(`📁 Log directory initialized: ${this.config.logDir}`);
     } catch (error) {
-      console.error('Failed to initialize log directory:', error);
+      safeLogger.error('Failed to initialize log directory:', error);
       throw error;
     }
   }
@@ -80,7 +81,7 @@ class LogAggregationService {
       await this.flushRemoteLogs();
     }, this.config.remoteLogging.flushInterval);
 
-    console.log('📡 Remote logging batch processing started');
+    safeLogger.info('📡 Remote logging batch processing started');
   }
 
   async log(entry: Omit<LogEntry, 'timestamp'>): Promise<void> {
@@ -130,7 +131,7 @@ class LogAggregationService {
       await this.checkFileRotation(logFileName, logFilePath);
 
     } catch (error) {
-      console.error('Failed to write log entry:', error);
+      safeLogger.error('Failed to write log entry:', error);
     }
   }
 
@@ -196,10 +197,10 @@ class LogAggregationService {
       // Clean up old log files
       await this.cleanupOldLogs(logFileName);
 
-      console.log(`🔄 Log file rotated: ${logFileName}`);
+      safeLogger.info(`🔄 Log file rotated: ${logFileName}`);
 
     } catch (error) {
-      console.error('Failed to rotate log file:', error);
+      safeLogger.error('Failed to rotate log file:', error);
     }
   }
 
@@ -219,10 +220,10 @@ class LogAggregationService {
       // Remove original file
       await fs.unlink(filePath);
       
-      console.log(`🗜️ Log file compressed: ${path.basename(gzipPath)}`);
+      safeLogger.info(`🗜️ Log file compressed: ${path.basename(gzipPath)}`);
 
     } catch (error) {
-      console.error('Failed to compress log file:', error);
+      safeLogger.error('Failed to compress log file:', error);
     }
   }
 
@@ -257,12 +258,12 @@ class LogAggregationService {
         
         for (const file of filesToDelete) {
           await fs.unlink(file.path);
-          console.log(`🗑️ Deleted old log file: ${file.name}`);
+          safeLogger.info(`🗑️ Deleted old log file: ${file.name}`);
         }
       }
 
     } catch (error) {
-      console.error('Failed to cleanup old logs:', error);
+      safeLogger.error('Failed to cleanup old logs:', error);
     }
   }
 
@@ -276,7 +277,7 @@ class LogAggregationService {
     try {
       await this.sendLogsToRemote(logsToSend);
     } catch (error) {
-      console.error('Failed to send logs to remote service:', error);
+      safeLogger.error('Failed to send logs to remote service:', error);
       // Put logs back in buffer for retry
       this.logBuffer.unshift(...logsToSend);
     }
@@ -329,14 +330,14 @@ class LogAggregationService {
     const service = entry.service ? `[${entry.service}]` : '';
     const requestId = entry.requestId ? `[${entry.requestId}]` : '';
     
-    console.log(`${prefix} ${timestamp} ${service}${requestId} ${entry.message}`);
+    safeLogger.info(`${prefix} ${timestamp} ${service}${requestId} ${entry.message}`);
     
     if (entry.metadata) {
-      console.log('  Metadata:', entry.metadata);
+      safeLogger.info('  Metadata:', entry.metadata);
     }
     
     if (entry.stack) {
-      console.log('  Stack:', entry.stack);
+      safeLogger.info('  Stack:', entry.stack);
     }
   }
 
@@ -462,7 +463,7 @@ class LogAggregationService {
   }
 
   async shutdown(): Promise<void> {
-    console.log('🛑 Shutting down log aggregation service...');
+    safeLogger.info('🛑 Shutting down log aggregation service...');
     
     // Flush remaining remote logs
     if (this.config.remoteLogging.enabled) {
@@ -481,7 +482,7 @@ class LogAggregationService {
     }
     this.rotationTimers.clear();
     
-    console.log('✅ Log aggregation service shutdown complete');
+    safeLogger.info('✅ Log aggregation service shutdown complete');
   }
 }
 

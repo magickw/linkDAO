@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -61,27 +62,27 @@ class SecurityComplianceTestRunner {
   ];
 
   async runAllTests(): Promise<SecurityTestReport> {
-    console.log('🔒 Starting Security and Compliance Test Suite...\n');
+    safeLogger.info('🔒 Starting Security and Compliance Test Suite...\n');
     
     const startTime = Date.now();
     const results: TestResult[] = [];
     const environment = process.env.NODE_ENV || 'test';
 
     for (const suite of this.testSuites) {
-      console.log(`📋 Running ${suite.name}...`);
+      safeLogger.info(`📋 Running ${suite.name}...`);
       
       try {
         const result = await this.runTestSuite(suite);
         results.push(result);
         
         if (result.failed > 0) {
-          console.log(`❌ ${suite.name}: ${result.failed} tests failed`);
+          safeLogger.info(`❌ ${suite.name}: ${result.failed} tests failed`);
         } else {
-          console.log(`✅ ${suite.name}: All ${result.passed} tests passed`);
+          safeLogger.info(`✅ ${suite.name}: All ${result.passed} tests passed`);
         }
       } catch (error) {
-        console.error(`💥 ${suite.name}: Test suite failed to run`);
-        console.error(error);
+        safeLogger.error(`💥 ${suite.name}: Test suite failed to run`);
+        safeLogger.error(error);
         
         results.push({
           suite: suite.name,
@@ -91,7 +92,7 @@ class SecurityComplianceTestRunner {
         });
       }
       
-      console.log('');
+      safeLogger.info('');
     }
 
     const totalDuration = Date.now() - startTime;
@@ -255,9 +256,9 @@ class SecurityComplianceTestRunner {
     const htmlPath = path.join(reportDir, `security-compliance-${timestamp}.html`);
     fs.writeFileSync(htmlPath, htmlReport);
 
-    console.log(`📄 Reports generated:`);
-    console.log(`   JSON: ${reportPath}`);
-    console.log(`   HTML: ${htmlPath}`);
+    safeLogger.info(`📄 Reports generated:`);
+    safeLogger.info(`   JSON: ${reportPath}`);
+    safeLogger.info(`   HTML: ${htmlPath}`);
   }
 
   private generateHtmlReport(report: SecurityTestReport): string {
@@ -337,31 +338,31 @@ class SecurityComplianceTestRunner {
   }
 
   private printSummary(report: SecurityTestReport): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('🔒 SECURITY & COMPLIANCE TEST SUMMARY');
-    console.log('='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
+    safeLogger.info('🔒 SECURITY & COMPLIANCE TEST SUMMARY');
+    safeLogger.info('='.repeat(60));
     
     const { summary } = report;
     const passRate = (summary.passed / summary.total_tests * 100).toFixed(1);
     
-    console.log(`📊 Total Tests: ${summary.total_tests}`);
-    console.log(`✅ Passed: ${summary.passed}`);
-    console.log(`❌ Failed: ${summary.failed}`);
-    console.log(`📈 Pass Rate: ${passRate}%`);
-    console.log(`🎯 Coverage: ${summary.coverage.toFixed(1)}%`);
-    console.log(`⏱️ Duration: ${(summary.duration / 1000).toFixed(1)}s`);
+    safeLogger.info(`📊 Total Tests: ${summary.total_tests}`);
+    safeLogger.info(`✅ Passed: ${summary.passed}`);
+    safeLogger.info(`❌ Failed: ${summary.failed}`);
+    safeLogger.info(`📈 Pass Rate: ${passRate}%`);
+    safeLogger.info(`🎯 Coverage: ${summary.coverage.toFixed(1)}%`);
+    safeLogger.info(`⏱️ Duration: ${(summary.duration / 1000).toFixed(1)}s`);
     
-    console.log('\n📋 RECOMMENDATIONS:');
+    safeLogger.info('\n📋 RECOMMENDATIONS:');
     report.recommendations.forEach(rec => {
-      console.log(`   ${rec}`);
+      safeLogger.info(`   ${rec}`);
     });
     
-    console.log('\n' + '='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
     
     if (summary.failed === 0) {
-      console.log('🎉 All security and compliance tests passed!');
+      safeLogger.info('🎉 All security and compliance tests passed!');
     } else {
-      console.log('⚠️ Some tests failed - please review and fix issues');
+      safeLogger.info('⚠️ Some tests failed - please review and fix issues');
       process.exit(1);
     }
   }
@@ -371,7 +372,7 @@ class SecurityComplianceTestRunner {
 if (require.main === module) {
   const runner = new SecurityComplianceTestRunner();
   runner.runAllTests().catch(error => {
-    console.error('💥 Test runner failed:', error);
+    safeLogger.error('💥 Test runner failed:', error);
     process.exit(1);
   });
 }

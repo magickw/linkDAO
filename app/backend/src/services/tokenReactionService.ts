@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { reactions, posts, users } from '../db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 
@@ -163,7 +164,7 @@ class TokenReactionService {
         milestoneReached,
       };
     } catch (error) {
-      console.error('Error creating reaction:', error);
+      safeLogger.error('Error creating reaction:', error);
       throw new Error('Failed to create reaction');
     }
   }
@@ -224,7 +225,7 @@ class TokenReactionService {
         })),
       };
     } catch (error) {
-      console.error('Error getting reaction summary:', error);
+      safeLogger.error('Error getting reaction summary:', error);
       throw new Error('Failed to get reaction summary');
     }
   }
@@ -302,7 +303,7 @@ class TokenReactionService {
         hasMore,
       };
     } catch (error) {
-      console.error('Error getting reactions:', error);
+      safeLogger.error('Error getting reactions:', error);
       throw new Error('Failed to get reactions');
     }
   }
@@ -336,7 +337,7 @@ class TokenReactionService {
         createdAt: r.createdAt!,
       }));
     } catch (error) {
-      console.error('Error getting user reactions:', error);
+      safeLogger.error('Error getting user reactions:', error);
       throw new Error('Failed to get user reactions');
     }
   }
@@ -367,7 +368,7 @@ class TokenReactionService {
         refundAmount,
       };
     } catch (error) {
-      console.error('Error removing reaction:', error);
+      safeLogger.error('Error removing reaction:', error);
       throw new Error('Failed to remove reaction');
     }
   }
@@ -407,7 +408,7 @@ class TokenReactionService {
         reactionBreakdown,
       };
     } catch (error) {
-      console.error('Error getting reaction analytics:', error);
+      safeLogger.error('Error getting reaction analytics:', error);
       throw new Error('Failed to get reaction analytics');
     }
   }

@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   moderationCases, 
   moderationPolicies, 
@@ -145,7 +146,7 @@ export class RiskBasedDecisionEngine {
       return finalDecision;
 
     } catch (error) {
-      console.error('Error in risk-based decision engine:', error);
+      safeLogger.error('Error in risk-based decision engine:', error);
       
       // Return safe fallback decision
       return {
@@ -264,7 +265,7 @@ export class RiskBasedDecisionEngine {
       this.policyCache = policyMap;
       this.lastCacheUpdate = Date.now();
     } catch (error) {
-      console.error('Failed to load moderation policies:', error);
+      safeLogger.error('Failed to load moderation policies:', error);
     }
   }
 
@@ -663,7 +664,7 @@ export class RiskBasedDecisionEngine {
       }
 
     } catch (error) {
-      console.error('Failed to log moderation decision:', error);
+      safeLogger.error('Failed to log moderation decision:', error);
     }
   }
 
@@ -717,7 +718,7 @@ export class RiskBasedDecisionEngine {
       
       return true;
     } catch (error) {
-      console.error('Failed to update policy:', error);
+      safeLogger.error('Failed to update policy:', error);
       return false;
     }
   }
@@ -774,7 +775,7 @@ export class RiskBasedDecisionEngine {
       };
 
     } catch (error) {
-      console.error('Failed to get decision stats:', error);
+      safeLogger.error('Failed to get decision stats:', error);
       return {
         totalDecisions: 0,
         actionBreakdown: {},

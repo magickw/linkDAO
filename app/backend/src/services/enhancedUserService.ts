@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users, follows, posts, reactions, tips } from '../db/schema';
 import { eq, desc, sql, and, or, ne, count, avg, sum } from 'drizzle-orm';
 
@@ -139,7 +140,7 @@ export class EnhancedUserService {
         updatedAt: user.createdAt || new Date(),
       };
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      safeLogger.error('Error fetching user profile:', error);
       return null;
     }
   }
@@ -163,7 +164,7 @@ export class EnhancedUserService {
 
       return this.getUserProfile(user.id);
     } catch (error) {
-      console.error('Error fetching user profile by address:', error);
+      safeLogger.error('Error fetching user profile by address:', error);
       return null;
     }
   }
@@ -187,7 +188,7 @@ export class EnhancedUserService {
 
       return this.getUserProfile(user.id);
     } catch (error) {
-      console.error('Error fetching user profile by handle:', error);
+      safeLogger.error('Error fetching user profile by handle:', error);
       return null;
     }
   }
@@ -283,7 +284,7 @@ export class EnhancedUserService {
 
       return suggestions.slice(0, maxResults);
     } catch (error) {
-      console.error('Error getting suggested users:', error);
+      safeLogger.error('Error getting suggested users:', error);
       return [];
     }
   }
@@ -364,7 +365,7 @@ export class EnhancedUserService {
 
       return results.slice(0, maxResults);
     } catch (error) {
-      console.error('Error searching users:', error);
+      safeLogger.error('Error searching users:', error);
       return [];
     }
   }
@@ -405,7 +406,7 @@ export class EnhancedUserService {
 
       return true;
     } catch (error) {
-      console.error('Error following user:', error);
+      safeLogger.error('Error following user:', error);
       return false;
     }
   }
@@ -428,7 +429,7 @@ export class EnhancedUserService {
 
       return true;
     } catch (error) {
-      console.error('Error unfollowing user:', error);
+      safeLogger.error('Error unfollowing user:', error);
       return false;
     }
   }
@@ -456,7 +457,7 @@ export class EnhancedUserService {
 
       return profiles;
     } catch (error) {
-      console.error('Error getting followers:', error);
+      safeLogger.error('Error getting followers:', error);
       return [];
     }
   }
@@ -484,7 +485,7 @@ export class EnhancedUserService {
 
       return profiles;
     } catch (error) {
-      console.error('Error getting following:', error);
+      safeLogger.error('Error getting following:', error);
       return [];
     }
   }
@@ -509,7 +510,7 @@ export class EnhancedUserService {
 
       return !!follow;
     } catch (error) {
-      console.error('Error checking follow status:', error);
+      safeLogger.error('Error checking follow status:', error);
       return false;
     }
   }
@@ -552,7 +553,7 @@ export class EnhancedUserService {
 
       return profiles.slice(0, limit);
     } catch (error) {
-      console.error('Error getting trending users:', error);
+      safeLogger.error('Error getting trending users:', error);
       return [];
     }
   }
@@ -617,7 +618,7 @@ export class EnhancedUserService {
 
       return result.count || 0;
     } catch (error) {
-      console.error('Error calculating mutual connections:', error);
+      safeLogger.error('Error calculating mutual connections:', error);
       return 0;
     }
   }

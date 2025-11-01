@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users, userReputationScores, reputationChangeEvents, reputationPenalties, reputationHistory } from '../db/schema';
 import { eq, and, gte, lte, desc, sql, count, avg } from 'drizzle-orm';
 
@@ -141,7 +142,7 @@ export class UserReputationSystemService {
       };
 
     } catch (error) {
-      console.error('Error getting user reputation:', error);
+      safeLogger.error('Error getting user reputation:', error);
       return null;
     }
   }
@@ -193,7 +194,7 @@ export class UserReputationSystemService {
       return defaultReputation;
 
     } catch (error) {
-      console.error('Error creating default reputation:', error);
+      safeLogger.error('Error creating default reputation:', error);
       throw new Error('Failed to create default reputation');
     }
   }
@@ -259,7 +260,7 @@ export class UserReputationSystemService {
       return updatedReputation;
 
     } catch (error) {
-      console.error('Error updating user reputation:', error);
+      safeLogger.error('Error updating user reputation:', error);
       return null;
     }
   }
@@ -360,7 +361,7 @@ export class UserReputationSystemService {
       };
 
     } catch (error) {
-      console.error('Error updating reputation scores:', error);
+      safeLogger.error('Error updating reputation scores:', error);
       throw new Error('Failed to update reputation scores');
     }
   }
@@ -396,7 +397,7 @@ export class UserReputationSystemService {
       });
 
     } catch (error) {
-      console.error('Error recording reputation change event:', error);
+      safeLogger.error('Error recording reputation change event:', error);
     }
   }
 
@@ -431,7 +432,7 @@ export class UserReputationSystemService {
         .where(eq(userReputationScores.userId, userId));
 
     } catch (error) {
-      console.error('Error updating reputation tier:', error);
+      safeLogger.error('Error updating reputation tier:', error);
     }
   }
 
@@ -484,7 +485,7 @@ export class UserReputationSystemService {
       return penalty;
 
     } catch (error) {
-      console.error('Error applying reputation penalty:', error);
+      safeLogger.error('Error applying reputation penalty:', error);
       throw new Error('Failed to apply reputation penalty');
     }
   }
@@ -537,7 +538,7 @@ export class UserReputationSystemService {
       }));
 
     } catch (error) {
-      console.error('Error getting reputation history:', error);
+      safeLogger.error('Error getting reputation history:', error);
       return [];
     }
   }
@@ -574,7 +575,7 @@ export class UserReputationSystemService {
       }));
 
     } catch (error) {
-      console.error('Error getting reputation leaderboard:', error);
+      safeLogger.error('Error getting reputation leaderboard:', error);
       return [];
     }
   }
@@ -630,7 +631,7 @@ export class UserReputationSystemService {
       };
 
     } catch (error) {
-      console.error('Error calculating reputation metrics:', error);
+      safeLogger.error('Error calculating reputation metrics:', error);
       
       // Return default metrics
       return {

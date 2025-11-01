@@ -1,8 +1,9 @@
 import { cartService } from '../services/cartService';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
 
 async function testCartService() {
-  console.log('Testing Cart Service...');
+  safeLogger.info('Testing Cart Service...');
 
   // Mock authenticated user
   const mockUser: AuthenticatedUser = {
@@ -13,9 +14,9 @@ async function testCartService() {
 
   try {
     // Test getting or creating a cart
-    console.log('1. Testing getOrCreateCart...');
+    safeLogger.info('1. Testing getOrCreateCart...');
     const cart = await cartService.getOrCreateCart(mockUser);
-    console.log('✅ Cart created/retrieved:', {
+    safeLogger.info('✅ Cart created/retrieved:', {
       id: cart.id,
       userId: cart.userId,
       status: cart.status,
@@ -23,9 +24,9 @@ async function testCartService() {
       totalAmount: cart.totalAmount,
     });
 
-    console.log('✅ Cart service test completed successfully!');
+    safeLogger.info('✅ Cart service test completed successfully!');
   } catch (error) {
-    console.error('❌ Cart service test failed:', error);
+    safeLogger.error('❌ Cart service test failed:', error);
   }
 }
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
@@ -17,7 +18,7 @@ router.use(rateLimitingMiddleware({
 }));
 
 // Handle order event
-router.post('/handle',
+router.post('/handle', csrfProtection, 
   validateRequest({
     body: {
       orderId: { type: 'number', required: true },
@@ -29,7 +30,7 @@ router.post('/handle',
 );
 
 // Process pending order events
-router.post('/process-pending',
+router.post('/process-pending', csrfProtection, 
   orderEventHandlerController.processPendingEvents
 );
 

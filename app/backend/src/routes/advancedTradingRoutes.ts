@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, query, param } from 'express-validator';
 import { AdvancedTradingController } from '../controllers/advancedTradingController';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -44,7 +45,7 @@ const priceAlertValidation = [
  * @desc Create a limit order
  * @access Private
  */
-router.post('/limit-orders', authMiddleware, limitOrderValidation, async (req, res) => {
+router.post('/limit-orders', csrfProtection,  authMiddleware, limitOrderValidation, async (req, res) => {
   await advancedTradingController.createLimitOrder(req, res);
 });
 
@@ -53,7 +54,7 @@ router.post('/limit-orders', authMiddleware, limitOrderValidation, async (req, r
  * @desc Cancel a limit order
  * @access Private
  */
-router.delete('/limit-orders/:orderId', authMiddleware, [
+router.delete('/limit-orders/:orderId', csrfProtection,  authMiddleware, [
   param('orderId').isString().withMessage('Order ID is required')
 ], async (req, res) => {
   await advancedTradingController.cancelLimitOrder(req, res);
@@ -77,7 +78,7 @@ router.get('/limit-orders', authMiddleware, [
  * @desc Create a price alert
  * @access Private
  */
-router.post('/price-alerts', authMiddleware, priceAlertValidation, async (req, res) => {
+router.post('/price-alerts', csrfProtection,  authMiddleware, priceAlertValidation, async (req, res) => {
   await advancedTradingController.createPriceAlert(req, res);
 });
 
@@ -86,7 +87,7 @@ router.post('/price-alerts', authMiddleware, priceAlertValidation, async (req, r
  * @desc Remove a price alert
  * @access Private
  */
-router.delete('/price-alerts/:alertId', authMiddleware, [
+router.delete('/price-alerts/:alertId', csrfProtection,  authMiddleware, [
   param('alertId').isString().withMessage('Alert ID is required')
 ], async (req, res) => {
   await advancedTradingController.removePriceAlert(req, res);
@@ -110,7 +111,7 @@ router.get('/price-alerts', authMiddleware, [
  * @desc Update user's portfolio
  * @access Private
  */
-router.post('/portfolio/update', authMiddleware, [
+router.post('/portfolio/update', csrfProtection,  authMiddleware, [
   body('walletAddress').isEthereumAddress().withMessage('Valid wallet address is required'),
   body('chainId').optional().isInt({ min: 1 }).withMessage('Invalid chain ID')
 ], async (req, res) => {

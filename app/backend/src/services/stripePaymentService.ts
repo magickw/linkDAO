@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { safeLogger } from '../utils/safeLogger';
 import { IPaymentProcessor } from './ldaoAcquisitionService';
 import { PurchaseRequest, PurchaseResult, PaymentMethod } from '../types/ldaoAcquisition';
 
@@ -63,7 +64,7 @@ export class StripePaymentService implements IPaymentProcessor {
         finalPrice: amountInCents / 100, // Convert back to dollars
       };
     } catch (error) {
-      console.error('Stripe payment processing error:', error);
+      safeLogger.error('Stripe payment processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment processing failed',
@@ -90,7 +91,7 @@ export class StripePaymentService implements IPaymentProcessor {
         };
       }
     } catch (error) {
-      console.error('Stripe payment confirmation error:', error);
+      safeLogger.error('Stripe payment confirmation error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment confirmation failed',
@@ -113,7 +114,7 @@ export class StripePaymentService implements IPaymentProcessor {
         created: event.created,
       };
     } catch (error) {
-      console.error('Stripe webhook verification error:', error);
+      safeLogger.error('Stripe webhook verification error:', error);
       return null;
     }
   }
@@ -130,12 +131,12 @@ export class StripePaymentService implements IPaymentProcessor {
         await this.handlePaymentCancellation(event.data.object);
         break;
       default:
-        console.log(`Unhandled Stripe event type: ${event.type}`);
+        safeLogger.info(`Unhandled Stripe event type: ${event.type}`);
     }
   }
 
   private async handlePaymentSuccess(paymentIntent: any): Promise<void> {
-    console.log('Payment succeeded:', paymentIntent.id);
+    safeLogger.info('Payment succeeded:', paymentIntent.id);
     // Here we would:
     // 1. Update database with successful payment
     // 2. Trigger token minting process
@@ -144,7 +145,7 @@ export class StripePaymentService implements IPaymentProcessor {
   }
 
   private async handlePaymentFailure(paymentIntent: any): Promise<void> {
-    console.log('Payment failed:', paymentIntent.id);
+    safeLogger.info('Payment failed:', paymentIntent.id);
     // Here we would:
     // 1. Update database with failed payment
     // 2. Send failure notification
@@ -152,7 +153,7 @@ export class StripePaymentService implements IPaymentProcessor {
   }
 
   private async handlePaymentCancellation(paymentIntent: any): Promise<void> {
-    console.log('Payment canceled:', paymentIntent.id);
+    safeLogger.info('Payment canceled:', paymentIntent.id);
     // Here we would:
     // 1. Update database with canceled payment
     // 2. Clean up any pending processes
@@ -181,7 +182,7 @@ export class StripePaymentService implements IPaymentProcessor {
         setupIntentId: setupIntent.id,
       };
     } catch (error) {
-      console.error('Stripe setup intent creation error:', error);
+      safeLogger.error('Stripe setup intent creation error:', error);
       throw new Error('Failed to create setup intent');
     }
   }
@@ -195,7 +196,7 @@ export class StripePaymentService implements IPaymentProcessor {
 
       return customer.id;
     } catch (error) {
-      console.error('Stripe customer creation error:', error);
+      safeLogger.error('Stripe customer creation error:', error);
       throw new Error('Failed to create customer');
     }
   }
@@ -209,7 +210,7 @@ export class StripePaymentService implements IPaymentProcessor {
 
       return paymentMethods.data;
     } catch (error) {
-      console.error('Stripe payment methods retrieval error:', error);
+      safeLogger.error('Stripe payment methods retrieval error:', error);
       throw new Error('Failed to retrieve payment methods');
     }
   }
@@ -226,7 +227,7 @@ export class StripePaymentService implements IPaymentProcessor {
         refundId: refund.id,
       };
     } catch (error) {
-      console.error('Stripe refund processing error:', error);
+      safeLogger.error('Stripe refund processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Refund processing failed',
@@ -253,7 +254,7 @@ export class StripePaymentService implements IPaymentProcessor {
         };
       }
     } catch (error) {
-      console.error('Stripe payment retry error:', error);
+      safeLogger.error('Stripe payment retry error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment retry failed',
@@ -274,7 +275,7 @@ export class StripePaymentService implements IPaymentProcessor {
         metadata: paymentIntent.metadata,
       };
     } catch (error) {
-      console.error('Stripe payment intent retrieval error:', error);
+      safeLogger.error('Stripe payment intent retrieval error:', error);
       return null;
     }
   }

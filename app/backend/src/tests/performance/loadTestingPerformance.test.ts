@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import express from 'express';
 import request from 'supertest';
@@ -368,7 +369,7 @@ describe('Load Testing Performance Tests', () => {
     // Start server
     server = app.listen(0); // Use random port
     const address = server.address();
-    console.log(`Test server running on port ${address.port}`);
+    safeLogger.info(`Test server running on port ${address.port}`);
   });
 
   afterAll(async () => {
@@ -399,7 +400,7 @@ describe('Load Testing Performance Tests', () => {
       expect(results.p95ResponseTime).toBeLessThan(500); // 95th percentile under 500ms
       expect(results.throughput).toBeGreaterThan(10); // At least 10 requests per second
 
-      console.log(`50 Concurrent Users - Browse Feed:
+      safeLogger.info(`50 Concurrent Users - Browse Feed:
         Total Requests: ${results.totalRequests}
         Error Rate: ${(results.errorRate * 100).toFixed(2)}%
         Average Response Time: ${results.averageResponseTime.toFixed(2)}ms
@@ -421,7 +422,7 @@ describe('Load Testing Performance Tests', () => {
       expect(results.p95ResponseTime).toBeLessThan(1000); // 95th percentile under 1 second
       expect(results.throughput).toBeGreaterThan(15); // At least 15 requests per second
 
-      console.log(`100 Concurrent Users - Mixed Workload:
+      safeLogger.info(`100 Concurrent Users - Mixed Workload:
         Total Requests: ${results.totalRequests}
         Error Rate: ${(results.errorRate * 100).toFixed(2)}%
         Average Response Time: ${results.averageResponseTime.toFixed(2)}ms
@@ -443,7 +444,7 @@ describe('Load Testing Performance Tests', () => {
       expect(results.p95ResponseTime).toBeLessThan(2000); // 95th percentile under 2 seconds
       expect(results.throughput).toBeGreaterThan(20); // At least 20 requests per second
 
-      console.log(`200 Concurrent Users - Stress Test:
+      safeLogger.info(`200 Concurrent Users - Stress Test:
         Total Requests: ${results.totalRequests}
         Error Rate: ${(results.errorRate * 100).toFixed(2)}%
         Average Response Time: ${results.averageResponseTime.toFixed(2)}ms
@@ -472,7 +473,7 @@ describe('Load Testing Performance Tests', () => {
           errorRate: results.errorRate
         });
 
-        console.log(`Scalability Test - ${userCount} users:
+        safeLogger.info(`Scalability Test - ${userCount} users:
           Throughput: ${results.throughput.toFixed(2)} req/s
           Avg Response Time: ${results.averageResponseTime.toFixed(2)}ms
           Error Rate: ${(results.errorRate * 100).toFixed(2)}%`);
@@ -520,7 +521,7 @@ describe('Load Testing Performance Tests', () => {
           errorRate: results.errorRate
         });
 
-        console.log(`Burst Test - ${scenario.users} users for ${scenario.duration}ms:
+        safeLogger.info(`Burst Test - ${scenario.users} users for ${scenario.duration}ms:
           Throughput: ${results.throughput.toFixed(2)} req/s
           Avg Response Time: ${results.averageResponseTime.toFixed(2)}ms
           Error Rate: ${(results.errorRate * 100).toFixed(2)}%`);
@@ -570,7 +571,7 @@ describe('Load Testing Performance Tests', () => {
       expect(avgWaitingConnections).toBeLessThan(5); // Average waiting should be low
       expect(maxWaitingConnections).toBeLessThan(20); // Max waiting should be reasonable
 
-      console.log(`Database Pool Under Load:
+      safeLogger.info(`Database Pool Under Load:
         Max Connections: ${maxConnections}
         Avg Waiting: ${avgWaitingConnections.toFixed(2)}
         Max Waiting: ${maxWaitingConnections}
@@ -617,7 +618,7 @@ describe('Load Testing Performance Tests', () => {
       expect(memoryGrowthMB).toBeLessThan(100); // Less than 100MB growth
       expect(maxMemoryMB).toBeLessThan(500); // Max memory under 500MB
 
-      console.log(`Memory Usage Under Sustained Load:
+      safeLogger.info(`Memory Usage Under Sustained Load:
         Initial Memory: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB
         Final Memory: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB
         Memory Growth: ${memoryGrowthMB.toFixed(2)}MB
@@ -651,7 +652,7 @@ describe('Load Testing Performance Tests', () => {
       expect(results.errorRate).toBeLessThan(0.3); // Less than 30% error rate
       expect(results.averageResponseTime).toBeGreaterThan(500); // Should reflect slower responses
 
-      console.log(`Service Degradation Test:
+      safeLogger.info(`Service Degradation Test:
         Error Rate: ${(results.errorRate * 100).toFixed(2)}%
         Average Response Time: ${results.averageResponseTime.toFixed(2)}ms
         Throughput: ${results.throughput.toFixed(2)} req/s`);
@@ -694,7 +695,7 @@ describe('Load Testing Performance Tests', () => {
       expect(results.errorRate).toBeLessThan(0.5); // But not complete failure
       expect(results.totalRequests).toBeGreaterThan(100); // Should continue processing after recovery
 
-      console.log(`Failure Recovery Test:
+      safeLogger.info(`Failure Recovery Test:
         Total Requests: ${results.totalRequests}
         Error Rate: ${(results.errorRate * 100).toFixed(2)}%
         Recovery demonstrated: ${requestCount > 100 ? 'Yes' : 'No'}`);
@@ -757,7 +758,7 @@ describe('Load Testing Performance Tests', () => {
 
         const overallCompliance = Object.values(slaCompliance).every(Boolean);
 
-        console.log(`${slaTest.name} SLA Compliance:
+        safeLogger.info(`${slaTest.name} SLA Compliance:
           Error Rate: ${(results.errorRate * 100).toFixed(2)}% (${slaCompliance.errorRate ? '✓' : '✗'})
           Avg Response Time: ${results.averageResponseTime.toFixed(2)}ms (${slaCompliance.avgResponseTime ? '✓' : '✗'})
           P95 Response Time: ${results.p95ResponseTime.toFixed(2)}ms (${slaCompliance.p95ResponseTime ? '✓' : '✗'})

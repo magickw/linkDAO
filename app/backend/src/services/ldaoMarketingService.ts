@@ -1,4 +1,5 @@
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { marketingCampaigns, userEngagement, referralTracking } from '../db/schema';
 import { sendEmail } from './emailService';
@@ -66,7 +67,7 @@ class LDAOMarketingService {
 
       return campaign;
     } catch (error) {
-      console.error('Error creating marketing campaign:', error);
+      safeLogger.error('Error creating marketing campaign:', error);
       throw new Error('Failed to create marketing campaign');
     }
   }
@@ -79,7 +80,7 @@ class LDAOMarketingService {
       
       return campaign || null;
     } catch (error) {
-      console.error('Error fetching campaign:', error);
+      safeLogger.error('Error fetching campaign:', error);
       throw new Error('Failed to fetch campaign');
     }
   }
@@ -96,7 +97,7 @@ class LDAOMarketingService {
         ))
         .orderBy(desc(marketingCampaigns.createdAt));
     } catch (error) {
-      console.error('Error fetching active campaigns:', error);
+      safeLogger.error('Error fetching active campaigns:', error);
       throw new Error('Failed to fetch active campaigns');
     }
   }
@@ -113,7 +114,7 @@ class LDAOMarketingService {
 
       return updatedCampaign;
     } catch (error) {
-      console.error('Error updating campaign status:', error);
+      safeLogger.error('Error updating campaign status:', error);
       throw new Error('Failed to update campaign status');
     }
   }
@@ -140,7 +141,7 @@ class LDAOMarketingService {
       // Send welcome emails to new users
       await this.executeEmailCampaign(welcomeCampaign);
     } catch (error) {
-      console.error('Error launching welcome campaign:', error);
+      safeLogger.error('Error launching welcome campaign:', error);
       throw new Error('Failed to launch welcome campaign');
     }
   }
@@ -166,7 +167,7 @@ class LDAOMarketingService {
       // Notify existing users about referral program
       await this.notifyUsersAboutReferralProgram(referralCampaign);
     } catch (error) {
-      console.error('Error launching referral campaign:', error);
+      safeLogger.error('Error launching referral campaign:', error);
       throw new Error('Failed to launch referral campaign');
     }
   }
@@ -192,7 +193,7 @@ class LDAOMarketingService {
       // Create targeted content for different user segments
       await this.createTargetedStakingContent(stakingCampaign);
     } catch (error) {
-      console.error('Error launching staking promotion:', error);
+      safeLogger.error('Error launching staking promotion:', error);
       throw new Error('Failed to launch staking promotion');
     }
   }
@@ -222,7 +223,7 @@ class LDAOMarketingService {
       // Schedule social media posts
       await this.scheduleSocialMediaPosts(socialCampaign);
     } catch (error) {
-      console.error('Error launching social media campaign:', error);
+      safeLogger.error('Error launching social media campaign:', error);
       throw new Error('Failed to launch social media campaign');
     }
   }
@@ -265,7 +266,7 @@ class LDAOMarketingService {
         impressions: targetUsers.length
       });
     } catch (error) {
-      console.error('Error executing email campaign:', error);
+      safeLogger.error('Error executing email campaign:', error);
       throw new Error('Failed to execute email campaign');
     }
   }
@@ -288,7 +289,7 @@ class LDAOMarketingService {
         await createNotification(user.id, notification);
       }
     } catch (error) {
-      console.error('Error notifying users about referral program:', error);
+      safeLogger.error('Error notifying users about referral program:', error);
     }
   }
 
@@ -334,7 +335,7 @@ class LDAOMarketingService {
         }
       }
     } catch (error) {
-      console.error('Error creating targeted staking content:', error);
+      safeLogger.error('Error creating targeted staking content:', error);
     }
   }
 
@@ -366,7 +367,7 @@ class LDAOMarketingService {
         await this.scheduleSocialPost(post, campaign.id);
       }
     } catch (error) {
-      console.error('Error scheduling social media posts:', error);
+      safeLogger.error('Error scheduling social media posts:', error);
     }
   }
 
@@ -378,7 +379,7 @@ class LDAOMarketingService {
       // Update campaign metrics in real-time
       await this.updateCampaignMetricsFromEngagement(engagement);
     } catch (error) {
-      console.error('Error tracking engagement:', error);
+      safeLogger.error('Error tracking engagement:', error);
     }
   }
 
@@ -392,7 +393,7 @@ class LDAOMarketingService {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('Error tracking campaign click:', error);
+      safeLogger.error('Error tracking campaign click:', error);
     }
   }
 
@@ -406,7 +407,7 @@ class LDAOMarketingService {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('Error tracking campaign conversion:', error);
+      safeLogger.error('Error tracking campaign conversion:', error);
     }
   }
 
@@ -435,7 +436,7 @@ class LDAOMarketingService {
         engagementRate: impressions > 0 ? (clicks / impressions) * 100 : 0
       };
     } catch (error) {
-      console.error('Error calculating campaign performance:', error);
+      safeLogger.error('Error calculating campaign performance:', error);
       throw new Error('Failed to calculate campaign performance');
     }
   }
@@ -463,7 +464,7 @@ class LDAOMarketingService {
         topPerformingCampaigns: await this.getTopPerformingCampaigns(5)
       };
     } catch (error) {
-      console.error('Error calculating overall marketing metrics:', error);
+      safeLogger.error('Error calculating overall marketing metrics:', error);
       throw new Error('Failed to calculate marketing metrics');
     }
   }
@@ -497,12 +498,12 @@ class LDAOMarketingService {
 
   private async scheduleSocialPost(post: any, campaignId: string): Promise<void> {
     // In production, integrate with social media APIs
-    console.log(`Scheduled ${post.platform} post for campaign ${campaignId}:`, post.content);
+    safeLogger.info(`Scheduled ${post.platform} post for campaign ${campaignId}:`, post.content);
   }
 
   private async initializeCampaignTracking(campaign: MarketingCampaign): Promise<void> {
     // Set up tracking pixels, UTM parameters, etc.
-    console.log(`Initialized tracking for campaign: ${campaign.id}`);
+    safeLogger.info(`Initialized tracking for campaign: ${campaign.id}`);
   }
 
   private async updateCampaignMetrics(campaignId: string, metrics: Partial<MarketingCampaign['metrics']>): Promise<void> {
@@ -514,7 +515,7 @@ class LDAOMarketingService {
         })
         .where(eq(marketingCampaigns.id, campaignId));
     } catch (error) {
-      console.error('Error updating campaign metrics:', error);
+      safeLogger.error('Error updating campaign metrics:', error);
     }
   }
 

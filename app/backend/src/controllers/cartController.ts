@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { cartService, AddToCartRequest, UpdateCartItemRequest } from '../services/cartService';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
@@ -18,7 +20,7 @@ export class CartController {
       const cart = await cartService.getOrCreateCart(req.user);
       successResponse(res, cart);
     } catch (error) {
-      console.error('Error getting cart:', error);
+      safeLogger.error('Error getting cart:', error);
       errorResponse(res, 'CART_ERROR', 'Failed to get cart', 500);
     }
   }
@@ -60,7 +62,7 @@ export class CartController {
       const cart = await cartService.addItem(req.user, addToCartRequest);
       successResponse(res, cart, 201);
     } catch (error) {
-      console.error('Error adding item to cart:', error);
+      safeLogger.error('Error adding item to cart:', error);
       
       if (error instanceof Error) {
         if (error.message === 'Product not found') {
@@ -113,7 +115,7 @@ export class CartController {
       const cart = await cartService.updateItem(req.user, id, updateRequest);
       successResponse(res, cart);
     } catch (error) {
-      console.error('Error updating cart item:', error);
+      safeLogger.error('Error updating cart item:', error);
       
       if (error instanceof Error) {
         if (error.message === 'Cart item not found') {
@@ -156,7 +158,7 @@ export class CartController {
       const cart = await cartService.removeItem(req.user, id);
       successResponse(res, cart);
     } catch (error) {
-      console.error('Error removing cart item:', error);
+      safeLogger.error('Error removing cart item:', error);
       
       if (error instanceof Error) {
         if (error.message === 'Cart item not found') {
@@ -183,7 +185,7 @@ export class CartController {
       const cart = await cartService.clearCart(req.user);
       successResponse(res, cart);
     } catch (error) {
-      console.error('Error clearing cart:', error);
+      safeLogger.error('Error clearing cart:', error);
       
       if (error instanceof Error) {
         if (error.message === 'Cart not found') {
@@ -231,7 +233,7 @@ export class CartController {
       const cart = await cartService.syncCart(req.user, items);
       successResponse(res, cart);
     } catch (error) {
-      console.error('Error syncing cart:', error);
+      safeLogger.error('Error syncing cart:', error);
       errorResponse(res, 'CART_ERROR', 'Failed to sync cart', 500);
     }
   }

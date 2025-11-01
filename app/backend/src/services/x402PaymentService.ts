@@ -1,4 +1,5 @@
 import { CdpClient } from '@coinbase/cdp-sdk';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface X402PaymentRequest {
   orderId: string;
@@ -31,13 +32,13 @@ export class X402PaymentService {
           apiKeyId,
           apiKeySecret,
         });
-        console.log('CDP client initialized successfully');
+        safeLogger.info('CDP client initialized successfully');
       } else {
-        console.warn('CDP API credentials not found. x402 payments will use mock implementation.');
+        safeLogger.warn('CDP API credentials not found. x402 payments will use mock implementation.');
         this.cdpClient = null;
       }
     } catch (error) {
-      console.warn('Failed to initialize CDP client. x402 payments will use mock implementation.', error);
+      safeLogger.warn('Failed to initialize CDP client. x402 payments will use mock implementation.', error);
       this.cdpClient = null;
     }
   }
@@ -57,7 +58,7 @@ export class X402PaymentService {
         transactionId: `x402_${request.orderId}`,
       };
     } catch (error) {
-      console.error('X402 payment processing failed:', error);
+      safeLogger.error('X402 payment processing failed:', error);
       return {
         success: false,
         status: 'failed',
@@ -78,7 +79,7 @@ export class X402PaymentService {
         status: 'completed',
       };
     } catch (error) {
-      console.error('Failed to check X402 payment status:', error);
+      safeLogger.error('Failed to check X402 payment status:', error);
       return {
         success: false,
         status: 'failed',
@@ -99,7 +100,7 @@ export class X402PaymentService {
         status: 'completed',
       };
     } catch (error) {
-      console.error('X402 payment refund failed:', error);
+      safeLogger.error('X402 payment refund failed:', error);
       return {
         success: false,
         status: 'failed',

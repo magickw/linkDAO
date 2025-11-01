@@ -4,6 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
@@ -75,9 +76,9 @@ describe('Real Data Performance Tests', () => {
     monitor = new PerformanceMonitor();
 
     // Seed comprehensive data for performance testing
-    console.log('🌱 Seeding comprehensive test data for performance tests...');
+    safeLogger.info('🌱 Seeding comprehensive test data for performance tests...');
     await seeder.seedComprehensive();
-    console.log('✅ Test data seeded');
+    safeLogger.info('✅ Test data seeded');
   });
 
   afterAll(async () => {
@@ -126,7 +127,7 @@ describe('Real Data Performance Tests', () => {
       const memoryIncrease = metrics.memoryUsage.peak.heapUsed - metrics.memoryUsage.before.heapUsed;
       expect(memoryIncrease).toBeLessThan(100 * 1024 * 1024); // 100MB
 
-      console.log(`Community queries completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Community queries completed in ${metrics.duration.toFixed(2)}ms`);
     });
 
     it('should handle large product queries efficiently', async () => {
@@ -171,7 +172,7 @@ describe('Real Data Performance Tests', () => {
       expect(priceFilteredProducts.length).toBeGreaterThan(0);
       expect(auctions.length).toBeGreaterThan(0);
 
-      console.log(`Product queries completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Product queries completed in ${metrics.duration.toFixed(2)}ms`);
     });
 
     it('should handle complex join queries efficiently', async () => {
@@ -223,7 +224,7 @@ describe('Real Data Performance Tests', () => {
       expect(userCommunityData.length).toBeGreaterThan(0);
       expect(communityStats.length).toBeGreaterThan(0);
 
-      console.log(`Complex join queries completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Complex join queries completed in ${metrics.duration.toFixed(2)}ms`);
     });
 
     it('should handle feed queries with pagination efficiently', async () => {
@@ -251,7 +252,7 @@ describe('Real Data Performance Tests', () => {
       expect(metrics.duration).toBeLessThan(4000); // 4 seconds
       expect(allPosts.length).toBe(pageSize * pages);
 
-      console.log(`Feed pagination (${pages} pages) completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Feed pagination (${pages} pages) completed in ${metrics.duration.toFixed(2)}ms`);
     });
   });
 
@@ -289,7 +290,7 @@ describe('Real Data Performance Tests', () => {
 
       expect(insertedUsers.length).toBe(1000);
 
-      console.log(`Bulk insert of 1000 users completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Bulk insert of 1000 users completed in ${metrics.duration.toFixed(2)}ms`);
 
       // Cleanup
       await db.delete(schema.users).where(schema.users.id.like('perf-test-user-%'));
@@ -333,7 +334,7 @@ describe('Real Data Performance Tests', () => {
 
       expect(updatedUsers.every(user => user.reputation === 500)).toBe(true);
 
-      console.log(`Bulk update of 500 users completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Bulk update of 500 users completed in ${metrics.duration.toFixed(2)}ms`);
 
       // Cleanup
       await db.delete(schema.users).where(schema.users.id.like('bulk-update-user-%'));
@@ -374,7 +375,7 @@ describe('Real Data Performance Tests', () => {
 
       expect(remainingPosts.length).toBe(0);
 
-      console.log(`Bulk delete of 1000 posts completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Bulk delete of 1000 posts completed in ${metrics.duration.toFixed(2)}ms`);
     });
   });
 
@@ -400,8 +401,8 @@ describe('Real Data Performance Tests', () => {
       
       // Note: In a real implementation with query caching,
       // the second query should be significantly faster
-      console.log(`First query: ${firstMetrics.duration.toFixed(2)}ms`);
-      console.log(`Second query: ${secondMetrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`First query: ${firstMetrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Second query: ${secondMetrics.duration.toFixed(2)}ms`);
     });
 
     it('should handle concurrent queries efficiently', async () => {
@@ -423,7 +424,7 @@ describe('Real Data Performance Tests', () => {
       expect(metrics.duration).toBeLessThan(3000); // 3 seconds
       expect(results.every(result => result.length > 0)).toBe(true);
 
-      console.log(`5 concurrent queries completed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`5 concurrent queries completed in ${metrics.duration.toFixed(2)}ms`);
     });
   });
 
@@ -456,8 +457,8 @@ describe('Real Data Performance Tests', () => {
       const memoryIncrease = metrics.memoryUsage.peak.heapUsed - metrics.memoryUsage.before.heapUsed;
       expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024); // 50MB
 
-      console.log(`Large result set (1000 records) processed in ${metrics.duration.toFixed(2)}ms`);
-      console.log(`Memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
+      safeLogger.info(`Large result set (1000 records) processed in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
     });
 
     it('should handle streaming large datasets efficiently', async () => {
@@ -499,8 +500,8 @@ describe('Real Data Performance Tests', () => {
       const memoryIncrease = metrics.memoryUsage.peak.heapUsed - metrics.memoryUsage.before.heapUsed;
       expect(memoryIncrease).toBeLessThan(30 * 1024 * 1024); // 30MB
 
-      console.log(`Streamed processing of ${processedCount} records in ${metrics.duration.toFixed(2)}ms`);
-      console.log(`Peak memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
+      safeLogger.info(`Streamed processing of ${processedCount} records in ${metrics.duration.toFixed(2)}ms`);
+      safeLogger.info(`Peak memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
     });
   });
 
@@ -556,7 +557,7 @@ describe('Real Data Performance Tests', () => {
         expect(metrics.duration).toBeLessThan(benchmark.maxTime);
         expect(result.length).toBeGreaterThan(0);
 
-        console.log(`${benchmark.name}: ${metrics.duration.toFixed(2)}ms (max: ${benchmark.maxTime}ms)`);
+        safeLogger.info(`${benchmark.name}: ${metrics.duration.toFixed(2)}ms (max: ${benchmark.maxTime}ms)`);
       }
     });
 
@@ -590,7 +591,7 @@ describe('Real Data Performance Tests', () => {
         expect(metrics.duration).toBeLessThan(2000); // 2 seconds for search
 
         const totalResults = communityResults.length + productResults.length + postResults.length;
-        console.log(`Search for "${term}": ${totalResults} results in ${metrics.duration.toFixed(2)}ms`);
+        safeLogger.info(`Search for "${term}": ${totalResults} results in ${metrics.duration.toFixed(2)}ms`);
       }
     });
   });
@@ -617,7 +618,7 @@ describe('Real Data Performance Tests', () => {
         });
 
         expect(posts.length).toBe(Math.min(size, 1000)); // Limited by actual data
-        console.log(`Query ${size} records: ${metrics.duration.toFixed(2)}ms (${results[results.length - 1].throughput.toFixed(0)} records/sec)`);
+        safeLogger.info(`Query ${size} records: ${metrics.duration.toFixed(2)}ms (${results[results.length - 1].throughput.toFixed(0)} records/sec)`);
       }
 
       // Performance should not degrade linearly with data size
@@ -653,7 +654,7 @@ describe('Real Data Performance Tests', () => {
           avgResponseTime: metrics.duration / concurrency
         });
 
-        console.log(`Concurrency ${concurrency}: ${metrics.duration.toFixed(2)}ms total, ${results[results.length - 1].avgResponseTime.toFixed(2)}ms avg`);
+        safeLogger.info(`Concurrency ${concurrency}: ${metrics.duration.toFixed(2)}ms total, ${results[results.length - 1].avgResponseTime.toFixed(2)}ms avg`);
       }
 
       // Average response time should not increase dramatically with concurrency

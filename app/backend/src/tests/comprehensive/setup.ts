@@ -5,12 +5,13 @@
  */
 
 import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 
 let testEnvironment: TestEnvironment;
 
 beforeAll(async () => {
-  console.log('Setting up comprehensive test environment...');
+  safeLogger.info('Setting up comprehensive test environment...');
   
   testEnvironment = new TestEnvironment();
   await testEnvironment.setup();
@@ -18,17 +19,17 @@ beforeAll(async () => {
   // Set global test timeout
   jest.setTimeout(600000); // 10 minutes
   
-  console.log('Comprehensive test environment ready');
+  safeLogger.info('Comprehensive test environment ready');
 }, 120000); // 2 minute setup timeout
 
 afterAll(async () => {
-  console.log('Tearing down comprehensive test environment...');
+  safeLogger.info('Tearing down comprehensive test environment...');
   
   if (testEnvironment) {
     await testEnvironment.teardown();
   }
   
-  console.log('Comprehensive test environment cleaned up');
+  safeLogger.info('Comprehensive test environment cleaned up');
 }, 60000); // 1 minute teardown timeout
 
 beforeEach(async () => {

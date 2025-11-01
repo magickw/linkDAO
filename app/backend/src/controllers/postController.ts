@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { PostService } from '../services/postService';
 import { CreatePostInput, UpdatePostInput } from '../models/Post';
 import { AppError, NotFoundError } from '../middleware/errorHandler';
@@ -17,7 +19,7 @@ export class PostController {
       const post = await postService.createPost(input);
       return res.status(201).json(post);
     } catch (error: any) {
-      console.error('Error in createPost controller:', error);
+      safeLogger.error('Error in createPost controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -37,7 +39,7 @@ export class PostController {
       }
       return res.json(post);
     } catch (error: any) {
-      console.error('Error in getPostById controller:', error);
+      safeLogger.error('Error in getPostById controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -53,7 +55,7 @@ export class PostController {
       const posts = await postService.getPostsByAuthor(author);
       return res.json(posts);
     } catch (error: any) {
-      console.error('Error in getPostsByAuthor controller:', error);
+      safeLogger.error('Error in getPostsByAuthor controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -69,7 +71,7 @@ export class PostController {
       const posts = await postService.getPostsByTag(tag);
       return res.json(posts);
     } catch (error: any) {
-      console.error('Error in getPostsByTag controller:', error);
+      safeLogger.error('Error in getPostsByTag controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -89,7 +91,7 @@ export class PostController {
       }
       return res.json(post);
     } catch (error: any) {
-      console.error('Error in updatePost controller:', error);
+      safeLogger.error('Error in updatePost controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -108,7 +110,7 @@ export class PostController {
       }
       return res.status(204).send();
     } catch (error: any) {
-      console.error('Error in deletePost controller:', error);
+      safeLogger.error('Error in deletePost controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -118,7 +120,7 @@ export class PostController {
       const posts = await postService.getAllPosts();
       return res.json(posts);
     } catch (error: any) {
-      console.error('Error in getAllPosts controller:', error);
+      safeLogger.error('Error in getAllPosts controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -135,7 +137,7 @@ export class PostController {
       const posts = await postService.getFeed(forUser);
       return res.json(posts);
     } catch (error: any) {
-      console.error('Error in getFeed controller:', error);
+      safeLogger.error('Error in getFeed controller:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }

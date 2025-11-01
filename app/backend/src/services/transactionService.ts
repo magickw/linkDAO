@@ -1,4 +1,5 @@
 import { eq, and, desc, sql, gte, lte, count } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   sellerTransactions,
@@ -127,7 +128,7 @@ class TransactionService {
         createdAt: transaction.createdAt.toISOString(),
       };
     } catch (error) {
-      console.error('Error recording transaction:', error);
+      safeLogger.error('Error recording transaction:', error);
       throw error;
     }
   }
@@ -233,7 +234,7 @@ class TransactionService {
 
       return enrichedTransactions;
     } catch (error) {
-      console.error('Error getting transaction history:', error);
+      safeLogger.error('Error getting transaction history:', error);
       throw error;
     }
   }
@@ -283,7 +284,7 @@ class TransactionService {
         recentTransactions,
       };
     } catch (error) {
-      console.error('Error getting transaction summary:', error);
+      safeLogger.error('Error getting transaction summary:', error);
       throw error;
     }
   }
@@ -425,7 +426,7 @@ class TransactionService {
         peakTransactionHours: peakHours,
       };
     } catch (error) {
-      console.error('Error getting transaction analytics:', error);
+      safeLogger.error('Error getting transaction analytics:', error);
       throw error;
     }
   }
@@ -519,7 +520,7 @@ class TransactionService {
       }
 
     } catch (error) {
-      console.error('Error recording order transaction:', error);
+      safeLogger.error('Error recording order transaction:', error);
       throw error;
     }
   }

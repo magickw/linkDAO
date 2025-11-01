@@ -2,20 +2,6 @@ import { createServer } from 'http';
 import { WebSocketService } from '../services/webSocketService';
 import { io as Client, Socket as ClientSocket } from 'socket.io-client';
 import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
-import test from '../../../frontend/src/pages/api/test';
 
 describe('WebSocketService', () => {
   let httpServer: any;

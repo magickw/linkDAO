@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { pollService, CreatePollInput, PollVoteInput } from '../services/pollService';
 import { z } from 'zod';
 
@@ -59,7 +61,7 @@ export class PollController {
         message: 'Poll created successfully'
       });
     } catch (error) {
-      console.error('Error creating poll:', error);
+      safeLogger.error('Error creating poll:', error);
       res.status(500).json({
         error: 'Failed to create poll',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -92,7 +94,7 @@ export class PollController {
         poll
       });
     } catch (error) {
-      console.error('Error fetching poll:', error);
+      safeLogger.error('Error fetching poll:', error);
       res.status(500).json({
         error: 'Failed to fetch poll',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -126,7 +128,7 @@ export class PollController {
         poll
       });
     } catch (error) {
-      console.error('Error fetching poll by post:', error);
+      safeLogger.error('Error fetching poll by post:', error);
       res.status(500).json({
         error: 'Failed to fetch poll',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -175,7 +177,7 @@ export class PollController {
         poll: updatedPoll
       });
     } catch (error) {
-      console.error('Error voting on poll:', error);
+      safeLogger.error('Error voting on poll:', error);
       
       // Handle specific error cases
       if (error instanceof Error) {
@@ -222,7 +224,7 @@ export class PollController {
         history
       });
     } catch (error) {
-      console.error('Error fetching voting history:', error);
+      safeLogger.error('Error fetching voting history:', error);
       res.status(500).json({
         error: 'Failed to fetch voting history',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -244,7 +246,7 @@ export class PollController {
         count: polls.length
       });
     } catch (error) {
-      console.error('Error fetching expiring polls:', error);
+      safeLogger.error('Error fetching expiring polls:', error);
       res.status(500).json({
         error: 'Failed to fetch expiring polls',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -277,7 +279,7 @@ export class PollController {
         message: 'Poll deleted successfully'
       });
     } catch (error) {
-      console.error('Error deleting poll:', error);
+      safeLogger.error('Error deleting poll:', error);
       res.status(500).json({
         error: 'Failed to delete poll',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -312,7 +314,7 @@ export class PollController {
         message: 'Poll expiration updated successfully'
       });
     } catch (error) {
-      console.error('Error updating poll expiration:', error);
+      safeLogger.error('Error updating poll expiration:', error);
       res.status(500).json({
         error: 'Failed to update poll expiration',
         message: error instanceof Error ? error.message : 'Unknown error'

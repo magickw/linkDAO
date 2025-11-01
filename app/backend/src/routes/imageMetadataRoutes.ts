@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import multer from 'multer';
 import imageMetadataController from '../controllers/imageMetadataController';
 import { authenticateToken } from '../middleware/auth';

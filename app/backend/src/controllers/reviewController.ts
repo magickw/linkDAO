@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { ReviewService } from '../services/reviewService';
 import { ReputationService } from '../services/reputationService';
 import { validateReview } from '../models/validation';
@@ -37,7 +39,7 @@ export class ReviewController {
         data: review
       });
     } catch (error: any) {
-      console.error('Error submitting review:', error);
+      safeLogger.error('Error submitting review:', error);
       res.status(400).json({
         success: false,
         error: error.message || 'Failed to submit review'
@@ -74,7 +76,7 @@ export class ReviewController {
         data: result
       });
     } catch (error: any) {
-      console.error('Error getting reviews for user:', error);
+      safeLogger.error('Error getting reviews for user:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to get reviews'
@@ -96,7 +98,7 @@ export class ReviewController {
         data: stats
       });
     } catch (error: any) {
-      console.error('Error getting review stats:', error);
+      safeLogger.error('Error getting review stats:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to get review statistics'
@@ -131,7 +133,7 @@ export class ReviewController {
         message: 'Review helpfulness updated'
       });
     } catch (error: any) {
-      console.error('Error marking review helpful:', error);
+      safeLogger.error('Error marking review helpful:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to update review helpfulness'
@@ -167,7 +169,7 @@ export class ReviewController {
         message: 'Review reported successfully'
       });
     } catch (error: any) {
-      console.error('Error reporting review:', error);
+      safeLogger.error('Error reporting review:', error);
       res.status(400).json({
         success: false,
         error: error.message || 'Failed to report review'
@@ -192,7 +194,7 @@ export class ReviewController {
         data: rankings
       });
     } catch (error: any) {
-      console.error('Error getting seller rankings:', error);
+      safeLogger.error('Error getting seller rankings:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to get seller rankings'
@@ -214,7 +216,7 @@ export class ReviewController {
         data: detection
       });
     } catch (error: any) {
-      console.error('Error detecting fake reviews:', error);
+      safeLogger.error('Error detecting fake reviews:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to detect fake reviews'
@@ -244,7 +246,7 @@ export class ReviewController {
         data: reputation
       });
     } catch (error: any) {
-      console.error('Error getting user reputation:', error);
+      safeLogger.error('Error getting user reputation:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to get user reputation'
@@ -275,7 +277,7 @@ export class ReviewController {
         message: 'Review flagged successfully'
       });
     } catch (error: any) {
-      console.error('Error flagging review:', error);
+      safeLogger.error('Error flagging review:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'Failed to flag review'

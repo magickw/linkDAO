@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import imageStorageController from '../controllers/imageStorageController';
 import { authenticateToken } from '../middleware/auth';
 

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { EnhancedStakingService } from '../services/enhancedStakingService';
 import { ethers } from 'ethers';
 
@@ -21,7 +23,7 @@ export const getStakingTiers = async (req: Request, res: Response) => {
       data: tiers
     });
   } catch (error) {
-    console.error('Error fetching staking tiers:', error);
+    safeLogger.error('Error fetching staking tiers:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch staking tiers'
@@ -49,7 +51,7 @@ export const getFlexibleStakingOptions = async (req: Request, res: Response) => 
       data: options
     });
   } catch (error) {
-    console.error('Error fetching flexible staking options:', error);
+    safeLogger.error('Error fetching flexible staking options:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch staking options'
@@ -93,7 +95,7 @@ export const calculateStakingRewards = async (req: Request, res: Response) => {
       data: calculation
     });
   } catch (error) {
-    console.error('Error calculating staking rewards:', error);
+    safeLogger.error('Error calculating staking rewards:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to calculate staking rewards'
@@ -161,7 +163,7 @@ export const createStakePosition = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error creating stake position:', error);
+    safeLogger.error('Error creating stake position:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create stake position'
@@ -189,7 +191,7 @@ export const getUserStakePositions = async (req: Request, res: Response) => {
       data: positions
     });
   } catch (error) {
-    console.error('Error fetching user stake positions:', error);
+    safeLogger.error('Error fetching user stake positions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch stake positions'
@@ -222,7 +224,7 @@ export const calculateEarlyWithdrawalPenalty = async (req: Request, res: Respons
       data: penalty
     });
   } catch (error) {
-    console.error('Error calculating early withdrawal penalty:', error);
+    safeLogger.error('Error calculating early withdrawal penalty:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to calculate penalty'
@@ -273,7 +275,7 @@ export const processPartialUnstaking = async (req: Request, res: Response) => {
       message: 'Partial unstaking processed successfully'
     });
   } catch (error) {
-    console.error('Error processing partial unstaking:', error);
+    safeLogger.error('Error processing partial unstaking:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to process partial unstaking'
@@ -324,7 +326,7 @@ export const processAutoCompounding = async (req: Request, res: Response) => {
       message: 'Auto-compounding processed successfully'
     });
   } catch (error) {
-    console.error('Error processing auto-compounding:', error);
+    safeLogger.error('Error processing auto-compounding:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to process auto-compounding'
@@ -352,7 +354,7 @@ export const getUserStakingAnalytics = async (req: Request, res: Response) => {
       data: analytics
     });
   } catch (error) {
-    console.error('Error fetching user staking analytics:', error);
+    safeLogger.error('Error fetching user staking analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch staking analytics'
@@ -389,7 +391,7 @@ export const getStakingTierDetails = async (req: Request, res: Response) => {
       data: tier
     });
   } catch (error) {
-    console.error('Error fetching staking tier details:', error);
+    safeLogger.error('Error fetching staking tier details:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch tier details'
@@ -418,7 +420,7 @@ export const getStakePositionDetails = async (req: Request, res: Response) => {
       error: 'Position details endpoint not yet implemented'
     });
   } catch (error) {
-    console.error('Error fetching stake position details:', error);
+    safeLogger.error('Error fetching stake position details:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch position details'
@@ -438,7 +440,7 @@ export const healthCheck = async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Health check failed:', error);
+    safeLogger.error('Health check failed:', error);
     res.status(500).json({
       success: false,
       error: 'Service health check failed'

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import imageMetadataService from '../services/imageMetadataService';
 
 export class ImageMetadataController {
@@ -33,7 +35,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Get image metadata error:', error);
+      safeLogger.error('Get image metadata error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve image metadata'
@@ -92,7 +94,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Update image metadata error:', error);
+      safeLogger.error('Update image metadata error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update image metadata'
@@ -135,7 +137,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Track image access error:', error);
+      safeLogger.error('Track image access error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track image access'
@@ -189,7 +191,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Get image analytics error:', error);
+      safeLogger.error('Get image analytics error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve image analytics'
@@ -230,7 +232,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Get images by usage type error:', error);
+      safeLogger.error('Get images by usage type error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve images by usage type'
@@ -280,7 +282,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Check backup status error:', error);
+      safeLogger.error('Check backup status error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to check backup status'
@@ -307,7 +309,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Get storage usage stats error:', error);
+      safeLogger.error('Get storage usage stats error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve storage usage statistics'
@@ -346,7 +348,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Find duplicate images error:', error);
+      safeLogger.error('Find duplicate images error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to find duplicate images'
@@ -383,7 +385,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Cleanup orphaned images error:', error);
+      safeLogger.error('Cleanup orphaned images error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to cleanup orphaned images'
@@ -416,7 +418,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Generate content hash error:', error);
+      safeLogger.error('Generate content hash error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate content hash'
@@ -448,7 +450,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Extract EXIF data error:', error);
+      safeLogger.error('Extract EXIF data error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to extract EXIF data'
@@ -508,7 +510,7 @@ export class ImageMetadataController {
       });
 
     } catch (error) {
-      console.error('Get image report error:', error);
+      safeLogger.error('Get image report error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate image report'

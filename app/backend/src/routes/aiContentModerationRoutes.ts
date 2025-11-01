@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { aiContentModerationController } from '../controllers/aiContentModerationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -30,7 +31,7 @@ router.use(aiRateLimit);
  * @access Admin
  * @body ContentModerationSchema
  */
-router.post('/moderate', aiContentModerationController.moderateContent);
+router.post('/moderate', csrfProtection,  aiContentModerationController.moderateContent);
 
 /**
  * @route POST /api/ai-moderation/moderate/batch
@@ -38,7 +39,7 @@ router.post('/moderate', aiContentModerationController.moderateContent);
  * @access Admin
  * @body { contents: ContentModerationSchema[] }
  */
-router.post('/moderate/batch', aiContentModerationController.moderateContentBatch);
+router.post('/moderate/batch', csrfProtection,  aiContentModerationController.moderateContentBatch);
 
 /**
  * @route GET /api/ai-moderation/spam/:contentId

@@ -6,6 +6,7 @@
  */
 
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import { EventEmitter } from 'events';
 import { securityConfig } from '../config/securityConfig';
 import securityMonitoringService, { SecurityEventType, SecuritySeverity } from './securityMonitoringService';
@@ -191,7 +192,7 @@ class SellerSecurityService extends EventEmitter {
 
       return true;
     } catch (error) {
-      console.error('Error validating seller access:', error);
+      safeLogger.error('Error validating seller access:', error);
       
       await this.securityMonitoring.recordSecurityEvent({
         type: SecurityEventType.SYSTEM_COMPROMISE,
@@ -277,7 +278,7 @@ class SellerSecurityService extends EventEmitter {
 
       return true;
     } catch (error) {
-      console.error('Error verifying wallet ownership:', error);
+      safeLogger.error('Error verifying wallet ownership:', error);
       
       await this.securityMonitoring.recordSecurityEvent({
         type: SecurityEventType.SYSTEM_COMPROMISE,
@@ -347,7 +348,7 @@ class SellerSecurityService extends EventEmitter {
 
       return true;
     } catch (error) {
-      console.error('Error checking role-based access:', error);
+      safeLogger.error('Error checking role-based access:', error);
       return false;
     }
   }
@@ -380,7 +381,7 @@ class SellerSecurityService extends EventEmitter {
 
       return sanitized;
     } catch (error) {
-      console.error('Error sanitizing seller data:', error);
+      safeLogger.error('Error sanitizing seller data:', error);
       throw new Error('Data sanitization failed');
     }
   }
@@ -440,7 +441,7 @@ class SellerSecurityService extends EventEmitter {
       // Emit event for real-time processing
       this.emit('sellerAuditEvent', event);
     } catch (error) {
-      console.error('Error logging seller audit event:', error);
+      safeLogger.error('Error logging seller audit event:', error);
     }
   }
 
@@ -638,7 +639,7 @@ class SellerSecurityService extends EventEmitter {
       });
 
       if (expiredSessions.length > 0) {
-        console.log(`Cleaned up ${expiredSessions.length} expired seller security sessions`);
+        safeLogger.info(`Cleaned up ${expiredSessions.length} expired seller security sessions`);
       }
     }, 300000); // 5 minutes
   }

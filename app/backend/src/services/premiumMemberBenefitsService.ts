@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { userStakingInfo, stakingPositions, stakingTiers, stakingEvents } from '../db/schema';
 import { eq, and, desc, gte, sum, count } from 'drizzle-orm';
@@ -94,7 +95,7 @@ export class PremiumMemberBenefitsService {
         benefits
       };
     } catch (error) {
-      console.error('Error checking premium membership status:', error);
+      safeLogger.error('Error checking premium membership status:', error);
       throw new Error('Failed to check premium membership status');
     }
   }
@@ -248,7 +249,7 @@ export class PremiumMemberBenefitsService {
 
       return premiumPools;
     } catch (error) {
-      console.error('Error fetching exclusive staking pools:', error);
+      safeLogger.error('Error fetching exclusive staking pools:', error);
       throw new Error('Failed to fetch exclusive staking pools');
     }
   }
@@ -287,7 +288,7 @@ export class PremiumMemberBenefitsService {
         finalPenalty: ethers.formatEther(finalPenaltyAmount)
       };
     } catch (error) {
-      console.error('Error calculating premium penalty discount:', error);
+      safeLogger.error('Error calculating premium penalty discount:', error);
       throw new Error('Failed to calculate penalty discount');
     }
   }
@@ -423,7 +424,7 @@ export class PremiumMemberBenefitsService {
         optimalRebalancing
       };
     } catch (error) {
-      console.error('Error generating premium analytics:', error);
+      safeLogger.error('Error generating premium analytics:', error);
       throw new Error('Failed to generate premium analytics');
     }
   }
@@ -512,7 +513,7 @@ export class PremiumMemberBenefitsService {
         reason: "Custom staking option approved based on your membership tier and stake amount"
       };
     } catch (error) {
-      console.error('Error creating custom staking option:', error);
+      safeLogger.error('Error creating custom staking option:', error);
       throw new Error('Failed to create custom staking option');
     }
   }
@@ -591,7 +592,7 @@ export class PremiumMemberBenefitsService {
         eligiblePromotions
       };
     } catch (error) {
-      console.error('Error fetching premium staking events:', error);
+      safeLogger.error('Error fetching premium staking events:', error);
       throw new Error('Failed to fetch premium staking events');
     }
   }

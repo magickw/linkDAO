@@ -4,6 +4,7 @@
  */
 
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { paymentMethodUsageHistory, paymentMethodPreferences } from '../db/schema';
 import { UserPreferences, PaymentMethodPreference } from './userPreferenceService';
@@ -70,7 +71,7 @@ export class PreferenceLearningService {
       
       return decayedPreferences;
     } catch (error) {
-      console.error('Error analyzing and updating preferences:', error);
+      safeLogger.error('Error analyzing and updating preferences:', error);
       throw error;
     }
   }
@@ -109,7 +110,7 @@ export class PreferenceLearningService {
         reasoning: bestMethod.score.reasoning
       };
     } catch (error) {
-      console.error('Error predicting preferred method:', error);
+      safeLogger.error('Error predicting preferred method:', error);
       throw error;
     }
   }
@@ -137,7 +138,7 @@ export class PreferenceLearningService {
         await this.analyzeAndUpdatePreferences(userId);
       }
     } catch (error) {
-      console.error('Error tracking user selection:', error);
+      safeLogger.error('Error tracking user selection:', error);
       throw error;
     }
   }
@@ -484,7 +485,7 @@ export class PreferenceLearningService {
   ): Promise<void> {
     // Update preference scores based on user selection
     // This would integrate with the userPreferenceService
-    console.log('Updating preference scores for user:', userId, 'method:', selectedMethod);
+    safeLogger.info('Updating preference scores for user:', userId, 'method:', selectedMethod);
   }
 
   private async getRecentSelections(userId: string, limit: number): Promise<any[]> {
@@ -521,7 +522,7 @@ export class PreferenceLearningService {
   private async saveUpdatedPreferences(userId: string, preferences: UserPreferences): Promise<void> {
     // Save updated preferences to database
     // This would integrate with the userPreferenceService
-    console.log('Saving updated preferences for user:', userId);
+    safeLogger.info('Saving updated preferences for user:', userId);
   }
 }
 

@@ -1,4 +1,5 @@
 import { eq, and, lt } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { sellerVerifications } from '../database/schemas/sellerVerification';
 import { sellers } from '../db/schema';
@@ -78,7 +79,7 @@ export class SellerVerificationService {
         const normalizedAddress = await this.normalizeAddress(verification.businessAddress);
         if (!normalizedAddress) {
           // Log warning but continue with verification
-          console.warn('Failed to normalize address for verification:', verificationId);
+          safeLogger.warn('Failed to normalize address for verification:', verificationId);
         }
       }
 
@@ -96,7 +97,7 @@ export class SellerVerificationService {
         await this.flagForManualReview(verificationId, verificationResult.reason || 'Automated verification failed');
       }
     } catch (error) {
-      console.error('Error processing verification:', error);
+      safeLogger.error('Error processing verification:', error);
       // Flag for manual review on error
       await this.flagForManualReview(verificationId, 'System error during verification: ' + (error as Error).message);
     }
@@ -135,7 +136,7 @@ export class SellerVerificationService {
         
         if (!addressResult.success) {
           // Address verification is not critical for approval, but affects risk score
-          console.warn('Address verification warning:', addressResult.reason);
+          safeLogger.warn('Address verification warning:', addressResult.reason);
         }
       }
 
@@ -145,7 +146,7 @@ export class SellerVerificationService {
         
         if (!registryResult.success) {
           // Registry check is not critical for approval, but affects risk score
-          console.warn('Business registry check warning:', registryResult.reason);
+          safeLogger.warn('Business registry check warning:', registryResult.reason);
         }
       }
 
@@ -159,7 +160,7 @@ export class SellerVerificationService {
         riskScore: riskScore
       };
     } catch (error) {
-      console.error('Error in automated verification:', error);
+      safeLogger.error('Error in automated verification:', error);
       return {
         success: false,
         reason: 'System error during automated verification: ' + (error as Error).message

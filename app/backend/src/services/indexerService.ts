@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
 import { FollowService } from './followService';
 import { PostService } from './postService';
@@ -97,7 +98,7 @@ export class IndexerService {
   }
 
   async start(): Promise<void> {
-    console.log('Starting blockchain indexer...');
+    safeLogger.info('Starting blockchain indexer...');
     
     // Get the current block number
     try {
@@ -111,11 +112,11 @@ export class IndexerService {
         timeoutPromise
       ]) as number;
       
-      console.log(`Current block number: ${this.lastBlock}`);
+      safeLogger.info(`Current block number: ${this.lastBlock}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn('Could not connect to blockchain node:', errorMessage);
-      console.log('Running in offline mode - blockchain features will be disabled');
+      safeLogger.warn('Could not connect to blockchain node:', errorMessage);
+      safeLogger.info('Running in offline mode - blockchain features will be disabled');
       this.useEventListeners = false;
       this.lastBlock = 0;
       return; // Continue without blockchain
@@ -123,10 +124,10 @@ export class IndexerService {
     
     // Set up event listeners only if we're configured to use them
     if (this.useEventListeners) {
-      console.log('Setting up event listeners for contract events');
+      safeLogger.info('Setting up event listeners for contract events');
       this.setupEventListeners();
     } else {
-      console.log('Skipping event listeners - either contracts not deployed or using placeholder addresses');
+      safeLogger.info('Skipping event listeners - either contracts not deployed or using placeholder addresses');
     }
     
     // Start polling for new blocks
@@ -138,13 +139,13 @@ export class IndexerService {
       // Profile events
       if (this.profileRegistry) {
         this.profileRegistry.on('ProfileCreated', (owner, tokenId, handle, createdAt, event) => {
-          console.log(`Profile created: ${owner} with handle ${handle}`);
+          safeLogger.info(`Profile created: ${owner} with handle ${handle}`);
           // In a real implementation, we would update our database
           // this.profileService.createProfile(owner, handle, tokenId.toString());
         });
 
         this.profileRegistry.on('ProfileUpdated', (tokenId, handle, avatarCid, bioCid, event) => {
-          console.log(`Profile updated: ${tokenId}`);
+          safeLogger.info(`Profile updated: ${tokenId}`);
           // In a real implementation, we would update our database
           // this.profileService.updateProfile(tokenId.toString(), avatarCid, bioCid);
         });
@@ -153,13 +154,13 @@ export class IndexerService {
       // Follow events
       if (this.followModule) {
         this.followModule.on('Followed', (follower, following, event) => {
-          console.log(`${follower} followed ${following}`);
+          safeLogger.info(`${follower} followed ${following}`);
           // In a real implementation, we would update our database
           // this.followService.follow(follower, following);
         });
 
         this.followModule.on('Unfollowed', (follower, following, event) => {
-          console.log(`${follower} unfollowed ${following}`);
+          safeLogger.info(`${follower} unfollowed ${following}`);
           // In a real implementation, we would update our database
           // this.followService.unfollow(follower, following);
         });
@@ -168,7 +169,7 @@ export class IndexerService {
       // Payment events
       if (this.paymentRouter) {
         this.paymentRouter.on('PaymentSent', (from, to, token, amount, fee, memo, event) => {
-          console.log(`Payment sent: ${from} -> ${to}, ${amount.toString()} tokens`);
+          safeLogger.info(`Payment sent: ${from} -> ${to}, ${amount.toString()} tokens`);
           // In a real implementation, we would update our database
         });
       }
@@ -176,24 +177,24 @@ export class IndexerService {
       // Governance events
       if (this.governance) {
         this.governance.on('ProposalCreated', (id, proposer, title, description, startBlock, endBlock, event) => {
-          console.log(`Proposal created: ${id} by ${proposer}`);
+          safeLogger.info(`Proposal created: ${id} by ${proposer}`);
           // In a real implementation, we would update our database
         });
 
         this.governance.on('VoteCast', (voter, proposalId, support, votes, reason, event) => {
-          console.log(`Vote cast: ${voter} on proposal ${proposalId}`);
+          safeLogger.info(`Vote cast: ${voter} on proposal ${proposalId}`);
           // In a real implementation, we would update our database
         });
 
         this.governance.on('ProposalExecuted', (id, event) => {
-          console.log(`Proposal executed: ${id}`);
+          safeLogger.info(`Proposal executed: ${id}`);
           // In a real implementation, we would update our database
         });
       }
       
-      console.log('Event listeners set up successfully');
+      safeLogger.info('Event listeners set up successfully');
     } catch (error) {
-      console.error('Error setting up event listeners:', error);
+      safeLogger.error('Error setting up event listeners:', error);
       this.useEventListeners = false; // Disable event listeners if we get an error
     }
   }
@@ -208,19 +209,19 @@ export class IndexerService {
       const currentBlock = await this.provider.getBlockNumber();
       
       if (currentBlock > this.lastBlock) {
-        console.log(`Processing blocks ${this.lastBlock + 1} to ${currentBlock}`);
+        safeLogger.info(`Processing blocks ${this.lastBlock + 1} to ${currentBlock}`);
         this.lastBlock = currentBlock;
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.warn('Error polling new blocks (blockchain offline):', errorMessage);
+      safeLogger.warn('Error polling new blocks (blockchain offline):', errorMessage);
       // Disable further polling attempts if we consistently can't connect
       this.useEventListeners = false;
     }
   }
 
   async stop(): Promise<void> {
-    console.log('Stopping blockchain indexer...');
+    safeLogger.info('Stopping blockchain indexer...');
     // Remove event listeners
     if (this.profileRegistry) {
       this.profileRegistry.removeAllListeners();

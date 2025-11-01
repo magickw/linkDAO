@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { userReputationSystemService } from '../services/userReputationSystemService';
 import { z } from 'zod';
 
@@ -58,7 +60,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error retrieving user reputation:', error);
+      safeLogger.error('Error retrieving user reputation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -108,7 +110,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error updating user reputation:', error);
+      safeLogger.error('Error updating user reputation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -150,7 +152,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error applying reputation penalty:', error);
+      safeLogger.error('Error applying reputation penalty:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -191,7 +193,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error retrieving reputation history:', error);
+      safeLogger.error('Error retrieving reputation history:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -227,7 +229,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error retrieving reputation leaderboard:', error);
+      safeLogger.error('Error retrieving reputation leaderboard:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving reputation leaderboard'
@@ -254,7 +256,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error calculating reputation metrics:', error);
+      safeLogger.error('Error calculating reputation metrics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -286,7 +288,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error retrieving reputation tiers:', error);
+      safeLogger.error('Error retrieving reputation tiers:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving reputation tiers'
@@ -315,7 +317,7 @@ export class UserReputationSystemController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

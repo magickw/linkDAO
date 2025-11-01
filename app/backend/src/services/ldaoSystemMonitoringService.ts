@@ -1,4 +1,5 @@
 import { eq, desc, gte, lte, and } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { systemMetrics, userFeedback, performanceLogs } from '../db/schema';
 import { createNotification } from './notificationService';
@@ -80,7 +81,7 @@ class LDAOSystemMonitoringService {
       // Check if metric triggers any alerts
       await this.checkAlertThresholds(metric);
     } catch (error) {
-      console.error('Error recording system metric:', error);
+      safeLogger.error('Error recording system metric:', error);
     }
   }
 
@@ -98,7 +99,7 @@ class LDAOSystemMonitoringService {
 
       return this.calculatePerformanceMetrics(metrics);
     } catch (error) {
-      console.error('Error fetching performance metrics:', error);
+      safeLogger.error('Error fetching performance metrics:', error);
       throw new Error('Failed to fetch performance metrics');
     }
   }
@@ -140,7 +141,7 @@ class LDAOSystemMonitoringService {
         }
       };
     } catch (error) {
-      console.error('Error fetching LDAO-specific metrics:', error);
+      safeLogger.error('Error fetching LDAO-specific metrics:', error);
       throw new Error('Failed to fetch LDAO metrics');
     }
   }
@@ -161,7 +162,7 @@ class LDAOSystemMonitoringService {
 
       return newFeedback;
     } catch (error) {
-      console.error('Error recording user feedback:', error);
+      safeLogger.error('Error recording user feedback:', error);
       throw new Error('Failed to record user feedback');
     }
   }
@@ -196,7 +197,7 @@ class LDAOSystemMonitoringService {
         sentimentAnalysis: await this.analyzeFeedbackSentiment(feedback)
       };
     } catch (error) {
-      console.error('Error fetching feedback summary:', error);
+      safeLogger.error('Error fetching feedback summary:', error);
       throw new Error('Failed to fetch feedback summary');
     }
   }
@@ -220,7 +221,7 @@ class LDAOSystemMonitoringService {
 
       return newAlert;
     } catch (error) {
-      console.error('Error creating system alert:', error);
+      safeLogger.error('Error creating system alert:', error);
       throw new Error('Failed to create system alert');
     }
   }
@@ -285,7 +286,7 @@ class LDAOSystemMonitoringService {
         await this.createAlert(alert);
       }
     } catch (error) {
-      console.error('Error checking alert thresholds:', error);
+      safeLogger.error('Error checking alert thresholds:', error);
     }
   }
 
@@ -304,7 +305,7 @@ class LDAOSystemMonitoringService {
         await this.notifyLDAOTeam(alert);
       }
     } catch (error) {
-      console.error('Error handling alert notifications:', error);
+      safeLogger.error('Error handling alert notifications:', error);
     }
   }
 
@@ -324,7 +325,7 @@ class LDAOSystemMonitoringService {
         });
       }
     } catch (error) {
-      console.error('Error recording system health:', error);
+      safeLogger.error('Error recording system health:', error);
     }
   }
 
@@ -358,7 +359,7 @@ class LDAOSystemMonitoringService {
         await this.recordMetric(metric);
       }
     } catch (error) {
-      console.error('Error recording LDAO transaction metrics:', error);
+      safeLogger.error('Error recording LDAO transaction metrics:', error);
     }
   }
 
@@ -386,7 +387,7 @@ class LDAOSystemMonitoringService {
         uptime: await this.calculateUptime()
       };
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      safeLogger.error('Error fetching dashboard data:', error);
       throw new Error('Failed to fetch dashboard data');
     }
   }
@@ -464,7 +465,7 @@ class LDAOSystemMonitoringService {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('Error processing feedback:', error);
+      safeLogger.error('Error processing feedback:', error);
     }
   }
 
@@ -501,7 +502,7 @@ class LDAOSystemMonitoringService {
         });
       }
     } catch (error) {
-      console.error('Error notifying administrators:', error);
+      safeLogger.error('Error notifying administrators:', error);
     }
   }
 
@@ -524,7 +525,7 @@ class LDAOSystemMonitoringService {
         });
       }
     } catch (error) {
-      console.error('Error notifying LDAO team:', error);
+      safeLogger.error('Error notifying LDAO team:', error);
     }
   }
 
@@ -538,7 +539,7 @@ class LDAOSystemMonitoringService {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('Error logging alert:', error);
+      safeLogger.error('Error logging alert:', error);
     }
   }
 

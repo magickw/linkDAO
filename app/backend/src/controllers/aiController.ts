@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { AIService } from '../services/aiService';
 import { AppError, ValidationError } from '../middleware/errorHandler';
 

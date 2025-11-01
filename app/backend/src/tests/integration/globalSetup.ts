@@ -6,11 +6,12 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import fs from 'fs';
 
 export default async function globalSetup(): Promise<void> {
-  console.log('🔧 Setting up integration test environment...');
+  safeLogger.info('🔧 Setting up integration test environment...');
   
   try {
     // Set environment variables
@@ -31,15 +32,15 @@ export default async function globalSetup(): Promise<void> {
     // Initialize test data
     await initializeTestData();
     
-    console.log('✅ Integration test environment ready');
+    safeLogger.info('✅ Integration test environment ready');
   } catch (error) {
-    console.error('❌ Failed to setup integration test environment:', error);
+    safeLogger.error('❌ Failed to setup integration test environment:', error);
     throw error;
   }
 }
 
 async function setupTestDatabase(): Promise<void> {
-  console.log('📊 Setting up test database...');
+  safeLogger.info('📊 Setting up test database...');
   
   try {
     // Use in-memory SQLite for fast tests
@@ -57,19 +58,19 @@ async function setupTestDatabase(): Promise<void> {
         stdio: 'pipe',
         env: { ...process.env }
       });
-      console.log('✅ Database migrations completed');
+      safeLogger.info('✅ Database migrations completed');
     } catch (migrationError) {
-      console.warn('⚠️  Database migrations failed, continuing with existing schema');
+      safeLogger.warn('⚠️  Database migrations failed, continuing with existing schema');
     }
     
   } catch (error) {
-    console.error('❌ Database setup failed:', error);
+    safeLogger.error('❌ Database setup failed:', error);
     throw error;
   }
 }
 
 async function setupTestCache(): Promise<void> {
-  console.log('🗄️  Setting up test cache...');
+  safeLogger.info('🗄️  Setting up test cache...');
   
   try {
     // Use in-memory cache for tests
@@ -79,15 +80,15 @@ async function setupTestCache(): Promise<void> {
     // Alternative: Use memory cache
     process.env.CACHE_TYPE = 'memory';
     
-    console.log('✅ Test cache configured');
+    safeLogger.info('✅ Test cache configured');
   } catch (error) {
-    console.warn('⚠️  Cache setup failed, using fallback:', error);
+    safeLogger.warn('⚠️  Cache setup failed, using fallback:', error);
     process.env.CACHE_TYPE = 'memory';
   }
 }
 
 async function createTestDirectories(): Promise<void> {
-  console.log('📁 Creating test directories...');
+  safeLogger.info('📁 Creating test directories...');
   
   const directories = [
     path.join(__dirname, '../../../test-reports'),
@@ -103,11 +104,11 @@ async function createTestDirectories(): Promise<void> {
     }
   }
   
-  console.log('✅ Test directories created');
+  safeLogger.info('✅ Test directories created');
 }
 
 async function initializeTestData(): Promise<void> {
-  console.log('🌱 Initializing test data...');
+  safeLogger.info('🌱 Initializing test data...');
   
   try {
     // Create test data factory
@@ -125,12 +126,12 @@ async function initializeTestData(): Promise<void> {
         validSignature: testDataFactory.createValidSignature()
       };
       
-      console.log('✅ Test data initialized');
+      safeLogger.info('✅ Test data initialized');
     } else {
-      console.warn('⚠️  Test data factory not found, skipping data initialization');
+      safeLogger.warn('⚠️  Test data factory not found, skipping data initialization');
     }
   } catch (error) {
-    console.warn('⚠️  Test data initialization failed:', error);
+    safeLogger.warn('⚠️  Test data initialization failed:', error);
   }
 }
 

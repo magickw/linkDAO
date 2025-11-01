@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -303,11 +304,11 @@ export class KYCService {
           await this.approveKYC(walletAddress, 'Automatically approved - basic tier');
         } else {
           // Higher tiers would require manual review
-          console.log(`KYC for ${walletAddress} requires manual review (${kycStatus.tier} tier)`);
+          safeLogger.info(`KYC for ${walletAddress} requires manual review (${kycStatus.tier} tier)`);
         }
       }
     } catch (error) {
-      console.error('Error in automatic KYC review:', error);
+      safeLogger.error('Error in automatic KYC review:', error);
     }
   }
 

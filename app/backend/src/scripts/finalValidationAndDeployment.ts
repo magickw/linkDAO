@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs';
 import path from 'path';
 import { performance } from 'perf_hooks';
@@ -45,8 +46,8 @@ class FinalValidationAndDeployment {
    * Main execution method for final validation and deployment
    */
   async execute(): Promise<void> {
-    console.log('🚀 Starting Final Validation and Production Deployment');
-    console.log('=' .repeat(60));
+    safeLogger.info('🚀 Starting Final Validation and Production Deployment');
+    safeLogger.info('=' .repeat(60));
 
     try {
       // Phase 1: Pre-deployment validation
@@ -71,10 +72,10 @@ class FinalValidationAndDeployment {
       // Generate final report
       await this.generateDeploymentReport();
 
-      console.log('✅ Final validation and deployment completed successfully');
+      safeLogger.info('✅ Final validation and deployment completed successfully');
 
     } catch (error) {
-      console.error('❌ Deployment failed:', error);
+      safeLogger.error('❌ Deployment failed:', error);
       
       if (this.deploymentConfig.rollbackEnabled) {
         await this.initiateRollback();
@@ -88,8 +89,8 @@ class FinalValidationAndDeployment {
    * Conduct comprehensive pre-deployment validation
    */
   private async conductPreDeploymentValidation(): Promise<void> {
-    console.log('\n📋 Phase 1: Pre-deployment Validation');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n📋 Phase 1: Pre-deployment Validation');
+    safeLogger.info('-'.repeat(40));
 
     const validations = [
       () => this.validateAPIEndpointConsistency(),
@@ -121,7 +122,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating API endpoint consistency...');
+      safeLogger.info('  🔍 Validating API endpoint consistency...');
 
       // Test unified API client
       const testResult = execSync('npm run test -- --testPathPattern=unifiedSellerAPIClient.test.ts', {
@@ -185,7 +186,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating data type consistency...');
+      safeLogger.info('  🔍 Validating data type consistency...');
 
       // Run TypeScript compilation to check for type errors
       execSync('npx tsc --noEmit --project tsconfig.json', {
@@ -223,7 +224,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating cache invalidation system...');
+      safeLogger.info('  🔍 Validating cache invalidation system...');
 
       // Test cache manager functionality
       const testResult = execSync('npm run test -- --testPathPattern=sellerCacheManager.test.ts', {
@@ -261,7 +262,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating error handling consistency...');
+      safeLogger.info('  🔍 Validating error handling consistency...');
 
       // Test error boundaries
       const errorBoundaryTest = execSync('npm run test -- --testPathPattern=SellerErrorBoundary.test.tsx', {
@@ -299,7 +300,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating image upload pipeline...');
+      safeLogger.info('  🔍 Validating image upload pipeline...');
 
       // Test unified image service
       const imageServiceTest = execSync('npm run test -- --testPathPattern=unifiedImageService.test.ts', {
@@ -337,7 +338,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating tier system integration...');
+      safeLogger.info('  🔍 Validating tier system integration...');
 
       // Test tier management service
       const tierServiceTest = execSync('npm run test -- --testPathPattern=tierManagementService.test.ts', {
@@ -375,7 +376,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating mobile optimizations...');
+      safeLogger.info('  🔍 Validating mobile optimizations...');
 
       // Test mobile seller components
       const mobileTest = execSync('npm run test -- --testPathPattern=MobileOptimizations.test.tsx', {
@@ -413,7 +414,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating real-time features...');
+      safeLogger.info('  🔍 Validating real-time features...');
 
       // Test WebSocket service
       const webSocketTest = execSync('npm run test -- --testPathPattern=sellerWebSocketService.test.ts', {
@@ -451,7 +452,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating performance optimizations...');
+      safeLogger.info('  🔍 Validating performance optimizations...');
 
       // Test performance monitoring
       const performanceTest = execSync('npm run test -- --testPathPattern=sellerPerformanceMonitoring.test.ts', {
@@ -489,7 +490,7 @@ class FinalValidationAndDeployment {
     const startTime = performance.now();
     
     try {
-      console.log('  🔍 Validating security measures...');
+      safeLogger.info('  🔍 Validating security measures...');
 
       // Test seller security service
       const securityTest = execSync('npm run test -- --testPathPattern=sellerSecurityService.test.ts', {
@@ -524,11 +525,11 @@ class FinalValidationAndDeployment {
    * Deploy to staging environment
    */
   private async deployToStaging(): Promise<void> {
-    console.log('\n🚀 Phase 2: Staging Deployment');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n🚀 Phase 2: Staging Deployment');
+    safeLogger.info('-'.repeat(40));
 
     try {
-      console.log('  📦 Deploying to staging environment...');
+      safeLogger.info('  📦 Deploying to staging environment...');
 
       // Build applications
       execSync('npm run build', {
@@ -547,7 +548,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('  ✅ Staging deployment completed');
+      safeLogger.info('  ✅ Staging deployment completed');
 
     } catch (error) {
       throw new Error(`Staging deployment failed: ${error.message}`);
@@ -558,7 +559,7 @@ class FinalValidationAndDeployment {
    * Validate staging environment
    */
   private async validateStagingEnvironment(): Promise<void> {
-    console.log('  🔍 Validating staging environment...');
+    safeLogger.info('  🔍 Validating staging environment...');
 
     try {
       // Wait for services to be ready
@@ -576,7 +577,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('  ✅ Staging validation completed');
+      safeLogger.info('  ✅ Staging validation completed');
 
     } catch (error) {
       throw new Error(`Staging validation failed: ${error.message}`);
@@ -587,11 +588,11 @@ class FinalValidationAndDeployment {
    * Deploy to production environment
    */
   private async deployToProduction(): Promise<void> {
-    console.log('\n🚀 Phase 3: Production Deployment');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n🚀 Phase 3: Production Deployment');
+    safeLogger.info('-'.repeat(40));
 
     try {
-      console.log('  📦 Deploying to production environment...');
+      safeLogger.info('  📦 Deploying to production environment...');
 
       // Create deployment backup
       await this.createDeploymentBackup();
@@ -614,7 +615,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('  ✅ Production deployment completed');
+      safeLogger.info('  ✅ Production deployment completed');
 
     } catch (error) {
       throw new Error(`Production deployment failed: ${error.message}`);
@@ -625,8 +626,8 @@ class FinalValidationAndDeployment {
    * Conduct post-deployment validation
    */
   private async conductPostDeploymentValidation(): Promise<void> {
-    console.log('\n✅ Phase 4: Post-deployment Validation');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n✅ Phase 4: Post-deployment Validation');
+    safeLogger.info('-'.repeat(40));
 
     try {
       // Wait for services to be ready
@@ -644,7 +645,7 @@ class FinalValidationAndDeployment {
       // Validate real-time features
       await this.validateRealTimeConnectivity();
 
-      console.log('  ✅ Post-deployment validation completed');
+      safeLogger.info('  ✅ Post-deployment validation completed');
 
     } catch (error) {
       throw new Error(`Post-deployment validation failed: ${error.message}`);
@@ -655,13 +656,13 @@ class FinalValidationAndDeployment {
    * Monitor system performance
    */
   private async monitorSystemPerformance(): Promise<void> {
-    console.log('\n📊 Phase 5: System Performance Monitoring');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n📊 Phase 5: System Performance Monitoring');
+    safeLogger.info('-'.repeat(40));
 
     const monitoringDuration = 5 * 60 * 1000; // 5 minutes
     const startTime = Date.now();
 
-    console.log(`  📈 Monitoring system performance for ${monitoringDuration / 1000} seconds...`);
+    safeLogger.info(`  📈 Monitoring system performance for ${monitoringDuration / 1000} seconds...`);
 
     const performanceMetrics = {
       responseTime: [],
@@ -684,15 +685,15 @@ class FinalValidationAndDeployment {
 
         // Check against thresholds
         if (metrics.responseTime > this.deploymentConfig.performanceThresholds.responseTime) {
-          console.warn(`  ⚠️  High response time detected: ${metrics.responseTime}ms`);
+          safeLogger.warn(`  ⚠️  High response time detected: ${metrics.responseTime}ms`);
         }
 
         if (metrics.errorRate > this.deploymentConfig.performanceThresholds.errorRate) {
-          console.warn(`  ⚠️  High error rate detected: ${metrics.errorRate}%`);
+          safeLogger.warn(`  ⚠️  High error rate detected: ${metrics.errorRate}%`);
         }
 
       } catch (error) {
-        console.error('  ❌ Error collecting performance metrics:', error.message);
+        safeLogger.error('  ❌ Error collecting performance metrics:', error.message);
       }
     }, 10000); // Collect metrics every 10 seconds
 
@@ -705,12 +706,12 @@ class FinalValidationAndDeployment {
     const avgMemoryUsage = performanceMetrics.memoryUsage.reduce((a, b) => a + b, 0) / performanceMetrics.memoryUsage.length;
     const avgCpuUsage = performanceMetrics.cpuUsage.reduce((a, b) => a + b, 0) / performanceMetrics.cpuUsage.length;
 
-    console.log('  📊 Performance Summary:');
-    console.log(`    Average Response Time: ${avgResponseTime.toFixed(2)}ms`);
-    console.log(`    Error Rate: ${performanceMetrics.errorRate}%`);
-    console.log(`    Throughput: ${performanceMetrics.throughput} req/s`);
-    console.log(`    Average Memory Usage: ${avgMemoryUsage.toFixed(2)}%`);
-    console.log(`    Average CPU Usage: ${avgCpuUsage.toFixed(2)}%`);
+    safeLogger.info('  📊 Performance Summary:');
+    safeLogger.info(`    Average Response Time: ${avgResponseTime.toFixed(2)}ms`);
+    safeLogger.info(`    Error Rate: ${performanceMetrics.errorRate}%`);
+    safeLogger.info(`    Throughput: ${performanceMetrics.throughput} req/s`);
+    safeLogger.info(`    Average Memory Usage: ${avgMemoryUsage.toFixed(2)}%`);
+    safeLogger.info(`    Average CPU Usage: ${avgCpuUsage.toFixed(2)}%`);
 
     // Validate against thresholds
     const performanceIssues = [];
@@ -725,10 +726,10 @@ class FinalValidationAndDeployment {
     }
 
     if (performanceIssues.length > 0) {
-      console.warn('  ⚠️  Performance issues detected:');
-      performanceIssues.forEach(issue => console.warn(`    - ${issue}`));
+      safeLogger.warn('  ⚠️  Performance issues detected:');
+      performanceIssues.forEach(issue => safeLogger.warn(`    - ${issue}`));
     } else {
-      console.log('  ✅ All performance metrics within acceptable thresholds');
+      safeLogger.info('  ✅ All performance metrics within acceptable thresholds');
     }
   }
 
@@ -736,8 +737,8 @@ class FinalValidationAndDeployment {
    * Validate all seller workflows in production
    */
   private async validateSellerWorkflows(): Promise<void> {
-    console.log('\n🔄 Phase 6: Seller Workflow Validation');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n🔄 Phase 6: Seller Workflow Validation');
+    safeLogger.info('-'.repeat(40));
 
     const workflows = [
       () => this.validateSellerOnboardingWorkflow(),
@@ -754,14 +755,14 @@ class FinalValidationAndDeployment {
       await workflow();
     }
 
-    console.log('  ✅ All seller workflows validated successfully');
+    safeLogger.info('  ✅ All seller workflows validated successfully');
   }
 
   /**
    * Validate seller onboarding workflow
    */
   private async validateSellerOnboardingWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller onboarding workflow...');
+    safeLogger.info('  🔍 Validating seller onboarding workflow...');
 
     try {
       // Run seller onboarding end-to-end test
@@ -770,7 +771,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller onboarding workflow validated');
+      safeLogger.info('    ✅ Seller onboarding workflow validated');
     } catch (error) {
       throw new Error(`Seller onboarding workflow validation failed: ${error.message}`);
     }
@@ -780,7 +781,7 @@ class FinalValidationAndDeployment {
    * Validate seller profile management workflow
    */
   private async validateSellerProfileManagementWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller profile management workflow...');
+    safeLogger.info('  🔍 Validating seller profile management workflow...');
 
     try {
       // Run profile management integration tests
@@ -789,7 +790,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller profile management workflow validated');
+      safeLogger.info('    ✅ Seller profile management workflow validated');
     } catch (error) {
       throw new Error(`Seller profile management workflow validation failed: ${error.message}`);
     }
@@ -799,7 +800,7 @@ class FinalValidationAndDeployment {
    * Validate seller dashboard workflow
    */
   private async validateSellerDashboardWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller dashboard workflow...');
+    safeLogger.info('  🔍 Validating seller dashboard workflow...');
 
     try {
       // Test dashboard real-time updates
@@ -808,7 +809,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller dashboard workflow validated');
+      safeLogger.info('    ✅ Seller dashboard workflow validated');
     } catch (error) {
       throw new Error(`Seller dashboard workflow validation failed: ${error.message}`);
     }
@@ -818,7 +819,7 @@ class FinalValidationAndDeployment {
    * Validate seller store workflow
    */
   private async validateSellerStoreWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller store workflow...');
+    safeLogger.info('  🔍 Validating seller store workflow...');
 
     try {
       // Test store page functionality
@@ -827,7 +828,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller store workflow validated');
+      safeLogger.info('    ✅ Seller store workflow validated');
     } catch (error) {
       throw new Error(`Seller store workflow validation failed: ${error.message}`);
     }
@@ -837,7 +838,7 @@ class FinalValidationAndDeployment {
    * Validate seller listing workflow
    */
   private async validateSellerListingWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller listing workflow...');
+    safeLogger.info('  🔍 Validating seller listing workflow...');
 
     try {
       // Test listing creation and management
@@ -846,7 +847,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller listing workflow validated');
+      safeLogger.info('    ✅ Seller listing workflow validated');
     } catch (error) {
       throw new Error(`Seller listing workflow validation failed: ${error.message}`);
     }
@@ -856,7 +857,7 @@ class FinalValidationAndDeployment {
    * Validate seller order management workflow
    */
   private async validateSellerOrderManagementWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller order management workflow...');
+    safeLogger.info('  🔍 Validating seller order management workflow...');
 
     try {
       // Test order processing workflow
@@ -865,7 +866,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller order management workflow validated');
+      safeLogger.info('    ✅ Seller order management workflow validated');
     } catch (error) {
       throw new Error(`Seller order management workflow validation failed: ${error.message}`);
     }
@@ -875,7 +876,7 @@ class FinalValidationAndDeployment {
    * Validate seller tier upgrade workflow
    */
   private async validateSellerTierUpgradeWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller tier upgrade workflow...');
+    safeLogger.info('  🔍 Validating seller tier upgrade workflow...');
 
     try {
       // Test tier upgrade functionality
@@ -884,7 +885,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller tier upgrade workflow validated');
+      safeLogger.info('    ✅ Seller tier upgrade workflow validated');
     } catch (error) {
       throw new Error(`Seller tier upgrade workflow validation failed: ${error.message}`);
     }
@@ -894,7 +895,7 @@ class FinalValidationAndDeployment {
    * Validate seller analytics workflow
    */
   private async validateSellerAnalyticsWorkflow(): Promise<void> {
-    console.log('  🔍 Validating seller analytics workflow...');
+    safeLogger.info('  🔍 Validating seller analytics workflow...');
 
     try {
       // Test analytics functionality
@@ -903,7 +904,7 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Seller analytics workflow validated');
+      safeLogger.info('    ✅ Seller analytics workflow validated');
     } catch (error) {
       throw new Error(`Seller analytics workflow validation failed: ${error.message}`);
     }
@@ -913,8 +914,8 @@ class FinalValidationAndDeployment {
    * Generate comprehensive deployment report
    */
   private async generateDeploymentReport(): Promise<void> {
-    console.log('\n📄 Generating Deployment Report');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n📄 Generating Deployment Report');
+    safeLogger.info('-'.repeat(40));
 
     const totalDuration = performance.now() - this.startTime;
     const passedValidations = this.validationResults.filter(r => r.status === 'passed').length;
@@ -957,9 +958,9 @@ class FinalValidationAndDeployment {
     const reportPath = path.join(process.cwd(), 'deployment-report.json');
     fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
-    console.log(`  📄 Deployment report generated: ${reportPath}`);
-    console.log(`  📊 Validation Summary: ${passedValidations} passed, ${failedValidations} failed, ${warningValidations} warnings`);
-    console.log(`  ⏱️  Total Duration: ${(totalDuration / 1000).toFixed(2)} seconds`);
+    safeLogger.info(`  📄 Deployment report generated: ${reportPath}`);
+    safeLogger.info(`  📊 Validation Summary: ${passedValidations} passed, ${failedValidations} failed, ${warningValidations} warnings`);
+    safeLogger.info(`  ⏱️  Total Duration: ${(totalDuration / 1000).toFixed(2)} seconds`);
   }
 
   /**
@@ -995,7 +996,7 @@ class FinalValidationAndDeployment {
    */
 
   private async waitForServices(environment: string): Promise<void> {
-    console.log(`  ⏳ Waiting for ${environment} services to be ready...`);
+    safeLogger.info(`  ⏳ Waiting for ${environment} services to be ready...`);
     
     const maxWaitTime = this.deploymentConfig.healthCheckTimeout;
     const startTime = Date.now();
@@ -1010,7 +1011,7 @@ class FinalValidationAndDeployment {
         const frontendHealth = await fetch(`${process.env.FRONTEND_URL}/api/health`);
         if (!frontendHealth.ok) throw new Error('Frontend not ready');
 
-        console.log(`  ✅ ${environment} services are ready`);
+        safeLogger.info(`  ✅ ${environment} services are ready`);
         return;
 
       } catch (error) {
@@ -1022,7 +1023,7 @@ class FinalValidationAndDeployment {
   }
 
   private async validateProductionAPIEndpoints(): Promise<void> {
-    console.log('  🔍 Validating production API endpoints...');
+    safeLogger.info('  🔍 Validating production API endpoints...');
 
     const endpoints = [
       '/api/marketplace/seller/test-wallet/profile',
@@ -1042,11 +1043,11 @@ class FinalValidationAndDeployment {
       }
     }
 
-    console.log('    ✅ All API endpoints accessible');
+    safeLogger.info('    ✅ All API endpoints accessible');
   }
 
   private async validateDatabaseConnectivity(): Promise<void> {
-    console.log('  🔍 Validating database connectivity...');
+    safeLogger.info('  🔍 Validating database connectivity...');
 
     try {
       const response = await fetch(`${process.env.BACKEND_URL}/api/health/database`);
@@ -1054,14 +1055,14 @@ class FinalValidationAndDeployment {
         throw new Error(`Database health check failed: ${response.status}`);
       }
 
-      console.log('    ✅ Database connectivity validated');
+      safeLogger.info('    ✅ Database connectivity validated');
     } catch (error) {
       throw new Error(`Database validation failed: ${error.message}`);
     }
   }
 
   private async validateCacheSystems(): Promise<void> {
-    console.log('  🔍 Validating cache systems...');
+    safeLogger.info('  🔍 Validating cache systems...');
 
     try {
       const response = await fetch(`${process.env.BACKEND_URL}/api/health/cache`);
@@ -1069,14 +1070,14 @@ class FinalValidationAndDeployment {
         throw new Error(`Cache health check failed: ${response.status}`);
       }
 
-      console.log('    ✅ Cache systems validated');
+      safeLogger.info('    ✅ Cache systems validated');
     } catch (error) {
       throw new Error(`Cache validation failed: ${error.message}`);
     }
   }
 
   private async validateRealTimeConnectivity(): Promise<void> {
-    console.log('  🔍 Validating real-time connectivity...');
+    safeLogger.info('  🔍 Validating real-time connectivity...');
 
     try {
       // Test WebSocket connection
@@ -1091,7 +1092,7 @@ class FinalValidationAndDeployment {
         setTimeout(() => reject(new Error('WebSocket connection timeout')), 10000);
       });
 
-      console.log('    ✅ Real-time connectivity validated');
+      safeLogger.info('    ✅ Real-time connectivity validated');
     } catch (error) {
       throw new Error(`Real-time connectivity validation failed: ${error.message}`);
     }
@@ -1118,7 +1119,7 @@ class FinalValidationAndDeployment {
   }
 
   private async createDeploymentBackup(): Promise<void> {
-    console.log('  💾 Creating deployment backup...');
+    safeLogger.info('  💾 Creating deployment backup...');
 
     try {
       execSync('npm run backup:create', {
@@ -1126,27 +1127,27 @@ class FinalValidationAndDeployment {
         encoding: 'utf8'
       });
 
-      console.log('    ✅ Deployment backup created');
+      safeLogger.info('    ✅ Deployment backup created');
     } catch (error) {
-      console.warn(`    ⚠️  Backup creation failed: ${error.message}`);
+      safeLogger.warn(`    ⚠️  Backup creation failed: ${error.message}`);
     }
   }
 
   private async initiateRollback(): Promise<void> {
-    console.log('\n🔄 Initiating Rollback');
-    console.log('-'.repeat(40));
+    safeLogger.info('\n🔄 Initiating Rollback');
+    safeLogger.info('-'.repeat(40));
 
     try {
-      console.log('  ⏪ Rolling back deployment...');
+      safeLogger.info('  ⏪ Rolling back deployment...');
 
       execSync('npm run rollback:production', {
         cwd: process.cwd(),
         encoding: 'utf8'
       });
 
-      console.log('  ✅ Rollback completed successfully');
+      safeLogger.info('  ✅ Rollback completed successfully');
     } catch (error) {
-      console.error(`  ❌ Rollback failed: ${error.message}`);
+      safeLogger.error(`  ❌ Rollback failed: ${error.message}`);
       throw error;
     }
   }
@@ -1171,7 +1172,7 @@ async function main() {
     await deployment.execute();
     process.exit(0);
   } catch (error) {
-    console.error('Deployment failed:', error.message);
+    safeLogger.error('Deployment failed:', error.message);
     process.exit(1);
   }
 }

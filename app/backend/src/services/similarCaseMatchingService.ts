@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, contentReports } from '../db/schema';
 import { eq, desc, and, gte, lte, sql, ne, isNotNull } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -170,7 +171,7 @@ export class SimilarCaseMatchingService {
         .slice(0, limit);
 
     } catch (error) {
-      console.error('Error finding similar cases:', error);
+      safeLogger.error('Error finding similar cases:', error);
       throw new Error('Failed to find similar cases');
     }
   }
@@ -210,7 +211,7 @@ export class SimilarCaseMatchingService {
       return precedents.sort((a, b) => b.confidence - a.confidence);
 
     } catch (error) {
-      console.error('Error building precedent database:', error);
+      safeLogger.error('Error building precedent database:', error);
       throw new Error('Failed to build precedent database');
     }
   }
@@ -254,7 +255,7 @@ export class SimilarCaseMatchingService {
       };
 
     } catch (error) {
-      console.error('Error analyzing consistency:', error);
+      safeLogger.error('Error analyzing consistency:', error);
       throw new Error('Failed to analyze decision consistency');
     }
   }
@@ -279,7 +280,7 @@ export class SimilarCaseMatchingService {
       return recommendation;
 
     } catch (error) {
-      console.error('Error generating decision recommendation:', error);
+      safeLogger.error('Error generating decision recommendation:', error);
       throw new Error('Failed to generate decision recommendation');
     }
   }

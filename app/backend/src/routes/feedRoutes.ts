@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { feedController } from '../controllers/feedController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -43,7 +44,7 @@ router.get('/trending',
 );
 
 // Create new post
-router.post('/',
+router.post('/', csrfProtection, 
   validateRequest({
     body: {
       content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
@@ -57,7 +58,7 @@ router.post('/',
 );
 
 // Update post
-router.put('/:id',
+router.put('/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -71,7 +72,7 @@ router.put('/:id',
 );
 
 // Delete post
-router.delete('/:id',
+router.delete('/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -81,7 +82,7 @@ router.delete('/:id',
 );
 
 // Add reaction to post
-router.post('/:id/react',
+router.post('/:id/react', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -95,7 +96,7 @@ router.post('/:id/react',
 );
 
 // Send tip to post author
-router.post('/:id/tip',
+router.post('/:id/tip', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -120,7 +121,7 @@ router.get('/:id/engagement',
 );
 
 // Share post
-router.post('/:id/share',
+router.post('/:id/share', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -150,7 +151,7 @@ router.get('/:id/comments',
 );
 
 // Add comment to post
-router.post('/:id/comments',
+router.post('/:id/comments', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -247,7 +248,7 @@ router.get('/posts/:postId/reactions',
 );
 
 // Enhanced post sharing
-router.post('/posts/:postId/share',
+router.post('/posts/:postId/share', csrfProtection, 
   validateRequest({
     params: {
       postId: { type: 'string', required: true }
@@ -261,7 +262,7 @@ router.post('/posts/:postId/share',
 );
 
 // Toggle bookmark
-router.post('/posts/:postId/bookmark',
+router.post('/posts/:postId/bookmark', csrfProtection, 
   validateRequest({
     params: {
       postId: { type: 'string', required: true }

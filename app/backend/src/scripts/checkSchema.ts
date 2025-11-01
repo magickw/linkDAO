@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import dotenv from 'dotenv';
 
@@ -9,7 +10,7 @@ async function checkSchema() {
   const db = drizzle(client);
 
   try {
-    console.log('Checking if required tables exist...');
+    safeLogger.info('Checking if required tables exist...');
     
     // Check if reward_epochs table exists
     const rewardEpochsExists = await db.execute(`
@@ -19,7 +20,7 @@ async function checkSchema() {
       ) AS exists;
     `);
     
-    console.log('reward_epochs table exists:', rewardEpochsExists[0].exists);
+    safeLogger.info('reward_epochs table exists:', rewardEpochsExists[0].exists);
     
     // Check if creator_rewards table exists
     const creatorRewardsExists = await db.execute(`
@@ -29,7 +30,7 @@ async function checkSchema() {
       ) AS exists;
     `);
     
-    console.log('creator_rewards table exists:', creatorRewardsExists[0].exists);
+    safeLogger.info('creator_rewards table exists:', creatorRewardsExists[0].exists);
     
     // Check if tips table has the correct structure
     const tipsColumns = await db.execute(`
@@ -39,14 +40,14 @@ async function checkSchema() {
       ORDER BY ordinal_position;
     `);
     
-    console.log('tips table columns:');
+    safeLogger.info('tips table columns:');
     tipsColumns.forEach((row: any) => {
-      console.log(`  ${row.column_name}: ${row.data_type}`);
+      safeLogger.info(`  ${row.column_name}: ${row.data_type}`);
     });
     
-    console.log('Schema check completed successfully!');
+    safeLogger.info('Schema check completed successfully!');
   } catch (error) {
-    console.error('Error checking schema:', error);
+    safeLogger.error('Error checking schema:', error);
   } finally {
     await client.end();
   }

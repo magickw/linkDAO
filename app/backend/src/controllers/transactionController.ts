@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { transactionService } from '../services/transactionService';
 
 export class TransactionController {
@@ -50,7 +52,7 @@ export class TransactionController {
         }
       });
     } catch (error) {
-      console.error('Error getting transaction history:', error);
+      safeLogger.error('Error getting transaction history:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get transaction history',
@@ -87,7 +89,7 @@ export class TransactionController {
         data: summary
       });
     } catch (error) {
-      console.error('Error getting transaction summary:', error);
+      safeLogger.error('Error getting transaction summary:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get transaction summary',
@@ -124,7 +126,7 @@ export class TransactionController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting transaction analytics:', error);
+      safeLogger.error('Error getting transaction analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get transaction analytics',
@@ -174,7 +176,7 @@ export class TransactionController {
         message: 'Transaction recorded successfully'
       });
     } catch (error) {
-      console.error('Error recording transaction:', error);
+      safeLogger.error('Error recording transaction:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to record transaction',
@@ -221,7 +223,7 @@ export class TransactionController {
         data: transaction
       });
     } catch (error) {
-      console.error('Error getting transaction:', error);
+      safeLogger.error('Error getting transaction:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get transaction',

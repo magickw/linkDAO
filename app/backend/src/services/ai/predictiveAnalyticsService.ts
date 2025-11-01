@@ -1,4 +1,5 @@
 import { openaiService } from './openaiService';
+import { safeLogger } from '../utils/safeLogger';
 import { aiCacheService } from './aiCacheService';
 
 /**
@@ -20,7 +21,7 @@ export class PredictiveAnalyticsService {
     // Check cache first
     const cached = await aiCacheService.getChurnPrediction(userId);
     if (cached) {
-      console.log('✅ Cache hit: User churn prediction for', userId);
+      safeLogger.info('✅ Cache hit: User churn prediction for', userId);
       return cached;
     }
 
@@ -58,7 +59,7 @@ export class PredictiveAnalyticsService {
 
       return result;
     } catch (error) {
-      console.error('Churn prediction error:', error);
+      safeLogger.error('Churn prediction error:', error);
       throw new Error('Failed to predict user churn');
     }
   }
@@ -108,7 +109,7 @@ export class PredictiveAnalyticsService {
         confidenceScore: 0.75, // Based on data quality
       };
     } catch (error) {
-      console.error('Content engagement prediction error:', error);
+      safeLogger.error('Content engagement prediction error:', error);
       throw new Error('Failed to predict content engagement');
     }
   }
@@ -160,7 +161,7 @@ export class PredictiveAnalyticsService {
         recommendations: analysis.recommendations,
       };
     } catch (error) {
-      console.error('Anomaly detection error:', error);
+      safeLogger.error('Anomaly detection error:', error);
       throw new Error('Failed to detect anomalies');
     }
   }
@@ -193,7 +194,7 @@ export class PredictiveAnalyticsService {
         recommendations: this.parseRecommendations(insights),
       };
     } catch (error) {
-      console.error('Seller performance prediction error:', error);
+      safeLogger.error('Seller performance prediction error:', error);
       throw new Error('Failed to predict seller performance');
     }
   }
@@ -231,7 +232,7 @@ export class PredictiveAnalyticsService {
         insights,
       };
     } catch (error) {
-      console.error('Platform health analysis error:', error);
+      safeLogger.error('Platform health analysis error:', error);
       throw new Error('Failed to analyze platform health');
     }
   }

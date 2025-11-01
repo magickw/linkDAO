@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { externalPlatformConnectorController } from '../controllers/externalPlatformConnectorController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -46,7 +47,7 @@ router.get('/configs/:platformId', externalPlatformConnectorController.getPlatfo
  * @param platformId - ID of the platform configuration to update
  * @body PlatformConfigSchema
  */
-router.put('/configs/:platformId', externalPlatformConnectorController.updatePlatformConfig);
+router.put('/configs/:platformId', csrfProtection,  externalPlatformConnectorController.updatePlatformConfig);
 
 /**
  * @route POST /api/external-platform/sync-dao
@@ -54,7 +55,7 @@ router.put('/configs/:platformId', externalPlatformConnectorController.updatePla
  * @access Admin
  * @body SyncDAODataSchema
  */
-router.post('/sync-dao', externalPlatformConnectorController.syncDAOData);
+router.post('/sync-dao', csrfProtection,  externalPlatformConnectorController.syncDAOData);
 
 /**
  * @route POST /api/external-platform/defi-data
@@ -62,7 +63,7 @@ router.post('/sync-dao', externalPlatformConnectorController.syncDAOData);
  * @access Admin
  * @body GetDeFiDataSchema
  */
-router.post('/defi-data', externalPlatformConnectorController.getDeFiProtocolData);
+router.post('/defi-data', csrfProtection,  externalPlatformConnectorController.getDeFiProtocolData);
 
 /**
  * @route POST /api/external-platform/nft-data
@@ -70,7 +71,7 @@ router.post('/defi-data', externalPlatformConnectorController.getDeFiProtocolDat
  * @access Admin
  * @body GetNFTDataSchema
  */
-router.post('/nft-data', externalPlatformConnectorController.getNFTMarketplaceData);
+router.post('/nft-data', csrfProtection,  externalPlatformConnectorController.getNFTMarketplaceData);
 
 /**
  * @route POST /api/external-platform/wallet-data
@@ -78,7 +79,7 @@ router.post('/nft-data', externalPlatformConnectorController.getNFTMarketplaceDa
  * @access Admin
  * @body GetWalletDataSchema
  */
-router.post('/wallet-data', externalPlatformConnectorController.getWalletData);
+router.post('/wallet-data', csrfProtection,  externalPlatformConnectorController.getWalletData);
 
 /**
  * @route GET /api/external-platform/explorer-data
@@ -94,7 +95,7 @@ router.get('/explorer-data', externalPlatformConnectorController.getBlockchainEx
  * @access Admin
  * @body ExecuteActionSchema
  */
-router.post('/execute-action', externalPlatformConnectorController.executeCrossPlatformAction);
+router.post('/execute-action', csrfProtection,  externalPlatformConnectorController.executeCrossPlatformAction);
 
 /**
  * @route GET /api/external-platform/sync-status
@@ -109,6 +110,6 @@ router.get('/sync-status', externalPlatformConnectorController.getSyncStatus);
  * @access Admin
  * @body TriggerSyncSchema
  */
-router.post('/trigger-sync', externalPlatformConnectorController.triggerManualSync);
+router.post('/trigger-sync', csrfProtection,  externalPlatformConnectorController.triggerManualSync);
 
 export default router;

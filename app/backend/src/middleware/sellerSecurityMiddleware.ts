@@ -6,6 +6,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import SellerSecurityService, { SellerRole, SellerAccessRequest } from '../services/sellerSecurityService';
 import securityMonitoringService, { SecurityEventType, SecuritySeverity } from '../services/securityMonitoringService';
 import { errorResponse, validationErrorResponse } from '../utils/apiResponse';
@@ -94,7 +95,7 @@ class SellerSecurityMiddleware {
 
         next();
       } catch (error) {
-        console.error('Seller security validation error:', error);
+        safeLogger.error('Seller security validation error:', error);
         
         await this.securityMonitoring.recordSecurityEvent({
           type: SecurityEventType.SYSTEM_COMPROMISE,
@@ -151,7 +152,7 @@ class SellerSecurityMiddleware {
 
         next();
       } catch (error) {
-        console.error('Wallet ownership verification error:', error);
+        safeLogger.error('Wallet ownership verification error:', error);
         return errorResponse(res, 'Verification failed', 500);
       }
     };
@@ -196,7 +197,7 @@ class SellerSecurityMiddleware {
 
         next();
       } catch (error) {
-        console.error('Role validation error:', error);
+        safeLogger.error('Role validation error:', error);
         return errorResponse(res, 'Role validation failed', 500);
       }
     };
@@ -217,7 +218,7 @@ class SellerSecurityMiddleware {
           }
           return originalSend.call(this, data);
         } catch (error) {
-          console.error('Response sanitization error:', error);
+          safeLogger.error('Response sanitization error:', error);
           return originalSend.call(this, data);
         }
       }.bind({ sellerSecurityService: this.sellerSecurityService });
@@ -274,7 +275,7 @@ class SellerSecurityMiddleware {
 
         next();
       } catch (error) {
-        console.error('Rate limiting error:', error);
+        safeLogger.error('Rate limiting error:', error);
         next();
       }
     };
@@ -313,7 +314,7 @@ class SellerSecurityMiddleware {
             timestamp: new Date()
           });
         } catch (error) {
-          console.error('Audit logging error:', error);
+          safeLogger.error('Audit logging error:', error);
         }
 
         return originalSend.call(this, data);
@@ -345,7 +346,7 @@ class SellerSecurityMiddleware {
         }
       });
     } catch (error) {
-      console.error('Error generating verification nonce:', error);
+      safeLogger.error('Error generating verification nonce:', error);
       return errorResponse(res, 'Failed to generate verification nonce', 500);
     }
   };
@@ -376,7 +377,7 @@ class SellerSecurityMiddleware {
         }
       });
     } catch (error) {
-      console.error('Error creating security session:', error);
+      safeLogger.error('Error creating security session:', error);
       return errorResponse(res, 'Failed to create security session', 500);
     }
   };
@@ -399,7 +400,7 @@ class SellerSecurityMiddleware {
         message: success ? 'Session revoked successfully' : 'Session not found'
       });
     } catch (error) {
-      console.error('Error revoking security session:', error);
+      safeLogger.error('Error revoking security session:', error);
       return errorResponse(res, 'Failed to revoke security session', 500);
     }
   };

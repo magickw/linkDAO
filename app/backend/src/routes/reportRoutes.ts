@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { reportController } from '../controllers/reportController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimiter } from '../middleware/rateLimiter';
@@ -39,7 +40,7 @@ const updateReportStatusSchema = z.object({
 });
 
 // Public routes
-router.post('/submit', 
+router.post('/submit', csrfProtection,  
   authMiddleware,
   rateLimiter({ windowMs: 15 * 60 * 1000, max: 10 }), // 10 reports per 15 minutes
   validateRequest(submitReportSchema),
@@ -64,7 +65,7 @@ router.get('/queue',
   reportController.getModerationQueue
 );
 
-router.put('/:reportId/status',
+router.put('/:reportId/status', csrfProtection, 
   authMiddleware,
   // TODO: Add moderator role check middleware
   validateRequest(updateReportStatusSchema),
@@ -78,11 +79,11 @@ router.get('/analytics',
 );
 
 // Internal routes for aggregation
-router.post('/_internal/aggregate',
+router.post('/_internal/aggregate', csrfProtection, 
   reportController.aggregateReports
 );
 
-router.post('/_internal/reputation-update',
+router.post('/_internal/reputation-update', csrfProtection, 
   reportController.updateReporterReputation
 );
 

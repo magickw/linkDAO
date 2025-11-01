@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from './databaseService';
 import { RedisService } from './redisService';
 import { auditLoggingService } from './auditLoggingService';
@@ -93,7 +94,7 @@ export class ModeratorAuthService {
 
       return profile;
     } catch (error) {
-      console.error('Error getting moderator profile:', error);
+      safeLogger.error('Error getting moderator profile:', error);
       return null;
     }
   }
@@ -186,7 +187,7 @@ export class ModeratorAuthService {
         remaining: Math.max(0, remaining)
       };
     } catch (error) {
-      console.error('Error checking daily limit:', error);
+      safeLogger.error('Error checking daily limit:', error);
       return { allowed: true, remaining: -1 };
     }
   }
@@ -202,7 +203,7 @@ export class ModeratorAuthService {
       await redisService.incr(cacheKey);
       await redisService.expire(cacheKey, 24 * 60 * 60); // Expire at end of day
     } catch (error) {
-      console.error('Error incrementing daily count:', error);
+      safeLogger.error('Error incrementing daily count:', error);
     }
   }
 
@@ -217,7 +218,7 @@ export class ModeratorAuthService {
         WHERE id = $1
       `, [moderatorId]);
     } catch (error) {
-      console.error('Error updating last active:', error);
+      safeLogger.error('Error updating last active:', error);
     }
   }
 
@@ -240,7 +241,7 @@ export class ModeratorAuthService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error logging moderator activity:', error);
+      safeLogger.error('Error logging moderator activity:', error);
     }
   }
 
@@ -280,7 +281,7 @@ export class ModeratorAuthService {
         overturnRate: parseFloat(row.overturn_rate) || 0
       };
     } catch (error) {
-      console.error('Error getting performance metrics:', error);
+      safeLogger.error('Error getting performance metrics:', error);
       return {
         casesReviewed: 0,
         avgDecisionTime: 0,

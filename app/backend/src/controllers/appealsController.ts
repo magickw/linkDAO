@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { appealsService, AppealSubmission, AppealStatusUpdate } from '../services/appealsService';
 import { z } from 'zod';
 
@@ -57,7 +59,7 @@ export class AppealsController {
         message: 'Appeal submitted successfully'
       });
     } catch (error) {
-      console.error('Error submitting appeal:', error);
+      safeLogger.error('Error submitting appeal:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
           error: 'Invalid request data', 
@@ -103,7 +105,7 @@ export class AppealsController {
 
       res.json(appeal);
     } catch (error) {
-      console.error('Error getting appeal:', error);
+      safeLogger.error('Error getting appeal:', error);
       res.status(500).json({ error: 'Failed to get appeal' });
     }
   }
@@ -137,7 +139,7 @@ export class AppealsController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error getting user appeals:', error);
+      safeLogger.error('Error getting user appeals:', error);
       res.status(500).json({ error: 'Failed to get user appeals' });
     }
   }
@@ -172,7 +174,7 @@ export class AppealsController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error getting appeals by status:', error);
+      safeLogger.error('Error getting appeals by status:', error);
       res.status(500).json({ error: 'Failed to get appeals by status' });
     }
   }
@@ -219,7 +221,7 @@ export class AppealsController {
         message: 'Appeal status updated successfully'
       });
     } catch (error) {
-      console.error('Error updating appeal status:', error);
+      safeLogger.error('Error updating appeal status:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
           error: 'Invalid request data', 
@@ -269,7 +271,7 @@ export class AppealsController {
         }
       });
     } catch (error) {
-      console.error('Error getting appeal stats:', error);
+      safeLogger.error('Error getting appeal stats:', error);
       res.status(500).json({ error: 'Failed to get appeal statistics' });
     }
   }
@@ -300,7 +302,7 @@ export class AppealsController {
         reason: 'Case is eligible for appeal'
       });
     } catch (error) {
-      console.error('Error checking appeal eligibility:', error);
+      safeLogger.error('Error checking appeal eligibility:', error);
       res.status(500).json({ error: 'Failed to check appeal eligibility' });
     }
   }
@@ -325,7 +327,7 @@ export class AppealsController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error getting my appeals:', error);
+      safeLogger.error('Error getting my appeals:', error);
       res.status(500).json({ error: 'Failed to get appeals' });
     }
   }

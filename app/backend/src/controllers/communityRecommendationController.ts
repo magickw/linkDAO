@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { communityRecommendationService, UserCommunityContext } from '../services/communityRecommendationService';
 
 export class CommunityRecommendationController {
@@ -37,7 +39,7 @@ export class CommunityRecommendationController {
         }
       });
     } catch (error) {
-      console.error('Error getting community recommendations:', error);
+      safeLogger.error('Error getting community recommendations:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate community recommendations'
@@ -84,7 +86,7 @@ export class CommunityRecommendationController {
         }
       });
     } catch (error) {
-      console.error('Error getting engagement insights:', error);
+      safeLogger.error('Error getting engagement insights:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate engagement insights'
@@ -138,7 +140,7 @@ export class CommunityRecommendationController {
         }
       });
     } catch (error) {
-      console.error('Error generating AI recommendations:', error);
+      safeLogger.error('Error generating AI recommendations:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate AI recommendations'

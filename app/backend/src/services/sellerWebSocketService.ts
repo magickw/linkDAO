@@ -1,4 +1,5 @@
 import { getWebSocketService } from './webSocketService';
+import { safeLogger } from '../utils/safeLogger';
 
 interface SellerUpdateEvent {
   type: 'profile_updated' | 'new_order' | 'order_status_changed' | 'tier_upgraded' | 'listing_updated' | 'payment_received' | 'review_received' | 'analytics_updated';
@@ -62,13 +63,13 @@ export class SellerWebSocketService {
   private setupSellerEventHandlers(): void {
     // Monitor seller connections through the main WebSocket service
     // This would be integrated with the main service's connection events
-    console.log('Seller WebSocket service initialized');
+    safeLogger.info('Seller WebSocket service initialized');
   }
 
   // Connection Management
   connect(walletAddress: string): void {
     if (!this.webSocketService) {
-      console.error('WebSocket service not available');
+      safeLogger.error('WebSocket service not available');
       return;
     }
 
@@ -88,7 +89,7 @@ export class SellerWebSocketService {
     // Subscribe to seller-specific events
     this.subscribeToSellerEvents(walletAddress);
 
-    console.log(`Seller connected: ${walletAddress}`);
+    safeLogger.info(`Seller connected: ${walletAddress}`);
     
     // Send connection confirmation
     this.sendToSeller(walletAddress, 'seller_connected', {
@@ -112,14 +113,14 @@ export class SellerWebSocketService {
       this.reconnectTimeouts.delete(walletAddress);
     }
 
-    console.log(`Seller disconnected: ${walletAddress}`);
+    safeLogger.info(`Seller disconnected: ${walletAddress}`);
   }
 
   private attemptReconnect(walletAddress: string): void {
     const attempts = this.reconnectAttempts.get(walletAddress) || 0;
     
     if (attempts >= this.maxReconnectAttempts) {
-      console.log(`Max reconnection attempts reached for seller: ${walletAddress}`);
+      safeLogger.info(`Max reconnection attempts reached for seller: ${walletAddress}`);
       this.reconnectAttempts.delete(walletAddress);
       return;
     }
@@ -131,7 +132,7 @@ export class SellerWebSocketService {
     
     const timeout = setTimeout(() => {
       if (!this.isSellerConnected(walletAddress)) {
-        console.log(`Attempting to reconnect seller: ${walletAddress} (attempt ${attempts + 1}/${this.maxReconnectAttempts})`);
+        safeLogger.info(`Attempting to reconnect seller: ${walletAddress} (attempt ${attempts + 1}/${this.maxReconnectAttempts})`);
         this.connect(walletAddress);
       }
       this.reconnectTimeouts.delete(walletAddress);
@@ -195,7 +196,7 @@ export class SellerWebSocketService {
         this.handleAnalyticsUpdate(event);
         break;
       default:
-        console.warn(`Unknown seller event type: ${event.type}`);
+        safeLogger.warn(`Unknown seller event type: ${event.type}`);
     }
   }
 
@@ -491,7 +492,7 @@ export class SellerWebSocketService {
   // Utility Methods
   private sendToSeller(walletAddress: string, event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): void {
     if (!this.webSocketService) {
-      console.error('WebSocket service not available');
+      safeLogger.error('WebSocket service not available');
       return;
     }
 
@@ -499,7 +500,7 @@ export class SellerWebSocketService {
       this.webSocketService.sendToUser(walletAddress, event, data, priority);
       this.connectionMetrics.messagesSent++;
     } catch (error) {
-      console.error(`Failed to send message to seller ${walletAddress}:`, error);
+      safeLogger.error(`Failed to send message to seller ${walletAddress}:`, error);
       this.connectionMetrics.messagesQueued++;
     }
   }
@@ -583,7 +584,7 @@ let sellerWebSocketService: SellerWebSocketService | null = null;
 export const initializeSellerWebSocket = (): SellerWebSocketService => {
   if (!sellerWebSocketService) {
     sellerWebSocketService = new SellerWebSocketService();
-    console.log('Seller WebSocket service initialized');
+    safeLogger.info('Seller WebSocket service initialized');
   }
   return sellerWebSocketService;
 };
@@ -596,6 +597,6 @@ export const shutdownSellerWebSocket = (): void => {
   if (sellerWebSocketService) {
     sellerWebSocketService.cleanup();
     sellerWebSocketService = null;
-    console.log('Seller WebSocket service shut down');
+    safeLogger.info('Seller WebSocket service shut down');
   }
 };

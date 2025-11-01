@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { featureFlagService, FeatureFlag } from '../services/featureFlagService';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -15,7 +17,7 @@ router.get('/flags', authMiddleware, async (req, res) => {
     const flags = await featureFlagService.getAllFlags();
     res.json({ flags });
   } catch (error) {
-    console.error('Error getting feature flags:', error);
+    safeLogger.error('Error getting feature flags:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -32,7 +34,7 @@ router.get('/flags/:flagName', authMiddleware, async (req, res) => {
 
     res.json({ flag });
   } catch (error) {
-    console.error('Error getting feature flag:', error);
+    safeLogger.error('Error getting feature flag:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -54,13 +56,13 @@ router.get('/flags/:flagName/evaluate', authMiddleware, async (req, res) => {
 
     res.json({ evaluation });
   } catch (error) {
-    console.error('Error evaluating feature flag:', error);
+    safeLogger.error('Error evaluating feature flag:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Create or update feature flag (admin only)
-router.put('/flags/:flagName', authMiddleware, async (req, res) => {
+router.put('/flags/:flagName', csrfProtection,  authMiddleware, async (req, res) => {
   try {
     // Check if user is admin
     if (!req.user?.isAdmin) {
@@ -97,13 +99,13 @@ router.put('/flags/:flagName', authMiddleware, async (req, res) => {
     await featureFlagService.setFlag(flag);
     res.json({ flag, message: 'Feature flag updated successfully' });
   } catch (error) {
-    console.error('Error updating feature flag:', error);
+    safeLogger.error('Error updating feature flag:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Delete feature flag (admin only)
-router.delete('/flags/:flagName', authMiddleware, async (req, res) => {
+router.delete('/flags/:flagName', csrfProtection,  authMiddleware, async (req, res) => {
   try {
     // Check if user is admin
     if (!req.user?.isAdmin) {
@@ -114,13 +116,13 @@ router.delete('/flags/:flagName', authMiddleware, async (req, res) => {
     await featureFlagService.deleteFlag(flagName);
     res.json({ message: 'Feature flag deleted successfully' });
   } catch (error) {
-    console.error('Error deleting feature flag:', error);
+    safeLogger.error('Error deleting feature flag:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Bulk evaluate multiple flags for current user
-router.post('/flags/evaluate', authMiddleware, async (req, res) => {
+router.post('/flags/evaluate', csrfProtection,  authMiddleware, async (req, res) => {
   try {
     const { flagNames } = req.body;
     
@@ -146,7 +148,7 @@ router.post('/flags/evaluate', authMiddleware, async (req, res) => {
 
     res.json({ evaluations });
   } catch (error) {
-    console.error('Error evaluating feature flags:', error);
+    safeLogger.error('Error evaluating feature flags:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -184,7 +186,7 @@ router.get('/flags/:flagName/stats', authMiddleware, async (req, res) => {
 
     res.json({ stats });
   } catch (error) {
-    console.error('Error getting feature flag stats:', error);
+    safeLogger.error('Error getting feature flag stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

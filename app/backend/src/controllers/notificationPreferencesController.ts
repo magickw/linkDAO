@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../db';
 import { notificationPreferences } from '../db/schema';
@@ -61,7 +63,7 @@ export const getPreferences = async (req: AuthenticatedRequest, res: Response): 
       });
     }
   } catch (error) {
-    console.error('Error getting notification preferences:', error);
+    safeLogger.error('Error getting notification preferences:', error);
     res.status(500).json({ error: 'Failed to get notification preferences' });
   }
 };
@@ -132,7 +134,7 @@ export const updatePreferences = async (req: AuthenticatedRequest, res: Response
       preferences: updatedPrefs,
     });
   } catch (error) {
-    console.error('Error updating notification preferences:', error);
+    safeLogger.error('Error updating notification preferences:', error);
     res.status(500).json({ error: 'Failed to update notification preferences' });
   }
 };
@@ -176,7 +178,7 @@ export const registerPushToken = async (req: AuthenticatedRequest, res: Response
       res.status(500).json({ error: 'Failed to register push token' });
     }
   } catch (error) {
-    console.error('Error registering push token:', error);
+    safeLogger.error('Error registering push token:', error);
     res.status(500).json({ error: 'Failed to register push token' });
   }
 };
@@ -204,7 +206,7 @@ export const unregisterPushToken = async (req: AuthenticatedRequest, res: Respon
       res.status(500).json({ error: 'Failed to unregister push token' });
     }
   } catch (error) {
-    console.error('Error unregistering push token:', error);
+    safeLogger.error('Error unregistering push token:', error);
     res.status(500).json({ error: 'Failed to unregister push token' });
   }
 };
@@ -263,7 +265,7 @@ export const testNotification = async (req: AuthenticatedRequest, res: Response)
       message: `Test ${type} notification sent`,
     });
   } catch (error) {
-    console.error('Error sending test notification:', error);
+    safeLogger.error('Error sending test notification:', error);
     res.status(500).json({ error: 'Failed to send test notification' });
   }
 };

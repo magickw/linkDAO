@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, moderationActions, contentReports, moderationAppeals } from '../db/schema';
 import { eq, and, gte, lte, desc, sql, count } from 'drizzle-orm';
 import { aiContentModerationService } from './aiContentModerationService';
@@ -486,7 +487,7 @@ export class AdvancedModerationWorkflowsService {
       return moderationCase;
 
     } catch (error) {
-      console.error('Error processing content through moderation workflow:', error);
+      safeLogger.error('Error processing content through moderation workflow:', error);
       
       // Create a fallback moderation case
       const fallbackCase: ModerationCase = {
@@ -569,7 +570,7 @@ export class AdvancedModerationWorkflowsService {
       }
 
     } catch (error) {
-      console.error('Error executing moderation action:', error);
+      safeLogger.error('Error executing moderation action:', error);
     }
   }
 
@@ -578,7 +579,7 @@ export class AdvancedModerationWorkflowsService {
    */
   private async sendModerationNotification(contentId: string, action: string): Promise<void> {
     // In a real implementation, this would send notifications to users
-    console.log(`Sending moderation notification for content ${contentId}: ${action}`);
+    safeLogger.info(`Sending moderation notification for content ${contentId}: ${action}`);
   }
 
   /**
@@ -600,7 +601,7 @@ export class AdvancedModerationWorkflowsService {
       });
 
     } catch (error) {
-      console.error('Error storing moderation case:', error);
+      safeLogger.error('Error storing moderation case:', error);
     }
   }
 
@@ -668,7 +669,7 @@ export class AdvancedModerationWorkflowsService {
       };
 
     } catch (error) {
-      console.error('Error getting moderation statistics:', error);
+      safeLogger.error('Error getting moderation statistics:', error);
       return {
         totalCases: 0,
         casesByStatus: [],

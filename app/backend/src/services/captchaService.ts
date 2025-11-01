@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { Request } from 'express';
 
@@ -98,7 +99,7 @@ export class CaptchaService {
       };
 
     } catch (error) {
-      console.error('reCAPTCHA verification error:', error);
+      safeLogger.error('reCAPTCHA verification error:', error);
       return {
         success: false,
         errorCodes: ['network-error']
@@ -138,7 +139,7 @@ export class CaptchaService {
       };
 
     } catch (error) {
-      console.error('hCaptcha verification error:', error);
+      safeLogger.error('hCaptcha verification error:', error);
       return {
         success: false,
         errorCodes: ['network-error']

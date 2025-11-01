@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface RateLimitRule {
   ruleId: string;
@@ -87,7 +88,7 @@ class RateLimitingAbusePreventionService extends EventEmitter {
       this.isInitialized = true;
       this.emit('initialized');
     } catch (error) {
-      console.error('Failed to initialize rate limiting service:', error);
+      safeLogger.error('Failed to initialize rate limiting service:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { eq, and, desc, sql, gte, lte, inArray } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { disputes, disputeEvidence, users, escrows } from '../db/schema';
 import { aiEvidenceAnalysisService } from './aiEvidenceAnalysisService';
@@ -146,7 +147,7 @@ export class ResolutionRecommendationService {
       
       return recommendation;
     } catch (error) {
-      console.error('Error generating resolution recommendation:', error);
+      safeLogger.error('Error generating resolution recommendation:', error);
       throw error;
     }
   }
@@ -189,7 +190,7 @@ export class ResolutionRecommendationService {
         .sort((a, b) => (b.similarity * b.satisfaction) - (a.similarity * a.satisfaction))
         .slice(0, 10); // Top 10 precedents
     } catch (error) {
-      console.error('Error finding precedent cases:', error);
+      safeLogger.error('Error finding precedent cases:', error);
       return [];
     }
   }
@@ -240,7 +241,7 @@ export class ResolutionRecommendationService {
         platformRules: applicableRules
       };
     } catch (error) {
-      console.error('Error checking policy compliance:', error);
+      safeLogger.error('Error checking policy compliance:', error);
       return {
         compliant: true,
         violatedPolicies: [],
@@ -289,7 +290,7 @@ export class ResolutionRecommendationService {
         reasoning
       };
     } catch (error) {
-      console.error('Error predicting outcome:', error);
+      safeLogger.error('Error predicting outcome:', error);
       throw error;
     }
   }
@@ -340,7 +341,7 @@ export class ResolutionRecommendationService {
         userSatisfactionPrediction
       };
     } catch (error) {
-      console.error('Error calculating impact assessment:', error);
+      safeLogger.error('Error calculating impact assessment:', error);
       throw error;
     }
   }
@@ -420,7 +421,7 @@ export class ResolutionRecommendationService {
 
       return alternatives.sort((a, b) => b.probability - a.probability);
     } catch (error) {
-      console.error('Error generating alternative outcomes:', error);
+      safeLogger.error('Error generating alternative outcomes:', error);
       return [];
     }
   }
@@ -893,7 +894,7 @@ export class ResolutionRecommendationService {
 
   private async storeRecommendation(recommendation: ResolutionRecommendation): Promise<void> {
     // In production, store in dedicated table
-    console.log(`Stored resolution recommendation for dispute ${recommendation.disputeId}`);
+    safeLogger.info(`Stored resolution recommendation for dispute ${recommendation.disputeId}`);
   }
 }
 

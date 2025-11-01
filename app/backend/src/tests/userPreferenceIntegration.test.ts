@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { paymentMethodPreferences, paymentMethodUsageHistory, paymentMethodPreferenceOverrides } from '../db/schema';
 
@@ -11,7 +12,7 @@ describe('User Preference Integration Tests', () => {
   // Skip tests if no database connection
   const skipIfNoDb = () => {
     if (!db) {
-      console.log('Skipping database tests - no database connection');
+      safeLogger.info('Skipping database tests - no database connection');
       return true;
     }
     return false;
@@ -45,7 +46,7 @@ describe('User Preference Integration Tests', () => {
       // This test ensures the application doesn't crash without a database
       expect(() => {
         const testDb = db;
-        console.log('Database status:', testDb ? 'connected' : 'not connected');
+        safeLogger.info('Database status:', testDb ? 'connected' : 'not connected');
       }).not.toThrow();
     });
   });

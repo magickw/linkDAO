@@ -11,6 +11,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, afterEach, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 import { LDAOAcquisitionService } from '../../services/ldaoAcquisitionService';
 import request from 'supertest';
@@ -711,7 +712,7 @@ describe('LDAO Acquisition System - Disaster Recovery Tests', () => {
       expect(serviceRecovered).toBe(true);
       expect(recoveryTime).toBeLessThan(maxRecoveryTime);
 
-      console.log(`Service recovered in ${recoveryTime / 1000} seconds`);
+      safeLogger.info(`Service recovered in ${recoveryTime / 1000} seconds`);
     });
 
     test('should meet RPO requirements for data recovery', async () => {
@@ -750,7 +751,7 @@ describe('LDAO Acquisition System - Disaster Recovery Tests', () => {
       const dataLoss = disasterTime - testEnv.getLastRecoveryPoint();
       expect(dataLoss).toBeLessThan(maxDataLoss);
 
-      console.log(`Data loss: ${dataLoss / 1000} seconds (RPO: ${maxDataLoss / 1000} seconds)`);
+      safeLogger.info(`Data loss: ${dataLoss / 1000} seconds (RPO: ${maxDataLoss / 1000} seconds)`);
     });
   });
 

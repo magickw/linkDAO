@@ -5,6 +5,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { cacheService } from './cacheService';
 import DatabaseOptimizationService from './databaseOptimizationService';
@@ -140,7 +141,7 @@ export class EnhancedDatabaseOptimizationService {
         await this.updateIndexOptimizationPlans();
         await this.cleanupQueryProfiles();
       } catch (error) {
-        console.error('Advanced monitoring error:', error);
+        safeLogger.error('Advanced monitoring error:', error);
       }
     }, 60000);
 
@@ -149,7 +150,7 @@ export class EnhancedDatabaseOptimizationService {
       try {
         await this.generateOptimizationReport();
       } catch (error) {
-        console.error('Optimization report generation error:', error);
+        safeLogger.error('Optimization report generation error:', error);
       }
     }, 300000);
   }
@@ -651,7 +652,7 @@ export class EnhancedDatabaseOptimizationService {
     patterns.forEach((frequency, pattern) => {
       if (frequency >= 10) { // Executed at least 10 times
         // This pattern is frequently used, consider creating a materialized view or optimizing
-        console.log(`Frequent query pattern detected: ${pattern} (${frequency} executions)`);
+        safeLogger.info(`Frequent query pattern detected: ${pattern} (${frequency} executions)`);
       }
     });
   }
@@ -666,7 +667,7 @@ export class EnhancedDatabaseOptimizationService {
       try {
         await this.generateIndexOptimizationPlan(table);
       } catch (error) {
-        console.error(`Failed to update optimization plan for table ${table}:`, error);
+        safeLogger.error(`Failed to update optimization plan for table ${table}:`, error);
       }
     }
   }
@@ -699,7 +700,7 @@ export class EnhancedDatabaseOptimizationService {
     };
 
     // Log the report (in production, this might be sent to a monitoring service)
-    console.log('Database Optimization Report:', JSON.stringify(report, null, 2));
+    safeLogger.info('Database Optimization Report:', JSON.stringify(report, null, 2));
   }
 
   /**

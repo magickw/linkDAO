@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { Worker } from 'worker_threads';
 
@@ -36,7 +37,7 @@ export class PerformanceTestSuite {
   }
 
   async testHighLoad(): Promise<PerformanceTestResults> {
-    console.log('Testing high load scenarios...');
+    safeLogger.info('Testing high load scenarios...');
     
     const results: PerformanceTestResults = {
       concurrentUsers: 0,
@@ -72,7 +73,7 @@ export class PerformanceTestSuite {
   }
 
   async testDatabaseLoad(): Promise<PerformanceTestResults> {
-    console.log('Testing database performance under load...');
+    safeLogger.info('Testing database performance under load...');
     
     const results: PerformanceTestResults = {
       concurrentUsers: 0,
@@ -106,7 +107,7 @@ export class PerformanceTestSuite {
   }
 
   async testBlockchainLoad(): Promise<PerformanceTestResults> {
-    console.log('Testing blockchain transaction performance...');
+    safeLogger.info('Testing blockchain transaction performance...');
     
     const results: PerformanceTestResults = {
       concurrentUsers: 0,
@@ -136,7 +137,7 @@ export class PerformanceTestSuite {
   }
 
   async testCaching(): Promise<PerformanceTestResults> {
-    console.log('Testing CDN and caching performance...');
+    safeLogger.info('Testing CDN and caching performance...');
     
     const results: PerformanceTestResults = {
       concurrentUsers: 0,
@@ -184,7 +185,7 @@ export class PerformanceTestSuite {
     let totalErrors = 0;
 
     for (const scenario of testScenarios) {
-      console.log(`Testing ${scenario.users} concurrent users...`);
+      safeLogger.info(`Testing ${scenario.users} concurrent users...`);
       
       const scenarioResults = await this.runLoadTestScenario(scenario.users, scenario.duration);
       

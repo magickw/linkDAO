@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   users, 
   moderationActions, 
@@ -132,7 +133,7 @@ export class ContextAwareScoringService {
 
       return context;
     } catch (error) {
-      console.error('Failed to get user context:', error);
+      safeLogger.error('Failed to get user context:', error);
       
       // Return minimal context on error
       return {
@@ -228,7 +229,7 @@ export class ContextAwareScoringService {
         recentPosts: recentResult[0]?.count || 0
       };
     } catch (error) {
-      console.error('Failed to get user post stats:', error);
+      safeLogger.error('Failed to get user post stats:', error);
       return { totalPosts: 0, recentPosts: 0 };
     }
   }
@@ -252,7 +253,7 @@ export class ContextAwareScoringService {
         totalAmount: parseFloat(result[0]?.totalAmount || '0')
       };
     } catch (error) {
-      console.error('Failed to get user reaction stats:', error);
+      safeLogger.error('Failed to get user reaction stats:', error);
       return { totalReactions: 0, totalAmount: 0 };
     }
   }
@@ -275,7 +276,7 @@ export class ContextAwareScoringService {
         totalTipAmount: parseFloat(result[0]?.totalAmount || '0')
       };
     } catch (error) {
-      console.error('Failed to get user tip stats:', error);
+      safeLogger.error('Failed to get user tip stats:', error);
       return { totalTipsReceived: 0, totalTipAmount: 0 };
     }
   }
@@ -304,7 +305,7 @@ export class ContextAwareScoringService {
         severity: this.mapActionToSeverity(v.action)
       }));
     } catch (error) {
-      console.error('Failed to get violation history:', error);
+      safeLogger.error('Failed to get violation history:', error);
       return [];
     }
   }
@@ -323,7 +324,7 @@ export class ContextAwareScoringService {
 
       return result.length > 0 ? parseFloat(result[0].newReputation || '50') : 50; // Default neutral reputation
     } catch (error) {
-      console.error('Failed to get current reputation:', error);
+      safeLogger.error('Failed to get current reputation:', error);
       return 50;
     }
   }

@@ -207,7 +207,7 @@ export class ReportBuilderService {
       await new Promise(resolve => setTimeout(resolve, 100));
       return Math.random() > 0.1; // 90% success rate for simulation
     } catch (error) {
-      console.error('Data source connection test failed:', error);
+      safeLogger.error('Data source connection test failed:', error);
       return false;
     }
   }

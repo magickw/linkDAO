@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { ModerationCase, ContentReport } from '../models/ModerationModels';
 import { ModeratorProfile } from './moderatorAuthService';
@@ -185,7 +186,7 @@ export class ReviewQueueService {
         stats
       };
     } catch (error) {
-      console.error('Error getting review queue:', error);
+      safeLogger.error('Error getting review queue:', error);
       throw new Error('Failed to fetch review queue');
     }
   }
@@ -220,7 +221,7 @@ export class ReviewQueueService {
       
       return true;
     } catch (error) {
-      console.error('Error assigning case:', error);
+      safeLogger.error('Error assigning case:', error);
       return false;
     }
   }
@@ -246,7 +247,7 @@ export class ReviewQueueService {
       
       return true;
     } catch (error) {
-      console.error('Error releasing case:', error);
+      safeLogger.error('Error releasing case:', error);
       return false;
     }
   }
@@ -328,7 +329,7 @@ export class ReviewQueueService {
         contentPreview
       };
     } catch (error) {
-      console.error('Error getting next case:', error);
+      safeLogger.error('Error getting next case:', error);
       return null;
     }
   }
@@ -366,7 +367,7 @@ export class ReviewQueueService {
         oldestCase: row.oldest_case
       };
     } catch (error) {
-      console.error('Error getting queue stats:', error);
+      safeLogger.error('Error getting queue stats:', error);
       return {
         total: 0,
         pending: 0,
@@ -475,7 +476,7 @@ export class ReviewQueueService {
         createdAt: row.created_at
       }));
     } catch (error) {
-      console.error('Error getting reports for case:', error);
+      safeLogger.error('Error getting reports for case:', error);
       return [];
     }
   }
@@ -493,7 +494,7 @@ export class ReviewQueueService {
         metadata: {}
       };
     } catch (error) {
-      console.error('Error getting content preview:', error);
+      safeLogger.error('Error getting content preview:', error);
       return null;
     }
   }

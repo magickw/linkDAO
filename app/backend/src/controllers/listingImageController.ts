@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { ListingImageService, ListingImageUpload } from '../services/listingImageService';
 import { ValidationError } from '../models/validation';
 import multer from 'multer';
@@ -67,7 +69,7 @@ export class ListingImageController {
         }
       });
     } catch (error: any) {
-      console.error('Error uploading listing images:', error);
+      safeLogger.error('Error uploading listing images:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -100,7 +102,7 @@ export class ListingImageController {
         gallery
       });
     } catch (error: any) {
-      console.error('Error fetching listing images:', error);
+      safeLogger.error('Error fetching listing images:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch listing images'
@@ -136,7 +138,7 @@ export class ListingImageController {
         gallery
       });
     } catch (error: any) {
-      console.error('Error setting primary image:', error);
+      safeLogger.error('Error setting primary image:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -191,7 +193,7 @@ export class ListingImageController {
         gallery
       });
     } catch (error: any) {
-      console.error('Error reordering images:', error);
+      safeLogger.error('Error reordering images:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -228,7 +230,7 @@ export class ListingImageController {
         gallery
       });
     } catch (error: any) {
-      console.error('Error deleting image:', error);
+      safeLogger.error('Error deleting image:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -261,7 +263,7 @@ export class ListingImageController {
         urls
       });
     } catch (error: any) {
-      console.error('Error fetching image URLs:', error);
+      safeLogger.error('Error fetching image URLs:', error);
       
       if (error instanceof ValidationError) {
         return res.status(404).json({
@@ -306,7 +308,7 @@ export class ListingImageController {
         urls
       });
     } catch (error: any) {
-      console.error('Error fetching optimized images:', error);
+      safeLogger.error('Error fetching optimized images:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch optimized images'
@@ -330,7 +332,7 @@ export class ListingImageController {
         galleryData
       });
     } catch (error: any) {
-      console.error('Error fetching gallery data:', error);
+      safeLogger.error('Error fetching gallery data:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch gallery data'
@@ -395,7 +397,7 @@ export class ListingImageController {
         }
       });
     } catch (error: any) {
-      console.error('Error batch processing images:', error);
+      safeLogger.error('Error batch processing images:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to batch process images'

@@ -3,18 +3,6 @@ import express from 'express';
 import marketplaceListingsRoutes from '../routes/marketplaceListingsRoutes';
 import { it } from 'node:test';
 import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { describe } from 'node:test';
 
 // Create a test app
 const app = express();

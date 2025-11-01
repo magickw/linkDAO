@@ -4,6 +4,7 @@
  */
 
 import { promises as fs } from 'fs';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 export interface PerformanceMetric {
@@ -238,7 +239,7 @@ export class DocumentPerformanceMonitoringService {
       this.alerts.splice(0, this.alerts.length - 100);
     }
 
-    console.log(`Performance alert created: ${alert.alertType} for ${alert.documentPath}`);
+    safeLogger.info(`Performance alert created: ${alert.alertType} for ${alert.documentPath}`);
   }
 
   /**

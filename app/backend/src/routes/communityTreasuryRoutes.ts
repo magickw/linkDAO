@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -20,7 +22,7 @@ router.get('/:id/treasury/pools', async (req, res) => {
 
     res.json(pools);
   } catch (error) {
-    console.error('Error fetching treasury pools:', error);
+    safeLogger.error('Error fetching treasury pools:', error);
     res.status(500).json({ error: 'Failed to fetch treasury pools' });
   }
 });
@@ -42,7 +44,7 @@ router.get('/:id/treasury/transactions', async (req, res) => {
     
     res.json(transactions);
   } catch (error) {
-    console.error('Error fetching transactions:', error);
+    safeLogger.error('Error fetching transactions:', error);
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });
@@ -66,13 +68,13 @@ router.get('/:id/treasury/proposals', async (req, res) => {
 
     res.json(proposals);
   } catch (error) {
-    console.error('Error fetching spending proposals:', error);
+    safeLogger.error('Error fetching spending proposals:', error);
     res.status(500).json({ error: 'Failed to fetch proposals' });
   }
 });
 
 // Create spending proposal
-router.post('/:id/treasury/proposals', authMiddleware, async (req, res) => {
+router.post('/:id/treasury/proposals', csrfProtection,  authMiddleware, async (req, res) => {
   try {
     const { id: communityId } = req.params;
     const { title, description, amount, tokenAddress, recipient } = req.body;
@@ -123,7 +125,7 @@ router.post('/:id/treasury/proposals', authMiddleware, async (req, res) => {
       data: proposal[0]
     });
   } catch (error) {
-    console.error('Error creating spending proposal:', error);
+    safeLogger.error('Error creating spending proposal:', error);
     res.status(500).json({ error: 'Failed to create proposal' });
   }
 });

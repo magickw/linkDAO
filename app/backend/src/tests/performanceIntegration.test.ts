@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { PerformanceOptimizationManager, defaultPerformanceConfig } from '../config/performanceConfig';
 import { PerformanceMiddleware } from '../middleware/performanceMiddleware';
 import express from 'express';
@@ -322,7 +323,7 @@ describe('Performance Integration Tests', () => {
       expect(averageTime).toBeLessThan(1000); // Less than 1 second average
       expect(totalTime).toBeLessThan(5000); // Total time less than 5 seconds
 
-      console.log(`Concurrent requests performance: ${concurrentRequests} requests in ${totalTime}ms (${averageTime.toFixed(2)}ms average)`);
+      safeLogger.info(`Concurrent requests performance: ${concurrentRequests} requests in ${totalTime}ms (${averageTime.toFixed(2)}ms average)`);
     });
 
     it('should maintain performance under sustained load', async () => {
@@ -339,7 +340,7 @@ describe('Performance Integration Tests', () => {
           const requestEnd = Date.now();
           responseTimes.push(requestEnd - requestStart);
         } catch (error) {
-          console.error('Request failed:', error);
+          safeLogger.error('Request failed:', error);
         }
 
         await new Promise(resolve => setTimeout(resolve, requestInterval));
@@ -352,7 +353,7 @@ describe('Performance Integration Tests', () => {
       expect(averageResponseTime).toBeLessThan(500); // Average should be reasonable
       expect(maxResponseTime).toBeLessThan(2000); // No request should be too slow
 
-      console.log(`Sustained load performance: ${responseTimes.length} requests, ${averageResponseTime.toFixed(2)}ms average, ${maxResponseTime}ms max`);
+      safeLogger.info(`Sustained load performance: ${responseTimes.length} requests, ${averageResponseTime.toFixed(2)}ms average, ${maxResponseTime}ms max`);
     });
 
     it('should generate comprehensive performance report', async () => {
@@ -388,7 +389,7 @@ describe('Performance Integration Tests', () => {
       expect(report.monitoring).toHaveProperty('summary');
       expect(report.monitoring.summary.application.requests.total).toBeGreaterThan(0);
 
-      console.log('Performance report generated successfully');
+      safeLogger.info('Performance report generated successfully');
     });
   });
 });

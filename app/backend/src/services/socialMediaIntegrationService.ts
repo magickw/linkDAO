@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { posts, communities, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -113,7 +114,7 @@ export class SocialMediaIntegrationService {
           
           results.push(result);
         } catch (error) {
-          console.error(`Failed to post to ${platform}:`, error);
+          safeLogger.error(`Failed to post to ${platform}:`, error);
           results.push({
             id: `failed-${platform}-${Date.now()}`,
             content: socialContent,
@@ -130,7 +131,7 @@ export class SocialMediaIntegrationService {
       return results;
 
     } catch (error) {
-      console.error('Error in cross-posting content:', error);
+      safeLogger.error('Error in cross-posting content:', error);
       throw new Error('Failed to cross-post content');
     }
   }
@@ -174,7 +175,7 @@ export class SocialMediaIntegrationService {
       // For now, we'll return placeholder URLs
       return cids.map((cid: string) => `https://ipfs.io/ipfs/${cid}`);
     } catch (error) {
-      console.error('Error parsing media CIDs:', error);
+      safeLogger.error('Error parsing media CIDs:', error);
       return [];
     }
   }
@@ -222,7 +223,7 @@ export class SocialMediaIntegrationService {
       }
 
     } catch (error) {
-      console.error(`Error posting to ${platform}:`, error);
+      safeLogger.error(`Error posting to ${platform}:`, error);
       return {
         id: postId,
         content,
@@ -245,7 +246,7 @@ export class SocialMediaIntegrationService {
     try {
       // In a real implementation, this would store records in a dedicated table
       // For now, we'll just log the information
-      console.log('Storing cross-post records:', { posts, originalPostId });
+      safeLogger.info('Storing cross-post records:', { posts, originalPostId });
       
       // Example of what the database storage might look like:
       /*
@@ -269,7 +270,7 @@ export class SocialMediaIntegrationService {
       */
 
     } catch (error) {
-      console.error('Error storing cross-post records:', error);
+      safeLogger.error('Error storing cross-post records:', error);
     }
   }
 
@@ -322,7 +323,7 @@ export class SocialMediaIntegrationService {
       return analytics;
 
     } catch (error) {
-      console.error('Error getting social media analytics:', error);
+      safeLogger.error('Error getting social media analytics:', error);
       return [];
     }
   }
@@ -383,7 +384,7 @@ export class SocialMediaIntegrationService {
       };
 
     } catch (error) {
-      console.error('Error optimizing content for social sharing:', error);
+      safeLogger.error('Error optimizing content for social sharing:', error);
       return {
         optimizedContent: content,
         suggestions: ['Unable to optimize content due to processing error'],
@@ -428,7 +429,7 @@ export class SocialMediaIntegrationService {
       return scheduledPosts;
 
     } catch (error) {
-      console.error('Error scheduling content:', error);
+      safeLogger.error('Error scheduling content:', error);
       throw new Error('Failed to schedule content');
     }
   }
@@ -445,7 +446,7 @@ export class SocialMediaIntegrationService {
       return [];
 
     } catch (error) {
-      console.error('Error getting scheduled posts:', error);
+      safeLogger.error('Error getting scheduled posts:', error);
       return [];
     }
   }
@@ -457,11 +458,11 @@ export class SocialMediaIntegrationService {
     try {
       // In a real implementation, this would update database record
       // For now, just return true
-      console.log(`Cancelling scheduled post: ${postId}`);
+      safeLogger.info(`Cancelling scheduled post: ${postId}`);
       return true;
 
     } catch (error) {
-      console.error('Error cancelling scheduled post:', error);
+      safeLogger.error('Error cancelling scheduled post:', error);
       return false;
     }
   }

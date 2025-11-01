@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { userJourneyService } from '../services/userJourneyService';
 import { z } from 'zod';
 
@@ -59,7 +61,7 @@ export class UserJourneyController {
         message: 'Journey event tracked successfully'
       });
     } catch (error) {
-      console.error('Error tracking journey event:', error);
+      safeLogger.error('Error tracking journey event:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -100,7 +102,7 @@ export class UserJourneyController {
         }
       });
     } catch (error) {
-      console.error('Error getting journey maps:', error);
+      safeLogger.error('Error getting journey maps:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -136,7 +138,7 @@ export class UserJourneyController {
         data: funnel
       });
     } catch (error) {
-      console.error('Error getting conversion funnel:', error);
+      safeLogger.error('Error getting conversion funnel:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -180,7 +182,7 @@ export class UserJourneyController {
         }
       });
     } catch (error) {
-      console.error('Error getting user sessions:', error);
+      safeLogger.error('Error getting user sessions:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -230,7 +232,7 @@ export class UserJourneyController {
         }
       });
     } catch (error) {
-      console.error('Error getting drop-off analysis:', error);
+      safeLogger.error('Error getting drop-off analysis:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -275,7 +277,7 @@ export class UserJourneyController {
         data: metrics
       });
     } catch (error) {
-      console.error('Error getting real-time metrics:', error);
+      safeLogger.error('Error getting real-time metrics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve real-time metrics'
@@ -331,7 +333,7 @@ export class UserJourneyController {
         data: summary
       });
     } catch (error) {
-      console.error('Error getting journey summary:', error);
+      safeLogger.error('Error getting journey summary:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({

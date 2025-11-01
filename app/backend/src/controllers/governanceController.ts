@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { governanceService } from '../services/governanceService';
 
 export class GovernanceController {
@@ -13,7 +15,7 @@ export class GovernanceController {
       const proposal = await governanceService.getProposal(proposalId);
       res.json(proposal);
     } catch (error) {
-      console.error('Error fetching proposal:', error);
+      safeLogger.error('Error fetching proposal:', error);
       res.status(500).json({ error: 'Failed to fetch proposal' });
     }
   }
@@ -30,7 +32,7 @@ export class GovernanceController {
       const proposals = await governanceService.getProposalsByDao(daoId, parseInt(limit as string));
       res.json(proposals);
     } catch (error) {
-      console.error('Error fetching DAO proposals:', error);
+      safeLogger.error('Error fetching DAO proposals:', error);
       res.status(500).json({ error: 'Failed to fetch DAO proposals' });
     }
   }
@@ -42,7 +44,7 @@ export class GovernanceController {
       const proposals = await governanceService.getAllActiveProposals(parseInt(limit as string));
       res.json(proposals);
     } catch (error) {
-      console.error('Error fetching active proposals:', error);
+      safeLogger.error('Error fetching active proposals:', error);
       res.status(500).json({ error: 'Failed to fetch active proposals' });
     }
   }
@@ -68,7 +70,7 @@ export class GovernanceController {
 
       res.status(201).json(proposal);
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      safeLogger.error('Error creating proposal:', error);
       res.status(500).json({ error: 'Failed to create proposal' });
     }
   }
@@ -99,7 +101,7 @@ export class GovernanceController {
         res.status(400).json({ error: 'Failed to record vote' });
       }
     } catch (error) {
-      console.error('Error voting on proposal:', error);
+      safeLogger.error('Error voting on proposal:', error);
       res.status(500).json({ error: 'Failed to record vote' });
     }
   }
@@ -115,7 +117,7 @@ export class GovernanceController {
       const proposals = await governanceService.searchProposals(query as string, parseInt(limit as string));
       res.json(proposals);
     } catch (error) {
-      console.error('Error searching proposals:', error);
+      safeLogger.error('Error searching proposals:', error);
       res.status(500).json({ error: 'Failed to search proposals' });
     }
   }
@@ -132,7 +134,7 @@ export class GovernanceController {
       const proposals = await governanceService.getProposalsBySpace(spaceId, parseInt(limit as string));
       res.json(proposals);
     } catch (error) {
-      console.error('Error fetching space proposals:', error);
+      safeLogger.error('Error fetching space proposals:', error);
       res.status(500).json({ error: 'Failed to fetch space proposals' });
     }
   }
@@ -148,7 +150,7 @@ export class GovernanceController {
       const treasuryData = await governanceService.getDAOTreasuryData(daoId);
       res.json(treasuryData);
     } catch (error) {
-      console.error('Error fetching treasury data:', error);
+      safeLogger.error('Error fetching treasury data:', error);
       res.status(500).json({ error: 'Failed to fetch treasury data' });
     }
   }
@@ -164,7 +166,7 @@ export class GovernanceController {
       const votingPower = await governanceService.getVotingPower(userId, daoId);
       res.json(votingPower);
     } catch (error) {
-      console.error('Error fetching voting power:', error);
+      safeLogger.error('Error fetching voting power:', error);
       res.status(500).json({ error: 'Failed to fetch voting power' });
     }
   }
@@ -185,7 +187,7 @@ export class GovernanceController {
         res.status(400).json({ error: 'Failed to delegate voting power' });
       }
     } catch (error) {
-      console.error('Error delegating voting power:', error);
+      safeLogger.error('Error delegating voting power:', error);
       res.status(500).json({ error: 'Failed to delegate voting power' });
     }
   }
@@ -207,7 +209,7 @@ export class GovernanceController {
         res.status(400).json({ error: 'Failed to revoke delegation' });
       }
     } catch (error) {
-      console.error('Error revoking delegation:', error);
+      safeLogger.error('Error revoking delegation:', error);
       res.status(500).json({ error: 'Failed to revoke delegation' });
     }
   }
@@ -225,7 +227,7 @@ export class GovernanceController {
       const history: any[] = []; // await governanceService.getUserVotingHistory(userId, daoId as string);
       res.json(history);
     } catch (error) {
-      console.error('Error fetching voting history:', error);
+      safeLogger.error('Error fetching voting history:', error);
       res.status(500).json({ error: 'Failed to fetch voting history' });
     }
   }

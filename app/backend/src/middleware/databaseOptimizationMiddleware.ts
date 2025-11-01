@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { Pool } from 'pg';
 import { performance } from 'perf_hooks';
 
@@ -107,7 +108,7 @@ export class DatabaseOptimizationMiddleware {
             queryPlan = explainResult.rows[0]['QUERY PLAN'][0];
           } catch (error) {
             // If EXPLAIN fails, continue without it
-            console.warn('Failed to get query plan:', error);
+            safeLogger.warn('Failed to get query plan:', error);
           }
         }
 
@@ -406,7 +407,7 @@ export class DatabaseOptimizationMiddleware {
   private logSlowQuery(query: string, params: any[], executionTime: number, queryPlan?: any): void {
     if (!this.options.enableQueryLogging) return;
 
-    console.warn('Slow Query Detected:', {
+    safeLogger.warn('Slow Query Detected:', {
       query: query.substring(0, 200) + (query.length > 200 ? '...' : ''),
       params: params.length > 0 ? params : undefined,
       executionTime: `${executionTime.toFixed(2)}ms`,

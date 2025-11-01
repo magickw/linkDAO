@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { sellerPerformanceMonitoringService } from '../services/sellerPerformanceMonitoringService';
 
 export class SellerPerformanceController {
@@ -40,7 +42,7 @@ export class SellerPerformanceController {
         }
       });
     } catch (error) {
-      console.error('Error in storeMetrics controller:', error);
+      safeLogger.error('Error in storeMetrics controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to store performance metrics',
@@ -71,7 +73,7 @@ export class SellerPerformanceController {
         data: dashboardData
       });
     } catch (error) {
-      console.error('Error in getDashboard controller:', error);
+      safeLogger.error('Error in getDashboard controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance dashboard',
@@ -115,7 +117,7 @@ export class SellerPerformanceController {
         data: testResult
       });
     } catch (error) {
-      console.error('Error in runRegressionTest controller:', error);
+      safeLogger.error('Error in runRegressionTest controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to run performance regression test',
@@ -168,7 +170,7 @@ export class SellerPerformanceController {
         }
       });
     } catch (error) {
-      console.error('Error in getAlerts controller:', error);
+      safeLogger.error('Error in getAlerts controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance alerts',
@@ -215,7 +217,7 @@ export class SellerPerformanceController {
         data: alert
       });
     } catch (error) {
-      console.error('Error in createAlert controller:', error);
+      safeLogger.error('Error in createAlert controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create performance alert',
@@ -250,7 +252,7 @@ export class SellerPerformanceController {
         }
       });
     } catch (error) {
-      console.error('Error in resolveAlert controller:', error);
+      safeLogger.error('Error in resolveAlert controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to resolve performance alert',
@@ -301,7 +303,7 @@ export class SellerPerformanceController {
         }
       });
     } catch (error) {
-      console.error('Error in getRecommendations controller:', error);
+      safeLogger.error('Error in getRecommendations controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance recommendations',
@@ -372,7 +374,7 @@ export class SellerPerformanceController {
         }
       });
     } catch (error) {
-      console.error('Error in getTrends controller:', error);
+      safeLogger.error('Error in getTrends controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance trends',
@@ -423,7 +425,7 @@ export class SellerPerformanceController {
         data: summary
       });
     } catch (error) {
-      console.error('Error in getPerformanceSummary controller:', error);
+      safeLogger.error('Error in getPerformanceSummary controller:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance summary',
@@ -457,7 +459,7 @@ export class SellerPerformanceController {
         data: healthStatus
       });
     } catch (error) {
-      console.error('Error in healthCheck controller:', error);
+      safeLogger.error('Error in healthCheck controller:', error);
       res.status(500).json({
         success: false,
         service: 'seller-performance-monitoring',

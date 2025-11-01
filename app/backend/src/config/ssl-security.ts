@@ -1,4 +1,5 @@
 import https from 'https';
+import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -89,13 +90,13 @@ class SecurityManager {
 
   private generateSecureSecret(): string {
     const secret = crypto.randomBytes(64).toString('hex');
-    console.warn('⚠️ Generated JWT secret. Set JWT_SECRET environment variable for production!');
+    safeLogger.warn('⚠️ Generated JWT secret. Set JWT_SECRET environment variable for production!');
     return secret;
   }
 
   private initializeSSL(): void {
     if (!this.config.ssl.enabled) {
-      console.log('🔓 SSL disabled');
+      safeLogger.info('🔓 SSL disabled');
       return;
     }
 
@@ -105,13 +106,13 @@ class SecurityManager {
       const caPath = this.config.ssl.caPath;
 
       if (!certPath || !keyPath) {
-        console.warn('⚠️ SSL enabled but certificate paths not provided');
+        safeLogger.warn('⚠️ SSL enabled but certificate paths not provided');
         return;
       }
 
       // Check if certificate files exist
       if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-        console.warn('⚠️ SSL certificate files not found');
+        safeLogger.warn('⚠️ SSL certificate files not found');
         return;
       }
 
@@ -126,10 +127,10 @@ class SecurityManager {
         this.sslOptions.ca = fs.readFileSync(caPath);
       }
 
-      console.log('🔒 SSL certificates loaded successfully');
+      safeLogger.info('🔒 SSL certificates loaded successfully');
 
     } catch (error) {
-      console.error('❌ Failed to load SSL certificates:', error);
+      safeLogger.error('❌ Failed to load SSL certificates:', error);
       this.sslOptions = null;
     }
   }

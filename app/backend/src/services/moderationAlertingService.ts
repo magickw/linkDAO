@@ -1,4 +1,5 @@
 import { moderationMetricsService } from './moderationMetricsService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationLoggingService } from './moderationLoggingService';
 import nodemailer from 'nodemailer';
 import { WebhookClient } from 'discord.js';
@@ -279,7 +280,7 @@ class ModerationAlertingService {
             break;
         }
       } catch (error) {
-        console.error(`Failed to send ${channelType} notification:`, error);
+        safeLogger.error(`Failed to send ${channelType} notification:`, error);
       }
     });
 

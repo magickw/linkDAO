@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface CacheConfig {
@@ -84,7 +85,7 @@ export class CacheService {
           retryStrategy: (times) => {
             // Stop retrying after 3 attempts to prevent infinite loops
             if (times > 3) {
-              console.warn('Max Redis retry attempts reached, giving up');
+              safeLogger.warn('Max Redis retry attempts reached, giving up');
               return null;
             }
             return Math.min(times * 100, 3000);
@@ -103,7 +104,7 @@ export class CacheService {
           lazyConnect: true,
           retryStrategy: (times) => {
             if (times > 3) {
-              console.warn('Max Redis retry attempts reached, giving up');
+              safeLogger.warn('Max Redis retry attempts reached, giving up');
               return null;
             }
             return Math.min(times * 100, 3000);
@@ -113,7 +114,7 @@ export class CacheService {
 
       this.setupEventHandlers();
     } catch (error) {
-      console.error('Failed to initialize Redis:', error);
+      safeLogger.error('Failed to initialize Redis:', error);
       this.isConnected = false;
       // Set redis to null to prevent undefined access
       this.redis = null as any;
@@ -122,32 +123,32 @@ export class CacheService {
 
   private setupEventHandlers(): void {
     if (!this.redis) {
-      console.warn('Redis client not available, skipping event handler setup');
+      safeLogger.warn('Redis client not available, skipping event handler setup');
       return;
     }
 
     this.redis.on('connect', () => {
-      console.log('✅ Redis connected successfully');
+      safeLogger.info('✅ Redis connected successfully');
       this.isConnected = true;
     });
 
     this.redis.on('ready', () => {
-      console.log('✅ Redis ready for operations');
+      safeLogger.info('✅ Redis ready for operations');
       this.isConnected = true;
     });
 
     this.redis.on('error', (error) => {
-      console.error('❌ Redis connection error:', error.message);
+      safeLogger.error('❌ Redis connection error:', error.message);
       this.isConnected = false;
     });
 
     this.redis.on('close', () => {
-      console.log('🔌 Redis connection closed');
+      safeLogger.info('🔌 Redis connection closed');
       this.isConnected = false;
     });
 
     this.redis.on('reconnecting', (delay) => {
-      console.log(`🔄 Redis reconnecting in ${delay}ms...`);
+      safeLogger.info(`🔄 Redis reconnecting in ${delay}ms...`);
     });
   }
 
@@ -167,7 +168,7 @@ export class CacheService {
         this.isConnected = true;
       }
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
+      safeLogger.error('Failed to connect to Redis:', error);
       throw error;
     }
   }
@@ -175,7 +176,7 @@ export class CacheService {
   async disconnect(): Promise<void> {
     if (this.isConnected && this.redis) {
       await this.redis.quit();
-      console.log('🔌 Redis connection closed gracefully');
+      safeLogger.info('🔌 Redis connection closed gracefully');
     }
   }
 
@@ -187,7 +188,7 @@ export class CacheService {
     try {
       // Check if redis client exists
       if (!this.redis) {
-        console.warn('Redis client not initialized, cache miss');
+        safeLogger.warn('Redis client not initialized, cache miss');
         this.stats.misses++;
         return null;
       }
@@ -196,7 +197,7 @@ export class CacheService {
         try {
           await this.connect();
         } catch (connectError) {
-          console.warn('Failed to connect to Redis, returning null');
+          safeLogger.warn('Failed to connect to Redis, returning null');
           this.stats.misses++;
           return null;
         }
@@ -214,7 +215,7 @@ export class CacheService {
         return null;
       }
     } catch (error) {
-      console.error(`Cache get error for key ${key}:`, error);
+      safeLogger.error(`Cache get error for key ${key}:`, error);
       this.stats.misses++;
       return null;
     }
@@ -224,7 +225,7 @@ export class CacheService {
     try {
       // Check if redis client exists
       if (!this.redis) {
-        console.warn('Redis client not initialized, skipping cache set');
+        safeLogger.warn('Redis client not initialized, skipping cache set');
         return false;
       }
 
@@ -232,7 +233,7 @@ export class CacheService {
         try {
           await this.connect();
         } catch (connectError) {
-          console.warn('Failed to connect to Redis, skipping cache set');
+          safeLogger.warn('Failed to connect to Redis, skipping cache set');
           return false;
         }
       }
@@ -248,7 +249,7 @@ export class CacheService {
 
       return true;
     } catch (error) {
-      console.error(`Cache set error for key ${key}:`, error);
+      safeLogger.error(`Cache set error for key ${key}:`, error);
       return false;
     }
   }
@@ -262,7 +263,7 @@ export class CacheService {
       await this.redis.del(key);
       return true;
     } catch (error) {
-      console.error(`Cache invalidate error for key ${key}:`, error);
+      safeLogger.error(`Cache invalidate error for key ${key}:`, error);
       return false;
     }
   }
@@ -280,7 +281,7 @@ export class CacheService {
       }
       return 0;
     } catch (error) {
-      console.error(`Cache invalidate pattern error for pattern ${pattern}:`, error);
+      safeLogger.error(`Cache invalidate pattern error for pattern ${pattern}:`, error);
       return 0;
     }
   }
@@ -294,7 +295,7 @@ export class CacheService {
       const result = await this.redis.exists(key);
       return result === 1;
     } catch (error) {
-      console.error(`Cache exists error for key ${key}:`, error);
+      safeLogger.error(`Cache exists error for key ${key}:`, error);
       return false;
     }
   }
@@ -307,7 +308,7 @@ export class CacheService {
 
       return await this.redis.ttl(key);
     } catch (error) {
-      console.error(`Cache TTL error for key ${key}:`, error);
+      safeLogger.error(`Cache TTL error for key ${key}:`, error);
       return -1;
     }
   }
@@ -396,7 +397,7 @@ export class CacheService {
       const values = await this.redis.mget(...keys);
       return values.map(value => value ? JSON.parse(value) : null);
     } catch (error) {
-      console.error('Cache mget error:', error);
+      safeLogger.error('Cache mget error:', error);
       return keys.map(() => null);
     }
   }
@@ -422,7 +423,7 @@ export class CacheService {
       await pipeline.exec();
       return true;
     } catch (error) {
-      console.error('Cache mset error:', error);
+      safeLogger.error('Cache mset error:', error);
       return false;
     }
   }
@@ -451,14 +452,14 @@ export class CacheService {
 
       return { allowed, remaining, resetTime };
     } catch (error) {
-      console.error('Rate limit check error:', error);
+      safeLogger.error('Rate limit check error:', error);
       return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
     }
   }
 
   // Cache warming
   async warmCache(): Promise<void> {
-    console.log('🔥 Starting cache warming...');
+    safeLogger.info('🔥 Starting cache warming...');
 
     try {
       // Warm popular listings
@@ -467,9 +468,9 @@ export class CacheService {
       // Warm category data
       await this.warmCategoryData();
       
-      console.log('✅ Cache warming completed');
+      safeLogger.info('✅ Cache warming completed');
     } catch (error) {
-      console.error('Cache warming error:', error);
+      safeLogger.error('Cache warming error:', error);
     }
   }
 
@@ -508,7 +509,7 @@ export class CacheService {
         keyCount: this.parseRedisKeyspace(keyspace)
       };
     } catch (error) {
-      console.error('Cache health check failed:', error);
+      safeLogger.error('Cache health check failed:', error);
       return {
         connected: false,
         latency: -1

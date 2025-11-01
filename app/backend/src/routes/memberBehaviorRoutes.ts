@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getMemberBehaviorMetrics,
   getEngagementPatterns,
@@ -51,6 +52,6 @@ router.get('/segment', authenticateToken, getMemberSegment);
  * @desc    Track user behavior event
  * @access  Private
  */
-router.post('/track', authenticateToken, trackBehaviorEvent);
+router.post('/track', csrfProtection,  authenticateToken, trackBehaviorEvent);
 
 export default router;

@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import request from 'supertest';
 import { ethers } from 'ethers';
 
@@ -42,7 +43,7 @@ export class SecurityTestSuite {
   }
 
   async testAuthentication(): Promise<SecurityTestResults> {
-    console.log('Testing authentication security...');
+    safeLogger.info('Testing authentication security...');
     
     const results: SecurityTestResults = this.getDefaultResults();
 
@@ -71,7 +72,7 @@ export class SecurityTestSuite {
   }
 
   async testAuthorization(): Promise<SecurityTestResults> {
-    console.log('Testing authorization security...');
+    safeLogger.info('Testing authorization security...');
     
     const results: SecurityTestResults = this.getDefaultResults();
 
@@ -97,7 +98,7 @@ export class SecurityTestSuite {
   }
 
   async testSmartContractSecurity(): Promise<SecurityTestResults> {
-    console.log('Testing smart contract security...');
+    safeLogger.info('Testing smart contract security...');
     
     const results: SecurityTestResults = this.getDefaultResults();
 
@@ -130,7 +131,7 @@ export class SecurityTestSuite {
   }
 
   async testAPISecurity(): Promise<SecurityTestResults> {
-    console.log('Testing API security...');
+    safeLogger.info('Testing API security...');
     
     const results: SecurityTestResults = this.getDefaultResults();
 
@@ -163,7 +164,7 @@ export class SecurityTestSuite {
   }
 
   async testDataProtection(): Promise<SecurityTestResults> {
-    console.log('Testing data protection...');
+    safeLogger.info('Testing data protection...');
     
     const results: SecurityTestResults = this.getDefaultResults();
 

@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import dotenv from "dotenv";
 
@@ -9,7 +10,7 @@ async function main() {
   const client = postgres(connectionString, { prepare: false });
   const db = drizzle(client);
 
-  console.log("Running cart system migration...");
+  safeLogger.info("Running cart system migration...");
   
   try {
     // Cart system migration SQL
@@ -75,9 +76,9 @@ async function main() {
     `;
 
     await client.unsafe(cartMigrationSQL);
-    console.log("Cart system migration completed successfully!");
+    safeLogger.info("Cart system migration completed successfully!");
   } catch (error) {
-    console.error("Error running cart migration:", error);
+    safeLogger.error("Error running cart migration:", error);
   } finally {
     await client.end();
   }

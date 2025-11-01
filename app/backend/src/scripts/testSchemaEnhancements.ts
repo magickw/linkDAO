@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import dotenv from "dotenv";
 import { sellers, products, orders, imageStorage, ensVerifications } from "../db/schema";
@@ -9,7 +10,7 @@ async function testSchemaEnhancements() {
   const connectionString = process.env.DATABASE_URL;
   
   if (!connectionString) {
-    console.error("DATABASE_URL environment variable is not set");
+    safeLogger.error("DATABASE_URL environment variable is not set");
     process.exit(1);
   }
 
@@ -17,19 +18,19 @@ async function testSchemaEnhancements() {
   const db = drizzle(client);
   
   try {
-    console.log("Testing marketplace enhancements schema...");
+    safeLogger.info("Testing marketplace enhancements schema...");
     
     // Test 1: Verify new tables exist and can be queried
-    console.log("\n1. Testing new tables:");
+    safeLogger.info("\n1. Testing new tables:");
     
     const imageStorageCount = await db.select().from(imageStorage).limit(1);
-    console.log(`✓ image_storage table accessible (${imageStorageCount.length} records found)`);
+    safeLogger.info(`✓ image_storage table accessible (${imageStorageCount.length} records found)`);
     
     const ensVerificationsCount = await db.select().from(ensVerifications).limit(1);
-    console.log(`✓ ens_verifications table accessible (${ensVerificationsCount.length} records found)`);
+    safeLogger.info(`✓ ens_verifications table accessible (${ensVerificationsCount.length} records found)`);
     
     // Test 2: Verify new columns in existing tables
-    console.log("\n2. Testing enhanced table columns:");
+    safeLogger.info("\n2. Testing enhanced table columns:");
     
     // Test sellers table enhancements
     const sellersTest = await db.select({
@@ -38,7 +39,7 @@ async function testSchemaEnhancements() {
       profileImageIpfs: sellers.profileImageIpfs,
       websiteUrl: sellers.websiteUrl
     }).from(sellers).limit(1);
-    console.log(`✓ sellers table enhanced columns accessible`);
+    safeLogger.info(`✓ sellers table enhanced columns accessible`);
     
     // Test products table enhancements
     const productsTest = await db.select({
@@ -47,7 +48,7 @@ async function testSchemaEnhancements() {
       publishedAt: products.publishedAt,
       imageIpfsHashes: products.imageIpfsHashes
     }).from(products).limit(1);
-    console.log(`✓ products table enhanced columns accessible`);
+    safeLogger.info(`✓ products table enhanced columns accessible`);
     
     // Test orders table enhancements
     const ordersTest = await db.select({
@@ -56,10 +57,10 @@ async function testSchemaEnhancements() {
       paymentMethod: orders.paymentMethod,
       shippingAddress: orders.shippingAddress
     }).from(orders).limit(1);
-    console.log(`✓ orders table enhanced columns accessible`);
+    safeLogger.info(`✓ orders table enhanced columns accessible`);
     
     // Test 3: Test data insertion into new tables
-    console.log("\n3. Testing data operations:");
+    safeLogger.info("\n3. Testing data operations:");
     
     // Test image storage insertion (will rollback)
     try {
@@ -75,29 +76,29 @@ async function testSchemaEnhancements() {
           usageType: "profile"
         }).returning();
         
-        console.log(`✓ image_storage insert test successful`);
+        safeLogger.info(`✓ image_storage insert test successful`);
         
         // Rollback the transaction to avoid leaving test data
         throw new Error("Rollback test transaction");
       });
     } catch (error) {
       if (error.message === "Rollback test transaction") {
-        console.log(`✓ image_storage transaction rollback successful`);
+        safeLogger.info(`✓ image_storage transaction rollback successful`);
       } else {
         throw error;
       }
     }
     
-    console.log("\n✅ All schema enhancement tests passed!");
-    console.log("\nDatabase Schema Enhancements Summary:");
-    console.log("- ENS support added to sellers table (optional)");
-    console.log("- Image storage infrastructure implemented");
-    console.log("- Enhanced listing management for products");
-    console.log("- Improved order tracking capabilities");
-    console.log("- All tables and columns are accessible and functional");
+    safeLogger.info("\n✅ All schema enhancement tests passed!");
+    safeLogger.info("\nDatabase Schema Enhancements Summary:");
+    safeLogger.info("- ENS support added to sellers table (optional)");
+    safeLogger.info("- Image storage infrastructure implemented");
+    safeLogger.info("- Enhanced listing management for products");
+    safeLogger.info("- Improved order tracking capabilities");
+    safeLogger.info("- All tables and columns are accessible and functional");
     
   } catch (error) {
-    console.error("Error testing schema enhancements:", error);
+    safeLogger.error("Error testing schema enhancements:", error);
     process.exit(1);
   } finally {
     await client.end();

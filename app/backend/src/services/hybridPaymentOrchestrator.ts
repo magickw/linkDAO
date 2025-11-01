@@ -1,4 +1,5 @@
 import { PaymentValidationService } from './paymentValidationService';
+import { safeLogger } from '../utils/safeLogger';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ExchangeRateService } from './exchangeRateService';
@@ -173,7 +174,7 @@ export class HybridPaymentOrchestrator {
         fallbackOptions
       };
     } catch (error) {
-      console.error('Error determining payment path:', error);
+      safeLogger.error('Error determining payment path:', error);
       
       // Default to fiat on error
       return {
@@ -216,12 +217,12 @@ export class HybridPaymentOrchestrator {
 
       return result;
     } catch (error) {
-      console.error('Hybrid checkout failed:', error);
+      safeLogger.error('Hybrid checkout failed:', error);
       
       // Try fallback path if available
       const pathDecision = await this.determineOptimalPaymentPath(request);
       if (pathDecision.fallbackOptions.length > 0) {
-        console.log('Attempting fallback payment path...');
+        safeLogger.info('Attempting fallback payment path...');
         return await this.processFiatEscrowPath(request, pathDecision.fallbackOptions[0], null);
       }
       
@@ -265,7 +266,7 @@ export class HybridPaymentOrchestrator {
         estimatedCompletionTime: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
       };
     } catch (error) {
-      console.error('Crypto escrow path failed:', error);
+      safeLogger.error('Crypto escrow path failed:', error);
       throw error;
     }
   }
@@ -304,7 +305,7 @@ export class HybridPaymentOrchestrator {
         estimatedCompletionTime: new Date(Date.now() + 1000) // Instant
       };
     } catch (error) {
-      console.error('Fiat escrow path failed:', error);
+      safeLogger.error('Fiat escrow path failed:', error);
       throw error;
     }
   }
@@ -330,10 +331,10 @@ export class HybridPaymentOrchestrator {
     const paymentIntentId = `pi_${Math.random().toString(36).substr(2, 9)}`;
     const sellerAccountId = `acct_${Math.random().toString(36).substr(2, 9)}`;
 
-    console.log(`Creating Stripe Connect escrow for order ${request.orderId}`);
-    console.log(`Transfer Group: ${transferGroup}`);
-    console.log(`Payment Intent: ${paymentIntentId}`);
-    console.log(`Seller Account: ${sellerAccountId}`);
+    safeLogger.info(`Creating Stripe Connect escrow for order ${request.orderId}`);
+    safeLogger.info(`Transfer Group: ${transferGroup}`);
+    safeLogger.info(`Payment Intent: ${paymentIntentId}`);
+    safeLogger.info(`Seller Account: ${sellerAccountId}`);
 
     return {
       paymentIntentId,
@@ -378,7 +379,7 @@ export class HybridPaymentOrchestrator {
         orderData.paymentToken
       );
     } catch (error) {
-      console.error('Error creating order record:', error);
+      safeLogger.error('Error creating order record:', error);
       return null;
     }
   }
@@ -433,7 +434,7 @@ export class HybridPaymentOrchestrator {
       await this.databaseService.updateOrder(parseInt(orderId), { status: newStatus });
 
     } catch (error) {
-      console.error('Error handling order fulfillment:', error);
+      safeLogger.error('Error handling order fulfillment:', error);
       throw error;
     }
   }
@@ -491,7 +492,7 @@ export class HybridPaymentOrchestrator {
         estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery) : undefined
       };
     } catch (error) {
-      console.error('Error getting unified order status:', error);
+      safeLogger.error('Error getting unified order status:', error);
       throw error;
     }
   }
@@ -499,17 +500,17 @@ export class HybridPaymentOrchestrator {
   // Private helper methods for Stripe Connect operations
 
   private async confirmStripeDelivery(paymentIntentId: string, metadata: any): Promise<void> {
-    console.log(`Confirming delivery for Stripe payment ${paymentIntentId}:`, metadata);
+    safeLogger.info(`Confirming delivery for Stripe payment ${paymentIntentId}:`, metadata);
     // In production: Update Stripe metadata, prepare for transfer
   }
 
   private async releaseStripeEscrow(paymentIntentId: string, transferGroup?: string): Promise<void> {
-    console.log(`Releasing Stripe escrow for payment ${paymentIntentId}, transfer group: ${transferGroup}`);
+    safeLogger.info(`Releasing Stripe escrow for payment ${paymentIntentId}, transfer group: ${transferGroup}`);
     // In production: Execute transfer to seller's connected account
   }
 
   private async handleStripeDispute(paymentIntentId: string, metadata: any): Promise<void> {
-    console.log(`Handling Stripe dispute for payment ${paymentIntentId}:`, metadata);
+    safeLogger.info(`Handling Stripe dispute for payment ${paymentIntentId}:`, metadata);
     // In production: Create dispute record, hold transfer
   }
 
@@ -541,7 +542,7 @@ export class HybridPaymentOrchestrator {
         )
       ]);
     } catch (error) {
-      console.error('Error sending checkout notifications:', error);
+      safeLogger.error('Error sending checkout notifications:', error);
     }
   }
 }

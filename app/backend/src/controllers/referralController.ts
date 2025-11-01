@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { referralService } from '../services/referralService';
 import { z } from 'zod';
 
@@ -64,7 +66,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error creating referral:', error);
+      safeLogger.error('Error creating referral:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -96,7 +98,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error validating referral code:', error);
+      safeLogger.error('Error validating referral code:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -127,7 +129,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error getting referral stats:', error);
+      safeLogger.error('Error getting referral stats:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -150,7 +152,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error getting referral leaderboard:', error);
+      safeLogger.error('Error getting referral leaderboard:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -190,7 +192,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error getting referral history:', error);
+      safeLogger.error('Error getting referral history:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -224,7 +226,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error getting referral rewards:', error);
+      safeLogger.error('Error getting referral rewards:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -260,7 +262,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error deactivating referral:', error);
+      safeLogger.error('Error deactivating referral:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -296,7 +298,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error generating referral code:', error);
+      safeLogger.error('Error generating referral code:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -332,7 +334,7 @@ export class ReferralController {
       });
 
     } catch (error) {
-      console.error('Error getting referral analytics:', error);
+      safeLogger.error('Error getting referral analytics:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

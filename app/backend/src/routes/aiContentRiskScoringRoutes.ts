@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { aiContentRiskScoringController } from '../controllers/aiContentRiskScoringController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -30,7 +31,7 @@ router.use(aiRateLimit);
  * @access Admin
  * @body ContentInput
  */
-router.post('/assess', aiContentRiskScoringController.assessContent);
+router.post('/assess', csrfProtection,  aiContentRiskScoringController.assessContent);
 
 /**
  * @route POST /api/ai-risk-scoring/assess/batch
@@ -38,7 +39,7 @@ router.post('/assess', aiContentRiskScoringController.assessContent);
  * @access Admin
  * @body { contents: ContentInput[] }
  */
-router.post('/assess/batch', aiContentRiskScoringController.assessContentBatch);
+router.post('/assess/batch', csrfProtection,  aiContentRiskScoringController.assessContentBatch);
 
 /**
  * @route GET /api/ai-risk-scoring/metrics
@@ -53,7 +54,7 @@ router.get('/metrics', aiContentRiskScoringController.getModelMetrics);
  * @access Admin
  * @body FeedbackSchema
  */
-router.post('/feedback', aiContentRiskScoringController.submitFeedback);
+router.post('/feedback', csrfProtection,  aiContentRiskScoringController.submitFeedback);
 
 /**
  * @route GET /api/ai-risk-scoring/explanation/:contentId

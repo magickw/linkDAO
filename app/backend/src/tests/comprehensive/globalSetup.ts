@@ -5,7 +5,7 @@
  */
 
 export default async function globalSetup(): Promise<void> {
-  console.log('Starting global test setup...');
+  safeLogger.info('Starting global test setup...');
   
   // Set environment variables for testing
   process.env.NODE_ENV = 'test';
@@ -51,5 +51,5 @@ export default async function globalSetup(): Promise<void> {
   process.env.E2E_BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:3000';
   process.env.E2E_HEADLESS = process.env.E2E_HEADLESS || 'true';
   
-  console.log('Global test setup completed');
+  safeLogger.info('Global test setup completed');
 }

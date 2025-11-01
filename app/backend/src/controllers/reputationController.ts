@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { reputationService, ReputationTransaction } from '../services/reputationService';
 import { createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { logger } from '../utils/logger';

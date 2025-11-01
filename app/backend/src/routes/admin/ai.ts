@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { openaiService } from '../../services/ai/openaiService';
 import { contentModerationAI } from '../../services/ai/contentModerationAI';
 import { predictiveAnalyticsService } from '../../services/ai/predictiveAnalyticsService';
@@ -39,7 +41,7 @@ router.use(checkAIAvailability);
  * POST /api/admin/ai/moderate
  * Moderate content using AI
  */
-router.post('/moderate', async (req, res) => {
+router.post('/moderate', csrfProtection,  async (req, res) => {
   try {
     const { contentId, content } = req.body;
 
@@ -57,7 +59,7 @@ router.post('/moderate', async (req, res) => {
       data: result
     });
   } catch (error: any) {
-    console.error('Content moderation error:', error);
+    safeLogger.error('Content moderation error:', error);
     res.status(500).json({
       error: 'Content moderation failed',
       message: error.message
@@ -69,7 +71,7 @@ router.post('/moderate', async (req, res) => {
  * POST /api/admin/ai/moderate/batch
  * Batch moderate multiple pieces of content
  */
-router.post('/moderate/batch', async (req, res) => {
+router.post('/moderate/batch', csrfProtection,  async (req, res) => {
   try {
     const { contents } = req.body;
 
@@ -87,7 +89,7 @@ router.post('/moderate/batch', async (req, res) => {
       data: Object.fromEntries(results)
     });
   } catch (error: any) {
-    console.error('Batch moderation error:', error);
+    safeLogger.error('Batch moderation error:', error);
     res.status(500).json({
       error: 'Batch moderation failed',
       message: error.message
@@ -110,7 +112,7 @@ router.get('/insights/churn/:userId', async (req, res) => {
       data: prediction
     });
   } catch (error: any) {
-    console.error('Churn prediction error:', error);
+    safeLogger.error('Churn prediction error:', error);
     res.status(500).json({
       error: 'Churn prediction failed',
       message: error.message
@@ -122,7 +124,7 @@ router.get('/insights/churn/:userId', async (req, res) => {
  * POST /api/admin/ai/insights/content-performance
  * Predict content engagement and viral potential
  */
-router.post('/insights/content-performance', async (req, res) => {
+router.post('/insights/content-performance', csrfProtection,  async (req, res) => {
   try {
     const { contentType, metadata } = req.body;
 
@@ -142,7 +144,7 @@ router.post('/insights/content-performance', async (req, res) => {
       data: prediction
     });
   } catch (error: any) {
-    console.error('Content performance prediction error:', error);
+    safeLogger.error('Content performance prediction error:', error);
     res.status(500).json({
       error: 'Content performance prediction failed',
       message: error.message
@@ -154,7 +156,7 @@ router.post('/insights/content-performance', async (req, res) => {
  * POST /api/admin/ai/insights/anomaly-detection
  * Detect anomalies in platform metrics
  */
-router.post('/insights/anomaly-detection', async (req, res) => {
+router.post('/insights/anomaly-detection', csrfProtection,  async (req, res) => {
   try {
     const { metrics } = req.body;
 
@@ -172,7 +174,7 @@ router.post('/insights/anomaly-detection', async (req, res) => {
       data: anomalies
     });
   } catch (error: any) {
-    console.error('Anomaly detection error:', error);
+    safeLogger.error('Anomaly detection error:', error);
     res.status(500).json({
       error: 'Anomaly detection failed',
       message: error.message
@@ -195,7 +197,7 @@ router.get('/insights/seller/:sellerId/performance', async (req, res) => {
       data: prediction
     });
   } catch (error: any) {
-    console.error('Seller performance prediction error:', error);
+    safeLogger.error('Seller performance prediction error:', error);
     res.status(500).json({
       error: 'Seller performance prediction failed',
       message: error.message
@@ -220,7 +222,7 @@ router.get('/insights/platform-health', async (req, res) => {
       data: analysis
     });
   } catch (error: any) {
-    console.error('Platform health analysis error:', error);
+    safeLogger.error('Platform health analysis error:', error);
     res.status(500).json({
       error: 'Platform health analysis failed',
       message: error.message
@@ -232,7 +234,7 @@ router.get('/insights/platform-health', async (req, res) => {
  * POST /api/admin/ai/insights/trends
  * Generate trend analysis and insights
  */
-router.post('/insights/trends', async (req, res) => {
+router.post('/insights/trends', csrfProtection,  async (req, res) => {
   try {
     const { historicalData, metricName, forecastDays } = req.body;
 
@@ -254,7 +256,7 @@ router.post('/insights/trends', async (req, res) => {
       data: prediction
     });
   } catch (error: any) {
-    console.error('Trend prediction error:', error);
+    safeLogger.error('Trend prediction error:', error);
     res.status(500).json({
       error: 'Trend prediction failed',
       message: error.message
@@ -266,7 +268,7 @@ router.post('/insights/trends', async (req, res) => {
  * POST /api/admin/ai/insights/generate
  * Generate custom insights from data
  */
-router.post('/insights/generate', async (req, res) => {
+router.post('/insights/generate', csrfProtection,  async (req, res) => {
   try {
     const { type, context, timeRange } = req.body;
 
@@ -301,7 +303,7 @@ router.post('/insights/generate', async (req, res) => {
       data: { insights }
     });
   } catch (error: any) {
-    console.error('Insight generation error:', error);
+    safeLogger.error('Insight generation error:', error);
     res.status(500).json({
       error: 'Insight generation failed',
       message: error.message
@@ -313,13 +315,13 @@ router.post('/insights/generate', async (req, res) => {
  * POST /api/admin/ai/community-recommendations
  * Get personalized community recommendations for a user
  */
-router.post('/community-recommendations', communityRecommendationController.getRecommendations);
+router.post('/community-recommendations', csrfProtection,  communityRecommendationController.getRecommendations);
 
 /**
  * POST /api/admin/ai/community-engagement-insights
  * Get community engagement insights
  */
-router.post('/community-engagement-insights', communityRecommendationController.getEngagementInsights);
+router.post('/community-engagement-insights', csrfProtection,  communityRecommendationController.getEngagementInsights);
 
 /**
  * GET /api/admin/ai/usage
@@ -334,7 +336,7 @@ router.get('/usage', async (req, res) => {
       data: metrics
     });
   } catch (error: any) {
-    console.error('Usage metrics error:', error);
+    safeLogger.error('Usage metrics error:', error);
     res.status(500).json({
       error: 'Failed to retrieve usage metrics',
       message: error.message
@@ -346,7 +348,7 @@ router.get('/usage', async (req, res) => {
  * POST /api/admin/ai/usage/reset
  * Reset AI usage metrics
  */
-router.post('/usage/reset', async (req, res) => {
+router.post('/usage/reset', csrfProtection,  async (req, res) => {
   try {
     openaiService.resetUsageMetrics();
 
@@ -355,7 +357,7 @@ router.post('/usage/reset', async (req, res) => {
       message: 'Usage metrics reset successfully'
     });
   } catch (error: any) {
-    console.error('Usage reset error:', error);
+    safeLogger.error('Usage reset error:', error);
     res.status(500).json({
       error: 'Failed to reset usage metrics',
       message: error.message
@@ -396,7 +398,7 @@ router.get('/usage/report', async (req, res) => {
       data: report
     });
   } catch (error: any) {
-    console.error('Usage report error:', error);
+    safeLogger.error('Usage report error:', error);
     res.status(500).json({
       error: 'Failed to generate usage report',
       message: error.message
@@ -418,7 +420,7 @@ router.get('/usage/check-budget', async (req, res) => {
       data: status
     });
   } catch (error: any) {
-    console.error('Budget check error:', error);
+    safeLogger.error('Budget check error:', error);
     res.status(500).json({
       error: 'Failed to check budget',
       message: error.message
@@ -445,7 +447,7 @@ router.get('/cache/stats', async (req, res) => {
       }
     });
   } catch (error: any) {
-    console.error('Cache stats error:', error);
+    safeLogger.error('Cache stats error:', error);
     res.status(500).json({
       error: 'Failed to get cache statistics',
       message: error.message
@@ -457,7 +459,7 @@ router.get('/cache/stats', async (req, res) => {
  * POST /api/admin/ai/cache/clear
  * Clear all AI caches
  */
-router.post('/cache/clear', async (req, res) => {
+router.post('/cache/clear', csrfProtection,  async (req, res) => {
   try {
     await aiCacheService.clearAll();
 
@@ -466,7 +468,7 @@ router.post('/cache/clear', async (req, res) => {
       message: 'AI cache cleared successfully'
     });
   } catch (error: any) {
-    console.error('Cache clear error:', error);
+    safeLogger.error('Cache clear error:', error);
     res.status(500).json({
       error: 'Failed to clear cache',
       message: error.message
@@ -487,7 +489,7 @@ router.get('/recommendations', async (req, res) => {
       data: { recommendations }
     });
   } catch (error: any) {
-    console.error('Recommendations error:', error);
+    safeLogger.error('Recommendations error:', error);
     res.status(500).json({
       error: 'Failed to get recommendations',
       message: error.message
@@ -499,7 +501,7 @@ router.get('/recommendations', async (req, res) => {
  * POST /api/admin/ai/estimate-cost
  * Estimate cost for an operation before running it
  */
-router.post('/estimate-cost', async (req, res) => {
+router.post('/estimate-cost', csrfProtection,  async (req, res) => {
   try {
     const { operation } = req.body;
 
@@ -516,7 +518,7 @@ router.post('/estimate-cost', async (req, res) => {
       data: { estimatedCost: estimate }
     });
   } catch (error: any) {
-    console.error('Cost estimation error:', error);
+    safeLogger.error('Cost estimation error:', error);
     res.status(500).json({
       error: 'Failed to estimate cost',
       message: error.message

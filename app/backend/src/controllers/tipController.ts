@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { TipService } from '../services/tipService';
 import { ethers } from 'ethers';
 
@@ -85,7 +87,7 @@ export class TipController {
         },
       });
     } catch (error) {
-      console.error('Error creating tip:', error);
+      safeLogger.error('Error creating tip:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -112,7 +114,7 @@ export class TipController {
 
       return res.json(earnings);
     } catch (error) {
-      console.error('Error fetching earnings:', error);
+      safeLogger.error('Error fetching earnings:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -141,7 +143,7 @@ export class TipController {
         transactionData,
       });
     } catch (error) {
-      console.error('Error claiming rewards:', error);
+      safeLogger.error('Error claiming rewards:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -184,7 +186,7 @@ export class TipController {
 
       return res.json(tips);
     } catch (error) {
-      console.error('Error fetching post tips:', error);
+      safeLogger.error('Error fetching post tips:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }

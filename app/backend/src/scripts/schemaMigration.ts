@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -11,11 +12,11 @@ async function runMigration() {
   const connectionString = process.env.DATABASE_URL;
   
   if (!connectionString) {
-    console.error('DATABASE_URL environment variable is required');
+    safeLogger.error('DATABASE_URL environment variable is required');
     process.exit(1);
   }
 
-  console.log('🔄 Starting schema sync migration...');
+  safeLogger.info('🔄 Starting schema sync migration...');
   
   // Create postgres client
   const client = postgres(connectionString, { max: 1 });
@@ -28,21 +29,21 @@ async function runMigration() {
     // Execute migration
     await client.unsafe(migrationSQL);
     
-    console.log('✅ Schema sync migration completed successfully!');
-    console.log('📋 Applied changes:');
-    console.log('   • Added auction fields to listings table (highest_bid, reserve_price, etc.)');
-    console.log('   • Added missing NFT fields to listings table');
-    console.log('   • Added delivery tracking to escrows table'); 
-    console.log('   • Added evidence tracking to disputes table');
-    console.log('   • Created offers table');
-    console.log('   • Created disputes table');
-    console.log('   • Created orders table');
-    console.log('   • Created ai_moderation table');
-    console.log('   • Updated numeric precision for amount fields');
-    console.log('   • Set embeddings to use TEXT format');
+    safeLogger.info('✅ Schema sync migration completed successfully!');
+    safeLogger.info('📋 Applied changes:');
+    safeLogger.info('   • Added auction fields to listings table (highest_bid, reserve_price, etc.)');
+    safeLogger.info('   • Added missing NFT fields to listings table');
+    safeLogger.info('   • Added delivery tracking to escrows table'); 
+    safeLogger.info('   • Added evidence tracking to disputes table');
+    safeLogger.info('   • Created offers table');
+    safeLogger.info('   • Created disputes table');
+    safeLogger.info('   • Created orders table');
+    safeLogger.info('   • Created ai_moderation table');
+    safeLogger.info('   • Updated numeric precision for amount fields');
+    safeLogger.info('   • Set embeddings to use TEXT format');
     
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    safeLogger.error('❌ Migration failed:', error);
     process.exit(1);
   } finally {
     await client.end();

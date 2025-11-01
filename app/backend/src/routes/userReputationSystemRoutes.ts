@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { userReputationSystemController } from '../controllers/userReputationSystemController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -55,7 +56,7 @@ router.use(reputationRateLimit);
  * @access Admin
  * @body UpdateReputationSchema
  */
-router.post('/update', userReputationSystemController.updateUserReputation);
+router.post('/update', csrfProtection,  userReputationSystemController.updateUserReputation);
 
 /**
  * @route POST /api/user-reputation/penalty
@@ -63,7 +64,7 @@ router.post('/update', userReputationSystemController.updateUserReputation);
  * @access Admin
  * @body ApplyPenaltySchema
  */
-router.post('/penalty', userReputationSystemController.applyReputationPenalty);
+router.post('/penalty', csrfProtection,  userReputationSystemController.applyReputationPenalty);
 
 /**
  * @route GET /api/user-reputation/leaderboard

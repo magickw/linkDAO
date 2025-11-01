@@ -4,6 +4,7 @@
  */
 
 import { Request } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import Redis from 'ioredis';
 
 export interface AbusePattern {
@@ -155,9 +156,9 @@ export class AbuseDetectionService {
         this.patterns.set(pattern.id, pattern);
       });
 
-      console.log('Abuse detection service initialized');
+      safeLogger.info('Abuse detection service initialized');
     } catch (error) {
-      console.error('Failed to initialize abuse detection service:', error);
+      safeLogger.error('Failed to initialize abuse detection service:', error);
     }
   }
 
@@ -209,7 +210,7 @@ export class AbuseDetectionService {
 
       return activities;
     } catch (error) {
-      console.error('Error analyzing request for abuse:', error);
+      safeLogger.error('Error analyzing request for abuse:', error);
       return [];
     }
   }
@@ -241,7 +242,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking rapid requests:', error);
+      safeLogger.error('Error checking rapid requests:', error);
       return null;
     }
   }
@@ -409,7 +410,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking geographic anomalies:', error);
+      safeLogger.error('Error checking geographic anomalies:', error);
       return null;
     }
   }
@@ -436,7 +437,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking login patterns:', error);
+      safeLogger.error('Error checking login patterns:', error);
       return null;
     }
   }
@@ -467,7 +468,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking registration patterns:', error);
+      safeLogger.error('Error checking registration patterns:', error);
       return null;
     }
   }
@@ -522,7 +523,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking posting patterns:', error);
+      safeLogger.error('Error checking posting patterns:', error);
       return null;
     }
   }
@@ -555,7 +556,7 @@ export class AbuseDetectionService {
 
       return null;
     } catch (error) {
-      console.error('Error checking following patterns:', error);
+      safeLogger.error('Error checking following patterns:', error);
       return null;
     }
   }
@@ -582,10 +583,10 @@ export class AbuseDetectionService {
       await this.redis.lpush('abuse_log', JSON.stringify(abuseEvent));
       await this.redis.ltrim('abuse_log', 0, 999); // Keep last 1000 events
 
-      console.warn('Abuse event recorded:', abuseEvent);
+      safeLogger.warn('Abuse event recorded:', abuseEvent);
       return eventId;
     } catch (error) {
-      console.error('Error recording abuse event:', error);
+      safeLogger.error('Error recording abuse event:', error);
       return '';
     }
   }
@@ -623,7 +624,7 @@ export class AbuseDetectionService {
         recentEvents: parsedEvents.slice(0, 20)
       };
     } catch (error) {
-      console.error('Error getting abuse stats:', error);
+      safeLogger.error('Error getting abuse stats:', error);
       return {
         totalEvents: 0,
         eventsByType: {},
@@ -665,7 +666,7 @@ export class AbuseDetectionService {
       
       return cleaned;
     } catch (error) {
-      console.error('Error during abuse data cleanup:', error);
+      safeLogger.error('Error during abuse data cleanup:', error);
       return 0;
     }
   }

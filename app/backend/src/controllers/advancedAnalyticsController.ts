@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AdvancedAnalyticsService, AnalyticsTimeRange } from '../services/advancedAnalyticsService';
 
 const advancedAnalyticsService = new AdvancedAnalyticsService();
@@ -61,7 +63,7 @@ export const getMarketplaceAnalytics = async (req: Request, res: Response) => {
       message: 'Marketplace analytics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting marketplace analytics:', error);
+    safeLogger.error('Error getting marketplace analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve marketplace analytics'
@@ -90,7 +92,7 @@ export const getTimeSeriesData = async (req: Request, res: Response) => {
       message: 'Time series data retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting time series data:', error);
+    safeLogger.error('Error getting time series data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve time series data'
@@ -114,7 +116,7 @@ export const getAnalyticsInsights = async (req: Request, res: Response) => {
       message: 'Analytics insights retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting analytics insights:', error);
+    safeLogger.error('Error getting analytics insights:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve analytics insights'
@@ -135,7 +137,7 @@ export const getRealTimeMetrics = async (req: Request, res: Response) => {
       message: 'Real-time metrics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting real-time metrics:', error);
+    safeLogger.error('Error getting real-time metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve real-time metrics'
@@ -159,7 +161,7 @@ export const getUserBehaviorAnalytics = async (req: Request, res: Response) => {
       message: 'User behavior analytics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting user behavior analytics:', error);
+    safeLogger.error('Error getting user behavior analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve user behavior analytics'
@@ -182,7 +184,7 @@ export const getSellerPerformanceAnalytics = async (req: Request, res: Response)
       message: 'Seller performance analytics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting seller performance analytics:', error);
+    safeLogger.error('Error getting seller performance analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve seller performance analytics'
@@ -209,7 +211,7 @@ export const exportAnalyticsData = async (req: Request, res: Response) => {
       message: 'Analytics data export initiated successfully'
     });
   } catch (error) {
-    console.error('Error exporting analytics data:', error);
+    safeLogger.error('Error exporting analytics data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to export analytics data'
@@ -231,7 +233,7 @@ export const configureAnalyticsAlerts = async (req: Request, res: Response) => {
       message: 'Analytics alerts configured successfully'
     });
   } catch (error) {
-    console.error('Error configuring analytics alerts:', error);
+    safeLogger.error('Error configuring analytics alerts:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to configure analytics alerts'
@@ -268,7 +270,7 @@ export const getDashboardData = async (req: Request, res: Response) => {
       message: 'Dashboard data retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting dashboard data:', error);
+    safeLogger.error('Error getting dashboard data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve dashboard data'

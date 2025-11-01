@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { LDAOAcquisitionService } from '../services/ldaoAcquisitionService';
 import { ldaoAcquisitionConfig } from '../config/ldaoAcquisitionConfig';
 import { PurchaseRequest, EarnRequest } from '../types/ldaoAcquisition';
@@ -58,7 +60,7 @@ export class LDAOAcquisitionController {
         res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Error in purchaseTokens:', error);
+      safeLogger.error('Error in purchaseTokens:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -101,7 +103,7 @@ export class LDAOAcquisitionController {
         });
       }
     } catch (error) {
-      console.error('Error in getPrice:', error);
+      safeLogger.error('Error in getPrice:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get price information',
@@ -147,7 +149,7 @@ export class LDAOAcquisitionController {
         res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Error in earnTokens:', error);
+      safeLogger.error('Error in earnTokens:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -203,7 +205,7 @@ export class LDAOAcquisitionController {
         },
       });
     } catch (error) {
-      console.error('Error in getTransactionHistory:', error);
+      safeLogger.error('Error in getTransactionHistory:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get transaction history',
@@ -225,7 +227,7 @@ export class LDAOAcquisitionController {
         },
       });
     } catch (error) {
-      console.error('Error in getPaymentMethods:', error);
+      safeLogger.error('Error in getPaymentMethods:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get payment methods',
@@ -268,7 +270,7 @@ export class LDAOAcquisitionController {
         res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Error in swapTokens:', error);
+      safeLogger.error('Error in swapTokens:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -319,7 +321,7 @@ export class LDAOAcquisitionController {
         res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Error in bridgeTokens:', error);
+      safeLogger.error('Error in bridgeTokens:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',
@@ -347,7 +349,7 @@ export class LDAOAcquisitionController {
         data: positions,
       });
     } catch (error) {
-      console.error('Error in getStakingPositions:', error);
+      safeLogger.error('Error in getStakingPositions:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get staking positions',
@@ -386,7 +388,7 @@ export class LDAOAcquisitionController {
         },
       });
     } catch (error) {
-      console.error('Error in getServiceStatus:', error);
+      safeLogger.error('Error in getServiceStatus:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get service status',

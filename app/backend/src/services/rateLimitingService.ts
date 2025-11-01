@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import rateLimit from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import Redis from 'ioredis';
@@ -78,9 +79,9 @@ export class RateLimitingService {
         sendCommand: (...args: string[]) => this.redis.call(...args)
       });
 
-      console.log('Rate limiting service initialized with Redis store');
+      safeLogger.info('Rate limiting service initialized with Redis store');
     } catch (error) {
-      console.warn('Redis not available for rate limiting, using memory store:', error);
+      safeLogger.warn('Redis not available for rate limiting, using memory store:', error);
       this.store = undefined as any; // Will use default memory store
     }
   }
@@ -111,7 +112,7 @@ export class RateLimitingService {
       ...config,
       store: this.store,
       onLimitReached: (req: Request, res: Response) => {
-        console.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
+        safeLogger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
           path: req.path,
@@ -142,7 +143,7 @@ export class RateLimitingService {
       keyGenerator: (req: Request) => `auth:${req.ip}`,
       skipSuccessfulRequests: true,
       onLimitReached: (req: Request, res: Response) => {
-        console.warn(`Authentication rate limit exceeded for ${req.ip}`, {
+        safeLogger.warn(`Authentication rate limit exceeded for ${req.ip}`, {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
           path: req.path,
@@ -184,7 +185,7 @@ export class RateLimitingService {
       },
       onLimitReached: (req: Request, res: Response) => {
         const userId = (req as any).user?.id;
-        console.warn(`User action rate limit exceeded for ${action}`, {
+        safeLogger.warn(`User action rate limit exceeded for ${action}`, {
           userId,
           action,
           ip: req.ip,
@@ -214,7 +215,7 @@ export class RateLimitingService {
       store: this.store,
       keyGenerator: (req: Request) => `ip:${req.ip}:${limitType}`,
       onLimitReached: (req: Request, res: Response) => {
-        console.warn(`IP rate limit exceeded for ${limitType}`, {
+        safeLogger.warn(`IP rate limit exceeded for ${limitType}`, {
           ip: req.ip,
           limitType,
           userAgent: req.get('User-Agent'),
@@ -313,7 +314,7 @@ export class RateLimitingService {
         
         next();
       } catch (error) {
-        console.error('Sliding window rate limit error:', error);
+        safeLogger.error('Sliding window rate limit error:', error);
         // Fail open - allow request if Redis is down
         next();
       }
@@ -390,7 +391,7 @@ export class RateLimitingService {
       const data = JSON.parse(result);
       return data;
     } catch (error) {
-      console.error('Error getting rate limit status:', error);
+      safeLogger.error('Error getting rate limit status:', error);
       return null;
     }
   }
@@ -405,7 +406,7 @@ export class RateLimitingService {
       await this.redis.del(key);
       return true;
     } catch (error) {
-      console.error('Error resetting rate limit:', error);
+      safeLogger.error('Error resetting rate limit:', error);
       return false;
     }
   }
@@ -451,7 +452,7 @@ export class RateLimitingService {
         topLimitedIPs: topLimitedIPs.slice(0, 5)
       };
     } catch (error) {
-      console.error('Error getting rate limit stats:', error);
+      safeLogger.error('Error getting rate limit stats:', error);
       return { totalKeys: 0, activeKeys: 0, topLimitedIPs: [] };
     }
   }
@@ -477,7 +478,7 @@ export class RateLimitingService {
       
       return cleaned;
     } catch (error) {
-      console.error('Error during rate limit cleanup:', error);
+      safeLogger.error('Error during rate limit cleanup:', error);
       return 0;
     }
   }

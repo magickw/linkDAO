@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 import { blockchainService } from './blockchainIntegration';
 
@@ -107,7 +108,7 @@ export class AdvancedModerationService {
 
       return report;
     } catch (error) {
-      console.error('Error submitting report:', error);
+      safeLogger.error('Error submitting report:', error);
       throw error;
     }
   }
@@ -168,7 +169,7 @@ export class AdvancedModerationService {
         suggestedAction,
       };
     } catch (error) {
-      console.error('Error in abuse detection:', error);
+      safeLogger.error('Error in abuse detection:', error);
       return {
         isAbusive: false,
         confidence: 0,
@@ -256,7 +257,7 @@ export class AdvancedModerationService {
         recommendedAction,
       };
     } catch (error) {
-      console.error('Error aggregating reports:', error);
+      safeLogger.error('Error aggregating reports:', error);
       return {
         totalReports: 0,
         averageReputation: 0,
@@ -275,7 +276,7 @@ export class AdvancedModerationService {
     mlResult: AbuseDetectionResult
   ): Promise<void> {
     try {
-      console.log(`Auto-moderating ${contentType} ${contentId}:`, mlResult);
+      safeLogger.info(`Auto-moderating ${contentType} ${contentId}:`, mlResult);
 
       // In production, implement actual moderation actions:
       // - Remove content
@@ -293,9 +294,9 @@ export class AdvancedModerationService {
         timestamp: new Date(),
       };
 
-      console.log('Auto-moderation action:', action);
+      safeLogger.info('Auto-moderation action:', action);
     } catch (error) {
-      console.error('Error in auto-moderation:', error);
+      safeLogger.error('Error in auto-moderation:', error);
     }
   }
 
@@ -325,7 +326,7 @@ export class AdvancedModerationService {
       // Mock implementation
       return [];
     } catch (error) {
-      console.error('Error getting moderation queue:', error);
+      safeLogger.error('Error getting moderation queue:', error);
       return [];
     }
   }
@@ -357,7 +358,7 @@ export class AdvancedModerationService {
 
       return moderationAction;
     } catch (error) {
-      console.error('Error taking moderation action:', error);
+      safeLogger.error('Error taking moderation action:', error);
       throw error;
     }
   }
@@ -388,7 +389,7 @@ export class AdvancedModerationService {
         accuracyRate: 0,
       };
     } catch (error) {
-      console.error('Error getting moderation analytics:', error);
+      safeLogger.error('Error getting moderation analytics:', error);
       throw error;
     }
   }
@@ -403,9 +404,9 @@ export class AdvancedModerationService {
   ): Promise<void> {
     try {
       // In production, store feedback for model retraining
-      console.log('ML feedback:', { reportId, wasAccurate, actualCategory });
+      safeLogger.info('ML feedback:', { reportId, wasAccurate, actualCategory });
     } catch (error) {
-      console.error('Error recording ML feedback:', error);
+      safeLogger.error('Error recording ML feedback:', error);
     }
   }
 

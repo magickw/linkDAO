@@ -1,4 +1,5 @@
 import { WebSocketService } from './webSocketService';
+import { safeLogger } from '../utils/safeLogger';
 import { notificationService } from './notificationService';
 
 export interface EarningNotification {
@@ -57,10 +58,10 @@ class EarningNotificationService {
         }
       });
 
-      console.log(`Earning notification sent to user ${notification.userId}: ${notification.message}`);
+      safeLogger.info(`Earning notification sent to user ${notification.userId}: ${notification.message}`);
 
     } catch (error) {
-      console.error('Error sending earning notification:', error);
+      safeLogger.error('Error sending earning notification:', error);
     }
   }
 
@@ -150,9 +151,9 @@ class EarningNotificationService {
 
     try {
       await Promise.allSettled(promises);
-      console.log(`Sent ${notifications.length} earning notifications`);
+      safeLogger.info(`Sent ${notifications.length} earning notifications`);
     } catch (error) {
-      console.error('Error sending batch notifications:', error);
+      safeLogger.error('Error sending batch notifications:', error);
     }
   }
 

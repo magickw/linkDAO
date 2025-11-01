@@ -4,6 +4,7 @@
  */
 
 import { eq, and, or, isNull, lt, gte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { paymentMethodPreferenceOverrides, paymentMethodPreferences } from '../db/schema';
 import { userPreferenceService, UserPreferences } from './userPreferenceService';
@@ -79,9 +80,9 @@ export class PreferenceOverrideService {
         wasSuggested: selectedMethod === context.recommendedMethod
       });
 
-      console.log(`Recorded manual selection for user ${userId}: ${selectedMethod}`);
+      safeLogger.info(`Recorded manual selection for user ${userId}: ${selectedMethod}`);
     } catch (error) {
-      console.error('Error handling manual selection:', error);
+      safeLogger.error('Error handling manual selection:', error);
       throw error;
     }
   }
@@ -123,10 +124,10 @@ export class PreferenceOverrideService {
         })
         .returning();
 
-      console.log(`Added preference override for user ${userId}: ${overrideType} - ${methodType}`);
+      safeLogger.info(`Added preference override for user ${userId}: ${overrideType} - ${methodType}`);
       return override.id;
     } catch (error) {
-      console.error('Error adding preference override:', error);
+      safeLogger.error('Error adding preference override:', error);
       throw error;
     }
   }
@@ -175,7 +176,7 @@ export class PreferenceOverrideService {
         createdAt: override.createdAt
       }));
     } catch (error) {
-      console.error('Error getting active overrides:', error);
+      safeLogger.error('Error getting active overrides:', error);
       return [];
     }
   }
@@ -237,7 +238,7 @@ export class PreferenceOverrideService {
 
       return modifiedPreferences;
     } catch (error) {
-      console.error('Error applying overrides to preferences:', error);
+      safeLogger.error('Error applying overrides to preferences:', error);
       return basePreferences;
     }
   }
@@ -259,12 +260,12 @@ export class PreferenceOverrideService {
       const deleted = (result.rowCount || 0) > 0;
       
       if (deleted) {
-        console.log(`Removed override ${overrideId} for user ${userId}`);
+        safeLogger.info(`Removed override ${overrideId} for user ${userId}`);
       }
       
       return deleted;
     } catch (error) {
-      console.error('Error removing override:', error);
+      safeLogger.error('Error removing override:', error);
       return false;
     }
   }
@@ -279,10 +280,10 @@ export class PreferenceOverrideService {
         .where(eq(paymentMethodPreferenceOverrides.userId, userId));
 
       const deletedCount = result.rowCount || 0;
-      console.log(`Removed ${deletedCount} overrides for user ${userId}`);
+      safeLogger.info(`Removed ${deletedCount} overrides for user ${userId}`);
       return deletedCount;
     } catch (error) {
-      console.error('Error removing all overrides:', error);
+      safeLogger.error('Error removing all overrides:', error);
       return 0;
     }
   }
@@ -305,10 +306,10 @@ export class PreferenceOverrideService {
         );
 
       const deletedCount = result.rowCount || 0;
-      console.log(`Removed ${deletedCount} ${overrideType} overrides for user ${userId}`);
+      safeLogger.info(`Removed ${deletedCount} ${overrideType} overrides for user ${userId}`);
       return deletedCount;
     } catch (error) {
-      console.error('Error removing overrides by type:', error);
+      safeLogger.error('Error removing overrides by type:', error);
       return 0;
     }
   }
@@ -336,7 +337,7 @@ export class PreferenceOverrideService {
         }
       });
     } catch (error) {
-      console.error('Error setting temporary preference:', error);
+      safeLogger.error('Error setting temporary preference:', error);
       throw error;
     }
   }
@@ -361,7 +362,7 @@ export class PreferenceOverrideService {
         }
       });
     } catch (error) {
-      console.error('Error setting network-specific preference:', error);
+      safeLogger.error('Error setting network-specific preference:', error);
       throw error;
     }
   }
@@ -405,7 +406,7 @@ export class PreferenceOverrideService {
         mostOverriddenMethod
       };
     } catch (error) {
-      console.error('Error getting override stats:', error);
+      safeLogger.error('Error getting override stats:', error);
       return {
         totalOverrides: 0,
         activeOverrides: 0,
@@ -430,7 +431,7 @@ export class PreferenceOverrideService {
       
       return true;
     } catch (error) {
-      console.error('Error checking payment method freedom:', error);
+      safeLogger.error('Error checking payment method freedom:', error);
       return true; // Default to allowing freedom
     }
   }
@@ -449,14 +450,14 @@ export class PreferenceOverrideService {
       // Also reset the user's base preferences
       await userPreferenceService.resetUserPreferences(userId);
 
-      console.log(`Reset all preference overrides for user ${userId}: ${removedOverrides} overrides removed`);
+      safeLogger.info(`Reset all preference overrides for user ${userId}: ${removedOverrides} overrides removed`);
 
       return {
         removedOverrides,
         resetTimestamp
       };
     } catch (error) {
-      console.error('Error resetting all preference overrides:', error);
+      safeLogger.error('Error resetting all preference overrides:', error);
       throw error;
     }
   }
@@ -492,12 +493,12 @@ export class PreferenceOverrideService {
 
       const deletedCount = result.rowCount || 0;
       if (deletedCount > 0) {
-        console.log(`Cleaned up ${deletedCount} expired preference overrides`);
+        safeLogger.info(`Cleaned up ${deletedCount} expired preference overrides`);
       }
       
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up expired overrides:', error);
+      safeLogger.error('Error cleaning up expired overrides:', error);
       return 0;
     }
   }

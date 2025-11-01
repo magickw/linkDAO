@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { cartController } from '../controllers/cartController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
@@ -21,7 +22,7 @@ router.get('/', cartController.getCart.bind(cartController));
  * @access Private
  * @body { productId: string, quantity: number }
  */
-router.post('/items',
+router.post('/items', csrfProtection, 
   validateRequest({
     body: {
       productId: { type: 'string', required: true },
@@ -38,7 +39,7 @@ router.post('/items',
  * @params { id: string }
  * @body { quantity: number }
  */
-router.put('/items/:id',
+router.put('/items/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -56,7 +57,7 @@ router.put('/items/:id',
  * @access Private
  * @params { id: string }
  */
-router.delete('/items/:id',
+router.delete('/items/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -70,7 +71,7 @@ router.delete('/items/:id',
  * @desc Clear cart
  * @access Private
  */
-router.delete('/', cartController.clearCart.bind(cartController));
+router.delete('/', csrfProtection,  cartController.clearCart.bind(cartController));
 
 /**
  * @route POST /api/cart/sync
@@ -78,7 +79,7 @@ router.delete('/', cartController.clearCart.bind(cartController));
  * @access Private
  * @body { items: Array<{ productId: string, quantity: number }> }
  */
-router.post('/sync',
+router.post('/sync', csrfProtection, 
   validateRequest({
     body: {
       items: { type: 'array', required: true }

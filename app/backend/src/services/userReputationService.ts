@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users, follows, posts, reactions, tips } from '../db/schema';
 import { eq, desc, sql, and, count, sum } from 'drizzle-orm';
 
@@ -84,7 +85,7 @@ export class UserReputationService {
         percentile
       };
     } catch (error) {
-      console.error('Error calculating user reputation:', error);
+      safeLogger.error('Error calculating user reputation:', error);
       throw error;
     }
   }
@@ -105,7 +106,7 @@ export class UserReputationService {
       const followers = followerCount.count || 0;
       return Math.floor(Math.log10(followers + 1) * 50);
     } catch (error) {
-      console.error('Error calculating follower score:', error);
+      safeLogger.error('Error calculating follower score:', error);
       return 0;
     }
   }
@@ -166,7 +167,7 @@ export class UserReputationService {
       const postTotal = postCount.count || 0;
       return Math.floor(Math.sqrt(postTotal) * 10);
     } catch (error) {
-      console.error('Error calculating content score:', error);
+      safeLogger.error('Error calculating content score:', error);
       return 0;
     }
   }
@@ -197,7 +198,7 @@ export class UserReputationService {
       // Balance between receiving and giving engagement
       return Math.floor((received * 2 + given) * 0.5);
     } catch (error) {
-      console.error('Error calculating engagement score:', error);
+      safeLogger.error('Error calculating engagement score:', error);
       return 0;
     }
   }
@@ -227,7 +228,7 @@ export class UserReputationService {
       // Score based on economic contribution
       return Math.floor((received * 0.1) + (given * 0.05));
     } catch (error) {
-      console.error('Error calculating contribution score:', error);
+      safeLogger.error('Error calculating contribution score:', error);
       return 0;
     }
   }

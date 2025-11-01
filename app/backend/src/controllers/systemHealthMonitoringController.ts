@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { enhancedSystemHealthService } from '../services/enhancedSystemHealthService';
 import { intelligentAlertingService } from '../services/intelligentAlertingService';
 import { capacityPlanningService } from '../services/capacityPlanningService';
@@ -62,7 +64,7 @@ export class SystemHealthMonitoringController {
         data: overview
       });
     } catch (error) {
-      console.error('Error getting system health overview:', error);
+      safeLogger.error('Error getting system health overview:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get system health overview'
@@ -112,7 +114,7 @@ export class SystemHealthMonitoringController {
         data: metrics
       });
     } catch (error) {
-      console.error('Error getting system health metrics:', error);
+      safeLogger.error('Error getting system health metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get system health metrics'
@@ -160,7 +162,7 @@ export class SystemHealthMonitoringController {
         }
       });
     } catch (error) {
-      console.error('Error getting component dependencies:', error);
+      safeLogger.error('Error getting component dependencies:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get component dependencies'
@@ -229,7 +231,7 @@ export class SystemHealthMonitoringController {
         }
       });
     } catch (error) {
-      console.error('Error getting intelligent alerts:', error);
+      safeLogger.error('Error getting intelligent alerts:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get intelligent alerts'
@@ -267,7 +269,7 @@ export class SystemHealthMonitoringController {
         });
       }
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
+      safeLogger.error('Error acknowledging alert:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to acknowledge alert'
@@ -296,7 +298,7 @@ export class SystemHealthMonitoringController {
         });
       }
     } catch (error) {
-      console.error('Error resolving alert:', error);
+      safeLogger.error('Error resolving alert:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to resolve alert'
@@ -372,7 +374,7 @@ export class SystemHealthMonitoringController {
         }
       });
     } catch (error) {
-      console.error('Error getting capacity planning data:', error);
+      safeLogger.error('Error getting capacity planning data:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get capacity planning data'
@@ -453,7 +455,7 @@ export class SystemHealthMonitoringController {
         }
       });
     } catch (error) {
-      console.error('Error getting performance analytics:', error);
+      safeLogger.error('Error getting performance analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get performance analytics'
@@ -501,7 +503,7 @@ export class SystemHealthMonitoringController {
         }
       });
     } catch (error) {
-      console.error('Error getting performance trends:', error);
+      safeLogger.error('Error getting performance trends:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get performance trends'
@@ -560,7 +562,7 @@ export class SystemHealthMonitoringController {
         data: status
       });
     } catch (error) {
-      console.error('Error getting system status:', error);
+      safeLogger.error('Error getting system status:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get system status'

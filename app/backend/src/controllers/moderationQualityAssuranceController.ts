@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationQualityAssuranceService } from '../services/moderationQualityAssuranceService';
 import { z } from 'zod';
 
@@ -77,7 +79,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error auditing decision:', error);
+      safeLogger.error('Error auditing decision:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -124,7 +126,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error calculating quality metrics:', error);
+      safeLogger.error('Error calculating quality metrics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -176,7 +178,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error evaluating performance:', error);
+      safeLogger.error('Error evaluating performance:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -218,7 +220,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      safeLogger.error('Error submitting feedback:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -268,7 +270,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error creating calibration session:', error);
+      safeLogger.error('Error creating calibration session:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -314,7 +316,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error submitting calibration results:', error);
+      safeLogger.error('Error submitting calibration results:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -379,7 +381,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error getting training recommendations:', error);
+      safeLogger.error('Error getting training recommendations:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error getting recommendations'
@@ -432,7 +434,7 @@ export class ModerationQualityAssuranceController {
       });
 
     } catch (error) {
-      console.error('Error getting QA dashboard:', error);
+      safeLogger.error('Error getting QA dashboard:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error getting dashboard data'

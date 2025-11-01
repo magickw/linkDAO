@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { contentModerationQueue, ContentModerationJob } from '../services/contentModerationQueue';
 import { contentStagingService } from '../services/contentStagingService';
 import { databaseService } from '../services/databaseService';
@@ -74,7 +76,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Content submission error:', error);
+      safeLogger.error('Content submission error:', error);
       res.status(500).json({
         error: 'Failed to submit content for moderation',
         code: 'SUBMISSION_FAILED',
@@ -147,7 +149,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Status check error:', error);
+      safeLogger.error('Status check error:', error);
       res.status(500).json({
         error: 'Failed to check moderation status',
         code: 'STATUS_CHECK_FAILED',
@@ -184,7 +186,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Queue stats error:', error);
+      safeLogger.error('Queue stats error:', error);
       res.status(500).json({
         error: 'Failed to get queue statistics',
         code: 'STATS_FAILED',
@@ -273,7 +275,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Retry moderation error:', error);
+      safeLogger.error('Retry moderation error:', error);
       res.status(500).json({
         error: 'Failed to retry moderation',
         code: 'RETRY_FAILED',
@@ -334,7 +336,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Moderation history error:', error);
+      safeLogger.error('Moderation history error:', error);
       res.status(500).json({
         error: 'Failed to get moderation history',
         code: 'HISTORY_FAILED',
@@ -369,7 +371,7 @@ export class ContentIngestionController {
       });
 
     } catch (error) {
-      console.error('Cleanup error:', error);
+      safeLogger.error('Cleanup error:', error);
       res.status(500).json({
         error: 'Failed to cleanup staged content',
         code: 'CLEANUP_FAILED',

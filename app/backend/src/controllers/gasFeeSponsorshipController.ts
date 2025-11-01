@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { GasFeeSponsorshipService } from '../services/gasFeeSponsorshipService';
 
 const gasFeeSponsorshipService = new GasFeeSponsorshipService();
@@ -21,7 +23,7 @@ export const getSponsorshipTiers = async (req: Request, res: Response) => {
       message: 'Sponsorship tiers retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting sponsorship tiers:', error);
+    safeLogger.error('Error getting sponsorship tiers:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve sponsorship tiers'
@@ -56,7 +58,7 @@ export const checkSponsorshipEligibility = async (req: Request, res: Response) =
       message: 'Eligibility checked successfully'
     });
   } catch (error) {
-    console.error('Error checking sponsorship eligibility:', error);
+    safeLogger.error('Error checking sponsorship eligibility:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check sponsorship eligibility'
@@ -93,7 +95,7 @@ export const applyForSponsorship = async (req: Request, res: Response) => {
         sponsorshipResult.reason || 'Sponsorship application denied'
     });
   } catch (error) {
-    console.error('Error applying for sponsorship:', error);
+    safeLogger.error('Error applying for sponsorship:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to process sponsorship application'
@@ -118,7 +120,7 @@ export const getSponsorshipStats = async (req: Request, res: Response) => {
       message: 'Sponsorship statistics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting sponsorship stats:', error);
+    safeLogger.error('Error getting sponsorship stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve sponsorship statistics'
@@ -145,7 +147,7 @@ export const getUserSponsorshipHistory = async (req: Request, res: Response) => 
       message: 'Sponsorship history retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting user sponsorship history:', error);
+    safeLogger.error('Error getting user sponsorship history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve sponsorship history'
@@ -166,7 +168,7 @@ export const getGasEstimates = async (req: Request, res: Response) => {
       message: 'Gas estimates retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting gas estimates:', error);
+    safeLogger.error('Error getting gas estimates:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve gas estimates'
@@ -191,7 +193,7 @@ export const getSponsorshipPoolBalance = async (req: Request, res: Response) => 
       message: 'Pool balance retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting pool balance:', error);
+    safeLogger.error('Error getting pool balance:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve pool balance'
@@ -216,7 +218,7 @@ export const updateSponsorshipTier = async (req: Request, res: Response) => {
       message: 'Sponsorship tier updated successfully'
     });
   } catch (error) {
-    console.error('Error updating sponsorship tier:', error);
+    safeLogger.error('Error updating sponsorship tier:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update sponsorship tier'
@@ -251,7 +253,7 @@ export const createSponsorshipTier = async (req: Request, res: Response) => {
       message: 'Sponsorship tier created successfully'
     });
   } catch (error) {
-    console.error('Error creating sponsorship tier:', error);
+    safeLogger.error('Error creating sponsorship tier:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create sponsorship tier'
@@ -278,7 +280,7 @@ export const getDailyUsage = async (req: Request, res: Response) => {
       message: 'Daily usage retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting daily usage:', error);
+    safeLogger.error('Error getting daily usage:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve daily usage'

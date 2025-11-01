@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { securityConfig } from '../config/securityConfig';
 import { securityMonitoringService, SecurityEvent, SecurityEventType, SecuritySeverity } from './securityMonitoringService';
@@ -134,7 +135,7 @@ class SecurityThreatDetectionService extends EventEmitter {
       this.performCorrelationAnalysis();
     }, 10 * 60 * 1000); // Every 10 minutes
 
-    console.log('Security threat detection service initialized');
+    safeLogger.info('Security threat detection service initialized');
   }
 
   /**
@@ -157,7 +158,7 @@ class SecurityThreatDetectionService extends EventEmitter {
       await this.performRealTimeCorrelation(event);
 
     } catch (error) {
-      console.error('Error analyzing security event:', error);
+      safeLogger.error('Error analyzing security event:', error);
     }
   }
 
@@ -300,7 +301,7 @@ class SecurityThreatDetectionService extends EventEmitter {
     // Emit detection event
     this.emit('threatDetected', detection);
 
-    console.log(`Threat detected: ${detection.patternName} (${detection.severity})`);
+    safeLogger.info(`Threat detected: ${detection.patternName} (${detection.severity})`);
   }
 
   /**
@@ -313,7 +314,7 @@ class SecurityThreatDetectionService extends EventEmitter {
       try {
         await this.executeThreatResponse(action, detection);
       } catch (error) {
-        console.error('Error executing automated response:', error);
+        safeLogger.error('Error executing automated response:', error);
       }
     }
   }
@@ -740,53 +741,53 @@ class SecurityThreatDetectionService extends EventEmitter {
   // Response execution methods
   private async blockIP(ipAddress: string, duration: number): Promise<void> {
     // Implementation would integrate with firewall/load balancer
-    console.log(`Blocked IP ${ipAddress} for ${duration}ms`);
+    safeLogger.info(`Blocked IP ${ipAddress} for ${duration}ms`);
   }
 
   private async suspendUser(userId: string, reason: string): Promise<void> {
     // Implementation would integrate with user management system
-    console.log(`Suspended user ${userId} for reason: ${reason}`);
+    safeLogger.info(`Suspended user ${userId} for reason: ${reason}`);
   }
 
   private async requireMFA(userId: string): Promise<void> {
     // Implementation would integrate with authentication system
-    console.log(`Required MFA for user ${userId}`);
+    safeLogger.info(`Required MFA for user ${userId}`);
   }
 
   private async alertAdministrators(detection: ThreatDetection, parameters: Record<string, any>): Promise<void> {
     // Implementation would integrate with notification system
-    console.log(`Alerted administrators about threat: ${detection.patternName}`);
+    safeLogger.info(`Alerted administrators about threat: ${detection.patternName}`);
   }
 
   private async quarantineEntity(entityType: string, entityId: string): Promise<void> {
     // Implementation would isolate the entity
-    console.log(`Quarantined ${entityType}: ${entityId}`);
+    safeLogger.info(`Quarantined ${entityType}: ${entityId}`);
   }
 
   private async enhanceMonitoring(entityType: string, entityId: string): Promise<void> {
     // Implementation would increase monitoring for the entity
-    console.log(`Enhanced monitoring for ${entityType}: ${entityId}`);
+    safeLogger.info(`Enhanced monitoring for ${entityType}: ${entityId}`);
   }
 
   // Periodic update methods
   private updateBehavioralProfiles(): void {
     // Update baseline profiles based on historical data
-    console.log('Updated behavioral profiles');
+    safeLogger.info('Updated behavioral profiles');
   }
 
   private async updateThreatIntelligence(): Promise<void> {
     // Fetch latest threat intelligence from external sources
-    console.log('Updated threat intelligence');
+    safeLogger.info('Updated threat intelligence');
   }
 
   private async performCorrelationAnalysis(): Promise<void> {
     // Perform correlation analysis across events
-    console.log('Performed correlation analysis');
+    safeLogger.info('Performed correlation analysis');
   }
 
   private async performRealTimeCorrelation(event: SecurityEvent): Promise<void> {
     // Real-time correlation with recent events
-    console.log('Performed real-time correlation');
+    safeLogger.info('Performed real-time correlation');
   }
 
   // Public API methods

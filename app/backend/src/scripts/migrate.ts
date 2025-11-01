@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import dotenv from "dotenv";
@@ -14,13 +15,13 @@ async function main() {
   const client = postgres(connectionString, { prepare: false });
   const db = drizzle(client);
 
-  console.log("Running migrations...");
+  safeLogger.info("Running migrations...");
   
   try {
     await migrate(db, { migrationsFolder: "./drizzle" });
-    console.log("Migrations completed successfully!");
+    safeLogger.info("Migrations completed successfully!");
   } catch (error) {
-    console.error("Error running migrations:", error);
+    safeLogger.error("Error running migrations:", error);
   } finally {
     await client.end();
   }

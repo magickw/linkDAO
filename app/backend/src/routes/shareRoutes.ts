@@ -3,6 +3,7 @@
  */
 
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { shareController } from '../controllers/shareController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -12,7 +13,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Track a share
-router.post('/track', shareController.trackShare.bind(shareController));
+router.post('/track', csrfProtection,  shareController.trackShare.bind(shareController));
 
 // Get share count for a post
 router.get('/:postId/count', shareController.getShareCount.bind(shareController));

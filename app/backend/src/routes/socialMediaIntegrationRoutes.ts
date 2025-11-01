@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { socialMediaIntegrationController } from '../controllers/socialMediaIntegrationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -30,7 +31,7 @@ router.use(socialMediaRateLimit);
  * @access Admin
  * @body CrossPostSchema
  */
-router.post('/cross-post', socialMediaIntegrationController.crossPostContent);
+router.post('/cross-post', csrfProtection,  socialMediaIntegrationController.crossPostContent);
 
 /**
  * @route GET /api/social-media/analytics
@@ -47,7 +48,7 @@ router.get('/analytics', socialMediaIntegrationController.getSocialMediaAnalytic
  * @access Admin
  * @body ContentOptimizationSchema
  */
-router.post('/optimize', socialMediaIntegrationController.optimizeContentForSocialSharing);
+router.post('/optimize', csrfProtection,  socialMediaIntegrationController.optimizeContentForSocialSharing);
 
 /**
  * @route POST /api/social-media/schedule
@@ -55,7 +56,7 @@ router.post('/optimize', socialMediaIntegrationController.optimizeContentForSoci
  * @access Admin
  * @body ScheduleContentSchema
  */
-router.post('/schedule', socialMediaIntegrationController.scheduleContent);
+router.post('/schedule', csrfProtection,  socialMediaIntegrationController.scheduleContent);
 
 /**
  * @route GET /api/social-media/scheduled
@@ -71,6 +72,6 @@ router.get('/scheduled', socialMediaIntegrationController.getScheduledPosts);
  * @access Admin
  * @body CancelScheduledPostSchema
  */
-router.post('/cancel', socialMediaIntegrationController.cancelScheduledPost);
+router.post('/cancel', csrfProtection,  socialMediaIntegrationController.cancelScheduledPost);
 
 export default router;

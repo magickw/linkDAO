@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { PostController } from '../controllers/postController';
 import { feedLimiter, createPostLimiter } from '../middleware/rateLimiter';
 
@@ -12,9 +13,9 @@ router.get('/tag/:tag', postController.getPostsByTag);
 router.get('/:id', postController.getPostById);
 
 // General routes
-router.post('/', createPostLimiter, postController.createPost);
-router.put('/:id', postController.updatePost);
-router.delete('/:id', postController.deletePost);
+router.post('/', csrfProtection,  createPostLimiter, postController.createPost);
+router.put('/:id', csrfProtection,  postController.updatePost);
+router.delete('/:id', csrfProtection,  postController.deletePost);
 router.get('/', postController.getAllPosts);
 
 export default router;

@@ -1,4 +1,5 @@
 import { eq, and, desc, sql, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { disputes, disputeEvidence, users, escrows, orders } from '../db/schema';
 import { aiEvidenceAnalysisService } from './aiEvidenceAnalysisService';
@@ -110,7 +111,7 @@ export class AutomatedCaseManagementService {
       
       return categorization;
     } catch (error) {
-      console.error('Error categorizing dispute:', error);
+      safeLogger.error('Error categorizing dispute:', error);
       throw error;
     }
   }
@@ -151,7 +152,7 @@ export class AutomatedCaseManagementService {
       
       return priorityScore;
     } catch (error) {
-      console.error('Error calculating priority score:', error);
+      safeLogger.error('Error calculating priority score:', error);
       throw error;
     }
   }
@@ -198,7 +199,7 @@ export class AutomatedCaseManagementService {
       
       return assignment;
     } catch (error) {
-      console.error('Error assigning dispute automatically:', error);
+      safeLogger.error('Error assigning dispute automatically:', error);
       throw error;
     }
   }
@@ -229,7 +230,7 @@ export class AutomatedCaseManagementService {
       
       return timeline;
     } catch (error) {
-      console.error('Error creating case timeline:', error);
+      safeLogger.error('Error creating case timeline:', error);
       throw error;
     }
   }
@@ -264,7 +265,7 @@ export class AutomatedCaseManagementService {
       
       return timeline;
     } catch (error) {
-      console.error('Error updating case timeline:', error);
+      safeLogger.error('Error updating case timeline:', error);
       throw error;
     }
   }
@@ -286,7 +287,7 @@ export class AutomatedCaseManagementService {
       
       return metrics.sort((a, b) => a.currentCapacity - b.currentCapacity);
     } catch (error) {
-      console.error('Error getting arbitrator workload metrics:', error);
+      safeLogger.error('Error getting arbitrator workload metrics:', error);
       throw error;
     }
   }
@@ -313,7 +314,7 @@ export class AutomatedCaseManagementService {
       
       return { reassignments, recommendations };
     } catch (error) {
-      console.error('Error optimizing case routing:', error);
+      safeLogger.error('Error optimizing case routing:', error);
       throw error;
     }
   }
@@ -760,7 +761,7 @@ export class AutomatedCaseManagementService {
       })
       .where(eq(disputes.id, assignment.disputeId));
     
-    console.log(`Assigned dispute ${assignment.disputeId} to ${assignment.assigneeId}`);
+    safeLogger.info(`Assigned dispute ${assignment.disputeId} to ${assignment.assigneeId}`);
   }
 
   private async getDisputeData(disputeId: number): Promise<any> {
@@ -772,17 +773,17 @@ export class AutomatedCaseManagementService {
 
   private async storeCategorization(disputeId: number, categorization: CaseCategorizationResult): Promise<void> {
     // In production, store in dedicated table
-    console.log(`Stored categorization for dispute ${disputeId}:`, categorization.category);
+    safeLogger.info(`Stored categorization for dispute ${disputeId}:`, categorization.category);
   }
 
   private async storePriorityScore(disputeId: number, priorityScore: CasePriorityScore): Promise<void> {
     // In production, store in dedicated table
-    console.log(`Stored priority score for dispute ${disputeId}:`, priorityScore.score);
+    safeLogger.info(`Stored priority score for dispute ${disputeId}:`, priorityScore.score);
   }
 
   private async storeTimeline(timeline: CaseTimeline): Promise<void> {
     // In production, store in dedicated table
-    console.log(`Stored timeline for dispute ${timeline.disputeId}`);
+    safeLogger.info(`Stored timeline for dispute ${timeline.disputeId}`);
   }
 
   private async getCaseTimeline(disputeId: number): Promise<CaseTimeline> {
@@ -816,7 +817,7 @@ export class AutomatedCaseManagementService {
 
   private async checkForDelays(timeline: CaseTimeline): Promise<void> {
     if (timeline.delayRisk > 0.5) {
-      console.log(`High delay risk detected for dispute ${timeline.disputeId}`);
+      safeLogger.info(`High delay risk detected for dispute ${timeline.disputeId}`);
       // In production, trigger alerts and notifications
     }
   }

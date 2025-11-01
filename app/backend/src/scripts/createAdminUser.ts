@@ -16,6 +16,7 @@
  */
 
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
@@ -28,9 +29,9 @@ dotenv.config();
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  console.error('❌ Error: DATABASE_URL environment variable is not set');
-  console.log('\nPlease set DATABASE_URL in your .env file or environment:');
-  console.log('export DATABASE_URL="postgresql://user:pass@host:port/dbname"');
+  safeLogger.error('❌ Error: DATABASE_URL environment variable is not set');
+  safeLogger.info('\nPlease set DATABASE_URL in your .env file or environment:');
+  safeLogger.info('export DATABASE_URL="postgresql://user:pass@host:port/dbname"');
   process.exit(1);
 }
 
@@ -62,21 +63,21 @@ async function createAdmin() {
 
   // Validate inputs
   if (!walletAddress) {
-    console.error('❌ Error: Wallet address is required');
-    console.log('\nUsage: npx ts-node src/scripts/createAdminUser.ts <walletAddress> <role> [password] [email]');
-    console.log('\nRoles: admin, super_admin, moderator (default: admin)');
-    console.log('\nExamples:');
-    console.log('  # Upgrade existing wallet to admin');
-    console.log('  npx ts-node src/scripts/createAdminUser.ts 0x1234...5678 super_admin');
-    console.log('\n  # Create admin with optional email/password');
-    console.log('  npx ts-node src/scripts/createAdminUser.ts 0x1234...5678 admin mypassword admin@linkdao.io');
+    safeLogger.error('❌ Error: Wallet address is required');
+    safeLogger.info('\nUsage: npx ts-node src/scripts/createAdminUser.ts <walletAddress> <role> [password] [email]');
+    safeLogger.info('\nRoles: admin, super_admin, moderator (default: admin)');
+    safeLogger.info('\nExamples:');
+    safeLogger.info('  # Upgrade existing wallet to admin');
+    safeLogger.info('  npx ts-node src/scripts/createAdminUser.ts 0x1234...5678 super_admin');
+    safeLogger.info('\n  # Create admin with optional email/password');
+    safeLogger.info('  npx ts-node src/scripts/createAdminUser.ts 0x1234...5678 admin mypassword admin@linkdao.io');
     process.exit(1);
   }
 
   // Validate wallet address format
   if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
-    console.error('❌ Error: Invalid Ethereum wallet address format');
-    console.log('Expected: 0x followed by 40 hexadecimal characters');
+    safeLogger.error('❌ Error: Invalid Ethereum wallet address format');
+    safeLogger.info('Expected: 0x followed by 40 hexadecimal characters');
     process.exit(1);
   }
 
@@ -84,29 +85,29 @@ async function createAdmin() {
   if (email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.error('❌ Error: Invalid email format');
+      safeLogger.error('❌ Error: Invalid email format');
       process.exit(1);
     }
   }
 
   // Validate password length if provided
   if (password && password.length < 8) {
-    console.error('❌ Error: Password must be at least 8 characters');
+    safeLogger.error('❌ Error: Password must be at least 8 characters');
     process.exit(1);
   }
 
   // Validate role
   const validRoles = ['admin', 'super_admin', 'moderator'];
   if (!validRoles.includes(role)) {
-    console.error('❌ Error: Invalid role. Must be one of: admin, super_admin, moderator');
+    safeLogger.error('❌ Error: Invalid role. Must be one of: admin, super_admin, moderator');
     process.exit(1);
   }
 
-  console.log('\n🔐 Setting up admin user...');
-  console.log('Wallet:', walletAddress);
-  console.log('Role:', role);
-  if (email) console.log('Email:', email);
-  if (password) console.log('Password:', '********');
+  safeLogger.info('\n🔐 Setting up admin user...');
+  safeLogger.info('Wallet:', walletAddress);
+  safeLogger.info('Role:', role);
+  if (email) safeLogger.info('Email:', email);
+  if (password) safeLogger.info('Password:', '********');
 
   try {
     // Check if user exists
@@ -135,7 +136,7 @@ async function createAdmin() {
 
     if (existingUser.length > 0) {
       // Upgrade existing user to admin
-      console.log('\n📝 User exists - upgrading to admin role...');
+      safeLogger.info('\n📝 User exists - upgrading to admin role...');
       
       const updateData: any = {
         role,
@@ -153,12 +154,12 @@ async function createAdmin() {
         .set(updateData)
         .where(eq(users.id, existingUser[0].id));
 
-      console.log('\n✅ User upgraded to admin successfully!');
-      console.log('User ID:', existingUser[0].id);
-      console.log('Handle:', existingUser[0].handle || 'Not set');
+      safeLogger.info('\n✅ User upgraded to admin successfully!');
+      safeLogger.info('User ID:', existingUser[0].id);
+      safeLogger.info('Handle:', existingUser[0].handle || 'Not set');
     } else {
       // Create new admin user
-      console.log('\n📝 Creating new admin user...');
+      safeLogger.info('\n📝 Creating new admin user...');
       
       const newUser = await db
         .insert(users)
@@ -173,36 +174,36 @@ async function createAdmin() {
         })
         .returning();
 
-      console.log('\n✅ Admin user created successfully!');
-      console.log('User ID:', newUser[0].id);
+      safeLogger.info('\n✅ Admin user created successfully!');
+      safeLogger.info('User ID:', newUser[0].id);
     }
 
-    console.log('\nYou can now login at: /admin-login');
-    console.log('Authentication options:');
-    console.log('  - Wallet Connect (always available)');
+    safeLogger.info('\nYou can now login at: /admin-login');
+    safeLogger.info('Authentication options:');
+    safeLogger.info('  - Wallet Connect (always available)');
     if (email && password) {
-      console.log('  - Email + Password:', email);
+      safeLogger.info('  - Email + Password:', email);
     } else {
-      console.log('  - Email + Password: Not configured');
+      safeLogger.info('  - Email + Password: Not configured');
     }
     
-    console.log('\nPermissions:');
-    defaultPermissions[role].forEach(perm => console.log('  -', perm));
+    safeLogger.info('\nPermissions:');
+    defaultPermissions[role].forEach(perm => safeLogger.info('  -', perm));
     
     if (password) {
-      console.log('\n⚠️  Important: Store these credentials securely!');
+      safeLogger.info('\n⚠️  Important: Store these credentials securely!');
     }
 
     await sql.end();
     process.exit(0);
   } catch (error) {
-    console.error('\n❌ Error setting up admin user:', error);
+    safeLogger.error('\n❌ Error setting up admin user:', error);
     await sql.end();
     process.exit(1);
   }
 }
 
 createAdmin().catch((error) => {
-  console.error('Fatal error:', error);
+  safeLogger.error('Fatal error:', error);
   process.exit(1);
 });

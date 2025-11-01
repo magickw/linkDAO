@@ -1,4 +1,5 @@
 import { eq, and, desc, sql, gte, lte, avg, count } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { disputes, users, escrows } from '../db/schema';
 
@@ -160,7 +161,7 @@ export class SatisfactionTrackingService {
 
       return { surveyIds };
     } catch (error) {
-      console.error('Error creating satisfaction survey:', error);
+      safeLogger.error('Error creating satisfaction survey:', error);
       throw error;
     }
   }
@@ -189,7 +190,7 @@ export class SatisfactionTrackingService {
 
       return survey;
     } catch (error) {
-      console.error('Error submitting survey response:', error);
+      safeLogger.error('Error submitting survey response:', error);
       throw error;
     }
   }
@@ -225,7 +226,7 @@ export class SatisfactionTrackingService {
 
       return metrics;
     } catch (error) {
-      console.error('Error calculating satisfaction metrics:', error);
+      safeLogger.error('Error calculating satisfaction metrics:', error);
       throw error;
     }
   }
@@ -261,7 +262,7 @@ export class SatisfactionTrackingService {
         recommendations
       };
     } catch (error) {
-      console.error('Error predicting satisfaction:', error);
+      safeLogger.error('Error predicting satisfaction:', error);
       throw error;
     }
   }
@@ -309,7 +310,7 @@ export class SatisfactionTrackingService {
         benchmarkComparison
       };
     } catch (error) {
-      console.error('Error getting satisfaction analytics:', error);
+      safeLogger.error('Error getting satisfaction analytics:', error);
       throw error;
     }
   }
@@ -331,7 +332,7 @@ export class SatisfactionTrackingService {
         urgentIssues
       };
     } catch (error) {
-      console.error('Error analyzing feedback:', error);
+      safeLogger.error('Error analyzing feedback:', error);
       throw error;
     }
   }
@@ -371,7 +372,7 @@ export class SatisfactionTrackingService {
       // Remove duplicates and prioritize
       return [...new Set(recommendations)].slice(0, 10);
     } catch (error) {
-      console.error('Error generating improvement recommendations:', error);
+      safeLogger.error('Error generating improvement recommendations:', error);
       return [];
     }
   }
@@ -384,23 +385,23 @@ export class SatisfactionTrackingService {
 
   private async sendSurveyToUser(surveyId: string, disputeId: number, userId: string, userType: 'buyer' | 'seller'): Promise<void> {
     // In production, send email/notification with survey link
-    console.log(`Sending satisfaction survey ${surveyId} to ${userType} ${userId} for dispute ${disputeId}`);
+    safeLogger.info(`Sending satisfaction survey ${surveyId} to ${userType} ${userId} for dispute ${disputeId}`);
   }
 
   private async storeSurveyResponse(survey: SatisfactionSurvey): Promise<void> {
     // In production, store in dedicated satisfaction_surveys table
-    console.log(`Stored survey response ${survey.id} for dispute ${survey.disputeId}`);
+    safeLogger.info(`Stored survey response ${survey.id} for dispute ${survey.disputeId}`);
   }
 
   private async updateDisputeSatisfactionMetrics(disputeId: number): Promise<void> {
     const metrics = await this.calculateSatisfactionMetrics(disputeId);
     // In production, update dispute record with satisfaction metrics
-    console.log(`Updated satisfaction metrics for dispute ${disputeId}:`, metrics.overallScore);
+    safeLogger.info(`Updated satisfaction metrics for dispute ${disputeId}:`, metrics.overallScore);
   }
 
   private async flagLowSatisfactionCase(survey: SatisfactionSurvey): Promise<void> {
     // Flag for immediate review
-    console.log(`Low satisfaction case flagged: Dispute ${survey.disputeId}, Score: ${survey.overallSatisfaction}`);
+    safeLogger.info(`Low satisfaction case flagged: Dispute ${survey.disputeId}, Score: ${survey.overallSatisfaction}`);
     
     // In production, create alert for admin team
     // await alertService.createAlert({

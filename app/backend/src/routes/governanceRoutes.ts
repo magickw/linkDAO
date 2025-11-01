@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { governanceController } from '../controllers/governanceController';
 
 const router = Router();
@@ -19,10 +20,10 @@ router.get('/space/:spaceId/proposals', governanceController.getProposalsBySpace
 router.get('/proposals/:proposalId', governanceController.getProposal);
 
 // Create new proposal
-router.post('/proposals', governanceController.createProposal);
+router.post('/proposals', csrfProtection,  governanceController.createProposal);
 
 // Vote on proposal
-router.post('/proposals/:proposalId/vote', governanceController.voteOnProposal);
+router.post('/proposals/:proposalId/vote', csrfProtection,  governanceController.voteOnProposal);
 
 // Get DAO treasury data
 router.get('/dao/:daoId/treasury', governanceController.getDAOTreasuryData);
@@ -31,10 +32,10 @@ router.get('/dao/:daoId/treasury', governanceController.getDAOTreasuryData);
 router.get('/dao/:daoId/users/:userId/voting-power', governanceController.getVotingPower);
 
 // Delegate voting power
-router.post('/delegate', governanceController.delegateVotingPower);
+router.post('/delegate', csrfProtection,  governanceController.delegateVotingPower);
 
 // Revoke delegation
-router.post('/revoke-delegation', governanceController.revokeDelegation);
+router.post('/revoke-delegation', csrfProtection,  governanceController.revokeDelegation);
 
 // Get user voting history
 router.get('/users/:userId/voting-history', governanceController.getUserVotingHistory);

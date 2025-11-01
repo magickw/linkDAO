@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { comprehensiveAuditService } from '../services/comprehensiveAuditService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -60,7 +62,7 @@ router.get('/events/search', adminAuthMiddleware, async (req: AuthenticatedReque
       data: result,
     });
   } catch (error) {
-    console.error('Error searching audit events:', error);
+    safeLogger.error('Error searching audit events:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to search audit events',
@@ -71,7 +73,7 @@ router.get('/events/search', adminAuthMiddleware, async (req: AuthenticatedReque
 /**
  * Generate audit visualization
  */
-router.post('/visualizations/:type', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/visualizations/:type', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { type } = req.params;
     const criteria = req.body;
@@ -95,7 +97,7 @@ router.post('/visualizations/:type', adminAuthMiddleware, async (req: Authentica
       data: visualization,
     });
   } catch (error) {
-    console.error('Error generating audit visualization:', error);
+    safeLogger.error('Error generating audit visualization:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate audit visualization',
@@ -106,7 +108,7 @@ router.post('/visualizations/:type', adminAuthMiddleware, async (req: Authentica
 /**
  * Generate audit analytics
  */
-router.post('/analytics', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/analytics', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const criteria = req.body;
 
@@ -117,7 +119,7 @@ router.post('/analytics', adminAuthMiddleware, async (req: AuthenticatedRequest,
       data: analytics,
     });
   } catch (error) {
-    console.error('Error generating audit analytics:', error);
+    safeLogger.error('Error generating audit analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate audit analytics',
@@ -128,7 +130,7 @@ router.post('/analytics', adminAuthMiddleware, async (req: AuthenticatedRequest,
 /**
  * Generate compliance report
  */
-router.post('/compliance/reports', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/compliance/reports', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { reportType, startDate, endDate } = req.body;
 
@@ -150,7 +152,7 @@ router.post('/compliance/reports', adminAuthMiddleware, async (req: Authenticate
       data: report,
     });
   } catch (error) {
-    console.error('Error generating compliance report:', error);
+    safeLogger.error('Error generating compliance report:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate compliance report',
@@ -161,7 +163,7 @@ router.post('/compliance/reports', adminAuthMiddleware, async (req: Authenticate
 /**
  * Export audit data
  */
-router.post('/export', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/export', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { criteria, format = 'json' } = req.body;
 
@@ -186,7 +188,7 @@ router.post('/export', adminAuthMiddleware, async (req: AuthenticatedRequest, re
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(exportData);
   } catch (error) {
-    console.error('Error exporting audit data:', error);
+    safeLogger.error('Error exporting audit data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to export audit data',
@@ -206,7 +208,7 @@ router.get('/integrity/validate', adminAuthMiddleware, async (req: Authenticated
       data: validation,
     });
   } catch (error) {
-    console.error('Error validating audit integrity:', error);
+    safeLogger.error('Error validating audit integrity:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to validate audit integrity',
@@ -217,7 +219,7 @@ router.get('/integrity/validate', adminAuthMiddleware, async (req: Authenticated
 /**
  * Record audit event (for internal use)
  */
-router.post('/events', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/events', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const eventData = req.body;
 
@@ -237,7 +239,7 @@ router.post('/events', adminAuthMiddleware, async (req: AuthenticatedRequest, re
       data: auditEvent,
     });
   } catch (error) {
-    console.error('Error recording audit event:', error);
+    safeLogger.error('Error recording audit event:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to record audit event',
@@ -272,7 +274,7 @@ router.get('/events/:eventId', adminAuthMiddleware, async (req: AuthenticatedReq
       data: event,
     });
   } catch (error) {
-    console.error('Error getting audit event:', error);
+    safeLogger.error('Error getting audit event:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get audit event',
@@ -332,7 +334,7 @@ router.get('/statistics', adminAuthMiddleware, async (req: AuthenticatedRequest,
       data: statistics,
     });
   } catch (error) {
-    console.error('Error getting audit statistics:', error);
+    safeLogger.error('Error getting audit statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get audit statistics',
@@ -372,7 +374,7 @@ router.get('/filters', adminAuthMiddleware, async (req: AuthenticatedRequest, re
       data: filters,
     });
   } catch (error) {
-    console.error('Error getting filter options:', error);
+    safeLogger.error('Error getting filter options:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get filter options',

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { EnhancedUserController } from '../controllers/enhancedUserController';
 
 const router = Router();
@@ -15,8 +16,8 @@ router.get('/search', userController.searchUsers.bind(userController));
 router.get('/trending', userController.getTrendingUsers.bind(userController));
 
 // Follow/unfollow routes
-router.post('/follow/:userId/:targetUserId', userController.followUser.bind(userController));
-router.delete('/follow/:userId/:targetUserId', userController.unfollowUser.bind(userController));
+router.post('/follow/:userId/:targetUserId', csrfProtection,  userController.followUser.bind(userController));
+router.delete('/follow/:userId/:targetUserId', csrfProtection,  userController.unfollowUser.bind(userController));
 router.get('/follow-status/:userId/:targetUserId', userController.checkFollowStatus.bind(userController));
 
 // Social connections routes

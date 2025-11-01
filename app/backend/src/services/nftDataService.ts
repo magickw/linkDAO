@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 
 interface NFTData {
   name?: string;
@@ -54,7 +55,7 @@ export class NFTDataService {
         } : undefined
       };
     } catch (error) {
-      console.error('OpenSea API error:', error);
+      safeLogger.error('OpenSea API error:', error);
       throw new Error('Failed to fetch NFT data from OpenSea');
     }
   }
@@ -96,7 +97,7 @@ export class NFTDataService {
         lastSale: undefined
       };
     } catch (error) {
-      console.error('Alchemy API error:', error);
+      safeLogger.error('Alchemy API error:', error);
       throw new Error('Failed to fetch NFT data from Alchemy');
     }
   }
@@ -131,7 +132,7 @@ export class NFTDataService {
 
       return response.data.stats;
     } catch (error) {
-      console.error('Collection stats error:', error);
+      safeLogger.error('Collection stats error:', error);
       return null;
     }
   }
@@ -168,7 +169,7 @@ export class NFTDataService {
         } : undefined
       }));
     } catch (error) {
-      console.error('NFT search error:', error);
+      safeLogger.error('NFT search error:', error);
       return [];
     }
   }
@@ -178,7 +179,7 @@ export class NFTDataService {
       const nftData = await this.getFromOpensea(contractAddress, tokenId);
       return nftData.owner?.toLowerCase() === ownerAddress.toLowerCase();
     } catch (error) {
-      console.error('NFT ownership validation error:', error);
+      safeLogger.error('NFT ownership validation error:', error);
       return false;
     }
   }

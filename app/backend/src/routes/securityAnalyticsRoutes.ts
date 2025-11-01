@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { securityAnalyticsService } from '../services/securityAnalyticsService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -24,7 +26,7 @@ router.get('/dashboard', adminAuthMiddleware, async (req: AuthenticatedRequest, 
       data: dashboard,
     });
   } catch (error) {
-    console.error('Error getting security analytics dashboard:', error);
+    safeLogger.error('Error getting security analytics dashboard:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security analytics dashboard',
@@ -44,7 +46,7 @@ router.get('/metrics', adminAuthMiddleware, async (req: AuthenticatedRequest, re
       data: metrics,
     });
   } catch (error) {
-    console.error('Error getting security metrics:', error);
+    safeLogger.error('Error getting security metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security metrics',
@@ -69,7 +71,7 @@ router.get('/risk-assessment', adminAuthMiddleware, async (req: AuthenticatedReq
       data: riskAssessment,
     });
   } catch (error) {
-    console.error('Error getting risk assessment:', error);
+    safeLogger.error('Error getting risk assessment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get risk assessment',
@@ -79,7 +81,7 @@ router.get('/risk-assessment', adminAuthMiddleware, async (req: AuthenticatedReq
 
  * Trigger new risk assessment
  */
-router.post('/risk-assessment', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/risk-assessment', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const riskAssessment = await securityAnalyticsService.performRiskAssessment();
 
@@ -89,7 +91,7 @@ router.post('/risk-assessment', adminAuthMiddleware, async (req: AuthenticatedRe
       message: 'Risk assessment completed successfully',
     });
   } catch (error) {
-    console.error('Error performing risk assessment:', error);
+    safeLogger.error('Error performing risk assessment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to perform risk assessment',
@@ -122,7 +124,7 @@ router.get('/trends', adminAuthMiddleware, async (req: AuthenticatedRequest, res
       data: trends,
     });
   } catch (error) {
-    console.error('Error getting security trends:', error);
+    safeLogger.error('Error getting security trends:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security trends',
@@ -166,7 +168,7 @@ router.get('/recommendations', adminAuthMiddleware, async (req: AuthenticatedReq
       },
     });
   } catch (error) {
-    console.error('Error getting security recommendations:', error);
+    safeLogger.error('Error getting security recommendations:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security recommendations',
@@ -177,7 +179,7 @@ router.get('/recommendations', adminAuthMiddleware, async (req: AuthenticatedReq
 /**
  * Update recommendation status
  */
-router.patch('/recommendations/:recommendationId/status', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.patch('/recommendations/:recommendationId/status', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { recommendationId } = req.params;
     const { status } = req.body;
@@ -197,7 +199,7 @@ router.patch('/recommendations/:recommendationId/status', adminAuthMiddleware, a
       message: 'Recommendation status updated successfully',
     });
   } catch (error) {
-    console.error('Error updating recommendation status:', error);
+    safeLogger.error('Error updating recommendation status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update recommendation status',
@@ -219,7 +221,7 @@ router.get('/forecast', adminAuthMiddleware, async (req: AuthenticatedRequest, r
       data: forecast,
     });
   } catch (error) {
-    console.error('Error getting security forecast:', error);
+    safeLogger.error('Error getting security forecast:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security forecast',
@@ -239,7 +241,7 @@ router.get('/optimization', adminAuthMiddleware, async (req: AuthenticatedReques
       data: recommendations,
     });
   } catch (error) {
-    console.error('Error getting optimization recommendations:', error);
+    safeLogger.error('Error getting optimization recommendations:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get optimization recommendations',
@@ -293,7 +295,7 @@ router.get('/statistics', adminAuthMiddleware, async (req: AuthenticatedRequest,
       data: statistics,
     });
   } catch (error) {
-    console.error('Error getting security statistics:', error);
+    safeLogger.error('Error getting security statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get security statistics',

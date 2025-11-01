@@ -3,6 +3,8 @@ import { cacheService } from '../services/cacheService';
 import { cacheWarmingService } from '../services/cacheWarmingService';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 import { rateLimitWithCache } from '../middleware/cachingMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();
 
@@ -18,7 +20,7 @@ router.get('/stats',
       const stats = await cacheService.getStats();
       return successResponse(res, stats, 200);
     } catch (error) {
-      console.error('Failed to get cache stats:', error);
+      safeLogger.error('Failed to get cache stats', { error });
       return errorResponse(
         res,
         'CACHE_STATS_ERROR',
@@ -48,7 +50,7 @@ router.get('/health',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Cache health check failed:', error);
+      safeLogger.error('Cache health check failed', { error });
       return errorResponse(
         res,
         'CACHE_HEALTH_ERROR',
@@ -67,6 +69,7 @@ router.get('/health',
  * @body {string} type - Warmup type: 'full' or 'quick' (default: 'quick')
  */
 router.post('/warm',
+  csrfProtection,
   rateLimitWithCache(req => `cache_warm:${req.ip}`, 2, 300), // 2 requests per 5 minutes
   async (req: Request, res: Response) => {
     try {
@@ -96,7 +99,7 @@ router.post('/warm',
       
       // Don't wait for completion, return immediately
       warmupPromise.catch(error => {
-        console.error('Cache warming failed:', error);
+        safeLogger.error('Cache warming failed', { error });
       });
 
       return successResponse(res, {
@@ -104,7 +107,7 @@ router.post('/warm',
         queueStatus: cacheWarmingService.getQueueStatus()
       }, 202);
     } catch (error) {
-      console.error('Failed to trigger cache warming:', error);
+      safeLogger.error('Failed to trigger cache warming', { error });
       return errorResponse(
         res,
         'CACHE_WARM_ERROR',
@@ -135,7 +138,7 @@ router.get('/warm/status',
         queueStatus
       }, 200);
     } catch (error) {
-      console.error('Failed to get cache warming status:', error);
+      safeLogger.error('Failed to get cache warming status', { error });
       return errorResponse(
         res,
         'CACHE_WARM_STATUS_ERROR',
@@ -154,6 +157,7 @@ router.get('/warm/status',
  * @param {string} pattern - Cache key pattern to invalidate
  */
 router.delete('/invalidate/:pattern',
+  csrfProtection,
   rateLimitWithCache(req => `cache_invalidate:${req.ip}`, 5, 60), // 5 requests per minute
   async (req: Request, res: Response) => {
     try {
@@ -176,7 +180,7 @@ router.delete('/invalidate/:pattern',
         deletedCount
       }, 200);
     } catch (error) {
-      console.error('Failed to invalidate cache:', error);
+      safeLogger.error('Failed to invalidate cache', { error });
       return errorResponse(
         res,
         'CACHE_INVALIDATE_ERROR',
@@ -194,6 +198,7 @@ router.delete('/invalidate/:pattern',
  * @access Protected (admin only - simplified for demo)
  */
 router.delete('/clear',
+  csrfProtection,
   rateLimitWithCache(req => `cache_clear:${req.ip}`, 1, 300), // 1 request per 5 minutes
   async (req: Request, res: Response) => {
     try {
@@ -223,7 +228,7 @@ router.delete('/clear',
         totalDeleted
       }, 200);
     } catch (error) {
-      console.error('Failed to clear cache:', error);
+      safeLogger.error('Failed to clear cache', { error });
       return errorResponse(
         res,
         'CACHE_CLEAR_ERROR',
@@ -267,7 +272,7 @@ router.get('/keys/:pattern',
         limit
       }, 200);
     } catch (error) {
-      console.error('Failed to get cache keys:', error);
+      safeLogger.error('Failed to get cache keys', { error });
       return errorResponse(
         res,
         'CACHE_KEYS_ERROR',
@@ -306,7 +311,7 @@ router.get('/memory',
 
       return successResponse(res, memoryInfo, 200);
     } catch (error) {
-      console.error('Failed to get memory information:', error);
+      safeLogger.error('Failed to get memory information', { error });
       return errorResponse(
         res,
         'CACHE_MEMORY_ERROR',

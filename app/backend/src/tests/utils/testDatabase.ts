@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { safeLogger } from '../utils/safeLogger';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import { jest } from '@jest/globals';
@@ -31,9 +32,9 @@ export async function setupTestDatabase(): Promise<void> {
     // Clear existing test data
     await cleanupTestData();
     
-    console.log('✅ Test database setup complete');
+    safeLogger.info('✅ Test database setup complete');
   } catch (error) {
-    console.error('❌ Test database setup failed:', error);
+    safeLogger.error('❌ Test database setup failed:', error);
     throw error;
   }
 }
@@ -48,9 +49,9 @@ export async function cleanupTestDatabase(): Promise<void> {
       await testPool.end();
     }
     
-    console.log('✅ Test database cleanup complete');
+    safeLogger.info('✅ Test database cleanup complete');
   } catch (error) {
-    console.error('❌ Test database cleanup failed:', error);
+    safeLogger.error('❌ Test database cleanup failed:', error);
   }
 }
 
@@ -65,9 +66,9 @@ export async function cleanupTestData(): Promise<void> {
     await testDb.delete(schema.sellerProfiles);
     await testDb.delete(schema.users);
     
-    console.log('✅ Test data cleanup complete');
+    safeLogger.info('✅ Test data cleanup complete');
   } catch (error) {
-    console.error('❌ Test data cleanup failed:', error);
+    safeLogger.error('❌ Test data cleanup failed:', error);
     throw error;
   }
 }
@@ -160,7 +161,7 @@ export async function measureQueryPerformance<T>(
   const result = await queryFn();
   const duration = Date.now() - start;
   
-  console.log(`[DB Query] ${queryName}: ${duration}ms`);
+  safeLogger.info(`[DB Query] ${queryName}: ${duration}ms`);
   
   return { result, duration };
 }
@@ -179,7 +180,7 @@ export function getPoolStats() {
 export function logPoolStats(context: string) {
   const stats = getPoolStats();
   if (stats) {
-    console.log(`[${context}] Pool Stats:`, stats);
+    safeLogger.info(`[${context}] Pool Stats:`, stats);
   }
 }
 
@@ -254,7 +255,7 @@ export async function validateSellerProfileIntegrity(walletAddress: string): Pro
     const requiredFields = ['walletAddress', 'displayName', 'storeName'];
     return requiredFields.every(field => profile[0][field] != null);
   } catch (error) {
-    console.error('Profile integrity validation failed:', error);
+    safeLogger.error('Profile integrity validation failed:', error);
     return false;
   }
 }
@@ -300,13 +301,13 @@ export async function validateReferentialIntegrity(): Promise<{ valid: boolean; 
 export async function createTestSnapshot(snapshotName: string): Promise<void> {
   // In a real implementation, this would create a database snapshot
   // For testing purposes, we'll just log the operation
-  console.log(`📸 Created test snapshot: ${snapshotName}`);
+  safeLogger.info(`📸 Created test snapshot: ${snapshotName}`);
 }
 
 export async function restoreTestSnapshot(snapshotName: string): Promise<void> {
   // In a real implementation, this would restore from a database snapshot
   // For testing purposes, we'll clean and reseed the database
-  console.log(`🔄 Restoring test snapshot: ${snapshotName}`);
+  safeLogger.info(`🔄 Restoring test snapshot: ${snapshotName}`);
   await cleanupTestData();
 }
 

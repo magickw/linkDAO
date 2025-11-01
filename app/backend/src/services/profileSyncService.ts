@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { sellerService } from './sellerService';
 
 export interface ProfileChangeEvent {
@@ -63,9 +64,9 @@ class ProfileSyncService extends EventEmitter {
       // Create backup/audit trail
       await this.createProfileBackup(walletAddress, changes);
 
-      console.log(`Profile sync completed for ${walletAddress}:`, changeType);
+      safeLogger.info(`Profile sync completed for ${walletAddress}:`, changeType);
     } catch (error) {
-      console.error('Profile sync error:', error);
+      safeLogger.error('Profile sync error:', error);
       throw new Error('Failed to synchronize profile changes');
     }
   }
@@ -86,7 +87,7 @@ class ProfileSyncService extends EventEmitter {
         await this.invalidateProfileCache(walletAddress);
         this.pendingUpdates.delete(walletAddress);
       } catch (error) {
-        console.error('Cache invalidation error:', error);
+        safeLogger.error('Cache invalidation error:', error);
       }
     }, this.syncOptions.cacheInvalidationDelay);
 
@@ -100,7 +101,7 @@ class ProfileSyncService extends EventEmitter {
     try {
       // Invalidate Redis cache if available
       // TODO: Implement Redis cache invalidation
-      console.log(`Cache invalidated for profile: ${walletAddress}`);
+      safeLogger.info(`Cache invalidated for profile: ${walletAddress}`);
 
       // Invalidate CDN cache for profile images
       await this.invalidateCDNCache(walletAddress);
@@ -108,7 +109,7 @@ class ProfileSyncService extends EventEmitter {
       // Emit cache invalidation event
       this.emit('cacheInvalidated', { walletAddress, timestamp: new Date() });
     } catch (error) {
-      console.error('Cache invalidation failed:', error);
+      safeLogger.error('Cache invalidation failed:', error);
     }
   }
 
@@ -119,9 +120,9 @@ class ProfileSyncService extends EventEmitter {
     try {
       // TODO: Implement CDN cache invalidation
       // This would typically involve calling CDN APIs to purge cached images
-      console.log(`CDN cache invalidated for profile: ${walletAddress}`);
+      safeLogger.info(`CDN cache invalidated for profile: ${walletAddress}`);
     } catch (error) {
-      console.error('CDN cache invalidation failed:', error);
+      safeLogger.error('CDN cache invalidation failed:', error);
     }
   }
 
@@ -132,12 +133,12 @@ class ProfileSyncService extends EventEmitter {
     try {
       // TODO: Implement WebSocket broadcasting
       // This would send real-time updates to connected clients
-      console.log('Broadcasting profile update:', event);
+      safeLogger.info('Broadcasting profile update:', event);
 
       // Emit broadcast event for other services to handle
       this.emit('profileBroadcast', event);
     } catch (error) {
-      console.error('Profile broadcast failed:', error);
+      safeLogger.error('Profile broadcast failed:', error);
     }
   }
 
@@ -165,13 +166,13 @@ class ProfileSyncService extends EventEmitter {
 
       if (hasSearchableChanges) {
         // TODO: Update search index (Elasticsearch, etc.)
-        console.log(`Search indexes updated for profile: ${walletAddress}`);
+        safeLogger.info(`Search indexes updated for profile: ${walletAddress}`);
         
         // Emit search index update event
         this.emit('searchIndexUpdate', { walletAddress, changes });
       }
     } catch (error) {
-      console.error('Search index update failed:', error);
+      safeLogger.error('Search index update failed:', error);
     }
   }
 
@@ -191,12 +192,12 @@ class ProfileSyncService extends EventEmitter {
       };
 
       // TODO: Store backup in database or file system
-      console.log('Profile backup created:', backup);
+      safeLogger.info('Profile backup created:', backup);
 
       // Emit backup event
       this.emit('profileBackup', backup);
     } catch (error) {
-      console.error('Profile backup failed:', error);
+      safeLogger.error('Profile backup failed:', error);
     }
   }
 
@@ -209,7 +210,7 @@ class ProfileSyncService extends EventEmitter {
   ): Promise<any> {
     try {
       // TODO: Implement profile recovery from backup
-      console.log(`Recovering profile for ${walletAddress}, version: ${version}`);
+      safeLogger.info(`Recovering profile for ${walletAddress}, version: ${version}`);
       
       // This would typically:
       // 1. Fetch backup data from storage
@@ -219,7 +220,7 @@ class ProfileSyncService extends EventEmitter {
 
       throw new Error('Profile recovery not yet implemented');
     } catch (error) {
-      console.error('Profile recovery failed:', error);
+      safeLogger.error('Profile recovery failed:', error);
       throw error;
     }
   }
@@ -233,12 +234,12 @@ class ProfileSyncService extends EventEmitter {
   ): Promise<any[]> {
     try {
       // TODO: Implement profile history retrieval
-      console.log(`Fetching profile history for ${walletAddress}, limit: ${limit}`);
+      safeLogger.info(`Fetching profile history for ${walletAddress}, limit: ${limit}`);
       
       // This would return an array of profile changes over time
       return [];
     } catch (error) {
-      console.error('Failed to get profile history:', error);
+      safeLogger.error('Failed to get profile history:', error);
       throw error;
     }
   }
@@ -261,7 +262,7 @@ class ProfileSyncService extends EventEmitter {
         lastSyncTime: new Date(),
       };
     } catch (error) {
-      console.error('Sync validation failed:', error);
+      safeLogger.error('Sync validation failed:', error);
       return {
         isInSync: false,
         discrepancies: ['Validation failed'],
@@ -275,7 +276,7 @@ class ProfileSyncService extends EventEmitter {
    */
   async forceSyncProfile(walletAddress: string): Promise<void> {
     try {
-      console.log(`Force syncing profile: ${walletAddress}`);
+      safeLogger.info(`Force syncing profile: ${walletAddress}`);
 
       // Get current profile data
       const profile = await sellerService.getSellerProfile(walletAddress);
@@ -289,9 +290,9 @@ class ProfileSyncService extends EventEmitter {
       // Invalidate all caches immediately
       await this.invalidateProfileCache(walletAddress);
 
-      console.log(`Force sync completed for: ${walletAddress}`);
+      safeLogger.info(`Force sync completed for: ${walletAddress}`);
     } catch (error) {
-      console.error('Force sync failed:', error);
+      safeLogger.error('Force sync failed:', error);
       throw error;
     }
   }
@@ -301,23 +302,23 @@ class ProfileSyncService extends EventEmitter {
    */
   setupEventListeners(): void {
     this.on('profileChange', (event: ProfileChangeEvent) => {
-      console.log('Profile change detected:', event);
+      safeLogger.info('Profile change detected:', event);
     });
 
     this.on('cacheInvalidated', (data) => {
-      console.log('Cache invalidated:', data);
+      safeLogger.info('Cache invalidated:', data);
     });
 
     this.on('profileBroadcast', (event: ProfileChangeEvent) => {
-      console.log('Profile update broadcasted:', event);
+      safeLogger.info('Profile update broadcasted:', event);
     });
 
     this.on('searchIndexUpdate', (data) => {
-      console.log('Search index updated:', data);
+      safeLogger.info('Search index updated:', data);
     });
 
     this.on('profileBackup', (backup) => {
-      console.log('Profile backup created:', backup);
+      safeLogger.info('Profile backup created:', backup);
     });
   }
 
@@ -328,7 +329,7 @@ class ProfileSyncService extends EventEmitter {
     // Clear all pending timeouts
     for (const [walletAddress, timeout] of this.pendingUpdates) {
       clearTimeout(timeout);
-      console.log(`Cleared pending update for: ${walletAddress}`);
+      safeLogger.info(`Cleared pending update for: ${walletAddress}`);
     }
     this.pendingUpdates.clear();
 

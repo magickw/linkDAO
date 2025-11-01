@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { automatedTierUpgradeController } from '../controllers/automatedTierUpgradeController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';

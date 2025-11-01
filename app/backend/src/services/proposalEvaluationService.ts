@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { AIService } from './aiService';
 import { GovernanceService } from './governanceService';
 
@@ -87,7 +88,7 @@ export class ProposalEvaluationService {
 
       return evaluation;
     } catch (error) {
-      console.error("Error evaluating proposal:", error);
+      safeLogger.error("Error evaluating proposal:", error);
       throw error;
     }
   }
@@ -130,7 +131,7 @@ export class ProposalEvaluationService {
 
       return response.content;
     } catch (error) {
-      console.error("Error getting AI proposal analysis:", error);
+      safeLogger.error("Error getting AI proposal analysis:", error);
       // Return a default analysis if AI fails
       return "Unable to generate AI analysis at this time. Please review the proposal manually.";
     }
@@ -153,7 +154,7 @@ export class ProposalEvaluationService {
         alignment: 90
       };
     } catch (error) {
-      console.error("Error extracting criteria scores:", error);
+      safeLogger.error("Error extracting criteria scores:", error);
       // Return default scores if extraction fails
       return {
         feasibility: 50,
@@ -228,7 +229,7 @@ export class ProposalEvaluationService {
 
       return response.content;
     } catch (error) {
-      console.error("Error getting voting guidance:", error);
+      safeLogger.error("Error getting voting guidance:", error);
       return "Unable to provide voting guidance at this time.";
     }
   }
@@ -253,7 +254,7 @@ export class ProposalEvaluationService {
         Recommendation: Monitor the final 24 hours as sentiment appears to be shifting.
       `;
     } catch (error) {
-      console.error("Error analyzing voting patterns:", error);
+      safeLogger.error("Error analyzing voting patterns:", error);
       return "Unable to analyze voting patterns at this time.";
     }
   }
@@ -277,7 +278,7 @@ export class ProposalEvaluationService {
         reasoning: "Current vote count shows 60% in favor with 40% of voting period remaining. Historical data suggests this trend will continue."
       };
     } catch (error) {
-      console.error("Error predicting outcome:", error);
+      safeLogger.error("Error predicting outcome:", error);
       return {
         willPass: false,
         confidence: 0,

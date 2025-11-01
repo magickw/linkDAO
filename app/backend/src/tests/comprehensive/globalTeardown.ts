@@ -5,11 +5,11 @@
  */
 
 export default async function globalTeardown(): Promise<void> {
-  console.log('Starting global test teardown...');
+  safeLogger.info('Starting global test teardown...');
   
   // Cleanup any global resources
   // Stop test services if they were started
   // Clean up temporary files
   
-  console.log('Global test teardown completed');
+  safeLogger.info('Global test teardown completed');
 }

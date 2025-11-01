@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { CustomScamDetectionController } from '../controllers/customScamDetectionController';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -10,7 +11,7 @@ const controller = new CustomScamDetectionController();
  * @desc Analyze content for scam patterns
  * @access Private
  */
-router.post('/analyze', authMiddleware, async (req, res) => {
+router.post('/analyze', csrfProtection,  authMiddleware, async (req, res) => {
   await controller.analyzeContent(req, res);
 });
 
@@ -19,7 +20,7 @@ router.post('/analyze', authMiddleware, async (req, res) => {
  * @desc Batch analyze multiple content items for scam patterns
  * @access Private
  */
-router.post('/batch-analyze', authMiddleware, async (req, res) => {
+router.post('/batch-analyze', csrfProtection,  authMiddleware, async (req, res) => {
   await controller.batchAnalyze(req, res);
 });
 

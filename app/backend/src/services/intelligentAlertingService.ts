@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { enhancedSystemHealthService, SystemHealthScore } from './enhancedSystemHealthService';
 import { systemHealthMonitoringService, HealthMetrics, SystemAlert } from './systemHealthMonitoringService';
 
@@ -263,7 +264,7 @@ export class IntelligentAlertingService extends EventEmitter {
         await this.updateMLModels();
         await this.processAlertFatiguePrevention();
       } catch (error) {
-        console.error('Intelligent alerting error:', error);
+        safeLogger.error('Intelligent alerting error:', error);
         this.emit('alertingError', error);
       }
     }, 30000);
@@ -274,7 +275,7 @@ export class IntelligentAlertingService extends EventEmitter {
         await this.performAlertCorrelation();
         await this.performRootCauseAnalysis();
       } catch (error) {
-        console.error('Alert correlation error:', error);
+        safeLogger.error('Alert correlation error:', error);
       }
     }, 120000);
 
@@ -315,7 +316,7 @@ export class IntelligentAlertingService extends EventEmitter {
 
       this.emit('mlModelsInitialized');
     } catch (error) {
-      console.error('ML model initialization failed:', error);
+      safeLogger.error('ML model initialization failed:', error);
       this.emit('mlInitializationFailed', error);
     }
   }
@@ -339,7 +340,7 @@ export class IntelligentAlertingService extends EventEmitter {
           await this.triggerIntelligentAlert(rule, currentMetrics, healthScore);
         }
       } catch (error) {
-        console.error(`Rule evaluation failed for ${ruleId}:`, error);
+        safeLogger.error(`Rule evaluation failed for ${ruleId}:`, error);
       }
     }
   }
@@ -845,7 +846,7 @@ export class IntelligentAlertingService extends EventEmitter {
       try {
         await this.sendAlertToChannel(alert, channel);
       } catch (error) {
-        console.error(`Failed to send alert to ${channel}:`, error);
+        safeLogger.error(`Failed to send alert to ${channel}:`, error);
       }
     }
 
@@ -883,7 +884,7 @@ export class IntelligentAlertingService extends EventEmitter {
    */
   private async sendSlackAlert(alert: AlertContext): Promise<void> {
     // Implementation would integrate with Slack API
-    console.log(`Slack alert: ${alert.title} - ${alert.message}`);
+    safeLogger.info(`Slack alert: ${alert.title} - ${alert.message}`);
   }
 
   /**
@@ -891,7 +892,7 @@ export class IntelligentAlertingService extends EventEmitter {
    */
   private async sendEmailAlert(alert: AlertContext): Promise<void> {
     // Implementation would integrate with email service
-    console.log(`Email alert: ${alert.title} - ${alert.message}`);
+    safeLogger.info(`Email alert: ${alert.title} - ${alert.message}`);
   }
 
   /**
@@ -899,7 +900,7 @@ export class IntelligentAlertingService extends EventEmitter {
    */
   private async sendWebhookAlert(alert: AlertContext): Promise<void> {
     // Implementation would send HTTP POST to webhook URL
-    console.log(`Webhook alert: ${alert.title} - ${alert.message}`);
+    safeLogger.info(`Webhook alert: ${alert.title} - ${alert.message}`);
   }
 
   /**
@@ -907,7 +908,7 @@ export class IntelligentAlertingService extends EventEmitter {
    */
   private async sendSMSAlert(alert: AlertContext): Promise<void> {
     // Implementation would integrate with SMS service
-    console.log(`SMS alert: ${alert.title} - ${alert.message}`);
+    safeLogger.info(`SMS alert: ${alert.title} - ${alert.message}`);
   }
 
   /**
@@ -926,7 +927,7 @@ export class IntelligentAlertingService extends EventEmitter {
             try {
               await this.sendAlertToChannel(currentAlert, channel);
             } catch (error) {
-              console.error(`Escalation alert failed for ${channel}:`, error);
+              safeLogger.error(`Escalation alert failed for ${channel}:`, error);
             }
           }
           
@@ -983,7 +984,7 @@ export class IntelligentAlertingService extends EventEmitter {
         timestamp: new Date()
       });
     } catch (error) {
-      console.error('Model retraining failed:', error);
+      safeLogger.error('Model retraining failed:', error);
       this.emit('modelRetrainingFailed', error);
     }
   }

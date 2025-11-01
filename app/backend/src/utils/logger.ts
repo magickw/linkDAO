@@ -128,12 +128,12 @@ class EnhancedLogger {
 
   private async sendEmailAlert(logEntry: LogEntry): Promise<void> {
     // Placeholder for email integration
-    console.log('Email alert would be sent to:', this.alertConfig.emailRecipients);
+    console.info('Email alert would be sent to:', this.alertConfig.emailRecipients);
   }
 
   private async sendSlackAlert(logEntry: LogEntry): Promise<void> {
     // Placeholder for Slack integration
-    console.log('Slack alert would be sent to:', this.alertConfig.slackChannel);
+    console.info('Slack alert would be sent to:', this.alertConfig.slackChannel);
   }
 
   private shouldAlert(level: LogEntry['level'], meta?: any): boolean {
@@ -156,9 +156,9 @@ class EnhancedLogger {
     const logEntry = this.formatLogEntry('info', message, meta);
     
     if (this.environment === 'development') {
-      console.log(`[${logEntry.timestamp}] INFO: ${message}`, meta || '');
+      console.info(`[${logEntry.timestamp}] INFO: ${message}`, meta || '');
     } else {
-      console.log(JSON.stringify(logEntry));
+      console.info(JSON.stringify(logEntry));
     }
 
     if (this.shouldAlert('info', meta)) {

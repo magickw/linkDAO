@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { aiEvidenceAnalysisService, EvidenceAnalysisResult } from '../services/aiEvidenceAnalysisService';
 import multer from 'multer';
 import path from 'path';
@@ -98,7 +100,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error analyzing evidence file:', error);
+      safeLogger.error('Error analyzing evidence file:', error);
       res.status(500).json({ 
         error: 'Failed to analyze evidence',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -149,7 +151,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error analyzing text evidence:', error);
+      safeLogger.error('Error analyzing text evidence:', error);
       res.status(500).json({ 
         error: 'Failed to analyze text evidence',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -226,7 +228,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error in batch analysis:', error);
+      safeLogger.error('Error in batch analysis:', error);
       res.status(500).json({ 
         error: 'Failed to perform batch analysis',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -280,7 +282,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error retrieving analysis results:', error);
+      safeLogger.error('Error retrieving analysis results:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve analysis results',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -320,7 +322,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error comparing evidence authenticity:', error);
+      safeLogger.error('Error comparing evidence authenticity:', error);
       res.status(500).json({ 
         error: 'Failed to compare evidence authenticity',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -365,7 +367,7 @@ export class AIEvidenceAnalysisController {
       });
 
     } catch (error) {
-      console.error('Error getting manipulation detection results:', error);
+      safeLogger.error('Error getting manipulation detection results:', error);
       res.status(500).json({ 
         error: 'Failed to get manipulation detection results',
         details: error instanceof Error ? error.message : 'Unknown error'

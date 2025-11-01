@@ -6,6 +6,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { sellerImageService } from '../services/sellerImageService';
 import { SellerError, SellerErrorType } from '../types/sellerError';
 
@@ -72,7 +74,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Image upload error:', error);
+      safeLogger.error('Image upload error:', error);
       
       if (error instanceof SellerError) {
         return res.status(400).json({
@@ -155,7 +157,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Multiple image upload error:', error);
+      safeLogger.error('Multiple image upload error:', error);
       
       res.status(500).json({
         success: false,
@@ -197,7 +199,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Get image info error:', error);
+      safeLogger.error('Get image info error:', error);
       
       res.status(500).json({
         success: false,
@@ -249,7 +251,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Delete image error:', error);
+      safeLogger.error('Delete image error:', error);
       
       if (error instanceof SellerError) {
         return res.status(400).json({
@@ -303,7 +305,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Get seller images error:', error);
+      safeLogger.error('Get seller images error:', error);
       
       res.status(500).json({
         success: false,
@@ -368,7 +370,7 @@ class SellerImageController {
       });
 
     } catch (error) {
-      console.error('Update image metadata error:', error);
+      safeLogger.error('Update image metadata error:', error);
       
       if (error instanceof SellerError) {
         return res.status(400).json({

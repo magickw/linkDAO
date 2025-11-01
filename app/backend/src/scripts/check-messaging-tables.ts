@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -9,7 +10,7 @@ async function main() {
   const connectionString = process.env.DATABASE_URL || "postgresql://username:password@localhost:5432/linkdao";
   const client = postgres(connectionString, { prepare: false });
 
-  console.log("Checking messaging tables status...\n");
+  safeLogger.info("Checking messaging tables status...\n");
 
   try {
     // Check what type chat_messages.id actually is
@@ -21,9 +22,9 @@ async function main() {
       ORDER BY column_name
     `;
 
-    console.log("Current chat_messages column types:");
+    safeLogger.info("Current chat_messages column types:");
     idTypeCheck.forEach((col: any) => {
-      console.log(`  ${col.column_name}: ${col.data_type} (${col.udt_name})`);
+      safeLogger.info(`  ${col.column_name}: ${col.data_type} (${col.udt_name})`);
     });
 
     // Check if messaging tables exist
@@ -35,15 +36,15 @@ async function main() {
       ORDER BY table_name
     `;
 
-    console.log("\nMessaging tables status:");
+    safeLogger.info("\nMessaging tables status:");
     const requiredTables = ['conversation_participants', 'message_templates', 'quick_replies', 'conversation_analytics'];
     const existingTables = tables.map((t: any) => t.table_name);
 
     requiredTables.forEach((tableName) => {
       if (existingTables.includes(tableName)) {
-        console.log(`  ✓ ${tableName} - EXISTS`);
+        safeLogger.info(`  ✓ ${tableName} - EXISTS`);
       } else {
-        console.log(`  ✗ ${tableName} - MISSING`);
+        safeLogger.info(`  ✗ ${tableName} - MISSING`);
       }
     });
 
@@ -51,44 +52,44 @@ async function main() {
     const allTablesExist = requiredTables.every((t) => existingTables.includes(t));
 
     if (allTablesExist) {
-      console.log("\n✅ All required messaging tables already exist!");
-      console.log("\nNo migration needed. The messaging system is ready to use.");
+      safeLogger.info("\n✅ All required messaging tables already exist!");
+      safeLogger.info("\nNo migration needed. The messaging system is ready to use.");
       return;
     }
 
     // If tables don't exist, run the migration
-    console.log("\n⚠️  Some tables are missing. Running migration...\n");
+    safeLogger.info("\n⚠️  Some tables are missing. Running migration...\n");
 
     // Read the messaging migration SQL file
     const migrationPath = path.join(__dirname, "../../drizzle/0047_marketplace_messaging.sql");
     const migrationSQL = fs.readFileSync(migrationPath, "utf-8");
 
-    console.log(`Executing migration: 0047_marketplace_messaging.sql`);
+    safeLogger.info(`Executing migration: 0047_marketplace_messaging.sql`);
 
     // Execute the migration
     await client.unsafe(migrationSQL);
 
-    console.log("\n✅ Messaging tables migration completed successfully!");
+    safeLogger.info("\n✅ Messaging tables migration completed successfully!");
 
   } catch (error: any) {
-    console.error("\n❌ Error during migration:");
-    console.error(error.message);
+    safeLogger.error("\n❌ Error during migration:");
+    safeLogger.error(error.message);
 
     // If error is about type incompatibility, provide more context
     if (error.message && error.message.includes("incompatible types")) {
-      console.log("\n⚠️  Column type mismatch detected.");
-      console.log("The migration expects chat_messages.id to be UUID type.");
-      console.log("Please check the actual column type in your database.");
-      console.log("\nThis usually means the database schema doesn't match the migration files.");
-      console.log("You may need to:");
-      console.log("  1. Check what type chat_messages.id actually is");
-      console.log("  2. Update the migration to match your actual schema");
-      console.log("  3. Or alter the column type if needed (with care)");
+      safeLogger.info("\n⚠️  Column type mismatch detected.");
+      safeLogger.info("The migration expects chat_messages.id to be UUID type.");
+      safeLogger.info("Please check the actual column type in your database.");
+      safeLogger.info("\nThis usually means the database schema doesn't match the migration files.");
+      safeLogger.info("You may need to:");
+      safeLogger.info("  1. Check what type chat_messages.id actually is");
+      safeLogger.info("  2. Update the migration to match your actual schema");
+      safeLogger.info("  3. Or alter the column type if needed (with care)");
     }
 
     // If error is "already exists", that's actually OK for some things
     if (error.message && error.message.includes("already exists")) {
-      console.log("\n✅ Tables/columns already exist - this is OK!");
+      safeLogger.info("\n✅ Tables/columns already exist - this is OK!");
     } else {
       throw error;
     }
@@ -98,6 +99,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  safeLogger.error("Fatal error:", error);
   process.exit(1);
 });

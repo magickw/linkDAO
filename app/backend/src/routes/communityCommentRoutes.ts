@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { db } from '../db';
 import { posts, users, reactions } from '../db/schema';
@@ -12,7 +14,7 @@ const router = Router();
  */
 
 // Vote on a comment (upvote/downvote)
-router.post('/:communityId/comments/:commentId/vote', authMiddleware, async (req, res) => {
+router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddleware, async (req, res) => {
   try {
     const { commentId } = req.params;
     const { voteType, amount = '1.0' } = req.body; // 'upvote' or 'downvote'
@@ -112,7 +114,7 @@ router.post('/:communityId/comments/:commentId/vote', authMiddleware, async (req
       }
     });
   } catch (error) {
-    console.error('Error recording comment vote:', error);
+    safeLogger.error('Error recording comment vote:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to record vote'
@@ -153,7 +155,7 @@ router.get('/:communityId/comments/:commentId/votes', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching comment votes:', error);
+    safeLogger.error('Error fetching comment votes:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch votes'
@@ -183,7 +185,7 @@ async function getVoteCounts(commentId: number): Promise<{
 
     return { upvotes, downvotes, score };
   } catch (error) {
-    console.error('Error counting votes:', error);
+    safeLogger.error('Error counting votes:', error);
     return { upvotes: 0, downvotes: 0, score: 0 };
   }
 }

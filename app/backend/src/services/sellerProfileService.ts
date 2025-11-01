@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { sellers } from '../db/schema';
 import { 
@@ -35,7 +36,7 @@ export class SellerProfileService {
       
       return this.mapSellerToProfile(seller);
     } catch (error) {
-      console.error('Error fetching seller profile:', error);
+      safeLogger.error('Error fetching seller profile:', error);
       throw error;
     }
   }
@@ -89,7 +90,7 @@ export class SellerProfileService {
       
       return this.mapSellerToProfile(seller);
     } catch (error) {
-      console.error('Error creating seller profile:', error);
+      safeLogger.error('Error creating seller profile:', error);
       throw error;
     }
   }
@@ -149,7 +150,7 @@ export class SellerProfileService {
       
       return this.mapSellerToProfile(seller);
     } catch (error) {
-      console.error('Error updating seller profile:', error);
+      safeLogger.error('Error updating seller profile:', error);
       throw error;
     }
   }
@@ -195,7 +196,7 @@ export class SellerProfileService {
         nextStep
       };
     } catch (error) {
-      console.error('Error fetching onboarding status:', error);
+      safeLogger.error('Error fetching onboarding status:', error);
       throw error;
     }
   }
@@ -228,7 +229,7 @@ export class SellerProfileService {
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {
-      console.error('Error updating onboarding step:', error);
+      safeLogger.error('Error updating onboarding step:', error);
       throw error;
     }
   }

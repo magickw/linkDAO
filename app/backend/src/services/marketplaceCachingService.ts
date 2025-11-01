@@ -1,4 +1,5 @@
 import { Redis, Cluster } from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { LRUCache } from 'lru-cache';
 import { performance } from 'perf_hooks';
 import { CachingStrategiesService } from './cachingStrategiesService';
@@ -246,7 +247,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       await this.redis.sadd(key, value);
       await this.redis.expire(key, ttl);
     } catch (error) {
-      console.error('Error adding to set:', error);
+      safeLogger.error('Error adding to set:', error);
     }
   }
 
@@ -254,7 +255,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     try {
       return await this.redis.smembers(key);
     } catch (error) {
-      console.error('Error getting set:', error);
+      safeLogger.error('Error getting set:', error);
       return [];
     }
   }
@@ -323,7 +324,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
           await this.processWarmupJob(job);
         }
       } catch (error) {
-        console.error('Warmup job failed:', error);
+        safeLogger.error('Warmup job failed:', error);
       } finally {
         this.isWarmupRunning = false;
       }
@@ -335,9 +336,9 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       const data = await job.loader();
       await this.set(job.key, data, job.ttl);
       
-      console.log(`Cache warmed up: ${job.key} (priority: ${job.priority})`);
+      safeLogger.info(`Cache warmed up: ${job.key} (priority: ${job.priority})`);
     } catch (error) {
-      console.error(`Failed to warm up cache for ${job.key}:`, error);
+      safeLogger.error(`Failed to warm up cache for ${job.key}:`, error);
     }
   }
 
@@ -423,7 +424,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
         performance: performanceHealthy
       };
     } catch (error) {
-      console.error('Cache health check failed:', error);
+      safeLogger.error('Cache health check failed:', error);
       return {
         redis: false,
         memory: false,
@@ -434,7 +435,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
 
   // Cleanup and maintenance
   async performMaintenance(): Promise<void> {
-    console.log('Starting cache maintenance...');
+    safeLogger.info('Starting cache maintenance...');
     
     try {
       // Clean up expired keys
@@ -446,9 +447,9 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       // Update cache statistics
       await this.updateCacheStatistics();
       
-      console.log('Cache maintenance completed');
+      safeLogger.info('Cache maintenance completed');
     } catch (error) {
-      console.error('Cache maintenance failed:', error);
+      safeLogger.error('Cache maintenance failed:', error);
     }
   }
 
@@ -468,10 +469,10 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       
       if (expiredKeys.length > 0) {
         await this.redis.del(...expiredKeys);
-        console.log(`Cleaned up ${expiredKeys.length} expired keys`);
+        safeLogger.info(`Cleaned up ${expiredKeys.length} expired keys`);
       }
     } catch (error) {
-      console.error('Cleanup failed:', error);
+      safeLogger.error('Cleanup failed:', error);
     }
   }
 
@@ -480,7 +481,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     const stats = this.getStats();
     if (stats.memoryUsage > 0.8) { // If using more than 80% of memory
       this.memoryCache.clear();
-      console.log('Memory cache cleared due to high usage');
+      safeLogger.info('Memory cache cleared due to high usage');
     }
   }
 

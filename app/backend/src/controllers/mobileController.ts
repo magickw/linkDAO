@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { db } from '../db';
 import { pushTokens, notificationPreferences } from '../db/schema';
@@ -47,7 +49,7 @@ export const registerMobilePushToken = async (req: AuthenticatedRequest, res: Re
       res.status(500).json({ error: 'Failed to register mobile push token' });
     }
   } catch (error) {
-    console.error('Error registering mobile push token:', error);
+    safeLogger.error('Error registering mobile push token:', error);
     res.status(500).json({ error: 'Failed to register mobile push token' });
   }
 };
@@ -75,7 +77,7 @@ export const unregisterMobilePushToken = async (req: AuthenticatedRequest, res: 
       res.status(500).json({ error: 'Failed to unregister mobile push token' });
     }
   } catch (error) {
-    console.error('Error unregistering mobile push token:', error);
+    safeLogger.error('Error unregistering mobile push token:', error);
     res.status(500).json({ error: 'Failed to unregister mobile push token' });
   }
 };
@@ -145,7 +147,7 @@ export const updateMobileNotificationPreferences = async (req: AuthenticatedRequ
       preferences: updatedPrefs,
     });
   } catch (error) {
-    console.error('Error updating mobile notification preferences:', error);
+    safeLogger.error('Error updating mobile notification preferences:', error);
     res.status(500).json({ error: 'Failed to update mobile notification preferences' });
   }
 };
@@ -196,7 +198,7 @@ export const getMobileNotificationPreferences = async (req: AuthenticatedRequest
       });
     }
   } catch (error) {
-    console.error('Error getting mobile notification preferences:', error);
+    safeLogger.error('Error getting mobile notification preferences:', error);
     res.status(500).json({ error: 'Failed to get mobile notification preferences' });
   }
 };
@@ -227,7 +229,7 @@ export const syncOfflineActions = async (req: AuthenticatedRequest, res: Respons
       results,
     });
   } catch (error) {
-    console.error('Error syncing offline actions:', error);
+    safeLogger.error('Error syncing offline actions:', error);
     res.status(500).json({ error: 'Failed to sync offline actions' });
   }
 };
@@ -252,7 +254,7 @@ export const getOfflineContent = async (req: AuthenticatedRequest, res: Response
       data: content,
     });
   } catch (error) {
-    console.error('Error getting offline content:', error);
+    safeLogger.error('Error getting offline content:', error);
     res.status(500).json({ error: 'Failed to get offline content' });
   }
 };
@@ -284,7 +286,7 @@ export const prepareOfflineContent = async (req: AuthenticatedRequest, res: Resp
       res.status(500).json({ error: 'Failed to prepare offline content' });
     }
   } catch (error) {
-    console.error('Error preparing offline content:', error);
+    safeLogger.error('Error preparing offline content:', error);
     res.status(500).json({ error: 'Failed to prepare offline content' });
   }
 };
@@ -308,7 +310,7 @@ export const getOfflineStats = async (req: AuthenticatedRequest, res: Response):
       stats,
     });
   } catch (error) {
-    console.error('Error getting offline stats:', error);
+    safeLogger.error('Error getting offline stats:', error);
     res.status(500).json({ error: 'Failed to get offline stats' });
   }
 };
@@ -346,7 +348,7 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
       url: `https://ipfs.io/ipfs/${cid}`,
     });
   } catch (error) {
-    console.error('Error uploading image:', error);
+    safeLogger.error('Error uploading image:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
 };

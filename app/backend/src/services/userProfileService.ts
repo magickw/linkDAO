@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users } from '../db/schema';
 import { eq } from "drizzle-orm";
 import { DataEncryptionService } from './dataEncryptionService';
@@ -21,7 +22,7 @@ async function encryptAddressData(addressData: any): Promise<string> {
     const encryptedData = await encryptionService.encryptData(JSON.stringify(addressData), 'PII');
     return JSON.stringify(encryptedData);
   } catch (error) {
-    console.error('Error encrypting address data:', error);
+    safeLogger.error('Error encrypting address data:', error);
     // Return empty string if encryption fails to avoid storing unencrypted data
     return '';
   }
@@ -38,7 +39,7 @@ async function decryptAddressData(encryptedData: string): Promise<any> {
     const decryptedData = await encryptionService.decryptData(encryptedObj);
     return JSON.parse(decryptedData);
   } catch (error) {
-    console.error('Error decrypting address data:', error);
+    safeLogger.error('Error decrypting address data:', error);
     return {};
   }
 }
@@ -108,7 +109,7 @@ export class UserProfileService {
         additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error decrypting user additional data, defaulting to empty object:', error);
+      safeLogger.error('Error decrypting user additional data, defaulting to empty object:', error);
     }
 
     // Handle potential null dates by providing default values
@@ -147,7 +148,7 @@ export class UserProfileService {
         additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error decrypting user additional data, defaulting to empty object:', error);
+      safeLogger.error('Error decrypting user additional data, defaulting to empty object:', error);
     }
 
     // Handle potential null dates by providing default values
@@ -220,7 +221,7 @@ export class UserProfileService {
         additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error decrypting user additional data:', error);
+      safeLogger.error('Error decrypting user additional data:', error);
     }
 
     // Update preferences
@@ -261,7 +262,7 @@ export class UserProfileService {
         additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error decrypting user additional data:', error);
+      safeLogger.error('Error decrypting user additional data:', error);
     }
 
     // Update privacy settings
@@ -294,7 +295,7 @@ export class UserProfileService {
       await db.delete(users).where(eq(users.id, id));
       return true;
     } catch (error) {
-      console.error('Error deleting profile:', error);
+      safeLogger.error('Error deleting profile:', error);
       return false;
     }
   }

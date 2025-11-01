@@ -1,15 +1,16 @@
 import { jest } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 
 // Global test setup for bridge tests
 beforeAll(async () => {
   // Setup test database connection
   // This would typically initialize a test database
-  console.log('Setting up bridge test environment...');
+  safeLogger.info('Setting up bridge test environment...');
 });
 
 afterAll(async () => {
   // Cleanup test database
-  console.log('Cleaning up bridge test environment...');
+  safeLogger.info('Cleaning up bridge test environment...');
 });
 
 beforeEach(() => {

@@ -6,6 +6,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { securityMonitoringService } from '../services/securityMonitoringService';
 import { complianceService } from '../services/complianceService';
@@ -59,7 +61,7 @@ export class SecurityController {
 
       res.json(dashboard);
     } catch (error) {
-      console.error('Error getting security dashboard:', error);
+      safeLogger.error('Error getting security dashboard:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -117,7 +119,7 @@ export class SecurityController {
         hasMore: filteredEvents.length > parseInt(offset as string) + parseInt(limit as string),
       });
     } catch (error) {
-      console.error('Error getting security events:', error);
+      safeLogger.error('Error getting security events:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -144,7 +146,7 @@ export class SecurityController {
 
       res.json({ alerts });
     } catch (error) {
-      console.error('Error getting security alerts:', error);
+      safeLogger.error('Error getting security alerts:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -166,7 +168,7 @@ export class SecurityController {
 
       res.json({ message: 'Alert acknowledged successfully' });
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
+      safeLogger.error('Error acknowledging alert:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -189,7 +191,7 @@ export class SecurityController {
 
       res.json({ message: 'Alert resolved successfully' });
     } catch (error) {
-      console.error('Error resolving alert:', error);
+      safeLogger.error('Error resolving alert:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -207,15 +209,15 @@ export class SecurityController {
       // Start scan asynchronously
       vulnerabilityScanner.performComprehensiveScan()
         .then(report => {
-          console.log(`Vulnerability scan completed: ${report.id}`);
+          safeLogger.info(`Vulnerability scan completed: ${report.id}`);
         })
         .catch(error => {
-          console.error('Vulnerability scan failed:', error);
+          safeLogger.error('Vulnerability scan failed:', error);
         });
 
       res.json({ message: 'Vulnerability scan started' });
     } catch (error) {
-      console.error('Error starting vulnerability scan:', error);
+      safeLogger.error('Error starting vulnerability scan:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -233,7 +235,7 @@ export class SecurityController {
       const reports = vulnerabilityScanner.getScanHistory();
       res.json({ reports });
     } catch (error) {
-      console.error('Error getting vulnerability reports:', error);
+      safeLogger.error('Error getting vulnerability reports:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -256,7 +258,7 @@ export class SecurityController {
 
       res.json({ message: 'Vulnerability status updated successfully' });
     } catch (error) {
-      console.error('Error updating vulnerability status:', error);
+      safeLogger.error('Error updating vulnerability status:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -290,7 +292,7 @@ export class SecurityController {
 
       res.json(dashboard);
     } catch (error) {
-      console.error('Error getting compliance dashboard:', error);
+      safeLogger.error('Error getting compliance dashboard:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -315,7 +317,7 @@ export class SecurityController {
 
       res.json({ report });
     } catch (error) {
-      console.error('Error generating compliance report:', error);
+      safeLogger.error('Error generating compliance report:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -335,7 +337,7 @@ export class SecurityController {
 
       res.json({ request });
     } catch (error) {
-      console.error('Error requesting data export:', error);
+      safeLogger.error('Error requesting data export:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -355,7 +357,7 @@ export class SecurityController {
 
       res.json({ request });
     } catch (error) {
-      console.error('Error requesting data deletion:', error);
+      safeLogger.error('Error requesting data deletion:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -375,7 +377,7 @@ export class SecurityController {
 
       res.json({ request });
     } catch (error) {
-      console.error('Error requesting opt-out:', error);
+      safeLogger.error('Error requesting opt-out:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -404,7 +406,7 @@ export class SecurityController {
 
       res.json({ consent });
     } catch (error) {
-      console.error('Error recording consent:', error);
+      safeLogger.error('Error recording consent:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -439,7 +441,7 @@ export class SecurityController {
 
       res.json(dashboard);
     } catch (error) {
-      console.error('Error getting key management dashboard:', error);
+      safeLogger.error('Error getting key management dashboard:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -467,7 +469,7 @@ export class SecurityController {
 
       res.json({ key: keyMetadata });
     } catch (error) {
-      console.error('Error generating key:', error);
+      safeLogger.error('Error generating key:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -489,7 +491,7 @@ export class SecurityController {
 
       res.json({ key: newKey });
     } catch (error) {
-      console.error('Error rotating key:', error);
+      safeLogger.error('Error rotating key:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -512,7 +514,7 @@ export class SecurityController {
 
       res.json({ message: 'Key revoked successfully' });
     } catch (error) {
-      console.error('Error revoking key:', error);
+      safeLogger.error('Error revoking key:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -547,7 +549,7 @@ export class SecurityController {
 
       res.json(auditTrail);
     } catch (error) {
-      console.error('Error getting audit logs:', error);
+      safeLogger.error('Error getting audit logs:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -577,7 +579,7 @@ export class SecurityController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(exportData);
     } catch (error) {
-      console.error('Error exporting audit logs:', error);
+      safeLogger.error('Error exporting audit logs:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

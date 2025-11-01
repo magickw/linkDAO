@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { systemHealthMonitoringController } from '../controllers/systemHealthMonitoringController';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 
@@ -41,11 +42,11 @@ router.get('/alerts', systemHealthMonitoringController.getIntelligentAlerts.bind
 
 // POST /api/admin/system-health/alerts/:alertId/acknowledge
 // Acknowledge an alert
-router.post('/alerts/:alertId/acknowledge', systemHealthMonitoringController.acknowledgeAlert.bind(systemHealthMonitoringController));
+router.post('/alerts/:alertId/acknowledge', csrfProtection,  systemHealthMonitoringController.acknowledgeAlert.bind(systemHealthMonitoringController));
 
 // POST /api/admin/system-health/alerts/:alertId/resolve
 // Resolve an alert
-router.post('/alerts/:alertId/resolve', systemHealthMonitoringController.resolveAlert.bind(systemHealthMonitoringController));
+router.post('/alerts/:alertId/resolve', csrfProtection,  systemHealthMonitoringController.resolveAlert.bind(systemHealthMonitoringController));
 
 /**
  * Capacity Planning Routes

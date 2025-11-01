@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   EnhancedFiatPaymentService, 
   FiatPaymentRequest, 
@@ -458,7 +460,7 @@ export class EnhancedFiatPaymentController {
       // Test connections (mock)
       try {
         // In production, test actual service connections
-        console.log('Testing payment provider connections...');
+        safeLogger.info('Testing payment provider connections...');
       } catch (error) {
         healthStatus.stripeConnection = 'unhealthy';
       }

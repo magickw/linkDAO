@@ -1,4 +1,5 @@
 import { ReportTemplate, ReportExecution, SchedulingConfig } from '../types/reporting';
+import { safeLogger } from '../utils/safeLogger';
 import { reportBuilderService } from './reportBuilderService';
 
 interface ScheduledReport {
@@ -379,7 +380,7 @@ export class ReportSchedulerService {
         }
 
       } catch (error) {
-        console.error(`Failed to execute scheduled report ${scheduledReport.id}:`, error);
+        safeLogger.error(`Failed to execute scheduled report ${scheduledReport.id}:`, error);
       }
     }
   }
@@ -412,7 +413,7 @@ export class ReportSchedulerService {
         execution.duration = execution.endTime.getTime() - execution.startTime.getTime();
         execution.errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
-        console.error(`Report execution failed:`, error);
+        safeLogger.error(`Report execution failed:`, error);
       }
     }
 
@@ -439,7 +440,7 @@ export class ReportSchedulerService {
     }
 
     // Simulate sending notifications
-    console.log(`Sending report notifications to: ${scheduledReport.schedule.recipients.join(', ')}`);
+    safeLogger.info(`Sending report notifications to: ${scheduledReport.schedule.recipients.join(', ')}`);
   }
 
   private calculateNextRun(schedule: SchedulingConfig, from: Date = new Date()): Date {

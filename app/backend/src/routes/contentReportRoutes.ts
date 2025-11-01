@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { contentReportController } from '../controllers/contentReportController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -22,7 +23,7 @@ const reportRateLimit = rateLimitingMiddleware({
  * @access Authenticated users
  * @body { contentId, contentType, reason, details? }
  */
-router.post('/report', reportRateLimit, contentReportController.submitReport);
+router.post('/report', csrfProtection,  reportRateLimit, contentReportController.submitReport);
 
 // Admin-only routes
 router.use(adminAuthMiddleware);
@@ -51,6 +52,6 @@ router.get('/reports/pending', contentReportController.getPendingReports);
  * @param reportId - ID of the report
  * @body { status, resolution? }
  */
-router.put('/reports/:reportId', contentReportController.updateReportStatus);
+router.put('/reports/:reportId', csrfProtection,  contentReportController.updateReportStatus);
 
 export default router;

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { GracefulDegradationService } from '../services/gracefulDegradationService';
+import { safeLogger } from '../utils/safeLogger';
 import { SystemHealthMonitoringService } from '../services/systemHealthMonitoringService';
 import { ErrorClassificationService } from '../services/errorClassificationService';
 import { AIModerationOrchestrator } from '../services/aiModerationOrchestrator';
@@ -30,7 +31,7 @@ class GracefulDegradationValidator {
   }
 
   async runValidation(): Promise<void> {
-    console.log('🚀 Starting Graceful Degradation System Validation...\n');
+    safeLogger.info('🚀 Starting Graceful Degradation System Validation...\n');
 
     try {
       await this.testRetryMechanism();
@@ -44,14 +45,14 @@ class GracefulDegradationValidator {
 
       this.printResults();
     } catch (error) {
-      console.error('❌ Validation failed with error:', error);
+      safeLogger.error('❌ Validation failed with error:', error);
     } finally {
       this.cleanup();
     }
   }
 
   private async testRetryMechanism(): Promise<void> {
-    console.log('🔄 Testing retry mechanism with exponential backoff...');
+    safeLogger.info('🔄 Testing retry mechanism with exponential backoff...');
     
     try {
       let attemptCount = 0;
@@ -73,21 +74,21 @@ class GracefulDegradationValidator {
       const duration = Date.now() - startTime;
       
       if (result === 'success' && attemptCount === 3 && duration >= 300) {
-        console.log('✅ Retry mechanism working correctly');
-        console.log(`   - Attempts: ${attemptCount}, Duration: ${duration}ms`);
+        safeLogger.info('✅ Retry mechanism working correctly');
+        safeLogger.info(`   - Attempts: ${attemptCount}, Duration: ${duration}ms`);
         this.testResults['retry_mechanism'] = true;
       } else {
-        console.log('❌ Retry mechanism failed');
+        safeLogger.info('❌ Retry mechanism failed');
         this.testResults['retry_mechanism'] = false;
       }
     } catch (error) {
-      console.log('❌ Retry mechanism test failed:', error);
+      safeLogger.info('❌ Retry mechanism test failed:', error);
       this.testResults['retry_mechanism'] = false;
     }
   }
 
   private async testFallbackStrategies(): Promise<void> {
-    console.log('🛡️ Testing fallback strategies...');
+    safeLogger.info('🛡️ Testing fallback strategies...');
     
     try {
       let fallbackExecuted = false;
@@ -107,20 +108,20 @@ class GracefulDegradationValidator {
       const fallbackResult = await this.degradationService['executeFallback']('test-operation', {});
       
       if (fallbackExecuted && fallbackResult.fallback) {
-        console.log('✅ Fallback strategies working correctly');
+        safeLogger.info('✅ Fallback strategies working correctly');
         this.testResults['fallback_strategies'] = true;
       } else {
-        console.log('❌ Fallback strategies failed');
+        safeLogger.info('❌ Fallback strategies failed');
         this.testResults['fallback_strategies'] = false;
       }
     } catch (error) {
-      console.log('❌ Fallback strategies test failed:', error);
+      safeLogger.info('❌ Fallback strategies test failed:', error);
       this.testResults['fallback_strategies'] = false;
     }
   }
 
   private async testErrorClassification(): Promise<void> {
-    console.log('🏷️ Testing error classification...');
+    safeLogger.info('🏷️ Testing error classification...');
     
     try {
       const testErrors = [
@@ -143,27 +144,27 @@ class GracefulDegradationValidator {
         if (classified.classification.type === expectedType) {
           correctClassifications++;
         } else {
-          console.log(`   - Misclassified: "${error.message}" as ${classified.classification.type}, expected ${expectedType}`);
+          safeLogger.info(`   - Misclassified: "${error.message}" as ${classified.classification.type}, expected ${expectedType}`);
         }
       });
 
       const accuracy = correctClassifications / testErrors.length;
       
       if (accuracy >= 0.8) {
-        console.log(`✅ Error classification working correctly (${Math.round(accuracy * 100)}% accuracy)`);
+        safeLogger.info(`✅ Error classification working correctly (${Math.round(accuracy * 100)}% accuracy)`);
         this.testResults['error_classification'] = true;
       } else {
-        console.log(`❌ Error classification accuracy too low (${Math.round(accuracy * 100)}%)`);
+        safeLogger.info(`❌ Error classification accuracy too low (${Math.round(accuracy * 100)}%)`);
         this.testResults['error_classification'] = false;
       }
     } catch (error) {
-      console.log('❌ Error classification test failed:', error);
+      safeLogger.info('❌ Error classification test failed:', error);
       this.testResults['error_classification'] = false;
     }
   }
 
   private async testCircuitBreakerBehavior(): Promise<void> {
-    console.log('⚡ Testing circuit breaker behavior...');
+    safeLogger.info('⚡ Testing circuit breaker behavior...');
     
     try {
       const failingOperation = () => Promise.reject(new Error('Service unavailable'));
@@ -183,21 +184,21 @@ class GracefulDegradationValidator {
       const circuitStats = systemHealth.circuitBreakerStats.get('circuit-test');
       
       if (failures > 0 && circuitStats) {
-        console.log(`✅ Circuit breaker triggered after ${failures} failures`);
-        console.log(`   - Circuit state: ${circuitStats.state}`);
+        safeLogger.info(`✅ Circuit breaker triggered after ${failures} failures`);
+        safeLogger.info(`   - Circuit state: ${circuitStats.state}`);
         this.testResults['circuit_breaker'] = true;
       } else {
-        console.log('❌ Circuit breaker not working correctly');
+        safeLogger.info('❌ Circuit breaker not working correctly');
         this.testResults['circuit_breaker'] = false;
       }
     } catch (error) {
-      console.log('❌ Circuit breaker test failed:', error);
+      safeLogger.info('❌ Circuit breaker test failed:', error);
       this.testResults['circuit_breaker'] = false;
     }
   }
 
   private async testSystemHealthMonitoring(): Promise<void> {
-    console.log('📊 Testing system health monitoring...');
+    safeLogger.info('📊 Testing system health monitoring...');
     
     try {
       // Collect initial metrics
@@ -213,23 +214,23 @@ class GracefulDegradationValidator {
       const healthSummary = this.healthMonitoringService.getHealthSummary();
       
       if (initialMetrics && healthSummary && typeof healthSummary.uptime === 'number') {
-        console.log('✅ System health monitoring working correctly');
-        console.log(`   - Status: ${healthSummary.status}`);
-        console.log(`   - Active alerts: ${healthSummary.activeAlerts}`);
-        console.log(`   - Services: ${JSON.stringify(healthSummary.servicesStatus)}`);
+        safeLogger.info('✅ System health monitoring working correctly');
+        safeLogger.info(`   - Status: ${healthSummary.status}`);
+        safeLogger.info(`   - Active alerts: ${healthSummary.activeAlerts}`);
+        safeLogger.info(`   - Services: ${JSON.stringify(healthSummary.servicesStatus)}`);
         this.testResults['health_monitoring'] = true;
       } else {
-        console.log('❌ System health monitoring failed');
+        safeLogger.info('❌ System health monitoring failed');
         this.testResults['health_monitoring'] = false;
       }
     } catch (error) {
-      console.log('❌ System health monitoring test failed:', error);
+      safeLogger.info('❌ System health monitoring test failed:', error);
       this.testResults['health_monitoring'] = false;
     }
   }
 
   private async testDegradationModes(): Promise<void> {
-    console.log('🔻 Testing degradation modes...');
+    safeLogger.info('🔻 Testing degradation modes...');
     
     try {
       // Test normal mode
@@ -250,22 +251,22 @@ class GracefulDegradationValidator {
       const emergencyMode = systemHealth.degradationState.mode;
       
       if (degradedMode === 'degraded' && emergencyMode === 'emergency') {
-        console.log('✅ Degradation modes working correctly');
-        console.log(`   - Initial: ${initialMode}, Degraded: ${degradedMode}, Emergency: ${emergencyMode}`);
+        safeLogger.info('✅ Degradation modes working correctly');
+        safeLogger.info(`   - Initial: ${initialMode}, Degraded: ${degradedMode}, Emergency: ${emergencyMode}`);
         this.testResults['degradation_modes'] = true;
       } else {
-        console.log('❌ Degradation modes not working correctly');
-        console.log(`   - Modes: ${initialMode} -> ${degradedMode} -> ${emergencyMode}`);
+        safeLogger.info('❌ Degradation modes not working correctly');
+        safeLogger.info(`   - Modes: ${initialMode} -> ${degradedMode} -> ${emergencyMode}`);
         this.testResults['degradation_modes'] = false;
       }
     } catch (error) {
-      console.log('❌ Degradation modes test failed:', error);
+      safeLogger.info('❌ Degradation modes test failed:', error);
       this.testResults['degradation_modes'] = false;
     }
   }
 
   private async testRecoveryMechanisms(): Promise<void> {
-    console.log('🔄 Testing recovery mechanisms...');
+    safeLogger.info('🔄 Testing recovery mechanisms...');
     
     try {
       // Start with degraded state
@@ -280,20 +281,20 @@ class GracefulDegradationValidator {
       const recoverySuccess = await this.degradationService.attemptRecovery();
       
       if (recoverySuccess !== undefined) {
-        console.log(`✅ Recovery mechanisms working correctly (Success: ${recoverySuccess})`);
+        safeLogger.info(`✅ Recovery mechanisms working correctly (Success: ${recoverySuccess})`);
         this.testResults['recovery_mechanisms'] = true;
       } else {
-        console.log('❌ Recovery mechanisms failed');
+        safeLogger.info('❌ Recovery mechanisms failed');
         this.testResults['recovery_mechanisms'] = false;
       }
     } catch (error) {
-      console.log('❌ Recovery mechanisms test failed:', error);
+      safeLogger.info('❌ Recovery mechanisms test failed:', error);
       this.testResults['recovery_mechanisms'] = false;
     }
   }
 
   private async testAIModerationIntegration(): Promise<void> {
-    console.log('🤖 Testing AI moderation integration...');
+    safeLogger.info('🤖 Testing AI moderation integration...');
     
     try {
       const testContent = {
@@ -313,23 +314,23 @@ class GracefulDegradationValidator {
       const healthCheck = await this.orchestrator.healthCheck();
       
       if (healthyResult && healthyResult.action && healthCheck) {
-        console.log('✅ AI moderation integration working correctly');
-        console.log(`   - Moderation result: ${healthyResult.action}`);
-        console.log(`   - Vendor health: ${Object.keys(healthCheck).length} vendors checked`);
+        safeLogger.info('✅ AI moderation integration working correctly');
+        safeLogger.info(`   - Moderation result: ${healthyResult.action}`);
+        safeLogger.info(`   - Vendor health: ${Object.keys(healthCheck).length} vendors checked`);
         this.testResults['ai_moderation_integration'] = true;
       } else {
-        console.log('❌ AI moderation integration failed');
+        safeLogger.info('❌ AI moderation integration failed');
         this.testResults['ai_moderation_integration'] = false;
       }
     } catch (error) {
-      console.log('❌ AI moderation integration test failed:', error);
+      safeLogger.info('❌ AI moderation integration test failed:', error);
       this.testResults['ai_moderation_integration'] = false;
     }
   }
 
   private printResults(): void {
-    console.log('\n📋 Validation Results Summary:');
-    console.log('================================');
+    safeLogger.info('\n📋 Validation Results Summary:');
+    safeLogger.info('================================');
     
     const totalTests = Object.keys(this.testResults).length;
     const passedTests = Object.values(this.testResults).filter(result => result).length;
@@ -338,42 +339,42 @@ class GracefulDegradationValidator {
     Object.entries(this.testResults).forEach(([testName, passed]) => {
       const status = passed ? '✅ PASS' : '❌ FAIL';
       const formattedName = testName.replace(/_/g, ' ').toUpperCase();
-      console.log(`${status} - ${formattedName}`);
+      safeLogger.info(`${status} - ${formattedName}`);
     });
     
-    console.log('\n📊 Overall Results:');
-    console.log(`   Total Tests: ${totalTests}`);
-    console.log(`   Passed: ${passedTests}`);
-    console.log(`   Failed: ${failedTests}`);
-    console.log(`   Success Rate: ${Math.round((passedTests / totalTests) * 100)}%`);
+    safeLogger.info('\n📊 Overall Results:');
+    safeLogger.info(`   Total Tests: ${totalTests}`);
+    safeLogger.info(`   Passed: ${passedTests}`);
+    safeLogger.info(`   Failed: ${failedTests}`);
+    safeLogger.info(`   Success Rate: ${Math.round((passedTests / totalTests) * 100)}%`);
     
     if (failedTests === 0) {
-      console.log('\n🎉 All tests passed! Graceful degradation system is working correctly.');
+      safeLogger.info('\n🎉 All tests passed! Graceful degradation system is working correctly.');
     } else {
-      console.log(`\n⚠️  ${failedTests} test(s) failed. Please review the implementation.`);
+      safeLogger.info(`\n⚠️  ${failedTests} test(s) failed. Please review the implementation.`);
     }
 
     // Print system health summary
-    console.log('\n🏥 Current System Health:');
+    safeLogger.info('\n🏥 Current System Health:');
     const healthSummary = this.healthMonitoringService.getHealthSummary();
-    console.log(`   Status: ${healthSummary.status}`);
-    console.log(`   Uptime: ${Math.round(healthSummary.uptime)}s`);
-    console.log(`   Active Alerts: ${healthSummary.activeAlerts}`);
-    console.log(`   Services: Healthy(${healthSummary.servicesStatus.healthy}) Degraded(${healthSummary.servicesStatus.degraded}) Failed(${healthSummary.servicesStatus.failed})`);
+    safeLogger.info(`   Status: ${healthSummary.status}`);
+    safeLogger.info(`   Uptime: ${Math.round(healthSummary.uptime)}s`);
+    safeLogger.info(`   Active Alerts: ${healthSummary.activeAlerts}`);
+    safeLogger.info(`   Services: Healthy(${healthSummary.servicesStatus.healthy}) Degraded(${healthSummary.servicesStatus.degraded}) Failed(${healthSummary.servicesStatus.failed})`);
 
     // Print error statistics
     const errorStats = this.errorClassificationService.getErrorStatistics();
     if (errorStats.totalErrors > 0) {
-      console.log('\n📈 Error Statistics:');
-      console.log(`   Total Errors: ${errorStats.totalErrors}`);
-      console.log(`   Retryable: ${errorStats.retryableErrors}`);
-      console.log(`   Non-retryable: ${errorStats.nonRetryableErrors}`);
-      console.log(`   By Type: ${JSON.stringify(errorStats.errorsByType)}`);
+      safeLogger.info('\n📈 Error Statistics:');
+      safeLogger.info(`   Total Errors: ${errorStats.totalErrors}`);
+      safeLogger.info(`   Retryable: ${errorStats.retryableErrors}`);
+      safeLogger.info(`   Non-retryable: ${errorStats.nonRetryableErrors}`);
+      safeLogger.info(`   By Type: ${JSON.stringify(errorStats.errorsByType)}`);
     }
   }
 
   private cleanup(): void {
-    console.log('\n🧹 Cleaning up resources...');
+    safeLogger.info('\n🧹 Cleaning up resources...');
     this.degradationService.destroy();
     this.healthMonitoringService.destroy();
   }
@@ -382,7 +383,7 @@ class GracefulDegradationValidator {
 // Run validation if this script is executed directly
 if (require.main === module) {
   const validator = new GracefulDegradationValidator();
-  validator.runValidation().catch(console.error);
+  validator.runValidation().catch(safeLogger.error);
 }
 
 export { GracefulDegradationValidator };

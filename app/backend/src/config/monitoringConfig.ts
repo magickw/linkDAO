@@ -122,7 +122,7 @@ export function getMonitoringConfig(): MonitoringConfig {
   // Validate configuration
   const errors = validateMonitoringConfig(config);
   if (errors.length > 0) {
-    console.warn('Monitoring configuration warnings:', errors);
+    safeLogger.warn('Monitoring configuration warnings:', errors);
   }
 
   return config;

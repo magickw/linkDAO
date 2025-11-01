@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { reportService } from '../services/reportService';
 import { reputationService } from '../services/reputationService';
 
@@ -43,7 +45,7 @@ export class ReportController {
         message: 'Report submitted successfully'
       });
     } catch (error) {
-      console.error('Error submitting report:', error);
+      safeLogger.error('Error submitting report:', error);
       res.status(500).json({ error: 'Failed to submit report' });
     }
   }
@@ -71,7 +73,7 @@ export class ReportController {
         }
       });
     } catch (error) {
-      console.error('Error fetching user reports:', error);
+      safeLogger.error('Error fetching user reports:', error);
       res.status(500).json({ error: 'Failed to fetch reports' });
     }
   }
@@ -92,7 +94,7 @@ export class ReportController {
         ...status
       });
     } catch (error) {
-      console.error('Error fetching report status:', error);
+      safeLogger.error('Error fetching report status:', error);
       res.status(500).json({ error: 'Failed to fetch report status' });
     }
   }
@@ -118,7 +120,7 @@ export class ReportController {
         }
       });
     } catch (error) {
-      console.error('Error fetching moderation queue:', error);
+      safeLogger.error('Error fetching moderation queue:', error);
       res.status(500).json({ error: 'Failed to fetch moderation queue' });
     }
   }
@@ -151,7 +153,7 @@ export class ReportController {
         message: 'Report status updated successfully'
       });
     } catch (error) {
-      console.error('Error updating report status:', error);
+      safeLogger.error('Error updating report status:', error);
       res.status(500).json({ error: 'Failed to update report status' });
     }
   }
@@ -165,7 +167,7 @@ export class ReportController {
         analytics
       });
     } catch (error) {
-      console.error('Error fetching report analytics:', error);
+      safeLogger.error('Error fetching report analytics:', error);
       res.status(500).json({ error: 'Failed to fetch analytics' });
     }
   }
@@ -183,7 +185,7 @@ export class ReportController {
         reportCount: result.reportCount
       });
     } catch (error) {
-      console.error('Error aggregating reports:', error);
+      safeLogger.error('Error aggregating reports:', error);
       res.status(500).json({ error: 'Failed to aggregate reports' });
     }
   }
@@ -199,7 +201,7 @@ export class ReportController {
         message: 'Reporter reputation updated'
       });
     } catch (error) {
-      console.error('Error updating reporter reputation:', error);
+      safeLogger.error('Error updating reporter reputation:', error);
       res.status(500).json({ error: 'Failed to update reputation' });
     }
   }

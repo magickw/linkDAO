@@ -6,11 +6,12 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import fs from 'fs';
 
 export default async function globalTeardown(): Promise<void> {
-  console.log('🧹 Cleaning up integration test environment...');
+  safeLogger.info('🧹 Cleaning up integration test environment...');
   
   try {
     // Database cleanup
@@ -25,15 +26,15 @@ export default async function globalTeardown(): Promise<void> {
     // Process cleanup
     await cleanupProcesses();
     
-    console.log('✅ Integration test environment cleaned up');
+    safeLogger.info('✅ Integration test environment cleaned up');
   } catch (error) {
-    console.warn('⚠️  Cleanup warning:', error);
+    safeLogger.warn('⚠️  Cleanup warning:', error);
     // Don't throw errors during cleanup to avoid masking test failures
   }
 }
 
 async function cleanupTestDatabase(): Promise<void> {
-  console.log('📊 Cleaning up test database...');
+  safeLogger.info('📊 Cleaning up test database...');
   
   try {
     const databaseUrl = process.env.DATABASE_URL;
@@ -43,7 +44,7 @@ async function cleanupTestDatabase(): Promise<void> {
       const dbPath = databaseUrl.replace('sqlite:', '');
       if (fs.existsSync(dbPath)) {
         fs.unlinkSync(dbPath);
-        console.log('✅ Test database file removed');
+        safeLogger.info('✅ Test database file removed');
       }
     } else if (databaseUrl && !databaseUrl.includes(':memory:')) {
       // For other databases, run cleanup script
@@ -55,9 +56,9 @@ async function cleanupTestDatabase(): Promise<void> {
           env: { ...process.env },
           timeout: 10000
         });
-        console.log('✅ Test database cleaned up');
+        safeLogger.info('✅ Test database cleaned up');
       } catch (cleanupError) {
-        console.warn('⚠️  Database cleanup script failed:', cleanupError);
+        safeLogger.warn('⚠️  Database cleanup script failed:', cleanupError);
       }
     }
     
@@ -67,12 +68,12 @@ async function cleanupTestDatabase(): Promise<void> {
     }
     
   } catch (error) {
-    console.warn('⚠️  Database cleanup failed:', error);
+    safeLogger.warn('⚠️  Database cleanup failed:', error);
   }
 }
 
 async function cleanupTestCache(): Promise<void> {
-  console.log('🗄️  Cleaning up test cache...');
+  safeLogger.info('🗄️  Cleaning up test cache...');
   
   try {
     // Clear Redis test database if used
@@ -82,9 +83,9 @@ async function cleanupTestCache(): Promise<void> {
           stdio: 'pipe',
           timeout: 5000
         });
-        console.log('✅ Redis test cache cleared');
+        safeLogger.info('✅ Redis test cache cleared');
       } catch (redisError) {
-        console.warn('⚠️  Redis cleanup failed (may not be running):', redisError);
+        safeLogger.warn('⚠️  Redis cleanup failed (may not be running):', redisError);
       }
     }
     
@@ -94,12 +95,12 @@ async function cleanupTestCache(): Promise<void> {
     }
     
   } catch (error) {
-    console.warn('⚠️  Cache cleanup failed:', error);
+    safeLogger.warn('⚠️  Cache cleanup failed:', error);
   }
 }
 
 async function cleanupTestFiles(): Promise<void> {
-  console.log('📁 Cleaning up test files...');
+  safeLogger.info('📁 Cleaning up test files...');
   
   try {
     const filesToCleanup = [
@@ -130,9 +131,9 @@ async function cleanupTestFiles(): Promise<void> {
     // Clean up old test reports (keep last 5)
     await cleanupOldTestReports();
     
-    console.log('✅ Test files cleaned up');
+    safeLogger.info('✅ Test files cleaned up');
   } catch (error) {
-    console.warn('⚠️  File cleanup failed:', error);
+    safeLogger.warn('⚠️  File cleanup failed:', error);
   }
 }
 
@@ -158,16 +159,16 @@ async function cleanupOldTestReports(): Promise<void> {
       }
       
       if (filesToDelete.length > 0) {
-        console.log(`✅ Cleaned up ${filesToDelete.length} old test reports`);
+        safeLogger.info(`✅ Cleaned up ${filesToDelete.length} old test reports`);
       }
     }
   } catch (error) {
-    console.warn('⚠️  Test report cleanup failed:', error);
+    safeLogger.warn('⚠️  Test report cleanup failed:', error);
   }
 }
 
 async function cleanupProcesses(): Promise<void> {
-  console.log('🔄 Cleaning up test processes...');
+  safeLogger.info('🔄 Cleaning up test processes...');
   
   try {
     // Force garbage collection if available
@@ -201,9 +202,9 @@ async function cleanupProcesses(): Promise<void> {
       delete global.__TEST_HANDLES__;
     }
     
-    console.log('✅ Test processes cleaned up');
+    safeLogger.info('✅ Test processes cleaned up');
   } catch (error) {
-    console.warn('⚠️  Process cleanup failed:', error);
+    safeLogger.warn('⚠️  Process cleanup failed:', error);
   }
 }
 

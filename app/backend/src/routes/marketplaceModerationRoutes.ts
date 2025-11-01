@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { MarketplaceModerationController } from '../controllers/marketplaceModerationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { apiLimiter } from '../middleware/rateLimiter';
@@ -18,7 +19,7 @@ const verificationLimiter = apiLimiter;
  * @desc Moderate a complete marketplace listing
  * @access Private
  */
-router.post('/moderate', 
+router.post('/moderate', csrfProtection,  
   standardLimiter,
   authMiddleware,
   controller.moderateListing.bind(controller)
@@ -29,7 +30,7 @@ router.post('/moderate',
  * @desc Verify NFT ownership for high-value listings
  * @access Private
  */
-router.post('/verify-nft',
+router.post('/verify-nft', csrfProtection, 
   verificationLimiter,
   authMiddleware,
   controller.verifyNFTOwnership.bind(controller)
@@ -40,7 +41,7 @@ router.post('/verify-nft',
  * @desc Check for counterfeit products
  * @access Private
  */
-router.post('/check-counterfeit',
+router.post('/check-counterfeit', csrfProtection, 
   standardLimiter,
   authMiddleware,
   controller.checkCounterfeit.bind(controller)
@@ -51,7 +52,7 @@ router.post('/check-counterfeit',
  * @desc Detect scam patterns in listings
  * @access Private
  */
-router.post('/detect-scam',
+router.post('/detect-scam', csrfProtection, 
   standardLimiter,
   authMiddleware,
   controller.detectScam.bind(controller)
@@ -84,7 +85,7 @@ router.get('/status/:listingId',
  * @desc Bulk moderate multiple listings
  * @access Private
  */
-router.post('/bulk-moderate',
+router.post('/bulk-moderate', csrfProtection, 
   bulkLimiter,
   authMiddleware,
   controller.bulkModerate.bind(controller)

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { PerformanceOptimizationService, ContentInput } from '../services/performanceOptimizationService';
 import { PerceptualHashingService } from '../services/perceptualHashingService';
 import { TextHashingService } from '../services/textHashingService';
@@ -310,7 +311,7 @@ describe('Performance Optimization Validation Tests', () => {
           const result = await performanceService.processContent(content);
           results.push(result);
         } catch (error) {
-          console.error('Sustained load error:', error);
+          safeLogger.error('Sustained load error:', error);
         }
       }, requestInterval);
 

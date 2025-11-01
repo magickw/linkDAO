@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getStakingTiers,
   getFlexibleStakingOptions,
@@ -27,17 +28,17 @@ router.get('/tiers/:tierId', getStakingTierDetails);
 router.get('/options/:userId', getFlexibleStakingOptions);
 
 // Staking calculations
-router.post('/calculate-rewards', calculateStakingRewards);
+router.post('/calculate-rewards', csrfProtection,  calculateStakingRewards);
 router.get('/calculate-penalty/:positionId', calculateEarlyWithdrawalPenalty);
 
 // Staking positions
-router.post('/positions', createStakePosition);
+router.post('/positions', csrfProtection,  createStakePosition);
 router.get('/positions/:userId', getUserStakePositions);
 router.get('/position/:positionId', getStakePositionDetails);
 
 // Staking operations
-router.post('/partial-unstake', processPartialUnstaking);
-router.post('/auto-compound', processAutoCompounding);
+router.post('/partial-unstake', csrfProtection,  processPartialUnstaking);
+router.post('/auto-compound', csrfProtection,  processAutoCompounding);
 
 // Analytics
 router.get('/analytics/:userId', getUserStakingAnalytics);

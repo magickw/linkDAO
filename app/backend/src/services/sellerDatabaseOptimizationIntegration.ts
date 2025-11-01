@@ -5,6 +5,7 @@
  */
 
 import { Pool } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import DatabaseOptimizationService from './databaseOptimizationService';
 import DatabaseConnectionOptimizer from './databaseConnectionOptimizer';
 import SellerQueryOptimizer from './sellerQueryOptimizer';
@@ -83,7 +84,7 @@ export class SellerDatabaseOptimizationIntegration {
       try {
         await this.runOptimizationAnalysis();
       } catch (error) {
-        console.error('Integrated optimization monitoring error:', error);
+        safeLogger.error('Integrated optimization monitoring error:', error);
       }
     }, 600000); // 10 minutes
   }
@@ -108,7 +109,7 @@ export class SellerDatabaseOptimizationIntegration {
       this.logPerformanceIssues(report);
 
     } catch (error) {
-      console.error('Failed to run optimization analysis:', error);
+      safeLogger.error('Failed to run optimization analysis:', error);
     }
   }
 
@@ -325,7 +326,7 @@ export class SellerDatabaseOptimizationIntegration {
           if (matchingRec) {
             const success = await this.databaseOptimizer.createIndex(matchingRec);
             if (success) {
-              console.log(`Automatically applied index optimization: ${matchingRec.createStatement}`);
+              safeLogger.info(`Automatically applied index optimization: ${matchingRec.createStatement}`);
             }
           }
         }
@@ -333,11 +334,11 @@ export class SellerDatabaseOptimizationIntegration {
         if (recommendation.category === 'connection') {
           // Apply connection optimizations
           await this.connectionOptimizer.forceOptimization();
-          console.log('Applied connection pool optimization');
+          safeLogger.info('Applied connection pool optimization');
         }
 
       } catch (error) {
-        console.error(`Failed to apply automatic optimization: ${recommendation.description}`, error);
+        safeLogger.error(`Failed to apply automatic optimization: ${recommendation.description}`, error);
       }
     }
   }
@@ -350,19 +351,19 @@ export class SellerDatabaseOptimizationIntegration {
     const warningIssues = report.performanceIssues.filter(issue => issue.severity === 'warning');
 
     if (criticalIssues.length > 0) {
-      console.error('CRITICAL SELLER DATABASE PERFORMANCE ISSUES:');
+      safeLogger.error('CRITICAL SELLER DATABASE PERFORMANCE ISSUES:');
       criticalIssues.forEach(issue => {
-        console.error(`- ${issue.component}: ${issue.issue}`);
-        console.error(`  Impact: ${issue.impact}`);
-        console.error(`  Resolution: ${issue.resolution}`);
+        safeLogger.error(`- ${issue.component}: ${issue.issue}`);
+        safeLogger.error(`  Impact: ${issue.impact}`);
+        safeLogger.error(`  Resolution: ${issue.resolution}`);
       });
     }
 
     if (warningIssues.length > 0) {
-      console.warn('SELLER DATABASE PERFORMANCE WARNINGS:');
+      safeLogger.warn('SELLER DATABASE PERFORMANCE WARNINGS:');
       warningIssues.forEach(issue => {
-        console.warn(`- ${issue.component}: ${issue.issue}`);
-        console.warn(`  Resolution: ${issue.resolution}`);
+        safeLogger.warn(`- ${issue.component}: ${issue.issue}`);
+        safeLogger.warn(`  Resolution: ${issue.resolution}`);
       });
     }
   }

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 
 export class EncryptionService {
   private readonly algorithm = 'aes-256-gcm';
@@ -36,7 +37,7 @@ export class EncryptionService {
         encryptionKey: encryptionKey.toString('hex')
       };
     } catch (error) {
-      console.error('Error encrypting content:', error);
+      safeLogger.error('Error encrypting content:', error);
       throw new Error('Failed to encrypt content');
     }
   }
@@ -64,7 +65,7 @@ export class EncryptionService {
       
       return decrypted;
     } catch (error) {
-      console.error('Error decrypting content:', error);
+      safeLogger.error('Error decrypting content:', error);
       throw new Error('Failed to decrypt content');
     }
   }
@@ -88,7 +89,7 @@ export class EncryptionService {
       
       return result.toString('base64');
     } catch (error) {
-      console.error('Error encrypting key:', error);
+      safeLogger.error('Error encrypting key:', error);
       throw new Error('Failed to encrypt key');
     }
   }
@@ -115,7 +116,7 @@ export class EncryptionService {
       
       return decrypted.toString('utf8');
     } catch (error) {
-      console.error('Error decrypting key:', error);
+      safeLogger.error('Error decrypting key:', error);
       throw new Error('Failed to decrypt key');
     }
   }
@@ -133,7 +134,7 @@ export class EncryptionService {
       // This is a placeholder - implement based on your infrastructure
       process.env[`ASSET_KEY_${assetId}`] = encryptedKey;
     } catch (error) {
-      console.error('Error storing key:', error);
+      safeLogger.error('Error storing key:', error);
       throw new Error('Failed to store encryption key');
     }
   }
@@ -152,7 +153,7 @@ export class EncryptionService {
       
       return await this.decryptKey(encryptedKey);
     } catch (error) {
-      console.error('Error retrieving key:', error);
+      safeLogger.error('Error retrieving key:', error);
       throw new Error('Failed to retrieve encryption key');
     }
   }
@@ -202,7 +203,7 @@ export class EncryptionService {
       sign.update(content);
       return sign.sign(privateKey, 'base64');
     } catch (error) {
-      console.error('Error signing content:', error);
+      safeLogger.error('Error signing content:', error);
       throw new Error('Failed to sign content');
     }
   }
@@ -216,7 +217,7 @@ export class EncryptionService {
       verify.update(content);
       return verify.verify(publicKey, signature, 'base64');
     } catch (error) {
-      console.error('Error verifying signature:', error);
+      safeLogger.error('Error verifying signature:', error);
       return false;
     }
   }
@@ -269,7 +270,7 @@ export class EncryptionService {
         userId: payload.userId
       };
     } catch (error) {
-      console.error('Error verifying access token:', error);
+      safeLogger.error('Error verifying access token:', error);
       return null;
     }
   }

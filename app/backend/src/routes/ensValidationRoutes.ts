@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { ensValidationService } from '../services/ensValidationService';
 import {
   successResponse,
@@ -85,7 +87,7 @@ router.post(
         200
       );
     } catch (error) {
-      console.error('Error in ENS validation endpoint:', error);
+      safeLogger.error('Error in ENS validation endpoint:', error);
 
       return errorResponse(
         res,
@@ -160,7 +162,7 @@ router.post(
         200
       );
     } catch (error) {
-      console.error('Error in ENS ownership verification endpoint:', error);
+      safeLogger.error('Error in ENS ownership verification endpoint:', error);
 
       return errorResponse(
         res,
@@ -214,7 +216,7 @@ router.get(
         200
       );
     } catch (error) {
-      console.error('Error fetching ENS verifications:', error);
+      safeLogger.error('Error fetching ENS verifications:', error);
 
       return errorResponse(
         res,
@@ -277,7 +279,7 @@ router.delete(
         200
       );
     } catch (error) {
-      console.error('Error revoking ENS verification:', error);
+      safeLogger.error('Error revoking ENS verification:', error);
 
       return errorResponse(
         res,
@@ -331,7 +333,7 @@ router.get(
         200
       );
     } catch (error) {
-      console.error('Error resolving ENS name:', error);
+      safeLogger.error('Error resolving ENS name:', error);
 
       return errorResponse(
         res,
@@ -386,7 +388,7 @@ router.get(
         200
       );
     } catch (error) {
-      console.error('Error reverse resolving address:', error);
+      safeLogger.error('Error reverse resolving address:', error);
 
       return errorResponse(
         res,

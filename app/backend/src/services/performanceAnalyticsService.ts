@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { enhancedSystemHealthService, SystemHealthScore } from './enhancedSystemHealthService';
 import { capacityPlanningService, PerformanceBottleneck } from './capacityPlanningService';
 import { systemHealthMonitoringService, HealthMetrics } from './systemHealthMonitoringService';
@@ -276,7 +277,7 @@ export class PerformanceAnalyticsService extends EventEmitter {
         await this.generateOptimizationRecommendations();
         await this.detectPerformanceAnomalies();
       } catch (error) {
-        console.error('Performance analysis error:', error);
+        safeLogger.error('Performance analysis error:', error);
         this.emit('analysisError', error);
       }
     }, this.analysisInterval);
@@ -287,7 +288,7 @@ export class PerformanceAnalyticsService extends EventEmitter {
         await this.evaluateBenchmarks();
         await this.assessPerformanceImpact();
       } catch (error) {
-        console.error('Benchmark evaluation error:', error);
+        safeLogger.error('Benchmark evaluation error:', error);
         this.emit('benchmarkError', error);
       }
     }, this.benchmarkInterval);

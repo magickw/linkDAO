@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, users, moderationAuditLog } from '../db/schema';
 import { eq, desc, and, gte, lte, sql, count, avg, sum } from 'drizzle-orm';
 import { aiContentRiskScoringService } from './aiContentRiskScoringService';
@@ -117,7 +118,7 @@ export class ModerationWorkflowOptimizationService {
       };
 
     } catch (error) {
-      console.error('Error optimizing moderation queue:', error);
+      safeLogger.error('Error optimizing moderation queue:', error);
       throw new Error('Failed to optimize moderation queue');
     }
   }
@@ -426,7 +427,7 @@ export class ModerationWorkflowOptimizationService {
       return bottlenecks;
 
     } catch (error) {
-      console.error('Error analyzing bottlenecks:', error);
+      safeLogger.error('Error analyzing bottlenecks:', error);
       return [];
     }
   }
@@ -487,7 +488,7 @@ export class ModerationWorkflowOptimizationService {
       };
 
     } catch (error) {
-      console.error('Error calculating workflow metrics:', error);
+      safeLogger.error('Error calculating workflow metrics:', error);
       throw new Error('Failed to calculate workflow metrics');
     }
   }
@@ -526,7 +527,7 @@ export class ModerationWorkflowOptimizationService {
         }));
 
     } catch (error) {
-      console.error('Error calculating moderator efficiencies:', error);
+      safeLogger.error('Error calculating moderator efficiencies:', error);
       return [];
     }
   }
@@ -572,7 +573,7 @@ export class ModerationWorkflowOptimizationService {
       return compliantCases / cases.length;
 
     } catch (error) {
-      console.error('Error calculating SLA compliance:', error);
+      safeLogger.error('Error calculating SLA compliance:', error);
       return 0.5; // Default to 50% if calculation fails
     }
   }

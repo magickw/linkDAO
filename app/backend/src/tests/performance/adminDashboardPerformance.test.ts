@@ -1,4 +1,5 @@
 import { describe, it, expect, jest, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import request from 'supertest';
 import { performance } from 'perf_hooks';
 import { app } from '../../index';
@@ -58,7 +59,7 @@ describe('Admin Dashboard Performance Tests', () => {
       expect(response.body).toHaveProperty('systemHealth');
       expect(response.body).toHaveProperty('moderationQueue');
       
-      console.log(`Dashboard metrics loaded in ${responseTime.toFixed(2)}ms`);
+      safeLogger.info(`Dashboard metrics loaded in ${responseTime.toFixed(2)}ms`);
     });
 
     it('should handle concurrent dashboard requests efficiently', async () => {
@@ -89,8 +90,8 @@ describe('Admin Dashboard Performance Tests', () => {
       const averageResponseTime = totalTime / concurrentRequests;
       expect(averageResponseTime).toBeLessThan(1000); // Less than 1 second average
 
-      console.log(`${concurrentRequests} concurrent requests completed in ${totalTime.toFixed(2)}ms`);
-      console.log(`Average response time: ${averageResponseTime.toFixed(2)}ms`);
+      safeLogger.info(`${concurrentRequests} concurrent requests completed in ${totalTime.toFixed(2)}ms`);
+      safeLogger.info(`Average response time: ${averageResponseTime.toFixed(2)}ms`);
     });
 
     it('should efficiently paginate large datasets', async () => {
@@ -122,7 +123,7 @@ describe('Admin Dashboard Performance Tests', () => {
       expect(response.body.pagination).toHaveProperty('total');
       expect(response.body.pagination).toHaveProperty('pages');
 
-      console.log(`Paginated query (${pageSize} items) completed in ${responseTime.toFixed(2)}ms`);
+      safeLogger.info(`Paginated query (${pageSize} items) completed in ${responseTime.toFixed(2)}ms`);
     });
   });
 
@@ -151,7 +152,7 @@ describe('Admin Dashboard Performance Tests', () => {
       expect(response.body).toHaveProperty('engagementMetrics');
       expect(response.body).toHaveProperty('revenueMetrics');
 
-      console.log(`Analytics overview generated in ${responseTime.toFixed(2)}ms`);
+      safeLogger.info(`Analytics overview generated in ${responseTime.toFixed(2)}ms`);
     });
 
     it('should handle complex aggregation queries efficiently', async () => {
@@ -199,7 +200,7 @@ describe('Admin Dashboard Performance Tests', () => {
       expect(response.body).toHaveProperty('results');
       expect(Array.isArray(response.body.results)).toBe(true);
 
-      console.log(`Complex aggregation query completed in ${responseTime.toFixed(2)}ms`);
+      safeLogger.info(`Complex aggregation query completed in ${responseTime.toFixed(2)}ms`);
     });
 
     it('should optimize chart data generation', async () => {
@@ -232,7 +233,7 @@ describe('Admin Dashboard Performance Tests', () => {
         expect(response.body).toHaveProperty('metadata');
       }
 
-      console.log('Chart generation performance:', performanceResults);
+      safeLogger.info('Chart generation performance:', performanceResults);
     });
   });
 
@@ -302,7 +303,7 @@ describe('Admin Dashboard Performance Tests', () => {
       // Cleanup connections
       connections.forEach(ws => ws.close());
 
-      console.log(`WebSocket performance - Avg connection: ${averageConnectionTime.toFixed(2)}ms, Broadcast: ${broadcastTime.toFixed(2)}ms`);
+      safeLogger.info(`WebSocket performance - Avg connection: ${averageConnectionTime.toFixed(2)}ms, Broadcast: ${broadcastTime.toFixed(2)}ms`);
     });
 
     it('should throttle high-frequency updates appropriately', async () => {
@@ -360,7 +361,7 @@ describe('Admin Dashboard Performance Tests', () => {
       const expectedMaxMessages = testDuration / 1000; // At most 1 per second
       expect(messageCount).toBeLessThanOrEqual(expectedMaxMessages * 2); // Allow some buffer
 
-      console.log(`Received ${messageCount} throttled updates over ${testDuration}ms`);
+      safeLogger.info(`Received ${messageCount} throttled updates over ${testDuration}ms`);
     });
   });
 
@@ -405,7 +406,7 @@ describe('Admin Dashboard Performance Tests', () => {
           expect(statusResponse.body.insights).toBeDefined();
           expect(Array.isArray(statusResponse.body.insights)).toBe(true);
 
-          console.log(`AI insights generated in ${processingTime.toFixed(2)}ms`);
+          safeLogger.info(`AI insights generated in ${processingTime.toFixed(2)}ms`);
         }
         
         attempts++;
@@ -444,7 +445,7 @@ describe('Admin Dashboard Performance Tests', () => {
       const acceptedJobs = responses.filter(r => r.status === 202);
       expect(acceptedJobs.length).toBeGreaterThan(0);
 
-      console.log(`${acceptedJobs.length}/${concurrentJobs} AI jobs accepted for concurrent processing`);
+      safeLogger.info(`${acceptedJobs.length}/${concurrentJobs} AI jobs accepted for concurrent processing`);
     });
   });
 
@@ -488,7 +489,7 @@ describe('Admin Dashboard Performance Tests', () => {
         expect(queryTime).toBeLessThan(query.expectedTime);
         expect(response.body).toBeDefined();
 
-        console.log(`${query.name}: ${queryTime.toFixed(2)}ms (expected < ${query.expectedTime}ms)`);
+        safeLogger.info(`${query.name}: ${queryTime.toFixed(2)}ms (expected < ${query.expectedTime}ms)`);
       }
     });
 
@@ -520,8 +521,8 @@ describe('Admin Dashboard Performance Tests', () => {
       const averageQueryTime = totalTime / simultaneousQueries;
       expect(averageQueryTime).toBeLessThan(2000);
 
-      console.log(`${simultaneousQueries} simultaneous queries completed in ${totalTime.toFixed(2)}ms`);
-      console.log(`Average query time: ${averageQueryTime.toFixed(2)}ms`);
+      safeLogger.info(`${simultaneousQueries} simultaneous queries completed in ${totalTime.toFixed(2)}ms`);
+      safeLogger.info(`Average query time: ${averageQueryTime.toFixed(2)}ms`);
     });
   });
 
@@ -551,9 +552,9 @@ describe('Admin Dashboard Performance Tests', () => {
       // Memory increase should be reasonable (less than 50% increase)
       expect(memoryIncreasePercent).toBeLessThan(50);
 
-      console.log(`Memory usage - Initial: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`Memory usage - Final: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`Memory increase: ${memoryIncreasePercent.toFixed(2)}%`);
+      safeLogger.info(`Memory usage - Initial: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+      safeLogger.info(`Memory usage - Final: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+      safeLogger.info(`Memory increase: ${memoryIncreasePercent.toFixed(2)}%`);
     });
 
     it('should handle garbage collection efficiently', async () => {
@@ -597,7 +598,7 @@ describe('Admin Dashboard Performance Tests', () => {
       // Memory should return close to initial levels after GC
       expect(Math.abs(memoryDifferencePercent)).toBeLessThan(25);
 
-      console.log(`GC efficiency - Memory difference: ${memoryDifferencePercent.toFixed(2)}%`);
+      safeLogger.info(`GC efficiency - Memory difference: ${memoryDifferencePercent.toFixed(2)}%`);
     });
   });
 
@@ -631,14 +632,14 @@ describe('Admin Dashboard Performance Tests', () => {
 
         performanceResults[loadLevel] = averageResponseTime;
         
-        console.log(`Load level ${loadLevel}: ${averageResponseTime.toFixed(2)}ms average response time`);
+        safeLogger.info(`Load level ${loadLevel}: ${averageResponseTime.toFixed(2)}ms average response time`);
       }
 
       // Performance should scale reasonably (not exponentially)
       const scalingFactor = performanceResults[100] / performanceResults[10];
       expect(scalingFactor).toBeLessThan(5); // Should not be more than 5x slower at 10x load
 
-      console.log(`Scaling factor (100 vs 10 requests): ${scalingFactor.toFixed(2)}x`);
+      safeLogger.info(`Scaling factor (100 vs 10 requests): ${scalingFactor.toFixed(2)}x`);
     });
 
     it('should handle sustained load over time', async () => {
@@ -666,7 +667,7 @@ describe('Admin Dashboard Performance Tests', () => {
           requestCount++;
           
         } catch (error) {
-          console.error('Request failed during sustained load test:', error);
+          safeLogger.error('Request failed during sustained load test:', error);
         }
 
         // Stop after test duration
@@ -696,11 +697,11 @@ describe('Admin Dashboard Performance Tests', () => {
       expect(averageResponseTime).toBeLessThan(2000); // Average under 2 seconds
       expect(maxResponseTime).toBeLessThan(5000); // Max under 5 seconds
 
-      console.log(`Sustained load test results:`);
-      console.log(`- Requests: ${requestCount}`);
-      console.log(`- Success rate: ${successRate.toFixed(2)}%`);
-      console.log(`- Average response time: ${averageResponseTime.toFixed(2)}ms`);
-      console.log(`- Max response time: ${maxResponseTime.toFixed(2)}ms`);
+      safeLogger.info(`Sustained load test results:`);
+      safeLogger.info(`- Requests: ${requestCount}`);
+      safeLogger.info(`- Success rate: ${successRate.toFixed(2)}%`);
+      safeLogger.info(`- Average response time: ${averageResponseTime.toFixed(2)}ms`);
+      safeLogger.info(`- Max response time: ${maxResponseTime.toFixed(2)}ms`);
     });
   });
 });

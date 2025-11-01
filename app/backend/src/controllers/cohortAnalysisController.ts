@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { cohortAnalysisService } from '../services/cohortAnalysisService';
 import { z } from 'zod';
 
@@ -41,7 +43,7 @@ export class CohortAnalysisController {
         data: analysis
       });
     } catch (error) {
-      console.error('Error getting cohort analysis:', error);
+      safeLogger.error('Error getting cohort analysis:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -77,7 +79,7 @@ export class CohortAnalysisController {
         data: comparison
       });
     } catch (error) {
-      console.error('Error comparing cohorts:', error);
+      safeLogger.error('Error comparing cohorts:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -120,7 +122,7 @@ export class CohortAnalysisController {
         data: metrics
       });
     } catch (error) {
-      console.error('Error getting user retention metrics:', error);
+      safeLogger.error('Error getting user retention metrics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -173,7 +175,7 @@ export class CohortAnalysisController {
         }
       });
     } catch (error) {
-      console.error('Error getting cohort heatmap data:', error);
+      safeLogger.error('Error getting cohort heatmap data:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -216,7 +218,7 @@ export class CohortAnalysisController {
         }
       });
     } catch (error) {
-      console.error('Error getting retention trends:', error);
+      safeLogger.error('Error getting retention trends:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -253,7 +255,7 @@ export class CohortAnalysisController {
         data: analysis.churnAnalysis
       });
     } catch (error) {
-      console.error('Error getting churn analysis:', error);
+      safeLogger.error('Error getting churn analysis:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -323,7 +325,7 @@ export class CohortAnalysisController {
         data: summary
       });
     } catch (error) {
-      console.error('Error getting cohort summary:', error);
+      safeLogger.error('Error getting cohort summary:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({

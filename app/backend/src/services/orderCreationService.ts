@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { NotificationService } from './notificationService';
 import { HybridPaymentOrchestrator } from './hybridPaymentOrchestrator';
 import { ProductListingService } from './listingService';
@@ -104,7 +105,7 @@ export class OrderCreationService {
    */
   async createOrder(request: OrderCreationRequest): Promise<OrderCreationResult> {
     try {
-      console.log(`🛒 Creating order for listing ${request.listingId}`);
+      safeLogger.info(`🛒 Creating order for listing ${request.listingId}`);
 
       // 1. Validate the order request
       const validation = await this.validateOrderRequest(request);
@@ -136,7 +137,7 @@ export class OrderCreationService {
       // 6. Send notifications
       const notifications = await this.sendOrderNotifications(order, listing, request);
 
-      console.log(`✅ Order ${order.id} created successfully with number ${orderNumber}`);
+      safeLogger.info(`✅ Order ${order.id} created successfully with number ${orderNumber}`);
 
       return {
         orderId: order.id.toString(),
@@ -151,7 +152,7 @@ export class OrderCreationService {
       };
 
     } catch (error) {
-      console.error('❌ Order creation failed:', error);
+      safeLogger.error('❌ Order creation failed:', error);
       throw error;
     }
   }
@@ -275,7 +276,7 @@ export class OrderCreationService {
         seller: true
       };
     } catch (error) {
-      console.error('Failed to send order notifications:', error);
+      safeLogger.error('Failed to send order notifications:', error);
       return {
         buyer: false,
         seller: false
@@ -334,7 +335,7 @@ export class OrderCreationService {
         estimatedDelivery: '5-7 business days'
       };
     } catch (error) {
-      console.error('Error getting order summary:', error);
+      safeLogger.error('Error getting order summary:', error);
       throw error;
     }
   }
@@ -367,7 +368,7 @@ export class OrderCreationService {
 
       return true;
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
       return false;
     }
   }
@@ -405,7 +406,7 @@ export class OrderCreationService {
         status: 'cancelled'
       };
     } catch (error) {
-      console.error('Error cancelling order:', error);
+      safeLogger.error('Error cancelling order:', error);
       throw error;
     }
   }

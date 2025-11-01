@@ -1,4 +1,5 @@
 import { eq, desc, and, gte, like } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
 import emailService from './emailService';
@@ -74,7 +75,7 @@ class LDAOSupportService {
 
       return ticket;
     } catch (error) {
-      console.error('Error creating support ticket:', error);
+      safeLogger.error('Error creating support ticket:', error);
       throw new Error('Failed to create support ticket');
     }
   }
@@ -86,7 +87,7 @@ class LDAOSupportService {
         .where(eq(supportTickets.userId, userId))
         .orderBy(desc(supportTickets.createdAt));
     } catch (error) {
-      console.error('Error fetching user tickets:', error);
+      safeLogger.error('Error fetching user tickets:', error);
       throw new Error('Failed to fetch support tickets');
     }
   }
@@ -99,7 +100,7 @@ class LDAOSupportService {
       
       return ticket || null;
     } catch (error) {
-      console.error('Error fetching ticket:', error);
+      safeLogger.error('Error fetching ticket:', error);
       throw new Error('Failed to fetch support ticket');
     }
   }
@@ -133,7 +134,7 @@ class LDAOSupportService {
 
       return updatedTicket;
     } catch (error) {
-      console.error('Error updating ticket status:', error);
+      safeLogger.error('Error updating ticket status:', error);
       throw new Error('Failed to update ticket status');
     }
   }
@@ -170,7 +171,7 @@ class LDAOSupportService {
         }
       }
     } catch (error) {
-      console.error('Error adding ticket response:', error);
+      safeLogger.error('Error adding ticket response:', error);
       throw new Error('Failed to add ticket response');
     }
   }
@@ -186,7 +187,7 @@ class LDAOSupportService {
         ))
         .orderBy(desc(supportFAQ.views));
     } catch (error) {
-      console.error('Error fetching FAQ items:', error);
+      safeLogger.error('Error fetching FAQ items:', error);
       throw new Error('Failed to fetch FAQ items');
     }
   }
@@ -211,7 +212,7 @@ class LDAOSupportService {
         faq.tags.some(tag => tag.toLowerCase().includes(escapedQuery.toLowerCase()))
       );
     } catch (error) {
-      console.error('Error searching FAQ:', error);
+      safeLogger.error('Error searching FAQ:', error);
       throw new Error('Failed to search FAQ');
     }
   }
@@ -230,7 +231,7 @@ class LDAOSupportService {
           .where(eq(supportFAQ.id, faqId));
       }
     } catch (error) {
-      console.error('Error updating FAQ helpfulness:', error);
+      safeLogger.error('Error updating FAQ helpfulness:', error);
       throw new Error('Failed to update FAQ rating');
     }
   }
@@ -246,7 +247,7 @@ class LDAOSupportService {
           .where(eq(supportFAQ.id, faqId));
       }
     } catch (error) {
-      console.error('Error incrementing FAQ views:', error);
+      safeLogger.error('Error incrementing FAQ views:', error);
     }
   }
 
@@ -290,7 +291,7 @@ class LDAOSupportService {
         ticketsByPriority
       };
     } catch (error) {
-      console.error('Error calculating support metrics:', error);
+      safeLogger.error('Error calculating support metrics:', error);
       throw new Error('Failed to calculate support metrics');
     }
   }
@@ -315,7 +316,7 @@ class LDAOSupportService {
         await this.updateTicketStatus(ticket.id, 'in-progress', availableAgent.id);
       }
     } catch (error) {
-      console.error('Error auto-assigning ticket:', error);
+      safeLogger.error('Error auto-assigning ticket:', error);
     }
   }
 
@@ -341,7 +342,7 @@ class LDAOSupportService {
         ticket.priority
       );
     } catch (error) {
-      console.error('Error sending ticket confirmation:', error);
+      safeLogger.error('Error sending ticket confirmation:', error);
     }
   }
 
@@ -358,7 +359,7 @@ class LDAOSupportService {
       // In production, this would notify all available agents
       await createNotification('support-team', notification);
     } catch (error) {
-      console.error('Error notifying support team:', error);
+      safeLogger.error('Error notifying support team:', error);
     }
   }
 
@@ -379,7 +380,7 @@ class LDAOSupportService {
 
       await createNotification(ticket.userId, notification);
     } catch (error) {
-      console.error('Error notifying ticket status change:', error);
+      safeLogger.error('Error notifying ticket status change:', error);
     }
   }
 
@@ -394,7 +395,7 @@ class LDAOSupportService {
 
       await createNotification(ticket.userId, notification);
     } catch (error) {
-      console.error('Error notifying user of response:', error);
+      safeLogger.error('Error notifying user of response:', error);
     }
   }
 
@@ -411,7 +412,7 @@ class LDAOSupportService {
         await createNotification(ticket.assignedTo, notification);
       }
     } catch (error) {
-      console.error('Error notifying staff of user response:', error);
+      safeLogger.error('Error notifying staff of user response:', error);
     }
   }
 
@@ -462,7 +463,7 @@ class LDAOSupportService {
       
       return chatSessionId;
     } catch (error) {
-      console.error('Error initiating live chat:', error);
+      safeLogger.error('Error initiating live chat:', error);
       throw new Error('Failed to initiate live chat');
     }
   }
@@ -479,7 +480,7 @@ class LDAOSupportService {
 
       return faq;
     } catch (error) {
-      console.error('Error creating FAQ item:', error);
+      safeLogger.error('Error creating FAQ item:', error);
       throw new Error('Failed to create FAQ item');
     }
   }
@@ -496,7 +497,7 @@ class LDAOSupportService {
 
       return updatedFAQ;
     } catch (error) {
-      console.error('Error updating FAQ item:', error);
+      safeLogger.error('Error updating FAQ item:', error);
       throw new Error('Failed to update FAQ item');
     }
   }

@@ -123,10 +123,10 @@ export function FeedErrorBoundary({ children, onRetry }: FeedErrorBoundaryProps)
           Reload Feed
         </button>
         <button 
-          onClick={() => window.location.href = '/dashboard'}
+          onClick={() => window.location.href = '/'}
           className="px-6 py-3 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 font-medium"
         >
-          Go to Dashboard
+          Go to Home
         </button>
       </div>
     </div>
@@ -176,10 +176,10 @@ export function CommunityErrorBoundary({ children, communityId, onRetry }: Commu
           Try Again
         </button>
         <button 
-          onClick={() => window.location.href = '/dashboard'}
+          onClick={() => window.location.href = '/'}
           className="px-6 py-3 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 font-medium"
         >
-          Back to Dashboard
+          Back to Home
         </button>
       </div>
     </div>

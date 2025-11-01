@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, query, param } from 'express-validator';
 import { HybridPaymentController } from '../controllers/hybridPaymentController';
 import { validateRequest } from '../middleware/validateRequest';
@@ -19,7 +20,7 @@ router.use(rateLimiter({
  * @desc Get optimal payment path recommendation
  * @access Public
  */
-router.post('/recommend-path',
+router.post('/recommend-path', csrfProtection, 
   [
     body('orderId')
       .isString()
@@ -63,7 +64,7 @@ router.post('/recommend-path',
  * @desc Process hybrid checkout with automatic path selection
  * @access Public
  */
-router.post('/checkout',
+router.post('/checkout', csrfProtection, 
   [
     body('orderId')
       .isString()
@@ -111,7 +112,7 @@ router.post('/checkout',
  * @desc Handle order fulfillment actions (delivery confirmation, fund release, disputes)
  * @access Public
  */
-router.post('/orders/:orderId/fulfill',
+router.post('/orders/:orderId/fulfill', csrfProtection, 
   [
     param('orderId')
       .isString()
@@ -194,7 +195,7 @@ router.get('/orders/:orderId/history',
  * @desc Switch payment method for pending order
  * @access Public
  */
-router.post('/orders/:orderId/switch-method',
+router.post('/orders/:orderId/switch-method', csrfProtection, 
   [
     param('orderId')
       .isString()

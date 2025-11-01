@@ -1,4 +1,5 @@
 import { moderationMetricsService } from './moderationMetricsService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationLoggingService } from './moderationLoggingService';
 import { db } from '../db/connectionPool';
 import { moderation_cases, moderation_appeals, content_reports, moderation_actions } from '../db/schema';
@@ -191,7 +192,7 @@ class ModerationDashboardService {
       };
 
     } catch (error) {
-      console.error('Failed to get accuracy data:', error);
+      safeLogger.error('Failed to get accuracy data:', error);
       return {
         falsePositiveRate: 0,
         falseNegativeRate: 0,
@@ -256,7 +257,7 @@ class ModerationDashboardService {
       };
 
     } catch (error) {
-      console.error('Failed to get appeals data:', error);
+      safeLogger.error('Failed to get appeals data:', error);
       return {
         totalAppeals: 0,
         pendingAppeals: 0,
@@ -387,7 +388,7 @@ class ModerationDashboardService {
       };
 
     } catch (error) {
-      console.error('Failed to get appeal analysis:', error);
+      safeLogger.error('Failed to get appeal analysis:', error);
       return {
         successRateByCategory: {},
         averageStakeAmount: 0,
@@ -471,7 +472,7 @@ class ModerationDashboardService {
       };
 
     } catch (error) {
-      console.error('Failed to get user behavior analysis:', error);
+      safeLogger.error('Failed to get user behavior analysis:', error);
       return {
         reportingPatterns: {
           topReporters: [],
@@ -576,7 +577,7 @@ class ModerationDashboardService {
         }));
 
     } catch (error) {
-      console.error('Failed to get top violation categories:', error);
+      safeLogger.error('Failed to get top violation categories:', error);
       return [];
     }
   }

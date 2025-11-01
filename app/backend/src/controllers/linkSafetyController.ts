@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { LinkSafetyService } from '../services/linkSafetyService';
 import { DomainReputationService } from '../services/domainReputationService';
 import { LinkMonitoringService } from '../services/linkMonitoringService';
@@ -39,7 +41,7 @@ export class LinkSafetyController {
         data: result,
       });
     } catch (error) {
-      console.error('Error analyzing URL:', error);
+      safeLogger.error('Error analyzing URL:', error);
       res.status(500).json({ 
         error: 'Failed to analyze URL',
         details: error.message 
@@ -73,7 +75,7 @@ export class LinkSafetyController {
         total: urls.length,
       });
     } catch (error) {
-      console.error('Error analyzing URLs:', error);
+      safeLogger.error('Error analyzing URLs:', error);
       res.status(500).json({ 
         error: 'Failed to analyze URLs',
         details: error.message 
@@ -107,7 +109,7 @@ export class LinkSafetyController {
         linksFound: results.length,
       });
     } catch (error) {
-      console.error('Error analyzing content links:', error);
+      safeLogger.error('Error analyzing content links:', error);
       res.status(500).json({ 
         error: 'Failed to analyze content links',
         details: error.message 
@@ -139,7 +141,7 @@ export class LinkSafetyController {
         data: reputation,
       });
     } catch (error) {
-      console.error('Error getting domain reputation:', error);
+      safeLogger.error('Error getting domain reputation:', error);
       res.status(500).json({ 
         error: 'Failed to get domain reputation',
         details: error.message 
@@ -171,7 +173,7 @@ export class LinkSafetyController {
         data: analytics,
       });
     } catch (error) {
-      console.error('Error getting domain analytics:', error);
+      safeLogger.error('Error getting domain analytics:', error);
       res.status(500).json({ 
         error: 'Failed to get domain analytics',
         details: error.message 
@@ -222,7 +224,7 @@ export class LinkSafetyController {
         message: 'Entry added to blacklist successfully',
       });
     } catch (error) {
-      console.error('Error adding to blacklist:', error);
+      safeLogger.error('Error adding to blacklist:', error);
       res.status(500).json({ 
         error: 'Failed to add to blacklist',
         details: error.message 
@@ -249,7 +251,7 @@ export class LinkSafetyController {
         count: alerts.length,
       });
     } catch (error) {
-      console.error('Error getting monitoring alerts:', error);
+      safeLogger.error('Error getting monitoring alerts:', error);
       res.status(500).json({ 
         error: 'Failed to get monitoring alerts',
         details: error.message 
@@ -269,7 +271,7 @@ export class LinkSafetyController {
         data: stats,
       });
     } catch (error) {
-      console.error('Error getting monitoring stats:', error);
+      safeLogger.error('Error getting monitoring stats:', error);
       res.status(500).json({ 
         error: 'Failed to get monitoring stats',
         details: error.message 
@@ -301,7 +303,7 @@ export class LinkSafetyController {
         data: assessment,
       });
     } catch (error) {
-      console.error('Error assessing content impact:', error);
+      safeLogger.error('Error assessing content impact:', error);
       res.status(500).json({ 
         error: 'Failed to assess content impact',
         details: error.message 
@@ -332,7 +334,7 @@ export class LinkSafetyController {
         message: 'Alert resolved successfully',
       });
     } catch (error) {
-      console.error('Error resolving alert:', error);
+      safeLogger.error('Error resolving alert:', error);
       res.status(500).json({ 
         error: 'Failed to resolve alert',
         details: error.message 
@@ -352,7 +354,7 @@ export class LinkSafetyController {
         message: 'Link monitoring started',
       });
     } catch (error) {
-      console.error('Error starting monitoring:', error);
+      safeLogger.error('Error starting monitoring:', error);
       res.status(500).json({ 
         error: 'Failed to start monitoring',
         details: error.message 
@@ -372,7 +374,7 @@ export class LinkSafetyController {
         message: 'Link monitoring stopped',
       });
     } catch (error) {
-      console.error('Error stopping monitoring:', error);
+      safeLogger.error('Error stopping monitoring:', error);
       res.status(500).json({ 
         error: 'Failed to stop monitoring',
         details: error.message 
@@ -404,7 +406,7 @@ export class LinkSafetyController {
         },
       });
     } catch (error) {
-      console.error('Error testing vendor connections:', error);
+      safeLogger.error('Error testing vendor connections:', error);
       res.status(500).json({ 
         error: 'Failed to test vendor connections',
         details: error.message 
@@ -430,7 +432,7 @@ export class LinkSafetyController {
         count: domains.length,
       });
     } catch (error) {
-      console.error('Error getting top domains:', error);
+      safeLogger.error('Error getting top domains:', error);
       res.status(500).json({ 
         error: 'Failed to get top domains',
         details: error.message 
@@ -458,7 +460,7 @@ export class LinkSafetyController {
         message: 'Domain verified successfully',
       });
     } catch (error) {
-      console.error('Error verifying domain:', error);
+      safeLogger.error('Error verifying domain:', error);
       res.status(500).json({ 
         error: 'Failed to verify domain',
         details: error.message 
@@ -492,7 +494,7 @@ export class LinkSafetyController {
         message: 'Domain blacklisted successfully',
       });
     } catch (error) {
-      console.error('Error blacklisting domain:', error);
+      safeLogger.error('Error blacklisting domain:', error);
       res.status(500).json({ 
         error: 'Failed to blacklist domain',
         details: error.message 

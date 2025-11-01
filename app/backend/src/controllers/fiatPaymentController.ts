@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { StripePaymentService } from '../services/stripePaymentService';
 import { PurchaseRequest } from '../types/ldaoAcquisition';
 
@@ -58,7 +60,7 @@ export class FiatPaymentController {
         });
       }
     } catch (error) {
-      console.error('Payment intent creation error:', error);
+      safeLogger.error('Payment intent creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create payment intent',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -81,7 +83,7 @@ export class FiatPaymentController {
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Payment confirmation error:', error);
+      safeLogger.error('Payment confirmation error:', error);
       res.status(500).json({ 
         error: 'Failed to confirm payment',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -117,7 +119,7 @@ export class FiatPaymentController {
         metadata: paymentIntent.metadata,
       });
     } catch (error) {
-      console.error('Payment status retrieval error:', error);
+      safeLogger.error('Payment status retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve payment status',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -130,7 +132,7 @@ export class FiatPaymentController {
       const signature = req.headers['stripe-signature'] as string;
       
       if (!signature) {
-        console.error('Missing Stripe signature');
+        safeLogger.error('Missing Stripe signature');
         res.status(400).json({ error: 'Missing signature' });
         return;
       }
@@ -138,7 +140,7 @@ export class FiatPaymentController {
       const event = await this.stripeService.handleWebhook(req.body, signature);
       
       if (!event) {
-        console.error('Invalid webhook signature');
+        safeLogger.error('Invalid webhook signature');
         res.status(400).json({ error: 'Invalid signature' });
         return;
       }
@@ -148,7 +150,7 @@ export class FiatPaymentController {
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error('Stripe webhook error:', error);
+      safeLogger.error('Stripe webhook error:', error);
       res.status(500).json({ 
         error: 'Webhook processing failed',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -183,7 +185,7 @@ export class FiatPaymentController {
         customerId 
       });
     } catch (error) {
-      console.error('Customer creation error:', error);
+      safeLogger.error('Customer creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create customer',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -202,7 +204,7 @@ export class FiatPaymentController {
         ...result
       });
     } catch (error) {
-      console.error('Setup intent creation error:', error);
+      safeLogger.error('Setup intent creation error:', error);
       res.status(500).json({ 
         error: 'Failed to create setup intent',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -237,7 +239,7 @@ export class FiatPaymentController {
         }))
       });
     } catch (error) {
-      console.error('Payment methods retrieval error:', error);
+      safeLogger.error('Payment methods retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve payment methods',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -270,7 +272,7 @@ export class FiatPaymentController {
         reason: reason || 'requested_by_customer'
       });
     } catch (error) {
-      console.error('Refund processing error:', error);
+      safeLogger.error('Refund processing error:', error);
       res.status(500).json({ 
         error: 'Failed to process refund',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -293,7 +295,7 @@ export class FiatPaymentController {
 
       res.status(200).json(result);
     } catch (error) {
-      console.error('Payment retry error:', error);
+      safeLogger.error('Payment retry error:', error);
       res.status(500).json({ 
         error: 'Failed to retry payment',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -312,7 +314,7 @@ export class FiatPaymentController {
         supportedWallets: ['apple_pay', 'google_pay'],
       });
     } catch (error) {
-      console.error('Supported methods retrieval error:', error);
+      safeLogger.error('Supported methods retrieval error:', error);
       res.status(500).json({ 
         error: 'Failed to retrieve supported methods',
         message: error instanceof Error ? error.message : 'Unknown error'

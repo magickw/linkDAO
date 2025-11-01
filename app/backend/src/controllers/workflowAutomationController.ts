@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { WorkflowAutomationEngine } from '../services/workflowAutomationEngine';
 import { 
   CreateWorkflowTemplateRequest, 

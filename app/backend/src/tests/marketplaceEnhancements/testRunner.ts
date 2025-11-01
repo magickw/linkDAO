@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -88,12 +89,12 @@ class MarketplaceTestRunner {
   private results: TestResult[] = [];
 
   constructor() {
-    console.log('🚀 Marketplace Enhancements Test Runner');
-    console.log('=========================================\n');
+    safeLogger.info('🚀 Marketplace Enhancements Test Runner');
+    safeLogger.info('=========================================\n');
   }
 
   async runAllTests(): Promise<void> {
-    console.log(`Running ${this.testSuites.length} test suites...\n`);
+    safeLogger.info(`Running ${this.testSuites.length} test suites...\n`);
 
     for (const suite of this.testSuites) {
       await this.runTestSuite(suite);
@@ -103,9 +104,9 @@ class MarketplaceTestRunner {
   }
 
   async runTestSuite(suite: TestSuite): Promise<void> {
-    console.log(`📋 ${suite.name}`);
-    console.log(`   ${suite.description}`);
-    console.log(`   Category: ${suite.category.toUpperCase()}`);
+    safeLogger.info(`📋 ${suite.name}`);
+    safeLogger.info(`   ${suite.description}`);
+    safeLogger.info(`   Category: ${suite.category.toUpperCase()}`);
 
     const startTime = Date.now();
     let passed = false;
@@ -141,13 +142,13 @@ class MarketplaceTestRunner {
       });
 
       passed = true;
-      console.log(`   ✅ PASSED (${Date.now() - startTime}ms)\n`);
+      safeLogger.info(`   ✅ PASSED (${Date.now() - startTime}ms)\n`);
 
     } catch (err: any) {
       error = err.message;
       output = err.stdout || err.message;
-      console.log(`   ❌ FAILED (${Date.now() - startTime}ms)`);
-      console.log(`   Error: ${error}\n`);
+      safeLogger.info(`   ❌ FAILED (${Date.now() - startTime}ms)`);
+      safeLogger.info(`   Error: ${error}\n`);
     }
 
     this.results.push({
@@ -162,7 +163,7 @@ class MarketplaceTestRunner {
   async runSpecificCategory(category: 'unit' | 'integration' | 'e2e'): Promise<void> {
     const suitesToRun = this.testSuites.filter(suite => suite.category === category);
     
-    console.log(`Running ${suitesToRun.length} ${category.toUpperCase()} test suites...\n`);
+    safeLogger.info(`Running ${suitesToRun.length} ${category.toUpperCase()} test suites...\n`);
 
     for (const suite of suitesToRun) {
       await this.runTestSuite(suite);
@@ -177,9 +178,9 @@ class MarketplaceTestRunner {
     );
 
     if (!suite) {
-      console.log(`❌ Test suite "${suiteName}" not found`);
-      console.log('\nAvailable test suites:');
-      this.testSuites.forEach(s => console.log(`  - ${s.name}`));
+      safeLogger.info(`❌ Test suite "${suiteName}" not found`);
+      safeLogger.info('\nAvailable test suites:');
+      this.testSuites.forEach(s => safeLogger.info(`  - ${s.name}`));
       return;
     }
 
@@ -193,27 +194,27 @@ class MarketplaceTestRunner {
     const failedTests = totalTests - passedTests;
     const totalDuration = this.results.reduce((sum, r) => sum + r.duration, 0);
 
-    console.log('\n📊 TEST SUMMARY');
-    console.log('================');
-    console.log(`Total Suites: ${totalTests}`);
-    console.log(`Passed: ${passedTests} ✅`);
-    console.log(`Failed: ${failedTests} ❌`);
-    console.log(`Total Duration: ${totalDuration}ms`);
-    console.log(`Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
+    safeLogger.info('\n📊 TEST SUMMARY');
+    safeLogger.info('================');
+    safeLogger.info(`Total Suites: ${totalTests}`);
+    safeLogger.info(`Passed: ${passedTests} ✅`);
+    safeLogger.info(`Failed: ${failedTests} ❌`);
+    safeLogger.info(`Total Duration: ${totalDuration}ms`);
+    safeLogger.info(`Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
 
     if (failedTests > 0) {
-      console.log('\n❌ FAILED SUITES:');
+      safeLogger.info('\n❌ FAILED SUITES:');
       this.results
         .filter(r => !r.passed)
         .forEach(r => {
-          console.log(`  - ${r.suite}: ${r.error}`);
+          safeLogger.info(`  - ${r.suite}: ${r.error}`);
         });
     }
 
-    console.log('\n📋 DETAILED RESULTS:');
+    safeLogger.info('\n📋 DETAILED RESULTS:');
     this.results.forEach(r => {
       const status = r.passed ? '✅' : '❌';
-      console.log(`  ${status} ${r.suite} (${r.duration}ms)`);
+      safeLogger.info(`  ${status} ${r.suite} (${r.duration}ms)`);
     });
 
     // Generate test report
@@ -239,11 +240,11 @@ class MarketplaceTestRunner {
 
     const reportPath = path.join(__dirname, 'test-report.json');
     require('fs').writeFileSync(reportPath, JSON.stringify(report, null, 2));
-    console.log(`\n📄 Test report saved to: ${reportPath}`);
+    safeLogger.info(`\n📄 Test report saved to: ${reportPath}`);
   }
 
   async validateTestEnvironment(): Promise<boolean> {
-    console.log('🔍 Validating test environment...\n');
+    safeLogger.info('🔍 Validating test environment...\n');
 
     const checks = [
       {
@@ -300,33 +301,33 @@ class MarketplaceTestRunner {
     for (const check of checks) {
       const passed = check.check();
       const status = passed ? '✅' : '❌';
-      console.log(`  ${status} ${check.name}`);
+      safeLogger.info(`  ${status} ${check.name}`);
       
       if (!passed) {
-        console.log(`      ${check.message}`);
+        safeLogger.info(`      ${check.message}`);
         allPassed = false;
       }
     }
 
-    console.log(`\n${allPassed ? '✅' : '❌'} Environment validation ${allPassed ? 'passed' : 'failed'}\n`);
+    safeLogger.info(`\n${allPassed ? '✅' : '❌'} Environment validation ${allPassed ? 'passed' : 'failed'}\n`);
     return allPassed;
   }
 
   listTestSuites(): void {
-    console.log('📋 Available Test Suites:');
-    console.log('=========================\n');
+    safeLogger.info('📋 Available Test Suites:');
+    safeLogger.info('=========================\n');
 
     const categories = ['unit', 'integration', 'e2e'] as const;
     
     categories.forEach(category => {
       const suites = this.testSuites.filter(s => s.category === category);
       if (suites.length > 0) {
-        console.log(`${category.toUpperCase()} TESTS:`);
+        safeLogger.info(`${category.toUpperCase()} TESTS:`);
         suites.forEach(suite => {
-          console.log(`  - ${suite.name}`);
-          console.log(`    ${suite.description}`);
-          console.log(`    Files: ${suite.testFiles.join(', ')}`);
-          console.log('');
+          safeLogger.info(`  - ${suite.name}`);
+          safeLogger.info(`    ${suite.description}`);
+          safeLogger.info(`    Files: ${suite.testFiles.join(', ')}`);
+          safeLogger.info('');
         });
       }
     });
@@ -339,7 +340,7 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.includes('--help') || args.includes('-h')) {
-    console.log(`
+    safeLogger.info(`
 Marketplace Enhancements Test Runner
 
 Usage:
@@ -383,7 +384,7 @@ Examples:
     const suiteIndex = args.indexOf('--suite');
     const suiteName = args[suiteIndex + 1];
     if (!suiteName) {
-      console.log('❌ Please specify a suite name after --suite');
+      safeLogger.info('❌ Please specify a suite name after --suite');
       return;
     }
     await runner.runSpecificSuite(suiteName);
@@ -391,7 +392,7 @@ Examples:
     // Run all tests by default
     const isValid = await runner.validateTestEnvironment();
     if (!isValid) {
-      console.log('❌ Environment validation failed. Please fix the issues above.');
+      safeLogger.info('❌ Environment validation failed. Please fix the issues above.');
       process.exit(1);
     }
     await runner.runAllTests();
@@ -399,7 +400,7 @@ Examples:
 }
 
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch(safeLogger.error);
 }
 
 export { MarketplaceTestRunner };

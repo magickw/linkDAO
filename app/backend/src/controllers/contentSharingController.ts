@@ -5,6 +5,7 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { contentSharingService } from '../services/contentSharingService';
 import { messagingService } from '../services/messagingService';
 import { communityService } from '../services/communityService';

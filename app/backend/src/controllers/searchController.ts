@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { SearchService } from '../services/searchService';
 import { RedisService } from '../services/redisService';
 import { eq, and, or } from 'drizzle-orm';
@@ -62,7 +64,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Search error:', error);
+      safeLogger.error('Search error:', error);
       return res.status(500).json({ error: 'Search failed' });
     }
   }
@@ -109,7 +111,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Post search error:', error);
+      safeLogger.error('Post search error:', error);
       return res.status(500).json({ error: 'Post search failed' });
     }
   }
@@ -146,7 +148,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Community search error:', error);
+      safeLogger.error('Community search error:', error);
       return res.status(500).json({ error: 'Community search failed' });
     }
   }
@@ -177,7 +179,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('User search error:', error);
+      safeLogger.error('User search error:', error);
       return res.status(500).json({ error: 'User search failed' });
     }
   }
@@ -212,7 +214,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Trending content error:', error);
+      safeLogger.error('Trending content error:', error);
       return res.status(500).json({ error: 'Failed to fetch trending content' });
     }
   }
@@ -236,7 +238,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Trending hashtags error:', error);
+      safeLogger.error('Trending hashtags error:', error);
       return res.status(500).json({ error: 'Failed to fetch trending hashtags' });
     }
   }
@@ -270,7 +272,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Hashtag posts error:', error);
+      safeLogger.error('Hashtag posts error:', error);
       return res.status(500).json({ error: 'Failed to fetch hashtag posts' });
     }
   }
@@ -292,7 +294,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Topic content error:', error);
+      safeLogger.error('Topic content error:', error);
       return res.status(500).json({ error: 'Failed to fetch topic content' });
     }
   }
@@ -321,7 +323,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Search suggestions error:', error);
+      safeLogger.error('Search suggestions error:', error);
       return res.status(500).json({ error: 'Failed to fetch search suggestions' });
     }
   }
@@ -349,7 +351,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Community recommendations error:', error);
+      safeLogger.error('Community recommendations error:', error);
       return res.status(500).json({ error: 'Failed to fetch community recommendations' });
     }
   }
@@ -375,7 +377,7 @@ export class SearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('User recommendations error:', error);
+      safeLogger.error('User recommendations error:', error);
       return res.status(500).json({ error: 'Failed to fetch user recommendations' });
     }
   }
@@ -411,7 +413,7 @@ export class SearchController {
         total: suggestions.length
       });
     } catch (error) {
-      console.error('Enhanced search suggestions error:', error);
+      safeLogger.error('Enhanced search suggestions error:', error);
       return res.status(500).json({ error: 'Failed to fetch search suggestions' });
     }
   }

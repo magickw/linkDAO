@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, gte, lte, desc, sum, count, sql } from 'drizzle-orm';
 import { 
   earningActivities, 
@@ -147,7 +148,7 @@ class EarningActivityService {
       };
 
     } catch (error) {
-      console.error('Error processing earning activity:', error);
+      safeLogger.error('Error processing earning activity:', error);
       return {
         success: false,
         tokensEarned: 0,
@@ -191,7 +192,7 @@ class EarningActivityService {
       return Math.max(0.5, Math.min(2.0, qualityScore));
 
     } catch (error) {
-      console.error('Error calculating quality score:', error);
+      safeLogger.error('Error calculating quality score:', error);
       return 1.0;
     }
   }
@@ -214,7 +215,7 @@ class EarningActivityService {
         totalEngagement: result?.reactionCount || 0
       };
     } catch (error) {
-      console.error('Error getting post engagement metrics:', error);
+      safeLogger.error('Error getting post engagement metrics:', error);
       return { totalEngagement: 0 };
     }
   }
@@ -357,7 +358,7 @@ class EarningActivityService {
         }
       });
     } catch (error) {
-      console.error('Error sending earning notification:', error);
+      safeLogger.error('Error sending earning notification:', error);
     }
   }
 

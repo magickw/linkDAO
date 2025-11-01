@@ -5,6 +5,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { contentSharingController } from '../controllers/contentSharingController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { MarketplaceListingsController } from '../controllers/marketplaceListingsController';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 
@@ -66,7 +67,7 @@ router.get('/listings/:id',
  * @body {string[]} images - Array of image URLs/IPFS hashes (optional)
  * @body {string} category - Listing category (optional)
  */
-router.post('/listings', controller.createListing);
+router.post('/listings', csrfProtection,  controller.createListing);
 
 /**
  * @route PUT /marketplace/listings/:id
@@ -81,7 +82,7 @@ router.post('/listings', controller.createListing);
  * @body {string} category - Listing category (optional)
  * @body {boolean} isActive - Active status (optional)
  */
-router.put('/listings/:id', controller.updateListing);
+router.put('/listings/:id', csrfProtection,  controller.updateListing);
 
 /**
  * @route DELETE /marketplace/listings/:id
@@ -89,6 +90,6 @@ router.put('/listings/:id', controller.updateListing);
  * @param {string} id - Listing ID
  * @body {string} sellerAddress - Seller's wallet address (for authorization)
  */
-router.delete('/listings/:id', controller.deleteListing);
+router.delete('/listings/:id', csrfProtection,  controller.deleteListing);
 
 export default router;

@@ -1,4 +1,5 @@
 import postgres from 'postgres';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -21,7 +22,7 @@ export class DatabaseConnectionPool {
 
     // If no database URL is provided, create a mock connection
     if (!connectionString) {
-      console.warn('No DATABASE_URL provided. Database operations will be disabled.');
+      safeLogger.warn('No DATABASE_URL provided. Database operations will be disabled.');
       this.sql = this.createMockConnection();
       return;
     }
@@ -52,7 +53,7 @@ export class DatabaseConnectionPool {
     try {
       this.sql = postgres(connectionString, {
         ...this.config,
-        onnotice: this.config.debug ? console.log : undefined,
+        onnotice: this.config.debug ? safeLogger.info : undefined,
         transform: {
           undefined: null
         }
@@ -61,13 +62,13 @@ export class DatabaseConnectionPool {
       // Handle connection events
       this.sql.listen('*', (row) => {
         if (this.config.debug) {
-          console.log('Database notification:', row);
+          safeLogger.info('Database notification:', row);
         }
       }).catch((error) => {
-        console.warn('Database listen failed:', error.message);
+        safeLogger.warn('Database listen failed:', error.message);
       });
     } catch (error) {
-      console.error('Failed to initialize database connection:', error);
+      safeLogger.error('Failed to initialize database connection:', error);
       this.sql = this.createMockConnection();
     }
   }
@@ -135,7 +136,7 @@ export class DatabaseConnectionPool {
         activeConnections: parseInt(stats[0]?.active_connections || '0')
       };
     } catch (error) {
-      console.error('Error getting pool stats:', error);
+      safeLogger.error('Error getting pool stats:', error);
       return {
         totalConnections: 0,
         idleConnections: 0,
@@ -194,9 +195,9 @@ export class DatabaseConnectionPool {
   public async close(): Promise<void> {
     try {
       await this.sql.end();
-      console.log('Database connection pool closed gracefully');
+      safeLogger.info('Database connection pool closed gracefully');
     } catch (error) {
-      console.error('Error closing database connection pool:', error);
+      safeLogger.error('Error closing database connection pool:', error);
     }
   }
 
@@ -211,7 +212,7 @@ export class DatabaseConnectionPool {
       const result = await this.sql.unsafe(explainQuery, params);
       return result;
     } catch (error) {
-      console.error('Error explaining query:', error);
+      safeLogger.error('Error explaining query:', error);
       throw error;
     }
   }
@@ -224,7 +225,7 @@ export class DatabaseConnectionPool {
         const stats = await this.getPoolStats();
         
         if (this.config.debug) {
-          console.log('DB Pool Status:', {
+          safeLogger.info('DB Pool Status:', {
             healthy: health.healthy,
             latency: health.latency,
             ...stats,
@@ -234,14 +235,14 @@ export class DatabaseConnectionPool {
         
         // Alert if unhealthy or too many connections
         if (!health.healthy) {
-          console.error('Database health check failed:', health.error);
+          safeLogger.error('Database health check failed:', health.error);
         }
         
         if (stats.totalConnections > (this.config.max || 20) * 0.8) {
-          console.warn('High connection usage detected:', stats);
+          safeLogger.warn('High connection usage detected:', stats);
         }
       } catch (error) {
-        console.error('Error during connection monitoring:', error);
+        safeLogger.error('Error during connection monitoring:', error);
       }
     }, intervalMs);
   }

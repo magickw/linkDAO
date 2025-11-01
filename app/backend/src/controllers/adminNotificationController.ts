@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { adminNotificationService } from '../services/adminNotificationService';
 import { AuthenticatedRequest } from '../middleware/auth';
 
@@ -33,7 +35,7 @@ export const getAdminNotifications = async (req: AuthenticatedRequest, res: Resp
       }
     });
   } catch (error) {
-    console.error('Error getting admin notifications:', error);
+    safeLogger.error('Error getting admin notifications:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get admin notifications',
@@ -78,7 +80,7 @@ export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Res
       });
     }
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    safeLogger.error('Error marking notification as read:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to mark notification as read',
@@ -108,7 +110,7 @@ export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res:
       data: { adminId, allMarkedAsRead: success }
     });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    safeLogger.error('Error marking all notifications as read:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to mark all notifications as read',
@@ -138,7 +140,7 @@ export const getUnreadNotificationCount = async (req: AuthenticatedRequest, res:
       data: { count }
     });
   } catch (error) {
-    console.error('Error getting unread notification count:', error);
+    safeLogger.error('Error getting unread notification count:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get unread notification count',
@@ -168,7 +170,7 @@ export const getNotificationStats = async (req: AuthenticatedRequest, res: Respo
       data: stats
     });
   } catch (error) {
-    console.error('Error getting notification stats:', error);
+    safeLogger.error('Error getting notification stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notification stats',
@@ -201,14 +203,14 @@ export const registerMobilePushToken = async (req: AuthenticatedRequest, res: Re
 
     // This would integrate with your push notification service
     // For now, we'll just log it
-    console.log(`Registered push token for admin ${adminId}: ${token} (${platform})`);
+    safeLogger.info(`Registered push token for admin ${adminId}: ${token} (${platform})`);
     
     res.json({
       success: true,
       message: 'Mobile push token registered successfully'
     });
   } catch (error) {
-    console.error('Error registering mobile push token:', error);
+    safeLogger.error('Error registering mobile push token:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to register mobile push token',
@@ -241,14 +243,14 @@ export const unregisterMobilePushToken = async (req: AuthenticatedRequest, res: 
 
     // This would integrate with your push notification service
     // For now, we'll just log it
-    console.log(`Unregistered push token for admin ${adminId}: ${token}`);
+    safeLogger.info(`Unregistered push token for admin ${adminId}: ${token}`);
     
     res.json({
       success: true,
       message: 'Mobile push token unregistered successfully'
     });
   } catch (error) {
-    console.error('Error unregistering mobile push token:', error);
+    safeLogger.error('Error unregistering mobile push token:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to unregister mobile push token',

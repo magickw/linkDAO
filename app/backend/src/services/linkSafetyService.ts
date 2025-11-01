@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   urlAnalysisResults, 
   domainReputation, 
@@ -110,7 +111,7 @@ export class LinkSafetyService {
 
       return result;
     } catch (error) {
-      console.error('Error analyzing URL:', error);
+      safeLogger.error('Error analyzing URL:', error);
       throw new Error(`Failed to analyze URL: ${error.message}`);
     }
   }
@@ -223,7 +224,7 @@ export class LinkSafetyService {
           );
         }
       } catch (error) {
-        console.error(`Error monitoring URL ${urlResult.url}:`, error);
+        safeLogger.error(`Error monitoring URL ${urlResult.url}:`, error);
       }
     }
   }
@@ -325,7 +326,7 @@ export class LinkSafetyService {
       const googleResult = await this.analyzeWithGoogleSafeBrowsing(url);
       results.push(googleResult);
     } catch (error) {
-      console.error('Google Safe Browsing analysis failed:', error);
+      safeLogger.error('Google Safe Browsing analysis failed:', error);
     }
 
     // PhishFort (mock implementation - replace with actual API)
@@ -333,7 +334,7 @@ export class LinkSafetyService {
       const phishfortResult = await this.analyzeWithPhishFort(url);
       results.push(phishfortResult);
     } catch (error) {
-      console.error('PhishFort analysis failed:', error);
+      safeLogger.error('PhishFort analysis failed:', error);
     }
 
     return results;
@@ -381,7 +382,7 @@ export class LinkSafetyService {
         siteName: this.extractDomain(url),
       };
     } catch (error) {
-      console.error('URL unfurling failed:', error);
+      safeLogger.error('URL unfurling failed:', error);
       return {};
     }
   }

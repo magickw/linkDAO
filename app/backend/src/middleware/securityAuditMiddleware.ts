@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { securityAuditLoggingService } from '../services/securityAuditLoggingService';
 
 interface AuditableRequest extends Request {
@@ -152,7 +153,7 @@ export function createSecurityAuditMiddleware(options: SecurityAuditOptions = {}
         });
 
       } catch (error) {
-        console.error('Failed to log security audit event:', error);
+        safeLogger.error('Failed to log security audit event:', error);
         // Don't throw error to avoid breaking the request flow
       }
     }

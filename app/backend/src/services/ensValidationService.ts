@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { ensVerifications } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -62,9 +63,9 @@ class ENSValidationService {
       const mainnetRpcUrl = process.env.MAINNET_RPC_URL || 'https://eth.llamarpc.com';
       this.mainnetProvider = new ethers.JsonRpcProvider(mainnetRpcUrl);
 
-      console.log('✅ ENS validation providers initialized');
+      safeLogger.info('✅ ENS validation providers initialized');
     } catch (error) {
-      console.error('Failed to initialize ENS providers:', error);
+      safeLogger.error('Failed to initialize ENS providers:', error);
     }
   }
 
@@ -110,7 +111,7 @@ class ENSValidationService {
       const address = await provider.resolveName(ensName);
       return address;
     } catch (error) {
-      console.error('ENS resolution error:', error);
+      safeLogger.error('ENS resolution error:', error);
       return null;
     }
   }
@@ -128,7 +129,7 @@ class ENSValidationService {
       const ensName = await provider.lookupAddress(address);
       return ensName;
     } catch (error) {
-      console.error('Reverse ENS resolution error:', error);
+      safeLogger.error('Reverse ENS resolution error:', error);
       return null;
     }
   }
@@ -171,7 +172,7 @@ class ENSValidationService {
         description,
       };
     } catch (error) {
-      console.error('Error fetching ENS text records:', error);
+      safeLogger.error('Error fetching ENS text records:', error);
       return {};
     }
   }
@@ -217,7 +218,7 @@ class ENSValidationService {
         const node = ethers.namehash(ensName);
         owner = await ensRegistry.owner(node);
       } catch (error) {
-        console.warn('Could not fetch ENS owner:', error);
+        safeLogger.warn('Could not fetch ENS owner:', error);
       }
 
       // Get text records
@@ -232,7 +233,7 @@ class ENSValidationService {
         ...textRecords,
       };
     } catch (error) {
-      console.error('ENS validation error:', error);
+      safeLogger.error('ENS validation error:', error);
       return {
         isValid: false,
         ensName,
@@ -313,7 +314,7 @@ class ENSValidationService {
         error: 'Wallet address does not match ENS name',
       };
     } catch (error) {
-      console.error('ENS ownership verification error:', error);
+      safeLogger.error('ENS ownership verification error:', error);
       return {
         isOwner: false,
         ensName,
@@ -373,7 +374,7 @@ class ENSValidationService {
 
       return verificationResult;
     } catch (error) {
-      console.error('Error storing ENS verification:', error);
+      safeLogger.error('Error storing ENS verification:', error);
       throw error;
     }
   }
@@ -393,7 +394,7 @@ class ENSValidationService {
 
       return verification;
     } catch (error) {
-      console.error('Error fetching ENS verification:', error);
+      safeLogger.error('Error fetching ENS verification:', error);
       return null;
     }
   }
@@ -413,7 +414,7 @@ class ENSValidationService {
 
       return verifications;
     } catch (error) {
-      console.error('Error fetching wallet ENS verifications:', error);
+      safeLogger.error('Error fetching wallet ENS verifications:', error);
       return [];
     }
   }
@@ -438,7 +439,7 @@ class ENSValidationService {
 
       return true;
     } catch (error) {
-      console.error('Error revoking ENS verification:', error);
+      safeLogger.error('Error revoking ENS verification:', error);
       return false;
     }
   }

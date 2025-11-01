@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import communityHealthService from '../services/communityHealthService';
 
 /**
@@ -20,7 +22,7 @@ export const getCommunityHealth = async (req: Request, res: Response): Promise<v
       data: healthMetrics
     });
   } catch (error) {
-    console.error('Error getting community health:', error);
+    safeLogger.error('Error getting community health:', error);
     res.status(500).json({ error: 'Failed to retrieve community health metrics' });
   }
 };
@@ -46,7 +48,7 @@ export const getCommunityHealthTrends = async (req: Request, res: Response): Pro
       data: trends
     });
   } catch (error) {
-    console.error('Error getting community health trends:', error);
+    safeLogger.error('Error getting community health trends:', error);
     res.status(500).json({ error: 'Failed to retrieve community health trends' });
   }
 };
@@ -67,7 +69,7 @@ export const getCommunityComparisons = async (req: Request, res: Response): Prom
       data: comparisons
     });
   } catch (error) {
-    console.error('Error getting community comparisons:', error);
+    safeLogger.error('Error getting community comparisons:', error);
     res.status(500).json({ error: 'Failed to retrieve community comparisons' });
   }
 };
@@ -89,7 +91,7 @@ export const getHealthAlerts = async (req: Request, res: Response): Promise<void
       data: alerts
     });
   } catch (error) {
-    console.error('Error getting health alerts:', error);
+    safeLogger.error('Error getting health alerts:', error);
     res.status(500).json({ error: 'Failed to retrieve health alerts' });
   }
 };
@@ -106,7 +108,7 @@ export const getRealTimeHealthSnapshot = async (req: Request, res: Response): Pr
       data: snapshot
     });
   } catch (error) {
-    console.error('Error getting real-time health snapshot:', error);
+    safeLogger.error('Error getting real-time health snapshot:', error);
     res.status(500).json({ error: 'Failed to retrieve real-time health snapshot' });
   }
 };
@@ -151,7 +153,7 @@ Last Updated: ${reportData.lastUpdated.toISOString()}`;
       });
     }
   } catch (error) {
-    console.error('Error exporting health report:', error);
+    safeLogger.error('Error exporting health report:', error);
     res.status(500).json({ error: 'Failed to export health report' });
   }
 };

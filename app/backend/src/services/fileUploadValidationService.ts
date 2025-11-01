@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import { spawn } from 'child_process';
 import { promisify } from 'util';
@@ -511,7 +512,7 @@ export class FileUploadValidationService {
       return this.performBasicVirusScan(file.buffer);
 
     } catch (error) {
-      console.warn('Virus scanning failed:', error);
+      safeLogger.warn('Virus scanning failed:', error);
       return {
         clean: true, // Assume clean if scanning fails
         threats: [],

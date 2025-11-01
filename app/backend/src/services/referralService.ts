@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, sum, count, gte, lte } from 'drizzle-orm';
 import { 
   referrals, 
@@ -122,7 +123,7 @@ class ReferralService {
       };
 
     } catch (error) {
-      console.error('Error creating referral:', error);
+      safeLogger.error('Error creating referral:', error);
       return {
         success: false,
         message: 'Failed to create referral'
@@ -183,7 +184,7 @@ class ReferralService {
       }
 
     } catch (error) {
-      console.error('Error processing signup bonus:', error);
+      safeLogger.error('Error processing signup bonus:', error);
     }
   }
 
@@ -261,7 +262,7 @@ class ReferralService {
       }
 
     } catch (error) {
-      console.error('Error processing activity bonus:', error);
+      safeLogger.error('Error processing activity bonus:', error);
     }
   }
 
@@ -329,7 +330,7 @@ class ReferralService {
       }
 
     } catch (error) {
-      console.error('Error processing milestone bonus:', error);
+      safeLogger.error('Error processing milestone bonus:', error);
     }
   }
 
@@ -404,7 +405,7 @@ class ReferralService {
       };
 
     } catch (error) {
-      console.error('Error getting referral stats:', error);
+      safeLogger.error('Error getting referral stats:', error);
       return {
         totalReferrals: 0,
         activeReferrals: 0,
@@ -446,7 +447,7 @@ class ReferralService {
       }));
 
     } catch (error) {
-      console.error('Error getting referral leaderboard:', error);
+      safeLogger.error('Error getting referral leaderboard:', error);
       return [];
     }
   }
@@ -483,7 +484,7 @@ class ReferralService {
       }));
 
     } catch (error) {
-      console.error('Error getting user referral history:', error);
+      safeLogger.error('Error getting user referral history:', error);
       return [];
     }
   }
@@ -500,7 +501,7 @@ class ReferralService {
         .orderBy(desc(referralRewards.createdAt));
 
     } catch (error) {
-      console.error('Error getting referral rewards history:', error);
+      safeLogger.error('Error getting referral rewards history:', error);
       return [];
     }
   }
@@ -519,7 +520,7 @@ class ReferralService {
         .where(eq(userEarningStats.userId, referrerId));
 
     } catch (error) {
-      console.error('Error updating referrer stats:', error);
+      safeLogger.error('Error updating referrer stats:', error);
     }
   }
 
@@ -542,7 +543,7 @@ class ReferralService {
       };
 
     } catch (error) {
-      console.error('Error deactivating referral:', error);
+      safeLogger.error('Error deactivating referral:', error);
       return {
         success: false,
         message: 'Failed to deactivate referral'
@@ -564,7 +565,7 @@ class ReferralService {
       return referral || null;
 
     } catch (error) {
-      console.error('Error getting referral by code:', error);
+      safeLogger.error('Error getting referral by code:', error);
       return null;
     }
   }
@@ -604,7 +605,7 @@ class ReferralService {
       };
 
     } catch (error) {
-      console.error('Error validating referral code:', error);
+      safeLogger.error('Error validating referral code:', error);
       return {
         valid: false,
         message: 'Error validating referral code'

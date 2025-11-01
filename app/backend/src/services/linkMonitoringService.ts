@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   linkMonitoringAlerts, 
   urlAnalysisResults, 
@@ -63,21 +64,21 @@ export class LinkMonitoringService {
    */
   startMonitoring(): void {
     if (this.monitoringInterval) {
-      console.log('Link monitoring already running');
+      safeLogger.info('Link monitoring already running');
       return;
     }
 
-    console.log('Starting real-time link monitoring');
+    safeLogger.info('Starting real-time link monitoring');
     this.monitoringInterval = setInterval(async () => {
       try {
         await this.performMonitoringCycle();
       } catch (error) {
-        console.error('Error in monitoring cycle:', error);
+        safeLogger.error('Error in monitoring cycle:', error);
       }
     }, this.MONITORING_INTERVAL_MS);
 
     // Run initial monitoring cycle
-    this.performMonitoringCycle().catch(console.error);
+    this.performMonitoringCycle().catch(safeLogger.error);
   }
 
   /**
@@ -87,7 +88,7 @@ export class LinkMonitoringService {
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
-      console.log('Link monitoring stopped');
+      safeLogger.info('Link monitoring stopped');
     }
   }
 
@@ -95,7 +96,7 @@ export class LinkMonitoringService {
    * Perform a complete monitoring cycle
    */
   async performMonitoringCycle(): Promise<void> {
-    console.log('Starting link monitoring cycle');
+    safeLogger.info('Starting link monitoring cycle');
 
     try {
       // 1. Re-analyze stale URLs
@@ -113,9 +114,9 @@ export class LinkMonitoringService {
       // 5. Clean up resolved alerts
       await this.cleanupResolvedAlerts();
 
-      console.log('Link monitoring cycle completed');
+      safeLogger.info('Link monitoring cycle completed');
     } catch (error) {
-      console.error('Error in monitoring cycle:', error);
+      safeLogger.error('Error in monitoring cycle:', error);
     }
   }
 
@@ -371,7 +372,7 @@ export class LinkMonitoringService {
           );
         }
       } catch (error) {
-        console.error(`Error reanalyzing URL ${urlResult.url}:`, error);
+        safeLogger.error(`Error reanalyzing URL ${urlResult.url}:`, error);
       }
     }
   }

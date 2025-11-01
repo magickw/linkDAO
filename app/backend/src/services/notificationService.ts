@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { OrderNotification } from '../models/Order';
 
 const databaseService = new DatabaseService();
@@ -128,7 +129,7 @@ export class NotificationService {
     try {
       const template = this.templates.get(type);
       if (!template) {
-        console.warn(`No template found for notification type: ${type}`);
+        safeLogger.warn(`No template found for notification type: ${type}`);
         return;
       }
 
@@ -171,7 +172,7 @@ export class NotificationService {
       }
 
     } catch (error) {
-      console.error('Error sending order notification:', error);
+      safeLogger.error('Error sending order notification:', error);
     }
   }
 
@@ -186,7 +187,7 @@ export class NotificationService {
     try {
       return await databaseService.getUserNotifications(userAddress, limit, offset);
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      safeLogger.error('Error getting user notifications:', error);
       return [];
     }
   }
@@ -198,7 +199,7 @@ export class NotificationService {
     try {
       return await databaseService.markNotificationAsRead(notificationId);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      safeLogger.error('Error marking notification as read:', error);
       return false;
     }
   }
@@ -210,7 +211,7 @@ export class NotificationService {
     try {
       return await databaseService.markAllNotificationsAsRead(userAddress);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      safeLogger.error('Error marking all notifications as read:', error);
       return false;
     }
   }
@@ -222,7 +223,7 @@ export class NotificationService {
     try {
       return await databaseService.getUnreadNotificationCount(userAddress);
     } catch (error) {
-      console.error('Error getting unread notification count:', error);
+      safeLogger.error('Error getting unread notification count:', error);
       return 0;
     }
   }
@@ -242,7 +243,7 @@ export class NotificationService {
     try {
       return await databaseService.updateNotificationPreferences(userAddress, preferences);
     } catch (error) {
-      console.error('Error updating notification preferences:', error);
+      safeLogger.error('Error updating notification preferences:', error);
       return false;
     }
   }
@@ -254,7 +255,7 @@ export class NotificationService {
     try {
       return await databaseService.getNotificationPreferences(userAddress);
     } catch (error) {
-      console.error('Error getting notification preferences:', error);
+      safeLogger.error('Error getting notification preferences:', error);
       return {
         email: true,
         push: true,
@@ -287,7 +288,7 @@ export class NotificationService {
 
       await Promise.allSettled(promises);
     } catch (error) {
-      console.error('Error sending bulk notifications:', error);
+      safeLogger.error('Error sending bulk notifications:', error);
     }
   }
 
@@ -323,7 +324,7 @@ export class NotificationService {
     try {
       // Implementation would depend on your real-time system (WebSocket, Server-Sent Events, etc.)
       // For now, we'll just log it
-      console.log(`Real-time notification to ${userAddress}:`, notification);
+      safeLogger.info(`Real-time notification to ${userAddress}:`, notification);
 
       // Example WebSocket implementation:
       // const wsService = WebSocketService.getInstance();
@@ -332,7 +333,7 @@ export class NotificationService {
       //   data: notification
       // });
     } catch (error) {
-      console.error('Error sending real-time notification:', error);
+      safeLogger.error('Error sending real-time notification:', error);
     }
   }
 
@@ -346,12 +347,12 @@ export class NotificationService {
       // Get user email from profile
       const userProfile = await databaseService.getUserByAddress(userAddress);
       if (!userProfile?.email) {
-        console.log(`No email found for user ${userAddress}`);
+        safeLogger.info(`No email found for user ${userAddress}`);
         return;
       }
 
       // Implementation would use your email service (SendGrid, AWS SES, etc.)
-      console.log(`Email notification to ${userProfile.email}:`, { title, message, actionUrl });
+      safeLogger.info(`Email notification to ${userProfile.email}:`, { title, message, actionUrl });
 
       // Example implementation:
       // const emailService = EmailService.getInstance();
@@ -361,7 +362,7 @@ export class NotificationService {
       //   html: this.generateEmailTemplate(title, message, actionUrl)
       // });
     } catch (error) {
-      console.error('Error sending email notification:', error);
+      safeLogger.error('Error sending email notification:', error);
     }
   }
 
@@ -375,12 +376,12 @@ export class NotificationService {
       // Get user push tokens from database
       const pushTokens = await databaseService.getUserPushTokens(userAddress);
       if (!pushTokens || pushTokens.length === 0) {
-        console.log(`No push tokens found for user ${userAddress}`);
+        safeLogger.info(`No push tokens found for user ${userAddress}`);
         return;
       }
 
       // Implementation would use your push service (FCM, APNS, etc.)
-      console.log(`Push notification to ${userAddress}:`, { title, message, actionUrl });
+      safeLogger.info(`Push notification to ${userAddress}:`, { title, message, actionUrl });
 
       // Example implementation:
       // const pushService = PushNotificationService.getInstance();
@@ -390,7 +391,7 @@ export class NotificationService {
       //   data: { actionUrl }
       // });
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      safeLogger.error('Error sending push notification:', error);
     }
   }
 
@@ -399,7 +400,7 @@ export class NotificationService {
       const preferences = await this.getNotificationPreferences(userAddress);
       return preferences.email && preferences.types.includes(type);
     } catch (error) {
-      console.error('Error checking email preferences:', error);
+      safeLogger.error('Error checking email preferences:', error);
       return false;
     }
   }
@@ -409,7 +410,7 @@ export class NotificationService {
       const preferences = await this.getNotificationPreferences(userAddress);
       return preferences.push && preferences.types.includes(type);
     } catch (error) {
-      console.error('Error checking push preferences:', error);
+      safeLogger.error('Error checking push preferences:', error);
       return false;
     }
   }
@@ -457,9 +458,9 @@ export class NotificationService {
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
       
       await databaseService.deleteOldNotifications(cutoffDate);
-      console.log(`Cleaned up notifications older than ${daysOld} days`);
+      safeLogger.info(`Cleaned up notifications older than ${daysOld} days`);
     } catch (error) {
-      console.error('Error cleaning up old notifications:', error);
+      safeLogger.error('Error cleaning up old notifications:', error);
     }
   }
 
@@ -474,7 +475,7 @@ export class NotificationService {
     try {
       return await databaseService.getNotificationStats(userAddress);
     } catch (error) {
-      console.error('Error getting notification stats:', error);
+      safeLogger.error('Error getting notification stats:', error);
       return { total: 0, unread: 0, byType: {} };
     }
   }

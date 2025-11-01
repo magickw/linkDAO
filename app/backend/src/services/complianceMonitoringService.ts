@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { securityConfig } from '../config/securityConfig';
 import { comprehensiveAuditService } from './comprehensiveAuditService';
@@ -179,7 +180,7 @@ class ComplianceMonitoringService extends EventEmitter {
       this.monitorViolations();
     }, 15 * 60 * 1000); // Every 15 minutes
 
-    console.log('Compliance monitoring service initialized');
+    safeLogger.info('Compliance monitoring service initialized');
   }
 
   /**
@@ -243,7 +244,7 @@ class ComplianceMonitoringService extends EventEmitter {
    * Perform automated compliance checking
    */
   async performAutomatedCompliance(): Promise<void> {
-    console.log('Performing automated compliance checks...');
+    safeLogger.info('Performing automated compliance checks...');
 
     for (const framework of this.frameworks.values()) {
       if (!framework.enabled) continue;
@@ -254,7 +255,7 @@ class ComplianceMonitoringService extends EventEmitter {
             const result = await this.executeComplianceCheck(requirement);
             await this.processComplianceResult(requirement, result);
           } catch (error) {
-            console.error(`Error checking requirement ${requirement.id}:`, error);
+            safeLogger.error(`Error checking requirement ${requirement.id}:`, error);
           }
         }
       }
@@ -1183,17 +1184,17 @@ class ComplianceMonitoringService extends EventEmitter {
   }
 
   private async escalateViolation(violation: ComplianceViolation): Promise<void> {
-    console.log(`Escalating overdue violation: ${violation.id}`);
+    safeLogger.info(`Escalating overdue violation: ${violation.id}`);
     // Implementation would send escalation notifications
   }
 
   private async alertCriticalViolation(violation: ComplianceViolation): Promise<void> {
-    console.log(`Critical violation alert: ${violation.id}`);
+    safeLogger.info(`Critical violation alert: ${violation.id}`);
     // Implementation would send immediate alerts
   }
 
   private async performDailyAssessment(): Promise<void> {
-    console.log('Performing daily compliance assessment');
+    safeLogger.info('Performing daily compliance assessment');
     
     // Update framework scores
     for (const framework of this.frameworks.values()) {

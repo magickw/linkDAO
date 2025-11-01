@@ -4,6 +4,7 @@
  */
 
 import fs from 'fs/promises';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import archiver from 'archiver';
 import { securityConfig } from '../config/securityConfig';
@@ -165,7 +166,7 @@ export class DataManagementService {
         complianceStatus
       };
     } catch (error) {
-      console.error('Error getting data inventory:', error);
+      safeLogger.error('Error getting data inventory:', error);
       throw new Error('Failed to retrieve data inventory');
     }
   }
@@ -250,7 +251,7 @@ export class DataManagementService {
         checksum
       };
     } catch (error) {
-      console.error('Error exporting user data:', error);
+      safeLogger.error('Error exporting user data:', error);
       throw new Error('Failed to export user data');
     }
   }
@@ -323,7 +324,7 @@ export class DataManagementService {
         archive.finalize();
       });
     } catch (error) {
-      console.error('Error creating data archive:', error);
+      safeLogger.error('Error creating data archive:', error);
       throw new Error('Failed to create data archive');
     }
   }
@@ -396,7 +397,7 @@ export class DataManagementService {
         errors
       };
     } catch (error) {
-      console.error('Error deleting user data:', error);
+      safeLogger.error('Error deleting user data:', error);
       throw new Error('Failed to delete user data');
     }
   }
@@ -451,7 +452,7 @@ export class DataManagementService {
         errors
       };
     } catch (error) {
-      console.error('Error anonymizing user data:', error);
+      safeLogger.error('Error anonymizing user data:', error);
       throw new Error('Failed to anonymize user data');
     }
   }
@@ -486,10 +487,10 @@ export class DataManagementService {
         automatedDecisionMaking: false
       });
 
-      console.log(`Data subject request received: ${request.type} for user ${request.userId}`);
+      safeLogger.info(`Data subject request received: ${request.type} for user ${request.userId}`);
       return dsRequest;
     } catch (error) {
-      console.error('Error processing data subject request:', error);
+      safeLogger.error('Error processing data subject request:', error);
       throw new Error('Failed to process data subject request');
     }
   }
@@ -532,7 +533,7 @@ export class DataManagementService {
         violations
       };
     } catch (error) {
-      console.error('Error checking retention compliance:', error);
+      safeLogger.error('Error checking retention compliance:', error);
       throw new Error('Failed to check retention compliance');
     }
   }
@@ -570,12 +571,12 @@ export class DataManagementService {
 
   private static async deleteCategoryData(userId: string, category: DataCategory): Promise<void> {
     // In production, delete data from actual database tables
-    console.log(`Deleting ${category.name} data for user ${userId}`);
+    safeLogger.info(`Deleting ${category.name} data for user ${userId}`);
   }
 
   private static async anonymizeCategoryData(userId: string, category: DataCategory): Promise<void> {
     // In production, anonymize data in actual database tables
-    console.log(`Anonymizing ${category.name} data for user ${userId}`);
+    safeLogger.info(`Anonymizing ${category.name} data for user ${userId}`);
   }
 
   private static async checkRetentionRequirement(userId: string, category: DataCategory): Promise<{
@@ -631,7 +632,7 @@ export class DataManagementService {
     };
 
     // In production, save to database
-    console.log('Data processing activity logged:', activityRecord);
+    safeLogger.info('Data processing activity logged:', activityRecord);
   }
 }
 

@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import {
   conversations,
   chatMessages,
@@ -82,7 +83,7 @@ export class MarketplaceMessagingService {
 
       return newConversation[0];
     } catch (error) {
-      console.error('Error creating order conversation:', error);
+      safeLogger.error('Error creating order conversation:', error);
       throw new Error('Failed to create order conversation');
     }
   }
@@ -137,7 +138,7 @@ export class MarketplaceMessagingService {
 
       return newMessage[0];
     } catch (error) {
-      console.error('Error sending order notification:', error);
+      safeLogger.error('Error sending order notification:', error);
       throw new Error('Failed to send order notification');
     }
   }
@@ -192,7 +193,7 @@ export class MarketplaceMessagingService {
 
       return timeline;
     } catch (error) {
-      console.error('Error getting order timeline:', error);
+      safeLogger.error('Error getting order timeline:', error);
       throw new Error('Failed to get order timeline');
     }
   }
@@ -217,7 +218,7 @@ export class MarketplaceMessagingService {
         )
       );
     } catch (error) {
-      console.error('Error suggesting quick replies:', error);
+      safeLogger.error('Error suggesting quick replies:', error);
       throw new Error('Failed to suggest quick replies');
     }
   }
@@ -290,7 +291,7 @@ export class MarketplaceMessagingService {
         firstResponseTime: firstResponseTime
       };
     } catch (error) {
-      console.error('Error updating conversation analytics:', error);
+      safeLogger.error('Error updating conversation analytics:', error);
       throw new Error('Failed to update conversation analytics');
     }
   }

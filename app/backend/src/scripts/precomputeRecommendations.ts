@@ -5,12 +5,13 @@
  */
 
 import { DatabaseService } from '../services/databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { RecommendationService } from '../services/recommendationService';
 import { users, communityMembers } from '../db/schema';
 import { gt } from 'drizzle-orm';
 
 async function precomputeRecommendations() {
-  console.log('Starting recommendation precomputation...');
+  safeLogger.info('Starting recommendation precomputation...');
   
   try {
     const databaseService = new DatabaseService();
@@ -29,7 +30,7 @@ async function precomputeRecommendations() {
       .from(users)
       .where(gt(users.createdAt, thirtyDaysAgo));
     
-    console.log(`Found ${activeUsers.length} active users`);
+    safeLogger.info(`Found ${activeUsers.length} active users`);
     
     // Precompute recommendations for each active user
     let processedCount = 0;
@@ -37,7 +38,7 @@ async function precomputeRecommendations() {
     
     for (const user of activeUsers) {
       try {
-        console.log(`Precomputing recommendations for user ${user.walletAddress}...`);
+        safeLogger.info(`Precomputing recommendations for user ${user.walletAddress}...`);
         
         // Precompute both community and user recommendations
         await Promise.all([
@@ -50,22 +51,22 @@ async function precomputeRecommendations() {
         // Add a small delay to avoid overwhelming the database
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Error precomputing recommendations for user ${user.walletAddress}:`, error);
+        safeLogger.error(`Error precomputing recommendations for user ${user.walletAddress}:`, error);
         errors.push(`User ${user.walletAddress}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
     
-    console.log(`Successfully precomputed recommendations for ${processedCount} users`);
+    safeLogger.info(`Successfully precomputed recommendations for ${processedCount} users`);
     
     if (errors.length > 0) {
-      console.log(`Errors encountered: ${errors.length}`);
-      errors.forEach(error => console.error(error));
+      safeLogger.info(`Errors encountered: ${errors.length}`);
+      errors.forEach(error => safeLogger.error(error));
     }
     
-    console.log('Recommendation precomputation completed');
+    safeLogger.info('Recommendation precomputation completed');
     process.exit(0);
   } catch (error) {
-    console.error('Fatal error during recommendation precomputation:', error);
+    safeLogger.error('Fatal error during recommendation precomputation:', error);
     process.exit(1);
   }
 }

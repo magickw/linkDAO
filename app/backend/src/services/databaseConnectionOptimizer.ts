@@ -5,6 +5,7 @@
  */
 
 import { Pool, PoolConfig, PoolClient } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface ConnectionPoolMetrics {
@@ -83,7 +84,7 @@ export class DatabaseConnectionOptimizer {
         await this.updateMetrics();
         await this.checkConnectionHealth();
       } catch (error) {
-        console.error('Connection pool monitoring error:', error);
+        safeLogger.error('Connection pool monitoring error:', error);
       }
     }, 30000);
 
@@ -92,7 +93,7 @@ export class DatabaseConnectionOptimizer {
       try {
         await this.optimizeConnectionPool();
       } catch (error) {
-        console.error('Connection pool optimization error:', error);
+        safeLogger.error('Connection pool optimization error:', error);
       }
     }, 300000);
 
@@ -123,7 +124,7 @@ export class DatabaseConnectionOptimizer {
     });
 
     this.pool.on('error', (error: Error, client: PoolClient) => {
-      console.error('Pool client error:', error);
+      safeLogger.error('Pool client error:', error);
       this.metrics.connectionErrors++;
       
       const connectionId = this.getConnectionId(client);
@@ -175,7 +176,7 @@ export class DatabaseConnectionOptimizer {
       await this.updateDatabaseStatistics();
 
     } catch (error) {
-      console.error('Error updating pool metrics:', error);
+      safeLogger.error('Error updating pool metrics:', error);
     }
   }
 
@@ -201,7 +202,7 @@ export class DatabaseConnectionOptimizer {
       
       // Update metrics with database-level data
       if (stats.idle_in_transaction > 0) {
-        console.warn(`Found ${stats.idle_in_transaction} idle in transaction connections`);
+        safeLogger.warn(`Found ${stats.idle_in_transaction} idle in transaction connections`);
       }
 
     } finally {
@@ -244,7 +245,7 @@ export class DatabaseConnectionOptimizer {
     }
 
     if (unhealthyConnections.length > 0) {
-      console.warn(`Found ${unhealthyConnections.length} unhealthy connections`);
+      safeLogger.warn(`Found ${unhealthyConnections.length} unhealthy connections`);
     }
   }
 
@@ -304,9 +305,9 @@ export class DatabaseConnectionOptimizer {
     const recommendations = await this.generateOptimizationRecommendations();
     
     if (recommendations.length > 0) {
-      console.log('Connection Pool Optimization Recommendations:');
+      safeLogger.info('Connection Pool Optimization Recommendations:');
       recommendations.forEach(rec => {
-        console.log(`- ${rec.parameter}: ${rec.currentValue} → ${rec.recommendedValue} (${rec.reason})`);
+        safeLogger.info(`- ${rec.parameter}: ${rec.currentValue} → ${rec.recommendedValue} (${rec.reason})`);
       });
 
       // Apply high-impact recommendations automatically
@@ -401,7 +402,7 @@ export class DatabaseConnectionOptimizer {
       // This is a simplified implementation - in production, you might want to
       // create a new pool with optimized settings and gradually migrate
       
-      console.log(`Applying optimization: ${recommendation.parameter} = ${recommendation.recommendedValue}`);
+      safeLogger.info(`Applying optimization: ${recommendation.parameter} = ${recommendation.recommendedValue}`);
       
       // For demonstration, we'll just log the optimization
       // In a real implementation, you would:
@@ -410,7 +411,7 @@ export class DatabaseConnectionOptimizer {
       // 3. Monitor the impact
       
     } catch (error) {
-      console.error(`Failed to apply optimization for ${recommendation.parameter}:`, error);
+      safeLogger.error(`Failed to apply optimization for ${recommendation.parameter}:`, error);
     }
   }
 

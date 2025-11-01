@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { users, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -147,7 +148,7 @@ export class AnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
       return result;
     } catch (error) {
-      console.error('Error getting overview metrics:', error);
+      safeLogger.error('Error getting overview metrics:', error);
       throw new Error('Failed to retrieve analytics metrics');
     }
   }
@@ -177,7 +178,7 @@ export class AnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
       return result;
     } catch (error) {
-      console.error('Error getting user behavior data:', error);
+      safeLogger.error('Error getting user behavior data:', error);
       throw new Error('Failed to retrieve user behavior analytics');
     }
   }
@@ -221,7 +222,7 @@ export class AnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(result));
       return result;
     } catch (error) {
-      console.error('Error getting sales analytics:', error);
+      safeLogger.error('Error getting sales analytics:', error);
       throw new Error('Failed to retrieve sales analytics');
     }
   }
@@ -241,7 +242,7 @@ export class AnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(sellerMetrics));
       return sellerMetrics;
     } catch (error) {
-      console.error('Error getting seller analytics:', error);
+      safeLogger.error('Error getting seller analytics:', error);
       throw new Error('Failed to retrieve seller analytics');
     }
   }
@@ -260,7 +261,7 @@ export class AnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL * 4, JSON.stringify(trends)); // Cache longer for trends
       return trends;
     } catch (error) {
-      console.error('Error getting market trends:', error);
+      safeLogger.error('Error getting market trends:', error);
       throw new Error('Failed to retrieve market trends');
     }
   }
@@ -291,7 +292,7 @@ export class AnalyticsService {
 
       return anomalies;
     } catch (error) {
-      console.error('Error detecting anomalies:', error);
+      safeLogger.error('Error detecting anomalies:', error);
       throw new Error('Failed to detect anomalies');
     }
   }
@@ -340,7 +341,7 @@ export class AnalyticsService {
       // Update real-time metrics
       await this.updateRealTimeMetrics(eventType, eventData);
     } catch (error) {
-      console.error('Error tracking user event:', error);
+      safeLogger.error('Error tracking user event:', error);
     }
   }
 
@@ -375,7 +376,7 @@ export class AnalyticsService {
         )
       `);
     } catch (error) {
-      console.error('Error tracking transaction:', error);
+      safeLogger.error('Error tracking transaction:', error);
     }
   }
 
@@ -398,7 +399,7 @@ export class AnalyticsService {
           throw new Error(`Unknown report type: ${reportType}`);
       }
     } catch (error) {
-      console.error('Error generating report:', error);
+      safeLogger.error('Error generating report:', error);
       throw new Error('Failed to generate analytics report');
     }
   }
@@ -426,7 +427,7 @@ export class AnalyticsService {
 
       return enhancedGeoData;
     } catch (error) {
-      console.error('Error getting geographic distribution:', error);
+      safeLogger.error('Error getting geographic distribution:', error);
       return [];
     }
   }
@@ -665,7 +666,7 @@ export class AnalyticsService {
         geographicDistribution
       };
     } catch (error) {
-      console.error('Error querying user analytics:', error);
+      safeLogger.error('Error querying user analytics:', error);
       // Return empty data structure if table doesn't exist or query fails
       return {
         totalPageViews: 0,
@@ -790,7 +791,7 @@ export class AnalyticsService {
         )
       `);
     } catch (error) {
-      console.error('Error storing anomaly:', error);
+      safeLogger.error('Error storing anomaly:', error);
     }
   }
 
@@ -827,14 +828,14 @@ export class AnalyticsService {
             return result;
           }
         } catch (error) {
-          console.warn('Geolocation service failed, trying next:', error);
+          safeLogger.warn('Geolocation service failed, trying next:', error);
           continue;
         }
       }
 
       return { country: null, city: null };
     } catch (error) {
-      console.error('Error getting location from IP:', error);
+      safeLogger.error('Error getting location from IP:', error);
       return { country: null, city: null };
     }
   }

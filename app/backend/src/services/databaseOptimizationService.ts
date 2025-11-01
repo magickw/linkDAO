@@ -4,6 +4,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface QueryPerformanceMetrics {
@@ -147,7 +148,7 @@ export class DatabaseOptimizationService {
         await this.analyzeSlowQueries();
         await this.generateIndexRecommendations();
       } catch (error) {
-        console.error('Database monitoring error:', error);
+        safeLogger.error('Database monitoring error:', error);
       }
     }, 30000);
   }
@@ -273,12 +274,12 @@ export class DatabaseOptimizationService {
   private checkOptimizationRules(query: string, metrics: QueryPerformanceMetrics): void {
     for (const rule of this.optimizationRules) {
       if (rule.check(query, metrics)) {
-        console.warn(`Database Optimization Alert [${rule.severity.toUpperCase()}]: ${rule.name}`);
-        console.warn(`Query: ${query.substring(0, 100)}...`);
-        console.warn(`Recommendation: ${rule.recommendation}`);
+        safeLogger.warn(`Database Optimization Alert [${rule.severity.toUpperCase()}]: ${rule.name}`);
+        safeLogger.warn(`Query: ${query.substring(0, 100)}...`);
+        safeLogger.warn(`Recommendation: ${rule.recommendation}`);
         
         // Log event for monitoring systems (could be sent to external monitoring)
-        console.log('Database Optimization Alert:', {
+        safeLogger.info('Database Optimization Alert:', {
           rule: rule.name,
           severity: rule.severity,
           query: query.substring(0, 200),
@@ -609,10 +610,10 @@ export class DatabaseOptimizationService {
       // Remove the recommendation since it's been implemented
       this.indexRecommendations = this.indexRecommendations.filter(rec => rec !== recommendation);
       
-      console.log(`Index created: ${recommendation.createStatement}`);
+      safeLogger.info(`Index created: ${recommendation.createStatement}`);
       return true;
     } catch (error) {
-      console.error(`Failed to create index: ${error}`);
+      safeLogger.error(`Failed to create index: ${error}`);
       return false;
     } finally {
       client.release();

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { enhancedSystemHealthService, PerformanceTrend } from './enhancedSystemHealthService';
 import { systemHealthMonitoringService, HealthMetrics } from './systemHealthMonitoringService';
 
@@ -170,7 +171,7 @@ export class CapacityPlanningService extends EventEmitter {
         await this.analyzeBottlenecks();
         await this.generateScalingRecommendations();
       } catch (error) {
-        console.error('Capacity monitoring error:', error);
+        safeLogger.error('Capacity monitoring error:', error);
         this.emit('monitoringError', error);
       }
     }, 60000);
@@ -181,7 +182,7 @@ export class CapacityPlanningService extends EventEmitter {
         await this.generateResourcePredictions();
         await this.performCostOptimizationAnalysis();
       } catch (error) {
-        console.error('Prediction generation error:', error);
+        safeLogger.error('Prediction generation error:', error);
         this.emit('predictionError', error);
       }
     }, 15 * 60 * 1000);

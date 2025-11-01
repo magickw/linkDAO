@@ -5,6 +5,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { ProductionMonitoringService } from '../services/productionMonitoringService';
 
 const router = Router();
@@ -120,7 +121,7 @@ router.get('/alerts', async (req: Request, res: Response) => {
  * POST /api/monitoring/alerts/:alertId/resolve
  * Resolve an alert
  */
-router.post('/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+router.post('/alerts/:alertId/resolve', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
     const resolved = monitoringService.resolveAlert(alertId);
@@ -205,7 +206,7 @@ router.get('/dashboard', async (req: Request, res: Response) => {
  * POST /api/monitoring/test-alert
  * Trigger a test alert (for testing purposes)
  */
-router.post('/test-alert', async (req: Request, res: Response) => {
+router.post('/test-alert', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { severity = 'low', metric = 'test', message = 'Test alert' } = req.body;
     
@@ -308,7 +309,7 @@ router.get('/seller-workflows/status', async (req: Request, res: Response) => {
  * POST /api/monitoring/seller-workflows/validate
  * Trigger seller workflow validation
  */
-router.post('/seller-workflows/validate', async (req: Request, res: Response) => {
+router.post('/seller-workflows/validate', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { workflow } = req.body;
     

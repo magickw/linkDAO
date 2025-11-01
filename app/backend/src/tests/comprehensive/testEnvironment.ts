@@ -6,6 +6,7 @@
  */
 
 import { Pool } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { Redis } from 'ioredis';
 import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -47,7 +48,7 @@ export class TestEnvironment {
   }
 
   async setup(): Promise<void> {
-    console.log('Setting up comprehensive test environment...');
+    safeLogger.info('Setting up comprehensive test environment...');
     
     try {
       await this.setupDatabase();
@@ -56,24 +57,24 @@ export class TestEnvironment {
       await this.setupServices();
       await this.seedTestData();
       
-      console.log('Test environment setup completed successfully');
+      safeLogger.info('Test environment setup completed successfully');
     } catch (error) {
-      console.error('Failed to setup test environment:', error);
+      safeLogger.error('Failed to setup test environment:', error);
       throw error;
     }
   }
 
   async teardown(): Promise<void> {
-    console.log('Tearing down test environment...');
+    safeLogger.info('Tearing down test environment...');
     
     try {
       await this.cleanupDatabase();
       await this.cleanupRedis();
       await this.cleanupBlockchain();
       
-      console.log('Test environment teardown completed');
+      safeLogger.info('Test environment teardown completed');
     } catch (error) {
-      console.error('Failed to teardown test environment:', error);
+      safeLogger.error('Failed to teardown test environment:', error);
       throw error;
     }
   }

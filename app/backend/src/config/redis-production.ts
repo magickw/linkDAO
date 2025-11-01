@@ -1,4 +1,5 @@
 import Redis, { RedisOptions, Cluster } from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -114,48 +115,48 @@ class RedisProductionManager {
 
     try {
       if (this.isCluster) {
-        console.log('🔗 Connecting to Redis Cluster...');
+        safeLogger.info('🔗 Connecting to Redis Cluster...');
         const config = this.getClusterConfig();
         this.client = new Redis.Cluster(config.nodes, config.options);
         
         this.client.on('connect', () => {
-          console.log('✅ Redis Cluster connected');
+          safeLogger.info('✅ Redis Cluster connected');
         });
         
         this.client.on('error', (error) => {
-          console.error('❌ Redis Cluster error:', error);
+          safeLogger.error('❌ Redis Cluster error:', error);
         });
         
         this.client.on('node error', (error, node) => {
-          console.error(`❌ Redis Cluster node error (${node.host}:${node.port}):`, error);
+          safeLogger.error(`❌ Redis Cluster node error (${node.host}:${node.port}):`, error);
         });
 
       } else {
-        console.log('🔗 Connecting to Redis standalone...');
+        safeLogger.info('🔗 Connecting to Redis standalone...');
         const config = this.getStandaloneConfig();
         this.client = new Redis(config);
         
         this.client.on('connect', () => {
-          console.log('✅ Redis connected');
+          safeLogger.info('✅ Redis connected');
         });
         
         this.client.on('error', (error) => {
-          console.error('❌ Redis error:', error);
+          safeLogger.error('❌ Redis error:', error);
         });
         
         this.client.on('reconnecting', () => {
-          console.log('🔄 Redis reconnecting...');
+          safeLogger.info('🔄 Redis reconnecting...');
         });
       }
 
       // Test connection
       await this.client.ping();
-      console.log('🏓 Redis ping successful');
+      safeLogger.info('🏓 Redis ping successful');
 
       return this.client;
 
     } catch (error) {
-      console.error('💥 Redis connection failed:', error);
+      safeLogger.error('💥 Redis connection failed:', error);
       throw error;
     }
   }
@@ -164,7 +165,7 @@ class RedisProductionManager {
     if (this.client) {
       await this.client.quit();
       this.client = null;
-      console.log('👋 Redis disconnected');
+      safeLogger.info('👋 Redis disconnected');
     }
   }
 

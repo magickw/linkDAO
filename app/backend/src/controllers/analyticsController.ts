@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { analyticsService, AnalyticsService } from '../services/analyticsService';
 import { z } from 'zod';
 
@@ -78,7 +80,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting overview metrics:', error);
+      safeLogger.error('Error getting overview metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve overview metrics',
@@ -102,7 +104,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting user behavior analytics:', error);
+      safeLogger.error('Error getting user behavior analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve user behavior analytics',
@@ -126,7 +128,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting sales analytics:', error);
+      safeLogger.error('Error getting sales analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve sales analytics',
@@ -153,7 +155,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting seller analytics:', error);
+      safeLogger.error('Error getting seller analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve seller analytics',
@@ -175,7 +177,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting market trends:', error);
+      safeLogger.error('Error getting market trends:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve market trends',
@@ -197,7 +199,7 @@ export class AnalyticsController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error getting anomaly alerts:', error);
+      safeLogger.error('Error getting anomaly alerts:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve anomaly alerts',
@@ -226,7 +228,7 @@ export class AnalyticsController {
         message: 'Event tracked successfully'
       });
     } catch (error) {
-      console.error('Error tracking user event:', error);
+      safeLogger.error('Error tracking user event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track user event',
@@ -266,7 +268,7 @@ export class AnalyticsController {
         message: 'Transaction tracked successfully'
       });
     } catch (error) {
-      console.error('Error tracking transaction:', error);
+      safeLogger.error('Error tracking transaction:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track transaction',
@@ -293,7 +295,7 @@ export class AnalyticsController {
         }
       });
     } catch (error) {
-      console.error('Error generating report:', error);
+      safeLogger.error('Error generating report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate report',
@@ -329,7 +331,7 @@ export class AnalyticsController {
         data: dashboard
       });
     } catch (error) {
-      console.error('Error getting real-time dashboard:', error);
+      safeLogger.error('Error getting real-time dashboard:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve dashboard data',
@@ -362,7 +364,7 @@ export class AnalyticsController {
         data: health
       });
     } catch (error) {
-      console.error('Error getting platform health:', error);
+      safeLogger.error('Error getting platform health:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve platform health',
@@ -419,7 +421,7 @@ export class AnalyticsController {
         res.json(exportData);
       }
     } catch (error) {
-      console.error('Error exporting analytics:', error);
+      safeLogger.error('Error exporting analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to export analytics data',

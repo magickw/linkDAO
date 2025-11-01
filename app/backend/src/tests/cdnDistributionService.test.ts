@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import cdnDistributionService from '../services/cdnDistributionService';
 import { CDNIntegrationService } from '../services/cdnIntegrationService';
 
@@ -347,8 +348,8 @@ describe('CDNDistributionService', () => {
 
     it('should handle cleanup errors', async () => {
       // Mock an error scenario
-      const originalConsoleLog = console.log;
-      console.log = jest.fn().mockImplementation(() => {
+      const originalConsoleLog = safeLogger.info;
+      safeLogger.info = jest.fn().mockImplementation(() => {
         throw new Error('Cleanup failed');
       });
 
@@ -357,7 +358,7 @@ describe('CDNDistributionService', () => {
       expect(result.errors).toContain('Cleanup failed');
 
       // Restore
-      console.log = originalConsoleLog;
+      safeLogger.info = originalConsoleLog;
     });
   });
 

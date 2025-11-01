@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { Redis } from 'ioredis';
 import { Pool } from 'pg';
@@ -565,7 +566,7 @@ export class HealthCheckService extends EventEmitter {
         // Add other detailed checks as needed
       }
     } catch (error) {
-      console.error(`Detailed health check failed for ${serviceName}:`, error);
+      safeLogger.error(`Detailed health check failed for ${serviceName}:`, error);
     }
   }
 
@@ -714,7 +715,7 @@ export class HealthCheckService extends EventEmitter {
     try {
       await this.redis.setex('system_health', 300, JSON.stringify(health)); // 5 minutes TTL
     } catch (error) {
-      console.error('Failed to store system health:', error);
+      safeLogger.error('Failed to store system health:', error);
     }
   }
 
@@ -732,7 +733,7 @@ export class HealthCheckService extends EventEmitter {
         return health;
       }
     } catch (error) {
-      console.error('Failed to get cached system health:', error);
+      safeLogger.error('Failed to get cached system health:', error);
     }
     
     return this.calculateSystemHealth();

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from '../services/databaseService';
 import { contentReports } from '../db/schema';
 import { z } from 'zod';
@@ -75,7 +77,7 @@ export class ContentReportController {
       }).returning();
 
       // Log report submission
-      console.log(`[MODERATION] Content report submitted: ${newReport[0].id} - ${validatedInput.reason} for ${validatedInput.contentType} ${validatedInput.contentId}`);
+      safeLogger.info(`[MODERATION] Content report submitted: ${newReport[0].id} - ${validatedInput.reason} for ${validatedInput.contentType} ${validatedInput.contentId}`);
 
       res.json({
         success: true,
@@ -87,7 +89,7 @@ export class ContentReportController {
       });
 
     } catch (error) {
-      console.error('Error submitting content report:', error);
+      safeLogger.error('Error submitting content report:', error);
 
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -138,7 +140,7 @@ export class ContentReportController {
       });
 
     } catch (error) {
-      console.error('Error retrieving content reports:', error);
+      safeLogger.error('Error retrieving content reports:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve reports'
@@ -184,7 +186,7 @@ export class ContentReportController {
       });
 
     } catch (error) {
-      console.error('Error retrieving pending reports:', error);
+      safeLogger.error('Error retrieving pending reports:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve pending reports'
@@ -236,7 +238,7 @@ export class ContentReportController {
         return;
       }
 
-      console.log(`[MODERATION] Report ${reportId} status updated to: ${status}`);
+      safeLogger.info(`[MODERATION] Report ${reportId} status updated to: ${status}`);
 
       res.json({
         success: true,
@@ -245,7 +247,7 @@ export class ContentReportController {
       });
 
     } catch (error) {
-      console.error('Error updating report status:', error);
+      safeLogger.error('Error updating report status:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update report status'

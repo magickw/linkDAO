@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
@@ -17,7 +18,7 @@ router.use(rateLimitingMiddleware({
 }));
 
 // Order-based conversations
-router.post('/conversations/order/:orderId', 
+router.post('/conversations/order/:orderId', csrfProtection,  
   validateRequest({
     params: {
       orderId: { type: 'number', required: true }
@@ -26,7 +27,7 @@ router.post('/conversations/order/:orderId',
   marketplaceMessagingController.createOrderConversation
 );
 
-router.post('/conversations/product/:productId',
+router.post('/conversations/product/:productId', csrfProtection, 
   validateRequest({
     params: {
       productId: { type: 'string', required: true }
@@ -59,7 +60,7 @@ router.get('/templates',
   marketplaceMessagingController.getTemplates
 );
 
-router.post('/templates',
+router.post('/templates', csrfProtection, 
   validateRequest({
     body: {
       name: { type: 'string', required: true, maxLength: 255 },
@@ -71,7 +72,7 @@ router.post('/templates',
   marketplaceMessagingController.createTemplate
 );
 
-router.put('/templates/:id',
+router.put('/templates/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -87,7 +88,7 @@ router.put('/templates/:id',
   marketplaceMessagingController.updateTemplate
 );
 
-router.delete('/templates/:id',
+router.delete('/templates/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -96,7 +97,7 @@ router.delete('/templates/:id',
   marketplaceMessagingController.deleteTemplate
 );
 
-router.post('/quick-replies',
+router.post('/quick-replies', csrfProtection, 
   validateRequest({
     body: {
       triggerKeywords: { type: 'array', required: true },
@@ -132,7 +133,7 @@ router.get('/seller/analytics/messaging',
 );
 
 // Automation
-router.post('/conversations/:id/auto-notify',
+router.post('/conversations/:id/auto-notify', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -146,7 +147,7 @@ router.post('/conversations/:id/auto-notify',
 );
 
 // Dispute integration
-router.post('/conversations/:id/escalate',
+router.post('/conversations/:id/escalate', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }

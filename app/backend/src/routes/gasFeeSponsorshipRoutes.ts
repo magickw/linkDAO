@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getSponsorshipTiers,
   checkSponsorshipEligibility,
@@ -27,12 +28,12 @@ router.get('/pool/balance', getSponsorshipPoolBalance);
 
 // User-specific routes
 router.get('/eligibility/:userId', checkSponsorshipEligibility);
-router.post('/apply', applyForSponsorship);
+router.post('/apply', csrfProtection,  applyForSponsorship);
 router.get('/history/:userId', getUserSponsorshipHistory);
 router.get('/usage/:userId', getDailyUsage);
 
 // Admin routes (would require authentication/authorization in production)
-router.put('/tiers/:tierId', updateSponsorshipTier);
-router.post('/tiers', createSponsorshipTier);
+router.put('/tiers/:tierId', csrfProtection,  updateSponsorshipTier);
+router.post('/tiers', csrfProtection,  createSponsorshipTier);
 
 export { router as gasFeeSponsorshipRouter };

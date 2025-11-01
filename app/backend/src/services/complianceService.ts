@@ -6,6 +6,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { users } from '../db/schema';
 import { securityConfig } from '../config/securityConfig';
 import AuditLoggingService from './auditLoggingService';
@@ -190,7 +191,7 @@ class ComplianceService {
       request.status = ComplianceStatus.REJECTED;
       request.data = { error: error instanceof Error ? error.message : 'Unknown error' };
       
-      console.error('Failed to process data export request:', error);
+      safeLogger.error('Failed to process data export request:', error);
     }
   }
 
@@ -266,7 +267,7 @@ class ComplianceService {
       request.status = ComplianceStatus.REJECTED;
       request.data = { error: error instanceof Error ? error.message : 'Unknown error' };
       
-      console.error('Failed to process data deletion request:', error);
+      safeLogger.error('Failed to process data deletion request:', error);
     }
   }
 
@@ -327,7 +328,7 @@ class ComplianceService {
       request.status = ComplianceStatus.REJECTED;
       request.data = { error: error instanceof Error ? error.message : 'Unknown error' };
       
-      console.error('Failed to process opt-out request:', error);
+      safeLogger.error('Failed to process opt-out request:', error);
     }
   }
 

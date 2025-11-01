@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { users, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -106,7 +107,7 @@ export class AnomalyDetectionService {
 
       return alerts;
     } catch (error) {
-      console.error('Error monitoring real-time anomalies:', error);
+      safeLogger.error('Error monitoring real-time anomalies:', error);
       throw new Error('Failed to monitor real-time anomalies');
     }
   }
@@ -159,7 +160,7 @@ export class AnomalyDetectionService {
 
       return anomalies;
     } catch (error) {
-      console.error('Error detecting statistical anomalies:', error);
+      safeLogger.error('Error detecting statistical anomalies:', error);
       throw new Error('Failed to detect statistical anomalies');
     }
   }
@@ -180,7 +181,7 @@ export class AnomalyDetectionService {
       
       return result;
     } catch (error) {
-      console.error('Error detecting ML anomalies:', error);
+      safeLogger.error('Error detecting ML anomalies:', error);
       return { isAnomaly: false, score: 0, confidence: 0 };
     }
   }
@@ -215,7 +216,7 @@ export class AnomalyDetectionService {
         escalationRequired
       };
     } catch (error) {
-      console.error('Error classifying anomaly:', error);
+      safeLogger.error('Error classifying anomaly:', error);
       return {
         category: 'unknown',
         severity: 'low',
@@ -275,7 +276,7 @@ export class AnomalyDetectionService {
         investigationData
       };
     } catch (error) {
-      console.error('Error investigating anomaly:', error);
+      safeLogger.error('Error investigating anomaly:', error);
       throw new Error('Failed to investigate anomaly');
     }
   }
@@ -293,7 +294,7 @@ export class AnomalyDetectionService {
         );
       }
     } catch (error) {
-      console.error('Error configuring thresholds:', error);
+      safeLogger.error('Error configuring thresholds:', error);
       throw new Error('Failed to configure anomaly thresholds');
     }
   }
@@ -373,7 +374,7 @@ export class AnomalyDetectionService {
         }))
       };
     } catch (error) {
-      console.error('Error getting anomaly statistics:', error);
+      safeLogger.error('Error getting anomaly statistics:', error);
       throw new Error('Failed to get anomaly statistics');
     }
   }
@@ -397,7 +398,7 @@ export class AnomalyDetectionService {
       alerts.push(...engagementAnomalies);
 
     } catch (error) {
-      console.error('Error detecting user behavior anomalies:', error);
+      safeLogger.error('Error detecting user behavior anomalies:', error);
     }
 
     return alerts;
@@ -420,7 +421,7 @@ export class AnomalyDetectionService {
       alerts.push(...failureAnomalies);
 
     } catch (error) {
-      console.error('Error detecting transaction anomalies:', error);
+      safeLogger.error('Error detecting transaction anomalies:', error);
     }
 
     return alerts;
@@ -443,7 +444,7 @@ export class AnomalyDetectionService {
       alerts.push(...responseTimeAnomalies);
 
     } catch (error) {
-      console.error('Error detecting system performance anomalies:', error);
+      safeLogger.error('Error detecting system performance anomalies:', error);
     }
 
     return alerts;
@@ -462,7 +463,7 @@ export class AnomalyDetectionService {
       alerts.push(...moderationAnomalies);
 
     } catch (error) {
-      console.error('Error detecting content anomalies:', error);
+      safeLogger.error('Error detecting content anomalies:', error);
     }
 
     return alerts;
@@ -481,7 +482,7 @@ export class AnomalyDetectionService {
       alerts.push(...threatAnomalies);
 
     } catch (error) {
-      console.error('Error detecting security anomalies:', error);
+      safeLogger.error('Error detecting security anomalies:', error);
     }
 
     return alerts;
@@ -648,13 +649,13 @@ export class AnomalyDetectionService {
         )
       `);
     } catch (error) {
-      console.error('Error storing anomaly alert:', error);
+      safeLogger.error('Error storing anomaly alert:', error);
     }
   }
 
   private async triggerImmediateAlert(alert: AnomalyAlert): Promise<void> {
     // Mock implementation - would trigger immediate notifications
-    console.log(`CRITICAL ANOMALY DETECTED: ${alert.title}`);
+    safeLogger.info(`CRITICAL ANOMALY DETECTED: ${alert.title}`);
   }
 
   private async getAnomalyById(anomalyId: string): Promise<AnomalyDetectionResult | null> {
@@ -678,7 +679,7 @@ export class AnomalyDetectionService {
         metadata: JSON.parse(String(row.investigation_data) || '{}')
       };
     } catch (error) {
-      console.error('Error getting anomaly by ID:', error);
+      safeLogger.error('Error getting anomaly by ID:', error);
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { MarketplaceModerationService, MarketplaceListingInput } from '../services/marketplaceModerationService';
 import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 import { z } from 'zod';

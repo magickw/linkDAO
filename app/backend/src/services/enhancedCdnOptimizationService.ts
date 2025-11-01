@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import { safeLogger } from '../utils/safeLogger';
 import { createHash } from 'crypto';
 import { Redis } from 'ioredis';
 import { performance } from 'perf_hooks';
@@ -193,7 +194,7 @@ export class EnhancedCDNOptimizationService {
       return metadata;
 
     } catch (error) {
-      console.error('Enhanced CDN upload error:', error);
+      safeLogger.error('Enhanced CDN upload error:', error);
       throw new Error(`Failed to upload optimized asset: ${error.message}`);
     }
   }
@@ -280,7 +281,7 @@ export class EnhancedCDNOptimizationService {
 
       return await pipeline.toBuffer();
     } catch (error) {
-      console.error('Image optimization error:', error);
+      safeLogger.error('Image optimization error:', error);
       return buffer; // Return original if optimization fails
     }
   }
@@ -337,7 +338,7 @@ export class EnhancedCDNOptimizationService {
       if (result.status === 'fulfilled') {
         variants.push(result.value);
       } else {
-        console.warn(`Failed to create variant ${index}:`, result.reason);
+        safeLogger.warn(`Failed to create variant ${index}:`, result.reason);
       }
     });
 
@@ -405,7 +406,7 @@ export class EnhancedCDNOptimizationService {
 
       await Promise.allSettled(edgeWarmupPromises);
     } catch (error) {
-      console.warn('Edge warmup failed:', error);
+      safeLogger.warn('Edge warmup failed:', error);
     }
   }
 
@@ -424,7 +425,7 @@ export class EnhancedCDNOptimizationService {
         });
         return response.ok;
       } catch (error) {
-        console.warn(`Edge warmup failed for ${region}:`, error);
+        safeLogger.warn(`Edge warmup failed for ${region}:`, error);
         return false;
       }
     });
@@ -544,7 +545,7 @@ export class EnhancedCDNOptimizationService {
           }
         }
       } catch (error) {
-        console.error('Invalidation error:', error);
+        safeLogger.error('Invalidation error:', error);
         throw new Error(`Failed to invalidate cache: ${error.message}`);
       }
     }
@@ -582,7 +583,7 @@ export class EnhancedCDNOptimizationService {
         
         await new Promise(resolve => setTimeout(resolve, pollInterval));
       } catch (error) {
-        console.error('Error checking invalidation status:', error);
+        safeLogger.error('Error checking invalidation status:', error);
         break;
       }
     }
@@ -632,7 +633,7 @@ export class EnhancedCDNOptimizationService {
         JSON.stringify(metadata)
       );
     } catch (error) {
-      console.error('Error caching asset metadata:', error);
+      safeLogger.error('Error caching asset metadata:', error);
     }
   }
 
@@ -647,7 +648,7 @@ export class EnhancedCDNOptimizationService {
     
     // Log performance insights
     if (metrics.totalTime > 10000) { // > 10 seconds
-      console.warn('Slow CDN operation detected:', {
+      safeLogger.warn('Slow CDN operation detected:', {
         totalTime: `${metrics.totalTime.toFixed(2)}ms`,
         compressionRatio: metrics.compressionRatio.toFixed(2),
         originalSize: `${(metrics.originalSize / 1024 / 1024).toFixed(2)}MB`

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { orderEventHandlerService } from '../services/orderEventHandlerService';
 import { apiResponse } from '../utils/apiResponse';
 
@@ -22,7 +24,7 @@ export class OrderEventHandlerController {
       
       res.json(apiResponse.success(null, `Order event ${eventType} handled successfully for order ${orderId}`));
     } catch (error) {
-      console.error('Error handling order event:', error);
+      safeLogger.error('Error handling order event:', error);
       res.status(500).json(apiResponse.error('Failed to handle order event'));
     }
   }
@@ -36,7 +38,7 @@ export class OrderEventHandlerController {
       await orderEventHandlerService.processPendingOrderEvents();
       res.json(apiResponse.success(null, 'Pending order events processed successfully'));
     } catch (error) {
-      console.error('Error processing pending order events:', error);
+      safeLogger.error('Error processing pending order events:', error);
       res.status(500).json(apiResponse.error('Failed to process pending order events'));
     }
   }

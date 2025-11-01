@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import { eq, and, gt, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
@@ -70,7 +71,7 @@ export class AuthenticationService {
 
       return { nonce, message, expiresAt };
     } catch (error) {
-      console.error('Error generating nonce:', error);
+      safeLogger.error('Error generating nonce:', error);
       throw new Error('Failed to generate authentication nonce');
     }
   }
@@ -143,7 +144,7 @@ export class AuthenticationService {
         expiresAt,
       };
     } catch (error) {
-      console.error('Error authenticating wallet:', error);
+      safeLogger.error('Error authenticating wallet:', error);
       await this.logAuthAttempt(walletAddress, 'login', false, error.message, ipAddress, userAgent);
       
       // Handle ConnectorNotConnectedError gracefully
@@ -207,7 +208,7 @@ export class AuthenticationService {
         lastUsedAt: new Date(),
       };
     } catch (error) {
-      console.error('Error validating session:', error);
+      safeLogger.error('Error validating session:', error);
       return null;
     }
   }
@@ -276,7 +277,7 @@ export class AuthenticationService {
         expiresAt,
       };
     } catch (error) {
-      console.error('Error refreshing session:', error);
+      safeLogger.error('Error refreshing session:', error);
       await this.logAuthAttempt('unknown', 'refresh', false, error.message, ipAddress, userAgent);
       return {
         success: false,
@@ -312,7 +313,7 @@ export class AuthenticationService {
 
       return true;
     } catch (error) {
-      console.error('Error during logout:', error);
+      safeLogger.error('Error during logout:', error);
       return false;
     }
   }
@@ -325,7 +326,7 @@ export class AuthenticationService {
       const recoveredAddress = ethers.verifyMessage(message, signature);
       return recoveredAddress.toLowerCase() === walletAddress.toLowerCase();
     } catch (error) {
-      console.error('Error verifying signature:', error);
+      safeLogger.error('Error verifying signature:', error);
       return false;
     }
   }
@@ -362,7 +363,7 @@ export class AuthenticationService {
 
       return { message: nonceRecord.message };
     } catch (error) {
-      console.error('Error validating nonce:', error);
+      safeLogger.error('Error validating nonce:', error);
       return null;
     }
   }
@@ -407,7 +408,7 @@ export class AuthenticationService {
         .set({ isActive: false })
         .where(eq(authSessions.walletAddress, walletAddress.toLowerCase()));
     } catch (error) {
-      console.error('Error invalidating existing sessions:', error);
+      safeLogger.error('Error invalidating existing sessions:', error);
     }
   }
 
@@ -432,7 +433,7 @@ export class AuthenticationService {
         userAgent,
       });
     } catch (error) {
-      console.error('Error logging auth attempt:', error);
+      safeLogger.error('Error logging auth attempt:', error);
     }
   }
 
@@ -445,7 +446,7 @@ export class AuthenticationService {
         .delete(walletNonces)
         .where(lt(walletNonces.expiresAt, new Date()));
     } catch (error) {
-      console.error('Error cleaning up expired nonces:', error);
+      safeLogger.error('Error cleaning up expired nonces:', error);
     }
   }
 
@@ -459,7 +460,7 @@ export class AuthenticationService {
         .set({ isActive: false })
         .where(lt(authSessions.expiresAt, new Date()));
     } catch (error) {
-      console.error('Error cleaning up expired sessions:', error);
+      safeLogger.error('Error cleaning up expired sessions:', error);
     }
   }
 
@@ -477,7 +478,7 @@ export class AuthenticationService {
         successRate: 0,
       };
     } catch (error) {
-      console.error('Error getting auth stats:', error);
+      safeLogger.error('Error getting auth stats:', error);
       return null;
     }
   }

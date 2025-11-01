@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 const testDir = path.join(__dirname);
@@ -37,9 +38,9 @@ const testSuites: TestSuite[] = [
 ];
 
 function runTestSuite(suite: TestSuite, verbose: boolean = false): boolean {
-  console.log(`\n🧪 Running ${suite.name}...`);
-  console.log(`📝 ${suite.description}`);
-  console.log('─'.repeat(60));
+  safeLogger.info(`\n🧪 Running ${suite.name}...`);
+  safeLogger.info(`📝 ${suite.description}`);
+  safeLogger.info('─'.repeat(60));
 
   try {
     const jestCommand = [
@@ -57,20 +58,20 @@ function runTestSuite(suite: TestSuite, verbose: boolean = false): boolean {
       cwd: path.join(__dirname, '../../../..') // Go to backend root
     });
 
-    console.log(`✅ ${suite.name} completed successfully`);
+    safeLogger.info(`✅ ${suite.name} completed successfully`);
     return true;
   } catch (error) {
-    console.error(`❌ ${suite.name} failed`);
+    safeLogger.error(`❌ ${suite.name} failed`);
     if (verbose) {
-      console.error(error);
+      safeLogger.error(error);
     }
     return false;
   }
 }
 
 function runAllTests(options: { verbose?: boolean; suite?: string } = {}): void {
-  console.log('🚀 Marketplace API Endpoints Test Suite');
-  console.log('═'.repeat(60));
+  safeLogger.info('🚀 Marketplace API Endpoints Test Suite');
+  safeLogger.info('═'.repeat(60));
   
   const startTime = Date.now();
   let passedSuites = 0;
@@ -82,7 +83,7 @@ function runAllTests(options: { verbose?: boolean; suite?: string } = {}): void 
     : testSuites;
 
   if (suitesToRun.length === 0) {
-    console.error(`❌ No test suites found matching: ${options.suite}`);
+    safeLogger.error(`❌ No test suites found matching: ${options.suite}`);
     process.exit(1);
   }
 
@@ -96,23 +97,23 @@ function runAllTests(options: { verbose?: boolean; suite?: string } = {}): void 
   const endTime = Date.now();
   const duration = ((endTime - startTime) / 1000).toFixed(2);
 
-  console.log('\n' + '═'.repeat(60));
-  console.log('📊 Test Results Summary');
-  console.log('─'.repeat(60));
-  console.log(`✅ Passed: ${passedSuites}/${totalSuites} test suites`);
-  console.log(`⏱️  Duration: ${duration}s`);
+  safeLogger.info('\n' + '═'.repeat(60));
+  safeLogger.info('📊 Test Results Summary');
+  safeLogger.info('─'.repeat(60));
+  safeLogger.info(`✅ Passed: ${passedSuites}/${totalSuites} test suites`);
+  safeLogger.info(`⏱️  Duration: ${duration}s`);
 
   if (passedSuites === totalSuites) {
-    console.log('🎉 All tests passed!');
+    safeLogger.info('🎉 All tests passed!');
     process.exit(0);
   } else {
-    console.log('💥 Some tests failed!');
+    safeLogger.info('💥 Some tests failed!');
     process.exit(1);
   }
 }
 
 function showHelp(): void {
-  console.log(`
+  safeLogger.info(`
 🧪 Marketplace API Endpoints Test Runner
 
 Usage:

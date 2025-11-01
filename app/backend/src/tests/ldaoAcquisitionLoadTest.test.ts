@@ -1,4 +1,5 @@
 import { LDAOAcquisitionService } from '../services/ldaoAcquisitionService';
+import { safeLogger } from '../utils/safeLogger';
 import { LDAOAcquisitionConfigManager } from '../config/ldaoAcquisitionConfig';
 import { PurchaseRequest, EarnRequest } from '../types/ldaoAcquisition';
 
@@ -168,7 +169,7 @@ describe('LDAO Acquisition Load Tests', () => {
       const failedPurchases = results.filter(r => !r.success).length;
       const successRate = (successfulPurchases / concurrentRequests) * 100;
 
-      console.log(`Load Test Results:
+      safeLogger.info(`Load Test Results:
         - Total Requests: ${concurrentRequests}
         - Successful: ${successfulPurchases}
         - Failed: ${failedPurchases}
@@ -204,7 +205,7 @@ describe('LDAO Acquisition Load Tests', () => {
         expect(quote.totalPrice).toBeGreaterThan(0);
       });
 
-      console.log(`Price Quote Load Test:
+      safeLogger.info(`Price Quote Load Test:
         - Total Quotes: ${concurrentQuotes}
         - Duration: ${duration}ms
         - Avg Response Time: ${(duration / concurrentQuotes).toFixed(2)}ms
@@ -242,7 +243,7 @@ describe('LDAO Acquisition Load Tests', () => {
         .filter(r => r.success)
         .reduce((sum, r) => sum + r.tokensEarned, 0);
 
-      console.log(`Earning Load Test Results:
+      safeLogger.info(`Earning Load Test Results:
         - Total Requests: ${concurrentRequests}
         - Successful: ${successfulEarnings}
         - Total Tokens Earned: ${totalTokensEarned}
@@ -307,7 +308,7 @@ describe('LDAO Acquisition Load Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Mixed Load Test Results:
+      safeLogger.info(`Mixed Load Test Results:
         - Total Operations: ${totalOperations}
         - Duration: ${duration}ms
         - Operations/sec: ${(totalOperations / (duration / 1000)).toFixed(2)}
@@ -343,7 +344,7 @@ describe('LDAO Acquisition Load Tests', () => {
       const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
       const memoryIncreasePercent = (memoryIncrease / initialMemory.heapUsed) * 100;
 
-      console.log(`Memory Usage:
+      safeLogger.info(`Memory Usage:
         - Initial Heap: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)} MB
         - Final Heap: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)} MB
         - Increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)} MB (${memoryIncreasePercent.toFixed(2)}%)
@@ -383,7 +384,7 @@ describe('LDAO Acquisition Load Tests', () => {
 
       const errorRate = (totalFailed / stressRequests) * 100;
 
-      console.log(`Stress Test Results:
+      safeLogger.info(`Stress Test Results:
         - Total Requests: ${stressRequests}
         - Successful: ${totalSuccessful}
         - Failed: ${totalFailed}

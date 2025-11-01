@@ -6,6 +6,7 @@
  */
 
 import { ComprehensiveTestSuite } from './testSuite';
+import { safeLogger } from '../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 import fs from 'fs/promises';
 import path from 'path';
@@ -59,8 +60,8 @@ export class ComprehensiveTestRunner {
   }
 
   async runAllTests(): Promise<TestExecutionReport> {
-    console.log(`Starting comprehensive test execution: ${this.executionId}`);
-    console.log(`Start time: ${this.startTime.toISOString()}`);
+    safeLogger.info(`Starting comprehensive test execution: ${this.executionId}`);
+    safeLogger.info(`Start time: ${this.startTime.toISOString()}`);
 
     try {
       // Setup test environment
@@ -102,22 +103,22 @@ export class ComprehensiveTestRunner {
       // Cleanup test environment
       await this.testEnv.teardown();
 
-      console.log(`Test execution completed: ${this.executionId}`);
-      console.log(`Duration: ${duration}ms`);
-      console.log(`Overall coverage: ${coverage.overall}%`);
-      console.log(`Pass rate: ${qualityMetrics.passRate}%`);
+      safeLogger.info(`Test execution completed: ${this.executionId}`);
+      safeLogger.info(`Duration: ${duration}ms`);
+      safeLogger.info(`Overall coverage: ${coverage.overall}%`);
+      safeLogger.info(`Pass rate: ${qualityMetrics.passRate}%`);
 
       return report;
 
     } catch (error) {
-      console.error('Test execution failed:', error);
+      safeLogger.error('Test execution failed:', error);
       await this.testEnv.teardown();
       throw error;
     }
   }
 
   private async executeTestSuites(): Promise<any> {
-    console.log('Executing test suites...');
+    safeLogger.info('Executing test suites...');
 
     const results = {
       smartContracts: null,
@@ -130,31 +131,31 @@ export class ComprehensiveTestRunner {
 
     try {
       // Execute smart contract tests
-      console.log('Running smart contract tests...');
+      safeLogger.info('Running smart contract tests...');
       results.smartContracts = await this.runSmartContractTests();
 
       // Execute API integration tests
-      console.log('Running API integration tests...');
+      safeLogger.info('Running API integration tests...');
       results.apiIntegration = await this.runAPIIntegrationTests();
 
       // Execute database tests
-      console.log('Running database tests...');
+      safeLogger.info('Running database tests...');
       results.database = await this.runDatabaseTests();
 
       // Execute end-to-end tests
-      console.log('Running end-to-end tests...');
+      safeLogger.info('Running end-to-end tests...');
       results.endToEnd = await this.runEndToEndTests();
 
       // Execute performance tests
-      console.log('Running performance tests...');
+      safeLogger.info('Running performance tests...');
       results.performance = await this.runPerformanceTests();
 
       // Execute security tests
-      console.log('Running security tests...');
+      safeLogger.info('Running security tests...');
       results.security = await this.runSecurityTests();
 
     } catch (error) {
-      console.error('Error executing test suites:', error);
+      safeLogger.error('Error executing test suites:', error);
       throw error;
     }
 
@@ -231,7 +232,7 @@ export class ComprehensiveTestRunner {
   }
 
   private async generateCoverageReports(): Promise<any> {
-    console.log('Generating coverage reports...');
+    safeLogger.info('Generating coverage reports...');
 
     // Generate smart contract coverage
     const smartContractCoverage = await this.generateSmartContractCoverage();
@@ -506,7 +507,7 @@ export class ComprehensiveTestRunner {
     const reportPath = path.join(reportsDir, `execution-report-${this.executionId}.json`);
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
 
-    console.log(`Execution report saved: ${reportPath}`);
+    safeLogger.info(`Execution report saved: ${reportPath}`);
   }
 
   private generateExecutionId(): string {
@@ -522,30 +523,30 @@ if (require.main === module) {
   
   runner.runAllTests()
     .then(report => {
-      console.log('\n=== TEST EXECUTION SUMMARY ===');
-      console.log(`Execution ID: ${report.executionId}`);
-      console.log(`Duration: ${report.duration}ms`);
-      console.log(`Overall Coverage: ${report.coverage.overall}%`);
-      console.log(`Pass Rate: ${report.qualityMetrics.passRate}%`);
-      console.log(`Security Score: ${report.qualityMetrics.securityScore}`);
-      console.log(`Critical Issues: ${report.qualityMetrics.criticalIssues}`);
+      safeLogger.info('\n=== TEST EXECUTION SUMMARY ===');
+      safeLogger.info(`Execution ID: ${report.executionId}`);
+      safeLogger.info(`Duration: ${report.duration}ms`);
+      safeLogger.info(`Overall Coverage: ${report.coverage.overall}%`);
+      safeLogger.info(`Pass Rate: ${report.qualityMetrics.passRate}%`);
+      safeLogger.info(`Security Score: ${report.qualityMetrics.securityScore}`);
+      safeLogger.info(`Critical Issues: ${report.qualityMetrics.criticalIssues}`);
       
       if (report.recommendations.length > 0) {
-        console.log('\n=== RECOMMENDATIONS ===');
+        safeLogger.info('\n=== RECOMMENDATIONS ===');
         report.recommendations.forEach((rec, index) => {
-          console.log(`${index + 1}. ${rec}`);
+          safeLogger.info(`${index + 1}. ${rec}`);
         });
       }
       
-      console.log('\n=== ARTIFACTS ===');
+      safeLogger.info('\n=== ARTIFACTS ===');
       Object.entries(report.artifacts).forEach(([name, path]) => {
-        console.log(`${name}: ${path}`);
+        safeLogger.info(`${name}: ${path}`);
       });
       
       process.exit(0);
     })
     .catch(error => {
-      console.error('Test execution failed:', error);
+      safeLogger.error('Test execution failed:', error);
       process.exit(1);
     });
 }

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { communityService } from '../services/communityService';
 
 export class CommunitySubscriptionController {
@@ -16,7 +18,7 @@ export class CommunitySubscriptionController {
         data: tiers
       });
     } catch (error) {
-      console.error('Error fetching subscription tiers:', error);
+      safeLogger.error('Error fetching subscription tiers:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch subscription tiers'
@@ -48,7 +50,7 @@ export class CommunitySubscriptionController {
         data: subscription
       });
     } catch (error) {
-      console.error('Error fetching user subscription:', error);
+      safeLogger.error('Error fetching user subscription:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch subscription'
@@ -123,7 +125,7 @@ export class CommunitySubscriptionController {
         }
       });
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      safeLogger.error('Error creating checkout session:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create checkout session'
@@ -183,7 +185,7 @@ export class CommunitySubscriptionController {
         }
       });
     } catch (error) {
-      console.error('Error processing crypto payment:', error);
+      safeLogger.error('Error processing crypto payment:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to process crypto payment'
@@ -226,7 +228,7 @@ export class CommunitySubscriptionController {
 
       res.json({ received: true });
     } catch (error) {
-      console.error('Webhook error:', error);
+      safeLogger.error('Webhook error:', error);
       res.status(400).json({ error: 'Webhook handler failed' });
     }
   }
@@ -283,7 +285,7 @@ export class CommunitySubscriptionController {
     
     // Notify user about failed payment
     // Could trigger grace period or suspend access
-    console.log('Payment failed for subscription:', subscription);
+    safeLogger.info('Payment failed for subscription:', subscription);
   }
 
   /**
@@ -317,7 +319,7 @@ export class CommunitySubscriptionController {
         message: 'Subscription cancelled successfully'
       });
     } catch (error) {
-      console.error('Error cancelling subscription:', error);
+      safeLogger.error('Error cancelling subscription:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to cancel subscription'

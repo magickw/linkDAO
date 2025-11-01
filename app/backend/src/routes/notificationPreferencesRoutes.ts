@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getPreferences,
   updatePreferences,
@@ -25,27 +26,27 @@ router.get('/', getPreferences);
  * @desc    Update notification preferences for the authenticated user
  * @access  Private
  */
-router.put('/', updatePreferences);
+router.put('/', csrfProtection,  updatePreferences);
 
 /**
  * @route   POST /api/notification-preferences/push-token
  * @desc    Register a push notification token
  * @access  Private
  */
-router.post('/push-token', registerPushToken);
+router.post('/push-token', csrfProtection,  registerPushToken);
 
 /**
  * @route   DELETE /api/notification-preferences/push-token
  * @desc    Unregister a push notification token
  * @access  Private
  */
-router.delete('/push-token', unregisterPushToken);
+router.delete('/push-token', csrfProtection,  unregisterPushToken);
 
 /**
  * @route   POST /api/notification-preferences/test
  * @desc    Send a test notification (for debugging)
  * @access  Private
  */
-router.post('/test', testNotification);
+router.post('/test', csrfProtection,  testNotification);
 
 export default router;

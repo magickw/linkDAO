@@ -1,4 +1,5 @@
 import { Redis } from 'redis';
+import { safeLogger } from '../utils/safeLogger';
 import { redisService } from './redisService';
 
 export interface FeatureFlag {
@@ -274,7 +275,7 @@ class FeatureFlagService {
         userId
       };
     } catch (error) {
-      console.error(`Error evaluating feature flag ${flagName}:`, error);
+      safeLogger.error(`Error evaluating feature flag ${flagName}:`, error);
       return {
         enabled: false,
         reason: 'Error evaluating flag',
@@ -295,7 +296,7 @@ class FeatureFlagService {
       // Fall back to default flags
       return this.defaultFlags.get(flagName) || null;
     } catch (error) {
-      console.error(`Error getting feature flag ${flagName}:`, error);
+      safeLogger.error(`Error getting feature flag ${flagName}:`, error);
       return this.defaultFlags.get(flagName) || null;
     }
   }
@@ -316,7 +317,7 @@ class FeatureFlagService {
       // Also update in-memory defaults for fallback
       this.defaultFlags.set(flag.name, flag);
     } catch (error) {
-      console.error(`Error setting feature flag ${flag.name}:`, error);
+      safeLogger.error(`Error setting feature flag ${flag.name}:`, error);
       throw error;
     }
   }
@@ -342,7 +343,7 @@ class FeatureFlagService {
 
       return flags;
     } catch (error) {
-      console.error('Error getting all feature flags:', error);
+      safeLogger.error('Error getting all feature flags:', error);
       return Array.from(this.defaultFlags.values());
     }
   }
@@ -352,7 +353,7 @@ class FeatureFlagService {
       await this.redis.del(`feature_flag:${flagName}`);
       this.defaultFlags.delete(flagName);
     } catch (error) {
-      console.error(`Error deleting feature flag ${flagName}:`, error);
+      safeLogger.error(`Error deleting feature flag ${flagName}:`, error);
       throw error;
     }
   }

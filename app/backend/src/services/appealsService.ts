@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, moderationAppeals, appealJurors, moderationAuditLog, reputationHistory } from '../db/schema';
 import { eq, and, sql, desc, asc } from 'drizzle-orm';
 import { z } from 'zod';
@@ -172,7 +173,7 @@ export class AppealsService {
 
       return { success: true, appealId };
     } catch (error) {
-      console.error('Error submitting appeal:', error);
+      safeLogger.error('Error submitting appeal:', error);
       if (error instanceof z.ZodError) {
         return { success: false, error: 'Invalid appeal data: ' + error.errors.map(e => e.message).join(', ') };
       }
@@ -227,7 +228,7 @@ export class AppealsService {
         } : undefined
       };
     } catch (error) {
-      console.error('Error getting appeal case:', error);
+      safeLogger.error('Error getting appeal case:', error);
       return null;
     }
   }
@@ -303,7 +304,7 @@ export class AppealsService {
 
       return { success: true };
     } catch (error) {
-      console.error('Error updating appeal status:', error);
+      safeLogger.error('Error updating appeal status:', error);
       if (error instanceof z.ZodError) {
         return { success: false, error: 'Invalid update data: ' + error.errors.map(e => e.message).join(', ') };
       }
@@ -374,7 +375,7 @@ export class AppealsService {
 
       return { appeals, total, page, limit };
     } catch (error) {
-      console.error('Error getting user appeals:', error);
+      safeLogger.error('Error getting user appeals:', error);
       return { appeals: [], total: 0, page, limit };
     }
   }
@@ -442,7 +443,7 @@ export class AppealsService {
 
       return { appeals, total, page, limit };
     } catch (error) {
-      console.error('Error getting appeals by status:', error);
+      safeLogger.error('Error getting appeals by status:', error);
       return { appeals: [], total: 0, page, limit };
     }
   }
@@ -495,7 +496,7 @@ export class AppealsService {
         userBalance
       };
     } catch (error) {
-      console.error('Error validating stake amount:', error);
+      safeLogger.error('Error validating stake amount:', error);
       return {
         isValid: false,
         requiredStake: '0',
@@ -553,7 +554,7 @@ export class AppealsService {
           break;
       }
     } catch (error) {
-      console.error('Error handling status transition:', error);
+      safeLogger.error('Error handling status transition:', error);
     }
   }
 
@@ -605,7 +606,7 @@ export class AppealsService {
         stakeAmount: appealCase.stakeAmount
       });
     } catch (error) {
-      console.error('Error executing appeal outcome:', error);
+      safeLogger.error('Error executing appeal outcome:', error);
     }
   }
 
@@ -639,7 +640,7 @@ export class AppealsService {
 
       // TODO: Update actual reputation in reputation system
     } catch (error) {
-      console.error('Error updating user reputation:', error);
+      safeLogger.error('Error updating user reputation:', error);
     }
   }
 
@@ -666,7 +667,7 @@ export class AppealsService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error logging appeal activity:', error);
+      safeLogger.error('Error logging appeal activity:', error);
     }
   }
 
@@ -685,7 +686,7 @@ export class AppealsService {
       
       return evidenceCid;
     } catch (error) {
-      console.error('Error storing appeal evidence:', error);
+      safeLogger.error('Error storing appeal evidence:', error);
       return '';
     }
   }
@@ -703,7 +704,7 @@ export class AppealsService {
         submissionTimestamp: new Date()
       };
     } catch (error) {
-      console.error('Error getting appeal evidence:', error);
+      safeLogger.error('Error getting appeal evidence:', error);
       return null;
     }
   }

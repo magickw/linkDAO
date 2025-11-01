@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import * as schema from "../db/schema";
 import { eq, and, or, ilike, desc, lt, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
@@ -22,13 +23,13 @@ export class DatabaseService {
       if (databaseInstance) {
         this.db = databaseInstance;
         this.isConnected = true;
-        console.log('✅ Database service initialized successfully');
+        safeLogger.info('✅ Database service initialized successfully');
       } else {
-        console.warn('⚠️ Database service running in offline mode - no database connection available');
+        safeLogger.warn('⚠️ Database service running in offline mode - no database connection available');
         this.isConnected = false;
       }
     } catch (error) {
-      console.error('❌ Failed to initialize database service:', error);
+      safeLogger.error('❌ Failed to initialize database service:', error);
       this.isConnected = false;
     }
   }
@@ -60,7 +61,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating user:", error);
+      safeLogger.error("Error creating user:", error);
       throw error;
     }
   }
@@ -78,7 +79,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating post:", error);
+      safeLogger.error("Error creating post:", error);
       throw error;
     }
   }
@@ -87,7 +88,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.posts).where(eq(schema.posts.authorId, authorId));
     } catch (error) {
-      console.error("Error getting posts by author:", error);
+      safeLogger.error("Error getting posts by author:", error);
       throw error;
     }
   }
@@ -96,7 +97,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.posts);
     } catch (error) {
-      console.error("Error getting all posts:", error);
+      safeLogger.error("Error getting all posts:", error);
       throw error;
     }
   }
@@ -106,7 +107,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.posts).where(eq(schema.posts.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting post by ID:", error);
+      safeLogger.error("Error getting post by ID:", error);
       throw error;
     }
   }
@@ -134,7 +135,7 @@ export class DatabaseService {
       
       return result;
     } catch (error) {
-      console.error("Error getting posts by tag:", error);
+      safeLogger.error("Error getting posts by tag:", error);
       throw error;
     }
   }
@@ -152,7 +153,7 @@ export class DatabaseService {
       
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating post:", error);
+      safeLogger.error("Error updating post:", error);
       throw error;
     }
   }
@@ -174,7 +175,7 @@ export class DatabaseService {
       
       return result.length > 0;
     } catch (error) {
-      console.error("Error deleting post:", error);
+      safeLogger.error("Error deleting post:", error);
       throw error;
     }
   }
@@ -189,7 +190,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error following user:", error);
+      safeLogger.error("Error following user:", error);
       throw error;
     }
   }
@@ -203,7 +204,7 @@ export class DatabaseService {
         )
       );
     } catch (error) {
-      console.error("Error unfollowing user:", error);
+      safeLogger.error("Error unfollowing user:", error);
       throw error;
     }
   }
@@ -212,7 +213,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.follows).where(eq(schema.follows.followingId, userId));
     } catch (error) {
-      console.error("Error getting followers:", error);
+      safeLogger.error("Error getting followers:", error);
       throw error;
     }
   }
@@ -221,7 +222,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.follows).where(eq(schema.follows.followerId, userId));
     } catch (error) {
-      console.error("Error getting following:", error);
+      safeLogger.error("Error getting following:", error);
       throw error;
     }
   }
@@ -240,7 +241,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating payment:", error);
+      safeLogger.error("Error creating payment:", error);
       throw error;
     }
   }
@@ -258,7 +259,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating proposal:", error);
+      safeLogger.error("Error creating proposal:", error);
       throw error;
     }
   }
@@ -275,7 +276,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating bot:", error);
+      safeLogger.error("Error creating bot:", error);
       throw error;
     }
   }
@@ -292,7 +293,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating embedding:", error);
+      safeLogger.error("Error creating embedding:", error);
       throw error;
     }
   }
@@ -303,7 +304,7 @@ export class DatabaseService {
       // For now, we'll return all embeddings (to be replaced with actual similarity search)
       return await this.db.select().from(schema.embeddings).limit(limit);
     } catch (error) {
-      console.error("Error searching embeddings:", error);
+      safeLogger.error("Error searching embeddings:", error);
       throw error;
     }
   }
@@ -329,7 +330,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating listing:", error);
+      safeLogger.error("Error creating listing:", error);
       throw error;
     }
   }
@@ -339,7 +340,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.listings).where(eq(schema.listings.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting listing by ID:", error);
+      safeLogger.error("Error getting listing by ID:", error);
       throw error;
     }
   }
@@ -348,7 +349,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.listings).where(eq(schema.listings.sellerId, sellerId));
     } catch (error) {
-      console.error("Error getting listings by seller:", error);
+      safeLogger.error("Error getting listings by seller:", error);
       throw error;
     }
   }
@@ -357,7 +358,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.listings);
     } catch (error) {
-      console.error("Error getting all listings:", error);
+      safeLogger.error("Error getting all listings:", error);
       throw error;
     }
   }
@@ -366,7 +367,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.listings).where(eq(schema.listings.status, 'active'));
     } catch (error) {
-      console.error("Error getting active listings:", error);
+      safeLogger.error("Error getting active listings:", error);
       throw error;
     }
   }
@@ -376,7 +377,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.listings).set(updates).where(eq(schema.listings.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating listing:", error);
+      safeLogger.error("Error updating listing:", error);
       throw error;
     }
   }
@@ -386,7 +387,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.listings).set({ status: 'cancelled' }).where(eq(schema.listings.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error canceling listing:", error);
+      safeLogger.error("Error canceling listing:", error);
       throw error;
     }
   }
@@ -401,7 +402,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error placing bid:", error);
+      safeLogger.error("Error placing bid:", error);
       throw error;
     }
   }
@@ -410,7 +411,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.bids).where(eq(schema.bids.listingId, listingId));
     } catch (error) {
-      console.error("Error getting bids by listing:", error);
+      safeLogger.error("Error getting bids by listing:", error);
       throw error;
     }
   }
@@ -419,7 +420,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.bids).where(eq(schema.bids.bidderId, bidderId));
     } catch (error) {
-      console.error("Error getting bids by bidder:", error);
+      safeLogger.error("Error getting bids by bidder:", error);
       throw error;
     }
   }
@@ -434,7 +435,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error making offer:", error);
+      safeLogger.error("Error making offer:", error);
       throw error;
     }
   }
@@ -443,7 +444,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.offers).where(eq(schema.offers.listingId, listingId));
     } catch (error) {
-      console.error("Error getting offers by listing:", error);
+      safeLogger.error("Error getting offers by listing:", error);
       throw error;
     }
   }
@@ -452,7 +453,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.offers).where(eq(schema.offers.buyerId, buyerId));
     } catch (error) {
-      console.error("Error getting offers by buyer:", error);
+      safeLogger.error("Error getting offers by buyer:", error);
       throw error;
     }
   }
@@ -462,7 +463,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.offers).set({ accepted: true }).where(eq(schema.offers.id, offerId)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error accepting offer:", error);
+      safeLogger.error("Error accepting offer:", error);
       throw error;
     }
   }
@@ -481,7 +482,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating escrow:", error);
+      safeLogger.error("Error creating escrow:", error);
       throw error;
     }
   }
@@ -491,7 +492,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.escrows).where(eq(schema.escrows.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting escrow by ID:", error);
+      safeLogger.error("Error getting escrow by ID:", error);
       throw error;
     }
   }
@@ -502,7 +503,7 @@ export class DatabaseService {
         or(eq(schema.escrows.buyerId, userId), eq(schema.escrows.sellerId, userId))
       );
     } catch (error) {
-      console.error("Error getting escrows by user:", error);
+      safeLogger.error("Error getting escrows by user:", error);
       throw error;
     }
   }
@@ -512,7 +513,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.escrows).set(updates).where(eq(schema.escrows.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating escrow:", error);
+      safeLogger.error("Error updating escrow:", error);
       throw error;
     }
   }
@@ -525,7 +526,7 @@ export class DatabaseService {
       }).where(eq(schema.escrows.id, escrowId)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error confirming delivery:", error);
+      safeLogger.error("Error confirming delivery:", error);
       throw error;
     }
   }
@@ -544,7 +545,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating order:", error);
+      safeLogger.error("Error creating order:", error);
       throw error;
     }
   }
@@ -554,7 +555,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.orders).where(eq(schema.orders.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting order by ID:", error);
+      safeLogger.error("Error getting order by ID:", error);
       throw error;
     }
   }
@@ -565,7 +566,7 @@ export class DatabaseService {
         or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId))
       );
     } catch (error) {
-      console.error("Error getting orders by user:", error);
+      safeLogger.error("Error getting orders by user:", error);
       throw error;
     }
   }
@@ -575,7 +576,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.orders).set(updates).where(eq(schema.orders.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating order:", error);
+      safeLogger.error("Error updating order:", error);
       throw error;
     }
   }
@@ -591,7 +592,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating dispute:", error);
+      safeLogger.error("Error creating dispute:", error);
       throw error;
     }
   }
@@ -601,7 +602,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.disputes).where(eq(schema.disputes.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting dispute by ID:", error);
+      safeLogger.error("Error getting dispute by ID:", error);
       throw error;
     }
   }
@@ -610,7 +611,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.disputes).where(eq(schema.disputes.reporterId, userId));
     } catch (error) {
-      console.error("Error getting disputes by user:", error);
+      safeLogger.error("Error getting disputes by user:", error);
       throw error;
     }
   }
@@ -620,7 +621,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.disputes).set(updates).where(eq(schema.disputes.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating dispute:", error);
+      safeLogger.error("Error updating dispute:", error);
       throw error;
     }
   }
@@ -635,7 +636,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating user reputation:", error);
+      safeLogger.error("Error creating user reputation:", error);
       throw error;
     }
   }
@@ -645,7 +646,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.reputations).where(eq(schema.reputations.walletAddress, address));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting user reputation:", error);
+      safeLogger.error("Error getting user reputation:", error);
       throw error;
     }
   }
@@ -655,7 +656,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.reputations).set(updates).where(eq(schema.reputations.walletAddress, address)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating user reputation:", error);
+      safeLogger.error("Error updating user reputation:", error);
       throw error;
     }
   }
@@ -664,7 +665,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.reputations).where(eq(schema.reputations.daoApproved, true));
     } catch (error) {
-      console.error("Error getting DAO approved vendors:", error);
+      safeLogger.error("Error getting DAO approved vendors:", error);
       throw error;
     }
   }
@@ -680,7 +681,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating AI moderation record:", error);
+      safeLogger.error("Error creating AI moderation record:", error);
       throw error;
     }
   }
@@ -695,7 +696,7 @@ export class DatabaseService {
       );
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting AI moderation record:", error);
+      safeLogger.error("Error getting AI moderation record:", error);
       throw error;
     }
   }
@@ -705,7 +706,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.aiModeration).set(updates).where(eq(schema.aiModeration.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating AI moderation record:", error);
+      safeLogger.error("Error updating AI moderation record:", error);
       throw error;
     }
   }
@@ -714,7 +715,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.aiModeration).where(eq(schema.aiModeration.status, 'pending'));
     } catch (error) {
-      console.error("Error getting pending AI moderation records:", error);
+      safeLogger.error("Error getting pending AI moderation records:", error);
       throw error;
     }
   }
@@ -730,7 +731,7 @@ export class DatabaseService {
       ).limit(limit).offset(offset);
       return result;
     } catch (error) {
-      console.error("Error searching users:", error);
+      safeLogger.error("Error searching users:", error);
       throw error;
     }
   }
@@ -742,7 +743,7 @@ export class DatabaseService {
         .limit(limit);
       return result;
     } catch (error) {
-      console.error("Error getting recent users:", error);
+      safeLogger.error("Error getting recent users:", error);
       throw error;
     }
   }
@@ -762,7 +763,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating category:", error);
+      safeLogger.error("Error creating category:", error);
       throw error;
     }
   }
@@ -771,7 +772,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.categories).where(eq(schema.categories.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting category by ID:", error);
+      safeLogger.error("Error getting category by ID:", error);
       throw error;
     }
   }
@@ -781,7 +782,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.categories).where(eq(schema.categories.slug, slug));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting category by slug:", error);
+      safeLogger.error("Error getting category by slug:", error);
       throw error;
     }
   }
@@ -790,7 +791,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.categories).where(eq(schema.categories.isActive, true));
     } catch (error) {
-      console.error("Error getting all categories:", error);
+      safeLogger.error("Error getting all categories:", error);
       throw error;
     }
   }
@@ -800,7 +801,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.categories).set(updates).where(eq(schema.categories.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating category:", error);
+      safeLogger.error("Error updating category:", error);
       throw error;
     }
   }
@@ -810,7 +811,7 @@ export class DatabaseService {
       const result = await this.db.delete(schema.categories).where(eq(schema.categories.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error deleting category:", error);
+      safeLogger.error("Error deleting category:", error);
       throw error;
     }
   }
@@ -837,7 +838,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating product:", error);
+      safeLogger.error("Error creating product:", error);
       throw error;
     }
   }
@@ -847,7 +848,7 @@ export class DatabaseService {
       const result = await this.db.select().from(schema.products).where(eq(schema.products.id, id));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting product by ID:", error);
+      safeLogger.error("Error getting product by ID:", error);
       throw error;
     }
   }
@@ -856,7 +857,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.products).where(eq(schema.products.sellerId, sellerId));
     } catch (error) {
-      console.error("Error getting products by seller:", error);
+      safeLogger.error("Error getting products by seller:", error);
       throw error;
     }
   }
@@ -865,7 +866,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.products);
     } catch (error) {
-      console.error("Error getting all products:", error);
+      safeLogger.error("Error getting all products:", error);
       throw error;
     }
   }
@@ -874,7 +875,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.products).where(eq(schema.products.status, 'active'));
     } catch (error) {
-      console.error("Error getting active products:", error);
+      safeLogger.error("Error getting active products:", error);
       throw error;
     }
   }
@@ -884,7 +885,7 @@ export class DatabaseService {
       const result = await this.db.update(schema.products).set(updates).where(eq(schema.products.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating product:", error);
+      safeLogger.error("Error updating product:", error);
       throw error;
     }
   }
@@ -894,7 +895,7 @@ export class DatabaseService {
       const result = await this.db.delete(schema.products).where(eq(schema.products.id, id)).returning();
       return result[0] || null;
     } catch (error) {
-      console.error("Error deleting product:", error);
+      safeLogger.error("Error deleting product:", error);
       throw error;
     }
   }
@@ -909,7 +910,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating product tag:", error);
+      safeLogger.error("Error creating product tag:", error);
       throw error;
     }
   }
@@ -918,7 +919,7 @@ export class DatabaseService {
     try {
       return await this.db.select().from(schema.productTags).where(eq(schema.productTags.productId, productId));
     } catch (error) {
-      console.error("Error getting product tags:", error);
+      safeLogger.error("Error getting product tags:", error);
       throw error;
     }
   }
@@ -928,7 +929,7 @@ export class DatabaseService {
       const result = await this.db.delete(schema.productTags).where(eq(schema.productTags.productId, productId)).returning();
       return result.length;
     } catch (error) {
-      console.error("Error deleting product tags:", error);
+      safeLogger.error("Error deleting product tags:", error);
       throw error;
     }
   }
@@ -942,7 +943,7 @@ export class DatabaseService {
       await this.db.select().from(schema.users).limit(1);
       return true;
     } catch (error) {
-      console.error("Database connection test failed:", error);
+      safeLogger.error("Database connection test failed:", error);
       throw error;
     }
   }
@@ -1264,7 +1265,7 @@ export class DatabaseService {
     return this.executeQuery(async () => {
       // This would update a visibility_boost field if it existed
       // For now, we'll just log it as this field doesn't exist in current schema
-      console.log(`Updated visibility boost for user ${userId}: ${visibilityBoost}`);
+      safeLogger.info(`Updated visibility boost for user ${userId}: ${visibilityBoost}`);
     });
   }
 
@@ -1315,7 +1316,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating moderation case:", error);
+      safeLogger.error("Error creating moderation case:", error);
       throw error;
     }
   }
@@ -1326,7 +1327,7 @@ export class DatabaseService {
         .where(eq(schema.moderationCases.contentId, contentId));
       return result[0] || null;
     } catch (error) {
-      console.error("Error getting moderation case by content ID:", error);
+      safeLogger.error("Error getting moderation case by content ID:", error);
       throw error;
     }
   }
@@ -1359,7 +1360,7 @@ export class DatabaseService {
       
       return result[0] || null;
     } catch (error) {
-      console.error("Error updating moderation case:", error);
+      safeLogger.error("Error updating moderation case:", error);
       throw error;
     }
   }
@@ -1389,7 +1390,7 @@ export class DatabaseService {
       
       return result;
     } catch (error) {
-      console.error("Error getting user moderation cases:", error);
+      safeLogger.error("Error getting user moderation cases:", error);
       throw error;
     }
   }
@@ -1401,7 +1402,7 @@ export class DatabaseService {
         .orderBy(desc(schema.moderationCases.createdAt))
         .limit(limit);
     } catch (error) {
-      console.error("Error getting moderation cases by status:", error);
+      safeLogger.error("Error getting moderation cases by status:", error);
       throw error;
     }
   }
@@ -1427,7 +1428,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating content report:", error);
+      safeLogger.error("Error creating content report:", error);
       throw error;
     }
   }
@@ -1438,7 +1439,7 @@ export class DatabaseService {
         .where(eq(schema.contentReports.contentId, contentId))
         .orderBy(desc(schema.contentReports.createdAt));
     } catch (error) {
-      console.error("Error getting content reports:", error);
+      safeLogger.error("Error getting content reports:", error);
       throw error;
     }
   }
@@ -1465,7 +1466,7 @@ export class DatabaseService {
       
       return result[0];
     } catch (error) {
-      console.error("Error creating moderation action:", error);
+      safeLogger.error("Error creating moderation action:", error);
       throw error;
     }
   }
@@ -1477,7 +1478,7 @@ export class DatabaseService {
         .orderBy(desc(schema.moderationActions.createdAt))
         .limit(limit);
     } catch (error) {
-      console.error("Error getting user moderation actions:", error);
+      safeLogger.error("Error getting user moderation actions:", error);
       throw error;
     }
   }
@@ -1531,10 +1532,10 @@ export class DatabaseService {
         confirmedAt: null
       };
       
-      console.log(`Created payment transaction ${transactionData.id} for order ${transactionData.orderId}`);
+      safeLogger.info(`Created payment transaction ${transactionData.id} for order ${transactionData.orderId}`);
       return transaction;
     } catch (error) {
-      console.error('Error creating payment transaction:', error);
+      safeLogger.error('Error creating payment transaction:', error);
       throw error;
     }
   }
@@ -1545,10 +1546,10 @@ export class DatabaseService {
   async updatePaymentTransaction(transactionId: string, updates: any): Promise<any> {
     try {
       // Mock implementation - in production, update actual database record
-      console.log(`Updated payment transaction ${transactionId}:`, updates);
+      safeLogger.info(`Updated payment transaction ${transactionId}:`, updates);
       return { success: true, transactionId, updates };
     } catch (error) {
-      console.error('Error updating payment transaction:', error);
+      safeLogger.error('Error updating payment transaction:', error);
       throw error;
     }
   }
@@ -1576,10 +1577,10 @@ export class DatabaseService {
         confirmedAt: new Date()
       };
       
-      console.log(`Retrieved payment transaction ${transactionId}`);
+      safeLogger.info(`Retrieved payment transaction ${transactionId}`);
       return mockTransaction;
     } catch (error) {
-      console.error('Error getting payment transaction:', error);
+      safeLogger.error('Error getting payment transaction:', error);
       return null;
     }
   }
@@ -1607,10 +1608,10 @@ export class DatabaseService {
         confirmedAt: new Date()
       }];
       
-      console.log(`Retrieved ${mockTransactions.length} payment transactions for order ${orderId}`);
+      safeLogger.info(`Retrieved ${mockTransactions.length} payment transactions for order ${orderId}`);
       return mockTransactions;
     } catch (error) {
-      console.error('Error getting payment transactions by order ID:', error);
+      safeLogger.error('Error getting payment transactions by order ID:', error);
       return [];
     }
   }
@@ -1648,10 +1649,10 @@ export class DatabaseService {
         createdAt: new Date()
       };
       
-      console.log(`Created payment receipt ${receiptData.receiptNumber} for transaction ${receiptData.transactionId}`);
+      safeLogger.info(`Created payment receipt ${receiptData.receiptNumber} for transaction ${receiptData.transactionId}`);
       return receipt;
     } catch (error) {
-      console.error('Error creating payment receipt:', error);
+      safeLogger.error('Error creating payment receipt:', error);
       throw error;
     }
   }
@@ -1676,10 +1677,10 @@ export class DatabaseService {
         createdAt: new Date()
       }];
       
-      console.log(`Retrieved ${mockReceipts.length} payment receipts for order ${orderId}`);
+      safeLogger.info(`Retrieved ${mockReceipts.length} payment receipts for order ${orderId}`);
       return mockReceipts;
     } catch (error) {
-      console.error('Error getting payment receipts by order ID:', error);
+      safeLogger.error('Error getting payment receipts by order ID:', error);
       return [];
     }
   }
@@ -1705,10 +1706,10 @@ export class DatabaseService {
         createdAt: new Date()
       };
       
-      console.log(`Created order tracking for order ${trackingData.orderId}: ${trackingData.status}`);
+      safeLogger.info(`Created order tracking for order ${trackingData.orderId}: ${trackingData.status}`);
       return tracking;
     } catch (error) {
-      console.error('Error creating order tracking:', error);
+      safeLogger.error('Error creating order tracking:', error);
       throw error;
     }
   }
@@ -1729,7 +1730,7 @@ export class DatabaseService {
       
       return created;
     } catch (error) {
-      console.error("Error creating admin notification:", error);
+      safeLogger.error("Error creating admin notification:", error);
       throw error;
     }
   }
@@ -1744,7 +1745,7 @@ export class DatabaseService {
         .limit(limit)
         .offset(offset);
     } catch (error) {
-      console.error("Error getting admin notifications:", error);
+      safeLogger.error("Error getting admin notifications:", error);
       throw error;
     }
   }
@@ -1758,7 +1759,7 @@ export class DatabaseService {
       
       return !!updated;
     } catch (error) {
-      console.error("Error marking admin notification as read:", error);
+      safeLogger.error("Error marking admin notification as read:", error);
       throw error;
     }
   }
@@ -1776,7 +1777,7 @@ export class DatabaseService {
       
       return true;
     } catch (error) {
-      console.error("Error marking all admin notifications as read:", error);
+      safeLogger.error("Error marking all admin notifications as read:", error);
       throw error;
     }
   }
@@ -1795,7 +1796,7 @@ export class DatabaseService {
       
       return parseInt(result[0].count.toString()) || 0;
     } catch (error) {
-      console.error("Error getting admin unread notification count:", error);
+      safeLogger.error("Error getting admin unread notification count:", error);
       return 0;
     }
   }
@@ -1806,7 +1807,7 @@ export class DatabaseService {
       // For now, returning an empty array
       return [];
     } catch (error) {
-      console.error("Error getting admins with role:", error);
+      safeLogger.error("Error getting admins with role:", error);
       return [];
     }
   }
@@ -1817,7 +1818,7 @@ export class DatabaseService {
       // For now, returning an empty array
       return [];
     } catch (error) {
-      console.error("Error getting admins with permission:", error);
+      safeLogger.error("Error getting admins with permission:", error);
       return [];
     }
   }
@@ -1841,7 +1842,7 @@ export class DatabaseService {
         types: ['MODERATION_REQUIRED', 'SYSTEM_ALERT', 'SECURITY_ALERT', 'USER_FLAGGED', 'SELLER_APPLICATION', 'DISPUTE_ESCALATED']
       };
     } catch (error) {
-      console.error("Error getting admin notification preferences:", error);
+      safeLogger.error("Error getting admin notification preferences:", error);
       // Return default preferences
       return {
         email: true,
@@ -1861,7 +1862,7 @@ export class DatabaseService {
 
       return tokens.map((t) => t.token);
     } catch (error) {
-      console.error("Error getting admin push tokens:", error);
+      safeLogger.error("Error getting admin push tokens:", error);
       return [];
     }
   }
@@ -1873,7 +1874,7 @@ export class DatabaseService {
       
       return deleted;
     } catch (error) {
-      console.error("Error deleting old admin notifications:", error);
+      safeLogger.error("Error deleting old admin notifications:", error);
       throw error;
     }
   }
@@ -1933,7 +1934,7 @@ export class DatabaseService {
 
       return { total, unread, byType, byCategory };
     } catch (error) {
-      console.error("Error getting admin notification stats:", error);
+      safeLogger.error("Error getting admin notification stats:", error);
       return { total: 0, unread: 0, byType: {}, byCategory: {} };
     }
   }

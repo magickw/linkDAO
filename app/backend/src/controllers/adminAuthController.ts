@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { validationResult } from 'express-validator';
 import { AdminAuthService } from '../services/adminAuthService';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
@@ -56,7 +58,7 @@ class AdminAuthController {
         200
       );
     } catch (error) {
-      console.error('Admin login error:', error);
+      safeLogger.error('Admin login error:', error);
       errorResponse(res, 'AUTHENTICATION_ERROR', 'Authentication failed', 500);
     }
   }
@@ -87,7 +89,7 @@ class AdminAuthController {
 
       successResponse(res, { message: 'Logged out successfully' }, 200);
     } catch (error) {
-      console.error('Admin logout error:', error);
+      safeLogger.error('Admin logout error:', error);
       errorResponse(res, 'LOGOUT_ERROR', 'Logout failed', 500);
     }
   }
@@ -124,7 +126,7 @@ class AdminAuthController {
         200
       );
     } catch (error) {
-      console.error('Get session info error:', error);
+      safeLogger.error('Get session info error:', error);
       errorResponse(res, 'SESSION_ERROR', 'Failed to get session info', 500);
     }
   }

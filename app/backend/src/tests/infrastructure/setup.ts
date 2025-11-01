@@ -4,6 +4,7 @@
  */
 
 import { config } from 'dotenv';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 // Load test environment variables
@@ -15,24 +16,24 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test:t
 process.env.REDIS_URL = process.env.TEST_REDIS_URL || 'redis://localhost:6379/1';
 
 // Mock console methods to reduce noise in tests
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
+const originalConsoleLog = safeLogger.info;
+const originalConsoleWarn = safeLogger.warn;
+const originalConsoleError = safeLogger.error;
 
 // Only show errors and important logs during tests
-console.log = (...args: any[]) => {
+safeLogger.info = (...args: any[]) => {
   if (process.env.VERBOSE_TESTS === 'true') {
     originalConsoleLog(...args);
   }
 };
 
-console.warn = (...args: any[]) => {
+safeLogger.warn = (...args: any[]) => {
   if (process.env.VERBOSE_TESTS === 'true') {
     originalConsoleWarn(...args);
   }
 };
 
-console.error = (...args: any[]) => {
+safeLogger.error = (...args: any[]) => {
   // Always show errors
   originalConsoleError(...args);
 };
@@ -136,7 +137,7 @@ Object.defineProperty(global, 'crypto', {
 
 // Global error handler for unhandled promises
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  safeLogger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Cleanup function for after each test
@@ -158,7 +159,7 @@ afterEach(() => {
 // Global teardown
 afterAll(() => {
   // Restore console methods
-  console.log = originalConsoleLog;
-  console.warn = originalConsoleWarn;
-  console.error = originalConsoleError;
+  safeLogger.info = originalConsoleLog;
+  safeLogger.warn = originalConsoleWarn;
+  safeLogger.error = originalConsoleError;
 });

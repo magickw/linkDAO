@@ -13,6 +13,7 @@
  */
 
 import { describe, beforeAll, afterAll, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 import { SmartContractTestSuite } from './smartContractTests';
 import { APIIntegrationTestSuite } from './apiIntegrationTests';
@@ -242,7 +243,7 @@ export class ComprehensiveTestSuite {
 
   async generateCoverageReport(): Promise<void> {
     // Generate comprehensive coverage report
-    console.log('Generating comprehensive test coverage report...');
+    safeLogger.info('Generating comprehensive test coverage report...');
     // Implementation for coverage report generation
   }
 

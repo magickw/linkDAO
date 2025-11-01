@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../db/schema";
@@ -44,7 +45,7 @@ export class TipService {
       
       return result[0];
     } catch (error) {
-      console.error('Error recording tip:', error);
+      safeLogger.error('Error recording tip:', error);
       throw error;
     }
   }
@@ -56,7 +57,7 @@ export class TipService {
     try {
       return await db.select().from(schema.tips).where(eq(schema.tips.postId, postId));
     } catch (error) {
-      console.error('Error getting tips for post:', error);
+      safeLogger.error('Error getting tips for post:', error);
       throw error;
     }
   }
@@ -75,7 +76,7 @@ export class TipService {
         return sum + parseFloat(tip.total);
       }, 0);
     } catch (error) {
-      console.error('Error getting total tips received:', error);
+      safeLogger.error('Error getting total tips received:', error);
       throw error;
     }
   }
@@ -94,7 +95,7 @@ export class TipService {
         return sum + parseFloat(tip.total);
       }, 0);
     } catch (error) {
-      console.error('Error getting total tips sent:', error);
+      safeLogger.error('Error getting total tips sent:', error);
       throw error;
     }
   }
@@ -117,7 +118,7 @@ export class TipService {
         return sum + parseFloat(reward.earned);
       }, 0);
     } catch (error) {
-      console.error('Error getting claimable rewards:', error);
+      safeLogger.error('Error getting claimable rewards:', error);
       throw error;
     }
   }
@@ -140,7 +141,7 @@ export class TipService {
       
       return result;
     } catch (error) {
-      console.error('Error claiming rewards:', error);
+      safeLogger.error('Error claiming rewards:', error);
       throw error;
     }
   }
@@ -158,7 +159,7 @@ export class TipService {
           lte(schema.tips.createdAt, endDate)
         ));
     } catch (error) {
-      console.error('Error getting tips in date range:', error);
+      safeLogger.error('Error getting tips in date range:', error);
       throw error;
     }
   }
@@ -178,7 +179,7 @@ export class TipService {
       
       return result[0];
     } catch (error) {
-      console.error('Error creating reward epoch:', error);
+      safeLogger.error('Error creating reward epoch:', error);
       throw error;
     }
   }
@@ -198,7 +199,7 @@ export class TipService {
       
       return result[0];
     } catch (error) {
-      console.error('Error crediting creator rewards:', error);
+      safeLogger.error('Error crediting creator rewards:', error);
       throw error;
     }
   }

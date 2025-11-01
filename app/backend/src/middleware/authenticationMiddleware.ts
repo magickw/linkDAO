@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticationService } from '../services/authenticationService';
 
 export interface AuthenticatedRequest extends Request {
@@ -53,7 +54,7 @@ export class AuthenticationMiddleware {
 
       next();
     } catch (error) {
-      console.error('Authentication middleware error:', error);
+      safeLogger.error('Authentication middleware error:', error);
       return res.status(500).json({
         success: false,
         error: {
@@ -85,7 +86,7 @@ export class AuthenticationMiddleware {
 
       next();
     } catch (error) {
-      console.error('Optional authentication middleware error:', error);
+      safeLogger.error('Optional authentication middleware error:', error);
       // Don't fail the request for optional auth
       next();
     }

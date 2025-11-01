@@ -58,7 +58,7 @@ class CDNService {
       // In a real implementation, this would delete from your CDN provider
       return true;
     } catch (error) {
-      console.error('CDN delete error:', error);
+      safeLogger.error('CDN delete error:', error);
       return false;
     }
   }

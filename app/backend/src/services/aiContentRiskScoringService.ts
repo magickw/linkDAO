@@ -1,4 +1,5 @@
 import { AIModerationOrchestrator, ContentInput, EnsembleDecision, ModerationResult } from './aiModerationOrchestrator';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from './databaseService';
 import { moderationCases } from '../db/schema';
 import { eq, desc, and, gte, lte, sql } from 'drizzle-orm';
@@ -133,7 +134,7 @@ export class AIContentRiskScoringService {
       return assessment;
 
     } catch (error) {
-      console.error('Error in AI content risk scoring:', error);
+      safeLogger.error('Error in AI content risk scoring:', error);
       
       // Return safe fallback assessment
       return this.createFallbackAssessment(content);
@@ -223,7 +224,7 @@ export class AIContentRiskScoringService {
       };
 
     } catch (error) {
-      console.error('Error calculating user reputation factor:', error);
+      safeLogger.error('Error calculating user reputation factor:', error);
       return {
         name: 'user_reputation',
         weight: this.riskFactorWeights.user_reputation,
@@ -293,7 +294,7 @@ export class AIContentRiskScoringService {
       };
 
     } catch (error) {
-      console.error('Error calculating temporal patterns factor:', error);
+      safeLogger.error('Error calculating temporal patterns factor:', error);
       return {
         name: 'temporal_patterns',
         weight: this.riskFactorWeights.temporal_patterns,
@@ -553,7 +554,7 @@ export class AIContentRiskScoringService {
       }));
 
     } catch (error) {
-      console.error('Error finding similar cases:', error);
+      safeLogger.error('Error finding similar cases:', error);
       return [];
     }
   }
@@ -636,7 +637,7 @@ export class AIContentRiskScoringService {
       });
 
     } catch (error) {
-      console.error('Error storing risk assessment:', error);
+      safeLogger.error('Error storing risk assessment:', error);
       // Don't throw - this is for analytics, not critical path
     }
   }

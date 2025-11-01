@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import multer from 'multer';
 import { sellerController } from '../controllers/sellerController';
 
@@ -23,8 +24,8 @@ const upload = multer({
 // Marketplace Seller Profile Routes
 // These routes are mapped to match the frontend expectations at /api/marketplace/seller/...
 // router.get('/seller/:walletAddress', sellerController.getProfile.bind(sellerController));
-// router.post('/seller/profile', sellerController.createProfile.bind(sellerController));
-// router.put('/seller/:walletAddress', sellerController.updateProfile.bind(sellerController));
+// router.post('/seller/profile', csrfProtection,  sellerController.createProfile.bind(sellerController));
+// router.put('/seller/:walletAddress', csrfProtection,  sellerController.updateProfile.bind(sellerController));
 
 // Enhanced profile update with image support
 router.put(
@@ -38,17 +39,17 @@ router.put(
 
 // Profile validation and completeness
 router.get('/seller/:walletAddress/completeness', sellerController.getProfileCompleteness.bind(sellerController));
-router.post('/seller/profile/validate', sellerController.validateProfile.bind(sellerController));
+router.post('/seller/profile/validate', csrfProtection,  sellerController.validateProfile.bind(sellerController));
 
 // Seller statistics
 router.get('/seller/stats/:walletAddress', sellerController.getSellerStats.bind(sellerController));
 
 // ENS validation routes
-router.post('/seller/ens/validate', sellerController.validateENS.bind(sellerController));
-router.post('/seller/ens/verify-ownership', sellerController.verifyENSOwnership.bind(sellerController));
+router.post('/seller/ens/validate', csrfProtection,  sellerController.validateENS.bind(sellerController));
+router.post('/seller/ens/verify-ownership', csrfProtection,  sellerController.verifyENSOwnership.bind(sellerController));
 
 // Profile synchronization routes
-router.post('/seller/:walletAddress/sync', sellerController.forceSyncProfile.bind(sellerController));
+router.post('/seller/:walletAddress/sync', csrfProtection,  sellerController.forceSyncProfile.bind(sellerController));
 router.get('/seller/:walletAddress/sync/validate', sellerController.validateProfileSync.bind(sellerController));
 router.get('/seller/:walletAddress/history', sellerController.getProfileHistory.bind(sellerController));
 
@@ -103,7 +104,7 @@ router.get('/seller/onboarding/:walletAddress', (req, res) => {
   });
 });
 
-router.put('/seller/onboarding/:walletAddress/:stepId', (req, res) => {
+router.put('/seller/onboarding/:walletAddress/:stepId', csrfProtection,  (req, res) => {
   const { walletAddress, stepId } = req.params;
   const data = req.body;
   

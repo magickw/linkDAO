@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import SellerSecurityMiddleware from '../middleware/sellerSecurityMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 import { validationErrorResponse } from '../utils/apiResponse';
@@ -18,7 +20,7 @@ const sellerSecurityMiddleware = new SellerSecurityMiddleware();
  * @desc Generate verification nonce for wallet ownership
  * @access Public
  */
-router.post('/nonce', 
+router.post('/nonce', csrfProtection,  
   rateLimitingMiddleware({ maxRequests: 10, windowMs: 60000 }), // 10 requests per minute
   sellerSecurityMiddleware.generateVerificationNonce
 );
@@ -28,7 +30,7 @@ router.post('/nonce',
  * @desc Verify wallet ownership with signature
  * @access Public
  */
-router.post('/verify',
+router.post('/verify', csrfProtection, 
   rateLimitingMiddleware({ maxRequests: 5, windowMs: 60000 }), // 5 requests per minute
   sellerSecurityMiddleware.requireWalletOwnership(),
   (req, res) => {
@@ -44,7 +46,7 @@ router.post('/verify',
  * @desc Create security session
  * @access Protected
  */
-router.post('/session',
+router.post('/session', csrfProtection, 
   rateLimitingMiddleware({ maxRequests: 20, windowMs: 300000 }), // 20 requests per 5 minutes
   sellerSecurityMiddleware.requireWalletOwnership(),
   sellerSecurityMiddleware.createSecuritySession
@@ -55,7 +57,7 @@ router.post('/session',
  * @desc Revoke security session
  * @access Protected
  */
-router.delete('/session',
+router.delete('/session', csrfProtection, 
   rateLimitingMiddleware({ maxRequests: 50, windowMs: 300000 }), // 50 requests per 5 minutes
   sellerSecurityMiddleware.revokeSecuritySession
 );
@@ -85,7 +87,7 @@ router.get('/status/:walletAddress',
         }
       });
     } catch (error) {
-      console.error('Error getting security status:', error);
+      safeLogger.error('Error getting security status:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get security status'
@@ -122,7 +124,7 @@ router.get('/audit/:walletAddress',
         }
       });
     } catch (error) {
-      console.error('Error getting audit logs:', error);
+      safeLogger.error('Error getting audit logs:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get audit logs'
@@ -136,7 +138,7 @@ router.get('/audit/:walletAddress',
  * @desc Update seller permissions (Owner only)
  * @access Protected - Owner only
  */
-router.post('/permissions/:walletAddress',
+router.post('/permissions/:walletAddress', csrfProtection, 
   rateLimitingMiddleware({ maxRequests: 10, windowMs: 300000 }), // 10 requests per 5 minutes
   sellerSecurityMiddleware.validateSellerAccess(['permissions']),
   sellerSecurityMiddleware.auditSellerOperation('permission_update', 'permissions', 'update'),
@@ -160,7 +162,7 @@ router.post('/permissions/:walletAddress',
         }
       });
     } catch (error) {
-      console.error('Error updating permissions:', error);
+      safeLogger.error('Error updating permissions:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update permissions'
@@ -193,7 +195,7 @@ router.get('/permissions/:walletAddress',
         }
       });
     } catch (error) {
-      console.error('Error getting permissions:', error);
+      safeLogger.error('Error getting permissions:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get permissions'
@@ -207,7 +209,7 @@ router.get('/permissions/:walletAddress',
  * @desc Create security alert
  * @access Protected - System/Admin only
  */
-router.post('/alert/:walletAddress',
+router.post('/alert/:walletAddress', csrfProtection, 
   rateLimitingMiddleware({ maxRequests: 20, windowMs: 300000 }), // 20 requests per 5 minutes
   sellerSecurityMiddleware.validateSellerAccess(['security']),
   sellerSecurityMiddleware.auditSellerOperation('security_alert', 'security', 'alert'),
@@ -235,7 +237,7 @@ router.post('/alert/:walletAddress',
         }
       });
     } catch (error) {
-      console.error('Error creating security alert:', error);
+      safeLogger.error('Error creating security alert:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create security alert'

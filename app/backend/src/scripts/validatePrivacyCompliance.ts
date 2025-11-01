@@ -11,19 +11,19 @@
 import { 
   PIIDetectionService 
 } from '../services/piiDetectionService';
-import { 
+import {
   GeofencingComplianceService,
   ComplianceContext 
 } from '../services/geofencingComplianceService';
-import { 
+import {
   DataRetentionService 
 } from '../services/dataRetentionService';
-import { 
+import {
   UserConsentService,
   ConsentType,
   ConsentStatus 
 } from '../services/userConsentService';
-import { 
+import {
   PrivacyEvidenceStorageService 
 } from '../services/privacyEvidenceStorageService';
 

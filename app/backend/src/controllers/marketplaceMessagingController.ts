@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { marketplaceMessagingService } from '../services/marketplaceMessagingService';
 import { orderMessagingAutomation } from '../services/orderMessagingAutomation';
 import { apiResponse } from '../utils/apiResponse';
@@ -26,7 +28,7 @@ export class MarketplaceMessagingController {
 
       res.status(201).json(apiResponse.success(conversation, 'Order conversation created successfully'));
     } catch (error) {
-      console.error('Error creating order conversation:', error);
+      safeLogger.error('Error creating order conversation:', error);
       res.status(500).json(apiResponse.error('Failed to create order conversation'));
     }
   }
@@ -49,7 +51,7 @@ export class MarketplaceMessagingController {
       // TODO: Implement product inquiry conversation creation
       res.status(201).json(apiResponse.success({}, 'Product inquiry conversation created successfully'));
     } catch (error) {
-      console.error('Error creating product inquiry conversation:', error);
+      safeLogger.error('Error creating product inquiry conversation:', error);
       res.status(500).json(apiResponse.error('Failed to create product inquiry conversation'));
     }
   }
@@ -78,7 +80,7 @@ export class MarketplaceMessagingController {
         }
       }, 'Order conversations retrieved successfully'));
     } catch (error) {
-      console.error('Error getting order conversations:', error);
+      safeLogger.error('Error getting order conversations:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve order conversations'));
     }
   }
@@ -101,7 +103,7 @@ export class MarketplaceMessagingController {
 
       res.json(apiResponse.success(timeline, 'Order timeline retrieved successfully'));
     } catch (error) {
-      console.error('Error getting order timeline:', error);
+      safeLogger.error('Error getting order timeline:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve order timeline'));
     }
   }
@@ -122,7 +124,7 @@ export class MarketplaceMessagingController {
       // TODO: Implement getting user's templates
       res.json(apiResponse.success([], 'Templates retrieved successfully'));
     } catch (error) {
-      console.error('Error getting templates:', error);
+      safeLogger.error('Error getting templates:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve templates'));
     }
   }
@@ -166,7 +168,7 @@ export class MarketplaceMessagingController {
 
       res.status(201).json(apiResponse.success(newTemplate[0], 'Template created successfully'));
     } catch (error) {
-      console.error('Error creating template:', error);
+      safeLogger.error('Error creating template:', error);
       res.status(500).json(apiResponse.error('Failed to create template'));
     }
   }
@@ -209,7 +211,7 @@ export class MarketplaceMessagingController {
 
       res.json(apiResponse.success(updated[0], 'Template updated successfully'));
     } catch (error) {
-      console.error('Error updating template:', error);
+      safeLogger.error('Error updating template:', error);
       res.status(500).json(apiResponse.error('Failed to update template'));
     }
   }
@@ -241,7 +243,7 @@ export class MarketplaceMessagingController {
 
       res.json(apiResponse.success(null, 'Template deleted successfully'));
     } catch (error) {
-      console.error('Error deleting template:', error);
+      safeLogger.error('Error deleting template:', error);
       res.status(500).json(apiResponse.error('Failed to delete template'));
     }
   }
@@ -284,7 +286,7 @@ export class MarketplaceMessagingController {
 
       res.status(201).json(apiResponse.success(newQuickReply[0], 'Quick reply created successfully'));
     } catch (error) {
-      console.error('Error creating quick reply:', error);
+      safeLogger.error('Error creating quick reply:', error);
       res.status(500).json(apiResponse.error('Failed to create quick reply'));
     }
   }
@@ -307,7 +309,7 @@ export class MarketplaceMessagingController {
 
       res.json(apiResponse.success(suggestions, 'Quick replies suggested successfully'));
     } catch (error) {
-      console.error('Error suggesting quick replies:', error);
+      safeLogger.error('Error suggesting quick replies:', error);
       res.status(500).json(apiResponse.error('Failed to suggest quick replies'));
     }
   }
@@ -330,7 +332,7 @@ export class MarketplaceMessagingController {
 
       res.json(apiResponse.success(analytics, 'Conversation analytics retrieved successfully'));
     } catch (error) {
-      console.error('Error getting conversation analytics:', error);
+      safeLogger.error('Error getting conversation analytics:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve conversation analytics'));
     }
   }
@@ -351,7 +353,7 @@ export class MarketplaceMessagingController {
       // TODO: Implement seller messaging analytics
       res.json(apiResponse.success({}, 'Seller messaging analytics retrieved successfully'));
     } catch (error) {
-      console.error('Error getting seller messaging analytics:', error);
+      safeLogger.error('Error getting seller messaging analytics:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve seller messaging analytics'));
     }
   }
@@ -375,7 +377,7 @@ export class MarketplaceMessagingController {
 
       res.status(201).json(apiResponse.success(message, 'Automated notification sent successfully'));
     } catch (error) {
-      console.error('Error sending automated notification:', error);
+      safeLogger.error('Error sending automated notification:', error);
       res.status(500).json(apiResponse.error('Failed to send automated notification'));
     }
   }
@@ -397,7 +399,7 @@ export class MarketplaceMessagingController {
       // TODO: Implement dispute escalation
       res.status(201).json(apiResponse.success({}, 'Conversation escalated to dispute successfully'));
     } catch (error) {
-      console.error('Error escalating to dispute:', error);
+      safeLogger.error('Error escalating to dispute:', error);
       res.status(500).json(apiResponse.error('Failed to escalate to dispute'));
     }
   }

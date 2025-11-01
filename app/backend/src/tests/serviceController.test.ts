@@ -20,20 +20,7 @@ jest.mock('../services/serviceService', () => ({
 import { serviceService } from '../services/serviceService';
 import { it } from 'node:test';
 import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
-import { it } from 'node:test';
-import { it } from 'node:test';
-import { describe } from 'node:test';
 import { beforeEach } from 'node:test';
-import { describe } from 'node:test';
 
 const app = express();
 app.use(express.json());

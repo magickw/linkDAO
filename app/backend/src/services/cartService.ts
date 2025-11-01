@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { carts, cartItems, products, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { AuthenticatedUser } from '../middleware/authMiddleware';
@@ -86,7 +87,7 @@ export class CartService {
 
       return this.formatCart(cart[0], items);
     } catch (error) {
-      console.error('Error getting or creating cart:', error);
+      safeLogger.error('Error getting or creating cart:', error);
       throw new Error('Failed to get or create cart');
     }
   }
@@ -160,7 +161,7 @@ export class CartService {
       // Return updated cart
       return this.getOrCreateCart(user);
     } catch (error) {
-      console.error('Error adding item to cart:', error);
+      safeLogger.error('Error adding item to cart:', error);
       throw error;
     }
   }
@@ -215,7 +216,7 @@ export class CartService {
       // Return updated cart
       return this.getOrCreateCart(user);
     } catch (error) {
-      console.error('Error updating cart item:', error);
+      safeLogger.error('Error updating cart item:', error);
       throw error;
     }
   }
@@ -262,7 +263,7 @@ export class CartService {
       // Return updated cart
       return this.getOrCreateCart(user);
     } catch (error) {
-      console.error('Error removing cart item:', error);
+      safeLogger.error('Error removing cart item:', error);
       throw error;
     }
   }
@@ -304,7 +305,7 @@ export class CartService {
       // Return updated cart
       return this.getOrCreateCart(user);
     } catch (error) {
-      console.error('Error clearing cart:', error);
+      safeLogger.error('Error clearing cart:', error);
       throw error;
     }
   }
@@ -350,7 +351,7 @@ export class CartService {
         },
       }));
     } catch (error) {
-      console.error('Error getting cart items:', error);
+      safeLogger.error('Error getting cart items:', error);
       return [];
     }
   }
@@ -397,7 +398,7 @@ export class CartService {
         try {
           await this.addItem(user, localItem);
         } catch (error) {
-          console.warn(`Failed to sync item ${localItem.productId}:`, error);
+          safeLogger.warn(`Failed to sync item ${localItem.productId}:`, error);
           // Continue with other items even if one fails
         }
       }
@@ -405,7 +406,7 @@ export class CartService {
       // Return the updated cart
       return this.getOrCreateCart(user);
     } catch (error) {
-      console.error('Error syncing cart:', error);
+      safeLogger.error('Error syncing cart:', error);
       throw error;
     }
   }

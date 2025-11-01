@@ -4,6 +4,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 interface TestResult {
@@ -18,7 +19,7 @@ class InfrastructureTestRunner {
   private results: TestResult[] = [];
 
   async runAllTests(): Promise<void> {
-    console.log('🚀 Starting Infrastructure Tests...\n');
+    safeLogger.info('🚀 Starting Infrastructure Tests...\n');
 
     const testFiles = [
       'serviceWorkerCache.test.ts',
@@ -35,7 +36,7 @@ class InfrastructureTestRunner {
   }
 
   private async runTest(testFile: string): Promise<void> {
-    console.log(`📋 Running ${testFile}...`);
+    safeLogger.info(`📋 Running ${testFile}...`);
     const startTime = Date.now();
 
     try {
@@ -54,7 +55,7 @@ class InfrastructureTestRunner {
         output
       });
 
-      console.log(`✅ ${testFile} passed (${duration}ms)\n`);
+      safeLogger.info(`✅ ${testFile} passed (${duration}ms)\n`);
     } catch (error) {
       const duration = Date.now() - startTime;
       
@@ -66,77 +67,77 @@ class InfrastructureTestRunner {
         error: error.stderr || error.message
       });
 
-      console.log(`❌ ${testFile} failed (${duration}ms)`);
-      console.log(`Error: ${error.message}\n`);
+      safeLogger.info(`❌ ${testFile} failed (${duration}ms)`);
+      safeLogger.info(`Error: ${error.message}\n`);
     }
   }
 
   private printSummary(): void {
-    console.log('\n📊 Infrastructure Tests Summary');
-    console.log('================================');
+    safeLogger.info('\n📊 Infrastructure Tests Summary');
+    safeLogger.info('================================');
 
     const passed = this.results.filter(r => r.passed).length;
     const failed = this.results.filter(r => !r.passed).length;
     const total = this.results.length;
     const totalDuration = this.results.reduce((sum, r) => sum + r.duration, 0);
 
-    console.log(`Total Tests: ${total}`);
-    console.log(`Passed: ${passed}`);
-    console.log(`Failed: ${failed}`);
-    console.log(`Total Duration: ${totalDuration}ms`);
-    console.log(`Success Rate: ${((passed / total) * 100).toFixed(1)}%`);
+    safeLogger.info(`Total Tests: ${total}`);
+    safeLogger.info(`Passed: ${passed}`);
+    safeLogger.info(`Failed: ${failed}`);
+    safeLogger.info(`Total Duration: ${totalDuration}ms`);
+    safeLogger.info(`Success Rate: ${((passed / total) * 100).toFixed(1)}%`);
 
     if (failed > 0) {
-      console.log('\n❌ Failed Tests:');
+      safeLogger.info('\n❌ Failed Tests:');
       this.results
         .filter(r => !r.passed)
         .forEach(result => {
-          console.log(`  - ${result.testFile}: ${result.error}`);
+          safeLogger.info(`  - ${result.testFile}: ${result.error}`);
         });
     }
 
-    console.log('\n📋 Detailed Results:');
+    safeLogger.info('\n📋 Detailed Results:');
     this.results.forEach(result => {
       const status = result.passed ? '✅' : '❌';
-      console.log(`  ${status} ${result.testFile} (${result.duration}ms)`);
+      safeLogger.info(`  ${status} ${result.testFile} (${result.duration}ms)`);
     });
 
     if (passed === total) {
-      console.log('\n🎉 All infrastructure tests passed!');
-      console.log('✨ Infrastructure is ready for production use.');
+      safeLogger.info('\n🎉 All infrastructure tests passed!');
+      safeLogger.info('✨ Infrastructure is ready for production use.');
     } else {
-      console.log('\n⚠️  Some infrastructure tests failed.');
-      console.log('🔧 Please review and fix the failing tests before proceeding.');
+      safeLogger.info('\n⚠️  Some infrastructure tests failed.');
+      safeLogger.info('🔧 Please review and fix the failing tests before proceeding.');
       process.exit(1);
     }
   }
 
   async runSpecificTest(testName: string): Promise<void> {
-    console.log(`🎯 Running specific test: ${testName}`);
+    safeLogger.info(`🎯 Running specific test: ${testName}`);
     await this.runTest(testName);
     this.printSummary();
   }
 
   async runCacheTests(): Promise<void> {
-    console.log('🗄️  Running Cache Tests...');
+    safeLogger.info('🗄️  Running Cache Tests...');
     await this.runTest('serviceWorkerCache.test.ts');
     this.printSummary();
   }
 
   async runApiTests(): Promise<void> {
-    console.log('🌐 Running API Tests...');
+    safeLogger.info('🌐 Running API Tests...');
     await this.runTest('apiEndpoints.integration.test.ts');
     this.printSummary();
   }
 
   async runWebSocketTests(): Promise<void> {
-    console.log('🔌 Running WebSocket Tests...');
+    safeLogger.info('🔌 Running WebSocket Tests...');
     await this.runTest('webSocket.test.ts');
     this.printSummary();
   }
 
   async runDatabaseTests(): Promise<void> {
-    console.log('🗃️  Running Database Tests...');
+    safeLogger.info('🗃️  Running Database Tests...');
     await this.runTest('database.test.ts');
     this.printSummary();
   }
@@ -148,28 +149,28 @@ if (require.main === module) {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    runner.runAllTests().catch(console.error);
+    runner.runAllTests().catch(safeLogger.error);
   } else {
     const command = args[0];
     
     switch (command) {
       case 'cache':
-        runner.runCacheTests().catch(console.error);
+        runner.runCacheTests().catch(safeLogger.error);
         break;
       case 'api':
-        runner.runApiTests().catch(console.error);
+        runner.runApiTests().catch(safeLogger.error);
         break;
       case 'websocket':
-        runner.runWebSocketTests().catch(console.error);
+        runner.runWebSocketTests().catch(safeLogger.error);
         break;
       case 'database':
-        runner.runDatabaseTests().catch(console.error);
+        runner.runDatabaseTests().catch(safeLogger.error);
         break;
       default:
         if (command.endsWith('.test.ts')) {
-          runner.runSpecificTest(command).catch(console.error);
+          runner.runSpecificTest(command).catch(safeLogger.error);
         } else {
-          console.log('Usage: npm run test:infrastructure [cache|api|websocket|database|<test-file>]');
+          safeLogger.info('Usage: npm run test:infrastructure [cache|api|websocket|database|<test-file>]');
           process.exit(1);
         }
     }

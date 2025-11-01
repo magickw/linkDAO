@@ -6,6 +6,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -53,21 +54,21 @@ class SecurityTestRunner {
    * Run all security tests
    */
   async runAllSecurityTests(): Promise<SecurityAssessmentReport> {
-    console.log('🔒 Starting comprehensive security test suite...\n');
+    safeLogger.info('🔒 Starting comprehensive security test suite...\n');
 
     const testResults: SecurityTestResult[] = [];
     const startTime = Date.now();
 
     for (const testSuite of this.testSuites) {
-      console.log(`📋 Running ${testSuite}...`);
+      safeLogger.info(`📋 Running ${testSuite}...`);
       
       try {
         const result = await this.runTestSuite(testSuite);
         testResults.push(result);
         
-        console.log(`✅ ${testSuite} completed: ${result.passed} passed, ${result.failed} failed`);
+        safeLogger.info(`✅ ${testSuite} completed: ${result.passed} passed, ${result.failed} failed`);
       } catch (error) {
-        console.error(`❌ ${testSuite} failed:`, error);
+        safeLogger.error(`❌ ${testSuite} failed:`, error);
         
         testResults.push({
           testSuite,
@@ -82,7 +83,7 @@ class SecurityTestRunner {
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`\n🏁 All security tests completed in ${totalDuration}ms`);
+    safeLogger.info(`\n🏁 All security tests completed in ${totalDuration}ms`);
 
     // Generate comprehensive report
     const report = this.generateSecurityReport(testResults);
@@ -268,7 +269,7 @@ class SecurityTestRunner {
     const filepath = path.join(reportsDir, filename);
 
     await fs.writeFile(filepath, JSON.stringify(report, null, 2));
-    console.log(`📄 Security report saved to: ${filepath}`);
+    safeLogger.info(`📄 Security report saved to: ${filepath}`);
 
     // Also save a summary report
     const summaryFilename = `security-summary-${timestamp}.md`;
@@ -276,7 +277,7 @@ class SecurityTestRunner {
     const summaryContent = this.generateMarkdownSummary(report);
     
     await fs.writeFile(summaryFilepath, summaryContent);
-    console.log(`📋 Security summary saved to: ${summaryFilepath}`);
+    safeLogger.info(`📋 Security summary saved to: ${summaryFilepath}`);
   }
 
   /**
@@ -351,37 +352,37 @@ ${recommendations.map(r => `- ${r}`).join('\n')}
   private displaySecuritySummary(report: SecurityAssessmentReport): void {
     const { summary, overallScore } = report;
 
-    console.log('\n' + '='.repeat(60));
-    console.log('🔒 SECURITY ASSESSMENT SUMMARY');
-    console.log('='.repeat(60));
-    console.log(`📊 Overall Security Score: ${overallScore}/100`);
-    console.log(`📋 Total Tests: ${summary.totalTests}`);
-    console.log(`✅ Passed: ${summary.passedTests}`);
-    console.log(`❌ Failed: ${summary.failedTests}`);
-    console.log(`🚨 Critical Issues: ${summary.criticalIssues}`);
-    console.log(`⚠️  High Issues: ${summary.highIssues}`);
-    console.log(`📋 Medium Issues: ${summary.mediumIssues}`);
-    console.log(`📝 Low Issues: ${summary.lowIssues}`);
-    console.log('='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
+    safeLogger.info('🔒 SECURITY ASSESSMENT SUMMARY');
+    safeLogger.info('='.repeat(60));
+    safeLogger.info(`📊 Overall Security Score: ${overallScore}/100`);
+    safeLogger.info(`📋 Total Tests: ${summary.totalTests}`);
+    safeLogger.info(`✅ Passed: ${summary.passedTests}`);
+    safeLogger.info(`❌ Failed: ${summary.failedTests}`);
+    safeLogger.info(`🚨 Critical Issues: ${summary.criticalIssues}`);
+    safeLogger.info(`⚠️  High Issues: ${summary.highIssues}`);
+    safeLogger.info(`📋 Medium Issues: ${summary.mediumIssues}`);
+    safeLogger.info(`📝 Low Issues: ${summary.lowIssues}`);
+    safeLogger.info('='.repeat(60));
 
     if (overallScore >= 90) {
-      console.log('🎉 EXCELLENT: Security posture is excellent!');
+      safeLogger.info('🎉 EXCELLENT: Security posture is excellent!');
     } else if (overallScore >= 80) {
-      console.log('👍 GOOD: Security posture is good with minor issues.');
+      safeLogger.info('👍 GOOD: Security posture is good with minor issues.');
     } else if (overallScore >= 70) {
-      console.log('⚠️  ACCEPTABLE: Security posture needs improvement.');
+      safeLogger.info('⚠️  ACCEPTABLE: Security posture needs improvement.');
     } else if (overallScore >= 60) {
-      console.log('🚨 POOR: Security posture requires immediate attention.');
+      safeLogger.info('🚨 POOR: Security posture requires immediate attention.');
     } else {
-      console.log('💀 CRITICAL: Do not deploy - critical security issues found.');
+      safeLogger.info('💀 CRITICAL: Do not deploy - critical security issues found.');
     }
 
-    console.log('\n📋 Top Recommendations:');
+    safeLogger.info('\n📋 Top Recommendations:');
     report.recommendations.slice(0, 5).forEach((rec, index) => {
-      console.log(`${index + 1}. ${rec}`);
+      safeLogger.info(`${index + 1}. ${rec}`);
     });
 
-    console.log('\n' + '='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
   }
 
   // Helper methods
@@ -433,7 +434,7 @@ if (require.main === module) {
       process.exit(exitCode);
     })
     .catch(error => {
-      console.error('Security test execution failed:', error);
+      safeLogger.error('Security test execution failed:', error);
       process.exit(1);
     });
 }

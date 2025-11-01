@@ -1,4 +1,5 @@
 import { eq, desc, and, sql, gte, lte, count } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   marketplaceHealthMetrics,
@@ -108,7 +109,7 @@ class MarketplaceHealthService {
         recommendations
       };
     } catch (error) {
-      console.error('Error generating marketplace health dashboard:', error);
+      safeLogger.error('Error generating marketplace health dashboard:', error);
       throw new Error('Failed to generate marketplace health dashboard');
     }
   }
@@ -148,7 +149,7 @@ class MarketplaceHealthService {
         trend
       };
     } catch (error) {
-      console.error('Error calculating overall health:', error);
+      safeLogger.error('Error calculating overall health:', error);
       return {
         score: 0,
         status: 'poor',
@@ -197,7 +198,7 @@ class MarketplaceHealthService {
         topPerformers: topPerformersResult[0].count
       };
     } catch (error) {
-      console.error('Error getting seller metrics:', error);
+      safeLogger.error('Error getting seller metrics:', error);
       return {
         totalSellers: 0,
         activeSellers: 0,
@@ -251,7 +252,7 @@ class MarketplaceHealthService {
         seasonalTrends
       };
     } catch (error) {
-      console.error('Error getting market trends:', error);
+      safeLogger.error('Error getting market trends:', error);
       return {
         totalVolume: 0,
         averageOrderValue: 0,
@@ -300,7 +301,7 @@ class MarketplaceHealthService {
         customerSatisfaction: customerSatisfaction * 100 // Convert to percentage
       };
     } catch (error) {
-      console.error('Error getting quality metrics:', error);
+      safeLogger.error('Error getting quality metrics:', error);
       return {
         averageRating: 0,
         disputeRate: 0,
@@ -325,7 +326,7 @@ class MarketplaceHealthService {
       const activityRate = totalSellers[0].count > 0 ? activeSellers / totalSellers[0].count : 0;
       return Math.round(activityRate * 100);
     } catch (error) {
-      console.error('Error getting seller activity score:', error);
+      safeLogger.error('Error getting seller activity score:', error);
       return 0;
     }
   }
@@ -349,7 +350,7 @@ class MarketplaceHealthService {
       if (dailyOrders >= 10) return 40;
       return Math.min(40, dailyOrders * 4);
     } catch (error) {
-      console.error('Error getting order volume score:', error);
+      safeLogger.error('Error getting order volume score:', error);
       return 0;
     }
   }
@@ -366,7 +367,7 @@ class MarketplaceHealthService {
 
       return Math.round((ratingScore + disputeScore) / 2);
     } catch (error) {
-      console.error('Error getting quality score:', error);
+      safeLogger.error('Error getting quality score:', error);
       return 0;
     }
   }
@@ -382,7 +383,7 @@ class MarketplaceHealthService {
       if (growthRate >= 0) return 40;
       return Math.max(0, 40 + growthRate); // Negative growth reduces score
     } catch (error) {
-      console.error('Error getting growth rate score:', error);
+      safeLogger.error('Error getting growth rate score:', error);
       return 0;
     }
   }
@@ -401,7 +402,7 @@ class MarketplaceHealthService {
 
       return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting active seller count:', error);
+      safeLogger.error('Error getting active seller count:', error);
       return 0;
     }
   }
@@ -441,7 +442,7 @@ class MarketplaceHealthService {
         concentration
       };
     } catch (error) {
-      console.error('Error getting seller distribution:', error);
+      safeLogger.error('Error getting seller distribution:', error);
       return {
         byTier: [],
         byRegion: [],
@@ -491,7 +492,7 @@ class MarketplaceHealthService {
         concentrationLevel
       };
     } catch (error) {
-      console.error('Error calculating market concentration:', error);
+      safeLogger.error('Error calculating market concentration:', error);
       return { top10Percentage: 0, herfindahlIndex: 0, concentrationLevel: 'low' };
     }
   }
@@ -517,7 +518,7 @@ class MarketplaceHealthService {
       if (previous === 0) return current > 0 ? 100 : 0;
       return ((current - previous) / previous) * 100;
     } catch (error) {
-      console.error('Error calculating order growth rate:', error);
+      safeLogger.error('Error calculating order growth rate:', error);
       return 0;
     }
   }
@@ -552,7 +553,7 @@ class MarketplaceHealthService {
         }
       ];
     } catch (error) {
-      console.error('Error getting category performance:', error);
+      safeLogger.error('Error getting category performance:', error);
       return [];
     }
   }
@@ -601,7 +602,7 @@ class MarketplaceHealthService {
 
       return trends;
     } catch (error) {
-      console.error('Error getting seasonal trends:', error);
+      safeLogger.error('Error getting seasonal trends:', error);
       return [];
     }
   }
@@ -615,7 +616,7 @@ class MarketplaceHealthService {
 
       return totalOrders[0].count > 0 ? disputedOrders[0].count / totalOrders[0].count : 0;
     } catch (error) {
-      console.error('Error getting dispute rate:', error);
+      safeLogger.error('Error getting dispute rate:', error);
       return 0;
     }
   }
@@ -639,7 +640,7 @@ class MarketplaceHealthService {
       if (Math.abs(changePercent) < 5) return 'stable';
       return changePercent > 0 ? 'improving' : 'declining';
     } catch (error) {
-      console.error('Error getting health trend:', error);
+      safeLogger.error('Error getting health trend:', error);
       return 'stable';
     }
   }
@@ -761,7 +762,7 @@ class MarketplaceHealthService {
         createdAt: now
       });
     } catch (error) {
-      console.error('Error recording health metric:', error);
+      safeLogger.error('Error recording health metric:', error);
       throw error;
     }
   }

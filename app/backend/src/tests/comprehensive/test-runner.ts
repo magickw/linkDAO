@@ -4,6 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { TestSuiteOrchestrator } from '../utils/testSuiteOrchestrator';
 import { TestReporter } from '../utils/testReporter';
 import { TestEnvironmentManager } from '../utils/testEnvironmentManager';
@@ -14,7 +15,7 @@ describe('Comprehensive AI Content Moderation Test Suite', () => {
   let envManager: TestEnvironmentManager;
 
   beforeAll(async () => {
-    console.log('🚀 Starting Comprehensive Test Suite...');
+    safeLogger.info('🚀 Starting Comprehensive Test Suite...');
     
     envManager = new TestEnvironmentManager();
     await envManager.setup();
@@ -25,11 +26,11 @@ describe('Comprehensive AI Content Moderation Test Suite', () => {
     reporter = new TestReporter();
     await reporter.initialize();
     
-    console.log('✅ Test environment initialized');
+    safeLogger.info('✅ Test environment initialized');
   });
 
   afterAll(async () => {
-    console.log('🧹 Cleaning up test environment...');
+    safeLogger.info('🧹 Cleaning up test environment...');
     
     if (reporter) {
       await reporter.generateFinalReport();
@@ -43,7 +44,7 @@ describe('Comprehensive AI Content Moderation Test Suite', () => {
       await envManager.cleanup();
     }
     
-    console.log('✅ Test cleanup completed');
+    safeLogger.info('✅ Test cleanup completed');
   });
 
   describe('Integration Tests', () => {
@@ -274,7 +275,7 @@ describe('Comprehensive AI Content Moderation Test Suite', () => {
       expect(reportSummary.passRate).toBeGreaterThan(0.95); // 95%+ pass rate
       expect(reportSummary.criticalIssues).toBe(0);
       
-      console.log('📊 Test Report Summary:', reportSummary);
+      safeLogger.info('📊 Test Report Summary:', reportSummary);
     });
   });
 });

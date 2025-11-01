@@ -1,4 +1,5 @@
 import { orderEventHandlerService } from './orderEventHandlerService';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { 
   orders, 
@@ -24,7 +25,7 @@ export class OrderEventListenerService {
       this.checkForNewEvents();
     }, 30000);
     
-    console.log('Order event listener started');
+    safeLogger.info('Order event listener started');
   }
 
   /**
@@ -36,7 +37,7 @@ export class OrderEventListenerService {
       this.pollingInterval = null;
     }
     
-    console.log('Order event listener stopped');
+    safeLogger.info('Order event listener stopped');
   }
 
   /**
@@ -44,7 +45,7 @@ export class OrderEventListenerService {
    */
   private async checkForNewEvents() {
     try {
-      console.log('Checking for new order events...');
+      safeLogger.info('Checking for new order events...');
       
       // Build query for new events
       let query = db
@@ -72,16 +73,16 @@ export class OrderEventListenerService {
           // Update the last processed event ID
           this.lastProcessedEventId = event.id;
         } catch (error) {
-          console.error(`Error processing event ${event.id}:`, error);
+          safeLogger.error(`Error processing event ${event.id}:`, error);
           // Continue processing other events
         }
       }
       
       if (events.length > 0) {
-        console.log(`Processed ${events.length} order events`);
+        safeLogger.info(`Processed ${events.length} order events`);
       }
     } catch (error) {
-      console.error('Error checking for new order events:', error);
+      safeLogger.error('Error checking for new order events:', error);
     }
   }
 
@@ -106,10 +107,10 @@ export class OrderEventListenerService {
         );
       }
       
-      console.log(`Processed ${events.length} events for order ${orderId}`);
+      safeLogger.info(`Processed ${events.length} events for order ${orderId}`);
       return events.length;
     } catch (error) {
-      console.error(`Error processing events for order ${orderId}:`, error);
+      safeLogger.error(`Error processing events for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -137,10 +138,10 @@ export class OrderEventListenerService {
         event.metadata ? JSON.parse(event.metadata) : undefined
       );
       
-      console.log(`Processed event ${eventId}`);
+      safeLogger.info(`Processed event ${eventId}`);
       return true;
     } catch (error) {
-      console.error(`Error processing event ${eventId}:`, error);
+      safeLogger.error(`Error processing event ${eventId}:`, error);
       throw error;
     }
   }

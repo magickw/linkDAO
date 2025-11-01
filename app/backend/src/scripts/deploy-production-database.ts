@@ -1,4 +1,5 @@
 import { runProductionMigrations, validateEnvironment, testDatabaseConnection } from './production-migrate';
+import { safeLogger } from '../utils/safeLogger';
 import { ProductionDataSeeder } from './seed-production-data';
 import { DatabaseBackupManager } from './database-backup';
 import dotenv from "dotenv";
@@ -46,35 +47,35 @@ class ProductionDatabaseDeployer {
       warnings: []
     };
 
-    console.log("🚀 Production Database Deployment");
-    console.log("=================================");
+    safeLogger.info("🚀 Production Database Deployment");
+    safeLogger.info("=================================");
     
     if (options.dryRun) {
-      console.log("🔍 DRY RUN MODE - No changes will be made");
+      safeLogger.info("🔍 DRY RUN MODE - No changes will be made");
     }
 
     try {
       // Step 1: Environment validation
-      console.log("1️⃣ Validating environment...");
+      safeLogger.info("1️⃣ Validating environment...");
       await validateEnvironment();
       await testDatabaseConnection(this.connectionString);
 
       // Step 2: Pre-deployment backup
       if (!options.skipBackup && !options.dryRun) {
-        console.log("2️⃣ Creating pre-deployment backup...");
+        safeLogger.info("2️⃣ Creating pre-deployment backup...");
         const backupResult = await this.backupManager.createFullBackup();
         result.steps.backup = backupResult.success;
         
         if (!backupResult.success) {
           result.warnings.push(`Backup failed: ${backupResult.error}`);
-          console.warn("⚠ Backup failed, continuing with deployment...");
+          safeLogger.warn("⚠ Backup failed, continuing with deployment...");
         } else {
-          console.log(`✅ Backup created: ${backupResult.backupPath}`);
+          safeLogger.info(`✅ Backup created: ${backupResult.backupPath}`);
         }
       }
 
       // Step 3: Run migrations
-      console.log("3️⃣ Running database migrations...");
+      safeLogger.info("3️⃣ Running database migrations...");
       if (!options.dryRun) {
         const migrationResult = await runProductionMigrations();
         result.steps.migration = migrationResult.success;
@@ -84,13 +85,13 @@ class ProductionDatabaseDeployer {
           throw new Error("Migration failed");
         }
       } else {
-        console.log("  🔍 DRY RUN: Would run migrations");
+        safeLogger.info("  🔍 DRY RUN: Would run migrations");
         result.steps.migration = true;
       }
 
       // Step 4: Seed initial data
       if (!options.skipSeeding) {
-        console.log("4️⃣ Seeding initial data...");
+        safeLogger.info("4️⃣ Seeding initial data...");
         if (!options.dryRun) {
           const seeder = new ProductionDataSeeder(this.connectionString);
           try {
@@ -103,24 +104,24 @@ class ProductionDatabaseDeployer {
             await seeder.close();
           }
         } else {
-          console.log("  🔍 DRY RUN: Would seed initial data");
+          safeLogger.info("  🔍 DRY RUN: Would seed initial data");
           result.steps.seeding = true;
         }
       }
 
       // Step 5: Post-deployment verification
-      console.log("5️⃣ Verifying deployment...");
+      safeLogger.info("5️⃣ Verifying deployment...");
       await this.verifyDeployment();
       result.steps.verification = true;
 
       result.success = true;
-      console.log("🎉 Database deployment completed successfully!");
+      safeLogger.info("🎉 Database deployment completed successfully!");
 
     } catch (error) {
       result.success = false;
       const errorMessage = error instanceof Error ? error.message : String(error);
       result.errors.push(errorMessage);
-      console.error("💥 Database deployment failed:", error);
+      safeLogger.error("💥 Database deployment failed:", error);
     }
 
     return result;
@@ -131,27 +132,27 @@ class ProductionDatabaseDeployer {
     
     try {
       await seeder.verifySeededData();
-      console.log("✅ Deployment verification passed");
+      safeLogger.info("✅ Deployment verification passed");
     } finally {
       await seeder.close();
     }
   }
 
   async rollbackDeployment(backupPath: string): Promise<boolean> {
-    console.log("🔄 Rolling back database deployment...");
+    safeLogger.info("🔄 Rolling back database deployment...");
     
     try {
       const restoreResult = await this.backupManager.restoreBackup(backupPath);
       
       if (restoreResult.success) {
-        console.log("✅ Database rollback completed successfully");
+        safeLogger.info("✅ Database rollback completed successfully");
         return true;
       } else {
-        console.error("❌ Database rollback failed:", restoreResult.error);
+        safeLogger.error("❌ Database rollback failed:", restoreResult.error);
         return false;
       }
     } catch (error) {
-      console.error("💥 Rollback failed:", error);
+      safeLogger.error("💥 Rollback failed:", error);
       return false;
     }
   }
@@ -187,7 +188,7 @@ class ProductionDatabaseDeployer {
 
 async function main() {
   if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL environment variable is required");
+    safeLogger.error("❌ DATABASE_URL environment variable is required");
     process.exit(1);
   }
 
@@ -207,8 +208,8 @@ async function main() {
         const result = await deployer.deployDatabase(options);
         
         if (!result.success) {
-          console.error("❌ Deployment failed");
-          result.errors.forEach(error => console.error(`  - ${error}`));
+          safeLogger.error("❌ Deployment failed");
+          result.errors.forEach(error => safeLogger.error(`  - ${error}`));
           process.exit(1);
         }
         break;
@@ -216,7 +217,7 @@ async function main() {
       case 'rollback':
         const backupPath = process.argv[3];
         if (!backupPath) {
-          console.error("❌ Backup file path is required for rollback");
+          safeLogger.error("❌ Backup file path is required for rollback");
           process.exit(1);
         }
         
@@ -228,19 +229,19 @@ async function main() {
         
       case 'status':
         const status = await deployer.getDeploymentStatus();
-        console.log("📊 Deployment Status:");
-        console.log(JSON.stringify(status, null, 2));
+        safeLogger.info("📊 Deployment Status:");
+        safeLogger.info(JSON.stringify(status, null, 2));
         break;
         
       default:
-        console.log("Usage:");
-        console.log("  npm run deploy:db deploy [--skip-backup] [--skip-seeding] [--dry-run]");
-        console.log("  npm run deploy:db rollback <backup-path>");
-        console.log("  npm run deploy:db status");
+        safeLogger.info("Usage:");
+        safeLogger.info("  npm run deploy:db deploy [--skip-backup] [--skip-seeding] [--dry-run]");
+        safeLogger.info("  npm run deploy:db rollback <backup-path>");
+        safeLogger.info("  npm run deploy:db status");
         break;
     }
   } catch (error) {
-    console.error("💥 Deployment operation failed:", error);
+    safeLogger.error("💥 Deployment operation failed:", error);
     process.exit(1);
   } finally {
     await deployer.close();

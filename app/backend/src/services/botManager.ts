@@ -1,4 +1,5 @@
 import { AIBot } from './aiService';
+import { safeLogger } from '../utils/safeLogger';
 import { WalletGuardBot } from './bots/walletGuardBot';
 import { ProposalSummarizerBot } from './bots/proposalSummarizerBot';
 import { CommunityModeratorBot } from './bots/communityModeratorBot';
@@ -17,7 +18,7 @@ function ensureBotsInitialized() {
     botRegistry.set('community-moderator', new CommunityModeratorBot());
     botRegistry.set('social-copilot', new SocialCopilotBot());
     botsInitialized = true;
-    console.log('AI bots initialized:', Array.from(botRegistry.keys()));
+    safeLogger.info('AI bots initialized:', Array.from(botRegistry.keys()));
   }
 }
 
@@ -58,7 +59,7 @@ export async function processMessageWithBot(botId: string, message: string, user
       model: response.model
     };
   } catch (error) {
-    console.error(`Error processing message with bot ${botId}:`, error);
+    safeLogger.error(`Error processing message with bot ${botId}:`, error);
     throw new Error(`Failed to process message with ${botId} bot`);
   }
 }

@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { DAOShippingPartnersService } from '../services/daoShippingPartnersService';
 
 const daoShippingService = new DAOShippingPartnersService();
@@ -28,7 +30,7 @@ export const getShippingPartners = async (req: Request, res: Response) => {
       message: 'Shipping partners retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting shipping partners:', error);
+    safeLogger.error('Error getting shipping partners:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve shipping partners'
@@ -58,7 +60,7 @@ export const getPartnerById = async (req: Request, res: Response) => {
       message: 'Partner retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting partner by ID:', error);
+    safeLogger.error('Error getting partner by ID:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve partner'
@@ -96,7 +98,7 @@ export const createShippingQuote = async (req: Request, res: Response) => {
       message: 'Shipping quote created successfully'
     });
   } catch (error) {
-    console.error('Error creating shipping quote:', error);
+    safeLogger.error('Error creating shipping quote:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create shipping quote'
@@ -117,7 +119,7 @@ export const getActiveProposals = async (req: Request, res: Response) => {
       message: 'Active proposals retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting active proposals:', error);
+    safeLogger.error('Error getting active proposals:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve active proposals'
@@ -158,7 +160,7 @@ export const submitProposalVote = async (req: Request, res: Response) => {
       message: 'Vote submitted successfully'
     });
   } catch (error) {
-    console.error('Error submitting proposal vote:', error);
+    safeLogger.error('Error submitting proposal vote:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to submit vote'
@@ -201,7 +203,7 @@ export const createPartnerProposal = async (req: Request, res: Response) => {
       message: 'Partner proposal created successfully'
     });
   } catch (error) {
-    console.error('Error creating partner proposal:', error);
+    safeLogger.error('Error creating partner proposal:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create partner proposal'
@@ -224,7 +226,7 @@ export const updatePartnerMetrics = async (req: Request, res: Response) => {
       message: 'Partner metrics updated successfully'
     });
   } catch (error) {
-    console.error('Error updating partner metrics:', error);
+    safeLogger.error('Error updating partner metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update partner metrics'
@@ -247,7 +249,7 @@ export const getPartnerAnalytics = async (req: Request, res: Response) => {
       message: 'Partner analytics retrieved successfully'
     });
   } catch (error) {
-    console.error('Error getting partner analytics:', error);
+    safeLogger.error('Error getting partner analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve partner analytics'
@@ -270,7 +272,7 @@ export const verifyPartnerRequirements = async (req: Request, res: Response) => 
       message: 'Partner requirements verification completed'
     });
   } catch (error) {
-    console.error('Error verifying partner requirements:', error);
+    safeLogger.error('Error verifying partner requirements:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to verify partner requirements'

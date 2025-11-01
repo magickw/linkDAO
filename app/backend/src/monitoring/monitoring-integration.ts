@@ -1,4 +1,5 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { getHealthMonitoringService } from './health-dashboard';
 import { getLogAggregationService } from './log-aggregation';
 import { getErrorTrackingService } from './error-tracking';
@@ -58,7 +59,7 @@ class MonitoringIntegrationService {
       this.setupWebhookRoutes(app);
     }
 
-    console.log('📊 Monitoring integration routes configured');
+    safeLogger.info('📊 Monitoring integration routes configured');
   }
 
   private setupErrorTrackingRoutes(app: express.Application): void {
@@ -275,7 +276,7 @@ class MonitoringIntegrationService {
         await this.handleAlertManagerWebhook(payload);
         break;
       default:
-        console.warn(`Unknown webhook service: ${service}`);
+        safeLogger.warn(`Unknown webhook service: ${service}`);
     }
   }
 
@@ -419,7 +420,7 @@ class MonitoringIntegrationService {
                 updateTimestamp(data.timestamp);
                 
             } catch (error) {
-                console.error('Failed to load dashboard:', error);
+                safeLogger.error('Failed to load dashboard:', error);
                 showError('Failed to load monitoring data');
             }
         }
@@ -553,11 +554,11 @@ class MonitoringIntegrationService {
   }
 
   async shutdown(): Promise<void> {
-    console.log('🛑 Shutting down monitoring integration...');
+    safeLogger.info('🛑 Shutting down monitoring integration...');
     
     await this.logService.shutdown();
     
-    console.log('✅ Monitoring integration shutdown complete');
+    safeLogger.info('✅ Monitoring integration shutdown complete');
   }
 }
 

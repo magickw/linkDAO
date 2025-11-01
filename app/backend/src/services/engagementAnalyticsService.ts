@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
 import type {
   EngagementAnalytics,
@@ -28,7 +29,7 @@ export class EngagementAnalyticsService {
       // In a real implementation, this would query the engagement_interactions table
       return this.getMockEngagementAnalytics(userId, timeRange, startDate, endDate);
     } catch (error) {
-      console.error('Error getting engagement analytics:', error);
+      safeLogger.error('Error getting engagement analytics:', error);
       throw new Error('Failed to get engagement analytics');
     }
   }
@@ -47,7 +48,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data
       return this.getMockEngagementTrends(timeRange, granularity, startDate, endDate);
     } catch (error) {
-      console.error('Error getting engagement trends:', error);
+      safeLogger.error('Error getting engagement trends:', error);
       throw new Error('Failed to get engagement trends');
     }
   }
@@ -58,7 +59,7 @@ export class EngagementAnalyticsService {
   static async trackEngagementInteraction(interaction: EngagementInteraction): Promise<void> {
     try {
       // In a real implementation, this would insert into engagement_interactions table
-      console.log('Tracking engagement interaction:', {
+      safeLogger.info('Tracking engagement interaction:', {
         postId: interaction.postId,
         userId: interaction.userId,
         type: interaction.type,
@@ -69,7 +70,7 @@ export class EngagementAnalyticsService {
       // For now, just log the interaction
       // TODO: Implement database insertion
     } catch (error) {
-      console.error('Error tracking engagement interaction:', error);
+      safeLogger.error('Error tracking engagement interaction:', error);
       throw new Error('Failed to track engagement interaction');
     }
   }
@@ -80,13 +81,13 @@ export class EngagementAnalyticsService {
   static async trackEngagementBatch(interactions: EngagementInteraction[]): Promise<void> {
     try {
       // In a real implementation, this would batch insert into engagement_interactions table
-      console.log(`Tracking ${interactions.length} engagement interactions in batch`);
+      safeLogger.info(`Tracking ${interactions.length} engagement interactions in batch`);
       
       for (const interaction of interactions) {
         await this.trackEngagementInteraction(interaction);
       }
     } catch (error) {
-      console.error('Error tracking engagement batch:', error);
+      safeLogger.error('Error tracking engagement batch:', error);
       throw new Error('Failed to track engagement batch');
     }
   }
@@ -104,7 +105,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data
       return this.getMockTopPerformingPosts(userId, limit);
     } catch (error) {
-      console.error('Error getting top performing posts:', error);
+      safeLogger.error('Error getting top performing posts:', error);
       throw new Error('Failed to get top performing posts');
     }
   }
@@ -120,7 +121,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data
       return this.getMockSocialProofIndicators(postId, maxDisplayCount);
     } catch (error) {
-      console.error('Error getting social proof indicators:', error);
+      safeLogger.error('Error getting social proof indicators:', error);
       throw new Error('Failed to get social proof indicators');
     }
   }
@@ -136,7 +137,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data
       return this.getMockEngagementAggregate(postId, timeWindow);
     } catch (error) {
-      console.error('Error getting engagement aggregate:', error);
+      safeLogger.error('Error getting engagement aggregate:', error);
       throw new Error('Failed to get engagement aggregate');
     }
   }
@@ -152,7 +153,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data for each post
       return postIds.map(postId => this.getMockPostEngagementMetrics(postId));
     } catch (error) {
-      console.error('Error getting bulk post analytics:', error);
+      safeLogger.error('Error getting bulk post analytics:', error);
       throw new Error('Failed to get bulk post analytics');
     }
   }
@@ -165,7 +166,7 @@ export class EngagementAnalyticsService {
       // For now, return mock data
       return this.getMockUserEngagementProfile(userId);
     } catch (error) {
-      console.error('Error getting user engagement profile:', error);
+      safeLogger.error('Error getting user engagement profile:', error);
       throw new Error('Failed to get user engagement profile');
     }
   }

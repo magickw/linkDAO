@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { stakingPositions, stakingTiers, userStakingInfo } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -81,7 +82,7 @@ export class EnhancedStakingService {
         earlyWithdrawalPenalty: tier.earlyWithdrawalPenalty
       }));
     } catch (error) {
-      console.error('Error fetching staking tiers:', error);
+      safeLogger.error('Error fetching staking tiers:', error);
       throw new Error('Failed to fetch staking tiers');
     }
   }
@@ -115,7 +116,7 @@ export class EnhancedStakingService {
         isPremiumMember
       };
     } catch (error) {
-      console.error('Error fetching flexible staking options:', error);
+      safeLogger.error('Error fetching flexible staking options:', error);
       throw new Error('Failed to fetch staking options');
     }
   }
@@ -189,7 +190,7 @@ export class EnhancedStakingService {
         compoundingEffect
       };
     } catch (error) {
-      console.error('Error calculating staking rewards:', error);
+      safeLogger.error('Error calculating staking rewards:', error);
       throw new Error('Failed to calculate staking rewards');
     }
   }
@@ -258,7 +259,7 @@ export class EnhancedStakingService {
 
       return positionId;
     } catch (error) {
-      console.error('Error creating stake position:', error);
+      safeLogger.error('Error creating stake position:', error);
       throw new Error('Failed to create stake position');
     }
   }
@@ -290,7 +291,7 @@ export class EnhancedStakingService {
         transactionHash: pos.transactionHash
       }));
     } catch (error) {
-      console.error('Error fetching user stake positions:', error);
+      safeLogger.error('Error fetching user stake positions:', error);
       throw new Error('Failed to fetch stake positions');
     }
   }
@@ -350,7 +351,7 @@ export class EnhancedStakingService {
         canWithdraw
       };
     } catch (error) {
-      console.error('Error calculating early withdrawal penalty:', error);
+      safeLogger.error('Error calculating early withdrawal penalty:', error);
       throw new Error('Failed to calculate penalty');
     }
   }
@@ -393,7 +394,7 @@ export class EnhancedStakingService {
       // Update user staking info
       await this.updateUserStakingInfo(pos.userId);
     } catch (error) {
-      console.error('Error processing partial unstaking:', error);
+      safeLogger.error('Error processing partial unstaking:', error);
       throw new Error('Failed to process partial unstaking');
     }
   }
@@ -436,7 +437,7 @@ export class EnhancedStakingService {
       // Update user staking info
       await this.updateUserStakingInfo(pos.userId);
     } catch (error) {
-      console.error('Error processing auto-compounding:', error);
+      safeLogger.error('Error processing auto-compounding:', error);
       throw new Error('Failed to process auto-compounding');
     }
   }
@@ -491,7 +492,7 @@ export class EnhancedStakingService {
         projectedMonthlyRewards: ethers.formatEther(projectedMonthlyRewards)
       };
     } catch (error) {
-      console.error('Error fetching user staking analytics:', error);
+      safeLogger.error('Error fetching user staking analytics:', error);
       throw new Error('Failed to fetch staking analytics');
     }
   }
@@ -551,7 +552,7 @@ export class EnhancedStakingService {
           .where(eq(userStakingInfo.userId, userId));
       }
     } catch (error) {
-      console.error('Error updating user staking info:', error);
+      safeLogger.error('Error updating user staking info:', error);
       throw new Error('Failed to update user staking info');
     }
   }

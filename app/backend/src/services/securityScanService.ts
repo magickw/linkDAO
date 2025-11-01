@@ -89,7 +89,7 @@ export class SecurityScanService {
         scannedAt: new Date()
       };
     } catch (error) {
-      console.error('Security scan failed:', error);
+      safeLogger.error('Security scan failed:', error);
       return {
         status: 'warning',
         score: 50,

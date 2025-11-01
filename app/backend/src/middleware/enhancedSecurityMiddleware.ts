@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from './adminAuthMiddleware';
 import crypto from 'crypto';
 
@@ -111,7 +112,7 @@ export const enforceMFA = async (
 
     next();
   } catch (error) {
-    console.error('MFA enforcement error:', error);
+    safeLogger.error('MFA enforcement error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal error during MFA verification',
@@ -211,7 +212,7 @@ export const requireReauth = (actionKey?: string) => {
 
       next();
     } catch (error) {
-      console.error('Reauth middleware error:', error);
+      safeLogger.error('Reauth middleware error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal error during reauth verification',
@@ -250,7 +251,7 @@ async function logSensitiveAction(
   };
 
   // In production, send to logging service
-  console.log('[SENSITIVE_ACTION]', JSON.stringify(logEntry));
+  safeLogger.info('[SENSITIVE_ACTION]', JSON.stringify(logEntry));
 
   // Check for anomalies
   await detectAnomalies(userId, action);
@@ -298,7 +299,7 @@ async function sendAnomalyAlert(
   anomalyType: string,
   details: any
 ): Promise<void> {
-  console.warn('[SECURITY_ANOMALY]', {
+  safeLogger.warn('[SECURITY_ANOMALY]', {
     userId,
     anomalyType,
     details,
@@ -423,7 +424,7 @@ export const validateSecureSession = (
   const storedFingerprint = req.get('X-Device-Fingerprint');
   
   if (storedFingerprint && currentFingerprint !== storedFingerprint) {
-    console.warn('[SECURITY] Device fingerprint mismatch', {
+    safeLogger.warn('[SECURITY] Device fingerprint mismatch', {
       userId: user.id,
       expected: storedFingerprint,
       actual: currentFingerprint,

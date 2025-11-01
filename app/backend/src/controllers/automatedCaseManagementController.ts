@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { automatedCaseManagementService } from '../services/automatedCaseManagementService';
 
 export class AutomatedCaseManagementController {
@@ -22,7 +24,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error categorizing dispute:', error);
+      safeLogger.error('Error categorizing dispute:', error);
       res.status(500).json({ 
         error: 'Failed to categorize dispute',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -50,7 +52,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error calculating priority score:', error);
+      safeLogger.error('Error calculating priority score:', error);
       res.status(500).json({ 
         error: 'Failed to calculate priority score',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -78,7 +80,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error assigning dispute automatically:', error);
+      safeLogger.error('Error assigning dispute automatically:', error);
       res.status(500).json({ 
         error: 'Failed to assign dispute automatically',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -106,7 +108,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error creating case timeline:', error);
+      safeLogger.error('Error creating case timeline:', error);
       res.status(500).json({ 
         error: 'Failed to create case timeline',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -139,7 +141,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error updating case timeline:', error);
+      safeLogger.error('Error updating case timeline:', error);
       res.status(500).json({ 
         error: 'Failed to update case timeline',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -160,7 +162,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error getting arbitrator workload metrics:', error);
+      safeLogger.error('Error getting arbitrator workload metrics:', error);
       res.status(500).json({ 
         error: 'Failed to get arbitrator workload metrics',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -181,7 +183,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error optimizing case routing:', error);
+      safeLogger.error('Error optimizing case routing:', error);
       res.status(500).json({ 
         error: 'Failed to optimize case routing',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -249,7 +251,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error in batch processing:', error);
+      safeLogger.error('Error in batch processing:', error);
       res.status(500).json({ 
         error: 'Failed to batch process disputes',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -304,7 +306,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error getting case management analytics:', error);
+      safeLogger.error('Error getting case management analytics:', error);
       res.status(500).json({ 
         error: 'Failed to get case management analytics',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -344,7 +346,7 @@ export class AutomatedCaseManagementController {
       });
 
     } catch (error) {
-      console.error('Error getting case recommendations:', error);
+      safeLogger.error('Error getting case recommendations:', error);
       res.status(500).json({ 
         error: 'Failed to get case recommendations',
         details: error instanceof Error ? error.message : 'Unknown error'

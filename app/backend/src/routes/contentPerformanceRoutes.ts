@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getPostPerformance,
   getPostsPerformance,
@@ -24,7 +25,7 @@ router.get('/posts/:postId', getPostPerformance);
  * @desc    Get performance metrics for multiple posts
  * @access  Public
  */
-router.post('/posts/batch', getPostsPerformance);
+router.post('/posts/batch', csrfProtection,  getPostsPerformance);
 
 /**
  * @route   GET /api/content-performance/trending
@@ -59,6 +60,6 @@ router.get('/user', authenticateToken, getUserContentPerformance);
  * @desc    Track content view event
  * @access  Private
  */
-router.post('/track-view', authenticateToken, trackContentView);
+router.post('/track-view', csrfProtection,  authenticateToken, trackContentView);
 
 export default router;

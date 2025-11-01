@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerListingService } from '../services/sellerListingService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
@@ -53,7 +55,7 @@ router.get('/seller/listings/:walletAddress',
 
       return successResponse(res, result, 200);
     } catch (error) {
-      console.error('Error fetching seller listings:', error);
+      safeLogger.error('Error fetching seller listings:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -75,7 +77,7 @@ router.get('/seller/listings/:walletAddress',
  * POST /api/marketplace/seller/listings
  * Create a new listing
  */
-router.post('/seller/listings',
+router.post('/seller/listings', csrfProtection, 
   rateLimitWithCache(req => `create_listing:${req.ip}`, 10, 60), // 10 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -115,7 +117,7 @@ router.post('/seller/listings',
 
       return successResponse(res, listing, 201);
     } catch (error) {
-      console.error('Error creating listing:', error);
+      safeLogger.error('Error creating listing:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -142,7 +144,7 @@ router.post('/seller/listings',
  * PUT /api/marketplace/seller/listings/:listingId
  * Update an existing listing
  */
-router.put('/seller/listings/:listingId',
+router.put('/seller/listings/:listingId', csrfProtection, 
   rateLimitWithCache(req => `update_listing:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -182,7 +184,7 @@ router.put('/seller/listings/:listingId',
 
       return successResponse(res, listing, 200);
     } catch (error) {
-      console.error('Error updating listing:', error);
+      safeLogger.error('Error updating listing:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -207,7 +209,7 @@ router.put('/seller/listings/:listingId',
  * DELETE /api/marketplace/seller/listings/:listingId
  * Delete a listing
  */
-router.delete('/seller/listings/:listingId',
+router.delete('/seller/listings/:listingId', csrfProtection, 
   rateLimitWithCache(req => `delete_listing:${req.ip}`, 20, 60), // 20 requests per minute
   cachingMiddleware.invalidate('sellerListings'),
   async (req: Request, res: Response) => {
@@ -229,7 +231,7 @@ router.delete('/seller/listings/:listingId',
         listingId
       }, 200);
     } catch (error) {
-      console.error('Error deleting listing:', error);
+      safeLogger.error('Error deleting listing:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -281,7 +283,7 @@ router.get('/seller/listings/detail/:listingId',
 
       return successResponse(res, listing, 200);
     } catch (error) {
-      console.error('Error fetching listing details:', error);
+      safeLogger.error('Error fetching listing details:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {

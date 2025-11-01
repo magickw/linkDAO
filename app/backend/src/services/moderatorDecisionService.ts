@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { evidenceStorageService } from './evidenceStorageService';
 import { auditLoggingService } from './auditLoggingService';
 import { reputationService } from './reputationService';
@@ -136,7 +137,7 @@ export class ModeratorDecisionService {
         reputationChange
       };
     } catch (error) {
-      console.error('Error processing moderation decision:', error);
+      safeLogger.error('Error processing moderation decision:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
@@ -247,7 +248,7 @@ export class ModeratorDecisionService {
         isActive: row.is_active
       }));
     } catch (error) {
-      console.error('Error getting policy templates:', error);
+      safeLogger.error('Error getting policy templates:', error);
       return [];
     }
   }
@@ -341,7 +342,7 @@ export class ModeratorDecisionService {
         }
       };
     } catch (error) {
-      console.error('Error getting decision history:', error);
+      safeLogger.error('Error getting decision history:', error);
       return {
         decisions: [],
         pagination: { page, limit, total: 0, totalPages: 0 }
@@ -388,7 +389,7 @@ export class ModeratorDecisionService {
         updatedAt: row.updated_at
       };
     } catch (error) {
-      console.error('Error validating case access:', error);
+      safeLogger.error('Error validating case access:', error);
       return null;
     }
   }
@@ -450,7 +451,7 @@ export class ModeratorDecisionService {
         isActive: row.is_active
       };
     } catch (error) {
-      console.error('Error getting policy template:', error);
+      safeLogger.error('Error getting policy template:', error);
       return null;
     }
   }
@@ -486,7 +487,7 @@ export class ModeratorDecisionService {
 
       return await evidenceStorageService.storeEvidenceBundle(evidenceBundle);
     } catch (error) {
-      console.error('Error creating evidence bundle:', error);
+      safeLogger.error('Error creating evidence bundle:', error);
       return undefined;
     }
   }
@@ -539,7 +540,7 @@ export class ModeratorDecisionService {
 
       return actionId;
     } catch (error) {
-      console.error('Error applying decision:', error);
+      safeLogger.error('Error applying decision:', error);
       throw error;
     }
   }
@@ -560,7 +561,7 @@ export class ModeratorDecisionService {
         source: 'moderation'
       });
     } catch (error) {
-      console.error('Error applying reputation impact:', error);
+      safeLogger.error('Error applying reputation impact:', error);
       return 0;
     }
   }
@@ -591,7 +592,7 @@ export class ModeratorDecisionService {
         }
       });
     } catch (error) {
-      console.error('Error notifying user:', error);
+      safeLogger.error('Error notifying user:', error);
     }
   }
 
@@ -620,7 +621,7 @@ export class ModeratorDecisionService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error logging decision:', error);
+      safeLogger.error('Error logging decision:', error);
     }
   }
 
@@ -635,7 +636,7 @@ export class ModeratorDecisionService {
         WHERE case_id = $1 AND assigned_to = $2 AND is_active = true
       `, [caseId, moderatorId]);
     } catch (error) {
-      console.error('Error releasing case assignment:', error);
+      safeLogger.error('Error releasing case assignment:', error);
     }
   }
 
@@ -648,7 +649,7 @@ export class ModeratorDecisionService {
     request: BulkDecisionRequest
   ): Promise<void> {
     // Implementation would send summary notifications
-    console.log(`Bulk action completed by ${moderator.id}: ${successfulCases.length} cases processed`);
+    safeLogger.info(`Bulk action completed by ${moderator.id}: ${successfulCases.length} cases processed`);
   }
 
   /**

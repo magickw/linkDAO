@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { BlockchainMarketplaceService } from './marketplaceService';
 
@@ -75,7 +76,7 @@ export class AIService {
         model: model
       };
     } catch (error) {
-      console.error('Error generating text:', error);
+      safeLogger.error('Error generating text:', error);
       throw error;
     }
   }
@@ -96,7 +97,7 @@ export class AIService {
         categories: response.results[0].categories
       };
     } catch (error) {
-      console.error('Error moderating content:', error);
+      safeLogger.error('Error moderating content:', error);
       throw error;
     }
   }
@@ -115,7 +116,7 @@ export class AIService {
 
       return response.data.map(item => item.embedding);
     } catch (error) {
-      console.error('Error generating embeddings:', error);
+      safeLogger.error('Error generating embeddings:', error);
       throw error;
     }
   }
@@ -296,7 +297,7 @@ export class AIService {
         aiModerationId: aiModeration?.id
       };
     } catch (error) {
-      console.error('Error analyzing listing:', error);
+      safeLogger.error('Error analyzing listing:', error);
       throw error;
     }
   }
@@ -385,7 +386,7 @@ export class AIService {
         aiModerationId: aiModeration?.id
       };
     } catch (error) {
-      console.error('Error assisting dispute resolution:', error);
+      safeLogger.error('Error assisting dispute resolution:', error);
       throw error;
     }
   }
@@ -455,7 +456,7 @@ export class AIService {
         analysis
       };
     } catch (error) {
-      console.error('Error detecting fraud:', error);
+      safeLogger.error('Error detecting fraud:', error);
       throw error;
     }
   }
@@ -510,7 +511,7 @@ export class AIService {
         suggestion: analysis
       };
     } catch (error) {
-      console.error('Error suggesting price:', error);
+      safeLogger.error('Error suggesting price:', error);
       throw error;
     }
   }
@@ -532,11 +533,11 @@ export class AIService {
             await this.assistDisputeResolution(record.objectId);
           }
         } catch (error) {
-          console.error(`Error processing ${record.objectType} ${record.objectId}:`, error);
+          safeLogger.error(`Error processing ${record.objectType} ${record.objectId}:`, error);
         }
       }
     } catch (error) {
-      console.error('Error processing pending moderation:', error);
+      safeLogger.error('Error processing pending moderation:', error);
       throw error;
     }
   }

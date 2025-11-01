@@ -147,12 +147,12 @@ const nextConfig = {
     return [
       {
         source: '/social',
-        destination: '/dashboard',
+        destination: '/',
         permanent: true,
       },
       {
         source: '/web3-social',
-        destination: '/dashboard',
+        destination: '/',
         permanent: true,
       },
     ];

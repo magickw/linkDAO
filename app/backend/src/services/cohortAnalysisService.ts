@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 
@@ -116,7 +117,7 @@ export class CohortAnalysisService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(analysis));
       return analysis;
     } catch (error) {
-      console.error('Error generating cohort analysis:', error);
+      safeLogger.error('Error generating cohort analysis:', error);
       throw new Error('Failed to generate cohort analysis');
     }
   }
@@ -443,7 +444,7 @@ export class CohortAnalysisService {
         insights
       };
     } catch (error) {
-      console.error('Error comparing cohorts:', error);
+      safeLogger.error('Error comparing cohorts:', error);
       throw new Error('Failed to compare cohorts');
     }
   }
@@ -511,7 +512,7 @@ export class CohortAnalysisService {
         churnProbability
       };
     } catch (error) {
-      console.error('Error getting user retention metrics:', error);
+      safeLogger.error('Error getting user retention metrics:', error);
       throw new Error('Failed to get user retention metrics');
     }
   }

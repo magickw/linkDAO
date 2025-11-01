@@ -1,4 +1,5 @@
 import { moderationLoggingService, PerformanceMetrics, AccuracyMetrics } from './moderationLoggingService';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connectionPool';
 import { moderation_cases, moderation_actions, content_reports, moderation_appeals } from '../db/schema';
 import { eq, gte, count, avg, sql } from 'drizzle-orm';
@@ -213,7 +214,7 @@ class ModerationMetricsService {
       };
 
     } catch (error) {
-      console.error('Failed to get business metrics:', error);
+      safeLogger.error('Failed to get business metrics:', error);
       return {
         totalContentProcessed: 0,
         contentByType: {},

@@ -1,4 +1,5 @@
 import { Pool, PoolConfig } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface PoolMetrics {
@@ -98,7 +99,7 @@ export class ConnectionPoolOptimizer {
     });
 
     this.pool.on('error', (error) => {
-      console.error('Pool error:', error);
+      safeLogger.error('Pool error:', error);
       this.metrics.connectionErrors++;
     });
   }
@@ -145,7 +146,7 @@ export class ConnectionPoolOptimizer {
       }
 
     } catch (error) {
-      console.error('Error updating pool metrics:', error);
+      safeLogger.error('Error updating pool metrics:', error);
     }
   }
 
@@ -195,14 +196,14 @@ export class ConnectionPoolOptimizer {
       const recommendations = this.generateOptimizationRecommendations();
       
       if (recommendations.length > 0) {
-        console.log('Connection Pool Optimization Recommendations:');
+        safeLogger.info('Connection Pool Optimization Recommendations:');
         
         // Sort by priority
         recommendations.sort((a, b) => b.priority - a.priority);
         
         recommendations.forEach(rec => {
-          console.log(`[${rec.impact.toUpperCase()}] ${rec.parameter}: ${rec.currentValue} → ${rec.recommendedValue}`);
-          console.log(`  Reason: ${rec.reason}`);
+          safeLogger.info(`[${rec.impact.toUpperCase()}] ${rec.parameter}: ${rec.currentValue} → ${rec.recommendedValue}`);
+          safeLogger.info(`  Reason: ${rec.reason}`);
         });
 
         // Apply high-priority recommendations automatically
@@ -215,7 +216,7 @@ export class ConnectionPoolOptimizer {
       }
 
     } catch (error) {
-      console.error('Pool optimization error:', error);
+      safeLogger.error('Pool optimization error:', error);
     }
   }
 
@@ -335,17 +336,17 @@ export class ConnectionPoolOptimizer {
    */
   private async applyOptimization(recommendation: OptimizationRecommendation): Promise<void> {
     try {
-      console.log(`Applying optimization: ${recommendation.parameter} = ${recommendation.recommendedValue}`);
+      safeLogger.info(`Applying optimization: ${recommendation.parameter} = ${recommendation.recommendedValue}`);
       
       // Note: In a real implementation, you would need to create a new pool
       // with the optimized configuration and gradually migrate connections
       // This is a simplified demonstration
       
       // Log the optimization for monitoring
-      console.log(`Optimization applied: ${recommendation.parameter} changed from ${recommendation.currentValue} to ${recommendation.recommendedValue}`);
+      safeLogger.info(`Optimization applied: ${recommendation.parameter} changed from ${recommendation.currentValue} to ${recommendation.recommendedValue}`);
       
     } catch (error) {
-      console.error(`Failed to apply optimization for ${recommendation.parameter}:`, error);
+      safeLogger.error(`Failed to apply optimization for ${recommendation.parameter}:`, error);
     }
   }
 
@@ -392,7 +393,7 @@ export class ConnectionPoolOptimizer {
       }
 
     } catch (error) {
-      console.error('Connection health check failed:', error);
+      safeLogger.error('Connection health check failed:', error);
     }
 
     return health;

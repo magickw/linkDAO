@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { ErrorLoggingService } from '../services/errorLoggingService';
 import { asyncHandler } from '../middleware/errorHandler';
 

@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { Request, Response } from 'express';
 
 const router = express.Router();
@@ -58,12 +60,12 @@ router.get('/api/proxy', async (req: Request, res: Response) => {
     // Send the response back to the client
     res.status(response.status).json(data);
   } catch (error) {
-    console.error('Proxy error:', error);
+    safeLogger.error('Proxy error:', error);
     res.status(500).json({ error: 'Proxy request failed' });
   }
 });
 
-router.post('/api/proxy', async (req: Request, res: Response) => {
+router.post('/api/proxy', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { url } = req.query;
     
@@ -115,7 +117,7 @@ router.post('/api/proxy', async (req: Request, res: Response) => {
     // Send the response back to the client
     res.status(response.status).json(data);
   } catch (error) {
-    console.error('Proxy error:', error);
+    safeLogger.error('Proxy error:', error);
     res.status(500).json({ error: 'Proxy request failed' });
   }
 });

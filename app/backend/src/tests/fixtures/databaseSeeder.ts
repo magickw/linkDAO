@@ -4,6 +4,7 @@
  */
 
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
 import {
@@ -53,7 +54,7 @@ export class DatabaseSeeder {
       clean = true
     } = options;
 
-    console.log('🌱 Starting database seeding...');
+    safeLogger.info('🌱 Starting database seeding...');
 
     try {
       if (clean) {
@@ -62,22 +63,22 @@ export class DatabaseSeeder {
 
       // Seed in dependency order
       const users = await this.seedUsers(userCount);
-      console.log(`✅ Seeded ${users.length} users`);
+      safeLogger.info(`✅ Seeded ${users.length} users`);
 
       const communities = await this.seedCommunities(communityCount);
-      console.log(`✅ Seeded ${communities.length} communities`);
+      safeLogger.info(`✅ Seeded ${communities.length} communities`);
 
       const daos = await this.seedDAOs(daoCount);
-      console.log(`✅ Seeded ${daos.length} DAOs`);
+      safeLogger.info(`✅ Seeded ${daos.length} DAOs`);
 
       const products = await this.seedProducts(productCount);
-      console.log(`✅ Seeded ${products.length} products`);
+      safeLogger.info(`✅ Seeded ${products.length} products`);
 
       const posts = await this.seedPosts(postCount);
-      console.log(`✅ Seeded ${posts.length} posts`);
+      safeLogger.info(`✅ Seeded ${posts.length} posts`);
 
       const proposals = await this.seedProposals(proposalCount);
-      console.log(`✅ Seeded ${proposals.length} proposals`);
+      safeLogger.info(`✅ Seeded ${proposals.length} proposals`);
 
       // Seed relationships
       await this.seedCommunityMemberships(users, communities);
@@ -85,9 +86,9 @@ export class DatabaseSeeder {
       await this.seedPostReactions(posts, users);
       await this.seedComments(posts, users);
 
-      console.log('🎉 Database seeding completed successfully!');
+      safeLogger.info('🎉 Database seeding completed successfully!');
     } catch (error) {
-      console.error('❌ Database seeding failed:', error);
+      safeLogger.error('❌ Database seeding failed:', error);
       throw error;
     }
   }
@@ -96,7 +97,7 @@ export class DatabaseSeeder {
    * Clean all test data from database
    */
   async cleanDatabase(): Promise<void> {
-    console.log('🧹 Cleaning existing test data...');
+    safeLogger.info('🧹 Cleaning existing test data...');
     
     try {
       // Clean in reverse dependency order
@@ -112,9 +113,9 @@ export class DatabaseSeeder {
       await this.db.delete(schema.users);
       await this.db.delete(schema.daos);
       
-      console.log('✅ Database cleaned');
+      safeLogger.info('✅ Database cleaned');
     } catch (error) {
-      console.error('❌ Database cleaning failed:', error);
+      safeLogger.error('❌ Database cleaning failed:', error);
       throw error;
     }
   }
@@ -500,5 +501,5 @@ export async function runSeeder(): Promise<void> {
 
 // Run seeder if called directly
 if (require.main === module) {
-  runSeeder().catch(console.error);
+  runSeeder().catch(safeLogger.error);
 }

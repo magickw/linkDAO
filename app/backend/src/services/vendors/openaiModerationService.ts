@@ -1,4 +1,5 @@
 import { VendorModerationService, ModerationResult } from '../aiModerationOrchestrator';
+import { safeLogger } from '../utils/safeLogger';
 
 interface OpenAIModerationResponse {
   id: string;
@@ -41,7 +42,7 @@ export class OpenAIModerationService implements VendorModerationService {
   constructor() {
     this.apiKey = process.env.OPENAI_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('OpenAI API key not found in environment variables');
+      safeLogger.warn('OpenAI API key not found in environment variables');
     }
   }
 
@@ -106,7 +107,7 @@ export class OpenAIModerationService implements VendorModerationService {
       };
 
     } catch (error) {
-      console.error('OpenAI moderation error:', error);
+      safeLogger.error('OpenAI moderation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       return {
@@ -132,7 +133,7 @@ export class OpenAIModerationService implements VendorModerationService {
       const testResult = await this.scanText('Hello world');
       return testResult.success;
     } catch (error) {
-      console.error('OpenAI health check failed:', error);
+      safeLogger.error('OpenAI health check failed:', error);
       return false;
     }
   }

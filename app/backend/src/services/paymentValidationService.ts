@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { ExchangeRateService } from './exchangeRateService';
@@ -163,7 +164,7 @@ export class PaymentValidationService {
           return result;
       }
     } catch (error) {
-      console.error('Payment validation error:', error);
+      safeLogger.error('Payment validation error:', error);
       return {
         isValid: false,
         hasSufficientBalance: false,
@@ -248,7 +249,7 @@ export class PaymentValidationService {
         gasBalance: gasBalanceInfo
       };
     } catch (error) {
-      console.error('Error checking crypto balance:', error);
+      safeLogger.error('Error checking crypto balance:', error);
       throw new Error('Failed to check crypto balance');
     }
   }
@@ -293,7 +294,7 @@ export class PaymentValidationService {
 
       return alternatives;
     } catch (error) {
-      console.error('Error generating payment alternatives:', error);
+      safeLogger.error('Error generating payment alternatives:', error);
       return [];
     }
   }
@@ -314,7 +315,7 @@ export class PaymentValidationService {
           throw new Error('Invalid payment method');
       }
     } catch (error) {
-      console.error('Error estimating payment fees:', error);
+      safeLogger.error('Error estimating payment fees:', error);
       return {
         processingFee: 0,
         platformFee: 0,
@@ -546,7 +547,7 @@ export class PaymentValidationService {
         gasFee = parseFloat(ethers.formatEther(gasCost));
       }
     } catch (error) {
-      console.error('Error estimating gas fees:', error);
+      safeLogger.error('Error estimating gas fees:', error);
       gasFee = 0.01; // Fallback estimate
     }
 
@@ -637,7 +638,7 @@ export class PaymentValidationService {
         ]
       };
     } catch (error) {
-      console.error('Error creating fiat alternative:', error);
+      safeLogger.error('Error creating fiat alternative:', error);
       return null;
     }
   }
@@ -690,13 +691,13 @@ export class PaymentValidationService {
             });
           }
         } catch (error) {
-          console.error(`Error checking ${token.symbol} balance:`, error);
+          safeLogger.error(`Error checking ${token.symbol} balance:`, error);
         }
       }
 
       return alternatives;
     } catch (error) {
-      console.error('Error creating crypto alternatives:', error);
+      safeLogger.error('Error creating crypto alternatives:', error);
       return [];
     }
   }
@@ -748,7 +749,7 @@ export class PaymentValidationService {
         ]
       };
     } catch (error) {
-      console.error('Error creating escrow alternative:', error);
+      safeLogger.error('Error creating escrow alternative:', error);
       return null;
     }
   }
@@ -797,13 +798,13 @@ export class PaymentValidationService {
             });
           }
         } catch (error) {
-          console.error(`Error checking ${token.symbol} alternative:`, error);
+          safeLogger.error(`Error checking ${token.symbol} alternative:`, error);
         }
       }
 
       return alternatives;
     } catch (error) {
-      console.error('Error creating token alternatives:', error);
+      safeLogger.error('Error creating token alternatives:', error);
       return [];
     }
   }

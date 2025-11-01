@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticationController, authValidationRules } from '../controllers/authenticationController';
 import { AuthenticationMiddleware } from '../middleware/authenticationMiddleware';
 import { AuthenticationService } from '../services/authenticationService';

@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { Request, Response } from 'express';
 import PerformanceOptimizationIntegration from '../middleware/performanceOptimizationIntegration';
 
@@ -42,7 +44,7 @@ router.get('/metrics', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error getting performance metrics:', error);
+    safeLogger.error('Error getting performance metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve performance metrics'
@@ -73,7 +75,7 @@ router.get('/report', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error generating performance report:', error);
+    safeLogger.error('Error generating performance report:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate performance report'
@@ -84,7 +86,7 @@ router.get('/report', async (req: Request, res: Response) => {
 /**
  * Trigger manual optimization
  */
-router.post('/optimize', async (req: Request, res: Response) => {
+router.post('/optimize', csrfProtection,  async (req: Request, res: Response) => {
   try {
     if (!performanceOptimizer) {
       return res.status(503).json({
@@ -104,7 +106,7 @@ router.post('/optimize', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error running optimization:', error);
+    safeLogger.error('Error running optimization:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to run optimization'
@@ -115,7 +117,7 @@ router.post('/optimize', async (req: Request, res: Response) => {
 /**
  * Reset performance metrics
  */
-router.post('/metrics/reset', async (req: Request, res: Response) => {
+router.post('/metrics/reset', csrfProtection,  async (req: Request, res: Response) => {
   try {
     if (!performanceOptimizer) {
       return res.status(503).json({
@@ -135,7 +137,7 @@ router.post('/metrics/reset', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error resetting metrics:', error);
+    safeLogger.error('Error resetting metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to reset metrics'
@@ -163,7 +165,7 @@ router.get('/cache/stats', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error getting cache stats:', error);
+    safeLogger.error('Error getting cache stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve cache statistics'
@@ -174,7 +176,7 @@ router.get('/cache/stats', async (req: Request, res: Response) => {
 /**
  * Clear cache
  */
-router.post('/cache/clear', async (req: Request, res: Response) => {
+router.post('/cache/clear', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { pattern } = req.body;
     const { cacheService } = await import('../services/cacheService');
@@ -197,7 +199,7 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error clearing cache:', error);
+    safeLogger.error('Error clearing cache:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to clear cache'
@@ -208,7 +210,7 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
 /**
  * Warm cache
  */
-router.post('/cache/warm', async (req: Request, res: Response) => {
+router.post('/cache/warm', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { cacheService } = await import('../services/cacheService');
     await cacheService.warmCache();
@@ -222,7 +224,7 @@ router.post('/cache/warm', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error warming cache:', error);
+    safeLogger.error('Error warming cache:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to warm cache'
@@ -255,7 +257,7 @@ router.get('/database/metrics', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error getting database metrics:', error);
+    safeLogger.error('Error getting database metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve database metrics'
@@ -310,7 +312,7 @@ router.get('/health', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error checking performance health:', error);
+    safeLogger.error('Error checking performance health:', error);
     res.status(503).json({
       success: false,
       error: 'Health check failed',

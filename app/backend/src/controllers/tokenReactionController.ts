@@ -4,6 +4,8 @@
  */
 
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import tokenReactionService, { ReactionType, REACTION_TYPES } from '../services/tokenReactionService';
 
@@ -50,7 +52,7 @@ export class TokenReactionController {
 
       res.status(201).json(result);
     } catch (error: any) {
-      console.error('Error creating reaction:', error);
+      safeLogger.error('Error creating reaction:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to create reaction'
@@ -98,7 +100,7 @@ export class TokenReactionController {
         hasMore: result.hasMore
       });
     } catch (error: any) {
-      console.error('Error getting reactions:', error);
+      safeLogger.error('Error getting reactions:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get reactions'
@@ -122,7 +124,7 @@ export class TokenReactionController {
 
       res.json(summaries);
     } catch (error: any) {
-      console.error('Error getting reaction summaries:', error);
+      safeLogger.error('Error getting reaction summaries:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get reaction summaries'
@@ -144,7 +146,7 @@ export class TokenReactionController {
 
       res.json(analytics);
     } catch (error: any) {
-      console.error('Error getting reaction analytics:', error);
+      safeLogger.error('Error getting reaction analytics:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get reaction analytics'
@@ -176,7 +178,7 @@ export class TokenReactionController {
 
       res.json(reactions);
     } catch (error: any) {
-      console.error('Error getting user reactions:', error);
+      safeLogger.error('Error getting user reactions:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get user reactions'
@@ -207,7 +209,7 @@ export class TokenReactionController {
 
       res.json(result);
     } catch (error: any) {
-      console.error('Error removing reaction:', error);
+      safeLogger.error('Error removing reaction:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to remove reaction'
@@ -257,7 +259,7 @@ export class TokenReactionController {
 
       res.json(topReactors);
     } catch (error: any) {
-      console.error('Error getting top reactors:', error);
+      safeLogger.error('Error getting top reactors:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get top reactors'
@@ -275,7 +277,7 @@ export class TokenReactionController {
         reactionTypes: REACTION_TYPES
       });
     } catch (error: any) {
-      console.error('Error getting reaction types:', error);
+      safeLogger.error('Error getting reaction types:', error);
       res.status(500).json({
         success: false,
         message: error.message || 'Failed to get reaction types'

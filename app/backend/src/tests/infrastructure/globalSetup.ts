@@ -4,11 +4,12 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import { config } from 'dotenv';
 import path from 'path';
 
 export default async function globalSetup() {
-  console.log('🔧 Setting up infrastructure test environment...');
+  safeLogger.info('🔧 Setting up infrastructure test environment...');
 
   // Load test environment variables
   config({ path: path.join(__dirname, '../../../.env.test') });
@@ -23,15 +24,15 @@ export default async function globalSetup() {
     // Setup test services
     await setupTestServices();
     
-    console.log('✅ Infrastructure test environment setup complete');
+    safeLogger.info('✅ Infrastructure test environment setup complete');
   } catch (error) {
-    console.error('❌ Failed to setup infrastructure test environment:', error);
+    safeLogger.error('❌ Failed to setup infrastructure test environment:', error);
     throw error;
   }
 }
 
 async function setupTestDatabase() {
-  console.log('📊 Setting up test database...');
+  safeLogger.info('📊 Setting up test database...');
   
   try {
     // Create test database if it doesn't exist
@@ -44,15 +45,15 @@ async function setupTestDatabase() {
       timeout: 30000
     });
     
-    console.log('✅ Test database setup complete');
+    safeLogger.info('✅ Test database setup complete');
   } catch (error) {
-    console.warn('⚠️  Test database setup failed (may not be available):', error.message);
+    safeLogger.warn('⚠️  Test database setup failed (may not be available):', error.message);
     // Don't fail the entire setup if database is not available
   }
 }
 
 async function setupTestRedis() {
-  console.log('🔴 Setting up test Redis...');
+  safeLogger.info('🔴 Setting up test Redis...');
   
   try {
     // Check if Redis is available
@@ -60,15 +61,15 @@ async function setupTestRedis() {
     
     // Simple Redis connection test
     // In a real setup, you might want to create a Redis client and test connection
-    console.log('✅ Test Redis setup complete');
+    safeLogger.info('✅ Test Redis setup complete');
   } catch (error) {
-    console.warn('⚠️  Test Redis setup failed (may not be available):', error.message);
+    safeLogger.warn('⚠️  Test Redis setup failed (may not be available):', error.message);
     // Don't fail the entire setup if Redis is not available
   }
 }
 
 async function setupTestServices() {
-  console.log('🛠️  Setting up test services...');
+  safeLogger.info('🛠️  Setting up test services...');
   
   try {
     // Setup any additional test services
@@ -89,9 +90,9 @@ async function setupTestServices() {
       }
     });
     
-    console.log('✅ Test services setup complete');
+    safeLogger.info('✅ Test services setup complete');
   } catch (error) {
-    console.error('❌ Test services setup failed:', error);
+    safeLogger.error('❌ Test services setup failed:', error);
     throw error;
   }
 }

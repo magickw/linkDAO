@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerController } from '../controllers/sellerController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
@@ -9,7 +10,7 @@ const router = Router();
 router.use(authMiddleware); // All seller routes require authentication
 
 // POST /api/sellers/listings - Create new product listing
-router.post('/listings', 
+router.post('/listings', csrfProtection,  
   validateRequest({
     body: {
       title: { type: 'string', required: true, minLength: 3, maxLength: 500 },
@@ -26,7 +27,7 @@ router.post('/listings',
 );
 
 // PUT /api/sellers/listings/:id - Update existing listing
-router.put('/listings/:id',
+router.put('/listings/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -47,7 +48,7 @@ router.put('/listings/:id',
 );
 
 // DELETE /api/sellers/listings/:id - Delete listing
-router.delete('/listings/:id',
+router.delete('/listings/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -69,7 +70,7 @@ router.get('/dashboard',
 );
 
 // PUT /api/sellers/profile - Update seller store information
-router.put('/profile',
+router.put('/profile', csrfProtection, 
   validateRequest({
     body: {
       displayName: { type: 'string', optional: true, minLength: 2, maxLength: 100 },
@@ -134,7 +135,7 @@ router.get('/profile', sellerController.getProfile.bind(sellerController));
 router.get('/stats', sellerController.getStats.bind(sellerController));
 
 // POST /api/sellers/verify - Request seller verification
-router.post('/verify',
+router.post('/verify', csrfProtection, 
   validateRequest({
     body: {
       verificationType: { type: 'string', required: true, enum: ['email', 'phone', 'kyc'] },
@@ -148,7 +149,7 @@ router.post('/verify',
 // Seller Applications Routes
 router.get('/applications', sellerController.getSellerApplications.bind(sellerController));
 router.get('/applications/:applicationId', sellerController.getSellerApplication.bind(sellerController));
-router.post('/applications/:applicationId/review', sellerController.reviewSellerApplication.bind(sellerController));
+router.post('/applications/:applicationId/review', csrfProtection,  sellerController.reviewSellerApplication.bind(sellerController));
 router.get('/applications/:applicationId/risk-assessment', sellerController.getSellerRiskAssessment.bind(sellerController));
 
 // Seller Performance Routes

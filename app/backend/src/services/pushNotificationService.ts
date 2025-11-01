@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { safeLogger } from '../utils/safeLogger';
 import { Message, MulticastMessage } from 'firebase-admin/messaging';
 import { db } from '../db';
 import { pushTokens } from '../db/schema';
@@ -42,7 +43,7 @@ export class PushNotificationService {
       const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
       if (!serviceAccountPath && !serviceAccountJson) {
-        console.warn('Push notification service disabled: Firebase credentials not configured');
+        safeLogger.warn('Push notification service disabled: Firebase credentials not configured');
         return;
       }
 
@@ -68,9 +69,9 @@ export class PushNotificationService {
       }
 
       this.enabled = true;
-      console.log('Push notification service initialized with Firebase');
+      safeLogger.info('Push notification service initialized with Firebase');
     } catch (error) {
-      console.error('Failed to initialize Firebase:', error);
+      safeLogger.error('Failed to initialize Firebase:', error);
       this.enabled = false;
     }
   }
@@ -80,7 +81,7 @@ export class PushNotificationService {
    */
   async sendToToken(token: string, notification: PushNotificationData): Promise<boolean> {
     if (!this.enabled || !this.firebaseApp) {
-      console.log('[PushNotificationService] Push notifications disabled, skipping:', notification.title);
+      safeLogger.info('[PushNotificationService] Push notifications disabled, skipping:', notification.title);
       return false;
     }
 
@@ -113,10 +114,10 @@ export class PushNotificationService {
       };
 
       const response = await admin.messaging().send(message);
-      console.log('[PushNotificationService] Successfully sent message:', response);
+      safeLogger.info('[PushNotificationService] Successfully sent message:', response);
       return true;
     } catch (error: any) {
-      console.error('[PushNotificationService] Error sending notification:', error);
+      safeLogger.error('[PushNotificationService] Error sending notification:', error);
 
       // Handle invalid tokens
       if (
@@ -138,7 +139,7 @@ export class PushNotificationService {
     failureCount: number;
   }> {
     if (!this.enabled || !this.firebaseApp) {
-      console.log('[PushNotificationService] Push notifications disabled, skipping batch');
+      safeLogger.info('[PushNotificationService] Push notifications disabled, skipping batch');
       return { successCount: 0, failureCount: 0 };
     }
 
@@ -176,7 +177,7 @@ export class PushNotificationService {
 
       const response = await admin.messaging().sendEachForMulticast(message);
 
-      console.log(
+      safeLogger.info(
         `[PushNotificationService] Batch send completed: ${response.successCount} success, ${response.failureCount} failures`
       );
 
@@ -201,7 +202,7 @@ export class PushNotificationService {
         failureCount: response.failureCount,
       };
     } catch (error) {
-      console.error('[PushNotificationService] Error sending batch notification:', error);
+      safeLogger.error('[PushNotificationService] Error sending batch notification:', error);
       return { successCount: 0, failureCount: tokens.length };
     }
   }
@@ -218,14 +219,14 @@ export class PushNotificationService {
       const tokens = await this.getUserTokens(userAddress);
 
       if (tokens.length === 0) {
-        console.log(`[PushNotificationService] No push tokens found for user ${userAddress}`);
+        safeLogger.info(`[PushNotificationService] No push tokens found for user ${userAddress}`);
         return false;
       }
 
       const result = await this.sendToTokens(tokens, notification);
       return result.successCount > 0;
     } catch (error) {
-      console.error('[PushNotificationService] Error sending notification to user:', error);
+      safeLogger.error('[PushNotificationService] Error sending notification to user:', error);
       return false;
     }
   }
@@ -278,7 +279,7 @@ export class PushNotificationService {
       }
 
       if (allTokens.length === 0) {
-        console.log('[PushNotificationService] No push tokens found for any users');
+        safeLogger.info('[PushNotificationService] No push tokens found for any users');
         return { successCount: 0, failureCount: 0 };
       }
 
@@ -296,7 +297,7 @@ export class PushNotificationService {
 
       return { successCount: totalSuccess, failureCount: totalFailure };
     } catch (error) {
-      console.error('[PushNotificationService] Error sending to multiple users:', error);
+      safeLogger.error('[PushNotificationService] Error sending to multiple users:', error);
       return { successCount: 0, failureCount: userAddresses.length };
     }
   }
@@ -318,7 +319,7 @@ export class PushNotificationService {
         .limit(1);
 
       if (existing.length > 0) {
-        console.log('[PushNotificationService] Token already registered');
+        safeLogger.info('[PushNotificationService] Token already registered');
         return true;
       }
 
@@ -329,10 +330,10 @@ export class PushNotificationService {
         platform,
       });
 
-      console.log(`[PushNotificationService] Registered push token for ${userAddress} (${platform})`);
+      safeLogger.info(`[PushNotificationService] Registered push token for ${userAddress} (${platform})`);
       return true;
     } catch (error) {
-      console.error('[PushNotificationService] Error registering token:', error);
+      safeLogger.error('[PushNotificationService] Error registering token:', error);
       return false;
     }
   }
@@ -343,10 +344,10 @@ export class PushNotificationService {
   async unregisterToken(token: string): Promise<boolean> {
     try {
       await db.delete(pushTokens).where(eq(pushTokens.token, token));
-      console.log('[PushNotificationService] Unregistered push token');
+      safeLogger.info('[PushNotificationService] Unregistered push token');
       return true;
     } catch (error) {
-      console.error('[PushNotificationService] Error unregistering token:', error);
+      safeLogger.error('[PushNotificationService] Error unregistering token:', error);
       return false;
     }
   }
@@ -363,7 +364,7 @@ export class PushNotificationService {
 
       return tokens.map((t) => t.token);
     } catch (error) {
-      console.error('[PushNotificationService] Error getting user tokens:', error);
+      safeLogger.error('[PushNotificationService] Error getting user tokens:', error);
       return [];
     }
   }
@@ -374,9 +375,9 @@ export class PushNotificationService {
   private async removeInvalidToken(token: string): Promise<void> {
     try {
       await db.delete(pushTokens).where(eq(pushTokens.token, token));
-      console.log('[PushNotificationService] Removed invalid token');
+      safeLogger.info('[PushNotificationService] Removed invalid token');
     } catch (error) {
-      console.error('[PushNotificationService] Error removing invalid token:', error);
+      safeLogger.error('[PushNotificationService] Error removing invalid token:', error);
     }
   }
 
@@ -388,9 +389,9 @@ export class PushNotificationService {
       for (const token of tokens) {
         await db.delete(pushTokens).where(eq(pushTokens.token, token));
       }
-      console.log(`[PushNotificationService] Removed ${tokens.length} invalid tokens`);
+      safeLogger.info(`[PushNotificationService] Removed ${tokens.length} invalid tokens`);
     } catch (error) {
-      console.error('[PushNotificationService] Error removing invalid tokens:', error);
+      safeLogger.error('[PushNotificationService] Error removing invalid tokens:', error);
     }
   }
 

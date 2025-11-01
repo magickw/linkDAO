@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { supportTicketingIntegrationService, SupportTicket } from '../services/supportTicketingIntegrationService';
 import { logger } from '../utils/logger';
 

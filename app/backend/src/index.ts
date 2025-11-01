@@ -32,20 +32,20 @@ import {
 import { globalErrorHandler, notFoundHandler } from './middleware/globalErrorHandler';
 
 // Import enhanced error handling and logging
-import { 
+import {
   enhancedErrorHandler, 
   EnhancedAppError, 
   ErrorFactory,
   asyncHandler 
 } from './middleware/enhancedErrorHandler';
-import { 
+import {
   enhancedRequestLoggingMiddleware,
   databaseQueryTrackingMiddleware,
   cacheOperationTrackingMiddleware,
   businessContextMiddleware,
   RequestLoggingHelpers
 } from './middleware/enhancedRequestLogging';
-import { 
+import {
   enhancedRateLimitingService,
   enhancedGeneralRateLimit,
   enhancedAuthRateLimit,
@@ -147,7 +147,7 @@ const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
 // Performance optimizer will be set after routes are imported
 
 // Import security enhancements
-import { 
+import {
   securityHeaders, 
   csrfProtection,
   requestSizeLimits, 

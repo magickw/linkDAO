@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationWorkflowOptimizationService } from '../services/moderationWorkflowOptimizationService';
 import { z } from 'zod';
 
@@ -57,7 +59,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error optimizing moderation queue:', error);
+      safeLogger.error('Error optimizing moderation queue:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -96,7 +98,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving workflow metrics:', error);
+      safeLogger.error('Error retrieving workflow metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving metrics'
@@ -136,7 +138,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error analyzing bottlenecks:', error);
+      safeLogger.error('Error analyzing bottlenecks:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -179,7 +181,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error balancing workload:', error);
+      safeLogger.error('Error balancing workload:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -226,7 +228,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving efficiency tracking:', error);
+      safeLogger.error('Error retrieving efficiency tracking:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving efficiency data'
@@ -264,7 +266,7 @@ export class ModerationWorkflowOptimizationController {
       });
 
     } catch (error) {
-      console.error('Error generating optimization recommendations:', error);
+      safeLogger.error('Error generating optimization recommendations:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error generating recommendations'

@@ -5,26 +5,27 @@
  */
 
 import { db } from '../../db';
+import { safeLogger } from '../utils/safeLogger';
 import { posts } from '../../db/schema';
 import { sql, eq } from 'drizzle-orm';
 
 async function testSimpleCommentCount() {
-  console.log('🧪 Testing Simple Comment Count...\n');
+  safeLogger.info('🧪 Testing Simple Comment Count...\n');
 
   try {
     // First, check if we have any posts
     const allPosts = await db.select().from(posts).limit(5);
-    console.log(`Found ${allPosts.length} posts in database`);
+    safeLogger.info(`Found ${allPosts.length} posts in database`);
 
     if (allPosts.length === 0) {
-      console.log('⚠️  No posts found in database. Comment counting cannot be tested without data.');
+      safeLogger.info('⚠️  No posts found in database. Comment counting cannot be tested without data.');
       return true;
     }
 
     // Display first post
     const firstPost = allPosts[0];
-    console.log(`\nFirst post ID: ${firstPost.id}`);
-    console.log(`Has parent: ${firstPost.parentId ? 'Yes (' + firstPost.parentId + ')' : 'No'}`);
+    safeLogger.info(`\nFirst post ID: ${firstPost.id}`);
+    safeLogger.info(`Has parent: ${firstPost.parentId ? 'Yes (' + firstPost.parentId + ')' : 'No'}`);
 
     // Count comments for first post
     const commentCountResult = await db
@@ -33,12 +34,12 @@ async function testSimpleCommentCount() {
       .where(eq(posts.parentId, firstPost.id));
 
     const commentCount = commentCountResult[0]?.count || 0;
-    console.log(`\n✅ Comment count for post ${firstPost.id}: ${commentCount}`);
+    safeLogger.info(`\n✅ Comment count for post ${firstPost.id}: ${commentCount}`);
 
     // Test on all top-level posts
-    console.log('\n\nTesting comment counts for all top-level posts:');
+    safeLogger.info('\n\nTesting comment counts for all top-level posts:');
     const topLevelPosts = allPosts.filter(p => !p.parentId);
-    console.log(`Found ${topLevelPosts.length} top-level posts`);
+    safeLogger.info(`Found ${topLevelPosts.length} top-level posts`);
 
     for (const post of topLevelPosts.slice(0, 3)) {
       const counts = await db
@@ -46,14 +47,14 @@ async function testSimpleCommentCount() {
         .from(posts)
         .where(eq(posts.parentId, post.id));
 
-      console.log(`Post ${post.id}: ${counts[0]?.count || 0} comments`);
+      safeLogger.info(`Post ${post.id}: ${counts[0]?.count || 0} comments`);
     }
 
-    console.log('\n✅ Simple comment count test passed!\n');
+    safeLogger.info('\n✅ Simple comment count test passed!\n');
     return true;
 
   } catch (error) {
-    console.error('\n❌ Test failed:', error);
+    safeLogger.error('\n❌ Test failed:', error);
     return false;
   }
 }
@@ -65,7 +66,7 @@ if (require.main === module) {
       process.exit(success ? 0 : 1);
     })
     .catch(error => {
-      console.error('Test execution failed:', error);
+      safeLogger.error('Test execution failed:', error);
       process.exit(1);
     });
 }

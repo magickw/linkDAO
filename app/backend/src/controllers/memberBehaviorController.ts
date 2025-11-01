@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import memberBehaviorAnalyticsService from '../services/memberBehaviorAnalyticsService';
 import { AuthenticatedRequest } from '../middleware/auth';
 
@@ -28,7 +30,7 @@ export const getMemberBehaviorMetrics = async (req: AuthenticatedRequest, res: R
       data: metrics
     });
   } catch (error) {
-    console.error('Error getting member behavior metrics:', error);
+    safeLogger.error('Error getting member behavior metrics:', error);
     res.status(500).json({ error: 'Failed to retrieve member behavior metrics' });
   }
 };
@@ -52,7 +54,7 @@ export const getEngagementPatterns = async (req: AuthenticatedRequest, res: Resp
       data: patterns
     });
   } catch (error) {
-    console.error('Error getting engagement patterns:', error);
+    safeLogger.error('Error getting engagement patterns:', error);
     res.status(500).json({ error: 'Failed to retrieve engagement patterns' });
   }
 };
@@ -72,7 +74,7 @@ export const getCohortAnalysis = async (req: Request, res: Response): Promise<vo
       data: analysis
     });
   } catch (error) {
-    console.error('Error getting cohort analysis:', error);
+    safeLogger.error('Error getting cohort analysis:', error);
     res.status(500).json({ error: 'Failed to retrieve cohort analysis' });
   }
 };
@@ -92,7 +94,7 @@ export const getBehavioralInsights = async (req: Request, res: Response): Promis
       data: insights
     });
   } catch (error) {
-    console.error('Error getting behavioral insights:', error);
+    safeLogger.error('Error getting behavioral insights:', error);
     res.status(500).json({ error: 'Failed to retrieve behavioral insights' });
   }
 };
@@ -116,7 +118,7 @@ export const getMemberSegment = async (req: AuthenticatedRequest, res: Response)
       data: segment
     });
   } catch (error) {
-    console.error('Error getting member segment:', error);
+    safeLogger.error('Error getting member segment:', error);
     res.status(500).json({ error: 'Failed to determine member segment' });
   }
 };
@@ -142,7 +144,7 @@ export const trackBehaviorEvent = async (req: AuthenticatedRequest, res: Respons
     
     // In a real implementation, this would insert into the user_analytics table
     // For now, we'll just log the event
-    console.log('Tracking behavior event:', {
+    safeLogger.info('Tracking behavior event:', {
       userId,
       eventType,
       eventData,
@@ -156,7 +158,7 @@ export const trackBehaviorEvent = async (req: AuthenticatedRequest, res: Respons
       message: 'Behavior event tracked successfully'
     });
   } catch (error) {
-    console.error('Error tracking behavior event:', error);
+    safeLogger.error('Error tracking behavior event:', error);
     res.status(500).json({ error: 'Failed to track behavior event' });
   }
 };

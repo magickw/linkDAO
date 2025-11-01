@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { userJourneyController } from '../controllers/userJourneyController';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
@@ -20,7 +21,7 @@ router.use(rateLimitingMiddleware({
  * @desc Track a user journey event
  * @access Admin
  */
-router.post('/track', userJourneyController.trackEvent.bind(userJourneyController));
+router.post('/track', csrfProtection,  userJourneyController.trackEvent.bind(userJourneyController));
 
 /**
  * @route GET /api/admin/user-journey/maps
@@ -40,7 +41,7 @@ router.get('/maps', userJourneyController.getJourneyMaps.bind(userJourneyControl
  * @body startDate - Start date (ISO string)
  * @body endDate - End date (ISO string)
  */
-router.post('/funnel', userJourneyController.getConversionFunnel.bind(userJourneyController));
+router.post('/funnel', csrfProtection,  userJourneyController.getConversionFunnel.bind(userJourneyController));
 
 /**
  * @route GET /api/admin/user-journey/sessions

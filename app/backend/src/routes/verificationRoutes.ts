@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { verificationService } from '../services/verificationService';
 
 const router = express.Router();
@@ -7,7 +9,7 @@ const router = express.Router();
  * Send email verification code
  * POST /api/verification/email
  */
-router.post('/email', async (req, res) => {
+router.post('/email', csrfProtection,  async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -33,7 +35,7 @@ router.post('/email', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Email verification request failed:', error);
+    safeLogger.error('Email verification request failed:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -45,7 +47,7 @@ router.post('/email', async (req, res) => {
  * Verify email with code
  * POST /api/verification/email/verify
  */
-router.post('/email/verify', async (req, res) => {
+router.post('/email/verify', csrfProtection,  async (req, res) => {
   try {
     const { email, code } = req.body;
 
@@ -71,7 +73,7 @@ router.post('/email/verify', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Email verification failed:', error);
+    safeLogger.error('Email verification failed:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -83,7 +85,7 @@ router.post('/email/verify', async (req, res) => {
  * Send phone verification code
  * POST /api/verification/phone
  */
-router.post('/phone', async (req, res) => {
+router.post('/phone', csrfProtection,  async (req, res) => {
   try {
     const { phone } = req.body;
 
@@ -109,7 +111,7 @@ router.post('/phone', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Phone verification request failed:', error);
+    safeLogger.error('Phone verification request failed:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -121,7 +123,7 @@ router.post('/phone', async (req, res) => {
  * Verify phone with code
  * POST /api/verification/phone/verify
  */
-router.post('/phone/verify', async (req, res) => {
+router.post('/phone/verify', csrfProtection,  async (req, res) => {
   try {
     const { phone, code } = req.body;
 
@@ -147,7 +149,7 @@ router.post('/phone/verify', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Phone verification failed:', error);
+    safeLogger.error('Phone verification failed:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -167,7 +169,7 @@ router.get('/status', (req, res) => {
       data: status
     });
   } catch (error) {
-    console.error('Failed to get verification status:', error);
+    safeLogger.error('Failed to get verification status:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -194,7 +196,7 @@ router.get('/test-email', async (req, res) => {
       emailServiceWorking: isWorking
     });
   } catch (error) {
-    console.error('Email service test failed:', error);
+    safeLogger.error('Email service test failed:', error);
     res.status(500).json({
       success: false,
       error: 'Email service test failed'

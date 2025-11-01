@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { reputationController } from '../controllers/reputationController';
 import { requestLoggingMiddleware } from '../middleware/requestLogging';
 import { generalRateLimit } from '../middleware/marketplaceSecurity';

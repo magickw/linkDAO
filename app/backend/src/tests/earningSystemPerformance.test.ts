@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { earningActivityService } from '../services/earningActivityService';
 import { referralService } from '../services/referralService';
 import { marketplaceRewardsService } from '../services/marketplaceRewardsService';
@@ -68,7 +69,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Processed 1000 activities in ${duration}ms`);
+      safeLogger.info(`Processed 1000 activities in ${duration}ms`);
 
       // Performance expectations
       expect(duration).toBeLessThan(30000); // Should complete within 30 seconds
@@ -80,7 +81,7 @@ describe('Earning System Performance Tests', () => {
       const successRate = (successfulResults.length / results.length) * 100;
       
       expect(successRate).toBeGreaterThan(70); // At least 70% success rate
-      console.log(`Success rate: ${successRate.toFixed(2)}%`);
+      safeLogger.info(`Success rate: ${successRate.toFixed(2)}%`);
     }, 60000); // 60 second timeout
 
     it('should efficiently process batch referral operations', async () => {
@@ -106,7 +107,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Processed 500 referrals in ${duration}ms`);
+      safeLogger.info(`Processed 500 referrals in ${duration}ms`);
 
       expect(duration).toBeLessThan(20000); // Should complete within 20 seconds
       
@@ -141,7 +142,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Processed 200 marketplace transactions in ${duration}ms`);
+      safeLogger.info(`Processed 200 marketplace transactions in ${duration}ms`);
 
       expect(duration).toBeLessThan(15000); // Should complete within 15 seconds
     }, 25000);
@@ -178,7 +179,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Retrieved stats for 50 users in ${duration}ms`);
+      safeLogger.info(`Retrieved stats for 50 users in ${duration}ms`);
 
       expect(duration).toBeLessThan(2000); // Should complete within 2 seconds
       expect(results.length).toBe(50);
@@ -204,7 +205,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Retrieved activity feeds for 30 users in ${duration}ms`);
+      safeLogger.info(`Retrieved activity feeds for 30 users in ${duration}ms`);
 
       expect(duration).toBeLessThan(1500); // Should complete within 1.5 seconds
       expect(results.length).toBe(30);
@@ -221,7 +222,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Generated leaderboards in ${duration}ms`);
+      safeLogger.info(`Generated leaderboards in ${duration}ms`);
 
       expect(duration).toBeLessThan(1000); // Should complete within 1 second
       expect(earningLeaderboard.length).toBeGreaterThan(0);
@@ -267,7 +268,7 @@ describe('Earning System Performance Tests', () => {
       const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
       const memoryIncreaseMB = memoryIncrease / (1024 * 1024);
 
-      console.log(`Memory increase: ${memoryIncreaseMB.toFixed(2)}MB`);
+      safeLogger.info(`Memory increase: ${memoryIncreaseMB.toFixed(2)}MB`);
 
       // Memory increase should be reasonable (less than 100MB)
       expect(memoryIncreaseMB).toBeLessThan(100);
@@ -303,7 +304,7 @@ describe('Earning System Performance Tests', () => {
         r.status === 'fulfilled' && !r.value.success && r.value.dailyLimitReached
       );
 
-      console.log(`Rate limiting test: ${successfulResults.length} successful, ${limitedResults.length} limited`);
+      safeLogger.info(`Rate limiting test: ${successfulResults.length} successful, ${limitedResults.length} limited`);
 
       // Should have limited some requests due to daily limits
       expect(limitedResults.length).toBeGreaterThan(0);
@@ -364,7 +365,7 @@ describe('Earning System Performance Tests', () => {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
-      console.log(`Mixed operations completed in ${duration}ms`);
+      safeLogger.info(`Mixed operations completed in ${duration}ms`);
 
       expect(duration).toBeLessThan(20000); // Should complete within 20 seconds
       
@@ -372,7 +373,7 @@ describe('Earning System Performance Tests', () => {
       const successRate = (successfulResults.length / results.length) * 100;
       
       expect(successRate).toBeGreaterThan(80); // At least 80% success rate
-      console.log(`Mixed operations success rate: ${successRate.toFixed(2)}%`);
+      safeLogger.info(`Mixed operations success rate: ${successRate.toFixed(2)}%`);
     }, 30000);
   });
 });

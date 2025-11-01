@@ -12,7 +12,7 @@ import {
   communityEvents,
   eventRsvps
 } from '../db/schema';
-import { 
+import {
   eq, 
   desc, 
   sql, 

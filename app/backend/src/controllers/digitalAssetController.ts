@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { digitalAssetService } from '../services/digitalAssetService';
 import { analyticsService } from '../services/analyticsService';
@@ -120,7 +122,7 @@ export class DigitalAssetController {
         data: asset
       });
     } catch (error) {
-      console.error('Error creating digital asset:', error);
+      safeLogger.error('Error creating digital asset:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.errors });
       } else {
@@ -149,7 +151,7 @@ export class DigitalAssetController {
         data: license
       });
     } catch (error) {
-      console.error('Error creating license:', error);
+      safeLogger.error('Error creating license:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.errors });
       } else {
@@ -178,7 +180,7 @@ export class DigitalAssetController {
         data: purchase
       });
     } catch (error) {
-      console.error('Error purchasing license:', error);
+      safeLogger.error('Error purchasing license:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.errors });
       } else {
@@ -237,7 +239,7 @@ export class DigitalAssetController {
         res.status(500).json({ error: 'Unexpected response from asset service' });
       }
     } catch (error) {
-      console.error('Error accessing asset:', error);
+      safeLogger.error('Error accessing asset:', error);
       res.status(500).json({ error: 'Failed to access asset' });
     }
   }
@@ -258,7 +260,7 @@ export class DigitalAssetController {
         data: { requestId }
       });
     } catch (error) {
-      console.error('Error submitting DMCA request:', error);
+      safeLogger.error('Error submitting DMCA request:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: 'Validation error', details: error.errors });
       } else {
@@ -302,7 +304,7 @@ export class DigitalAssetController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting analytics:', error);
+      safeLogger.error('Error getting analytics:', error);
       res.status(500).json({ error: 'Failed to get analytics' });
     }
   }
@@ -342,7 +344,7 @@ export class DigitalAssetController {
         data: timeSeriesData
       });
     } catch (error) {
-      console.error('Error getting time series data:', error);
+      safeLogger.error('Error getting time series data:', error);
       res.status(500).json({ error: 'Failed to get time series data' });
     }
   }
@@ -367,7 +369,7 @@ export class DigitalAssetController {
         data: stats
       });
     } catch (error) {
-      console.error('Error getting real-time stats:', error);
+      safeLogger.error('Error getting real-time stats:', error);
       res.status(500).json({ error: 'Failed to get real-time stats' });
     }
   }
@@ -401,7 +403,7 @@ export class DigitalAssetController {
         data: distribution
       });
     } catch (error) {
-      console.error('Error getting geographic distribution:', error);
+      safeLogger.error('Error getting geographic distribution:', error);
       res.status(500).json({ error: 'Failed to get geographic distribution' });
     }
   }
@@ -435,7 +437,7 @@ export class DigitalAssetController {
         data: revenueAnalytics
       });
     } catch (error) {
-      console.error('Error getting revenue analytics:', error);
+      safeLogger.error('Error getting revenue analytics:', error);
       res.status(500).json({ error: 'Failed to get revenue analytics' });
     }
   }
@@ -471,7 +473,7 @@ export class DigitalAssetController {
         data: { templateId }
       });
     } catch (error) {
-      console.error('Error creating watermark template:', error);
+      safeLogger.error('Error creating watermark template:', error);
       res.status(500).json({ error: 'Failed to create watermark template' });
     }
   }
@@ -494,7 +496,7 @@ export class DigitalAssetController {
         data: templates
       });
     } catch (error) {
-      console.error('Error getting watermark templates:', error);
+      safeLogger.error('Error getting watermark templates:', error);
       res.status(500).json({ error: 'Failed to get watermark templates' });
     }
   }

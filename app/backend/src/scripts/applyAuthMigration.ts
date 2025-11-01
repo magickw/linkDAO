@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { safeLogger } from '../utils/safeLogger';
 import postgres from 'postgres';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -10,7 +11,7 @@ async function applyAuthMigration() {
   const db = drizzle(sql);
 
   try {
-    console.log('Applying authentication system migration...');
+    safeLogger.info('Applying authentication system migration...');
     
     // Read the migration file
     const migrationPath = path.join(__dirname, '../../drizzle/0037_authentication_system.sql');
@@ -25,14 +26,14 @@ async function applyAuthMigration() {
     // Execute each statement
     for (const statement of statements) {
       if (statement.trim()) {
-        console.log(`Executing: ${statement.substring(0, 50)}...`);
+        safeLogger.info(`Executing: ${statement.substring(0, 50)}...`);
         await sql.unsafe(statement);
       }
     }
     
-    console.log('Authentication system migration applied successfully!');
+    safeLogger.info('Authentication system migration applied successfully!');
   } catch (error) {
-    console.error('Error applying migration:', error);
+    safeLogger.error('Error applying migration:', error);
     throw error;
   } finally {
     await sql.end();
@@ -40,7 +41,7 @@ async function applyAuthMigration() {
 }
 
 if (require.main === module) {
-  applyAuthMigration().catch(console.error);
+  applyAuthMigration().catch(safeLogger.error);
 }
 
 export { applyAuthMigration };

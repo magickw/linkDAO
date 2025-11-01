@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { PerformanceOptimizationManager } from '../config/performanceConfig';
 
@@ -58,7 +59,7 @@ export class PerformanceMiddleware {
 
         // Log slow requests
         if (responseTime > 2000) {
-          console.warn(`Slow request detected: ${req.method} ${req.path} took ${responseTime.toFixed(2)}ms`);
+          safeLogger.warn(`Slow request detected: ${req.method} ${req.path} took ${responseTime.toFixed(2)}ms`);
         }
 
         originalEnd.call(this, chunk, encoding);
@@ -91,7 +92,7 @@ export class PerformanceMiddleware {
           });
         }
       } catch (error) {
-        console.error('Load balancing error:', error);
+        safeLogger.error('Load balancing error:', error);
         // Continue without load balancing if there's an error
       }
 
@@ -131,7 +132,7 @@ export class PerformanceMiddleware {
           // Cache successful responses
           if (res.statusCode === 200) {
             req.performanceManager?.cacheData(cacheKey, data, ttl).catch(error => {
-              console.error('Cache write error:', error);
+              safeLogger.error('Cache write error:', error);
             });
           }
           
@@ -140,7 +141,7 @@ export class PerformanceMiddleware {
         };
 
       } catch (error) {
-        console.error('Cache middleware error:', error);
+        safeLogger.error('Cache middleware error:', error);
         // Continue without caching if there's an error
       }
 

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { cacheService } from '../services/cacheService';
 import { performance } from 'perf_hooks';
 
@@ -90,7 +91,7 @@ export class ResponseCachingMiddleware {
           if (condition(req, res) && res.statusCode >= 200 && res.statusCode < 300) {
             // Cache the response asynchronously
             cacheService.set(fullCacheKey, data, ttl).catch(error => {
-              console.error(`Failed to cache response for ${fullCacheKey}:`, error);
+              safeLogger.error(`Failed to cache response for ${fullCacheKey}:`, error);
             });
 
             // Set cache headers
@@ -116,7 +117,7 @@ export class ResponseCachingMiddleware {
         });
 
       } catch (error) {
-        console.error(`Cache middleware error for ${fullCacheKey}:`, error);
+        safeLogger.error(`Cache middleware error for ${fullCacheKey}:`, error);
         next();
       }
     };
@@ -142,7 +143,7 @@ export class ResponseCachingMiddleware {
               await cacheService.invalidatePattern(pattern);
             }
           } catch (error) {
-            console.error('Cache invalidation error:', error);
+            safeLogger.error('Cache invalidation error:', error);
           }
         }
       };
@@ -190,7 +191,7 @@ export class ResponseCachingMiddleware {
             const data = await rule.loader();
             await cacheService.set(rule.pattern, data, rule.ttl || 300);
           } catch (error) {
-            console.error(`Cache warming failed for ${rule.pattern}:`, error);
+            safeLogger.error(`Cache warming failed for ${rule.pattern}:`, error);
           }
         }
       });

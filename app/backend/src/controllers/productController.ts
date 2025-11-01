@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { ProductService } from '../services/productService';
 import { SearchService, AdvancedSearchFilters } from '../services/searchService';
 import { 

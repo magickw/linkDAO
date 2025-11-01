@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationPolicies, moderationVendors } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -61,7 +62,7 @@ export class PolicyConfigurationService {
         isActive: policy.isActive ?? true
       }));
     } catch (error) {
-      console.error('Failed to get policies:', error);
+      safeLogger.error('Failed to get policies:', error);
       return [];
     }
   }
@@ -91,7 +92,7 @@ export class PolicyConfigurationService {
         isActive: policy.isActive ?? true
       }));
     } catch (error) {
-      console.error('Failed to get policies by category:', error);
+      safeLogger.error('Failed to get policies by category:', error);
       return [];
     }
   }
@@ -130,7 +131,7 @@ export class PolicyConfigurationService {
 
       return null;
     } catch (error) {
-      console.error('Failed to create policy:', error);
+      safeLogger.error('Failed to create policy:', error);
       return null;
     }
   }
@@ -162,7 +163,7 @@ export class PolicyConfigurationService {
       
       return true;
     } catch (error) {
-      console.error('Failed to update policy:', error);
+      safeLogger.error('Failed to update policy:', error);
       return false;
     }
   }
@@ -182,7 +183,7 @@ export class PolicyConfigurationService {
       
       return true;
     } catch (error) {
-      console.error('Failed to delete policy:', error);
+      safeLogger.error('Failed to delete policy:', error);
       return false;
     }
   }
@@ -212,7 +213,7 @@ export class PolicyConfigurationService {
           : vendor.configuration || {}
       }));
     } catch (error) {
-      console.error('Failed to get vendors:', error);
+      safeLogger.error('Failed to get vendors:', error);
       return [];
     }
   }
@@ -247,7 +248,7 @@ export class PolicyConfigurationService {
       
       return true;
     } catch (error) {
-      console.error('Failed to update vendor:', error);
+      safeLogger.error('Failed to update vendor:', error);
       return false;
     }
   }
@@ -269,7 +270,7 @@ export class PolicyConfigurationService {
       const results = await Promise.all(updatePromises);
       return results.every(result => result === true);
     } catch (error) {
-      console.error('Failed to bulk update thresholds:', error);
+      safeLogger.error('Failed to bulk update thresholds:', error);
       return false;
     }
   }
@@ -295,7 +296,7 @@ export class PolicyConfigurationService {
       
       return results.every(result => result !== null);
     } catch (error) {
-      console.error('Failed to apply policy template:', error);
+      safeLogger.error('Failed to apply policy template:', error);
       return false;
     }
   }
@@ -543,7 +544,7 @@ export class PolicyConfigurationService {
       // For now, return mock data structure
       return [];
     } catch (error) {
-      console.error('Failed to get policy effectiveness:', error);
+      safeLogger.error('Failed to get policy effectiveness:', error);
       return [];
     }
   }
@@ -604,7 +605,7 @@ export class PolicyConfigurationService {
 
       return { success: errors.length === 0, errors };
     } catch (error) {
-      console.error('Failed to import configuration:', error);
+      safeLogger.error('Failed to import configuration:', error);
       return { success: false, errors: ['Import failed due to system error'] };
     }
   }

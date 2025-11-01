@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { DatabaseOptimizationService } from '../services/databaseOptimizationService';
 import { CachingStrategiesService } from '../services/cachingStrategiesService';
@@ -90,7 +91,7 @@ describe('Performance Tests', () => {
       expect(averageTime).toBeLessThan(100); // Should average less than 100ms per query
       expect(totalTime).toBeLessThan(2000); // Total time should be less than 2 seconds
 
-      console.log(`Concurrent queries performance: ${totalTime.toFixed(2)}ms total, ${averageTime.toFixed(2)}ms average`);
+      safeLogger.info(`Concurrent queries performance: ${totalTime.toFixed(2)}ms total, ${averageTime.toFixed(2)}ms average`);
     });
 
     it('should optimize query performance with indexes', async () => {
@@ -123,7 +124,7 @@ describe('Performance Tests', () => {
       expect(averageTime).toBeLessThan(50); // Should average less than 50ms
       expect(maxTime).toBeLessThan(200); // No query should take more than 200ms
 
-      console.log(`Indexed query performance: ${averageTime.toFixed(2)}ms average, ${maxTime.toFixed(2)}ms max`);
+      safeLogger.info(`Indexed query performance: ${averageTime.toFixed(2)}ms average, ${maxTime.toFixed(2)}ms max`);
     });
 
     it('should maintain connection pool efficiency', async () => {
@@ -170,7 +171,7 @@ describe('Performance Tests', () => {
       expect(getEnd - getStart).toBeLessThan(5); // Cache get should be extremely fast
       expect(cached).toEqual(testData);
 
-      console.log(`Cache performance: set ${(setEnd - setStart).toFixed(2)}ms, get ${(getEnd - getStart).toFixed(2)}ms`);
+      safeLogger.info(`Cache performance: set ${(setEnd - setStart).toFixed(2)}ms, get ${(getEnd - getStart).toFixed(2)}ms`);
     });
 
     it('should handle high-frequency cache operations', async () => {
@@ -197,7 +198,7 @@ describe('Performance Tests', () => {
       expect(setTime).toBeLessThan(1000); // 1000 sets in less than 1 second
       expect(getTime).toBeLessThan(500); // 1000 gets in less than 0.5 seconds
 
-      console.log(`Batch cache performance: ${operations} sets in ${setTime.toFixed(2)}ms, ${operations} gets in ${getTime.toFixed(2)}ms`);
+      safeLogger.info(`Batch cache performance: ${operations} sets in ${setTime.toFixed(2)}ms, ${operations} gets in ${getTime.toFixed(2)}ms`);
     });
 
     it('should demonstrate multi-level cache efficiency', async () => {
@@ -222,7 +223,7 @@ describe('Performance Tests', () => {
       expect(firstEnd - firstStart).toBeGreaterThan(45); // Should include fallback time
       expect(secondEnd - secondStart).toBeLessThan(5); // Should be very fast from memory
 
-      console.log(`Multi-level cache: first access ${(firstEnd - firstStart).toFixed(2)}ms, second access ${(secondEnd - secondStart).toFixed(2)}ms`);
+      safeLogger.info(`Multi-level cache: first access ${(firstEnd - firstStart).toFixed(2)}ms, second access ${(secondEnd - secondStart).toFixed(2)}ms`);
     });
   });
 
@@ -283,8 +284,8 @@ describe('Performance Tests', () => {
         expect(deviation).toBeLessThan(0.3); // Within 30% of expected
       });
 
-      console.log(`Load balancer performance: ${requests} requests in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(4)}ms per request)`);
-      console.log('Distribution:', Object.fromEntries(serverCounts));
+      safeLogger.info(`Load balancer performance: ${requests} requests in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(4)}ms per request)`);
+      safeLogger.info('Distribution:', Object.fromEntries(serverCounts));
     });
 
     it('should handle server failures gracefully', async () => {
@@ -337,7 +338,7 @@ describe('Performance Tests', () => {
       const metrics = monitor.getMetrics('test.metric');
       expect(metrics).toHaveLength(metricsCount);
 
-      console.log(`Metrics recording performance: ${metricsCount} metrics in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(4)}ms per metric)`);
+      safeLogger.info(`Metrics recording performance: ${metricsCount} metrics in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(4)}ms per metric)`);
     });
 
     it('should aggregate metrics efficiently', async () => {
@@ -357,7 +358,7 @@ describe('Performance Tests', () => {
       expect(aggregated.length).toBeGreaterThan(0);
       expect(end - start).toBeLessThan(100); // Aggregation should be fast
 
-      console.log(`Metrics aggregation performance: ${(end - start).toFixed(2)}ms for ${aggregated.length} buckets`);
+      safeLogger.info(`Metrics aggregation performance: ${(end - start).toFixed(2)}ms for ${aggregated.length} buckets`);
     });
 
     it('should handle alert evaluation efficiently', async () => {
@@ -387,7 +388,7 @@ describe('Performance Tests', () => {
 
       expect(end - start).toBeLessThan(50); // Alert evaluation should be fast
 
-      console.log(`Alert evaluation performance: ${(end - start).toFixed(2)}ms`);
+      safeLogger.info(`Alert evaluation performance: ${(end - start).toFixed(2)}ms`);
     });
   });
 
@@ -432,7 +433,7 @@ describe('Performance Tests', () => {
       expect(averageTime).toBeLessThan(50); // Average should be less than 50ms
       expect(maxTime).toBeLessThan(200); // No request should take more than 200ms
 
-      console.log(`Full lifecycle performance: ${averageTime.toFixed(2)}ms average, ${minTime.toFixed(2)}ms min, ${maxTime.toFixed(2)}ms max`);
+      safeLogger.info(`Full lifecycle performance: ${averageTime.toFixed(2)}ms average, ${minTime.toFixed(2)}ms min, ${maxTime.toFixed(2)}ms max`);
     });
 
     it('should maintain performance under sustained load', async () => {
@@ -477,7 +478,7 @@ describe('Performance Tests', () => {
       expect(p95ResponseTime).toBeLessThan(200); // 95th percentile should be reasonable
       expect(requestCount).toBeGreaterThan(400); // Should handle expected load
 
-      console.log(`Sustained load performance: ${requestCount} requests, ${averageResponseTime.toFixed(2)}ms average, ${p95ResponseTime.toFixed(2)}ms p95`);
+      safeLogger.info(`Sustained load performance: ${requestCount} requests, ${averageResponseTime.toFixed(2)}ms average, ${p95ResponseTime.toFixed(2)}ms p95`);
     });
   });
 });
@@ -538,7 +539,7 @@ describe('Load Testing Scenarios', () => {
 
     expect(totalTime).toBeLessThan(5000); // Should complete within 5 seconds
     
-    console.log(`Marketplace browsing load test: ${totalActions} actions by ${concurrentUsers} users in ${totalTime.toFixed(2)}ms`);
+    safeLogger.info(`Marketplace browsing load test: ${totalActions} actions by ${concurrentUsers} users in ${totalTime.toFixed(2)}ms`);
   });
 
   it('should handle order processing load', async () => {
@@ -571,6 +572,6 @@ describe('Load Testing Scenarios', () => {
     expect(results).toHaveLength(concurrentOrders);
     expect(averageTime).toBeLessThan(100); // Average order processing should be fast
 
-    console.log(`Order processing load test: ${concurrentOrders} orders in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(2)}ms average)`);
+    safeLogger.info(`Order processing load test: ${concurrentOrders} orders in ${totalTime.toFixed(2)}ms (${averageTime.toFixed(2)}ms average)`);
   });
 });

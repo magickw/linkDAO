@@ -1,4 +1,5 @@
 import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 
 /**
  * Security Test Setup
@@ -7,7 +8,7 @@ import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 
 // Global test configuration
 beforeAll(async () => {
-  console.log('🔒 Setting up security test environment...');
+  safeLogger.info('🔒 Setting up security test environment...');
   
   // Set test environment variables
   process.env.NODE_ENV = 'test';
@@ -20,11 +21,11 @@ beforeAll(async () => {
   // Setup test data
   // await seedSecurityTestData();
   
-  console.log('✅ Security test environment ready');
+  safeLogger.info('✅ Security test environment ready');
 });
 
 afterAll(async () => {
-  console.log('🧹 Cleaning up security test environment...');
+  safeLogger.info('🧹 Cleaning up security test environment...');
   
   // Cleanup test data
   // await cleanupTestDatabase();
@@ -32,7 +33,7 @@ afterAll(async () => {
   // Reset environment variables
   delete process.env.SECURITY_TEST_MODE;
   
-  console.log('✅ Security test cleanup complete');
+  safeLogger.info('✅ Security test cleanup complete');
 });
 
 beforeEach(async () => {

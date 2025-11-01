@@ -1,4 +1,5 @@
 import { StripePaymentService } from './stripePaymentService';
+import { safeLogger } from '../utils/safeLogger';
 import { MoonPayService } from './moonPayService';
 import { FiatToCryptoService, ConversionRequest, ConversionResult } from './fiatToCryptoService';
 import { IPaymentProcessor } from './ldaoAcquisitionService';
@@ -54,7 +55,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
           };
       }
     } catch (error) {
-      console.error('Fiat payment orchestration error:', error);
+      safeLogger.error('Fiat payment orchestration error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment processing failed',
@@ -125,7 +126,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
 
       return stripeResult;
     } catch (error) {
-      console.error('Stripe payment processing error:', error);
+      safeLogger.error('Stripe payment processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Stripe payment failed',
@@ -173,7 +174,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
         finalPrice: quote.totalAmount,
       };
     } catch (error) {
-      console.error('MoonPay payment processing error:', error);
+      safeLogger.error('MoonPay payment processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'MoonPay payment failed',
@@ -220,7 +221,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
           };
       }
     } catch (error) {
-      console.error('Payment retry error:', error);
+      safeLogger.error('Payment retry error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Payment retry failed',
@@ -241,7 +242,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
         };
       }
     } catch (error) {
-      console.error('Refund processing error:', error);
+      safeLogger.error('Refund processing error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Refund processing failed',
@@ -323,14 +324,14 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
         return transaction ? { status: transaction.status, provider: 'moonpay' } : null;
       }
     } catch (error) {
-      console.error('Transaction status retrieval error:', error);
+      safeLogger.error('Transaction status retrieval error:', error);
       return null;
     }
   }
 
   public async handleFailedConversion(transactionId: string, reason: string): Promise<void> {
     try {
-      console.log(`Handling failed conversion for transaction ${transactionId}: ${reason}`);
+      safeLogger.info(`Handling failed conversion for transaction ${transactionId}: ${reason}`);
       
       // Initiate refund process
       await this.processRefund(transactionId);
@@ -341,7 +342,7 @@ export class FiatPaymentOrchestrator implements IPaymentProcessor {
       // Send notification to user (would be implemented)
       // await this.notificationService.sendConversionFailureNotification(transactionId, reason);
     } catch (error) {
-      console.error('Failed conversion handling error:', error);
+      safeLogger.error('Failed conversion handling error:', error);
     }
   }
 }

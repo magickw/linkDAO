@@ -1,4 +1,5 @@
 import { CustomScamDetectionService, ContentInput } from '../services/customScamDetectionService';
+import { safeLogger } from '../utils/safeLogger';
 import { logger } from '../utils/logger';
 
 /**
@@ -6,7 +7,7 @@ import { logger } from '../utils/logger';
  * Tests various scam patterns and edge cases
  */
 async function validateCustomScamDetection() {
-  console.log('🔍 Starting Custom Scam Detection Validation...\n');
+  safeLogger.info('🔍 Starting Custom Scam Detection Validation...\n');
 
   const service = new CustomScamDetectionService();
   let totalTests = 0;
@@ -187,7 +188,7 @@ async function validateCustomScamDetection() {
   // Run test cases
   for (const testCase of testCases) {
     totalTests++;
-    console.log(`Testing: ${testCase.name}`);
+    safeLogger.info(`Testing: ${testCase.name}`);
 
     try {
       const result = await service.analyzeContent(testCase.content);
@@ -200,28 +201,28 @@ async function validateCustomScamDetection() {
       );
 
       if (isScamMatch && categoryMatch && (testCase.expectedScam ? patternsMatch : true)) {
-        console.log(`✅ PASS - ${testCase.name}`);
-        console.log(`   Result: ${result.isScam ? 'SCAM' : 'CLEAN'} (${result.confidence.toFixed(2)} confidence)`);
-        console.log(`   Category: ${result.category}`);
-        console.log(`   Patterns: ${result.patterns.join(', ')}\n`);
+        safeLogger.info(`✅ PASS - ${testCase.name}`);
+        safeLogger.info(`   Result: ${result.isScam ? 'SCAM' : 'CLEAN'} (${result.confidence.toFixed(2)} confidence)`);
+        safeLogger.info(`   Category: ${result.category}`);
+        safeLogger.info(`   Patterns: ${result.patterns.join(', ')}\n`);
         passedTests++;
       } else {
-        console.log(`❌ FAIL - ${testCase.name}`);
-        console.log(`   Expected: ${testCase.expectedScam ? 'SCAM' : 'CLEAN'} (${testCase.expectedCategory})`);
-        console.log(`   Got: ${result.isScam ? 'SCAM' : 'CLEAN'} (${result.category})`);
-        console.log(`   Expected patterns: ${testCase.expectedPatterns.join(', ')}`);
-        console.log(`   Got patterns: ${result.patterns.join(', ')}`);
-        console.log(`   Confidence: ${result.confidence.toFixed(2)}\n`);
+        safeLogger.info(`❌ FAIL - ${testCase.name}`);
+        safeLogger.info(`   Expected: ${testCase.expectedScam ? 'SCAM' : 'CLEAN'} (${testCase.expectedCategory})`);
+        safeLogger.info(`   Got: ${result.isScam ? 'SCAM' : 'CLEAN'} (${result.category})`);
+        safeLogger.info(`   Expected patterns: ${testCase.expectedPatterns.join(', ')}`);
+        safeLogger.info(`   Got patterns: ${result.patterns.join(', ')}`);
+        safeLogger.info(`   Confidence: ${result.confidence.toFixed(2)}\n`);
         failedTests++;
       }
     } catch (error) {
-      console.log(`❌ ERROR - ${testCase.name}: ${error}\n`);
+      safeLogger.info(`❌ ERROR - ${testCase.name}: ${error}\n`);
       failedTests++;
     }
   }
 
   // Performance test
-  console.log('🚀 Running Performance Test...');
+  safeLogger.info('🚀 Running Performance Test...');
   const performanceContent: ContentInput = {
     text: 'This is a performance test message with some crypto content. '.repeat(50),
     metadata: { contentId: 'performance-test' }
@@ -232,18 +233,18 @@ async function validateCustomScamDetection() {
   const endTime = Date.now();
   const duration = endTime - startTime;
 
-  console.log(`⏱️  Performance: ${duration}ms (should be < 1000ms)`);
+  safeLogger.info(`⏱️  Performance: ${duration}ms (should be < 1000ms)`);
   if (duration < 1000) {
-    console.log('✅ Performance test passed\n');
+    safeLogger.info('✅ Performance test passed\n');
     passedTests++;
   } else {
-    console.log('❌ Performance test failed\n');
+    safeLogger.info('❌ Performance test failed\n');
     failedTests++;
   }
   totalTests++;
 
   // Concurrent test
-  console.log('🔄 Running Concurrent Test...');
+  safeLogger.info('🔄 Running Concurrent Test...');
   const concurrentContents = Array.from({ length: 5 }, (_, i) => ({
     text: `Concurrent test message ${i}`,
     metadata: { contentId: `concurrent-${i}` }
@@ -256,27 +257,27 @@ async function validateCustomScamDetection() {
   const concurrentEnd = Date.now();
   const concurrentDuration = concurrentEnd - concurrentStart;
 
-  console.log(`⏱️  Concurrent: ${concurrentDuration}ms for 5 requests`);
+  safeLogger.info(`⏱️  Concurrent: ${concurrentDuration}ms for 5 requests`);
   if (concurrentResults.length === 5 && concurrentDuration < 2000) {
-    console.log('✅ Concurrent test passed\n');
+    safeLogger.info('✅ Concurrent test passed\n');
     passedTests++;
   } else {
-    console.log('❌ Concurrent test failed\n');
+    safeLogger.info('❌ Concurrent test failed\n');
     failedTests++;
   }
   totalTests++;
 
   // Summary
-  console.log('📊 Validation Summary:');
-  console.log(`Total Tests: ${totalTests}`);
-  console.log(`Passed: ${passedTests}`);
-  console.log(`Failed: ${failedTests}`);
-  console.log(`Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
+  safeLogger.info('📊 Validation Summary:');
+  safeLogger.info(`Total Tests: ${totalTests}`);
+  safeLogger.info(`Passed: ${passedTests}`);
+  safeLogger.info(`Failed: ${failedTests}`);
+  safeLogger.info(`Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
 
   if (failedTests === 0) {
-    console.log('\n🎉 All tests passed! Custom Scam Detection is working correctly.');
+    safeLogger.info('\n🎉 All tests passed! Custom Scam Detection is working correctly.');
   } else {
-    console.log(`\n⚠️  ${failedTests} test(s) failed. Please review the implementation.`);
+    safeLogger.info(`\n⚠️  ${failedTests} test(s) failed. Please review the implementation.`);
   }
 
   return {
@@ -294,7 +295,7 @@ if (require.main === module) {
       process.exit(results.failedTests === 0 ? 0 : 1);
     })
     .catch(error => {
-      console.error('Validation failed:', error);
+      safeLogger.error('Validation failed:', error);
       process.exit(1);
     });
 }

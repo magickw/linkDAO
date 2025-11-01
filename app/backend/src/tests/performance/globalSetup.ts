@@ -3,9 +3,10 @@
  */
 
 import { performance } from 'perf_hooks';
+import { safeLogger } from '../utils/safeLogger';
 
 export default async function globalSetup() {
-  console.log('🚀 Setting up global performance test environment...');
+  safeLogger.info('🚀 Setting up global performance test environment...');
   
   // Mark global setup start
   performance.mark('global-setup-start');
@@ -35,17 +36,17 @@ export default async function globalSetup() {
   
   // Enable garbage collection for memory tests
   if (global.gc) {
-    console.log('✓ Garbage collection available for memory tests');
+    safeLogger.info('✓ Garbage collection available for memory tests');
   } else {
-    console.log('⚠️  Garbage collection not available. Run with --expose-gc for memory tests');
+    safeLogger.info('⚠️  Garbage collection not available. Run with --expose-gc for memory tests');
   }
   
   // Check system resources
   const memoryUsage = process.memoryUsage();
-  console.log(`📊 Initial memory usage: ${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+  safeLogger.info(`📊 Initial memory usage: ${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`);
   
   // Warm up V8 engine
-  console.log('🔥 Warming up V8 engine...');
+  safeLogger.info('🔥 Warming up V8 engine...');
   for (let i = 0; i < 1000; i++) {
     const obj = { id: i, data: `warmup-${i}` };
     JSON.stringify(obj);
@@ -57,5 +58,5 @@ export default async function globalSetup() {
   performance.measure('global-setup-duration', 'global-setup-start', 'global-setup-end');
   
   const setupDuration = performance.getEntriesByName('global-setup-duration')[0].duration;
-  console.log(`✅ Global setup completed in ${setupDuration.toFixed(2)}ms`);
+  safeLogger.info(`✅ Global setup completed in ${setupDuration.toFixed(2)}ms`);
 }

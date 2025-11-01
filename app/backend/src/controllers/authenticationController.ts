@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticationService } from '../services/authenticationService';
 import { AuthenticatedRequest } from '../middleware/authenticationMiddleware';
 import {
@@ -62,7 +64,7 @@ export class AuthenticationController {
         data: response,
       });
     } catch (error) {
-      console.error('Error generating nonce:', error);
+      safeLogger.error('Error generating nonce:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -144,7 +146,7 @@ export class AuthenticationController {
 
       res.json(response);
     } catch (error) {
-      console.error('Error authenticating wallet:', error);
+      safeLogger.error('Error authenticating wallet:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -207,7 +209,7 @@ export class AuthenticationController {
 
       res.json(response);
     } catch (error) {
-      console.error('Error refreshing session:', error);
+      safeLogger.error('Error refreshing session:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -246,7 +248,7 @@ export class AuthenticationController {
         data: response,
       });
     } catch (error) {
-      console.error('Error getting auth status:', error);
+      safeLogger.error('Error getting auth status:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -280,7 +282,7 @@ export class AuthenticationController {
 
       res.json(response);
     } catch (error) {
-      console.error('Error during logout:', error);
+      safeLogger.error('Error during logout:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -306,7 +308,7 @@ export class AuthenticationController {
         data: stats,
       });
     } catch (error) {
-      console.error('Error getting auth stats:', error);
+      safeLogger.error('Error getting auth stats:', error);
       res.status(500).json({
         success: false,
         error: {
@@ -336,7 +338,7 @@ export class AuthenticationController {
         },
       });
     } catch (error) {
-      console.error('Auth health check error:', error);
+      safeLogger.error('Auth health check error:', error);
       res.status(500).json({
         success: false,
         error: {

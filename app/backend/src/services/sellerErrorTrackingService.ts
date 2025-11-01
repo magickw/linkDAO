@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 
@@ -118,7 +119,7 @@ export class SellerErrorTrackingService {
         return newError;
       }
     } catch (err) {
-      console.error('Error tracking seller error:', err);
+      safeLogger.error('Error tracking seller error:', err);
       throw new Error('Failed to track seller error');
     }
   }
@@ -224,7 +225,7 @@ export class SellerErrorTrackingService {
       return metrics;
 
     } catch (error) {
-      console.error('Error getting error metrics:', error);
+      safeLogger.error('Error getting error metrics:', error);
       throw new Error('Failed to retrieve error metrics');
     }
   }
@@ -267,7 +268,7 @@ export class SellerErrorTrackingService {
       }));
 
     } catch (error) {
-      console.error('Error getting error alerts:', error);
+      safeLogger.error('Error getting error alerts:', error);
       return [];
     }
   }
@@ -291,7 +292,7 @@ export class SellerErrorTrackingService {
       `);
 
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
+      safeLogger.error('Error acknowledging alert:', error);
       throw new Error('Failed to acknowledge alert');
     }
   }
@@ -325,7 +326,7 @@ export class SellerErrorTrackingService {
       `);
 
     } catch (error) {
-      console.error('Error resolving error:', error);
+      safeLogger.error('Error resolving error:', error);
       throw new Error('Failed to resolve error');
     }
   }
@@ -362,7 +363,7 @@ export class SellerErrorTrackingService {
       };
 
     } catch (error) {
-      console.error('Error getting error by ID:', error);
+      safeLogger.error('Error getting error by ID:', error);
       return null;
     }
   }
@@ -381,7 +382,7 @@ export class SellerErrorTrackingService {
       return result.rowCount || 0;
 
     } catch (error) {
-      console.error('Error cleaning up old errors:', error);
+      safeLogger.error('Error cleaning up old errors:', error);
       return 0;
     }
   }
@@ -424,7 +425,7 @@ export class SellerErrorTrackingService {
       };
 
     } catch (error) {
-      console.error('Error getting error by fingerprint:', error);
+      safeLogger.error('Error getting error by fingerprint:', error);
       return null;
     }
   }
@@ -555,7 +556,7 @@ export class SellerErrorTrackingService {
 
       // Could also integrate with email, Slack, etc.
     } catch (error) {
-      console.error('Error sending alert notification:', error);
+      safeLogger.error('Error sending alert notification:', error);
     }
   }
 

@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { pushNotificationService } from './pushNotificationService';
 import { getAdminWebSocketService } from './adminWebSocketService';
 
@@ -146,7 +147,7 @@ export class AdminNotificationService {
       await this.sendPushNotification(data);
 
     } catch (error) {
-      console.error('Error sending admin notification:', error);
+      safeLogger.error('Error sending admin notification:', error);
     }
   }
 
@@ -180,7 +181,7 @@ export class AdminNotificationService {
 
       await Promise.allSettled(promises);
     } catch (error) {
-      console.error('Error sending notification to role:', error);
+      safeLogger.error('Error sending notification to role:', error);
     }
   }
 
@@ -214,7 +215,7 @@ export class AdminNotificationService {
 
       await Promise.allSettled(promises);
     } catch (error) {
-      console.error('Error sending notification to permission:', error);
+      safeLogger.error('Error sending notification to permission:', error);
     }
   }
 
@@ -229,7 +230,7 @@ export class AdminNotificationService {
     try {
       return await databaseService.getAdminNotifications(adminId, limit, offset);
     } catch (error) {
-      console.error('Error getting admin notifications:', error);
+      safeLogger.error('Error getting admin notifications:', error);
       return [];
     }
   }
@@ -241,7 +242,7 @@ export class AdminNotificationService {
     try {
       return await databaseService.markAdminNotificationAsRead(notificationId);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      safeLogger.error('Error marking notification as read:', error);
       return false;
     }
   }
@@ -253,7 +254,7 @@ export class AdminNotificationService {
     try {
       return await databaseService.markAllAdminNotificationsAsRead(adminId);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      safeLogger.error('Error marking all notifications as read:', error);
       return false;
     }
   }
@@ -265,7 +266,7 @@ export class AdminNotificationService {
     try {
       return await databaseService.getAdminUnreadNotificationCount(adminId);
     } catch (error) {
-      console.error('Error getting unread notification count:', error);
+      safeLogger.error('Error getting unread notification count:', error);
       return 0;
     }
   }
@@ -288,7 +289,7 @@ export class AdminNotificationService {
 
       await databaseService.createAdminNotification(notification);
     } catch (error) {
-      console.error('Error storing admin notification:', error);
+      safeLogger.error('Error storing admin notification:', error);
     }
   }
 
@@ -307,7 +308,7 @@ export class AdminNotificationService {
         });
       }
     } catch (error) {
-      console.error('Error sending real-time admin notification:', error);
+      safeLogger.error('Error sending real-time admin notification:', error);
     }
   }
 
@@ -338,7 +339,7 @@ export class AdminNotificationService {
         }
       });
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      safeLogger.error('Error sending push notification:', error);
     }
   }
 
@@ -366,9 +367,9 @@ export class AdminNotificationService {
       cutoffDate.setDate(cutoffDate.getDate() - daysOld);
       
       await databaseService.deleteOldAdminNotifications(cutoffDate);
-      console.log(`Cleaned up admin notifications older than ${daysOld} days`);
+      safeLogger.info(`Cleaned up admin notifications older than ${daysOld} days`);
     } catch (error) {
-      console.error('Error cleaning up old admin notifications:', error);
+      safeLogger.error('Error cleaning up old admin notifications:', error);
     }
   }
 
@@ -384,7 +385,7 @@ export class AdminNotificationService {
     try {
       return await databaseService.getAdminNotificationStats(adminId);
     } catch (error) {
-      console.error('Error getting admin notification stats:', error);
+      safeLogger.error('Error getting admin notification stats:', error);
       return { total: 0, unread: 0, byType: {}, byCategory: {} };
     }
   }

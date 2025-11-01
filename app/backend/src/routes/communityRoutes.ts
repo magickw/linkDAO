@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { communityController } from '../controllers/communityController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -54,7 +55,7 @@ router.get('/:id',
 );
 
 // Create new community (auth required)
-router.post('/',
+router.post('/', csrfProtection, 
   authRequired,
   validateRequest({
     body: {
@@ -76,7 +77,7 @@ router.post('/',
 );
 
 // Update community (auth required)
-router.put('/:id',
+router.put('/:id', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -97,7 +98,7 @@ router.put('/:id',
 );
 
 // Join community (auth required)
-router.post('/:id/join',
+router.post('/:id/join', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -108,7 +109,7 @@ router.post('/:id/join',
 );
 
 // Leave community (auth required)
-router.delete('/:id/leave',
+router.delete('/:id/leave', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -135,7 +136,7 @@ router.get('/:id/posts',
 );
 
 // Create post in community (auth required)
-router.post('/:id/posts',
+router.post('/:id/posts', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -152,7 +153,7 @@ router.post('/:id/posts',
 );
 
 // AI-assisted post creation in community (auth required)
-router.post('/:id/posts/ai-assisted',
+router.post('/:id/posts/ai-assisted', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -197,7 +198,7 @@ router.get('/:id/stats',
 );
 
 // Moderation actions (auth required, moderator only)
-router.post('/:id/moderate',
+router.post('/:id/moderate', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -228,7 +229,7 @@ router.get('/:id/governance',
 );
 
 // Create governance proposal (auth required)
-router.post('/:id/governance',
+router.post('/:id/governance', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -246,7 +247,7 @@ router.post('/:id/governance',
 );
 
 // Vote on governance proposal (auth required)
-router.post('/:id/governance/:proposalId/vote',
+router.post('/:id/governance/:proposalId/vote', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -262,7 +263,7 @@ router.post('/:id/governance/:proposalId/vote',
 );
 
 // Execute governance proposal (auth required)
-router.post('/:id/governance/:proposalId/execute',
+router.post('/:id/governance/:proposalId/execute', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -290,7 +291,7 @@ router.get('/:id/moderation/queue',
 );
 
 // Flag content (auth required)
-router.post('/:id/flag',
+router.post('/:id/flag', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -320,7 +321,7 @@ router.get('/search/query',
 );
 
 // Create delegation (auth required)
-router.post('/:id/delegations',
+router.post('/:id/delegations', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -337,7 +338,7 @@ router.post('/:id/delegations',
 );
 
 // Revoke delegation (auth required)
-router.delete('/:id/delegations',
+router.delete('/:id/delegations', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -367,7 +368,7 @@ router.get('/:id/delegations',
 );
 
 // Create proxy vote (auth required)
-router.post('/proxy-votes',
+router.post('/proxy-votes', csrfProtection, 
   authRequired,
   validateRequest({
     body: {
@@ -382,7 +383,7 @@ router.post('/proxy-votes',
 );
 
 // Create multi-signature approval (auth required)
-router.post('/multi-sig-approvals',
+router.post('/multi-sig-approvals', csrfProtection, 
   authRequired,
   validateRequest({
     body: {
@@ -410,7 +411,7 @@ router.get('/:proposalId/multi-sig-approvals',
 );
 
 // Create automated execution (auth required)
-router.post('/automated-executions',
+router.post('/automated-executions', csrfProtection, 
   authRequired,
   validateRequest({
     body: {
@@ -453,7 +454,7 @@ router.get('/token-gated-content/:contentId/access',
 );
 
 // Grant access to token-gated content
-router.post('/token-gated-content/:contentId/access',
+router.post('/token-gated-content/:contentId/access', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -467,7 +468,7 @@ router.post('/token-gated-content/:contentId/access',
 );
 
 // Create token-gated content
-router.post('/:communityId/token-gated-content',
+router.post('/:communityId/token-gated-content', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -500,7 +501,7 @@ router.get('/posts/:postId/token-gated-content',
 // Subscription tier routes
 
 // Create subscription tier
-router.post('/:communityId/subscription-tiers',
+router.post('/:communityId/subscription-tiers', csrfProtection, 
   authRequired,
   validateRequest({
     params: {
@@ -532,7 +533,7 @@ router.get('/:communityId/subscription-tiers',
 );
 
 // Subscribe user to a tier
-router.post('/:communityId/subscriptions',
+router.post('/:communityId/subscriptions', csrfProtection, 
   authRequired,
   validateRequest({
     params: {

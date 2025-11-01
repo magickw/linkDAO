@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { authController } from '../controllers/authController';
 import { adminAuthController } from '../controllers/adminAuthController';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -49,7 +50,7 @@ const profileUpdateValidation = [
  * @desc Authenticate with wallet signature
  * @access Public
  */
-router.post('/wallet-connect', walletConnectValidation, authController.walletConnect);
+router.post('/wallet-connect', csrfProtection,  walletConnectValidation, authController.walletConnect);
 
 /**
  * @route GET /api/auth/profile
@@ -63,14 +64,14 @@ router.get('/profile', authMiddleware, authController.getProfile);
  * @desc Update authenticated user profile
  * @access Private
  */
-router.put('/profile', authMiddleware, profileUpdateValidation, authController.updateProfile);
+router.put('/profile', csrfProtection,  authMiddleware, profileUpdateValidation, authController.updateProfile);
 
 /**
  * @route POST /api/auth/logout
  * @desc Logout user and invalidate session
  * @access Private
  */
-router.post('/logout', authMiddleware, authController.logout);
+router.post('/logout', csrfProtection,  authMiddleware, authController.logout);
 
 // Admin credentials login validation
 const adminLoginValidation = [
@@ -89,14 +90,14 @@ const adminLoginValidation = [
  * @desc Admin login with email and password
  * @access Public
  */
-router.post('/admin/login', adminLoginValidation, adminAuthController.adminLogin);
+router.post('/admin/login', csrfProtection,  adminLoginValidation, adminAuthController.adminLogin);
 
 /**
  * @route POST /api/auth/admin/logout
  * @desc Admin logout and revoke session
  * @access Private (Admin)
  */
-router.post('/admin/logout', authMiddleware, adminAuthController.adminLogout);
+router.post('/admin/logout', csrfProtection,  authMiddleware, adminAuthController.adminLogout);
 
 /**
  * @route GET /api/auth/admin/session

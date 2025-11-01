@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { complianceMonitoringService } from '../services/complianceMonitoringService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -24,7 +26,7 @@ router.get('/dashboard', adminAuthMiddleware, async (req: AuthenticatedRequest, 
       data: dashboard,
     });
   } catch (error) {
-    console.error('Error getting compliance dashboard:', error);
+    safeLogger.error('Error getting compliance dashboard:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance dashboard',
@@ -51,7 +53,7 @@ router.get('/frameworks', adminAuthMiddleware, async (req: AuthenticatedRequest,
       data: frameworks,
     });
   } catch (error) {
-    console.error('Error getting compliance frameworks:', error);
+    safeLogger.error('Error getting compliance frameworks:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance frameworks',
@@ -80,7 +82,7 @@ router.get('/frameworks/:frameworkId', adminAuthMiddleware, async (req: Authenti
       data: framework,
     });
   } catch (error) {
-    console.error('Error getting compliance framework:', error);
+    safeLogger.error('Error getting compliance framework:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance framework',
@@ -130,7 +132,7 @@ router.get('/violations', adminAuthMiddleware, async (req: AuthenticatedRequest,
       },
     });
   } catch (error) {
-    console.error('Error getting compliance violations:', error);
+    safeLogger.error('Error getting compliance violations:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance violations',
@@ -160,7 +162,7 @@ router.get('/violations/:violationId', adminAuthMiddleware, async (req: Authenti
       data: violation,
     });
   } catch (error) {
-    console.error('Error getting compliance violation:', error);
+    safeLogger.error('Error getting compliance violation:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance violation',
@@ -171,7 +173,7 @@ router.get('/violations/:violationId', adminAuthMiddleware, async (req: Authenti
 /**
  * Update compliance violation status
  */
-router.patch('/violations/:violationId/status', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.patch('/violations/:violationId/status', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { violationId } = req.params;
     const { status, notes, assignedTo } = req.body;
@@ -198,7 +200,7 @@ router.patch('/violations/:violationId/status', adminAuthMiddleware, async (req:
       message: 'Violation status updated successfully',
     });
   } catch (error) {
-    console.error('Error updating violation status:', error);
+    safeLogger.error('Error updating violation status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update violation status',
@@ -209,7 +211,7 @@ router.patch('/violations/:violationId/status', adminAuthMiddleware, async (req:
 /**
  * Generate compliance report
  */
-router.post('/reports', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/reports', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { frameworkId, reportType, startDate, endDate } = req.body;
 
@@ -240,7 +242,7 @@ router.post('/reports', adminAuthMiddleware, async (req: AuthenticatedRequest, r
       data: report,
     });
   } catch (error) {
-    console.error('Error generating compliance report:', error);
+    safeLogger.error('Error generating compliance report:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate compliance report',
@@ -283,7 +285,7 @@ router.get('/reports', adminAuthMiddleware, async (req: AuthenticatedRequest, re
       },
     });
   } catch (error) {
-    console.error('Error getting compliance reports:', error);
+    safeLogger.error('Error getting compliance reports:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance reports',
@@ -313,7 +315,7 @@ router.get('/reports/:reportId', adminAuthMiddleware, async (req: AuthenticatedR
       data: report,
     });
   } catch (error) {
-    console.error('Error getting compliance report:', error);
+    safeLogger.error('Error getting compliance report:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance report',
@@ -365,7 +367,7 @@ router.get('/frameworks/:frameworkId/requirements', adminAuthMiddleware, async (
       },
     });
   } catch (error) {
-    console.error('Error getting compliance requirements:', error);
+    safeLogger.error('Error getting compliance requirements:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance requirements',
@@ -376,7 +378,7 @@ router.get('/frameworks/:frameworkId/requirements', adminAuthMiddleware, async (
 /**
  * Trigger compliance assessment
  */
-router.post('/frameworks/:frameworkId/assess', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/frameworks/:frameworkId/assess', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { frameworkId } = req.params;
     const { requirementIds } = req.body;
@@ -407,7 +409,7 @@ router.post('/frameworks/:frameworkId/assess', adminAuthMiddleware, async (req: 
       message: 'Compliance assessment started',
     });
   } catch (error) {
-    console.error('Error starting compliance assessment:', error);
+    safeLogger.error('Error starting compliance assessment:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to start compliance assessment',
@@ -500,7 +502,7 @@ router.get('/statistics', adminAuthMiddleware, async (req: AuthenticatedRequest,
       data: statistics,
     });
   } catch (error) {
-    console.error('Error getting compliance statistics:', error);
+    safeLogger.error('Error getting compliance statistics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get compliance statistics',
@@ -511,7 +513,7 @@ router.get('/statistics', adminAuthMiddleware, async (req: AuthenticatedRequest,
 /**
  * Export compliance data
  */
-router.post('/export', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/export', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const {
       frameworkId,
@@ -594,7 +596,7 @@ router.post('/export', adminAuthMiddleware, async (req: AuthenticatedRequest, re
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(formattedData);
   } catch (error) {
-    console.error('Error exporting compliance data:', error);
+    safeLogger.error('Error exporting compliance data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to export compliance data',

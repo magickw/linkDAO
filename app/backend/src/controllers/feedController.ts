@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
@@ -34,7 +36,7 @@ export class FeedController {
 
       res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
     } catch (error) {
-      console.error('Error getting enhanced feed:', error);
+      safeLogger.error('Error getting enhanced feed:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve feed'));
     }
   }
@@ -56,7 +58,7 @@ export class FeedController {
 
       res.json(apiResponse.success(trendingPosts, 'Trending posts retrieved successfully'));
     } catch (error) {
-      console.error('Error getting trending posts:', error);
+      safeLogger.error('Error getting trending posts:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve trending posts'));
     }
   }
@@ -89,7 +91,7 @@ export class FeedController {
 
       res.status(201).json(apiResponse.success(post, 'Post created successfully'));
     } catch (error) {
-      console.error('Error creating post:', error);
+      safeLogger.error('Error creating post:', error);
       res.status(500).json(apiResponse.error('Failed to create post'));
     }
   }
@@ -120,7 +122,7 @@ export class FeedController {
 
       res.json(apiResponse.success(updatedPost, 'Post updated successfully'));
     } catch (error) {
-      console.error('Error updating post:', error);
+      safeLogger.error('Error updating post:', error);
       res.status(500).json(apiResponse.error('Failed to update post'));
     }
   }
@@ -148,7 +150,7 @@ export class FeedController {
 
       res.json(apiResponse.success(null, 'Post deleted successfully'));
     } catch (error) {
-      console.error('Error deleting post:', error);
+      safeLogger.error('Error deleting post:', error);
       res.status(500).json(apiResponse.error('Failed to delete post'));
     }
   }
@@ -174,7 +176,7 @@ export class FeedController {
 
       res.json(apiResponse.success(reaction, 'Reaction added successfully'));
     } catch (error) {
-      console.error('Error adding reaction:', error);
+      safeLogger.error('Error adding reaction:', error);
       res.status(500).json(apiResponse.error('Failed to add reaction'));
     }
   }
@@ -201,7 +203,7 @@ export class FeedController {
 
       res.json(apiResponse.success(tip, 'Tip sent successfully'));
     } catch (error) {
-      console.error('Error sending tip:', error);
+      safeLogger.error('Error sending tip:', error);
       res.status(500).json(apiResponse.error('Failed to send tip'));
     }
   }
@@ -220,7 +222,7 @@ export class FeedController {
 
       res.json(apiResponse.success(engagementData, 'Engagement data retrieved successfully'));
     } catch (error) {
-      console.error('Error getting engagement data:', error);
+      safeLogger.error('Error getting engagement data:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve engagement data'));
     }
   }
@@ -247,7 +249,7 @@ export class FeedController {
 
       res.json(apiResponse.success(shareResult, 'Post shared successfully'));
     } catch (error) {
-      console.error('Error sharing post:', error);
+      safeLogger.error('Error sharing post:', error);
       res.status(500).json(apiResponse.error('Failed to share post'));
     }
   }
@@ -271,7 +273,7 @@ export class FeedController {
 
       res.json(apiResponse.success(comments, 'Comments retrieved successfully'));
     } catch (error) {
-      console.error('Error getting post comments:', error);
+      safeLogger.error('Error getting post comments:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve comments'));
     }
   }
@@ -297,7 +299,7 @@ export class FeedController {
 
       res.status(201).json(apiResponse.success(comment, 'Comment added successfully'));
     } catch (error) {
-      console.error('Error adding comment:', error);
+      safeLogger.error('Error adding comment:', error);
       res.status(500).json(apiResponse.error('Failed to add comment'));
     }
   }
@@ -315,7 +317,7 @@ export class FeedController {
 
       res.json(apiResponse.success(metrics, 'Community engagement metrics retrieved successfully'));
     } catch (error) {
-      console.error('Error getting community engagement metrics:', error);
+      safeLogger.error('Error getting community engagement metrics:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve community engagement metrics'));
     }
   }
@@ -334,7 +336,7 @@ export class FeedController {
 
       res.json(apiResponse.success(leaderboard, 'Community leaderboard retrieved successfully'));
     } catch (error) {
-      console.error('Error getting community leaderboard:', error);
+      safeLogger.error('Error getting community leaderboard:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve community leaderboard'));
     }
   }
@@ -348,7 +350,7 @@ export class FeedController {
 
       res.json(apiResponse.success(likedByData, 'Liked by data retrieved successfully'));
     } catch (error) {
-      console.error('Error getting liked by data:', error);
+      safeLogger.error('Error getting liked by data:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve liked by data'));
     }
   }
@@ -368,7 +370,7 @@ export class FeedController {
 
       res.json(apiResponse.success(trendingHashtags, 'Trending hashtags retrieved successfully'));
     } catch (error) {
-      console.error('Error getting trending hashtags:', error);
+      safeLogger.error('Error getting trending hashtags:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve trending hashtags'));
     }
   }
@@ -387,7 +389,7 @@ export class FeedController {
 
       res.json(apiResponse.success(popularityMetrics, 'Content popularity metrics retrieved successfully'));
     } catch (error) {
-      console.error('Error getting content popularity metrics:', error);
+      safeLogger.error('Error getting content popularity metrics:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve content popularity metrics'));
     }
   }
@@ -410,7 +412,7 @@ export class FeedController {
 
       res.json(apiResponse.success(replies, 'Comment replies retrieved successfully'));
     } catch (error) {
-      console.error('Error getting comment replies:', error);
+      safeLogger.error('Error getting comment replies:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve comment replies'));
     }
   }
@@ -424,7 +426,7 @@ export class FeedController {
 
       res.json(apiResponse.success(reactions, 'Post reactions retrieved successfully'));
     } catch (error) {
-      console.error('Error getting post reactions:', error);
+      safeLogger.error('Error getting post reactions:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve post reactions'));
     }
   }
@@ -450,7 +452,7 @@ export class FeedController {
 
       res.json(apiResponse.success(shareResult, 'Post shared successfully'));
     } catch (error) {
-      console.error('Error sharing post:', error);
+      safeLogger.error('Error sharing post:', error);
       res.status(500).json(apiResponse.error('Failed to share post'));
     }
   }
@@ -473,7 +475,7 @@ export class FeedController {
 
       res.json(apiResponse.success(bookmarkResult, 'Bookmark toggled successfully'));
     } catch (error) {
-      console.error('Error toggling bookmark:', error);
+      safeLogger.error('Error toggling bookmark:', error);
       res.status(500).json(apiResponse.error('Failed to toggle bookmark'));
     }
   }

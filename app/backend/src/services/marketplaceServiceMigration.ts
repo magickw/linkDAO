@@ -1,4 +1,5 @@
 import { UnifiedMarketplaceService } from './unifiedMarketplaceService';
+import { safeLogger } from '../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import { ProductListingService } from './listingService';
 
@@ -26,7 +27,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.createBlockchainListing instead
      */
     async createListing(input: any) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.createBlockchainListing instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.createBlockchainListing instead');
         return this.blockchainService.createListing(input);
     }
 
@@ -35,7 +36,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.getBlockchainListingById instead
      */
     async getListingById(id: string) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.getBlockchainListingById instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.getBlockchainListingById instead');
         return this.blockchainService.getListingById(id);
     }
 
@@ -44,7 +45,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.updateBlockchainListing instead
      */
     async updateListing(id: string, input: any) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.updateBlockchainListing instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.updateBlockchainListing instead');
         return this.blockchainService.updateListing(id, input);
     }
 
@@ -53,7 +54,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.getListingsBySeller instead
      */
     async getListingsBySeller(sellerAddress: string) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.getListingsBySeller instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.getListingsBySeller instead');
         return this.blockchainService.getListingsBySeller(sellerAddress);
     }
 
@@ -62,7 +63,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.createListing instead
      */
     async createProductListing(input: any) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.createListing instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.createListing instead');
         return this.productService.createListing(input);
     }
 
@@ -71,7 +72,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.getListingById instead
      */
     async getProductListingById(id: string) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.getListingById instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.getListingById instead');
         const result = await this.unifiedService.getListingById(id);
         return result.product;
     }
@@ -81,7 +82,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.updateListing instead
      */
     async updateProductListing(id: string, input: any) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.updateListing instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.updateListing instead');
         const result = await this.unifiedService.updateListing(id, input);
         return result.product;
     }
@@ -91,7 +92,7 @@ export class MarketplaceServiceMigration {
      * @deprecated Use UnifiedMarketplaceService.searchListings instead
      */
     async getMarketplaceListings(filters?: any, sort?: any, pagination?: any) {
-        console.warn('DEPRECATED: Use UnifiedMarketplaceService.searchListings instead');
+        safeLogger.warn('DEPRECATED: Use UnifiedMarketplaceService.searchListings instead');
         return this.unifiedService.searchListings(filters, sort, pagination);
     }
 

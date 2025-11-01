@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import * as cheerio from 'cheerio';
 
 interface LinkScrapingOptions {
@@ -70,7 +71,7 @@ export class LinkScraperService {
 
       return linkData;
     } catch (error) {
-      console.error('Link scraping failed:', error);
+      safeLogger.error('Link scraping failed:', error);
       
       // Return minimal data for failed scrapes
       return {

@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { shares, posts } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
@@ -46,7 +47,7 @@ class ShareService {
 
       return true;
     } catch (error) {
-      console.error('Error tracking share:', error);
+      safeLogger.error('Error tracking share:', error);
       throw new Error('Failed to track share');
     }
   }
@@ -63,7 +64,7 @@ class ShareService {
 
       return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting share count:', error);
+      safeLogger.error('Error getting share count:', error);
       return 0;
     }
   }
@@ -89,7 +90,7 @@ class ShareService {
         external: breakdown.find(item => item.targetType === 'external')?.count || 0
       };
     } catch (error) {
-      console.error('Error getting share breakdown:', error);
+      safeLogger.error('Error getting share breakdown:', error);
       throw new Error('Failed to retrieve share breakdown');
     }
   }
@@ -108,7 +109,7 @@ class ShareService {
 
       return recentShares;
     } catch (error) {
-      console.error('Error getting recent shares:', error);
+      safeLogger.error('Error getting recent shares:', error);
       throw new Error('Failed to retrieve recent shares');
     }
   }
@@ -147,7 +148,7 @@ class ShareService {
         }
       };
     } catch (error) {
-      console.error('Error getting user shares:', error);
+      safeLogger.error('Error getting user shares:', error);
       throw new Error('Failed to retrieve user shares');
     }
   }

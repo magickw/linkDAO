@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { KYCVerificationService, KYCVerificationRequest } from '../services/kycVerificationService';
 
 export class KYCController {
@@ -110,7 +112,7 @@ export class KYCController {
         nextSteps: this.getNextSteps(result.status, verificationLevel),
       });
     } catch (error) {
-      console.error('KYC initiation error:', error);
+      safeLogger.error('KYC initiation error:', error);
       res.status(500).json({
         error: 'Failed to initiate KYC verification',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -158,7 +160,7 @@ export class KYCController {
         nextSteps: this.getNextSteps(verification.status, verification.verificationLevel),
       });
     } catch (error) {
-      console.error('KYC status retrieval error:', error);
+      safeLogger.error('KYC status retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve verification status',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -202,7 +204,7 @@ export class KYCController {
         recommendations: this.getVerificationRecommendations(verification.verificationLevel),
       });
     } catch (error) {
-      console.error('User KYC status retrieval error:', error);
+      safeLogger.error('User KYC status retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve user verification status',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -250,7 +252,7 @@ export class KYCController {
         estimatedTime: this.getEstimatedVerificationTime(requiredLevel),
       });
     } catch (error) {
-      console.error('KYC requirement check error:', error);
+      safeLogger.error('KYC requirement check error:', error);
       res.status(500).json({
         error: 'Failed to check verification requirement',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -285,7 +287,7 @@ export class KYCController {
         benefits: this.getVerificationBenefits(level as any),
       });
     } catch (error) {
-      console.error('KYC limits retrieval error:', error);
+      safeLogger.error('KYC limits retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve limits',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -322,7 +324,7 @@ export class KYCController {
         },
       });
     } catch (error) {
-      console.error('Compliance report generation error:', error);
+      safeLogger.error('Compliance report generation error:', error);
       res.status(500).json({
         error: 'Failed to generate compliance report',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -358,7 +360,7 @@ export class KYCController {
         timestamp: event.timestamp,
       });
     } catch (error) {
-      console.error('KYC webhook error:', error);
+      safeLogger.error('KYC webhook error:', error);
       res.status(500).json({ 
         error: 'Webhook processing failed',
         message: error instanceof Error ? error.message : 'Unknown error'

@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { getRedisManager } from '../config/redis-production';
 import { getLoadBalancerManager } from '../config/load-balancer';
 import postgres from 'postgres';
@@ -132,11 +133,11 @@ class HealthMonitoringService {
         this.storeMetrics(metrics);
         await this.checkAlerts(metrics);
       } catch (error) {
-        console.error('Error collecting metrics:', error);
+        safeLogger.error('Error collecting metrics:', error);
       }
     }, 30000);
 
-    console.log('📊 Health monitoring started');
+    safeLogger.info('📊 Health monitoring started');
   }
 
   private async collectMetrics(): Promise<HealthMetrics> {
@@ -315,7 +316,7 @@ class HealthMonitoringService {
       }
     };
 
-    console.error(`🚨 ALERT [${rule.severity.toUpperCase()}]: ${rule.name} - ${rule.message}`);
+    safeLogger.error(`🚨 ALERT [${rule.severity.toUpperCase()}]: ${rule.name} - ${rule.message}`);
     
     // Send to external alerting systems
     await this.sendToAlertingServices(alert);
@@ -336,10 +337,10 @@ class HealthMonitoringService {
       }
 
       // Example: Log to file
-      console.log(`ALERT: ${JSON.stringify(alert)}`);
+      safeLogger.info(`ALERT: ${JSON.stringify(alert)}`);
       
     } catch (error) {
-      console.error('Failed to send alert:', error);
+      safeLogger.error('Failed to send alert:', error);
     }
   }
 
@@ -468,7 +469,7 @@ class HealthMonitoringService {
                 updateAlerts(data.alerts);
                 updateMetrics(data.metrics);
             } catch (error) {
-                console.error('Failed to load dashboard data:', error);
+                safeLogger.error('Failed to load dashboard data:', error);
             }
         }
 

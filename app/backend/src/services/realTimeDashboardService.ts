@@ -1,4 +1,5 @@
 import { Redis } from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { EventEmitter } from 'events';
 import { analyticsService } from './analyticsService';
 
@@ -68,7 +69,7 @@ export class RealTimeDashboardService extends EventEmitter {
         await this.updateSystemHealth();
         this.emit('metricsUpdated');
       } catch (error) {
-        console.error('Error updating real-time metrics:', error);
+        safeLogger.error('Error updating real-time metrics:', error);
         this.emit('error', error);
       }
     }, this.UPDATE_FREQUENCY);
@@ -99,7 +100,7 @@ export class RealTimeDashboardService extends EventEmitter {
       const fresh = await this.redis.get('dashboard:metrics');
       return fresh ? JSON.parse(fresh) : this.getDefaultMetrics();
     } catch (error) {
-      console.error('Error getting dashboard metrics:', error);
+      safeLogger.error('Error getting dashboard metrics:', error);
       return this.getDefaultMetrics();
     }
   }
@@ -118,7 +119,7 @@ export class RealTimeDashboardService extends EventEmitter {
       const fresh = await this.redis.get('dashboard:health');
       return fresh ? JSON.parse(fresh) : this.getDefaultHealth();
     } catch (error) {
-      console.error('Error getting system health:', error);
+      safeLogger.error('Error getting system health:', error);
       return this.getDefaultHealth();
     }
   }
@@ -181,7 +182,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
       await this.redis.setex('dashboard:metrics', this.METRICS_TTL, JSON.stringify(metrics));
     } catch (error) {
-      console.error('Error updating dashboard metrics:', error);
+      safeLogger.error('Error updating dashboard metrics:', error);
     }
   }
 
@@ -221,7 +222,7 @@ export class RealTimeDashboardService extends EventEmitter {
 
       await this.redis.setex('dashboard:health', this.METRICS_TTL, JSON.stringify(health));
     } catch (error) {
-      console.error('Error updating system health:', error);
+      safeLogger.error('Error updating system health:', error);
       
       // Store error state
       const errorHealth: SystemHealth = {
@@ -263,7 +264,7 @@ export class RealTimeDashboardService extends EventEmitter {
       // Emit event for WebSocket clients
       this.emit('event', event);
     } catch (error) {
-      console.error('Error recording event:', error);
+      safeLogger.error('Error recording event:', error);
     }
   }
 
@@ -275,7 +276,7 @@ export class RealTimeDashboardService extends EventEmitter {
       const events = await this.redis.xread('STREAMS', 'events:stream', lastId);
       return events || [];
     } catch (error) {
-      console.error('Error getting event stream:', error);
+      safeLogger.error('Error getting event stream:', error);
       return [];
     }
   }
@@ -298,7 +299,7 @@ export class RealTimeDashboardService extends EventEmitter {
       await this.redis.setex(cacheKey, 300, JSON.stringify(trends)); // 5 min cache
       return trends;
     } catch (error) {
-      console.error('Error getting trending metrics:', error);
+      safeLogger.error('Error getting trending metrics:', error);
       return {};
     }
   }

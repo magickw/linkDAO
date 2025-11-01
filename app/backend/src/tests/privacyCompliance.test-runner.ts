@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -25,22 +26,22 @@ class PrivacyComplianceTestRunner {
   ];
 
   async runTests(): Promise<void> {
-    console.log('🔒 Privacy and Compliance Test Runner');
-    console.log('=====================================\n');
+    safeLogger.info('🔒 Privacy and Compliance Test Runner');
+    safeLogger.info('=====================================\n');
 
     const results: TestResult[] = [];
 
     for (const testFile of this.testFiles) {
-      console.log(`Running ${testFile}...`);
+      safeLogger.info(`Running ${testFile}...`);
       const result = await this.runSingleTest(testFile);
       results.push(result);
       
       if (result.passed) {
-        console.log(`✅ ${testFile} - PASSED (${result.duration}ms)\n`);
+        safeLogger.info(`✅ ${testFile} - PASSED (${result.duration}ms)\n`);
       } else {
-        console.log(`❌ ${testFile} - FAILED (${result.duration}ms)`);
+        safeLogger.info(`❌ ${testFile} - FAILED (${result.duration}ms)`);
         if (result.error) {
-          console.log(`Error: ${result.error}\n`);
+          safeLogger.info(`Error: ${result.error}\n`);
         }
       }
     }
@@ -88,36 +89,36 @@ class PrivacyComplianceTestRunner {
     const failed = results.filter(r => !r.passed).length;
     const totalDuration = results.reduce((sum, r) => sum + r.duration, 0);
 
-    console.log('\n📊 Test Summary');
-    console.log('===============');
-    console.log(`Total Tests: ${results.length}`);
-    console.log(`Passed: ${passed}`);
-    console.log(`Failed: ${failed}`);
-    console.log(`Total Duration: ${totalDuration}ms`);
+    safeLogger.info('\n📊 Test Summary');
+    safeLogger.info('===============');
+    safeLogger.info(`Total Tests: ${results.length}`);
+    safeLogger.info(`Passed: ${passed}`);
+    safeLogger.info(`Failed: ${failed}`);
+    safeLogger.info(`Total Duration: ${totalDuration}ms`);
 
     if (failed > 0) {
-      console.log('\n❌ Failed Tests:');
+      safeLogger.info('\n❌ Failed Tests:');
       results.filter(r => !r.passed).forEach(result => {
-        console.log(`  - ${result.testFile}: ${result.error || 'Unknown error'}`);
+        safeLogger.info(`  - ${result.testFile}: ${result.error || 'Unknown error'}`);
       });
     }
 
-    console.log('\n🔒 Privacy Compliance Features Tested:');
-    console.log('  ✓ PII Detection and Redaction');
-    console.log('  ✓ Geofencing and Regional Compliance');
-    console.log('  ✓ Data Retention Policies');
-    console.log('  ✓ User Consent Management');
-    console.log('  ✓ Privacy-Compliant Evidence Storage');
-    console.log('  ✓ GDPR Compliance Workflows');
-    console.log('  ✓ CCPA Compliance Workflows');
-    console.log('  ✓ Cross-Border Data Transfer Rules');
-    console.log('  ✓ Data Protection Integration');
+    safeLogger.info('\n🔒 Privacy Compliance Features Tested:');
+    safeLogger.info('  ✓ PII Detection and Redaction');
+    safeLogger.info('  ✓ Geofencing and Regional Compliance');
+    safeLogger.info('  ✓ Data Retention Policies');
+    safeLogger.info('  ✓ User Consent Management');
+    safeLogger.info('  ✓ Privacy-Compliant Evidence Storage');
+    safeLogger.info('  ✓ GDPR Compliance Workflows');
+    safeLogger.info('  ✓ CCPA Compliance Workflows');
+    safeLogger.info('  ✓ Cross-Border Data Transfer Rules');
+    safeLogger.info('  ✓ Data Protection Integration');
 
     if (passed === results.length) {
-      console.log('\n🎉 All privacy compliance tests passed!');
-      console.log('Task 14 implementation is ready for production.');
+      safeLogger.info('\n🎉 All privacy compliance tests passed!');
+      safeLogger.info('Task 14 implementation is ready for production.');
     } else {
-      console.log('\n⚠️  Some tests failed. Please review and fix issues before deployment.');
+      safeLogger.info('\n⚠️  Some tests failed. Please review and fix issues before deployment.');
       process.exit(1);
     }
   }
@@ -127,7 +128,7 @@ class PrivacyComplianceTestRunner {
 if (require.main === module) {
   const runner = new PrivacyComplianceTestRunner();
   runner.runTests().catch(error => {
-    console.error('Test runner failed:', error);
+    safeLogger.error('Test runner failed:', error);
     process.exit(1);
   });
 }

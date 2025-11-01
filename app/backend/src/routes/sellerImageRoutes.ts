@@ -6,6 +6,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import multer from 'multer';
 import { sellerImageController } from '../controllers/sellerImageController';
 import { authMiddleware } from '../middleware/authMiddleware';

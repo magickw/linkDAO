@@ -80,7 +80,6 @@ export const DynamicComponents = {
 
 // Route-based code splitting
 export const DynamicPages = {
-  Dashboard: lazy(() => import('@/pages/dashboard') as any),
   Profile: lazy(() => import('@/pages/profile') as any),
   Communities: lazy(() => import('@/pages/communities') as any),
   Governance: lazy(() => import('@/pages/governance') as any),

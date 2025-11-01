@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 
@@ -114,7 +115,7 @@ export class UserJourneyService {
       // Update real-time journey metrics
       await this.updateRealTimeJourneyMetrics(eventType, pageUrl);
     } catch (error) {
-      console.error('Error tracking journey event:', error);
+      safeLogger.error('Error tracking journey event:', error);
       throw new Error('Failed to track user journey event');
     }
   }
@@ -205,7 +206,7 @@ export class UserJourneyService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(journeyMaps));
       return journeyMaps;
     } catch (error) {
-      console.error('Error getting user journey maps:', error);
+      safeLogger.error('Error getting user journey maps:', error);
       throw new Error('Failed to retrieve user journey maps');
     }
   }
@@ -321,7 +322,7 @@ export class UserJourneyService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(funnel));
       return funnel;
     } catch (error) {
-      console.error('Error getting conversion funnel:', error);
+      safeLogger.error('Error getting conversion funnel:', error);
       throw new Error('Failed to retrieve conversion funnel');
     }
   }
@@ -387,7 +388,7 @@ export class UserJourneyService {
 
       return sessions;
     } catch (error) {
-      console.error('Error getting user sessions:', error);
+      safeLogger.error('Error getting user sessions:', error);
       throw new Error('Failed to retrieve user sessions');
     }
   }
@@ -455,7 +456,7 @@ export class UserJourneyService {
 
       return dropOffPoints;
     } catch (error) {
-      console.error('Error identifying drop-off points:', error);
+      safeLogger.error('Error identifying drop-off points:', error);
       return [];
     }
   }
@@ -533,7 +534,7 @@ export class UserJourneyService {
         timeFromStart: Number(row.time_from_start)
       }));
     } catch (error) {
-      console.error('Error getting session events:', error);
+      safeLogger.error('Error getting session events:', error);
       return [];
     }
   }
@@ -567,7 +568,7 @@ export class UserJourneyService {
 
       return Number(result[0]?.avg_time) || 0;
     } catch (error) {
-      console.error('Error getting average time to next step:', error);
+      safeLogger.error('Error getting average time to next step:', error);
       return 0;
     }
   }
@@ -603,7 +604,7 @@ export class UserJourneyService {
 
       return result.map(row => String(row.page_url));
     } catch (error) {
-      console.error('Error getting common exit pages:', error);
+      safeLogger.error('Error getting common exit pages:', error);
       return [];
     }
   }
@@ -659,7 +660,7 @@ export class UserJourneyService {
         this.redis.expire(pageKey, 3600)
       ]);
     } catch (error) {
-      console.error('Error updating real-time journey metrics:', error);
+      safeLogger.error('Error updating real-time journey metrics:', error);
     }
   }
 }

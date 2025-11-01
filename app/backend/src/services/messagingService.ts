@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { conversations, chatMessages, blockedUsers, messageReadStatus } from '../db/schema';
 // import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
@@ -95,7 +96,7 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      console.error('Error getting conversations:', error);
+      safeLogger.error('Error getting conversations:', error);
       throw new Error('Failed to get conversations');
     }
   }
@@ -164,7 +165,7 @@ export class MessagingService {
         data: newConversation[0]
       };
     } catch (error) {
-      console.error('Error starting conversation:', error);
+      safeLogger.error('Error starting conversation:', error);
       throw new Error('Failed to start conversation');
     }
   }
@@ -192,7 +193,7 @@ export class MessagingService {
 
       return conversation[0];
     } catch (error) {
-      console.error('Error getting conversation details:', error);
+      safeLogger.error('Error getting conversation details:', error);
       throw new Error('Failed to get conversation details');
     }
   }
@@ -265,7 +266,7 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      console.error('Error getting conversation messages:', error);
+      safeLogger.error('Error getting conversation messages:', error);
       throw new Error('Failed to get conversation messages');
     }
   }
@@ -353,7 +354,7 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      console.error('Error sending message:', error);
+      safeLogger.error('Error sending message:', error);
       throw new Error('Failed to send message');
     }
   }
@@ -401,7 +402,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error marking conversation as read:', error);
+      safeLogger.error('Error marking conversation as read:', error);
       throw new Error('Failed to mark conversation as read');
     }
   }
@@ -443,7 +444,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error deleting conversation:', error);
+      safeLogger.error('Error deleting conversation:', error);
       throw new Error('Failed to delete conversation');
     }
   }
@@ -477,7 +478,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error archiving conversation:', error);
+      safeLogger.error('Error archiving conversation:', error);
       throw new Error('Failed to archive conversation');
     }
   }
@@ -509,7 +510,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error unarchiving conversation:', error);
+      safeLogger.error('Error unarchiving conversation:', error);
       throw new Error('Failed to unarchive conversation');
     }
   }
@@ -573,7 +574,7 @@ export class MessagingService {
         data: { messageId, status, updatedAt: new Date() }
       };
     } catch (error) {
-      console.error('Error updating message status:', error);
+      safeLogger.error('Error updating message status:', error);
       throw new Error('Failed to update message status');
     }
   }
@@ -615,7 +616,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error deleting message:', error);
+      safeLogger.error('Error deleting message:', error);
       throw new Error('Failed to delete message');
     }
   }
@@ -672,7 +673,7 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      console.error('Error searching messages:', error);
+      safeLogger.error('Error searching messages:', error);
       throw new Error('Failed to search messages');
     }
   }
@@ -728,7 +729,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error blocking user:', error);
+      safeLogger.error('Error blocking user:', error);
       throw new Error('Failed to block user');
     }
   }
@@ -752,7 +753,7 @@ export class MessagingService {
         data: null
       };
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      safeLogger.error('Error unblocking user:', error);
       throw new Error('Failed to unblock user');
     }
   }
@@ -771,7 +772,7 @@ export class MessagingService {
         createdAt: b.createdAt
       }));
     } catch (error) {
-      console.error('Error getting blocked users:', error);
+      safeLogger.error('Error getting blocked users:', error);
       throw new Error('Failed to get blocked users');
     }
   }
@@ -815,7 +816,7 @@ export class MessagingService {
         }
       };
     } catch (error) {
-      console.error('Error getting conversation participants:', error);
+      safeLogger.error('Error getting conversation participants:', error);
       throw new Error('Failed to get conversation participants');
     }
   }
@@ -870,7 +871,7 @@ export class MessagingService {
 
       return blocked.length > 0;
     } catch (error) {
-      console.error('Error checking if user is blocked:', error);
+      safeLogger.error('Error checking if user is blocked:', error);
       return false;
     }
   }

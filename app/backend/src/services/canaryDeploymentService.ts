@@ -1,4 +1,5 @@
 import { moderationLoggingService } from './moderationLoggingService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationMetricsService } from './moderationMetricsService';
 import { moderationAlertingService } from './moderationAlertingService';
 
@@ -471,7 +472,7 @@ class CanaryDeploymentService {
           );
         }
       } catch (error) {
-        console.error(`Failed to monitor deployment ${deployment.id}:`, error);
+        safeLogger.error(`Failed to monitor deployment ${deployment.id}:`, error);
       }
     }
   }

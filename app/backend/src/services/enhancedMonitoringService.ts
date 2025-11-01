@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { Redis } from 'ioredis';
 import { PerformanceMonitoringService } from './performanceMonitoringService';
@@ -125,7 +126,7 @@ export class EnhancedMonitoringService extends EventEmitter {
       await this.performHealthChecks();
     }, 60000);
 
-    console.log('Enhanced monitoring service started');
+    safeLogger.info('Enhanced monitoring service started');
   }
 
   private setupEventHandlers(): void {
@@ -140,12 +141,12 @@ export class EnhancedMonitoringService extends EventEmitter {
 
     // Listen to our own events for logging
     this.on('alertCreated', (alert) => {
-      console.warn(`ALERT CREATED: ${alert.message}`);
+      safeLogger.warn(`ALERT CREATED: ${alert.message}`);
       this.sendAlert(alert);
     });
 
     this.on('alertResolved', (alert) => {
-      console.info(`ALERT RESOLVED: ${alert.message}`);
+      safeLogger.info(`ALERT RESOLVED: ${alert.message}`);
     });
   }
 
@@ -189,7 +190,7 @@ export class EnhancedMonitoringService extends EventEmitter {
       });
 
     } catch (error) {
-      console.error('Monitoring cycle error:', error);
+      safeLogger.error('Monitoring cycle error:', error);
       await this.createAlert({
         type: 'error',
         severity: 'high',
@@ -240,7 +241,7 @@ export class EnhancedMonitoringService extends EventEmitter {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Error collecting business metrics:', error);
+      safeLogger.error('Error collecting business metrics:', error);
       return {
         revenue: 0,
         orders: 0,
@@ -355,7 +356,7 @@ export class EnhancedMonitoringService extends EventEmitter {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Error collecting cache metrics:', error);
+      safeLogger.error('Error collecting cache metrics:', error);
       return {
         hitRate: 0,
         missRate: 1,
@@ -543,7 +544,7 @@ export class EnhancedMonitoringService extends EventEmitter {
         await this.sendEmailAlert(alert);
       }
     } catch (error) {
-      console.error('Failed to send alert:', error);
+      safeLogger.error('Failed to send alert:', error);
     }
   }
 
@@ -604,7 +605,7 @@ export class EnhancedMonitoringService extends EventEmitter {
 
   private async sendEmailAlert(alert: SystemAlert): Promise<void> {
     // Email implementation would go here
-    console.log('Email alert would be sent:', alert.message);
+    safeLogger.info('Email alert would be sent:', alert.message);
   }
 
   // Utility methods

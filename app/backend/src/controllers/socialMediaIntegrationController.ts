@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { socialMediaIntegrationService } from '../services/socialMediaIntegrationService';
 import { z } from 'zod';
 
@@ -53,7 +55,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error cross-posting content:', error);
+      safeLogger.error('Error cross-posting content:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -96,7 +98,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving social media analytics:', error);
+      safeLogger.error('Error retrieving social media analytics:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -133,7 +135,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error optimizing content for social sharing:', error);
+      safeLogger.error('Error optimizing content for social sharing:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -168,7 +170,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error scheduling content:', error);
+      safeLogger.error('Error scheduling content:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -204,7 +206,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error retrieving scheduled posts:', error);
+      safeLogger.error('Error retrieving scheduled posts:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving scheduled posts'
@@ -235,7 +237,7 @@ export class SocialMediaIntegrationController {
       }
 
     } catch (error) {
-      console.error('Error cancelling scheduled post:', error);
+      safeLogger.error('Error cancelling scheduled post:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -275,7 +277,7 @@ export class SocialMediaIntegrationController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

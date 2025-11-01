@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { aiContentRiskScoringService, ContentRiskAssessment } from '../services/aiContentRiskScoringService';
 import { ContentInput } from '../services/aiModerationOrchestrator';
 import { z } from 'zod';
@@ -50,7 +52,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error in content risk assessment:', error);
+      safeLogger.error('Error in content risk assessment:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -106,7 +108,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error in batch content risk assessment:', error);
+      safeLogger.error('Error in batch content risk assessment:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -141,7 +143,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error retrieving model metrics:', error);
+      safeLogger.error('Error retrieving model metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving metrics'
@@ -169,7 +171,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      safeLogger.error('Error submitting feedback:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -214,7 +216,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error retrieving assessment explanation:', error);
+      safeLogger.error('Error retrieving assessment explanation:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving explanation'
@@ -254,7 +256,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error retrieving model configuration:', error);
+      safeLogger.error('Error retrieving model configuration:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving configuration'
@@ -285,7 +287,7 @@ export class AIContentRiskScoringController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { earningActivityService } from './earningActivityService';
 import { reputationService } from './reputationService';
 
@@ -63,7 +64,7 @@ class EarningEventListeners extends EventEmitter {
    */
   private async handlePostCreated(event: PostCreatedEvent) {
     try {
-      console.log('Processing earning for post creation:', event.postId);
+      safeLogger.info('Processing earning for post creation:', event.postId);
 
       // Calculate quality score based on post content
       const qualityScore = await this.calculatePostQualityScore(event);
@@ -84,13 +85,13 @@ class EarningEventListeners extends EventEmitter {
       });
 
       if (result.success) {
-        console.log(`Post earning processed: ${result.tokensEarned} tokens earned for user ${event.authorId}`);
+        safeLogger.info(`Post earning processed: ${result.tokensEarned} tokens earned for user ${event.authorId}`);
       } else {
-        console.log(`Post earning failed: ${result.message}`);
+        safeLogger.info(`Post earning failed: ${result.message}`);
       }
 
     } catch (error) {
-      console.error('Error processing post creation earning:', error);
+      safeLogger.error('Error processing post creation earning:', error);
     }
   }
 
@@ -99,7 +100,7 @@ class EarningEventListeners extends EventEmitter {
    */
   private async handleCommentCreated(event: CommentCreatedEvent) {
     try {
-      console.log('Processing earning for comment creation:', event.commentId);
+      safeLogger.info('Processing earning for comment creation:', event.commentId);
 
       // Calculate quality score based on comment engagement
       const qualityScore = await this.calculateCommentQualityScore(event);
@@ -119,13 +120,13 @@ class EarningEventListeners extends EventEmitter {
       });
 
       if (result.success) {
-        console.log(`Comment earning processed: ${result.tokensEarned} tokens earned for user ${event.authorId}`);
+        safeLogger.info(`Comment earning processed: ${result.tokensEarned} tokens earned for user ${event.authorId}`);
       } else {
-        console.log(`Comment earning failed: ${result.message}`);
+        safeLogger.info(`Comment earning failed: ${result.message}`);
       }
 
     } catch (error) {
-      console.error('Error processing comment creation earning:', error);
+      safeLogger.error('Error processing comment creation earning:', error);
     }
   }
 
@@ -134,7 +135,7 @@ class EarningEventListeners extends EventEmitter {
    */
   private async handleMarketplaceTransaction(event: MarketplaceTransactionEvent) {
     try {
-      console.log('Processing earning for marketplace transaction:', event.orderId);
+      safeLogger.info('Processing earning for marketplace transaction:', event.orderId);
 
       // Process buyer reward
       if (event.buyerId) {
@@ -152,7 +153,7 @@ class EarningEventListeners extends EventEmitter {
         });
 
         if (buyerResult.success) {
-          console.log(`Buyer earning processed: ${buyerResult.tokensEarned} tokens earned for user ${event.buyerId}`);
+          safeLogger.info(`Buyer earning processed: ${buyerResult.tokensEarned} tokens earned for user ${event.buyerId}`);
         }
       }
 
@@ -172,12 +173,12 @@ class EarningEventListeners extends EventEmitter {
         });
 
         if (sellerResult.success) {
-          console.log(`Seller earning processed: ${sellerResult.tokensEarned} tokens earned for user ${event.sellerId}`);
+          safeLogger.info(`Seller earning processed: ${sellerResult.tokensEarned} tokens earned for user ${event.sellerId}`);
         }
       }
 
     } catch (error) {
-      console.error('Error processing marketplace transaction earning:', error);
+      safeLogger.error('Error processing marketplace transaction earning:', error);
     }
   }
 
@@ -186,7 +187,7 @@ class EarningEventListeners extends EventEmitter {
    */
   private async handleReferralCompleted(event: ReferralEvent) {
     try {
-      console.log('Processing earning for referral completion:', event.referralCode);
+      safeLogger.info('Processing earning for referral completion:', event.referralCode);
 
       const result = await earningActivityService.processEarningActivity({
         userId: event.referrerId,
@@ -201,13 +202,13 @@ class EarningEventListeners extends EventEmitter {
       });
 
       if (result.success) {
-        console.log(`Referral earning processed: ${result.tokensEarned} tokens earned for user ${event.referrerId}`);
+        safeLogger.info(`Referral earning processed: ${result.tokensEarned} tokens earned for user ${event.referrerId}`);
       } else {
-        console.log(`Referral earning failed: ${result.message}`);
+        safeLogger.info(`Referral earning failed: ${result.message}`);
       }
 
     } catch (error) {
-      console.error('Error processing referral earning:', error);
+      safeLogger.error('Error processing referral earning:', error);
     }
   }
 
@@ -216,7 +217,7 @@ class EarningEventListeners extends EventEmitter {
    */
   private async handleProfileCompleted(event: { userId: string; isPremiumUser?: boolean }) {
     try {
-      console.log('Processing earning for profile completion:', event.userId);
+      safeLogger.info('Processing earning for profile completion:', event.userId);
 
       const result = await earningActivityService.processEarningActivity({
         userId: event.userId,
@@ -228,13 +229,13 @@ class EarningEventListeners extends EventEmitter {
       });
 
       if (result.success) {
-        console.log(`Profile completion earning processed: ${result.tokensEarned} tokens earned for user ${event.userId}`);
+        safeLogger.info(`Profile completion earning processed: ${result.tokensEarned} tokens earned for user ${event.userId}`);
       } else {
-        console.log(`Profile completion earning failed: ${result.message}`);
+        safeLogger.info(`Profile completion earning failed: ${result.message}`);
       }
 
     } catch (error) {
-      console.error('Error processing profile completion earning:', error);
+      safeLogger.error('Error processing profile completion earning:', error);
     }
   }
 
@@ -268,7 +269,7 @@ class EarningEventListeners extends EventEmitter {
           const reputationMultiplier = Math.min(0.3, userReputation.score / 1000);
           qualityScore += reputationMultiplier;
         } catch (error) {
-          console.error('Error getting user reputation for quality score:', error);
+          safeLogger.error('Error getting user reputation for quality score:', error);
         }
       }
 
@@ -276,7 +277,7 @@ class EarningEventListeners extends EventEmitter {
       return Math.max(0.5, Math.min(2.0, qualityScore));
 
     } catch (error) {
-      console.error('Error calculating post quality score:', error);
+      safeLogger.error('Error calculating post quality score:', error);
       return 1.0;
     }
   }
@@ -300,7 +301,7 @@ class EarningEventListeners extends EventEmitter {
           const reputationMultiplier = Math.min(0.2, userReputation.score / 1000);
           qualityScore += reputationMultiplier;
         } catch (error) {
-          console.error('Error getting user reputation for quality score:', error);
+          safeLogger.error('Error getting user reputation for quality score:', error);
         }
       }
 
@@ -308,7 +309,7 @@ class EarningEventListeners extends EventEmitter {
       return Math.max(0.5, Math.min(1.5, qualityScore));
 
     } catch (error) {
-      console.error('Error calculating comment quality score:', error);
+      safeLogger.error('Error calculating comment quality score:', error);
       return 1.0;
     }
   }

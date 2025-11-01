@@ -4,6 +4,7 @@
  */
 
 import { eq, desc, and, lt, isNull, or } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   paymentMethodPreferences, 
@@ -87,7 +88,7 @@ export class UserPreferenceService {
         ...decryptedPreferences
       };
     } catch (error) {
-      console.error('Failed to get user payment preferences:', error);
+      safeLogger.error('Failed to get user payment preferences:', error);
       return this.getDefaultPreferences();
     }
   }
@@ -117,7 +118,7 @@ export class UserPreferenceService {
       // Save updated preferences
       await this.saveUserPreferences(userId, updatedPreferences);
     } catch (error) {
-      console.error('Failed to update payment preference:', error);
+      safeLogger.error('Failed to update payment preference:', error);
       throw error;
     }
   }
@@ -205,7 +206,7 @@ export class UserPreferenceService {
         metadata: options.metadata || {}
       });
     } catch (error) {
-      console.error('Failed to add preference override:', error);
+      safeLogger.error('Failed to add preference override:', error);
       throw error;
     }
   }
@@ -223,7 +224,7 @@ export class UserPreferenceService {
         .delete(paymentMethodPreferenceOverrides)
         .where(eq(paymentMethodPreferenceOverrides.userId, userId));
     } catch (error) {
-      console.error('Failed to reset user preferences:', error);
+      safeLogger.error('Failed to reset user preferences:', error);
       throw error;
     }
   }
@@ -244,7 +245,7 @@ export class UserPreferenceService {
 
       return result.rowCount || 0;
     } catch (error) {
-      console.error('Failed to cleanup expired overrides:', error);
+      safeLogger.error('Failed to cleanup expired overrides:', error);
       return 0;
     }
   }
@@ -297,7 +298,7 @@ export class UserPreferenceService {
         preferenceAccuracy: totalTransactions > 0 ? preferredCount / totalTransactions : 0
       };
     } catch (error) {
-      console.error('Failed to get user payment analytics:', error);
+      safeLogger.error('Failed to get user payment analytics:', error);
       return {
         totalTransactions: 0,
         methodBreakdown: {},
@@ -357,7 +358,7 @@ export class UserPreferenceService {
         authTag: authTag.toString('hex')
       });
     } catch (error) {
-      console.error('Failed to encrypt preferences:', error);
+      safeLogger.error('Failed to encrypt preferences:', error);
       return JSON.stringify({});
     }
   }
@@ -375,7 +376,7 @@ export class UserPreferenceService {
       
       return JSON.parse(decrypted);
     } catch (error) {
-      console.error('Failed to decrypt preferences:', error);
+      safeLogger.error('Failed to decrypt preferences:', error);
       return {};
     }
   }

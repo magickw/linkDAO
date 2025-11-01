@@ -1,4 +1,5 @@
 import { Queue, Worker, Job, QueueEvents } from 'bullmq';
+import { safeLogger } from '../utils/safeLogger';
 import Redis from 'ioredis';
 
 export interface ContentModerationJob {
@@ -125,37 +126,37 @@ class ContentModerationQueueService {
   private setupEventListeners(): void {
     // Fast queue events
     this.fastWorker.on('completed', (job: Job<ContentModerationJob>) => {
-      console.log(`Fast lane job ${job.id} completed for content ${job.data.contentId}`);
+      safeLogger.info(`Fast lane job ${job.id} completed for content ${job.data.contentId}`);
     });
 
     this.fastWorker.on('failed', (job: Job<ContentModerationJob> | undefined, err: Error) => {
-      console.error(`Fast lane job ${job?.id} failed:`, err);
+      safeLogger.error(`Fast lane job ${job?.id} failed:`, err);
     });
 
     // Slow queue events
     this.slowWorker.on('completed', (job: Job<ContentModerationJob>) => {
-      console.log(`Slow lane job ${job.id} completed for content ${job.data.contentId}`);
+      safeLogger.info(`Slow lane job ${job.id} completed for content ${job.data.contentId}`);
     });
 
     this.slowWorker.on('failed', (job: Job<ContentModerationJob> | undefined, err: Error) => {
-      console.error(`Slow lane job ${job?.id} failed:`, err);
+      safeLogger.error(`Slow lane job ${job?.id} failed:`, err);
     });
 
     // Queue events for monitoring
     this.queueEvents.on('waiting', ({ jobId }) => {
-      console.log(`Job ${jobId} is waiting`);
+      safeLogger.info(`Job ${jobId} is waiting`);
     });
 
     this.queueEvents.on('active', ({ jobId }) => {
-      console.log(`Job ${jobId} is now active`);
+      safeLogger.info(`Job ${jobId} is now active`);
     });
 
     this.queueEvents.on('completed', ({ jobId, returnvalue }) => {
-      console.log(`Job ${jobId} completed with result:`, returnvalue);
+      safeLogger.info(`Job ${jobId} completed with result:`, returnvalue);
     });
 
     this.queueEvents.on('failed', ({ jobId, failedReason }) => {
-      console.error(`Job ${jobId} failed:`, failedReason);
+      safeLogger.error(`Job ${jobId} failed:`, failedReason);
     });
   }
 
@@ -338,11 +339,11 @@ class ContentModerationQueueService {
         processedAt: new Date()
       };
 
-      console.log(`Fast lane processing completed for ${contentId} in ${Date.now() - startTime}ms`);
+      safeLogger.info(`Fast lane processing completed for ${contentId} in ${Date.now() - startTime}ms`);
       return result;
 
     } catch (error) {
-      console.error(`Fast lane processing failed for ${contentId}:`, error);
+      safeLogger.error(`Fast lane processing failed for ${contentId}:`, error);
       throw error;
     }
   }
@@ -484,11 +485,11 @@ class ContentModerationQueueService {
         processedAt: new Date()
       };
 
-      console.log(`Slow lane processing completed for ${contentId} in ${Date.now() - startTime}ms`);
+      safeLogger.info(`Slow lane processing completed for ${contentId} in ${Date.now() - startTime}ms`);
       return result;
 
     } catch (error) {
-      console.error(`Slow lane processing failed for ${contentId}:`, error);
+      safeLogger.error(`Slow lane processing failed for ${contentId}:`, error);
       throw error;
     }
   }
@@ -580,7 +581,7 @@ class ContentModerationQueueService {
    * Graceful shutdown
    */
   async shutdown(): Promise<void> {
-    console.log('Shutting down content moderation queue service...');
+    safeLogger.info('Shutting down content moderation queue service...');
     
     await Promise.all([
       this.fastWorker.close(),
@@ -589,7 +590,7 @@ class ContentModerationQueueService {
     ]);
     
     await this.redis.quit();
-    console.log('Content moderation queue service shut down complete');
+    safeLogger.info('Content moderation queue service shut down complete');
   }
 }
 

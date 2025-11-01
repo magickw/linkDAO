@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { EngagementAnalyticsService } from '../services/engagementAnalyticsService';
 
 export class EngagementAnalyticsController {
@@ -25,7 +27,7 @@ export class EngagementAnalyticsController {
         }
       });
     } catch (error) {
-      console.error('Error getting engagement analytics:', error);
+      safeLogger.error('Error getting engagement analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get engagement analytics',
@@ -58,7 +60,7 @@ export class EngagementAnalyticsController {
         }
       });
     } catch (error) {
-      console.error('Error getting engagement trends:', error);
+      safeLogger.error('Error getting engagement trends:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get engagement trends',
@@ -98,7 +100,7 @@ export class EngagementAnalyticsController {
         message: 'Interaction tracked successfully'
       });
     } catch (error) {
-      console.error('Error tracking engagement interaction:', error);
+      safeLogger.error('Error tracking engagement interaction:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track interaction',
@@ -145,7 +147,7 @@ export class EngagementAnalyticsController {
         message: `${interactions.length} interactions tracked successfully`
       });
     } catch (error) {
-      console.error('Error tracking engagement batch:', error);
+      safeLogger.error('Error tracking engagement batch:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track interactions',
@@ -180,7 +182,7 @@ export class EngagementAnalyticsController {
         }
       });
     } catch (error) {
-      console.error('Error getting top performing posts:', error);
+      safeLogger.error('Error getting top performing posts:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get top performing posts',
@@ -207,7 +209,7 @@ export class EngagementAnalyticsController {
         data: indicators
       });
     } catch (error) {
-      console.error('Error getting social proof indicators:', error);
+      safeLogger.error('Error getting social proof indicators:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get social proof indicators',
@@ -234,7 +236,7 @@ export class EngagementAnalyticsController {
         data: aggregate
       });
     } catch (error) {
-      console.error('Error getting engagement aggregate:', error);
+      safeLogger.error('Error getting engagement aggregate:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get engagement aggregate',
@@ -267,7 +269,7 @@ export class EngagementAnalyticsController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting bulk post analytics:', error);
+      safeLogger.error('Error getting bulk post analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get bulk post analytics',
@@ -290,7 +292,7 @@ export class EngagementAnalyticsController {
         data: profile
       });
     } catch (error) {
-      console.error('Error getting user engagement profile:', error);
+      safeLogger.error('Error getting user engagement profile:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get user engagement profile',

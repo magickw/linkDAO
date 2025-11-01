@@ -1,4 +1,5 @@
 import { getLogAggregationService } from './log-aggregation';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -105,9 +106,9 @@ class ErrorTrackingService {
           environment: process.env.NODE_ENV || 'production',
           sampleRate: this.config.sampleRate
         });
-        console.log('📡 Sentry error tracking initialized');
+        safeLogger.info('📡 Sentry error tracking initialized');
       } catch (error) {
-        console.warn('⚠️ Failed to initialize Sentry:', error);
+        safeLogger.warn('⚠️ Failed to initialize Sentry:', error);
       }
     }
 
@@ -119,9 +120,9 @@ class ErrorTrackingService {
           apiKey: this.config.externalServices.bugsnag.apiKey,
           releaseStage: process.env.NODE_ENV || 'production'
         });
-        console.log('📡 Bugsnag error tracking initialized');
+        safeLogger.info('📡 Bugsnag error tracking initialized');
       } catch (error) {
-        console.warn('⚠️ Failed to initialize Bugsnag:', error);
+        safeLogger.warn('⚠️ Failed to initialize Bugsnag:', error);
       }
     }
 
@@ -135,9 +136,9 @@ class ErrorTrackingService {
           captureUncaught: true,
           captureUnhandledRejections: true
         });
-        console.log('📡 Rollbar error tracking initialized');
+        safeLogger.info('📡 Rollbar error tracking initialized');
       } catch (error) {
-        console.warn('⚠️ Failed to initialize Rollbar:', error);
+        safeLogger.warn('⚠️ Failed to initialize Rollbar:', error);
       }
     }
   }
@@ -218,7 +219,7 @@ class ErrorTrackingService {
       return trackedError.id;
 
     } catch (trackingError) {
-      console.error('Failed to track error:', trackingError);
+      safeLogger.error('Failed to track error:', trackingError);
       return null;
     }
   }
@@ -376,7 +377,7 @@ class ErrorTrackingService {
         Sentry.captureException(error);
       });
     } catch (sentryError) {
-      console.warn('Failed to send error to Sentry:', sentryError);
+      safeLogger.warn('Failed to send error to Sentry:', sentryError);
     }
   }
 
@@ -397,7 +398,7 @@ class ErrorTrackingService {
         }
       });
     } catch (bugsnagError) {
-      console.warn('Failed to send error to Bugsnag:', bugsnagError);
+      safeLogger.warn('Failed to send error to Bugsnag:', bugsnagError);
     }
   }
 
@@ -416,9 +417,9 @@ class ErrorTrackingService {
       }
       
       // Note: This is a simplified example. Actual Rollbar integration would be more complex.
-      console.log('Would send to Rollbar:', { error, data: rollbarData });
+      safeLogger.info('Would send to Rollbar:', { error, data: rollbarData });
     } catch (rollbarError) {
-      console.warn('Failed to send error to Rollbar:', rollbarError);
+      safeLogger.warn('Failed to send error to Rollbar:', rollbarError);
     }
   }
 
@@ -464,7 +465,7 @@ class ErrorTrackingService {
     }
     
     if (removedCount > 0) {
-      console.log(`🧹 Cleaned up ${removedCount} old tracked errors`);
+      safeLogger.info(`🧹 Cleaned up ${removedCount} old tracked errors`);
     }
   }
 

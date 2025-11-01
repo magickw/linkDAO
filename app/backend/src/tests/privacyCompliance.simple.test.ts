@@ -6,19 +6,15 @@
 import { 
   PIIDetectionService 
 } from '../services/piiDetectionService';
-import { 
   GeofencingComplianceService,
   ComplianceContext 
 } from '../services/geofencingComplianceService';
-import { 
   DataRetentionService 
 } from '../services/dataRetentionService';
-import { 
   UserConsentService,
   ConsentType,
   ConsentStatus 
 } from '../services/userConsentService';
-import { 
   PrivacyEvidenceStorageService 
 } from '../services/privacyEvidenceStorageService';
 

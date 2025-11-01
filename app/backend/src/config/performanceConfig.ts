@@ -1,4 +1,5 @@
 import { DatabaseOptimizationService } from '../services/databaseOptimizationService';
+import { safeLogger } from '../utils/safeLogger';
 import { CachingStrategiesService } from '../services/cachingStrategiesService';
 import { LoadBalancingService } from '../services/loadBalancingService';
 import { PerformanceMonitoringService } from '../services/performanceMonitoringService';
@@ -113,7 +114,7 @@ export class PerformanceOptimizationManager {
   }
 
   async initialize(): Promise<void> {
-    console.log('Initializing performance optimization services...');
+    safeLogger.info('Initializing performance optimization services...');
 
     try {
       // Initialize database optimization
@@ -168,9 +169,9 @@ export class PerformanceOptimizationManager {
       // Setup monitoring alerts
       this.setupMonitoringAlerts();
 
-      console.log('Performance optimization services initialized successfully');
+      safeLogger.info('Performance optimization services initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize performance services:', error);
+      safeLogger.error('Failed to initialize performance services:', error);
       throw error;
     }
   }
@@ -369,7 +370,7 @@ export class PerformanceOptimizationManager {
 
   // Cleanup
   async shutdown(): Promise<void> {
-    console.log('Shutting down performance optimization services...');
+    safeLogger.info('Shutting down performance optimization services...');
 
     try {
       await this.dbService?.close();
@@ -377,9 +378,9 @@ export class PerformanceOptimizationManager {
       this.loadBalancer?.destroy();
       this.monitor?.destroy();
 
-      console.log('Performance optimization services shut down successfully');
+      safeLogger.info('Performance optimization services shut down successfully');
     } catch (error) {
-      console.error('Error during shutdown:', error);
+      safeLogger.error('Error during shutdown:', error);
       throw error;
     }
   }

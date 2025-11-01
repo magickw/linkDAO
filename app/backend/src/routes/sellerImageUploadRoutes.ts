@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { imageUploadService } from '../services/imageUploadService';
 import { uploadFields, handleMulterError } from '../middleware/uploadMiddleware';
 import { db } from '../db';
@@ -58,7 +60,7 @@ router.put(
           updateData.profileImageIpfs = uploadResult.ipfsHash;
           updateData.profileImageCdn = uploadResult.cdnUrl;
         } catch (uploadError) {
-          console.error('Profile image upload failed:', uploadError);
+          safeLogger.error('Profile image upload failed:', uploadError);
           return errorResponse(
             res,
             'IMAGE_UPLOAD_ERROR',
@@ -84,7 +86,7 @@ router.put(
           updateData.coverImageIpfs = uploadResult.ipfsHash;
           updateData.coverImageCdn = uploadResult.cdnUrl;
         } catch (uploadError) {
-          console.error('Cover image upload failed:', uploadError);
+          safeLogger.error('Cover image upload failed:', uploadError);
           return errorResponse(
             res,
             'IMAGE_UPLOAD_ERROR',
@@ -135,7 +137,7 @@ router.put(
             : profileData.socialLinks;
           updateData.socialLinks = JSON.stringify(socialLinks);
         } catch (error) {
-          console.error('Invalid social links JSON:', error);
+          safeLogger.error('Invalid social links JSON:', error);
         }
       }
 
@@ -174,7 +176,7 @@ router.put(
         },
       }, 200);
     } catch (error) {
-      console.error('Error updating enhanced seller profile:', error);
+      safeLogger.error('Error updating enhanced seller profile:', error);
 
       return errorResponse(
         res,
@@ -242,7 +244,7 @@ router.post(
             });
             uploadResults.push(result);
           } catch (uploadError) {
-            console.error('Image upload failed:', uploadError);
+            safeLogger.error('Image upload failed:', uploadError);
             // Continue with other files even if one fails
           }
         }
@@ -263,7 +265,7 @@ router.post(
         count: uploadResults.length,
       }, 201);
     } catch (error) {
-      console.error('Error in image upload:', error);
+      safeLogger.error('Error in image upload:', error);
 
       return errorResponse(
         res,

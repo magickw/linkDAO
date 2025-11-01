@@ -7,6 +7,7 @@
  */
 
 import { Client } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -22,7 +23,7 @@ async function runTestMigration(): Promise<void> {
   } = process.env;
 
   if (!TEST_DB_HOST || !TEST_DB_PORT || !TEST_DB_NAME || !TEST_DB_USER || !TEST_DB_PASSWORD) {
-    console.log('Test database environment variables not set, skipping migration');
+    safeLogger.info('Test database environment variables not set, skipping migration');
     return;
   }
 
@@ -35,12 +36,12 @@ async function runTestMigration(): Promise<void> {
   });
 
   try {
-    console.log('Connecting to test database...');
+    safeLogger.info('Connecting to test database...');
     await client.connect();
-    console.log('Connected to test database');
+    safeLogger.info('Connected to test database');
 
     // Run basic schema setup
-    console.log('Running basic schema setup...');
+    safeLogger.info('Running basic schema setup...');
     
     // Create a simple test table to verify the connection
     await client.query(`
@@ -50,9 +51,9 @@ async function runTestMigration(): Promise<void> {
       )
     `);
 
-    console.log('Test migration completed successfully');
+    safeLogger.info('Test migration completed successfully');
   } catch (error) {
-    console.error('Test migration failed:', error);
+    safeLogger.error('Test migration failed:', error);
     throw error;
   } finally {
     await client.end();
@@ -63,11 +64,11 @@ async function runTestMigration(): Promise<void> {
 if (require.main === module) {
   runTestMigration()
     .then(() => {
-      console.log('Test database migration completed');
+      safeLogger.info('Test database migration completed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Test database migration failed:', error);
+      safeLogger.error('Test database migration failed:', error);
       process.exit(1);
     });
 }

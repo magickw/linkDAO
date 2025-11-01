@@ -1,4 +1,5 @@
 import { eq, desc, asc, and, gte, lte, like, count, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { marketplaceListings } from '../db/schema';
 import {
@@ -100,7 +101,7 @@ export class MarketplaceListingsService {
         hasPrevious: offset > 0
       };
     } catch (error) {
-      console.error('Error getting marketplace listings:', error);
+      safeLogger.error('Error getting marketplace listings:', error);
       throw new Error('Failed to retrieve marketplace listings');
     }
   }
@@ -135,7 +136,7 @@ export class MarketplaceListingsService {
         updatedAt: listing.updatedAt
       };
     } catch (error) {
-      console.error('Error getting marketplace listing by ID:', error);
+      safeLogger.error('Error getting marketplace listing by ID:', error);
       throw new Error('Failed to retrieve marketplace listing');
     }
   }
@@ -183,7 +184,7 @@ export class MarketplaceListingsService {
         updatedAt: listing.updatedAt
       };
     } catch (error) {
-      console.error('Error creating marketplace listing:', error);
+      safeLogger.error('Error creating marketplace listing:', error);
       throw new Error('Failed to create marketplace listing');
     }
   }
@@ -244,7 +245,7 @@ export class MarketplaceListingsService {
         updatedAt: listing.updatedAt
       };
     } catch (error) {
-      console.error('Error updating marketplace listing:', error);
+      safeLogger.error('Error updating marketplace listing:', error);
       throw new Error('Failed to update marketplace listing');
     }
   }
@@ -275,7 +276,7 @@ export class MarketplaceListingsService {
 
       return result.length > 0;
     } catch (error) {
-      console.error('Error deleting marketplace listing:', error);
+      safeLogger.error('Error deleting marketplace listing:', error);
       throw new Error('Failed to delete marketplace listing');
     }
   }
@@ -377,7 +378,7 @@ export class MarketplaceListingsService {
         hasPrevious: offset > 0
       };
     } catch (error) {
-      console.error('Error searching marketplace listings:', error);
+      safeLogger.error('Error searching marketplace listings:', error);
       throw new Error('Failed to search marketplace listings');
     }
   }
@@ -405,7 +406,7 @@ export class MarketplaceListingsService {
         count: row.count
       }));
     } catch (error) {
-      console.error('Error getting categories:', error);
+      safeLogger.error('Error getting categories:', error);
       throw new Error('Failed to retrieve categories');
     }
   }

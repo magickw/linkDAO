@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface IndexRecommendation {
@@ -83,7 +84,7 @@ export class DatabaseIndexOptimizer {
         await this.analyzeIndexUsage();
         await this.generateIndexRecommendations();
       } catch (error) {
-        console.error('Index monitoring error:', error);
+        safeLogger.error('Index monitoring error:', error);
       }
     }, 3600000); // 1 hour
   }
@@ -133,7 +134,7 @@ export class DatabaseIndexOptimizer {
       }
 
     } catch (error) {
-      console.error('Error analyzing query:', error);
+      safeLogger.error('Error analyzing query:', error);
     }
   }
 
@@ -278,7 +279,7 @@ export class DatabaseIndexOptimizer {
       return this.indexRecommendations;
 
     } catch (error) {
-      console.error('Error generating index recommendations:', error);
+      safeLogger.error('Error generating index recommendations:', error);
       return [];
     }
   }
@@ -570,7 +571,7 @@ export class DatabaseIndexOptimizer {
             totalSpaceReclaimed += size * multiplier;
           }
         } catch (error) {
-          console.error(`Failed to drop index ${index.indexName}:`, error);
+          safeLogger.error(`Failed to drop index ${index.indexName}:`, error);
         }
       }
 

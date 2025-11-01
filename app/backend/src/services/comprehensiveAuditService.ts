@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { securityConfig } from '../config/securityConfig';
 import AuditLoggingService from './auditLoggingService';
@@ -138,7 +139,7 @@ class ComprehensiveAuditService extends EventEmitter {
       this.maintainSearchIndex();
     }, 60 * 60 * 1000); // Hourly
 
-    console.log('Comprehensive audit service initialized');
+    safeLogger.info('Comprehensive audit service initialized');
   }
 
   /**
@@ -943,7 +944,7 @@ class ComprehensiveAuditService extends EventEmitter {
     });
     
     if (eventsToDelete.length > 0) {
-      console.log(`Cleaned up ${eventsToDelete.length} expired audit events`);
+      safeLogger.info(`Cleaned up ${eventsToDelete.length} expired audit events`);
     }
   }
 

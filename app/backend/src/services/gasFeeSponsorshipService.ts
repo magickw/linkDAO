@@ -4,6 +4,7 @@
  */
 
 import { eq, and, desc, sum, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { users } from '../db/schema';
 
@@ -115,7 +116,7 @@ export class GasFeeSponsorshipService {
         }
       ];
     } catch (error) {
-      console.error('Error fetching sponsorship tiers:', error);
+      safeLogger.error('Error fetching sponsorship tiers:', error);
       throw error;
     }
   }
@@ -142,7 +143,7 @@ export class GasFeeSponsorshipService {
         return true;
       }).sort((a, b) => b.coveragePercentage - a.coveragePercentage);
     } catch (error) {
-      console.error('Error checking eligibility:', error);
+      safeLogger.error('Error checking eligibility:', error);
       throw error;
     }
   }
@@ -164,7 +165,7 @@ export class GasFeeSponsorshipService {
       return mockUsage.toFixed(6);
       
     } catch (error) {
-      console.error('Error getting daily usage:', error);
+      safeLogger.error('Error getting daily usage:', error);
       return '0';
     }
   }
@@ -211,7 +212,7 @@ export class GasFeeSponsorshipService {
         dailyUsage: (dailyUsage + sponsoredAmount).toString()
       };
     } catch (error) {
-      console.error('Error applying for sponsorship:', error);
+      safeLogger.error('Error applying for sponsorship:', error);
       throw error;
     }
   }
@@ -236,7 +237,7 @@ export class GasFeeSponsorshipService {
         }
       };
     } catch (error) {
-      console.error('Error getting sponsorship stats:', error);
+      safeLogger.error('Error getting sponsorship stats:', error);
       throw error;
     }
   }
@@ -257,7 +258,7 @@ export class GasFeeSponsorshipService {
         timestamp: new Date(Date.now() - i * 3600000)
       }));
     } catch (error) {
-      console.error('Error getting user sponsorship history:', error);
+      safeLogger.error('Error getting user sponsorship history:', error);
       throw error;
     }
   }
@@ -287,7 +288,7 @@ export class GasFeeSponsorshipService {
       // For now, return mock data
       return '150.75';
     } catch (error) {
-      console.error('Error getting pool balance:', error);
+      safeLogger.error('Error getting pool balance:', error);
       throw error;
     }
   }
@@ -307,7 +308,7 @@ export class GasFeeSponsorshipService {
         return { status: 'critical', message: 'Pool funds critically low' };
       }
     } catch (error) {
-      console.error('Error checking pool health:', error);
+      safeLogger.error('Error checking pool health:', error);
       throw error;
     }
   }
@@ -318,9 +319,9 @@ export class GasFeeSponsorshipService {
   async updateTier(tierId: string, updates: Partial<SponsorshipTier>): Promise<void> {
     try {
       // In a real implementation, this would update the database
-      console.log(`Updating tier ${tierId} with updates:`, updates);
+      safeLogger.info(`Updating tier ${tierId} with updates:`, updates);
     } catch (error) {
-      console.error('Error updating tier:', error);
+      safeLogger.error('Error updating tier:', error);
       throw error;
     }
   }
@@ -331,10 +332,10 @@ export class GasFeeSponsorshipService {
   async createTier(tierData: Omit<SponsorshipTier, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
       // In a real implementation, this would insert into the database
-      console.log('Creating new tier:', tierData);
+      safeLogger.info('Creating new tier:', tierData);
       return `tier_${Date.now()}`;
     } catch (error) {
-      console.error('Error creating tier:', error);
+      safeLogger.error('Error creating tier:', error);
       throw error;
     }
   }

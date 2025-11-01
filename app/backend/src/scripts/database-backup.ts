@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import dotenv from "dotenv";
 import { writeFile, readFile, mkdir } from "fs/promises";
@@ -90,14 +91,14 @@ class DatabaseBackupManager {
         PGPASSWORD: dbConfig.password 
       };
 
-      console.log(`🔄 Creating database backup...`);
-      console.log(`📁 Output: ${backupPath}`);
+      safeLogger.info(`🔄 Creating database backup...`);
+      safeLogger.info(`📁 Output: ${backupPath}`);
 
       // Execute pg_dump
       const { stdout, stderr } = await execAsync(pgDumpCmd, { env });
       
       if (stderr && !stderr.includes('NOTICE')) {
-        console.warn('⚠ pg_dump warnings:', stderr);
+        safeLogger.warn('⚠ pg_dump warnings:', stderr);
       }
 
       // Verify backup file was created
@@ -110,8 +111,8 @@ class DatabaseBackupManager {
       result.backupPath = backupPath;
       result.size = stats.size;
 
-      console.log(`✅ Backup created successfully`);
-      console.log(`📊 Size: ${this.formatBytes(stats.size)}`);
+      safeLogger.info(`✅ Backup created successfully`);
+      safeLogger.info(`📊 Size: ${this.formatBytes(stats.size)}`);
 
       // Compress if requested
       if (options.compress) {
@@ -122,7 +123,7 @@ class DatabaseBackupManager {
     } catch (error) {
       result.success = false;
       result.error = error instanceof Error ? error.message : String(error);
-      console.error('❌ Backup failed:', error);
+      safeLogger.error('❌ Backup failed:', error);
     }
 
     return result;
@@ -152,29 +153,29 @@ class DatabaseBackupManager {
         PGPASSWORD: dbConfig.password 
       };
 
-      console.log(`🔄 Restoring database from backup...`);
-      console.log(`📁 Source: ${backupPath}`);
+      safeLogger.info(`🔄 Restoring database from backup...`);
+      safeLogger.info(`📁 Source: ${backupPath}`);
 
       const { stdout, stderr } = await execAsync(psqlCmd, { env });
       
       if (stderr && !stderr.includes('NOTICE')) {
-        console.warn('⚠ psql warnings:', stderr);
+        safeLogger.warn('⚠ psql warnings:', stderr);
       }
 
       result.success = true;
-      console.log(`✅ Database restored successfully`);
+      safeLogger.info(`✅ Database restored successfully`);
 
     } catch (error) {
       result.success = false;
       result.error = error instanceof Error ? error.message : String(error);
-      console.error('❌ Restore failed:', error);
+      safeLogger.error('❌ Restore failed:', error);
     }
 
     return result;
   }
 
   async createSchemaBackup(): Promise<BackupResult> {
-    console.log('📋 Creating schema-only backup...');
+    safeLogger.info('📋 Creating schema-only backup...');
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups', 'schema');
@@ -188,7 +189,7 @@ class DatabaseBackupManager {
   }
 
   async createFullBackup(): Promise<BackupResult> {
-    console.log('💾 Creating full database backup...');
+    safeLogger.info('💾 Creating full database backup...');
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupDir = path.join(process.cwd(), 'backups', 'full');
@@ -206,10 +207,10 @@ class DatabaseBackupManager {
     
     try {
       await execAsync(`gzip ${backupPath}`);
-      console.log(`🗜 Backup compressed: ${compressedPath}`);
+      safeLogger.info(`🗜 Backup compressed: ${compressedPath}`);
       return compressedPath;
     } catch (error) {
-      console.warn('⚠ Compression failed, keeping uncompressed backup');
+      safeLogger.warn('⚠ Compression failed, keeping uncompressed backup');
       return backupPath;
     }
   }
@@ -262,11 +263,11 @@ class DatabaseBackupManager {
 }
 
 async function main() {
-  console.log("💾 Database Backup & Recovery Tool");
-  console.log("==================================");
+  safeLogger.info("💾 Database Backup & Recovery Tool");
+  safeLogger.info("==================================");
   
   if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL environment variable is required");
+    safeLogger.error("❌ DATABASE_URL environment variable is required");
     process.exit(1);
   }
 
@@ -286,7 +287,7 @@ async function main() {
       case 'restore':
         const backupPath = process.argv[3];
         if (!backupPath) {
-          console.error("❌ Backup file path is required for restore");
+          safeLogger.error("❌ Backup file path is required for restore");
           process.exit(1);
         }
         await backupManager.restoreBackup(backupPath);
@@ -295,20 +296,20 @@ async function main() {
       case 'list':
         const backupDir = process.argv[3] || path.join(process.cwd(), 'backups');
         const backups = await backupManager.listBackups(backupDir);
-        console.log("📋 Available backups:");
-        backups.forEach(backup => console.log(`  - ${backup}`));
+        safeLogger.info("📋 Available backups:");
+        backups.forEach(backup => safeLogger.info(`  - ${backup}`));
         break;
         
       default:
-        console.log("Usage:");
-        console.log("  npm run backup schema  - Create schema-only backup");
-        console.log("  npm run backup full    - Create full database backup");
-        console.log("  npm run backup restore <path> - Restore from backup");
-        console.log("  npm run backup list [dir] - List available backups");
+        safeLogger.info("Usage:");
+        safeLogger.info("  npm run backup schema  - Create schema-only backup");
+        safeLogger.info("  npm run backup full    - Create full database backup");
+        safeLogger.info("  npm run backup restore <path> - Restore from backup");
+        safeLogger.info("  npm run backup list [dir] - List available backups");
         break;
     }
   } catch (error) {
-    console.error("💥 Backup operation failed:", error);
+    safeLogger.error("💥 Backup operation failed:", error);
     process.exit(1);
   } finally {
     await backupManager.close();

@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { EventEmitter } from 'events';
 import { DatabaseOptimizationService } from '../../services/databaseOptimizationService';
@@ -354,7 +355,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       expect(heapGrowthMB).toBeLessThan(50); // Less than 50MB heap growth
       expect(rssGrowthMB).toBeLessThan(100); // Less than 100MB RSS growth
 
-      console.log(`Memory Usage During Normal Operations:
+      safeLogger.info(`Memory Usage During Normal Operations:
         Duration: ${analysis.duration}ms
         Heap Growth: ${heapGrowthMB.toFixed(2)}MB
         RSS Growth: ${rssGrowthMB.toFixed(2)}MB
@@ -424,7 +425,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       const finalHeapMB = analysis.heapUsed.final / (1024 * 1024);
       expect(finalHeapMB).toBeLessThan(500); // Should not exceed 500MB
 
-      console.log(`Memory Pressure Test:
+      safeLogger.info(`Memory Pressure Test:
         Max Heap: ${(analysis.heapUsed.max / 1024 / 1024).toFixed(2)}MB
         Final Heap: ${(analysis.heapUsed.final / 1024 / 1024).toFixed(2)}MB
         Max RSS: ${(analysis.rss.max / 1024 / 1024).toFixed(2)}MB
@@ -489,7 +490,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
         
         expect(avgReclaimed).toBeGreaterThan(0); // Should reclaim some memory
         
-        console.log(`Garbage Collection Efficiency:
+        safeLogger.info(`Garbage Collection Efficiency:
           GC Cycles: ${gcStats.length}
           Total Reclaimed: ${(totalReclaimed / 1024 / 1024).toFixed(2)}MB
           Average Reclaimed: ${(avgReclaimed / 1024 / 1024).toFixed(2)}MB`);
@@ -499,7 +500,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       const heapGrowthMB = analysis.heapUsed.growth / (1024 * 1024);
       expect(heapGrowthMB).toBeLessThan(20); // Should not grow more than 20MB
 
-      console.log(`GC Test Memory Analysis:
+      safeLogger.info(`GC Test Memory Analysis:
         Heap Growth: ${heapGrowthMB.toFixed(2)}MB
         Max Heap: ${(analysis.heapUsed.max / 1024 / 1024).toFixed(2)}MB
         Final Heap: ${(analysis.heapUsed.final / 1024 / 1024).toFixed(2)}MB`);
@@ -539,7 +540,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       const leakReport = leakDetector.detectLeaks();
       expect(leakReport.hasLeaks).toBe(false);
 
-      console.log(`Database Connection Pool Health:
+      safeLogger.info(`Database Connection Pool Health:
         Total Connections: ${poolStats.totalCount}
         Idle Connections: ${poolStats.idleCount}
         Waiting Connections: ${poolStats.waitingCount}
@@ -580,7 +581,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       // Should not have significant leaks
       expect(leakReport.hasLeaks).toBe(false);
 
-      console.log(`WebSocket Connection Management:
+      safeLogger.info(`WebSocket Connection Management:
         Connections Created: ${clients.length}
         Leak Detection: ${leakReport.hasLeaks ? 'FAILED' : 'PASSED'}`);
     });
@@ -628,7 +629,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       expect(heapGrowthMB).toBeLessThan(30); // Should not grow more than 30MB
       expect(leakReport.hasLeaks).toBe(false);
 
-      console.log(`Cache Memory Management:
+      safeLogger.info(`Cache Memory Management:
         Cache Operations: ${cacheOperations.length}
         Heap Growth: ${heapGrowthMB.toFixed(2)}MB
         Leak Detection: ${leakReport.hasLeaks ? 'FAILED' : 'PASSED'}`);
@@ -667,7 +668,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       const eventEmitterLeaks = leakReport.leaks.filter(leak => leak.type === 'EventEmitter');
       expect(eventEmitterLeaks.length).toBe(0);
 
-      console.log(`EventEmitter Management:
+      safeLogger.info(`EventEmitter Management:
         EventEmitters Created: ${eventEmitters.length}
         Listeners Created: ${listeners.length}
         EventEmitter Leaks: ${eventEmitterLeaks.length}`);
@@ -733,7 +734,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
 
       expect(reclaimedMB).toBeGreaterThanOrEqual(0); // Should reclaim some memory
 
-      console.log(`Resource Cleanup Test:
+      safeLogger.info(`Resource Cleanup Test:
         Memory Before Cleanup: ${(beforeCleanup.heapUsed / 1024 / 1024).toFixed(2)}MB
         Memory After Cleanup: ${(afterCleanup.heapUsed / 1024 / 1024).toFixed(2)}MB
         Memory Reclaimed: ${reclaimedMB.toFixed(2)}MB
@@ -791,7 +792,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       const heapGrowthMB = analysis.heapUsed.growth / (1024 * 1024);
       expect(heapGrowthMB).toBeLessThan(20);
 
-      console.log(`Graceful Shutdown Under Load:
+      safeLogger.info(`Graceful Shutdown Under Load:
         Services: ${tempServices.length}
         Operations Started: ${operations.length}
         Shutdown Time: ${shutdownTime.toFixed(2)}ms
@@ -842,7 +843,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
         expect(totalTime).toBeGreaterThan(0); // Should use some CPU
         expect(totalTime).toBeLessThan(10000000); // Should not be excessive (10 seconds in microseconds)
 
-        console.log(`CPU Usage During Intensive Operations:
+        safeLogger.info(`CPU Usage During Intensive Operations:
           Operations: ${intensiveOperations.length}
           Total CPU Time: ${(totalTime / 1000).toFixed(2)}ms
           User Time: ${(totalUserTime / 1000).toFixed(2)}ms
@@ -886,7 +887,7 @@ describe('Memory and Resource Usage Performance Tests', () => {
       expect(maxConnections).toBeLessThanOrEqual(20); // Pool limit
       expect(avgConnections).toBeGreaterThan(0);
 
-      console.log(`Connection Monitoring:
+      safeLogger.info(`Connection Monitoring:
         Operations: ${dbOperations.length}
         Max Connections: ${maxConnections}
         Average Connections: ${avgConnections.toFixed(2)}

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { aiInsightsEngine } from '../services/aiInsightsEngine';
 import { predictiveAnalyticsService } from '../services/predictiveAnalyticsService';
 import { anomalyDetectionService } from '../services/anomalyDetectionService';
@@ -22,7 +24,7 @@ export class AIInsightsController {
         data: report
       });
     } catch (error) {
-      console.error('Error getting insights report:', error);
+      safeLogger.error('Error getting insights report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate insights report'
@@ -42,7 +44,7 @@ export class AIInsightsController {
         data: status
       });
     } catch (error) {
-      console.error('Error getting engine status:', error);
+      safeLogger.error('Error getting engine status:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get engine status'
@@ -62,7 +64,7 @@ export class AIInsightsController {
         message: 'AI Insights Engine started successfully'
       });
     } catch (error) {
-      console.error('Error starting engine:', error);
+      safeLogger.error('Error starting engine:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to start AI Insights Engine'
@@ -82,7 +84,7 @@ export class AIInsightsController {
         message: 'AI Insights Engine stopped successfully'
       });
     } catch (error) {
-      console.error('Error stopping engine:', error);
+      safeLogger.error('Error stopping engine:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to stop AI Insights Engine'
@@ -103,7 +105,7 @@ export class AIInsightsController {
         message: 'Engine configuration updated successfully'
       });
     } catch (error) {
-      console.error('Error updating engine config:', error);
+      safeLogger.error('Error updating engine config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update engine configuration'
@@ -129,7 +131,7 @@ export class AIInsightsController {
         data: insights
       });
     } catch (error) {
-      console.error('Error getting insights:', error);
+      safeLogger.error('Error getting insights:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get insights'
@@ -153,7 +155,7 @@ export class AIInsightsController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting performance analytics:', error);
+      safeLogger.error('Error getting performance analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get performance analytics'
@@ -211,7 +213,7 @@ export class AIInsightsController {
         data: predictions
       });
     } catch (error) {
-      console.error('Error getting predictive analytics:', error);
+      safeLogger.error('Error getting predictive analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get predictive analytics'
@@ -231,7 +233,7 @@ export class AIInsightsController {
         data: anomalies
       });
     } catch (error) {
-      console.error('Error getting anomalies:', error);
+      safeLogger.error('Error getting anomalies:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get anomaly detection results'
@@ -255,7 +257,7 @@ export class AIInsightsController {
         data: statistics
       });
     } catch (error) {
-      console.error('Error getting anomaly statistics:', error);
+      safeLogger.error('Error getting anomaly statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get anomaly statistics'
@@ -276,7 +278,7 @@ export class AIInsightsController {
         message: 'Anomaly thresholds configured successfully'
       });
     } catch (error) {
-      console.error('Error configuring anomaly thresholds:', error);
+      safeLogger.error('Error configuring anomaly thresholds:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to configure anomaly thresholds'
@@ -298,7 +300,7 @@ export class AIInsightsController {
         data: investigation
       });
     } catch (error) {
-      console.error('Error investigating anomaly:', error);
+      safeLogger.error('Error investigating anomaly:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to investigate anomaly'
@@ -328,7 +330,7 @@ export class AIInsightsController {
         data: trends
       });
     } catch (error) {
-      console.error('Error getting trend analysis:', error);
+      safeLogger.error('Error getting trend analysis:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get trend analysis'
@@ -366,7 +368,7 @@ export class AIInsightsController {
         data: patterns
       });
     } catch (error) {
-      console.error('Error getting seasonal patterns:', error);
+      safeLogger.error('Error getting seasonal patterns:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get seasonal patterns'
@@ -388,7 +390,7 @@ export class AIInsightsController {
         data: alerts
       });
     } catch (error) {
-      console.error('Error generating trend alerts:', error);
+      safeLogger.error('Error generating trend alerts:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate trend alerts'
@@ -418,7 +420,7 @@ export class AIInsightsController {
         message: 'Trend visualization endpoint - implementation needed'
       });
     } catch (error) {
-      console.error('Error creating trend visualization:', error);
+      safeLogger.error('Error creating trend visualization:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create trend visualization'
@@ -456,7 +458,7 @@ export class AIInsightsController {
         data: forecast
       });
     } catch (error) {
-      console.error('Error forecasting metric:', error);
+      safeLogger.error('Error forecasting metric:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to forecast metric'
@@ -480,7 +482,7 @@ export class AIInsightsController {
         data: statistics
       });
     } catch (error) {
-      console.error('Error getting trend statistics:', error);
+      safeLogger.error('Error getting trend statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get trend statistics'
@@ -504,7 +506,7 @@ export class AIInsightsController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting insight analytics:', error);
+      safeLogger.error('Error getting insight analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get insight analytics'
@@ -526,7 +528,7 @@ export class AIInsightsController {
         data: naturalLanguageInsight
       });
     } catch (error) {
-      console.error('Error generating natural language insight:', error);
+      safeLogger.error('Error generating natural language insight:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate natural language insight'
@@ -548,7 +550,7 @@ export class AIInsightsController {
         message: 'Insight outcome tracked successfully'
       });
     } catch (error) {
-      console.error('Error tracking insight outcome:', error);
+      safeLogger.error('Error tracking insight outcome:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to track insight outcome'
@@ -581,7 +583,7 @@ export class AIInsightsController {
         data: evaluation
       });
     } catch (error) {
-      console.error('Error evaluating prediction accuracy:', error);
+      safeLogger.error('Error evaluating prediction accuracy:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to evaluate prediction accuracy'

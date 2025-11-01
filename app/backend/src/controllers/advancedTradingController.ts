@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AdvancedTradingService } from '../services/advancedTradingService';
 import { TokenInfo } from '../types/uniswapV3';
 import { validationResult } from 'express-validator';
@@ -72,7 +74,7 @@ export class AdvancedTradingController {
         data: limitOrder
       });
     } catch (error) {
-      console.error('Error creating limit order:', error);
+      safeLogger.error('Error creating limit order:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create limit order',
@@ -96,7 +98,7 @@ export class AdvancedTradingController {
         data: { cancelled: success }
       });
     } catch (error) {
-      console.error('Error cancelling limit order:', error);
+      safeLogger.error('Error cancelling limit order:', error);
       res.status(400).json({
         success: false,
         message: 'Failed to cancel limit order',
@@ -126,7 +128,7 @@ export class AdvancedTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting limit orders:', error);
+      safeLogger.error('Error getting limit orders:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get limit orders',
@@ -192,7 +194,7 @@ export class AdvancedTradingController {
         data: priceAlert
       });
     } catch (error) {
-      console.error('Error creating price alert:', error);
+      safeLogger.error('Error creating price alert:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create price alert',
@@ -216,7 +218,7 @@ export class AdvancedTradingController {
         data: { removed: success }
       });
     } catch (error) {
-      console.error('Error removing price alert:', error);
+      safeLogger.error('Error removing price alert:', error);
       res.status(400).json({
         success: false,
         message: 'Failed to remove price alert',
@@ -244,7 +246,7 @@ export class AdvancedTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting price alerts:', error);
+      safeLogger.error('Error getting price alerts:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get price alerts',
@@ -283,7 +285,7 @@ export class AdvancedTradingController {
         }
       });
     } catch (error) {
-      console.error('Error updating portfolio:', error);
+      safeLogger.error('Error updating portfolio:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update portfolio',
@@ -313,7 +315,7 @@ export class AdvancedTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting portfolio:', error);
+      safeLogger.error('Error getting portfolio:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get portfolio',
@@ -343,7 +345,7 @@ export class AdvancedTradingController {
         }
       });
     } catch (error) {
-      console.error('Error getting trading history:', error);
+      safeLogger.error('Error getting trading history:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get trading history',
@@ -378,7 +380,7 @@ export class AdvancedTradingController {
         data: taxReport
       });
     } catch (error) {
-      console.error('Error generating tax report:', error);
+      safeLogger.error('Error generating tax report:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to generate tax report',
@@ -405,7 +407,7 @@ export class AdvancedTradingController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting performance analytics:', error);
+      safeLogger.error('Error getting performance analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get performance analytics',

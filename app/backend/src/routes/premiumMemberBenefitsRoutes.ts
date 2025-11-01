@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   checkPremiumMembershipStatus,
   getExclusiveStakingPools,
@@ -28,10 +29,10 @@ router.get('/exclusive-pools/:userId', getExclusiveStakingPools);
 router.get('/analytics/:userId', getPremiumAnalytics);
 
 // Penalty discounts
-router.post('/penalty-discount/:userId', calculatePremiumPenaltyDiscount);
+router.post('/penalty-discount/:userId', csrfProtection,  calculatePremiumPenaltyDiscount);
 
 // Custom staking options
-router.post('/custom-staking/:userId', createCustomStakingOption);
+router.post('/custom-staking/:userId', csrfProtection,  createCustomStakingOption);
 
 // Premium events and promotions
 router.get('/events/:userId', getPremiumStakingEvents);

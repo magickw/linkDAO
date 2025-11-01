@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { reportBuilderService } from '../services/reportBuilderService';
 import { ReportTemplate, ReportSection, DataSourceConnection } from '../types/reporting';
 

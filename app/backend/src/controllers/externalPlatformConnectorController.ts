@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { externalPlatformConnectorService } from '../services/externalPlatformConnectorService';
 import { z } from 'zod';
 
@@ -56,7 +58,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error retrieving platform configurations:', error);
+      safeLogger.error('Error retrieving platform configurations:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving platform configurations'
@@ -96,7 +98,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error retrieving platform configuration:', error);
+      safeLogger.error('Error retrieving platform configuration:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving platform configuration'
@@ -142,7 +144,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error updating platform configuration:', error);
+      safeLogger.error('Error updating platform configuration:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -188,7 +190,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error syncing DAO data:', error);
+      safeLogger.error('Error syncing DAO data:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -232,7 +234,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error getting DeFi protocol data:', error);
+      safeLogger.error('Error getting DeFi protocol data:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -277,7 +279,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error getting NFT marketplace data:', error);
+      safeLogger.error('Error getting NFT marketplace data:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -321,7 +323,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error getting wallet data:', error);
+      safeLogger.error('Error getting wallet data:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -365,7 +367,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error getting blockchain explorer data:', error);
+      safeLogger.error('Error getting blockchain explorer data:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error getting blockchain explorer data'
@@ -401,7 +403,7 @@ export class ExternalPlatformConnectorController {
       }
 
     } catch (error) {
-      console.error('Error executing cross-platform action:', error);
+      safeLogger.error('Error executing cross-platform action:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -433,7 +435,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error getting sync status:', error);
+      safeLogger.error('Error getting sync status:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error getting sync status'
@@ -466,7 +468,7 @@ export class ExternalPlatformConnectorController {
       }
 
     } catch (error) {
-      console.error('Error triggering manual sync:', error);
+      safeLogger.error('Error triggering manual sync:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -505,7 +507,7 @@ export class ExternalPlatformConnectorController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

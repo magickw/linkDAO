@@ -1,4 +1,5 @@
 import { ProductListingService } from './listingService';
+import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { DatabaseService } from './databaseService';
 import { Product } from '../models/Product';
@@ -335,7 +336,7 @@ export class ListingPublicationService {
   private async updateRealTimeFeeds(update: ListingVisibilityUpdate): Promise<void> {
     // This would integrate with WebSocket or Server-Sent Events
     // For now, we'll just log the update
-    console.log(`Real-time feed update: ${update.action} for listing ${update.listingId}`);
+    safeLogger.info(`Real-time feed update: ${update.action} for listing ${update.listingId}`);
   }
 
   /**
@@ -344,7 +345,7 @@ export class ListingPublicationService {
   private async notifySubscribers(update: ListingVisibilityUpdate): Promise<void> {
     // This would integrate with notification service
     // For now, we'll just log the notification
-    console.log(`Notifying subscribers of ${update.action} for listing ${update.listingId}`);
+    safeLogger.info(`Notifying subscribers of ${update.action} for listing ${update.listingId}`);
   }
 
   /**
@@ -424,7 +425,7 @@ export class ListingPublicationService {
    * Log publication activity for audit trail
    */
   private async logPublicationActivity(listingId: string, action: string, metadata: any): Promise<void> {
-    console.log(`Listing ${listingId}: ${action}`, metadata);
+    safeLogger.info(`Listing ${listingId}: ${action}`, metadata);
     
     // In a real implementation, this would write to an audit log table
     // For now, we'll just log to console
@@ -434,7 +435,7 @@ export class ListingPublicationService {
    * Log listing change for monitoring
    */
   private async logListingChange(update: ListingVisibilityUpdate): Promise<void> {
-    console.log(`Listing change propagated:`, update);
+    safeLogger.info(`Listing change propagated:`, update);
     
     // In a real implementation, this would write to a monitoring system
     // For now, we'll just log to console

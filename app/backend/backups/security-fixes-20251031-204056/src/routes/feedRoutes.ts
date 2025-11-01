@@ -1,0 +1,278 @@
+import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { feedController } from '../controllers/feedController';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { validateRequest } from '../middleware/validation';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
+
+const router = express.Router();
+
+// Apply authentication middleware to all feed routes
+router.use(authMiddleware);
+
+// Apply rate limiting
+router.use(rateLimitingMiddleware({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many feed requests from this IP'
+}));
+
+// Get personalized feed with filtering
+router.get('/enhanced', 
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      sort: { type: 'string', optional: true, enum: ['hot', 'new', 'top', 'following'] },
+      communities: { type: 'array', optional: true },
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month', 'all'] }
+    }
+  }),
+  feedController.getEnhancedFeed
+);
+
+// Get trending posts
+router.get('/trending',
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week'] }
+    }
+  }),
+  feedController.getTrendingPosts
+);
+
+// Create new post
+router.post('/', csrfProtection, 
+  validateRequest({
+    body: {
+      content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
+      communityId: { type: 'string', optional: true },
+      mediaUrls: { type: 'array', optional: true },
+      tags: { type: 'array', optional: true },
+      pollData: { type: 'object', optional: true }
+    }
+  }),
+  feedController.createPost
+);
+
+// Update post
+router.put('/:id', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      content: { type: 'string', optional: true, minLength: 1, maxLength: 5000 },
+      tags: { type: 'array', optional: true }
+    }
+  }),
+  feedController.updatePost
+);
+
+// Delete post
+router.delete('/:id', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.deletePost
+);
+
+// Add reaction to post
+router.post('/:id/react', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      type: { type: 'string', required: true, enum: ['like', 'love', 'laugh', 'angry', 'sad'] },
+      tokenAmount: { type: 'number', optional: true, min: 0 }
+    }
+  }),
+  feedController.addReaction
+);
+
+// Send tip to post author
+router.post('/:id/tip', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      amount: { type: 'number', required: true, min: 0.001 },
+      tokenType: { type: 'string', required: true },
+      message: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  feedController.sendTip
+);
+
+// Get detailed engagement data for post
+router.get('/:id/engagement',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.getEngagementData
+);
+
+// Share post
+router.post('/:id/share', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      targetType: { type: 'string', required: true, enum: ['community', 'direct_message', 'external'] },
+      targetId: { type: 'string', optional: true },
+      message: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  feedController.sharePost
+);
+
+// Get post comments
+router.get('/:id/comments',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'top'] }
+    }
+  }),
+  feedController.getPostComments
+);
+
+// Add comment to post
+router.post('/:id/comments', csrfProtection, 
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      content: { type: 'string', required: true, minLength: 1, maxLength: 2000 },
+      parentCommentId: { type: 'string', optional: true }
+    }
+  }),
+  feedController.addComment
+);
+
+// Get community engagement metrics
+router.get('/community/:communityId/metrics',
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    query: {
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month'] }
+    }
+  }),
+  feedController.getCommunityEngagementMetrics
+);
+
+// Get community leaderboard
+router.get('/community/:communityId/leaderboard',
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    query: {
+      metric: { type: 'string', required: true, enum: ['posts', 'engagement', 'tips_received', 'tips_given'] },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  feedController.getCommunityLeaderboard
+);
+
+// Get liked by data for post
+router.get('/posts/:postId/engagement',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getLikedByData
+);
+
+// Get trending hashtags
+router.get('/hashtags/trending',
+  validateRequest({
+    query: {
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month'] }
+    }
+  }),
+  feedController.getTrendingHashtags
+);
+
+// Get content popularity metrics
+router.get('/posts/:postId/popularity',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getContentPopularityMetrics
+);
+
+// Get comment replies
+router.get('/comments/:commentId/replies',
+  validateRequest({
+    params: {
+      commentId: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'top'] }
+    }
+  }),
+  feedController.getCommentReplies
+);
+
+// Get post reactions
+router.get('/posts/:postId/reactions',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getPostReactions
+);
+
+// Enhanced post sharing
+router.post('/posts/:postId/share', csrfProtection, 
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    },
+    body: {
+      platform: { type: 'string', required: true, enum: ['twitter', 'discord', 'telegram', 'copy_link'] },
+      message: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  feedController.sharePostEnhanced
+);
+
+// Toggle bookmark
+router.post('/posts/:postId/bookmark', csrfProtection, 
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.toggleBookmark
+);
+
+export default router;

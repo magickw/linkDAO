@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 
 export interface KYCConfig {
@@ -115,7 +116,7 @@ export class KYCVerificationService {
 
       return verification;
     } catch (error) {
-      console.error('KYC verification initiation error:', error);
+      safeLogger.error('KYC verification initiation error:', error);
       throw new Error('Failed to initiate KYC verification');
     }
   }
@@ -167,7 +168,7 @@ export class KYCVerificationService {
         riskScore: 0,
       };
     } catch (error) {
-      console.error('Jumio submission error:', error);
+      safeLogger.error('Jumio submission error:', error);
       return null;
     }
   }
@@ -227,7 +228,7 @@ export class KYCVerificationService {
         riskScore: 0,
       };
     } catch (error) {
-      console.error('Onfido submission error:', error);
+      safeLogger.error('Onfido submission error:', error);
       return null;
     }
   }
@@ -270,7 +271,7 @@ export class KYCVerificationService {
         riskScore: 0,
       };
     } catch (error) {
-      console.error('Sumsub submission error:', error);
+      safeLogger.error('Sumsub submission error:', error);
       return null;
     }
   }
@@ -337,7 +338,7 @@ export class KYCVerificationService {
   public async handleWebhook(payload: string, signature: string, provider: string): Promise<KYCWebhookEvent | null> {
     try {
       if (!this.verifyWebhookSignature(payload, signature, provider)) {
-        console.error('Invalid webhook signature');
+        safeLogger.error('Invalid webhook signature');
         return null;
       }
 
@@ -355,7 +356,7 @@ export class KYCVerificationService {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('KYC webhook handling error:', error);
+      safeLogger.error('KYC webhook handling error:', error);
       return null;
     }
   }
@@ -392,7 +393,7 @@ export class KYCVerificationService {
         Buffer.from(expectedSignature, 'hex')
       );
     } catch (error) {
-      console.error('Webhook signature verification error:', error);
+      safeLogger.error('Webhook signature verification error:', error);
       return false;
     }
   }
@@ -416,7 +417,7 @@ export class KYCVerificationService {
         await this.handleVerificationRejected(verificationId, event.reasons);
       }
     } catch (error) {
-      console.error('Webhook event processing error:', error);
+      safeLogger.error('Webhook event processing error:', error);
     }
   }
 
@@ -446,7 +447,7 @@ export class KYCVerificationService {
   }
 
   private async handleVerificationApproved(verificationId: string): Promise<void> {
-    console.log(`KYC verification approved: ${verificationId}`);
+    safeLogger.info(`KYC verification approved: ${verificationId}`);
     
     // In a real implementation, this would:
     // 1. Update user's verification status in database
@@ -456,7 +457,7 @@ export class KYCVerificationService {
   }
 
   private async handleVerificationRejected(verificationId: string, reasons?: string[]): Promise<void> {
-    console.log(`KYC verification rejected: ${verificationId}`, reasons);
+    safeLogger.info(`KYC verification rejected: ${verificationId}`, reasons);
     
     // In a real implementation, this would:
     // 1. Update user's verification status in database

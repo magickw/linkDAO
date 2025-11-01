@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sellers, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, count, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -191,7 +192,7 @@ export class SellerPerformanceMonitoringService {
       await this.updatePerformanceBaselines(sellerId, metrics);
 
     } catch (error) {
-      console.error('Error storing performance metrics:', error);
+      safeLogger.error('Error storing performance metrics:', error);
       throw new Error('Failed to store performance metrics');
     }
   }
@@ -238,7 +239,7 @@ export class SellerPerformanceMonitoringService {
       return dashboardData;
 
     } catch (error) {
-      console.error('Error getting performance dashboard:', error);
+      safeLogger.error('Error getting performance dashboard:', error);
       throw new Error('Failed to retrieve performance dashboard');
     }
   }
@@ -299,7 +300,7 @@ export class SellerPerformanceMonitoringService {
       return result;
 
     } catch (error) {
-      console.error('Error running performance regression test:', error);
+      safeLogger.error('Error running performance regression test:', error);
       throw new Error('Failed to run performance regression test');
     }
   }
@@ -340,7 +341,7 @@ export class SellerPerformanceMonitoringService {
       }));
 
     } catch (error) {
-      console.error('Error getting performance alerts:', error);
+      safeLogger.error('Error getting performance alerts:', error);
       return [];
     }
   }
@@ -381,7 +382,7 @@ export class SellerPerformanceMonitoringService {
       return alert;
 
     } catch (error) {
-      console.error('Error creating performance alert:', error);
+      safeLogger.error('Error creating performance alert:', error);
       throw new Error('Failed to create performance alert');
     }
   }
@@ -400,7 +401,7 @@ export class SellerPerformanceMonitoringService {
       `);
 
     } catch (error) {
-      console.error('Error resolving performance alert:', error);
+      safeLogger.error('Error resolving performance alert:', error);
       throw new Error('Failed to resolve performance alert');
     }
   }
@@ -422,7 +423,7 @@ export class SellerPerformanceMonitoringService {
       return this.generateRecommendations(sellerId, metrics, regressions);
 
     } catch (error) {
-      console.error('Error getting performance recommendations:', error);
+      safeLogger.error('Error getting performance recommendations:', error);
       return [];
     }
   }
@@ -493,7 +494,7 @@ export class SellerPerformanceMonitoringService {
       return metric ? trends.filter(t => t.metric.toLowerCase().includes(metric.toLowerCase())) : trends;
 
     } catch (error) {
-      console.error('Error getting performance trends:', error);
+      safeLogger.error('Error getting performance trends:', error);
       return [];
     }
   }
@@ -536,7 +537,7 @@ export class SellerPerformanceMonitoringService {
       };
 
     } catch (error) {
-      console.error('Error getting latest metrics:', error);
+      safeLogger.error('Error getting latest metrics:', error);
       return this.getDefaultMetrics(sellerId);
     }
   }
@@ -545,7 +546,7 @@ export class SellerPerformanceMonitoringService {
     try {
       return await this.getPerformanceAlerts(sellerId);
     } catch (error) {
-      console.error('Error getting active alerts:', error);
+      safeLogger.error('Error getting active alerts:', error);
       return [];
     }
   }
@@ -573,7 +574,7 @@ export class SellerPerformanceMonitoringService {
       }));
 
     } catch (error) {
-      console.error('Error getting active regressions:', error);
+      safeLogger.error('Error getting active regressions:', error);
       return [];
     }
   }
@@ -594,7 +595,7 @@ export class SellerPerformanceMonitoringService {
       return Math.max(0, Math.min(100, score));
 
     } catch (error) {
-      console.error('Error calculating overall score:', error);
+      safeLogger.error('Error calculating overall score:', error);
       return 50; // Default score
     }
   }
@@ -629,7 +630,7 @@ export class SellerPerformanceMonitoringService {
       }
 
     } catch (error) {
-      console.error('Error checking performance regressions:', error);
+      safeLogger.error('Error checking performance regressions:', error);
     }
   }
 
@@ -690,7 +691,7 @@ export class SellerPerformanceMonitoringService {
       baselines.set('cache_hit_rate', newCacheBaseline);
 
     } catch (error) {
-      console.error('Error updating performance baselines:', error);
+      safeLogger.error('Error updating performance baselines:', error);
     }
   }
 
@@ -799,7 +800,7 @@ export class SellerPerformanceMonitoringService {
 
       // Could also integrate with email, Slack, etc.
     } catch (error) {
-      console.error('Error sending alert notification:', error);
+      safeLogger.error('Error sending alert notification:', error);
     }
   }
 

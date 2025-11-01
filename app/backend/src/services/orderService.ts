@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
@@ -88,7 +89,7 @@ export class OrderService {
 
       return this.formatOrder(dbOrder, buyerUser, sellerUser, escrowId);
     } catch (error) {
-      console.error('Error creating order:', error);
+      safeLogger.error('Error creating order:', error);
       throw error;
     }
   }
@@ -110,7 +111,7 @@ export class OrderService {
 
       return this.formatOrder(dbOrder, buyer, seller, dbOrder.escrowId?.toString());
     } catch (error) {
-      console.error('Error getting order:', error);
+      safeLogger.error('Error getting order:', error);
       throw error;
     }
   }
@@ -139,7 +140,7 @@ export class OrderService {
 
       return orders;
     } catch (error) {
-      console.error('Error getting user orders:', error);
+      safeLogger.error('Error getting user orders:', error);
       throw error;
     }
   }
@@ -164,7 +165,7 @@ export class OrderService {
 
       return success !== null;
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
       throw error;
     }
   }
@@ -220,7 +221,7 @@ export class OrderService {
 
       return true;
     } catch (error) {
-      console.error('Error processing shipping:', error);
+      safeLogger.error('Error processing shipping:', error);
       throw error;
     }
   }
@@ -251,7 +252,7 @@ export class OrderService {
 
       return true;
     } catch (error) {
-      console.error('Error confirming delivery:', error);
+      safeLogger.error('Error confirming delivery:', error);
       throw error;
     }
   }
@@ -263,7 +264,7 @@ export class OrderService {
     try {
       return await databaseService.getOrderEvents(parseInt(orderId));
     } catch (error) {
-      console.error('Error getting order history:', error);
+      safeLogger.error('Error getting order history:', error);
       throw error;
     }
   }
@@ -289,7 +290,7 @@ export class OrderService {
         recentOrders: await this.getOrdersByUser(userAddress)
       };
     } catch (error) {
-      console.error('Error getting order analytics:', error);
+      safeLogger.error('Error getting order analytics:', error);
       throw error;
     }
   }
@@ -327,7 +328,7 @@ export class OrderService {
 
       return true;
     } catch (error) {
-      console.error('Error initiating dispute:', error);
+      safeLogger.error('Error initiating dispute:', error);
       throw error;
     }
   }
@@ -471,7 +472,7 @@ export class OrderService {
       // Create order event
       await this.createOrderEvent(orderId, 'PAYMENT_RELEASED', 'Payment automatically released to seller');
     } catch (error) {
-      console.error('Error auto-releasing payment:', error);
+      safeLogger.error('Error auto-releasing payment:', error);
     }
   }
 }

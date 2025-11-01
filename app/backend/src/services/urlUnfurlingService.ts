@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import * as cheerio from 'cheerio';
 import { URL } from 'url';
 
@@ -62,7 +63,7 @@ export class UrlUnfurlingService {
 
       return unfurledContent;
     } catch (error) {
-      console.error('URL unfurling error:', error);
+      safeLogger.error('URL unfurling error:', error);
       return {
         url,
         statusCode: error.response?.status || 0,

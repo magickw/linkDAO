@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { moderationMetricsService } from '../services/moderationMetricsService';
 import { moderationDashboardService } from '../services/moderationDashboardService';
 import { moderationAlertingService } from '../services/moderationAlertingService';
@@ -25,7 +27,7 @@ router.get('/metrics', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to get system metrics:', error);
+    safeLogger.error('Failed to get system metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve system metrics'
@@ -47,7 +49,7 @@ router.get('/dashboard', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to get dashboard data:', error);
+    safeLogger.error('Failed to get dashboard data:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve dashboard data'
@@ -69,7 +71,7 @@ router.get('/analytics', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to get detailed analytics:', error);
+    safeLogger.error('Failed to get detailed analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve detailed analytics'
@@ -91,7 +93,7 @@ router.get('/performance', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to get performance metrics:', error);
+    safeLogger.error('Failed to get performance metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve performance metrics'
@@ -113,7 +115,7 @@ router.get('/accuracy', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Failed to get accuracy metrics:', error);
+    safeLogger.error('Failed to get accuracy metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve accuracy metrics'
@@ -145,7 +147,7 @@ router.get('/logs', async (req, res) => {
       filters: { startTime, endTime, eventType, limit }
     });
   } catch (error) {
-    console.error('Failed to get structured logs:', error);
+    safeLogger.error('Failed to get structured logs:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve structured logs'
@@ -167,7 +169,7 @@ router.get('/alerts/rules', async (req, res) => {
       data: rules
     });
   } catch (error) {
-    console.error('Failed to get alert rules:', error);
+    safeLogger.error('Failed to get alert rules:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve alert rules'
@@ -178,7 +180,7 @@ router.get('/alerts/rules', async (req, res) => {
 /**
  * Create or update alert rule
  */
-router.post('/alerts/rules', async (req, res) => {
+router.post('/alerts/rules', csrfProtection,  async (req, res) => {
   try {
     const rule = req.body;
     
@@ -197,7 +199,7 @@ router.post('/alerts/rules', async (req, res) => {
       message: 'Alert rule saved successfully'
     });
   } catch (error) {
-    console.error('Failed to save alert rule:', error);
+    safeLogger.error('Failed to save alert rule:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to save alert rule'
@@ -208,7 +210,7 @@ router.post('/alerts/rules', async (req, res) => {
 /**
  * Delete alert rule
  */
-router.delete('/alerts/rules/:ruleId', async (req, res) => {
+router.delete('/alerts/rules/:ruleId', csrfProtection,  async (req, res) => {
   try {
     const { ruleId } = req.params;
     moderationAlertingService.removeAlertRule(ruleId);
@@ -218,7 +220,7 @@ router.delete('/alerts/rules/:ruleId', async (req, res) => {
       message: 'Alert rule deleted successfully'
     });
   } catch (error) {
-    console.error('Failed to delete alert rule:', error);
+    safeLogger.error('Failed to delete alert rule:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete alert rule'
@@ -238,7 +240,7 @@ router.get('/alerts/active', async (req, res) => {
       data: alerts
     });
   } catch (error) {
-    console.error('Failed to get active alerts:', error);
+    safeLogger.error('Failed to get active alerts:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve active alerts'
@@ -259,7 +261,7 @@ router.get('/alerts/history', async (req, res) => {
       data: history
     });
   } catch (error) {
-    console.error('Failed to get alert history:', error);
+    safeLogger.error('Failed to get alert history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve alert history'
@@ -270,7 +272,7 @@ router.get('/alerts/history', async (req, res) => {
 /**
  * Acknowledge alert
  */
-router.post('/alerts/:alertId/acknowledge', async (req, res) => {
+router.post('/alerts/:alertId/acknowledge', csrfProtection,  async (req, res) => {
   try {
     const { alertId } = req.params;
     const { acknowledgedBy } = req.body;
@@ -289,7 +291,7 @@ router.post('/alerts/:alertId/acknowledge', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Failed to acknowledge alert:', error);
+    safeLogger.error('Failed to acknowledge alert:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to acknowledge alert'
@@ -300,7 +302,7 @@ router.post('/alerts/:alertId/acknowledge', async (req, res) => {
 /**
  * Test alert
  */
-router.post('/alerts/test/:ruleId', async (req, res) => {
+router.post('/alerts/test/:ruleId', csrfProtection,  async (req, res) => {
   try {
     const { ruleId } = req.params;
     await moderationAlertingService.testAlert(ruleId);
@@ -310,7 +312,7 @@ router.post('/alerts/test/:ruleId', async (req, res) => {
       message: 'Test alert sent successfully'
     });
   } catch (error) {
-    console.error('Failed to send test alert:', error);
+    safeLogger.error('Failed to send test alert:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to send test alert'
@@ -332,7 +334,7 @@ router.get('/policies', async (req, res) => {
       data: policies
     });
   } catch (error) {
-    console.error('Failed to get policy versions:', error);
+    safeLogger.error('Failed to get policy versions:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve policy versions'
@@ -343,7 +345,7 @@ router.get('/policies', async (req, res) => {
 /**
  * Create policy version
  */
-router.post('/policies', async (req, res) => {
+router.post('/policies', csrfProtection,  async (req, res) => {
   try {
     const { name, description, config } = req.body;
     const createdBy = req.user?.id || 'unknown';
@@ -367,7 +369,7 @@ router.post('/policies', async (req, res) => {
       data: policyVersion
     });
   } catch (error) {
-    console.error('Failed to create policy version:', error);
+    safeLogger.error('Failed to create policy version:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create policy version'
@@ -378,7 +380,7 @@ router.post('/policies', async (req, res) => {
 /**
  * Start canary deployment
  */
-router.post('/deployments', async (req, res) => {
+router.post('/deployments', csrfProtection,  async (req, res) => {
   try {
     const { policyVersionId, trafficPercentage, targetMetrics } = req.body;
     const createdBy = req.user?.id || 'unknown';
@@ -402,7 +404,7 @@ router.post('/deployments', async (req, res) => {
       data: deployment
     });
   } catch (error) {
-    console.error('Failed to start canary deployment:', error);
+    safeLogger.error('Failed to start canary deployment:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to start canary deployment'
@@ -422,7 +424,7 @@ router.get('/deployments/active', async (req, res) => {
       data: deployments
     });
   } catch (error) {
-    console.error('Failed to get active deployments:', error);
+    safeLogger.error('Failed to get active deployments:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve active deployments'
@@ -443,7 +445,7 @@ router.get('/deployments/history', async (req, res) => {
       data: history
     });
   } catch (error) {
-    console.error('Failed to get deployment history:', error);
+    safeLogger.error('Failed to get deployment history:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve deployment history'
@@ -471,7 +473,7 @@ router.get('/deployments/:deploymentId/metrics', async (req, res) => {
       data: metrics
     });
   } catch (error) {
-    console.error('Failed to get deployment metrics:', error);
+    safeLogger.error('Failed to get deployment metrics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve deployment metrics'
@@ -482,7 +484,7 @@ router.get('/deployments/:deploymentId/metrics', async (req, res) => {
 /**
  * Rollback deployment
  */
-router.post('/deployments/:deploymentId/rollback', async (req, res) => {
+router.post('/deployments/:deploymentId/rollback', csrfProtection,  async (req, res) => {
   try {
     const { deploymentId } = req.params;
     const { reason } = req.body;
@@ -502,7 +504,7 @@ router.post('/deployments/:deploymentId/rollback', async (req, res) => {
       message: 'Deployment rolled back successfully'
     });
   } catch (error) {
-    console.error('Failed to rollback deployment:', error);
+    safeLogger.error('Failed to rollback deployment:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to rollback deployment'
@@ -513,7 +515,7 @@ router.post('/deployments/:deploymentId/rollback', async (req, res) => {
 /**
  * Promote deployment to production
  */
-router.post('/deployments/:deploymentId/promote', async (req, res) => {
+router.post('/deployments/:deploymentId/promote', csrfProtection,  async (req, res) => {
   try {
     const { deploymentId } = req.params;
     const promotedBy = req.user?.id || 'unknown';
@@ -525,7 +527,7 @@ router.post('/deployments/:deploymentId/promote', async (req, res) => {
       message: 'Deployment promoted to production successfully'
     });
   } catch (error) {
-    console.error('Failed to promote deployment:', error);
+    safeLogger.error('Failed to promote deployment:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to promote deployment'
@@ -555,7 +557,7 @@ router.get('/health', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Health check failed:', error);
+    safeLogger.error('Health check failed:', error);
     res.status(500).json({
       success: false,
       status: 'unhealthy',

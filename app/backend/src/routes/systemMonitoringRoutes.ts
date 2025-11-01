@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { healthMonitoringService } from '../services/healthMonitoringService';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 import { asyncHandler } from '../middleware/globalErrorHandler';
@@ -57,7 +59,7 @@ router.get('/health/comprehensive', asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Comprehensive health check failed:', error);
+    safeLogger.error('Comprehensive health check failed:', error);
     errorResponse(res, 'HEALTH_CHECK_FAILED', 'Health check service unavailable', 503);
   }
 }));
@@ -273,7 +275,7 @@ router.get('/alerts', asyncHandler(async (req, res) => {
  * @desc Acknowledge a system alert
  * @access Public
  */
-router.post('/alerts/:alertId/acknowledge', asyncHandler(async (req, res) => {
+router.post('/alerts/:alertId/acknowledge', csrfProtection,  asyncHandler(async (req, res) => {
   const { alertId } = req.params;
   const { acknowledgedBy } = req.body;
   

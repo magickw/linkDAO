@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -112,7 +113,7 @@ export class AvatarMediaService {
         metadata,
       };
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      safeLogger.error('Error uploading avatar:', error);
       return { success: false, error: 'Internal server error' };
     }
   }
@@ -153,7 +154,7 @@ export class AvatarMediaService {
       // Generate default avatar based on user data
       return this.generateDefaultAvatar(user.handle || user.walletAddress || userId);
     } catch (error) {
-      console.error('Error getting user avatar URL:', error);
+      safeLogger.error('Error getting user avatar URL:', error);
       return this.generateDefaultAvatar(userId);
     }
   }
@@ -191,7 +192,7 @@ export class AvatarMediaService {
           },
         };
       } catch (error) {
-        console.error(`Error generating ${size}x${size} avatar:`, error);
+        safeLogger.error(`Error generating ${size}x${size} avatar:`, error);
         results[size] = { success: false, error: 'Failed to generate size' };
       }
     }
@@ -229,7 +230,7 @@ export class AvatarMediaService {
 
       return true;
     } catch (error) {
-      console.error('Error deleting avatar:', error);
+      safeLogger.error('Error deleting avatar:', error);
       return false;
     }
   }
@@ -293,7 +294,7 @@ export class AvatarMediaService {
       
       return { success: true, hash: `Qm${hash.substring(0, 44)}` };
     } catch (error) {
-      console.error('Error uploading to IPFS:', error);
+      safeLogger.error('Error uploading to IPFS:', error);
       return { success: false };
     }
   }
@@ -316,7 +317,7 @@ export class AvatarMediaService {
       
       return { success: true, url };
     } catch (error) {
-      console.error('Error uploading to CDN:', error);
+      safeLogger.error('Error uploading to CDN:', error);
       return { success: false };
     }
   }
@@ -328,7 +329,7 @@ export class AvatarMediaService {
       // await ipfs.pin.rm(hash);
       return true;
     } catch (error) {
-      console.error('Error deleting from IPFS:', error);
+      safeLogger.error('Error deleting from IPFS:', error);
       return false;
     }
   }
@@ -343,7 +344,7 @@ export class AvatarMediaService {
       // }).promise();
       return true;
     } catch (error) {
-      console.error('Error deleting from CDN:', error);
+      safeLogger.error('Error deleting from CDN:', error);
       return false;
     }
   }

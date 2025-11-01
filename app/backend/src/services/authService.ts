@@ -1,4 +1,5 @@
 import { RedisService } from './redisService';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
@@ -146,7 +147,7 @@ export class AuthService {
       
       return permissions;
     } catch (error) {
-      console.error('Error getting user permissions:', error);
+      safeLogger.error('Error getting user permissions:', error);
       return ['basic_trading', 'profile_management'];
     }
   }

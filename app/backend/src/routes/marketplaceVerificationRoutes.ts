@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { marketplaceVerificationController } from '../controllers/marketplaceVerificationController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { apiLimiter } from '../middleware/rateLimiter';
@@ -16,21 +17,21 @@ router.use(apiLimiter);
  * @desc Verify high-value NFT listing
  * @access Private
  */
-router.post('/high-value', marketplaceVerificationController.verifyHighValueListing);
+router.post('/high-value', csrfProtection,  marketplaceVerificationController.verifyHighValueListing);
 
 /**
  * @route POST /api/marketplace/verification/counterfeit
  * @desc Detect counterfeit listings using brand keyword analysis
  * @access Private
  */
-router.post('/counterfeit', marketplaceVerificationController.detectCounterfeit);
+router.post('/counterfeit', csrfProtection,  marketplaceVerificationController.detectCounterfeit);
 
 /**
  * @route POST /api/marketplace/verification/ownership
  * @desc Verify proof of ownership signature
  * @access Private
  */
-router.post('/ownership', marketplaceVerificationController.verifyProofOfOwnership);
+router.post('/ownership', csrfProtection,  marketplaceVerificationController.verifyProofOfOwnership);
 
 /**
  * @route GET /api/marketplace/verification/seller/:sellerAddress
@@ -44,13 +45,13 @@ router.get('/seller/:sellerAddress', marketplaceVerificationController.getSeller
  * @desc Detect scam patterns in marketplace listings
  * @access Private
  */
-router.post('/scam', marketplaceVerificationController.detectScamPatterns);
+router.post('/scam', csrfProtection,  marketplaceVerificationController.detectScamPatterns);
 
 /**
  * @route POST /api/marketplace/verification/complete
  * @desc Comprehensive marketplace listing verification
  * @access Private
  */
-router.post('/complete', marketplaceVerificationController.verifyMarketplaceListing);
+router.post('/complete', csrfProtection,  marketplaceVerificationController.verifyMarketplaceListing);
 
 export default router;

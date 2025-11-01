@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { RecommendationService } from '../services/recommendationService';
 import { authenticateUser } from '../middleware/auth';
 
@@ -26,7 +28,7 @@ export async function getCommunityRecommendations(req: Request, res: Response) {
       count: recommendations.length
     });
   } catch (error) {
-    console.error('Error getting community recommendations:', error);
+    safeLogger.error('Error getting community recommendations:', error);
     res.status(500).json({ error: 'Failed to get community recommendations' });
   }
 }
@@ -53,7 +55,7 @@ export async function getUserRecommendations(req: Request, res: Response) {
       count: recommendations.length
     });
   } catch (error) {
-    console.error('Error getting user recommendations:', error);
+    safeLogger.error('Error getting user recommendations:', error);
     res.status(500).json({ error: 'Failed to get user recommendations' });
   }
 }
@@ -76,7 +78,7 @@ export async function getTrendingContent(req: Request, res: Response) {
       count: trending.length
     });
   } catch (error) {
-    console.error('Error getting trending content:', error);
+    safeLogger.error('Error getting trending content:', error);
     res.status(500).json({ error: 'Failed to get trending content' });
   }
 }
@@ -106,7 +108,7 @@ export async function recordUserInteraction(req: Request, res: Response) {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error recording user interaction:', error);
+    safeLogger.error('Error recording user interaction:', error);
     res.status(500).json({ error: 'Failed to record user interaction' });
   }
 }
@@ -131,7 +133,7 @@ export async function precomputeRecommendations(req: Request, res: Response) {
 
     res.json({ success: true, message: 'Recommendations precomputed successfully' });
   } catch (error) {
-    console.error('Error precomputing recommendations:', error);
+    safeLogger.error('Error precomputing recommendations:', error);
     res.status(500).json({ error: 'Failed to precompute recommendations' });
   }
 }

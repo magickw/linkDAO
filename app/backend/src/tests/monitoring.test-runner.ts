@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -70,22 +71,22 @@ class MonitoringTestRunner {
   private results: TestResult[] = [];
 
   async runAllTests(): Promise<TestReport> {
-    console.log('🚀 Starting Comprehensive Monitoring System Tests...\n');
+    safeLogger.info('🚀 Starting Comprehensive Monitoring System Tests...\n');
 
     const startTime = Date.now();
 
     for (const suite of this.testSuites) {
-      console.log(`📋 Running ${suite.name}...`);
+      safeLogger.info(`📋 Running ${suite.name}...`);
       const result = await this.runTestSuite(suite);
       this.results.push(result);
       
       if (result.failed > 0) {
-        console.log(`❌ ${suite.name}: ${result.failed} failed tests`);
-        result.errors.forEach(error => console.log(`   - ${error}`));
+        safeLogger.info(`❌ ${suite.name}: ${result.failed} failed tests`);
+        result.errors.forEach(error => safeLogger.info(`   - ${error}`));
       } else {
-        console.log(`✅ ${suite.name}: All ${result.passed} tests passed`);
+        safeLogger.info(`✅ ${suite.name}: All ${result.passed} tests passed`);
       }
-      console.log(`   Duration: ${result.duration}ms\n`);
+      safeLogger.info(`   Duration: ${result.duration}ms\n`);
     }
 
     const endTime = Date.now();
@@ -311,44 +312,44 @@ The monitoring system tests cover:
 `;
 
     writeFileSync(reportPath, markdown);
-    console.log(`📄 Test report generated: ${reportPath}`);
+    safeLogger.info(`📄 Test report generated: ${reportPath}`);
   }
 
   private printSummary(report: TestReport): void {
-    console.log('\n' + '='.repeat(60));
-    console.log('📊 MONITORING SYSTEM TEST SUMMARY');
-    console.log('='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
+    safeLogger.info('📊 MONITORING SYSTEM TEST SUMMARY');
+    safeLogger.info('='.repeat(60));
     
-    console.log(`\n📈 Results:`);
-    console.log(`   Total Tests: ${report.totalTests}`);
-    console.log(`   Passed: ${report.totalPassed} ✅`);
-    console.log(`   Failed: ${report.totalFailed} ${report.totalFailed > 0 ? '❌' : '✅'}`);
-    console.log(`   Skipped: ${report.totalSkipped} ⏭️`);
-    console.log(`   Duration: ${(report.totalDuration / 1000).toFixed(2)}s`);
-    console.log(`   Coverage: ${report.overallCoverage.toFixed(1)}%`);
+    safeLogger.info(`\n📈 Results:`);
+    safeLogger.info(`   Total Tests: ${report.totalTests}`);
+    safeLogger.info(`   Passed: ${report.totalPassed} ✅`);
+    safeLogger.info(`   Failed: ${report.totalFailed} ${report.totalFailed > 0 ? '❌' : '✅'}`);
+    safeLogger.info(`   Skipped: ${report.totalSkipped} ⏭️`);
+    safeLogger.info(`   Duration: ${(report.totalDuration / 1000).toFixed(2)}s`);
+    safeLogger.info(`   Coverage: ${report.overallCoverage.toFixed(1)}%`);
 
     if (report.totalFailed === 0) {
-      console.log('\n🎉 All tests passed! Monitoring system is ready for deployment.');
+      safeLogger.info('\n🎉 All tests passed! Monitoring system is ready for deployment.');
     } else {
-      console.log('\n⚠️  Some tests failed. Please review and fix before deployment.');
+      safeLogger.info('\n⚠️  Some tests failed. Please review and fix before deployment.');
     }
 
-    console.log('\n🔍 Key Areas Tested:');
-    console.log('   • Metrics collection and aggregation');
-    console.log('   • Structured logging and audit trails');
-    console.log('   • Dashboard data services');
-    console.log('   • Alert rule management and notifications');
-    console.log('   • Canary deployment workflows');
-    console.log('   • Performance under load');
-    console.log('   • Integration with external services');
-    console.log('   • Error handling and recovery');
+    safeLogger.info('\n🔍 Key Areas Tested:');
+    safeLogger.info('   • Metrics collection and aggregation');
+    safeLogger.info('   • Structured logging and audit trails');
+    safeLogger.info('   • Dashboard data services');
+    safeLogger.info('   • Alert rule management and notifications');
+    safeLogger.info('   • Canary deployment workflows');
+    safeLogger.info('   • Performance under load');
+    safeLogger.info('   • Integration with external services');
+    safeLogger.info('   • Error handling and recovery');
 
-    console.log('\n📋 Recommendations:');
+    safeLogger.info('\n📋 Recommendations:');
     report.recommendations.forEach(rec => {
-      console.log(`   • ${rec}`);
+      safeLogger.info(`   • ${rec}`);
     });
 
-    console.log('\n' + '='.repeat(60));
+    safeLogger.info('\n' + '='.repeat(60));
   }
 }
 
@@ -360,7 +361,7 @@ if (require.main === module) {
       process.exit(report.totalFailed > 0 ? 1 : 0);
     })
     .catch(error => {
-      console.error('❌ Test runner failed:', error);
+      safeLogger.error('❌ Test runner failed:', error);
       process.exit(1);
     });
 }

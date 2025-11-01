@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 import { Redis } from 'ioredis';
 
@@ -175,7 +176,7 @@ export class UserSegmentationService {
 
       return segment;
     } catch (error) {
-      console.error('Error creating segment:', error);
+      safeLogger.error('Error creating segment:', error);
       throw new Error('Failed to create user segment');
     }
   }
@@ -215,7 +216,7 @@ export class UserSegmentationService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegments));
       return updatedSegments;
     } catch (error) {
-      console.error('Error getting segments:', error);
+      safeLogger.error('Error getting segments:', error);
       throw new Error('Failed to retrieve user segments');
     }
   }
@@ -251,7 +252,7 @@ export class UserSegmentationService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(updatedSegment));
       return updatedSegment;
     } catch (error) {
-      console.error('Error getting segment by ID:', error);
+      safeLogger.error('Error getting segment by ID:', error);
       throw new Error('Failed to retrieve user segment');
     }
   }
@@ -291,7 +292,7 @@ export class UserSegmentationService {
 
       return updatedSegment;
     } catch (error) {
-      console.error('Error updating segment:', error);
+      safeLogger.error('Error updating segment:', error);
       throw new Error('Failed to update user segment');
     }
   }
@@ -305,7 +306,7 @@ export class UserSegmentationService {
       await this.redis.del(`segment:${segmentId}`);
       await this.redis.del('segments:all');
     } catch (error) {
-      console.error('Error deleting segment:', error);
+      safeLogger.error('Error deleting segment:', error);
       throw new Error('Failed to delete user segment');
     }
   }
@@ -326,7 +327,7 @@ export class UserSegmentationService {
 
       return await this.getUsersMatchingCriteria(segment.criteria, limit, offset);
     } catch (error) {
-      console.error('Error getting segment users:', error);
+      safeLogger.error('Error getting segment users:', error);
       throw new Error('Failed to retrieve segment users');
     }
   }
@@ -357,7 +358,7 @@ export class UserSegmentationService {
         insights
       };
     } catch (error) {
-      console.error('Error comparing segments:', error);
+      safeLogger.error('Error comparing segments:', error);
       throw new Error('Failed to compare segments');
     }
   }
@@ -392,7 +393,7 @@ export class UserSegmentationService {
 
       return insights;
     } catch (error) {
-      console.error('Error generating predictive insights:', error);
+      safeLogger.error('Error generating predictive insights:', error);
       throw new Error('Failed to generate predictive insights');
     }
   }
@@ -423,7 +424,7 @@ export class UserSegmentationService {
         communicationPreferences
       };
     } catch (error) {
-      console.error('Error generating personalization recommendations:', error);
+      safeLogger.error('Error generating personalization recommendations:', error);
       throw new Error('Failed to generate personalization recommendations');
     }
   }
@@ -436,7 +437,7 @@ export class UserSegmentationService {
       const result = await db.execute(query);
       return Number(result[0]?.count) || 0;
     } catch (error) {
-      console.error('Error calculating segment size:', error);
+      safeLogger.error('Error calculating segment size:', error);
       return 0;
     }
   }
@@ -482,7 +483,7 @@ export class UserSegmentationService {
         growthRate: activityMetrics.growthRate
       };
     } catch (error) {
-      console.error('Error calculating segment metrics:', error);
+      safeLogger.error('Error calculating segment metrics:', error);
       return this.getEmptyMetrics();
     }
   }
@@ -522,7 +523,7 @@ export class UserSegmentationService {
 
       return trends;
     } catch (error) {
-      console.error('Error calculating segment trends:', error);
+      safeLogger.error('Error calculating segment trends:', error);
       return [];
     }
   }
@@ -592,7 +593,7 @@ export class UserSegmentationService {
         }
       }));
     } catch (error) {
-      console.error('Error getting users matching criteria:', error);
+      safeLogger.error('Error getting users matching criteria:', error);
       return [];
     }
   }
@@ -870,7 +871,7 @@ export class UserSegmentationService {
   // Database operations (simplified - would use proper schema)
   private async storeSegment(segment: UserSegment): Promise<void> {
     // Would store in a segments table
-    console.log('Storing segment:', segment.segmentId);
+    safeLogger.info('Storing segment:', segment.segmentId);
   }
 
   private async getSegmentsFromDatabase(): Promise<UserSegment[]> {
@@ -885,12 +886,12 @@ export class UserSegmentationService {
 
   private async updateSegmentInDatabase(segment: UserSegment): Promise<void> {
     // Would update segment in database
-    console.log('Updating segment:', segment.segmentId);
+    safeLogger.info('Updating segment:', segment.segmentId);
   }
 
   private async deleteSegmentFromDatabase(segmentId: string): Promise<void> {
     // Would delete segment from database
-    console.log('Deleting segment:', segmentId);
+    safeLogger.info('Deleting segment:', segmentId);
   }
 }
 

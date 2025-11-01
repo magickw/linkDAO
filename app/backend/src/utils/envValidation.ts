@@ -50,31 +50,31 @@ export function validateEnv(): EnvConfig {
 
   // Log warnings
   if (warnings.length > 0) {
-    console.warn('⚠️  Environment warnings:');
-    warnings.forEach(warning => console.warn(`   - ${warning}`));
+    safeLogger.warn('⚠️  Environment warnings:');
+    warnings.forEach(warning => safeLogger.warn(`   - ${warning}`));
   }
 
   // Log errors
   if (errors.length > 0) {
-    console.error('❌ Environment errors:');
-    errors.forEach(error => console.error(`   - ${error}`));
+    safeLogger.error('❌ Environment errors:');
+    errors.forEach(error => safeLogger.error(`   - ${error}`));
     if (config.NODE_ENV === 'production') {
       throw new Error('Environment validation failed');
     }
   }
 
   // Log configuration (without sensitive data)
-  console.log('🔧 Environment configuration:');
-  console.log(`   - NODE_ENV: ${config.NODE_ENV}`);
-  console.log(`   - PORT: ${config.PORT}`);
-  console.log(`   - JWT_SECRET: ${config.JWT_SECRET ? '[SET]' : '[NOT SET]'}`);
-  console.log(`   - DATABASE_URL: ${config.DATABASE_URL ? '[SET]' : '[NOT SET]'}`);
+  safeLogger.info('🔧 Environment configuration:');
+  safeLogger.info(`   - NODE_ENV: ${config.NODE_ENV}`);
+  safeLogger.info(`   - PORT: ${config.PORT}`);
+  safeLogger.info(`   - JWT_SECRET: ${config.JWT_SECRET ? '[SET]' : '[NOT SET]'}`);
+  safeLogger.info(`   - DATABASE_URL: ${config.DATABASE_URL ? '[SET]' : '[NOT SET]'}`);
   if (!config.DATABASE_URL) {
-    console.log(`   - POSTGRES_HOST: ${config.POSTGRES_HOST}`);
-    console.log(`   - POSTGRES_PORT: ${config.POSTGRES_PORT}`);
-    console.log(`   - POSTGRES_DB: ${config.POSTGRES_DB}`);
-    console.log(`   - POSTGRES_USER: ${config.POSTGRES_USER}`);
-    console.log(`   - POSTGRES_PASSWORD: ${config.POSTGRES_PASSWORD ? '[SET]' : '[NOT SET]'}`);
+    safeLogger.info(`   - POSTGRES_HOST: ${config.POSTGRES_HOST}`);
+    safeLogger.info(`   - POSTGRES_PORT: ${config.POSTGRES_PORT}`);
+    safeLogger.info(`   - POSTGRES_DB: ${config.POSTGRES_DB}`);
+    safeLogger.info(`   - POSTGRES_USER: ${config.POSTGRES_USER}`);
+    safeLogger.info(`   - POSTGRES_PASSWORD: ${config.POSTGRES_PASSWORD ? '[SET]' : '[NOT SET]'}`);
   }
 
   return config;

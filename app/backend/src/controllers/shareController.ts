@@ -5,6 +5,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { shareService } from '../services/shareService';
 
 class ShareController {
@@ -42,7 +44,7 @@ class ShareController {
         message: 'Share tracked successfully'
       });
     } catch (error) {
-      console.error('Error in trackShare:', error);
+      safeLogger.error('Error in trackShare:', error);
       res.status(500).json({ error: 'Failed to track share' });
     }
   }
@@ -63,7 +65,7 @@ class ShareController {
 
       res.json({ postId, shareCount: count });
     } catch (error) {
-      console.error('Error in getShareCount:', error);
+      safeLogger.error('Error in getShareCount:', error);
       res.status(500).json({ error: 'Failed to get share count' });
     }
   }
@@ -84,7 +86,7 @@ class ShareController {
 
       res.json({ postId, ...breakdown });
     } catch (error) {
-      console.error('Error in getShareBreakdown:', error);
+      safeLogger.error('Error in getShareBreakdown:', error);
       res.status(500).json({ error: 'Failed to get share breakdown' });
     }
   }
@@ -107,7 +109,7 @@ class ShareController {
 
       res.json(result);
     } catch (error) {
-      console.error('Error in getUserShares:', error);
+      safeLogger.error('Error in getUserShares:', error);
       res.status(500).json({ error: 'Failed to retrieve shares' });
     }
   }

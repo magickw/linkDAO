@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface PrivacyPolicy {
   policyId: string;
@@ -156,7 +157,7 @@ class PrivacyPolicyIntegrationService extends EventEmitter {
       this.emit('initialized');
       
     } catch (error) {
-      console.error('Failed to initialize privacy policy integration service:', error);
+      safeLogger.error('Failed to initialize privacy policy integration service:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { transactionController } from '../controllers/transactionController';
 
 const router = Router();
@@ -9,7 +10,7 @@ router.get('/summary/:walletAddress', transactionController.getTransactionSummar
 router.get('/analytics/:walletAddress', transactionController.getTransactionAnalytics.bind(transactionController));
 
 // Transaction management routes
-router.post('/record/:walletAddress', transactionController.recordTransaction.bind(transactionController));
+router.post('/record/:walletAddress', csrfProtection,  transactionController.recordTransaction.bind(transactionController));
 router.get('/:transactionId', transactionController.getTransactionById.bind(transactionController));
 
 export default router;

@@ -1,4 +1,5 @@
 import { WebSocket, WebSocketServer } from 'ws';
+import { safeLogger } from '../utils/safeLogger';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
 import jwt from 'jsonwebtoken';
@@ -42,7 +43,7 @@ class RealTimeNotificationService {
     // Start heartbeat to clean up dead connections
     this.heartbeatInterval = setInterval(this.heartbeat.bind(this), 30000);
     
-    console.log(`Real-time notification service started on port ${port}`);
+    safeLogger.info(`Real-time notification service started on port ${port}`);
   }
 
   private verifyClient(info: { origin: string; secure: boolean; req: IncomingMessage }): boolean {
@@ -52,7 +53,7 @@ class RealTimeNotificationService {
       const userId = url.searchParams.get('userId');
 
       if (!token || !userId) {
-        console.log('Missing token or userId in WebSocket connection');
+        safeLogger.info('Missing token or userId in WebSocket connection');
         return false;
       }
 
@@ -62,7 +63,7 @@ class RealTimeNotificationService {
 
       return true;
     } catch (error) {
-      console.error('WebSocket verification failed:', error);
+      safeLogger.error('WebSocket verification failed:', error);
       return false;
     }
   }
@@ -89,7 +90,7 @@ class RealTimeNotificationService {
       }
       this.userConnections.get(userId)!.add(clientId);
 
-      console.log(`Client connected: ${clientId} for user ${userId}`);
+      safeLogger.info(`Client connected: ${clientId} for user ${userId}`);
 
       // Set up message handlers
       ws.on('message', (data) => this.handleMessage(clientId, data));
@@ -103,7 +104,7 @@ class RealTimeNotificationService {
       });
 
     } catch (error) {
-      console.error('Error handling WebSocket connection:', error);
+      safeLogger.error('Error handling WebSocket connection:', error);
       ws.close();
     }
   }
@@ -142,10 +143,10 @@ class RealTimeNotificationService {
           break;
 
         default:
-          console.warn(`Unknown message type: ${message.type}`);
+          safeLogger.warn(`Unknown message type: ${message.type}`);
       }
     } catch (error) {
-      console.error('Error handling WebSocket message:', error);
+      safeLogger.error('Error handling WebSocket message:', error);
     }
   }
 
@@ -153,7 +154,7 @@ class RealTimeNotificationService {
     const client = this.clients.get(clientId);
     if (!client) return;
 
-    console.log(`Client disconnected: ${clientId}`);
+    safeLogger.info(`Client disconnected: ${clientId}`);
 
     // Remove from user connections
     const userClients = this.userConnections.get(client.userId);
@@ -179,7 +180,7 @@ class RealTimeNotificationService {
   }
 
   private handleError(clientId: string, error: Error): void {
-    console.error(`WebSocket error for client ${clientId}:`, error);
+    safeLogger.error(`WebSocket error for client ${clientId}:`, error);
     this.handleDisconnection(clientId);
   }
 
@@ -194,7 +195,7 @@ class RealTimeNotificationService {
     }
     this.postSubscriptions.get(postId)!.add(clientId);
 
-    console.log(`Client ${clientId} subscribed to post ${postId}`);
+    safeLogger.info(`Client ${clientId} subscribed to post ${postId}`);
   }
 
   private unsubscribeFromPost(clientId: string, postId: string): void {
@@ -211,22 +212,22 @@ class RealTimeNotificationService {
       }
     }
 
-    console.log(`Client ${clientId} unsubscribed from post ${postId}`);
+    safeLogger.info(`Client ${clientId} unsubscribed from post ${postId}`);
   }
 
   private handleMarkRead(clientId: string, notificationId: string): void {
     // In a real implementation, update database
-    console.log(`Marking notification ${notificationId} as read for client ${clientId}`);
+    safeLogger.info(`Marking notification ${notificationId} as read for client ${clientId}`);
   }
 
   private handleMarkAllRead(clientId: string, category?: string): void {
     // In a real implementation, update database
-    console.log(`Marking all notifications as read for client ${clientId}, category: ${category}`);
+    safeLogger.info(`Marking all notifications as read for client ${clientId}, category: ${category}`);
   }
 
   private handleDismiss(clientId: string, notificationId: string): void {
     // In a real implementation, update database
-    console.log(`Dismissing notification ${notificationId} for client ${clientId}`);
+    safeLogger.info(`Dismissing notification ${notificationId} for client ${clientId}`);
   }
 
   private sendToClient(clientId: string, message: NotificationMessage): void {
@@ -238,7 +239,7 @@ class RealTimeNotificationService {
     try {
       client.ws.send(JSON.stringify(message));
     } catch (error) {
-      console.error(`Error sending message to client ${clientId}:`, error);
+      safeLogger.error(`Error sending message to client ${clientId}:`, error);
       this.handleDisconnection(clientId);
     }
   }
@@ -267,7 +268,7 @@ class RealTimeNotificationService {
 
     this.clients.forEach((client, clientId) => {
       if (now.getTime() - client.lastPing.getTime() > timeout) {
-        console.log(`Client ${clientId} timed out`);
+        safeLogger.info(`Client ${clientId} timed out`);
         client.ws.terminate();
         this.handleDisconnection(clientId);
       }

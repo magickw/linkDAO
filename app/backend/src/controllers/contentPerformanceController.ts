@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import contentPerformanceService from '../services/contentPerformanceService';
 import { AuthenticatedRequest } from '../middleware/auth';
 
@@ -21,7 +23,7 @@ export const getPostPerformance = async (req: Request, res: Response): Promise<v
       data: metrics
     });
   } catch (error) {
-    console.error('Error getting post performance:', error);
+    safeLogger.error('Error getting post performance:', error);
     res.status(500).json({ error: 'Failed to retrieve post performance metrics' });
   }
 };
@@ -52,7 +54,7 @@ export const getPostsPerformance = async (req: Request, res: Response): Promise<
       data: metrics
     });
   } catch (error) {
-    console.error('Error getting posts performance:', error);
+    safeLogger.error('Error getting posts performance:', error);
     res.status(500).json({ error: 'Failed to retrieve posts performance metrics' });
   }
 };
@@ -82,7 +84,7 @@ export const getTrendingContent = async (req: Request, res: Response): Promise<v
       data: trendingContent
     });
   } catch (error) {
-    console.error('Error getting trending content:', error);
+    safeLogger.error('Error getting trending content:', error);
     res.status(500).json({ error: 'Failed to retrieve trending content' });
   }
 };
@@ -106,7 +108,7 @@ export const getContentQuality = async (req: Request, res: Response): Promise<vo
       data: qualityMetrics
     });
   } catch (error) {
-    console.error('Error getting content quality:', error);
+    safeLogger.error('Error getting content quality:', error);
     res.status(500).json({ error: 'Failed to retrieve content quality metrics' });
   }
 };
@@ -130,7 +132,7 @@ export const getContentSharingAnalytics = async (req: Request, res: Response): P
       data: sharingAnalytics
     });
   } catch (error) {
-    console.error('Error getting content sharing analytics:', error);
+    safeLogger.error('Error getting content sharing analytics:', error);
     res.status(500).json({ error: 'Failed to retrieve content sharing analytics' });
   }
 };
@@ -154,7 +156,7 @@ export const getUserContentPerformance = async (req: AuthenticatedRequest, res: 
       data: performanceSummary
     });
   } catch (error) {
-    console.error('Error getting user content performance:', error);
+    safeLogger.error('Error getting user content performance:', error);
     res.status(500).json({ error: 'Failed to retrieve user content performance summary' });
   }
 };
@@ -174,7 +176,7 @@ export const trackContentView = async (req: AuthenticatedRequest, res: Response)
     
     // In a real implementation, this would insert into the views table
     // For now, we'll just log the event
-    console.log('Tracking content view:', {
+    safeLogger.info('Tracking content view:', {
       userId,
       postId
     });
@@ -184,7 +186,7 @@ export const trackContentView = async (req: AuthenticatedRequest, res: Response)
       message: 'Content view tracked successfully'
     });
   } catch (error) {
-    console.error('Error tracking content view:', error);
+    safeLogger.error('Error tracking content view:', error);
     res.status(500).json({ error: 'Failed to track content view' });
   }
 };

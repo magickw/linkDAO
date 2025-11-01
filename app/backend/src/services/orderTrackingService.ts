@@ -4,6 +4,7 @@
  */
 
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { UserProfileService } from './userProfileService';
 import { NotificationService } from './notificationService';
 import { OrderService } from './orderService';
@@ -134,7 +135,7 @@ export class OrderTrackingService {
         totalPages: Math.ceil(total / limit)
       };
     } catch (error) {
-      console.error('Error getting order history:', error);
+      safeLogger.error('Error getting order history:', error);
       throw error;
     }
   }
@@ -169,7 +170,7 @@ export class OrderTrackingService {
 
       return await this.formatOrder(dbOrder, buyer, seller);
     } catch (error) {
-      console.error('Error getting order by ID:', error);
+      safeLogger.error('Error getting order by ID:', error);
       throw error;
     }
   }
@@ -196,7 +197,7 @@ export class OrderTrackingService {
         userType: this.determineUserTypeFromEvent(event.eventType)
       }));
     } catch (error) {
-      console.error('Error getting order timeline:', error);
+      safeLogger.error('Error getting order timeline:', error);
       throw error;
     }
   }
@@ -238,7 +239,7 @@ export class OrderTrackingService {
       // Use the existing getOrderHistory method with enhanced filters
       return await this.getOrderHistory(userAddress, 'buyer', page, limit, filters);
     } catch (error) {
-      console.error('Error searching orders:', error);
+      safeLogger.error('Error searching orders:', error);
       throw error;
     }
   }
@@ -291,7 +292,7 @@ export class OrderTrackingService {
         { status, metadata }
       );
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
       throw error;
     }
   }
@@ -358,7 +359,7 @@ export class OrderTrackingService {
         { trackingNumber, carrier }
       );
     } catch (error) {
-      console.error('Error adding tracking info:', error);
+      safeLogger.error('Error adding tracking info:', error);
       throw error;
     }
   }
@@ -414,7 +415,7 @@ export class OrderTrackingService {
       // Start auto-completion timer (handled by OrderService)
       // This would typically trigger payment release after a delay
     } catch (error) {
-      console.error('Error confirming delivery:', error);
+      safeLogger.error('Error confirming delivery:', error);
       throw error;
     }
   }
@@ -455,7 +456,7 @@ export class OrderTrackingService {
         statusBreakdown: analytics.statusBreakdown || {}
       };
     } catch (error) {
-      console.error('Error getting order statistics:', error);
+      safeLogger.error('Error getting order statistics:', error);
       throw error;
     }
   }
@@ -496,7 +497,7 @@ export class OrderTrackingService {
         events: trackingRecord.events ? JSON.parse(trackingRecord.events) : []
       };
     } catch (error) {
-      console.error('Error getting tracking info:', error);
+      safeLogger.error('Error getting tracking info:', error);
       throw error;
     }
   }
@@ -549,7 +550,7 @@ export class OrderTrackingService {
 
       return csvContent;
     } catch (error) {
-      console.error('Error exporting order history:', error);
+      safeLogger.error('Error exporting order history:', error);
       throw error;
     }
   }
@@ -581,7 +582,7 @@ export class OrderTrackingService {
         unreadCount: unreadCount || 0
       };
     } catch (error) {
-      console.error('Error getting order notifications:', error);
+      safeLogger.error('Error getting order notifications:', error);
       throw error;
     }
   }
@@ -593,7 +594,7 @@ export class OrderTrackingService {
     try {
       await this.notificationService.markAsRead(notificationId);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      safeLogger.error('Error marking notification as read:', error);
       throw error;
     }
   }
@@ -613,7 +614,7 @@ export class OrderTrackingService {
 
       return await this.databaseService.getOrderStatusCounts(user.id, userType);
     } catch (error) {
-      console.error('Error getting order status counts:', error);
+      safeLogger.error('Error getting order status counts:', error);
       throw error;
     }
   }
@@ -653,7 +654,7 @@ export class OrderTrackingService {
 
       return results;
     } catch (error) {
-      console.error('Error bulk updating order status:', error);
+      safeLogger.error('Error bulk updating order status:', error);
       throw error;
     }
   }
@@ -687,7 +688,7 @@ export class OrderTrackingService {
         }
       };
     } catch (error) {
-      console.error('Error getting order trends:', error);
+      safeLogger.error('Error getting order trends:', error);
       throw error;
     }
   }

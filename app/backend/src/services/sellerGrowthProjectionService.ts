@@ -1,4 +1,5 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import {
   sellerGrowthProjections,
@@ -118,7 +119,7 @@ class SellerGrowthProjectionService {
         createdAt: savedProjections.createdAt || new Date()
       };
     } catch (error) {
-      console.error('Error generating seller growth projections:', error);
+      safeLogger.error('Error generating seller growth projections:', error);
       throw new Error('Failed to generate seller growth projections');
     }
   }
@@ -163,7 +164,7 @@ class SellerGrowthProjectionService {
       // Generate new projections
       return await this.generateSellerGrowthProjections(sellerWalletAddress);
     } catch (error) {
-      console.error('Error getting seller growth projections:', error);
+      safeLogger.error('Error getting seller growth projections:', error);
       return null;
     }
   }
@@ -231,7 +232,7 @@ class SellerGrowthProjectionService {
 
       return { revenue, orders, customers, ratings, periods };
     } catch (error) {
-      console.error('Error getting historical data:', error);
+      safeLogger.error('Error getting historical data:', error);
       return {
         revenue: [],
         orders: [],
@@ -280,7 +281,7 @@ class SellerGrowthProjectionService {
         milestones
       };
     } catch (error) {
-      console.error('Error projecting revenue:', error);
+      safeLogger.error('Error projecting revenue:', error);
       return this.createDefaultProjection('revenue', 0);
     }
   }
@@ -315,7 +316,7 @@ class SellerGrowthProjectionService {
         milestones
       };
     } catch (error) {
-      console.error('Error projecting orders:', error);
+      safeLogger.error('Error projecting orders:', error);
       return this.createDefaultProjection('orders', 0);
     }
   }
@@ -351,7 +352,7 @@ class SellerGrowthProjectionService {
         milestones
       };
     } catch (error) {
-      console.error('Error projecting customer base:', error);
+      safeLogger.error('Error projecting customer base:', error);
       return this.createDefaultProjection('customer_base', 0);
     }
   }
@@ -383,7 +384,7 @@ class SellerGrowthProjectionService {
         milestones
       };
     } catch (error) {
-      console.error('Error projecting market share:', error);
+      safeLogger.error('Error projecting market share:', error);
       return this.createDefaultProjection('market_share', 0);
     }
   }
@@ -446,7 +447,7 @@ class SellerGrowthProjectionService {
 
       return factors;
     } catch (error) {
-      console.error('Error analyzing success factors:', error);
+      safeLogger.error('Error analyzing success factors:', error);
       return [];
     }
   }
@@ -530,7 +531,7 @@ class SellerGrowthProjectionService {
 
       return recommendations;
     } catch (error) {
-      console.error('Error generating improvement recommendations:', error);
+      safeLogger.error('Error generating improvement recommendations:', error);
       return [];
     }
   }
@@ -702,7 +703,7 @@ class SellerGrowthProjectionService {
       // Calculate relative position (0-1 scale)
       return Math.min(1, Math.max(0, sellerScore / Math.max(marketplaceAverage, 50)));
     } catch (error) {
-      console.error('Error assessing market position:', error);
+      safeLogger.error('Error assessing market position:', error);
       return 0.5;
     }
   }
@@ -724,7 +725,7 @@ class SellerGrowthProjectionService {
 
       return Number(result[0]?.totalRevenue || 0);
     } catch (error) {
-      console.error('Error getting total market revenue:', error);
+      safeLogger.error('Error getting total market revenue:', error);
       return 0;
     }
   }
@@ -801,7 +802,7 @@ class SellerGrowthProjectionService {
 
       return saved[0];
     } catch (error) {
-      console.error('Error saving projections:', error);
+      safeLogger.error('Error saving projections:', error);
       throw error;
     }
   }

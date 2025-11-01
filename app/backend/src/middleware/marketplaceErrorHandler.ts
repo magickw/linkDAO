@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { AppError } from './errorHandler';
 
 // Marketplace-specific error types
@@ -282,7 +283,7 @@ export const gracefulDegradationHandler = (
   fallbackData?: any
 ) => {
   return (error: any, req: Request, res: Response, next: NextFunction) => {
-    console.warn(`⚠️ Service degradation: ${serviceName} is unavailable`, error.message);
+    safeLogger.warn(`⚠️ Service degradation: ${serviceName} is unavailable`, error.message);
 
     // Return fallback response
     res.status(200).json({
@@ -358,18 +359,18 @@ export class ErrorMonitoringService {
 
     // Different logging levels based on severity
     if (logEntry.severity === 'critical') {
-      console.error('🚨 CRITICAL ERROR:', JSON.stringify(logEntry, null, 2));
+      safeLogger.error('🚨 CRITICAL ERROR:', JSON.stringify(logEntry, null, 2));
     } else if (logEntry.severity === 'high') {
-      console.error('❌ HIGH SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
+      safeLogger.error('❌ HIGH SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
     } else if (logEntry.severity === 'medium') {
-      console.warn('⚠️ MEDIUM SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
+      safeLogger.warn('⚠️ MEDIUM SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
     } else {
-      console.log('ℹ️ LOW SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
+      safeLogger.info('ℹ️ LOW SEVERITY ERROR:', JSON.stringify(logEntry, null, 2));
     }
 
     // Alert if error frequency is high
     if (currentCount > 10) {
-      console.error(`🚨 HIGH ERROR FREQUENCY: ${errorKey} occurred ${currentCount} times in the last hour`);
+      safeLogger.error(`🚨 HIGH ERROR FREQUENCY: ${errorKey} occurred ${currentCount} times in the last hour`);
     }
   }
 

@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { communities, proposals, votes } from '../db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
@@ -264,7 +265,7 @@ export class ExternalPlatformConnectorService {
       return mockData;
 
     } catch (error) {
-      console.error(`Error syncing DAO data from ${platformId}:`, error);
+      safeLogger.error(`Error syncing DAO data from ${platformId}:`, error);
       
       // Update sync status to error
       await this.updatePlatformConfig(platformId, { syncStatus: 'error' });
@@ -280,7 +281,7 @@ export class ExternalPlatformConnectorService {
     try {
       // In a real implementation, this would store data in database
       // For now, we'll just log the information
-      console.log('Storing DAO sync data:', { communityId, data });
+      safeLogger.info('Storing DAO sync data:', { communityId, data });
       
       // Example of what database storage might look like:
       /*
@@ -308,7 +309,7 @@ export class ExternalPlatformConnectorService {
       */
 
     } catch (error) {
-      console.error('Error storing DAO sync data:', error);
+      safeLogger.error('Error storing DAO sync data:', error);
     }
   }
 
@@ -343,7 +344,7 @@ export class ExternalPlatformConnectorService {
       return mockData;
 
     } catch (error) {
-      console.error(`Error getting DeFi data from ${protocolId}:`, error);
+      safeLogger.error(`Error getting DeFi data from ${protocolId}:`, error);
       return null;
     }
   }
@@ -386,7 +387,7 @@ export class ExternalPlatformConnectorService {
       return mockData;
 
     } catch (error) {
-      console.error(`Error getting NFT data from ${marketplaceId}:`, error);
+      safeLogger.error(`Error getting NFT data from ${marketplaceId}:`, error);
       return null;
     }
   }
@@ -428,7 +429,7 @@ export class ExternalPlatformConnectorService {
       return mockData;
 
     } catch (error) {
-      console.error(`Error getting wallet data for ${walletAddress}:`, error);
+      safeLogger.error(`Error getting wallet data for ${walletAddress}:`, error);
       return null;
     }
   }
@@ -471,7 +472,7 @@ export class ExternalPlatformConnectorService {
       return mockData;
 
     } catch (error) {
-      console.error('Error getting blockchain explorer data:', error);
+      safeLogger.error('Error getting blockchain explorer data:', error);
       return null;
     }
   }
@@ -512,7 +513,7 @@ export class ExternalPlatformConnectorService {
       }
 
     } catch (error) {
-      console.error(`Error executing cross-platform action on ${platformId}:`, error);
+      safeLogger.error(`Error executing cross-platform action on ${platformId}:`, error);
       return {
         success: false,
         error: 'Internal error during cross-platform action execution'
@@ -561,7 +562,7 @@ export class ExternalPlatformConnectorService {
       return true;
 
     } catch (error) {
-      console.error(`Error triggering manual sync for ${platformId}:`, error);
+      safeLogger.error(`Error triggering manual sync for ${platformId}:`, error);
       
       // Update sync status to error
       await this.updatePlatformConfig(platformId, { syncStatus: 'error' });

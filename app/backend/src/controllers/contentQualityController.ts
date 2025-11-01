@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { documentFreshnessService } from '../services/documentFreshnessService';
 import { contentReviewWorkflowService } from '../services/contentReviewWorkflowService';
 import { documentPerformanceMonitoringService } from '../services/documentPerformanceMonitoringService';
@@ -22,7 +24,7 @@ export class ContentQualityController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error generating freshness report:', error);
+      safeLogger.error('Error generating freshness report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate freshness report',
@@ -46,7 +48,7 @@ export class ContentQualityController {
         }
       });
     } catch (error) {
-      console.error('Error checking document freshness:', error);
+      safeLogger.error('Error checking document freshness:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to check document freshness',
@@ -82,7 +84,7 @@ export class ContentQualityController {
         data: task
       });
     } catch (error) {
-      console.error('Error creating review task:', error);
+      safeLogger.error('Error creating review task:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create review task',
@@ -114,7 +116,7 @@ export class ContentQualityController {
         data: task
       });
     } catch (error) {
-      console.error('Error updating review task:', error);
+      safeLogger.error('Error updating review task:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update review task',
@@ -151,7 +153,7 @@ export class ContentQualityController {
         data: task
       });
     } catch (error) {
-      console.error('Error completing checklist item:', error);
+      safeLogger.error('Error completing checklist item:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to complete checklist item',
@@ -183,7 +185,7 @@ export class ContentQualityController {
         data: task
       });
     } catch (error) {
-      console.error('Error adding review comment:', error);
+      safeLogger.error('Error adding review comment:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to add review comment',
@@ -203,7 +205,7 @@ export class ContentQualityController {
         data: report
       });
     } catch (error) {
-      console.error('Error generating workflow report:', error);
+      safeLogger.error('Error generating workflow report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate workflow report',
@@ -226,7 +228,7 @@ export class ContentQualityController {
         }
       });
     } catch (error) {
-      console.error('Error getting overdue tasks:', error);
+      safeLogger.error('Error getting overdue tasks:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get overdue tasks',
@@ -257,7 +259,7 @@ export class ContentQualityController {
         message: 'Performance metric recorded'
       });
     } catch (error) {
-      console.error('Error recording performance metric:', error);
+      safeLogger.error('Error recording performance metric:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to record performance metric',
@@ -288,7 +290,7 @@ export class ContentQualityController {
         message: 'Error recorded'
       });
     } catch (error) {
-      console.error('Error recording error:', error);
+      safeLogger.error('Error recording error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to record error',
@@ -310,7 +312,7 @@ export class ContentQualityController {
         data: report
       });
     } catch (error) {
-      console.error('Error generating performance report:', error);
+      safeLogger.error('Error generating performance report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate performance report',
@@ -346,7 +348,7 @@ export class ContentQualityController {
         }
       });
     } catch (error) {
-      console.error('Error getting document metrics:', error);
+      safeLogger.error('Error getting document metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get document metrics',
@@ -377,7 +379,7 @@ export class ContentQualityController {
         message: 'User behavior recorded'
       });
     } catch (error) {
-      console.error('Error recording user behavior:', error);
+      safeLogger.error('Error recording user behavior:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to record user behavior',
@@ -398,7 +400,7 @@ export class ContentQualityController {
         data: report
       });
     } catch (error) {
-      console.error('Error generating content suggestion report:', error);
+      safeLogger.error('Error generating content suggestion report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate content suggestion report',

@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { marketplaceUsers, sellerVerifications, marketplaceProducts, marketplaceOrders } from "../db/marketplaceSchema";
@@ -44,7 +46,7 @@ export class SellerController {
         totalPages: Math.ceil(totalCount / parseInt(limit as string))
       });
     } catch (error) {
-      console.error("Error fetching seller applications:", error);
+      safeLogger.error("Error fetching seller applications:", error);
       res.status(500).json({ error: "Failed to fetch seller applications" });
     }
   }
@@ -84,7 +86,7 @@ export class SellerController {
       
       res.json(sellers[0]);
     } catch (error) {
-      console.error("Error fetching seller application:", error);
+      safeLogger.error("Error fetching seller application:", error);
       res.status(500).json({ error: "Failed to fetch seller application" });
     }
   }
@@ -137,7 +139,7 @@ export class SellerController {
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error reviewing seller application:", error);
+      safeLogger.error("Error reviewing seller application:", error);
       res.status(500).json({ error: "Failed to review seller application" });
     }
   }
@@ -201,7 +203,7 @@ export class SellerController {
         }
       });
     } catch (error) {
-      console.error("Error fetching risk assessment:", error);
+      safeLogger.error("Error fetching risk assessment:", error);
       res.status(500).json({ error: "Failed to fetch risk assessment" });
     }
   }
@@ -304,7 +306,7 @@ export class SellerController {
         totalPages: Math.ceil(totalCount / parseInt(limit as string))
       });
     } catch (error) {
-      console.error("Error fetching seller performance:", error);
+      safeLogger.error("Error fetching seller performance:", error);
       res.status(500).json({ error: "Failed to fetch seller performance" });
     }
   }
@@ -319,7 +321,7 @@ export class SellerController {
         downloadUrl: `/downloads/seller-performance-${Date.now()}.csv`
       });
     } catch (error) {
-      console.error("Error exporting seller performance:", error);
+      safeLogger.error("Error exporting seller performance:", error);
       res.status(500).json({ error: "Failed to export seller performance" });
     }
   }
@@ -366,7 +368,7 @@ export class SellerController {
 
       res.json({ success: true, profile: { ...updatedProfile, walletAddress } });
     } catch (error) {
-      console.error("Error updating seller profile (enhanced):", error);
+      safeLogger.error("Error updating seller profile (enhanced):", error);
       res.status(500).json({ error: "Failed to update seller profile" });
     }
   }
@@ -397,7 +399,7 @@ export class SellerController {
         missingFields: fields.filter(field => !seller[field as keyof typeof seller])
       });
     } catch (error) {
-      console.error("Error calculating profile completeness:", error);
+      safeLogger.error("Error calculating profile completeness:", error);
       res.status(500).json({ error: "Failed to calculate profile completeness" });
     }
   }
@@ -418,7 +420,7 @@ export class SellerController {
 
       res.json({ valid: true, errors: [] });
     } catch (error) {
-      console.error("Error validating profile:", error);
+      safeLogger.error("Error validating profile:", error);
       res.status(500).json({ error: "Failed to validate profile" });
     }
   }
@@ -450,7 +452,7 @@ export class SellerController {
         totalReviews: Math.floor((verification.seller_verifications.successfulTransactions || 0) * 0.7)
       });
     } catch (error) {
-      console.error("Error fetching seller stats:", error);
+      safeLogger.error("Error fetching seller stats:", error);
       res.status(500).json({ error: "Failed to fetch seller stats" });
     }
   }
@@ -464,7 +466,7 @@ export class SellerController {
 
       res.json({ valid: isValid, ensName });
     } catch (error) {
-      console.error("Error validating ENS:", error);
+      safeLogger.error("Error validating ENS:", error);
       res.status(500).json({ error: "Failed to validate ENS" });
     }
   }
@@ -478,7 +480,7 @@ export class SellerController {
 
       res.json({ verified: isOwner, ensName, walletAddress });
     } catch (error) {
-      console.error("Error verifying ENS ownership:", error);
+      safeLogger.error("Error verifying ENS ownership:", error);
       res.status(500).json({ error: "Failed to verify ENS ownership" });
     }
   }
@@ -490,7 +492,7 @@ export class SellerController {
       // Mock sync - in production, sync with blockchain/IPFS
       res.json({ success: true, message: "Profile synced successfully", walletAddress });
     } catch (error) {
-      console.error("Error syncing profile:", error);
+      safeLogger.error("Error syncing profile:", error);
       res.status(500).json({ error: "Failed to sync profile" });
     }
   }
@@ -502,7 +504,7 @@ export class SellerController {
       // Mock validation - in production, check sync status
       res.json({ inSync: true, lastSync: new Date(), walletAddress });
     } catch (error) {
-      console.error("Error validating profile sync:", error);
+      safeLogger.error("Error validating profile sync:", error);
       res.status(500).json({ error: "Failed to validate profile sync" });
     }
   }
@@ -525,7 +527,7 @@ export class SellerController {
         walletAddress
       });
     } catch (error) {
-      console.error("Error fetching profile history:", error);
+      safeLogger.error("Error fetching profile history:", error);
       res.status(500).json({ error: "Failed to fetch profile history" });
     }
   }
@@ -606,7 +608,7 @@ export class SellerController {
         }
       });
     } catch (error) {
-      console.error("Error creating listing:", error);
+      safeLogger.error("Error creating listing:", error);
       res.status(500).json({ success: false, error: "Failed to create listing" });
     }
   }
@@ -662,7 +664,7 @@ export class SellerController {
         }
       });
     } catch (error) {
-      console.error("Error updating listing:", error);
+      safeLogger.error("Error updating listing:", error);
       res.status(500).json({ success: false, error: "Failed to update listing" });
     }
   }
@@ -691,7 +693,7 @@ export class SellerController {
 
       res.json({ success: true, message: "Listing deleted successfully" });
     } catch (error) {
-      console.error("Error deleting listing:", error);
+      safeLogger.error("Error deleting listing:", error);
       res.status(500).json({ success: false, error: "Failed to delete listing" });
     }
   }
@@ -744,7 +746,7 @@ export class SellerController {
 
       res.json({ success: true, data: dashboardData });
     } catch (error) {
-      console.error("Error fetching dashboard:", error);
+      safeLogger.error("Error fetching dashboard:", error);
       res.status(500).json({ success: false, error: "Failed to fetch dashboard data" });
     }
   }
@@ -774,7 +776,7 @@ export class SellerController {
         }
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      safeLogger.error("Error updating profile:", error);
       res.status(500).json({ success: false, error: "Failed to update profile" });
     }
   }
@@ -854,7 +856,7 @@ export class SellerController {
         }
       });
     } catch (error) {
-      console.error("Error fetching listings:", error);
+      safeLogger.error("Error fetching listings:", error);
       res.status(500).json({ success: false, error: "Failed to fetch listings" });
     }
   }
@@ -929,7 +931,7 @@ export class SellerController {
         }
       });
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      safeLogger.error("Error fetching orders:", error);
       res.status(500).json({ success: false, error: "Failed to fetch orders" });
     }
   }
@@ -964,7 +966,7 @@ export class SellerController {
         res.json({ success: true, data: analytics });
       }
     } catch (error) {
-      console.error("Error fetching analytics:", error);
+      safeLogger.error("Error fetching analytics:", error);
       res.status(500).json({ success: false, error: "Failed to fetch analytics" });
     }
   }
@@ -983,7 +985,7 @@ export class SellerController {
 
       res.json({ success: true, data: profile });
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      safeLogger.error("Error fetching profile:", error);
       res.status(500).json({ success: false, error: "Failed to fetch profile" });
     }
   }
@@ -995,7 +997,7 @@ export class SellerController {
       const stats = await this.getSellerStatsInternal(user.walletAddress);
       res.json({ success: true, data: stats });
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      safeLogger.error("Error fetching stats:", error);
       res.status(500).json({ success: false, error: "Failed to fetch stats" });
     }
   }
@@ -1010,7 +1012,7 @@ export class SellerController {
       const result = await sellerService.verifySellerProfile(user.walletAddress, verificationType);
       res.json({ success: true, data: result });
     } catch (error) {
-      console.error("Error requesting verification:", error);
+      safeLogger.error("Error requesting verification:", error);
       res.status(500).json({ success: false, error: "Failed to request verification" });
     }
   }
@@ -1021,7 +1023,7 @@ export class SellerController {
       const { sellerService } = await import('../services/sellerService');
       return await sellerService.getSellerStats(walletAddress);
     } catch (error) {
-      console.error("Error fetching seller stats:", error);
+      safeLogger.error("Error fetching seller stats:", error);
       // Return default stats if service fails
       return {
         totalListings: 0,
@@ -1044,7 +1046,7 @@ export class SellerController {
       const orders = await sellerService.getSellerOrders(walletAddress);
       return orders.slice(0, limit);
     } catch (error) {
-      console.error("Error fetching recent orders:", error);
+      safeLogger.error("Error fetching recent orders:", error);
       return [];
     }
   }
@@ -1068,7 +1070,7 @@ export class SellerController {
         count: cat.count
       }));
     } catch (error) {
-      console.error("Error fetching top categories:", error);
+      safeLogger.error("Error fetching top categories:", error);
       return [];
     }
   }
@@ -1097,7 +1099,7 @@ export class SellerController {
         sales: Math.floor(Math.random() * 50) // Mock sales data
       }));
     } catch (error) {
-      console.error("Error fetching top products:", error);
+      safeLogger.error("Error fetching top products:", error);
       return [];
     }
   }

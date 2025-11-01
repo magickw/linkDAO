@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { SearchService, AdvancedSearchFilters } from '../services/searchService';
 import { RedisService } from '../services/redisService';
 import { ProductSortOptions } from '../models/Product';
@@ -196,7 +197,7 @@ export class MarketplaceSearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Marketplace search error:', error);
+      safeLogger.error('Marketplace search error:', error);
       return res.status(500).json({ error: 'Search failed' });
     }
   }
@@ -224,7 +225,7 @@ export class MarketplaceSearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Search suggestions error:', error);
+      safeLogger.error('Search suggestions error:', error);
       return res.status(500).json({ error: 'Failed to fetch search suggestions' });
     }
   }
@@ -252,7 +253,7 @@ export class MarketplaceSearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Product recommendations error:', error);
+      safeLogger.error('Product recommendations error:', error);
       return res.status(500).json({ error: 'Failed to fetch product recommendations' });
     }
   }
@@ -274,7 +275,7 @@ export class MarketplaceSearchController {
 
       return res.json(results);
     } catch (error) {
-      console.error('Product comparison error:', error);
+      safeLogger.error('Product comparison error:', error);
       return res.status(500).json({ error: 'Failed to compare products' });
     }
   }

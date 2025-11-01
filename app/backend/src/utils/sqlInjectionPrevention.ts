@@ -4,6 +4,7 @@
  */
 
 import { sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { Request, Response, NextFunction } from 'express';
 
@@ -75,7 +76,7 @@ export class SQLInjectionPrevention {
           const injectionAttempt = this.detectSQLInjection(data, source);
           if (injectionAttempt.detected) {
             // Log the attempt
-            console.warn(`SQL injection attempt detected in ${source}:`, {
+            safeLogger.warn(`SQL injection attempt detected in ${source}:`, {
               ip: req.ip,
               userAgent: req.get('User-Agent'),
               url: req.url,
@@ -97,7 +98,7 @@ export class SQLInjectionPrevention {
 
         next();
       } catch (error) {
-        console.error('Error in SQL injection prevention middleware:', error);
+        safeLogger.error('Error in SQL injection prevention middleware:', error);
         res.status(500).json({
           success: false,
           error: 'Security validation failed',
@@ -227,14 +228,14 @@ export class SQLInjectionPrevention {
       return {
         execute: async (): Promise<SafeQueryResult<T>> => {
           try {
-            const result = await db.execute(sql.raw(query, ...parameters));
+            const result = await db.execute(sql.raw(query));
             return {
               success: true,
               data: result as T,
               affectedRows: Array.isArray(result) ? result.length : 1
             };
           } catch (error) {
-            console.error('Database query error:', error);
+            safeLogger.error('Database query error:', error);
             return {
               success: false,
               error: error instanceof Error ? error.message : 'Database error'

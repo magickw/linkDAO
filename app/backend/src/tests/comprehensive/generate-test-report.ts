@@ -8,6 +8,7 @@
  */
 
 import fs from 'fs/promises';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 interface TestExecutionReport {
@@ -78,19 +79,19 @@ async function generateMockReport(): Promise<void> {
   const latestReportPath = path.join(reportsDir, 'execution-report-latest.json');
   await fs.writeFile(latestReportPath, JSON.stringify(report, null, 2));
 
-  console.log(`Mock test report generated: ${reportPath}`);
-  console.log('Note: This is a mock report for CI/CD purposes. Run full test suite locally for actual results.');
+  safeLogger.info(`Mock test report generated: ${reportPath}`);
+  safeLogger.info('Note: This is a mock report for CI/CD purposes. Run full test suite locally for actual results.');
 }
 
 // Generate report if this file is executed directly
 if (require.main === module) {
   generateMockReport()
     .then(() => {
-      console.log('Test report generation completed');
+      safeLogger.info('Test report generation completed');
       process.exit(0);
     })
     .catch((error) => {
-      console.error('Test report generation failed:', error);
+      safeLogger.error('Test report generation failed:', error);
       process.exit(1);
     });
 }

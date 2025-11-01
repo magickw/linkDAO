@@ -6,6 +6,7 @@
  */
 
 import { Pool } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import { describe, test, expect } from '@jest/globals';
 
 export interface DatabaseTestResults {
@@ -41,7 +42,7 @@ export class DatabaseTestSuite {
   }
 
   async testModels(): Promise<DatabaseTestResults> {
-    console.log('Testing database models and validation...');
+    safeLogger.info('Testing database models and validation...');
     
     // Test all model validations
     await this.testUserModel();
@@ -72,7 +73,7 @@ export class DatabaseTestSuite {
   }
 
   async testQueryPerformance(): Promise<DatabaseTestResults> {
-    console.log('Testing database query performance...');
+    safeLogger.info('Testing database query performance...');
     
     const performanceMetrics = [];
     
@@ -109,7 +110,7 @@ export class DatabaseTestSuite {
   }
 
   async testMigrations(): Promise<DatabaseTestResults> {
-    console.log('Testing database migrations...');
+    safeLogger.info('Testing database migrations...');
     
     // Test forward migrations
     await this.testForwardMigrations();

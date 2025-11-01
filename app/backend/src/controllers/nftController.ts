@@ -1,4 +1,6 @@
 import { Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/auth';
 import nftService from '../services/nftService';
 import multer from 'multer';
@@ -106,7 +108,7 @@ export class NFTController {
         data: nft,
       });
     } catch (error) {
-      console.error('Error creating NFT:', error);
+      safeLogger.error('Error creating NFT:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({
           error: 'Validation error',
@@ -160,7 +162,7 @@ export class NFTController {
         data: collection,
       });
     } catch (error) {
-      console.error('Error creating collection:', error);
+      safeLogger.error('Error creating collection:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({
           error: 'Validation error',
@@ -193,7 +195,7 @@ export class NFTController {
         data: nft,
       });
     } catch (error) {
-      console.error('Error getting NFT:', error);
+      safeLogger.error('Error getting NFT:', error);
       res.status(500).json({
         error: 'Failed to get NFT',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -222,7 +224,7 @@ export class NFTController {
         },
       });
     } catch (error) {
-      console.error('Error getting creator NFTs:', error);
+      safeLogger.error('Error getting creator NFTs:', error);
       res.status(500).json({
         error: 'Failed to get creator NFTs',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -251,7 +253,7 @@ export class NFTController {
         },
       });
     } catch (error) {
-      console.error('Error getting collection NFTs:', error);
+      safeLogger.error('Error getting collection NFTs:', error);
       res.status(500).json({
         error: 'Failed to get collection NFTs',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -286,7 +288,7 @@ export class NFTController {
         data: listing,
       });
     } catch (error) {
-      console.error('Error listing NFT:', error);
+      safeLogger.error('Error listing NFT:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({
           error: 'Validation error',
@@ -329,7 +331,7 @@ export class NFTController {
         data: auction,
       });
     } catch (error) {
-      console.error('Error creating auction:', error);
+      safeLogger.error('Error creating auction:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({
           error: 'Validation error',
@@ -371,7 +373,7 @@ export class NFTController {
         data: offer,
       });
     } catch (error) {
-      console.error('Error making offer:', error);
+      safeLogger.error('Error making offer:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({
           error: 'Validation error',
@@ -406,7 +408,7 @@ export class NFTController {
         },
       });
     } catch (error) {
-      console.error('Error getting active listings:', error);
+      safeLogger.error('Error getting active listings:', error);
       res.status(500).json({
         error: 'Failed to get active listings',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -434,7 +436,7 @@ export class NFTController {
         },
       });
     } catch (error) {
-      console.error('Error getting active auctions:', error);
+      safeLogger.error('Error getting active auctions:', error);
       res.status(500).json({
         error: 'Failed to get active auctions',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -456,7 +458,7 @@ export class NFTController {
         data: offers,
       });
     } catch (error) {
-      console.error('Error getting NFT offers:', error);
+      safeLogger.error('Error getting NFT offers:', error);
       res.status(500).json({
         error: 'Failed to get NFT offers',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -492,7 +494,7 @@ export class NFTController {
         },
       });
     } catch (error) {
-      console.error('Error searching NFTs:', error);
+      safeLogger.error('Error searching NFTs:', error);
       res.status(500).json({
         error: 'Failed to search NFTs',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -514,7 +516,7 @@ export class NFTController {
         data: provenance,
       });
     } catch (error) {
-      console.error('Error getting NFT provenance:', error);
+      safeLogger.error('Error getting NFT provenance:', error);
       res.status(500).json({
         error: 'Failed to get NFT provenance',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -543,7 +545,7 @@ export class NFTController {
         message: 'NFT verified successfully',
       });
     } catch (error) {
-      console.error('Error verifying NFT:', error);
+      safeLogger.error('Error verifying NFT:', error);
       res.status(500).json({
         error: 'Failed to verify NFT',
         message: error instanceof Error ? error.message : 'Unknown error',

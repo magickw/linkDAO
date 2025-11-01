@@ -1,4 +1,5 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import compression from 'compression';
@@ -308,7 +309,7 @@ app.use('/api/*', (req, res) => {
 
 // Global error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', error.message);
+  safeLogger.error('Error:', error.message);
   
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -333,12 +334,12 @@ app.use('*', (req, res) => {
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  safeLogger.info('SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully');
+  safeLogger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
 });
 
@@ -348,21 +349,21 @@ if (process.env.NODE_ENV === 'development') {
     const memUsage = process.memoryUsage();
     const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
     if (heapUsedMB > 400) { // Warn if using more than 400MB
-      console.warn(`⚠️  High memory usage: ${heapUsedMB}MB`);
+      safeLogger.warn(`⚠️  High memory usage: ${heapUsedMB}MB`);
     }
   }, 30000); // Check every 30 seconds
 }
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Web3 Marketplace Backend (Render Optimized) running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 API ready: http://localhost:${PORT}/`);
+  safeLogger.info(`🚀 Web3 Marketplace Backend (Render Optimized) running on port ${PORT}`);
+  safeLogger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  safeLogger.info(`🌐 Health check: http://localhost:${PORT}/health`);
+  safeLogger.info(`📡 API ready: http://localhost:${PORT}/`);
   
   // Log initial memory usage
   const memUsage = process.memoryUsage();
-  console.log(`💾 Initial memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+  safeLogger.info(`💾 Initial memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
 });
 
 export default app;

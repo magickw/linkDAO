@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { appealsController } from '../controllers/appealsController';
 import { authenticateToken } from '../middleware/authMiddleware';
 import rateLimit from 'express-rate-limit';
@@ -51,7 +52,7 @@ router.use(generalAppealsRateLimit);
  *   contactInfo?: string
  * }
  */
-router.post('/', appealSubmissionRateLimit, appealsController.submitAppeal);
+router.post('/', csrfProtection,  appealSubmissionRateLimit, appealsController.submitAppeal);
 
 /**
  * @route GET /api/appeals/my
@@ -134,6 +135,6 @@ router.get('/stats', adminRateLimit, appealsController.getAppealStats);
  *   decisionCid?: string
  * }
  */
-router.put('/:appealId/status', adminRateLimit, appealsController.updateAppealStatus);
+router.put('/:appealId/status', csrfProtection,  adminRateLimit, appealsController.updateAppealStatus);
 
 export default router;

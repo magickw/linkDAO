@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { eq, desc } from "drizzle-orm";
 import { moderationCases } from "../db/schema";
@@ -30,7 +32,7 @@ export class ModerationController {
         totalPages: Math.ceil(totalCount / parseInt(limit as string))
       });
     } catch (error) {
-      console.error("Error fetching moderation queue:", error);
+      safeLogger.error("Error fetching moderation queue:", error);
       res.status(500).json({ error: "Failed to fetch moderation queue" });
     }
   }
@@ -56,7 +58,7 @@ export class ModerationController {
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error assigning moderation item:", error);
+      safeLogger.error("Error assigning moderation item:", error);
       res.status(500).json({ error: "Failed to assign moderation item" });
     }
   }
@@ -84,7 +86,7 @@ export class ModerationController {
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error resolving moderation item:", error);
+      safeLogger.error("Error resolving moderation item:", error);
       res.status(500).json({ error: "Failed to resolve moderation item" });
     }
   }

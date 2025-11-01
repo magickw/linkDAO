@@ -4,6 +4,7 @@
  */
 
 import { promises as fs } from 'fs';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import matter from 'gray-matter';
 import { differenceInDays, parseISO, format } from 'date-fns';
@@ -92,7 +93,7 @@ export class DocumentFreshnessService {
 
       return alerts;
     } catch (error) {
-      console.error('Error checking document freshness:', error);
+      safeLogger.error('Error checking document freshness:', error);
       throw new Error(`Failed to check document freshness: ${error.message}`);
     }
   }
@@ -125,7 +126,7 @@ export class DocumentFreshnessService {
       
       return this.createAlert(filePath, metadata, lastUpdated, daysSinceUpdate, alertLevel, reasons);
     } catch (error) {
-      console.error(`Error checking document ${filePath}:`, error);
+      safeLogger.error(`Error checking document ${filePath}:`, error);
       return null;
     }
   }
@@ -276,7 +277,7 @@ export class DocumentFreshnessService {
           }
         }
       } catch (error) {
-        console.warn(`Could not scan directory ${dir}:`, error.message);
+        safeLogger.warn(`Could not scan directory ${dir}:`, error.message);
       }
     };
     
@@ -364,13 +365,13 @@ export class DocumentFreshnessService {
         const report = await this.generateFreshnessReport();
         
         if (report.alerts.length > 0) {
-          console.log(`Document freshness check: ${report.alerts.length} documents need attention`);
+          safeLogger.info(`Document freshness check: ${report.alerts.length} documents need attention`);
           
           // Send alerts to monitoring system
           await this.sendFreshnessAlerts(report);
         }
       } catch (error) {
-        console.error('Automated freshness check failed:', error);
+        safeLogger.error('Automated freshness check failed:', error);
       }
     }, intervalMs);
   }
@@ -381,7 +382,7 @@ export class DocumentFreshnessService {
   private async sendFreshnessAlerts(report: any): Promise<void> {
     // This would integrate with your monitoring/alerting system
     // For now, we'll log the alerts
-    console.log('Document Freshness Report:', {
+    safeLogger.info('Document Freshness Report:', {
       timestamp: new Date().toISOString(),
       summary: report.summary,
       criticalAlerts: report.alerts.filter((a: FreshnessAlert) => a.alertLevel === 'critical'),

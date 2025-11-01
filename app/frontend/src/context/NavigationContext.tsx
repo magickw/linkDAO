@@ -100,7 +100,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     const updateStateFromURL = () => {
       const { pathname, query } = router;
       
-      if (pathname === '/dashboard') {
+      if (pathname === '/') {
         const { view, community, post } = query;
         
         setNavigationState(prev => ({
@@ -176,11 +176,11 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   // Navigation functions that update URL
   const navigateToFeed = () => {
-    router.push('/dashboard', undefined, { shallow: true });
+    router.push('/', undefined, { shallow: true });
   };
 
   const navigateToCommunity = (communityId: string) => {
-    router.push(`/dashboard?view=community&community=${communityId}`, undefined, { shallow: true });
+    router.push(`/?view=community&community=${communityId}`, undefined, { shallow: true });
   };
 
   const navigateToPost = (postId: string, communityId?: string) => {

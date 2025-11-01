@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { ApiResponse } from '../utils/apiResponse';
 import { validateRequest, marketplaceSchemas, commonSchemas } from '../middleware/joiValidation';
 import { paginationUtils } from '../utils/pagination';
@@ -59,7 +61,7 @@ router.get('/products',
       // Return standardized response
       ApiResponse.success(res, paginatedProducts, 200, pagination);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      safeLogger.error('Error fetching products:', error);
       ApiResponse.serverError(res, 'Failed to fetch products');
     }
   }
@@ -69,7 +71,7 @@ router.get('/products',
  * Example route demonstrating validation and sanitization
  * POST /api/example/products
  */
-router.post('/products',
+router.post('/products', csrfProtection, 
   generalRateLimit,
   textSanitization,
   validateRequest(marketplaceSchemas.createListing),
@@ -88,7 +90,7 @@ router.post('/products',
       // Return created response
       ApiResponse.created(res, newProduct);
     } catch (error) {
-      console.error('Error creating product:', error);
+      safeLogger.error('Error creating product:', error);
       ApiResponse.serverError(res, 'Failed to create product');
     }
   }
@@ -130,7 +132,7 @@ router.get('/products/:id',
 
       ApiResponse.success(res, product);
     } catch (error) {
-      console.error('Error fetching product:', error);
+      safeLogger.error('Error fetching product:', error);
       ApiResponse.serverError(res, 'Failed to fetch product');
     }
   }
@@ -140,7 +142,7 @@ router.get('/products/:id',
  * Example route demonstrating validation errors
  * PUT /api/example/products/:id
  */
-router.put('/products/:id',
+router.put('/products/:id', csrfProtection, 
   generalRateLimit,
   textSanitization,
   validateRequest({
@@ -161,7 +163,7 @@ router.put('/products/:id',
 
       ApiResponse.success(res, updatedProduct);
     } catch (error) {
-      console.error('Error updating product:', error);
+      safeLogger.error('Error updating product:', error);
       ApiResponse.serverError(res, 'Failed to update product');
     }
   }
@@ -171,7 +173,7 @@ router.put('/products/:id',
  * Example route demonstrating different HTTP status codes
  * DELETE /api/example/products/:id
  */
-router.delete('/products/:id',
+router.delete('/products/:id', csrfProtection, 
   generalRateLimit,
   validateRequest({
     params: commonSchemas.idParam
@@ -192,7 +194,7 @@ router.delete('/products/:id',
       // Return no content for successful deletion
       ApiResponse.noContent(res);
     } catch (error) {
-      console.error('Error deleting product:', error);
+      safeLogger.error('Error deleting product:', error);
       ApiResponse.serverError(res, 'Failed to delete product');
     }
   }

@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   offlineContentCache, 
   offlineActionQueue,
@@ -76,7 +77,7 @@ export class MobileOfflineService {
 
       return true;
     } catch (error) {
-      console.error('Error preparing offline content:', error);
+      safeLogger.error('Error preparing offline content:', error);
       return false;
     }
   }
@@ -124,7 +125,7 @@ export class MobileOfflineService {
         posts,
       };
     } catch (error) {
-      console.error('Error getting offline content:', error);
+      safeLogger.error('Error getting offline content:', error);
       return {
         communities: [],
         posts: [],
@@ -172,7 +173,7 @@ export class MobileOfflineService {
 
       return results;
     } catch (error) {
-      console.error('Error syncing offline actions:', error);
+      safeLogger.error('Error syncing offline actions:', error);
       throw error;
     }
   }
@@ -184,9 +185,9 @@ export class MobileOfflineService {
     try {
       // This would be called by a background job to process pending actions
       // For now, we'll just log that it would happen
-      console.log('Processing pending offline actions...');
+      safeLogger.info('Processing pending offline actions...');
     } catch (error) {
-      console.error('Error processing pending actions:', error);
+      safeLogger.error('Error processing pending actions:', error);
     }
   }
 
@@ -202,7 +203,7 @@ export class MobileOfflineService {
 
       return memberships.map(m => m.communityId);
     } catch (error) {
-      console.error('Error getting user community IDs:', error);
+      safeLogger.error('Error getting user community IDs:', error);
       return [];
     }
   }
@@ -225,7 +226,7 @@ export class MobileOfflineService {
         communityCount: communityCount[0]?.count || 0,
       };
     } catch (error) {
-      console.error('Error getting offline stats:', error);
+      safeLogger.error('Error getting offline stats:', error);
       return {};
     }
   }

@@ -1,0 +1,60 @@
+import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { marketplaceVerificationController } from '../controllers/marketplaceVerificationController';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
+import { apiLimiter } from '../middleware/rateLimiter';
+import { csrfProtection } from '../middleware/csrfProtection';
+
+const router = Router();
+
+// Apply authentication middleware to all routes
+router.use(authMiddleware);
+
+// Apply rate limiting for verification endpoints
+router.use(apiLimiter);
+
+/**
+ * @route POST /api/marketplace/verification/high-value
+ * @desc Verify high-value NFT listing
+ * @access Private
+ */
+router.post('/high-value', csrfProtection,  marketplaceVerificationController.verifyHighValueListing);
+
+/**
+ * @route POST /api/marketplace/verification/counterfeit
+ * @desc Detect counterfeit listings using brand keyword analysis
+ * @access Private
+ */
+router.post('/counterfeit', csrfProtection,  marketplaceVerificationController.detectCounterfeit);
+
+/**
+ * @route POST /api/marketplace/verification/ownership
+ * @desc Verify proof of ownership signature
+ * @access Private
+ */
+router.post('/ownership', csrfProtection,  marketplaceVerificationController.verifyProofOfOwnership);
+
+/**
+ * @route GET /api/marketplace/verification/seller/:sellerAddress
+ * @desc Get seller verification tier based on reputation and KYC
+ * @access Private
+ */
+router.get('/seller/:sellerAddress', marketplaceVerificationController.getSellerVerificationTier);
+
+/**
+ * @route POST /api/marketplace/verification/scam
+ * @desc Detect scam patterns in marketplace listings
+ * @access Private
+ */
+router.post('/scam', csrfProtection,  marketplaceVerificationController.detectScamPatterns);
+
+/**
+ * @route POST /api/marketplace/verification/complete
+ * @desc Comprehensive marketplace listing verification
+ * @access Private
+ */
+router.post('/complete', csrfProtection,  marketplaceVerificationController.verifyMarketplaceListing);
+
+export default router;

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 
 interface TokenData {
   symbol: string;
@@ -31,7 +32,7 @@ export class TokenDataService {
       // Combine data from different sources
       return this.combineTokenData(coingeckoData, etherscanData, contractAddress);
     } catch (error) {
-      console.error('Token data fetch failed:', error);
+      safeLogger.error('Token data fetch failed:', error);
       throw new Error('Unable to fetch token information');
     }
   }
@@ -131,7 +132,7 @@ export class TokenDataService {
 
       return response.data[symbol.toLowerCase()]?.usd || 0;
     } catch (error) {
-      console.error('Token price fetch failed:', error);
+      safeLogger.error('Token price fetch failed:', error);
       return 0;
     }
   }
@@ -162,7 +163,7 @@ export class TokenDataService {
       const balances = response.data.result.tokenBalances;
       return balances[0]?.tokenBalance || '0x0';
     } catch (error) {
-      console.error('Token balance fetch failed:', error);
+      safeLogger.error('Token balance fetch failed:', error);
       return '0x0';
     }
   }
@@ -205,7 +206,7 @@ export class TokenDataService {
         verified: true
       }));
     } catch (error) {
-      console.error('Token search failed:', error);
+      safeLogger.error('Token search failed:', error);
       return [];
     }
   }
@@ -240,7 +241,7 @@ export class TokenDataService {
         verified: true
       }));
     } catch (error) {
-      console.error('Top tokens fetch failed:', error);
+      safeLogger.error('Top tokens fetch failed:', error);
       return [];
     }
   }

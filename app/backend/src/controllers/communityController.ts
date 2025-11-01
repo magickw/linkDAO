@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { communityService } from '../services/communityService';
 import { apiResponse, createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { openaiService } from '../services/ai/openaiService';
@@ -41,7 +43,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(communities, {}));
     } catch (error) {
-      console.error('Error listing communities:', error);
+      safeLogger.error('Error listing communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve communities'));
     }
   }
@@ -63,7 +65,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(trendingCommunities, {}));
     } catch (error) {
-      console.error('Error getting trending communities:', error);
+      safeLogger.error('Error getting trending communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve trending communities'));
     }
   }
@@ -83,7 +85,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
-      console.error('Error getting community details:', error);
+      safeLogger.error('Error getting community details:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }
@@ -130,7 +132,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(community, {}));
     } catch (error) {
-      console.error('Error creating community:', error);
+      safeLogger.error('Error creating community:', error);
       if (error.message.includes('already exists')) {
         res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', 409));
       } else {
@@ -164,7 +166,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(updatedCommunity, {}));
     } catch (error) {
-      console.error('Error updating community:', error);
+      safeLogger.error('Error updating community:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update community'));
     }
   }
@@ -192,7 +194,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(result.data, {}));
     } catch (error) {
-      console.error('Error joining community:', error);
+      safeLogger.error('Error joining community:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to join community'));
     }
   }
@@ -220,7 +222,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(null, {}));
     } catch (error) {
-      console.error('Error leaving community:', error);
+      safeLogger.error('Error leaving community:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to leave community'));
     }
   }
@@ -246,7 +248,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(posts, {}));
     } catch (error) {
-      console.error('Error getting community posts:', error);
+      safeLogger.error('Error getting community posts:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community posts'));
     }
   }
@@ -279,7 +281,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(post.data, {}));
     } catch (error) {
-      console.error('Error creating community post:', error);
+      safeLogger.error('Error creating community post:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create post'));
     }
   }
@@ -348,7 +350,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(post.data, {}));
     } catch (error) {
-      console.error('Error creating AI-assisted post:', error);
+      safeLogger.error('Error creating AI-assisted post:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create post'));
     }
   }
@@ -458,7 +460,7 @@ export class CommunityController {
         }
       };
     } catch (error) {
-      console.error('Error handling AI post assistance:', error);
+      safeLogger.error('Error handling AI post assistance:', error);
       return { success: false, message: 'Failed to process AI request' };
     }
   }
@@ -471,7 +473,7 @@ export class CommunityController {
     try {
       return await openaiService.generateInsight({ type, context });
     } catch (error) {
-      console.error('Error calling AI insights service:', error);
+      safeLogger.error('Error calling AI insights service:', error);
       throw error;
     }
   }
@@ -495,7 +497,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(members, {}));
     } catch (error) {
-      console.error('Error getting community members:', error);
+      safeLogger.error('Error getting community members:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community members'));
     }
   }
@@ -514,7 +516,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(stats, {}));
     } catch (error) {
-      console.error('Error getting community stats:', error);
+      safeLogger.error('Error getting community stats:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community statistics'));
     }
   }
@@ -546,7 +548,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error moderating content:', error);
+      safeLogger.error('Error moderating content:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to moderate content'));
     }
   }
@@ -570,7 +572,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(proposals, {}));
     } catch (error) {
-      console.error('Error getting governance proposals:', error);
+      safeLogger.error('Error getting governance proposals:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve governance proposals'));
     }
   }
@@ -610,7 +612,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse((proposal as any).data || proposal, {}));
     } catch (error) {
-      console.error('Error creating governance proposal:', error);
+      safeLogger.error('Error creating governance proposal:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create governance proposal'));
     }
   }
@@ -642,7 +644,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error voting on proposal:', error);
+      safeLogger.error('Error voting on proposal:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to cast vote'));
     }
   }
@@ -667,7 +669,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(result, {}));
     } catch (error) {
-      console.error('Error executing proposal:', error);
+      safeLogger.error('Error executing proposal:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to execute proposal'));
     }
   }
@@ -690,7 +692,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(queue, {}));
     } catch (error) {
-      console.error('Error getting moderation queue:', error);
+      safeLogger.error('Error getting moderation queue:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve moderation queue'));
     }
   }
@@ -723,7 +725,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(result, {}));
     } catch (error) {
-      console.error('Error flagging content:', error);
+      safeLogger.error('Error flagging content:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to flag content'));
     }
   }
@@ -747,7 +749,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(searchResults, {}));
     } catch (error) {
-      console.error('Error searching communities:', error);
+      safeLogger.error('Error searching communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search communities'));
     }
   }
@@ -785,7 +787,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error creating delegation:', error);
+      safeLogger.error('Error creating delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create delegation'));
     }
   }
@@ -817,7 +819,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(result, {}));
     } catch (error) {
-      console.error('Error revoking delegation:', error);
+      safeLogger.error('Error revoking delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to revoke delegation'));
     }
   }
@@ -847,7 +849,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(delegations, {}));
     } catch (error) {
-      console.error('Error getting delegations:', error);
+      safeLogger.error('Error getting delegations:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get delegations'));
     }
   }
@@ -884,7 +886,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error creating proxy vote:', error);
+      safeLogger.error('Error creating proxy vote:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create proxy vote'));
     }
   }
@@ -920,7 +922,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error creating multi-signature approval:', error);
+      safeLogger.error('Error creating multi-signature approval:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create multi-signature approval'));
     }
   }
@@ -938,7 +940,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(approvals, {}));
     } catch (error) {
-      console.error('Error getting multi-signature approvals:', error);
+      safeLogger.error('Error getting multi-signature approvals:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get multi-signature approvals'));
     }
   }
@@ -970,7 +972,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
-      console.error('Error creating automated execution:', error);
+      safeLogger.error('Error creating automated execution:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create automated execution'));
     }
   }
@@ -988,7 +990,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(executions, {}));
     } catch (error) {
-      console.error('Error getting automated executions:', error);
+      safeLogger.error('Error getting automated executions:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get automated executions'));
     }
   }
@@ -1008,7 +1010,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse({ hasAccess }, {}));
     } catch (error) {
-      console.error('Error checking content access:', error);
+      safeLogger.error('Error checking content access:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to check content access'));
     }
   }
@@ -1034,7 +1036,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse({ success: true }, {}));
     } catch (error) {
-      console.error('Error granting content access:', error);
+      safeLogger.error('Error granting content access:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to grant content access'));
     }
   }
@@ -1061,7 +1063,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(content, {}));
     } catch (error) {
-      console.error('Error creating token-gated content:', error);
+      safeLogger.error('Error creating token-gated content:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create token-gated content'));
     }
   }
@@ -1080,7 +1082,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(content, {}));
     } catch (error) {
-      console.error('Error getting token-gated content:', error);
+      safeLogger.error('Error getting token-gated content:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get token-gated content'));
     }
   }
@@ -1107,7 +1109,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(tier, {}));
     } catch (error) {
-      console.error('Error creating subscription tier:', error);
+      safeLogger.error('Error creating subscription tier:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create subscription tier'));
     }
   }
@@ -1121,7 +1123,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(tiers, {}));
     } catch (error) {
-      console.error('Error getting subscription tiers:', error);
+      safeLogger.error('Error getting subscription tiers:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get subscription tiers'));
     }
   }
@@ -1148,7 +1150,7 @@ export class CommunityController {
 
       res.status(201).json(createSuccessResponse(subscription, {}));
     } catch (error) {
-      console.error('Error subscribing user:', error);
+      safeLogger.error('Error subscribing user:', error);
       if (error.message.includes('not found')) {
         res.status(404).json(createErrorResponse('NOT_FOUND', error.message, 404));
       } else {
@@ -1171,7 +1173,7 @@ export class CommunityController {
 
       res.json(createSuccessResponse(subscriptions, {}));
     } catch (error) {
-      console.error('Error getting user subscriptions:', error);
+      safeLogger.error('Error getting user subscriptions:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get user subscriptions'));
     }
   }
@@ -1189,7 +1191,7 @@ export class CommunityController {
       const authors = await communityService.searchAuthors(q.trim());
       res.json(createSuccessResponse(authors, {}));
     } catch (error) {
-      console.error('Error searching authors:', error);
+      safeLogger.error('Error searching authors:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search authors'));
     }
   }

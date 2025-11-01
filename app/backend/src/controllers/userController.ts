@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from "../services/databaseService";
 import { userProfileService } from "../services/userProfileService";
 import { eq, desc } from "drizzle-orm";
@@ -37,7 +39,7 @@ export class UserController {
         totalPages: Math.ceil(totalCount / parseInt(limit as string))
       });
     } catch (error) {
-      console.error("Error fetching users:", error);
+      safeLogger.error("Error fetching users:", error);
       res.status(500).json({ error: "Failed to fetch users" });
     }
   }
@@ -50,11 +52,11 @@ export class UserController {
       
       // In a real implementation, we would store suspension details in a separate table
       // For now, we'll just log it
-      console.log(`User ${userId} suspended for reason: ${reason}`);
+      safeLogger.info(`User ${userId} suspended for reason: ${reason}`);
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error suspending user:", error);
+      safeLogger.error("Error suspending user:", error);
       res.status(500).json({ error: "Failed to suspend user" });
     }
   }
@@ -66,11 +68,11 @@ export class UserController {
       
       // In a real implementation, we would update suspension details
       // For now, we'll just log it
-      console.log(`User ${userId} unsuspended`);
+      safeLogger.info(`User ${userId} unsuspended`);
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error unsuspending user:", error);
+      safeLogger.error("Error unsuspending user:", error);
       res.status(500).json({ error: "Failed to unsuspend user" });
     }
   }
@@ -101,7 +103,7 @@ export class UserController {
       
       res.json({ success: true, message: `User ${userId} role updated to: ${role}` });
     } catch (error) {
-      console.error("Error updating user role:", error);
+      safeLogger.error("Error updating user role:", error);
       res.status(500).json({ error: "Failed to update user role" });
     }
   }

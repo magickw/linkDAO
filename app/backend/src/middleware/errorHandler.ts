@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface ApiError extends Error {
   statusCode?: number;
@@ -88,11 +89,11 @@ const logError = (error: ApiError, req: Request) => {
   };
 
   if (error.statusCode && error.statusCode >= 500) {
-    console.error('🚨 Server Error:', JSON.stringify(errorInfo, null, 2));
+    safeLogger.error('🚨 Server Error:', JSON.stringify(errorInfo, null, 2));
   } else if (error.statusCode && error.statusCode >= 400) {
-    console.warn('⚠️  Client Error:', JSON.stringify(errorInfo, null, 2));
+    safeLogger.warn('⚠️  Client Error:', JSON.stringify(errorInfo, null, 2));
   } else {
-    console.log('ℹ️  Request Info:', JSON.stringify(errorInfo, null, 2));
+    safeLogger.info('ℹ️  Request Info:', JSON.stringify(errorInfo, null, 2));
   }
 };
 
@@ -196,21 +197,21 @@ export const asyncHandler = (fn: Function) => {
 
 // Unhandled promise rejection handler
 process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  console.error('🚨 Unhandled Promise Rejection:', reason);
-  console.error('Promise:', promise);
+  safeLogger.error('🚨 Unhandled Promise Rejection:', reason);
+  safeLogger.error('Promise:', promise);
   
   // In production, we might want to gracefully shutdown
   if (process.env.NODE_ENV === 'production') {
-    console.log('🛑 Shutting down due to unhandled promise rejection...');
+    safeLogger.info('🛑 Shutting down due to unhandled promise rejection...');
     process.exit(1);
   }
 });
 
 // Uncaught exception handler
 process.on('uncaughtException', (error: Error) => {
-  console.error('🚨 Uncaught Exception:', error);
+  safeLogger.error('🚨 Uncaught Exception:', error);
   
   // Always exit on uncaught exceptions
-  console.log('🛑 Shutting down due to uncaught exception...');
+  safeLogger.info('🛑 Shutting down due to uncaught exception...');
   process.exit(1);
 });

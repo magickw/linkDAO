@@ -4,6 +4,7 @@
  */
 
 import { db } from '../../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { posts, communities, conversations, messages } from '../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
@@ -37,7 +38,7 @@ describe('Database Operations Tests', () => {
         await db.delete(communities).where(eq(communities.id, testCommunityId));
       }
     } catch (error) {
-      console.error('Cleanup error:', error);
+      safeLogger.error('Cleanup error:', error);
     }
   }
 

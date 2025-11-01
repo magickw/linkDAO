@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { orderManagementService } from '../services/orderManagementService';
 
 export class OrderManagementController {
@@ -33,7 +35,7 @@ export class OrderManagementController {
         data: order
       });
     } catch (error) {
-      console.error('Error getting order details:', error);
+      safeLogger.error('Error getting order details:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get order details',
@@ -84,7 +86,7 @@ export class OrderManagementController {
         }
       });
     } catch (error) {
-      console.error('Error getting user orders:', error);
+      safeLogger.error('Error getting user orders:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user orders',
@@ -129,7 +131,7 @@ export class OrderManagementController {
         });
       }
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update order status',
@@ -175,7 +177,7 @@ export class OrderManagementController {
         });
       }
     } catch (error) {
-      console.error('Error adding order tracking:', error);
+      safeLogger.error('Error adding order tracking:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to add tracking information',
@@ -205,7 +207,7 @@ export class OrderManagementController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting order analytics:', error);
+      safeLogger.error('Error getting order analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get order analytics',
@@ -234,7 +236,7 @@ export class OrderManagementController {
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting platform order analytics:', error);
+      safeLogger.error('Error getting platform order analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get platform order analytics',

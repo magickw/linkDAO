@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 
 export interface SecurityAuditEvent {
@@ -128,7 +129,7 @@ class SecurityAuditLoggingService extends EventEmitter {
       this.isInitialized = true;
       this.emit('initialized');
     } catch (error) {
-      console.error('Failed to initialize security audit logging service:', error);
+      safeLogger.error('Failed to initialize security audit logging service:', error);
       throw error;
     }
   }
@@ -578,7 +579,7 @@ class SecurityAuditLoggingService extends EventEmitter {
       
       this.emit('eventsBatchPersisted', events.length);
     } catch (error) {
-      console.error('Failed to batch persist audit events:', error);
+      safeLogger.error('Failed to batch persist audit events:', error);
       // Re-add events to buffer for retry
       this.eventBuffer.unshift(...events);
     }
@@ -673,7 +674,7 @@ class SecurityAuditLoggingService extends EventEmitter {
     for (const action of actions) {
       switch (action) {
         case 'log_compliance':
-          console.log(`Compliance logging for event ${event.eventId}`);
+          safeLogger.info(`Compliance logging for event ${event.eventId}`);
           break;
         case 'notify_dpo':
           this.emit('notifyDPO', event);

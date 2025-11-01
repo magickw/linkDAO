@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -33,7 +34,7 @@ export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next
 
     next();
   } catch (error) {
-    console.error('Admin role validation error:', error);
+    safeLogger.error('Admin role validation error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error during role validation'
@@ -70,7 +71,7 @@ export const requirePermission = (permission: string) => {
 
       next();
     } catch (error) {
-      console.error('Permission validation error:', error);
+      safeLogger.error('Permission validation error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error during permission validation'
@@ -105,7 +106,7 @@ export const requireRole = (roles: string | string[]) => {
 
       next();
     } catch (error) {
-      console.error('Role validation error:', error);
+      safeLogger.error('Role validation error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error during role validation'
@@ -122,7 +123,7 @@ export const auditAdminAction = (action: string) => {
       
       if (user) {
         // Log the admin action
-        console.log(`Admin Action: ${action}`, {
+        safeLogger.info(`Admin Action: ${action}`, {
           adminId: user.id,
           email: user.email,
           role: user.role,
@@ -144,7 +145,7 @@ export const auditAdminAction = (action: string) => {
 
       next();
     } catch (error) {
-      console.error('Audit logging error:', error);
+      safeLogger.error('Audit logging error:', error);
       // Don't fail the request due to audit logging issues
       next();
     }
@@ -199,7 +200,7 @@ export const adminRateLimit = (maxRequests: number = 100, windowMs: number = 15 
       userRequests.count++;
       next();
     } catch (error) {
-      console.error('Admin rate limiting error:', error);
+      safeLogger.error('Admin rate limiting error:', error);
       // Don't fail the request due to rate limiting issues
       next();
     }
@@ -218,7 +219,7 @@ export const adminIPWhitelist = (allowedIPs: string[] = []) => {
       const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
       
       if (!clientIP || !allowedIPs.includes(clientIP)) {
-        console.warn(`Admin access denied from IP: ${clientIP}`);
+        safeLogger.warn(`Admin access denied from IP: ${clientIP}`);
         return res.status(403).json({
           success: false,
           error: 'Access denied',
@@ -228,7 +229,7 @@ export const adminIPWhitelist = (allowedIPs: string[] = []) => {
 
       next();
     } catch (error) {
-      console.error('IP whitelist validation error:', error);
+      safeLogger.error('IP whitelist validation error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error during IP validation'
@@ -262,7 +263,7 @@ export const validateAdminSession = (req: AuthenticatedRequest, res: Response, n
 
     next();
   } catch (error) {
-    console.error('Session validation error:', error);
+    safeLogger.error('Session validation error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error during session validation'

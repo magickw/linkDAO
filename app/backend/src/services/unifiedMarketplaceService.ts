@@ -1,4 +1,5 @@
 import { ProductListingService } from './listingService';
+import { safeLogger } from '../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import { Product, CreateProductInput, UpdateProductInput, ProductSearchFilters, ProductSortOptions, PaginationOptions, ProductSearchResult } from '../models/Product';
 import { MarketplaceListing, CreateListingInput as BlockchainCreateListingInput, UpdateListingInput as BlockchainUpdateListingInput } from '../models/Marketplace';
@@ -148,7 +149,7 @@ export class UnifiedMarketplaceService {
 
             return { product, blockchainData };
         } catch (error) {
-            console.error('Error getting listing:', error);
+            safeLogger.error('Error getting listing:', error);
             return { product: null };
         }
     }
@@ -189,7 +190,7 @@ export class UnifiedMarketplaceService {
                 blockchainData: Object.keys(blockchainData).length > 0 ? blockchainData : undefined
             };
         } catch (error) {
-            console.error('Error searching listings:', error);
+            safeLogger.error('Error searching listings:', error);
             throw new ValidationError('Failed to search listings', 'search');
         }
     }
@@ -219,7 +220,7 @@ export class UnifiedMarketplaceService {
                 try {
                     blockchainListings = await this.blockchainMarketplaceService.getListingsBySeller(sellerId);
                 } catch (error) {
-                    console.error('Error getting blockchain listings for seller:', error);
+                    safeLogger.error('Error getting blockchain listings for seller:', error);
                 }
             }
 
@@ -228,7 +229,7 @@ export class UnifiedMarketplaceService {
                 blockchainListings: blockchainListings.length > 0 ? blockchainListings : undefined
             };
         } catch (error) {
-            console.error('Error getting listings by seller:', error);
+            safeLogger.error('Error getting listings by seller:', error);
             throw new ValidationError('Failed to get seller listings', 'seller');
         }
     }
@@ -403,7 +404,7 @@ export class UnifiedMarketplaceService {
 
             return stats;
         } catch (error) {
-            console.error('Error getting listing stats:', error);
+            safeLogger.error('Error getting listing stats:', error);
             throw new ValidationError('Failed to get listing statistics', 'stats');
         }
     }
@@ -449,7 +450,7 @@ export class UnifiedMarketplaceService {
 
             return { synced, failed, errors };
         } catch (error) {
-            console.error('Error in bulk sync:', error);
+            safeLogger.error('Error in bulk sync:', error);
             throw new ValidationError('Failed to perform bulk sync', 'bulk_sync');
         }
     }

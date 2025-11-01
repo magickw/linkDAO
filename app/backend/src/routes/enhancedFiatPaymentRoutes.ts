@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, query, param } from 'express-validator';
 import { EnhancedFiatPaymentController } from '../controllers/enhancedFiatPaymentController';
 import { validateRequest } from '../middleware/validateRequest';
@@ -19,7 +20,7 @@ router.use(rateLimiter({
  * @desc Process fiat payment
  * @access Public
  */
-router.post('/process',
+router.post('/process', csrfProtection, 
   [
     body('orderId')
       .isString()
@@ -101,7 +102,7 @@ router.get('/methods',
  * @desc Setup new payment method for user
  * @access Public
  */
-router.post('/setup-method',
+router.post('/setup-method', csrfProtection, 
   [
     body('userAddress')
       .isString()
@@ -154,7 +155,7 @@ router.get('/selection-data',
  * @desc Process crypto conversion after fiat payment
  * @access Public
  */
-router.post('/convert-crypto',
+router.post('/convert-crypto', csrfProtection, 
   [
     body('transactionId')
       .isString()
@@ -199,7 +200,7 @@ router.get('/receipt/:transactionId',
  * @desc Refund fiat payment
  * @access Public
  */
-router.post('/refund/:transactionId',
+router.post('/refund/:transactionId', csrfProtection, 
   [
     param('transactionId')
       .isString()
@@ -292,7 +293,7 @@ router.get('/statistics/:userAddress',
  * @desc Validate payment method
  * @access Public
  */
-router.post('/validate-method',
+router.post('/validate-method', csrfProtection, 
   [
     body('paymentMethodId')
       .isString()

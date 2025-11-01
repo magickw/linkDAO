@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { marketplaceRewardsService, MarketplaceChallengeData } from '../services/marketplaceRewardsService';
 import { z } from 'zod';
 
@@ -39,7 +41,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting user marketplace stats:', error);
+      safeLogger.error('Error getting user marketplace stats:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -61,7 +63,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting active marketplace challenges:', error);
+      safeLogger.error('Error getting active marketplace challenges:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -93,7 +95,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting marketplace rewards history:', error);
+      safeLogger.error('Error getting marketplace rewards history:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -121,7 +123,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting volume tiers:', error);
+      safeLogger.error('Error getting volume tiers:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -164,7 +166,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error creating marketplace challenge:', error);
+      safeLogger.error('Error creating marketplace challenge:', error);
       
       if (error instanceof z.ZodError) {
         return res.status(400).json({
@@ -204,7 +206,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error processing marketplace transaction:', error);
+      safeLogger.error('Error processing marketplace transaction:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -243,7 +245,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting marketplace analytics:', error);
+      safeLogger.error('Error getting marketplace analytics:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -270,7 +272,7 @@ export class MarketplaceRewardsController {
       });
 
     } catch (error) {
-      console.error('Error getting marketplace leaderboard:', error);
+      safeLogger.error('Error getting marketplace leaderboard:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

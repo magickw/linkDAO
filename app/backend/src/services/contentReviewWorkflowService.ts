@@ -4,6 +4,7 @@
  */
 
 import { promises as fs } from 'fs';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 import matter from 'gray-matter';
 import { differenceInDays, addDays, format } from 'date-fns';
@@ -448,7 +449,7 @@ export class ContentReviewWorkflowService {
   private async saveTaskToFile(task: ReviewTask): Promise<void> {
     // In a real implementation, this would save to a database or file system
     // For now, we'll just keep it in memory
-    console.log(`Saved review task ${task.id} to storage`);
+    safeLogger.info(`Saved review task ${task.id} to storage`);
   }
 
   private generateRecommendations(summary: any, overdueTasks: ReviewTask[]): string[] {

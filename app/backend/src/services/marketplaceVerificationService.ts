@@ -1,4 +1,5 @@
 import { eq, and } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { sellerVerifications, marketplaceVerifications } from '../db/marketplaceSchema';
 import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
@@ -113,7 +114,7 @@ export class MarketplaceVerificationService {
         const normalizedAddress = await this.normalizeAddress(verification.businessAddress);
         if (!normalizedAddress) {
           // Log warning but continue with verification
-          console.warn('Failed to normalize address for verification:', verificationId);
+          safeLogger.warn('Failed to normalize address for verification:', verificationId);
         }
       }
 
@@ -137,7 +138,7 @@ export class MarketplaceVerificationService {
         await this.flagForManualReview(verificationId, verificationResult.reason);
       }
     } catch (error) {
-      console.error('Error processing verification:', error);
+      safeLogger.error('Error processing verification:', error);
       // Flag for manual review on error
       await this.flagForManualReview(verificationId, 'System error during verification');
     }

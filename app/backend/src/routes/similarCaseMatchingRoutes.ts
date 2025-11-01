@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { similarCaseMatchingController } from '../controllers/similarCaseMatchingController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -27,14 +28,14 @@ router.use(caseMatchingRateLimit);
  * @access Admin
  * @body FindSimilarCasesSchema
  */
-router.post('/find', similarCaseMatchingController.findSimilarCases);
+router.post('/find', csrfProtection,  similarCaseMatchingController.findSimilarCases);
 
 /**
  * @route POST /api/similar-cases/precedents/build
  * @desc Build and retrieve case precedent database
  * @access Admin
  */
-router.post('/precedents/build', similarCaseMatchingController.buildPrecedentDatabase);
+router.post('/precedents/build', csrfProtection,  similarCaseMatchingController.buildPrecedentDatabase);
 
 /**
  * @route GET /api/similar-cases/precedents/search
@@ -58,7 +59,7 @@ router.get('/consistency', similarCaseMatchingController.analyzeConsistency);
  * @access Admin
  * @body DecisionRecommendationSchema
  */
-router.post('/recommendation', similarCaseMatchingController.getDecisionRecommendation);
+router.post('/recommendation', csrfProtection,  similarCaseMatchingController.getDecisionRecommendation);
 
 /**
  * @route GET /api/similar-cases/patterns

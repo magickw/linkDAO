@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { projectManagementController } from '../controllers/projectManagementController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validateRequest';
@@ -10,7 +11,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Time Tracking Routes
-router.post('/time-tracking/start', [
+router.post('/time-tracking/start', csrfProtection,  [
   body('bookingId').isUUID().withMessage('Valid booking ID is required'),
   body('milestoneId').optional().isUUID().withMessage('Milestone ID must be a valid UUID'),
   body('description').optional().isString().trim().isLength({ max: 500 }),
@@ -18,7 +19,7 @@ router.post('/time-tracking/start', [
   validateRequest
 ], projectManagementController.startTimeTracking.bind(projectManagementController));
 
-router.post('/time-tracking/stop', [
+router.post('/time-tracking/stop', csrfProtection,  [
   body('timeTrackingId').isUUID().withMessage('Valid time tracking ID is required'),
   body('description').optional().isString().trim().isLength({ max: 500 }),
   validateRequest
@@ -34,7 +35,7 @@ router.get('/time-tracking/booking/:bookingId', [
 ], projectManagementController.getTimeTracking.bind(projectManagementController));
 
 // Deliverables Routes
-router.post('/deliverables', [
+router.post('/deliverables', csrfProtection,  [
   body('bookingId').isUUID().withMessage('Valid booking ID is required'),
   body('milestoneId').optional().isUUID().withMessage('Milestone ID must be a valid UUID'),
   body('title').isString().trim().isLength({ min: 1, max: 255 }).withMessage('Title is required and must be 1-255 characters'),
@@ -49,7 +50,7 @@ router.post('/deliverables', [
   validateRequest
 ], projectManagementController.createDeliverable.bind(projectManagementController));
 
-router.put('/deliverables/:deliverableId', [
+router.put('/deliverables/:deliverableId', csrfProtection,  [
   param('deliverableId').isUUID().withMessage('Valid deliverable ID is required'),
   body('title').optional().isString().trim().isLength({ min: 1, max: 255 }),
   body('description').optional().isString().trim().isLength({ max: 1000 }),
@@ -66,7 +67,7 @@ router.get('/deliverables/booking/:bookingId', [
 ], projectManagementController.getDeliverables.bind(projectManagementController));
 
 // Milestone Payments Routes
-router.post('/milestone-payments', [
+router.post('/milestone-payments', csrfProtection,  [
   body('milestoneId').isUUID().withMessage('Valid milestone ID is required'),
   body('amount').isDecimal().withMessage('Amount must be a valid decimal'),
   body('currency').isString().isLength({ min: 3, max: 10 }).withMessage('Currency must be 3-10 characters'),
@@ -76,7 +77,7 @@ router.post('/milestone-payments', [
   validateRequest
 ], projectManagementController.createMilestonePayment.bind(projectManagementController));
 
-router.put('/milestone-payments/:paymentId/process', [
+router.put('/milestone-payments/:paymentId/process', csrfProtection,  [
   param('paymentId').isUUID().withMessage('Valid payment ID is required'),
   body('status').isIn(['pending', 'processing', 'held', 'released', 'refunded', 'disputed']).withMessage('Invalid status'),
   body('transactionHash').optional().isString().isLength({ min: 1, max: 66 }),
@@ -84,7 +85,7 @@ router.put('/milestone-payments/:paymentId/process', [
 ], projectManagementController.processMilestonePayment.bind(projectManagementController));
 
 // Communication Routes
-router.post('/threads', [
+router.post('/threads', csrfProtection,  [
   body('bookingId').isUUID().withMessage('Valid booking ID is required'),
   body('milestoneId').optional().isUUID().withMessage('Milestone ID must be a valid UUID'),
   body('threadType').isIn(['general', 'milestone', 'deliverable', 'payment', 'support']).withMessage('Invalid thread type'),
@@ -93,7 +94,7 @@ router.post('/threads', [
   validateRequest
 ], projectManagementController.createProjectThread.bind(projectManagementController));
 
-router.post('/messages', [
+router.post('/messages', csrfProtection,  [
   body('threadId').isUUID().withMessage('Valid thread ID is required'),
   body('messageType').optional().isIn(['text', 'file', 'image', 'code', 'milestone_update', 'payment_update', 'system']),
   body('content').optional().isString().trim().isLength({ max: 5000 }),
@@ -116,7 +117,7 @@ router.get('/messages/thread/:threadId', [
 ], projectManagementController.getProjectMessages.bind(projectManagementController));
 
 // Approval Routes
-router.post('/approvals', [
+router.post('/approvals', csrfProtection,  [
   body('bookingId').isUUID().withMessage('Valid booking ID is required'),
   body('milestoneId').optional().isUUID().withMessage('Milestone ID must be a valid UUID'),
   body('deliverableId').optional().isUUID().withMessage('Deliverable ID must be a valid UUID'),
@@ -125,7 +126,7 @@ router.post('/approvals', [
   validateRequest
 ], projectManagementController.createApproval.bind(projectManagementController));
 
-router.put('/approvals/:approvalId/process', [
+router.put('/approvals/:approvalId/process', csrfProtection,  [
   param('approvalId').isUUID().withMessage('Valid approval ID is required'),
   body('status').isIn(['approved', 'rejected', 'changes_requested']).withMessage('Invalid approval status'),
   body('feedback').optional().isString().trim().isLength({ max: 1000 }),
@@ -133,7 +134,7 @@ router.put('/approvals/:approvalId/process', [
 ], projectManagementController.processApproval.bind(projectManagementController));
 
 // File Management Routes
-router.post('/files', [
+router.post('/files', csrfProtection,  [
   body('bookingId').isUUID().withMessage('Valid booking ID is required'),
   body('milestoneId').optional().isUUID().withMessage('Milestone ID must be a valid UUID'),
   body('deliverableId').optional().isUUID().withMessage('Deliverable ID must be a valid UUID'),

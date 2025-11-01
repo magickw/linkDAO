@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { Token, CurrencyAmount, TradeType, Percent } from '@uniswap/sdk-core';
 import { Pool, Route, Trade, SwapQuoter, SwapRouter } from '@uniswap/v3-sdk';
 import { AlphaRouter, SwapType } from '@uniswap/smart-order-router';
@@ -29,7 +30,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         provider: this.provider,
       });
     } catch (error) {
-      console.warn('Failed to initialize AlphaRouter, DEX swap functionality will be limited:', error);
+      safeLogger.warn('Failed to initialize AlphaRouter, DEX swap functionality will be limited:', error);
       this.alphaRouter = null;
     }
   }
@@ -106,7 +107,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         timestamp: Date.now(),
       };
     } catch (error) {
-      console.error('Error getting swap quote:', error);
+      safeLogger.error('Error getting swap quote:', error);
       throw new Error(`Failed to get swap quote: ${error.message}`);
     }
   }
@@ -146,7 +147,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         timestamp: Date.now(),
       };
     } catch (error) {
-      console.error('Error executing swap:', error);
+      safeLogger.error('Error executing swap:', error);
       throw new Error(`Failed to execute swap: ${error.message}`);
     }
   }
@@ -172,7 +173,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         reserve1: '0', // Would be calculated from liquidity
       };
     } catch (error) {
-      console.error('Error getting liquidity info:', error);
+      safeLogger.error('Error getting liquidity info:', error);
       throw new Error(`Failed to get liquidity info: ${error.message}`);
     }
   }
@@ -188,7 +189,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         const info = await this.getLiquidityInfo(pair.tokenA, pair.tokenB, pair.fee);
         liquidityInfos.push(info);
       } catch (error) {
-        console.error(`Error monitoring pool ${pair.tokenA}/${pair.tokenB}:`, error);
+        safeLogger.error(`Error monitoring pool ${pair.tokenA}/${pair.tokenB}:`, error);
       }
     }
 
@@ -201,11 +202,11 @@ export class UniswapV3Service implements IUniswapV3Service {
   async handleSwapFailure(params: SwapParams, error: Error): Promise<SwapQuote[]> {
     // If AlphaRouter is not available, return empty array
     if (!this.alphaRouter) {
-      console.warn('DEX swap functionality not available, cannot provide alternatives');
+      safeLogger.warn('DEX swap functionality not available, cannot provide alternatives');
       return [];
     }
 
-    console.log('Handling swap failure, looking for alternatives...');
+    safeLogger.info('Handling swap failure, looking for alternatives...');
     
     const alternatives: SwapQuote[] = [];
     
@@ -220,7 +221,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         const quote = await this.getSwapQuote(alternativeParams);
         alternatives.push(quote);
       } catch (altError) {
-        console.error(`Alternative with fee ${fee} also failed:`, altError);
+        safeLogger.error(`Alternative with fee ${fee} also failed:`, altError);
       }
     }
 
@@ -238,7 +239,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         value: methodParameters.value,
       });
     } catch (error) {
-      console.error('Error estimating gas:', error);
+      safeLogger.error('Error estimating gas:', error);
       return BigInt(200000); // Default gas limit
     }
   }
@@ -262,7 +263,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       // Add 10% buffer for faster execution
       return (gasPrice * BigInt(110)) / BigInt(100);
     } catch (error) {
-      console.error('Error getting gas price:', error);
+      safeLogger.error('Error getting gas price:', error);
       return ethers.parseUnits('20', 'gwei'); // Fallback gas price
     }
   }
@@ -286,7 +287,7 @@ export class UniswapV3Service implements IUniswapV3Service {
 
       return { symbol, decimals, name };
     } catch (error) {
-      console.error('Error validating token:', error);
+      safeLogger.error('Error validating token:', error);
       throw new Error(`Invalid token address: ${tokenAddress}`);
     }
   }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { contentPreviewController } from '../controllers/contentPreviewController';
 import { authenticateToken } from '../middleware/auth';
 import rateLimit from 'express-rate-limit';
@@ -13,22 +14,22 @@ const previewRateLimit = rateLimit({
 });
 
 // Generate preview for URL
-router.post('/generate', previewRateLimit, contentPreviewController.generatePreview);
+router.post('/generate', csrfProtection,  previewRateLimit, contentPreviewController.generatePreview);
 
 // Get cached preview
 router.get('/cache/:urlHash', contentPreviewController.getCachedPreview);
 
 // Clear preview cache (admin only)
-router.delete('/cache', authenticateToken, contentPreviewController.clearCache);
+router.delete('/cache', csrfProtection,  authenticateToken, contentPreviewController.clearCache);
 
 // Get cache statistics (admin only)
 router.get('/cache/stats', authenticateToken, contentPreviewController.getCacheStats);
 
 // Security scan endpoint
-router.post('/security/scan', previewRateLimit, contentPreviewController.securityScan);
+router.post('/security/scan', csrfProtection,  previewRateLimit, contentPreviewController.securityScan);
 
 // Link preview endpoint
-router.post('/link', previewRateLimit, contentPreviewController.generateLinkPreview);
+router.post('/link', csrfProtection,  previewRateLimit, contentPreviewController.generateLinkPreview);
 
 // NFT preview endpoints
 router.get('/nft/opensea/:contractAddress/:tokenId', previewRateLimit, contentPreviewController.getOpenseaNFT);

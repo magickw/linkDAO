@@ -1,4 +1,5 @@
 import { orderMessagingAutomation } from './orderMessagingAutomation';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { 
   orders, 
@@ -14,7 +15,7 @@ export class OrderEventHandlerService {
    */
   async handleOrderEvent(orderId: number, eventType: string, eventData?: any) {
     try {
-      console.log(`Handling order event: ${eventType} for order ${orderId}`);
+      safeLogger.info(`Handling order event: ${eventType} for order ${orderId}`);
       
       switch (eventType) {
         case 'ORDER_CREATED':
@@ -34,10 +35,10 @@ export class OrderEventHandlerService {
           break;
           
         default:
-          console.log(`No specific handler for event type: ${eventType}`);
+          safeLogger.info(`No specific handler for event type: ${eventType}`);
       }
     } catch (error) {
-      console.error(`Error handling order event ${eventType} for order ${orderId}:`, error);
+      safeLogger.error(`Error handling order event ${eventType} for order ${orderId}:`, error);
     }
   }
 
@@ -47,9 +48,9 @@ export class OrderEventHandlerService {
   private async handleOrderCreated(orderId: number) {
     try {
       await orderMessagingAutomation.onOrderCreated(orderId);
-      console.log(`Successfully handled order created event for order ${orderId}`);
+      safeLogger.info(`Successfully handled order created event for order ${orderId}`);
     } catch (error) {
-      console.error(`Error in handleOrderCreated for order ${orderId}:`, error);
+      safeLogger.error(`Error in handleOrderCreated for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -74,12 +75,12 @@ export class OrderEventHandlerService {
       
       if (payment) {
         await orderMessagingAutomation.onPaymentReceived(orderId, payment);
-        console.log(`Successfully handled payment received event for order ${orderId}`);
+        safeLogger.info(`Successfully handled payment received event for order ${orderId}`);
       } else {
-        console.warn(`No payment found for order ${orderId}`);
+        safeLogger.warn(`No payment found for order ${orderId}`);
       }
     } catch (error) {
-      console.error(`Error in handlePaymentReceived for order ${orderId}:`, error);
+      safeLogger.error(`Error in handlePaymentReceived for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -104,12 +105,12 @@ export class OrderEventHandlerService {
       
       if (trackingInfo) {
         await orderMessagingAutomation.onOrderShipped(orderId, trackingInfo);
-        console.log(`Successfully handled order shipped event for order ${orderId}`);
+        safeLogger.info(`Successfully handled order shipped event for order ${orderId}`);
       } else {
-        console.warn(`No tracking info found for order ${orderId}`);
+        safeLogger.warn(`No tracking info found for order ${orderId}`);
       }
     } catch (error) {
-      console.error(`Error in handleOrderShipped for order ${orderId}:`, error);
+      safeLogger.error(`Error in handleOrderShipped for order ${orderId}:`, error);
       throw error;
     }
   }
@@ -120,9 +121,9 @@ export class OrderEventHandlerService {
   private async handleDisputeInitiated(disputeId: number) {
     try {
       await orderMessagingAutomation.onDisputeOpened(disputeId);
-      console.log(`Successfully handled dispute initiated event for dispute ${disputeId}`);
+      safeLogger.info(`Successfully handled dispute initiated event for dispute ${disputeId}`);
     } catch (error) {
-      console.error(`Error in handleDisputeInitiated for dispute ${disputeId}:`, error);
+      safeLogger.error(`Error in handleDisputeInitiated for dispute ${disputeId}:`, error);
       throw error;
     }
   }
@@ -134,9 +135,9 @@ export class OrderEventHandlerService {
     try {
       // This would typically check for unprocessed events and handle them
       // For now, we'll just log that this functionality exists
-      console.log('Processing pending order events...');
+      safeLogger.info('Processing pending order events...');
     } catch (error) {
-      console.error('Error processing pending order events:', error);
+      safeLogger.error('Error processing pending order events:', error);
     }
   }
 }

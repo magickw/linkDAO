@@ -1,4 +1,5 @@
 import { VendorModerationService, ModerationResult } from '../aiModerationOrchestrator';
+import { safeLogger } from '../utils/safeLogger';
 
 interface PerspectiveAPIResponse {
   attributeScores: {
@@ -42,7 +43,7 @@ export class PerspectiveAPIService implements VendorModerationService {
   constructor() {
     this.apiKey = process.env.PERSPECTIVE_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('Perspective API key not found in environment variables');
+      safeLogger.warn('Perspective API key not found in environment variables');
     }
   }
 
@@ -116,7 +117,7 @@ export class PerspectiveAPIService implements VendorModerationService {
       };
 
     } catch (error) {
-      console.error('Perspective API error:', error);
+      safeLogger.error('Perspective API error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       return {
@@ -142,7 +143,7 @@ export class PerspectiveAPIService implements VendorModerationService {
       const testResult = await this.scanText('Hello world');
       return testResult.success;
     } catch (error) {
-      console.error('Perspective API health check failed:', error);
+      safeLogger.error('Perspective API health check failed:', error);
       return false;
     }
   }

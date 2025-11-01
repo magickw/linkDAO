@@ -3,6 +3,7 @@
  */
 
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { bookmarkController } from '../controllers/bookmarkController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -12,7 +13,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Toggle bookmark
-router.post('/toggle', bookmarkController.toggleBookmark.bind(bookmarkController));
+router.post('/toggle', csrfProtection,  bookmarkController.toggleBookmark.bind(bookmarkController));
 
 // Get user's bookmarks
 router.get('/', bookmarkController.getUserBookmarks.bind(bookmarkController));

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { adminDashboardService } from '../services/adminDashboardService';
 import { getAdminWebSocketService } from '../services/adminWebSocketService';
 
@@ -34,7 +36,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting dashboard config:', error);
+      safeLogger.error('Error getting dashboard config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get dashboard configuration',
@@ -82,7 +84,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error updating dashboard config:', error);
+      safeLogger.error('Error updating dashboard config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update dashboard configuration',
@@ -122,7 +124,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error resetting dashboard config:', error);
+      safeLogger.error('Error resetting dashboard config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to reset dashboard configuration',
@@ -153,7 +155,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error exporting dashboard config:', error);
+      safeLogger.error('Error exporting dashboard config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to export dashboard configuration',
@@ -201,7 +203,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error importing dashboard config:', error);
+      safeLogger.error('Error importing dashboard config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to import dashboard configuration',
@@ -232,7 +234,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting user preferences:', error);
+      safeLogger.error('Error getting user preferences:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get user preferences',
@@ -271,7 +273,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error updating user preferences:', error);
+      safeLogger.error('Error updating user preferences:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update user preferences',
@@ -302,7 +304,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting layout config:', error);
+      safeLogger.error('Error getting layout config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get layout configuration',
@@ -350,7 +352,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error updating layout config:', error);
+      safeLogger.error('Error updating layout config:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update layout configuration',
@@ -398,7 +400,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error adding widget:', error);
+      safeLogger.error('Error adding widget:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to add widget',
@@ -456,7 +458,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error updating widget:', error);
+      safeLogger.error('Error updating widget:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to update widget',
@@ -506,7 +508,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error removing widget:', error);
+      safeLogger.error('Error removing widget:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to remove widget',
@@ -544,7 +546,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting dashboard metrics:', error);
+      safeLogger.error('Error getting dashboard metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get dashboard metrics',
@@ -581,7 +583,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting alerts:', error);
+      safeLogger.error('Error getting alerts:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get alerts',
@@ -632,7 +634,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
+      safeLogger.error('Error acknowledging alert:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to acknowledge alert',
@@ -683,7 +685,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error dismissing alert:', error);
+      safeLogger.error('Error dismissing alert:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to dismiss alert',
@@ -719,7 +721,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting dashboard usage analytics:', error);
+      safeLogger.error('Error getting dashboard usage analytics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get dashboard usage analytics',
@@ -754,7 +756,7 @@ class AdminDashboardController {
         }
       });
     } catch (error) {
-      console.error('Error getting dashboard performance metrics:', error);
+      safeLogger.error('Error getting dashboard performance metrics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get dashboard performance metrics',

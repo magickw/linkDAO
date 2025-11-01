@@ -1,4 +1,5 @@
 import { NotificationService } from './notificationService';
+import { safeLogger } from '../utils/safeLogger';
 import { supportNotificationService } from './supportNotificationService';
 
 // Re-export the original notification service for order notifications
@@ -25,6 +26,6 @@ export async function createNotification(
   } else {
     // For order notifications, use the existing service
     // This maintains backward compatibility
-    console.log('Order notification:', notification);
+    safeLogger.info('Order notification:', notification);
   }
 }

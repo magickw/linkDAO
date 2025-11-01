@@ -6,6 +6,7 @@
  */
 
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import { securityConfig } from '../config/securityConfig';
 import AuditLoggingService from './auditLoggingService';
 
@@ -413,13 +414,13 @@ class KeyManagementService {
         try {
           metadata.status = KeyStatus.PENDING_ROTATION;
           await this.rotateKey(keyId);
-          console.log(`Auto-rotated key ${keyId} of type ${metadata.type}`);
+          safeLogger.info(`Auto-rotated key ${keyId} of type ${metadata.type}`);
         } catch (error) {
-          console.error(`Failed to auto-rotate key ${keyId}:`, error);
+          safeLogger.error(`Failed to auto-rotate key ${keyId}:`, error);
         }
       } else if (keyAge >= policy.rotationInterval - policy.notifyBeforeExpiry) {
         // Notify about upcoming rotation
-        console.warn(`Key ${keyId} of type ${metadata.type} will expire soon`);
+        safeLogger.warn(`Key ${keyId} of type ${metadata.type} will expire soon`);
       }
     }
   }
@@ -540,7 +541,7 @@ class KeyManagementService {
     // Check for key rotation every hour
     setInterval(() => {
       this.checkKeysForRotation().catch(error => {
-        console.error('Key rotation check failed:', error);
+        safeLogger.error('Key rotation check failed:', error);
       });
     }, 60 * 60 * 1000); // 1 hour
   }
@@ -644,7 +645,7 @@ class KeyManagementService {
   // HSM integration methods (placeholder implementations)
   private async storeKeyInHSM(keyId: string, keyMaterial: Buffer): Promise<void> {
     // Implementation would integrate with actual HSM
-    console.log(`Storing key ${keyId} in HSM`);
+    safeLogger.info(`Storing key ${keyId} in HSM`);
   }
 
   private async retrieveKeyFromHSM(keyId: string): Promise<Buffer> {
@@ -654,7 +655,7 @@ class KeyManagementService {
 
   private async deleteKeyFromHSM(keyId: string): Promise<void> {
     // Implementation would delete from actual HSM
-    console.log(`Deleting key ${keyId} from HSM`);
+    safeLogger.info(`Deleting key ${keyId} from HSM`);
   }
 }
 

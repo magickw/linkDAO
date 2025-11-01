@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sellers, products, orders, users } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg, isNotNull } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -177,7 +178,7 @@ export class SellerAnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(metrics));
       return metrics;
     } catch (error) {
-      console.error('Error getting seller performance metrics:', error);
+      safeLogger.error('Error getting seller performance metrics:', error);
       throw new Error('Failed to retrieve seller performance metrics');
     }
   }
@@ -200,7 +201,7 @@ export class SellerAnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(tierProgression));
       return tierProgression;
     } catch (error) {
-      console.error('Error getting seller tier progression:', error);
+      safeLogger.error('Error getting seller tier progression:', error);
       throw new Error('Failed to retrieve seller tier progression');
     }
   }
@@ -236,7 +237,7 @@ export class SellerAnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(performanceInsights));
       return performanceInsights;
     } catch (error) {
-      console.error('Error getting seller performance insights:', error);
+      safeLogger.error('Error getting seller performance insights:', error);
       throw new Error('Failed to retrieve seller performance insights');
     }
   }
@@ -259,7 +260,7 @@ export class SellerAnalyticsService {
       await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(bottlenecks));
       return bottlenecks;
     } catch (error) {
-      console.error('Error detecting performance bottlenecks:', error);
+      safeLogger.error('Error detecting performance bottlenecks:', error);
       throw new Error('Failed to detect performance bottlenecks');
     }
   }
@@ -287,7 +288,7 @@ export class SellerAnalyticsService {
       await this.redis.zadd(metricKey, Date.now(), value);
       await this.redis.expire(metricKey, 86400); // 24 hours
     } catch (error) {
-      console.error('Error tracking seller performance:', error);
+      safeLogger.error('Error tracking seller performance:', error);
     }
   }
 
@@ -323,7 +324,7 @@ export class SellerAnalyticsService {
         value: Number(row.value)
       }));
     } catch (error) {
-      console.error('Error getting seller performance trends:', error);
+      safeLogger.error('Error getting seller performance trends:', error);
       return [];
     }
   }
@@ -376,7 +377,7 @@ export class SellerAnalyticsService {
         summary: this.generateReportSummary(metrics, insights, tierProgression, bottlenecks)
       };
     } catch (error) {
-      console.error('Error generating seller report:', error);
+      safeLogger.error('Error generating seller report:', error);
       throw new Error('Failed to generate seller report');
     }
   }
@@ -426,7 +427,7 @@ export class SellerAnalyticsService {
         inventoryTurnover
       };
     } catch (error) {
-      console.error('Error calculating sales metrics:', error);
+      safeLogger.error('Error calculating sales metrics:', error);
       return {
         totalSales: 0,
         totalOrders: 0,
@@ -485,7 +486,7 @@ export class SellerAnalyticsService {
         customerLifetimeValue: Number(row?.customer_lifetime_value) || 0
       };
     } catch (error) {
-      console.error('Error calculating customer metrics:', error);
+      safeLogger.error('Error calculating customer metrics:', error);
       return {
         conversionRate: 0,
         customerSatisfaction: 0,
@@ -526,7 +527,7 @@ export class SellerAnalyticsService {
         conversionRate: Number(row.conversion_rate) || 0
       }));
     } catch (error) {
-      console.error('Error getting top products:', error);
+      safeLogger.error('Error getting top products:', error);
       return [];
     }
   }
@@ -546,7 +547,7 @@ export class SellerAnalyticsService {
         behavior
       };
     } catch (error) {
-      console.error('Error getting customer insights:', error);
+      safeLogger.error('Error getting customer insights:', error);
       return {
         demographics: {
           ageGroups: [],

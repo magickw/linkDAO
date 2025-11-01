@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { satisfactionTrackingService } from '../services/satisfactionTrackingService';
 
 export class SatisfactionTrackingController {
@@ -22,7 +24,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error creating satisfaction survey:', error);
+      safeLogger.error('Error creating satisfaction survey:', error);
       res.status(500).json({ 
         error: 'Failed to create satisfaction survey',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -92,7 +94,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error submitting survey response:', error);
+      safeLogger.error('Error submitting survey response:', error);
       res.status(500).json({ 
         error: 'Failed to submit survey response',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -120,7 +122,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error getting satisfaction metrics:', error);
+      safeLogger.error('Error getting satisfaction metrics:', error);
       res.status(500).json({ 
         error: 'Failed to get satisfaction metrics',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -148,7 +150,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error predicting satisfaction:', error);
+      safeLogger.error('Error predicting satisfaction:', error);
       res.status(500).json({ 
         error: 'Failed to predict satisfaction',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -186,7 +188,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error getting satisfaction analytics:', error);
+      safeLogger.error('Error getting satisfaction analytics:', error);
       res.status(500).json({ 
         error: 'Failed to get satisfaction analytics',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -214,7 +216,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error analyzing feedback:', error);
+      safeLogger.error('Error analyzing feedback:', error);
       res.status(500).json({ 
         error: 'Failed to analyze feedback',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -239,7 +241,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error generating improvement recommendations:', error);
+      safeLogger.error('Error generating improvement recommendations:', error);
       res.status(500).json({ 
         error: 'Failed to generate improvement recommendations',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -287,7 +289,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error getting satisfaction dashboard:', error);
+      safeLogger.error('Error getting satisfaction dashboard:', error);
       res.status(500).json({ 
         error: 'Failed to get satisfaction dashboard',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -320,7 +322,7 @@ export class SatisfactionTrackingController {
       });
 
     } catch (error) {
-      console.error('Error getting satisfaction trends:', error);
+      safeLogger.error('Error getting satisfaction trends:', error);
       res.status(500).json({ 
         error: 'Failed to get satisfaction trends',
         details: error instanceof Error ? error.message : 'Unknown error'

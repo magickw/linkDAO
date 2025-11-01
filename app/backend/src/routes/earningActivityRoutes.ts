@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { earningActivityController } from '../controllers/earningActivityController';
 import { authMiddleware } from '../middleware/authMiddleware';
 
@@ -12,7 +13,7 @@ router.use(authMiddleware);
  * @desc Process an earning activity
  * @access Private
  */
-router.post('/activity', earningActivityController.processEarningActivity.bind(earningActivityController));
+router.post('/activity', csrfProtection,  earningActivityController.processEarningActivity.bind(earningActivityController));
 
 /**
  * @route GET /api/earning/metrics
@@ -33,7 +34,7 @@ router.get('/feed', earningActivityController.getUserActivityFeed.bind(earningAc
  * @desc Mark activity feed items as read
  * @access Private
  */
-router.post('/feed/read', earningActivityController.markActivityFeedAsRead.bind(earningActivityController));
+router.post('/feed/read', csrfProtection,  earningActivityController.markActivityFeedAsRead.bind(earningActivityController));
 
 /**
  * @route GET /api/earning/leaderboard
@@ -61,6 +62,6 @@ router.get('/config', earningActivityController.getEarningConfig.bind(earningAct
  * @desc Trigger daily login reward
  * @access Private
  */
-router.post('/daily-login', earningActivityController.triggerDailyLoginReward.bind(earningActivityController));
+router.post('/daily-login', csrfProtection,  earningActivityController.triggerDailyLoginReward.bind(earningActivityController));
 
 export default router;

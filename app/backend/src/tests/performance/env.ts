@@ -14,7 +14,7 @@ if (!process.env.NODE_OPTIONS) {
 
 // Enable garbage collection exposure
 if (!process.execArgv.includes('--expose-gc')) {
-  console.warn('⚠️  Consider running with --expose-gc flag for accurate memory testing');
+  safeLogger.warn('⚠️  Consider running with --expose-gc flag for accurate memory testing');
 }
 
 // Set test timeouts
@@ -22,10 +22,10 @@ jest.setTimeout(120000); // 2 minutes for performance tests
 
 // Global error handlers for performance tests
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection in performance test:', reason);
+  safeLogger.error('Unhandled Rejection in performance test:', reason);
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception in performance test:', error);
+  safeLogger.error('Uncaught Exception in performance test:', error);
   process.exit(1);
 });

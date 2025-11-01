@@ -10,6 +10,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { TestEnvironment } from '../comprehensive/testEnvironment';
 import { LDAOAcquisitionService } from '../../services/ldaoAcquisitionService';
@@ -79,7 +80,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       expect(errorRate).toBeLessThan(maxErrorRate);
       expect(successful).toBeGreaterThanOrEqual(concurrentUsers * 0.95); // 95% success rate
 
-      console.log(`Performance Results:
+      safeLogger.info(`Performance Results:
         - Total time: ${totalTime.toFixed(2)}ms
         - Successful requests: ${successful}/${concurrentUsers}
         - Error rate: ${(errorRate * 100).toFixed(2)}%
@@ -252,7 +253,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
         expect(queryTime).toBeLessThan(1000); // Less than 1 second
         expect(result).toBeDefined();
         
-        console.log(`${queryTest.name}: ${queryTime.toFixed(2)}ms`);
+        safeLogger.info(`${queryTest.name}: ${queryTime.toFixed(2)}ms`);
       }
     });
 
@@ -335,7 +336,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
 
       // Analyze gas efficiency
       gasResults.forEach((result, index) => {
-        console.log(`Purchase ${index + 1}:
+        safeLogger.info(`Purchase ${index + 1}:
           - Amount: ${ethers.utils.formatEther(result.amount)} LDAO
           - Gas used: ${result.gasUsed}
           - Gas cost: ${ethers.utils.formatEther(result.totalCost)} ETH
@@ -381,7 +382,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       // Batch should be more efficient
       expect(batchGasPerUser).toBeLessThan(avgIndividualGas * 0.8); // 20% more efficient
 
-      console.log(`Gas Efficiency:
+      safeLogger.info(`Gas Efficiency:
         - Batch gas per user: ${batchGasPerUser}
         - Individual gas average: ${avgIndividualGas}
         - Efficiency gain: ${((1 - batchGasPerUser / avgIndividualGas) * 100).toFixed(1)}%
@@ -418,7 +419,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       const maxTime = Math.max(...responseTimes);
       const minTime = Math.min(...responseTimes);
 
-      console.log(`Price Quote Performance:
+      safeLogger.info(`Price Quote Performance:
         - Average response time: ${avgResponseTime.toFixed(2)}ms
         - Max response time: ${maxTime.toFixed(2)}ms
         - Min response time: ${minTime.toFixed(2)}ms
@@ -533,7 +534,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
       const memoryIncreasePercent = (memoryIncrease / initialMemory.heapUsed) * 100;
       
-      console.log(`Memory Usage Analysis:
+      safeLogger.info(`Memory Usage Analysis:
         - Initial heap: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)} MB
         - Final heap: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)} MB
         - Increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)} MB (${memoryIncreasePercent.toFixed(1)}%)
@@ -610,7 +611,7 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       // Cached request should be significantly faster
       expect(secondRequestTime).toBeLessThan(firstRequestTime * 0.5);
       
-      console.log(`Caching Performance:
+      safeLogger.info(`Caching Performance:
         - First request (cache miss): ${firstRequestTime.toFixed(2)}ms
         - Second request (cache hit): ${secondRequestTime.toFixed(2)}ms
         - Speed improvement: ${((firstRequestTime - secondRequestTime) / firstRequestTime * 100).toFixed(1)}%

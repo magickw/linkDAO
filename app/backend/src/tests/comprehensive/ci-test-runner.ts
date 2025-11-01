@@ -5,6 +5,7 @@
  */
 
 import fs from 'fs/promises';
+import { safeLogger } from '../utils/safeLogger';
 import path from 'path';
 
 interface TestResult {
@@ -39,7 +40,7 @@ class CITestRunner {
   }
 
   async run(): Promise<void> {
-    console.log('Starting CI test execution...');
+    safeLogger.info('Starting CI test execution...');
     
     try {
       // Run simplified tests
@@ -48,14 +49,14 @@ class CITestRunner {
       // Save report
       await this.saveReport(report);
       
-      console.log(`Test execution completed in ${report.duration}ms`);
-      console.log(`Passed: ${report.passedTests}, Failed: ${report.failedTests}`);
+      safeLogger.info(`Test execution completed in ${report.duration}ms`);
+      safeLogger.info(`Passed: ${report.passedTests}, Failed: ${report.failedTests}`);
       
       // For CI purposes, we'll exit with success to avoid breaking the pipeline
       // In a real scenario, you might want to be more strict about test failures
       process.exit(0);
     } catch (error) {
-      console.error('Test execution failed:', error);
+      safeLogger.error('Test execution failed:', error);
       process.exit(0); // Exit with success to avoid breaking CI
     }
   }
@@ -75,7 +76,7 @@ class CITestRunner {
       passedTests += suiteResult.passed;
       failedTests += suiteResult.failed;
     } catch (error) {
-      console.error('Error running test suite:', error);
+      safeLogger.error('Error running test suite:', error);
       failedTests += 1;
     }
 
@@ -103,7 +104,7 @@ class CITestRunner {
         name: 'Node.js Environment Check', 
         test: () => {
           const version = process.version;
-          console.log(`Node.js version: ${version}`);
+          safeLogger.info(`Node.js version: ${version}`);
           return version.startsWith('v');
         } 
       },
@@ -169,9 +170,9 @@ class CITestRunner {
       const artifactPath = path.join(reportsDir, 'execution-report-latest.json');
       await fs.writeFile(artifactPath, JSON.stringify(report, null, 2));
       
-      console.log(`Test report saved to ${reportPath}`);
+      safeLogger.info(`Test report saved to ${reportPath}`);
     } catch (error) {
-      console.error('Failed to save test report:', error);
+      safeLogger.error('Failed to save test report:', error);
     }
   }
 }
@@ -180,7 +181,7 @@ class CITestRunner {
 if (require.main === module) {
   const runner = new CITestRunner();
   runner.run().catch(error => {
-    console.error('Fatal error:', error);
+    safeLogger.error('Fatal error:', error);
     process.exit(0); // Exit with success to avoid breaking CI
   });
 }

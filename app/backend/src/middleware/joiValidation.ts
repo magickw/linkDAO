@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import Joi from 'joi';
 import { ApiResponse } from '../utils/apiResponse';
 
@@ -131,7 +132,7 @@ export const validateRequest = (schema: JoiValidationSchema) => {
 
       next();
     } catch (error) {
-      console.error('Validation middleware error:', error);
+      safeLogger.error('Validation middleware error:', error);
       ApiResponse.serverError(res, 'Validation processing failed');
     }
   };
@@ -431,7 +432,7 @@ export const createValidationMiddleware = (
 
       next();
     } catch (error) {
-      console.error('Validation middleware error:', error);
+      safeLogger.error('Validation middleware error:', error);
       ApiResponse.serverError(res, 'Validation processing failed');
     }
   };

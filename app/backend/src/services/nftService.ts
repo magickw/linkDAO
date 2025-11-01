@@ -1,4 +1,5 @@
 import { eq, desc, and, or, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { nfts, nftCollections, nftListings, nftOffers, nftAuctions, users } from '../db/schema';
 import ipfsService, { NFTMetadata } from './ipfsService';
@@ -114,7 +115,7 @@ class NFTService {
         animationUrl: animationHash ? `${ipfsService.getGatewayUrl()}${animationHash}` : null,
       };
     } catch (error) {
-      console.error('Error creating NFT:', error);
+      safeLogger.error('Error creating NFT:', error);
       throw new Error('Failed to create NFT');
     }
   }
@@ -146,7 +147,7 @@ class NFTService {
         imageUrl: imageResult.url,
       };
     } catch (error) {
-      console.error('Error creating collection:', error);
+      safeLogger.error('Error creating collection:', error);
       throw new Error('Failed to create collection');
     }
   }
@@ -188,7 +189,7 @@ class NFTService {
 
       return listing;
     } catch (error) {
-      console.error('Error listing NFT:', error);
+      safeLogger.error('Error listing NFT:', error);
       throw new Error('Failed to list NFT');
     }
   }
@@ -213,7 +214,7 @@ class NFTService {
 
       return auction;
     } catch (error) {
-      console.error('Error creating auction:', error);
+      safeLogger.error('Error creating auction:', error);
       throw new Error('Failed to create auction');
     }
   }
@@ -236,7 +237,7 @@ class NFTService {
 
       return offer;
     } catch (error) {
-      console.error('Error making offer:', error);
+      safeLogger.error('Error making offer:', error);
       throw new Error('Failed to make offer');
     }
   }
@@ -277,7 +278,7 @@ class NFTService {
         collection,
       };
     } catch (error) {
-      console.error('Error getting NFT by ID:', error);
+      safeLogger.error('Error getting NFT by ID:', error);
       throw new Error('Failed to get NFT');
     }
   }
@@ -307,7 +308,7 @@ class NFTService {
         collection,
       }));
     } catch (error) {
-      console.error('Error getting NFTs by creator:', error);
+      safeLogger.error('Error getting NFTs by creator:', error);
       throw new Error('Failed to get creator NFTs');
     }
   }
@@ -341,7 +342,7 @@ class NFTService {
         creator,
       }));
     } catch (error) {
-      console.error('Error getting NFTs by collection:', error);
+      safeLogger.error('Error getting NFTs by collection:', error);
       throw new Error('Failed to get collection NFTs');
     }
   }
@@ -386,7 +387,7 @@ class NFTService {
         collection,
       }));
     } catch (error) {
-      console.error('Error getting active listings:', error);
+      safeLogger.error('Error getting active listings:', error);
       throw new Error('Failed to get active listings');
     }
   }
@@ -431,7 +432,7 @@ class NFTService {
         collection,
       }));
     } catch (error) {
-      console.error('Error getting active auctions:', error);
+      safeLogger.error('Error getting active auctions:', error);
       throw new Error('Failed to get active auctions');
     }
   }
@@ -463,7 +464,7 @@ class NFTService {
         buyer,
       }));
     } catch (error) {
-      console.error('Error getting NFT offers:', error);
+      safeLogger.error('Error getting NFT offers:', error);
       throw new Error('Failed to get NFT offers');
     }
   }
@@ -481,7 +482,7 @@ class NFTService {
         })
         .where(eq(nfts.id, nftId));
     } catch (error) {
-      console.error('Error verifying NFT:', error);
+      safeLogger.error('Error verifying NFT:', error);
       throw new Error('Failed to verify NFT');
     }
   }
@@ -505,7 +506,7 @@ class NFTService {
         // Additional ownership transfers would be tracked here
       ];
     } catch (error) {
-      console.error('Error getting NFT provenance:', error);
+      safeLogger.error('Error getting NFT provenance:', error);
       throw new Error('Failed to get NFT provenance');
     }
   }
@@ -567,7 +568,7 @@ class NFTService {
         collection,
       }));
     } catch (error) {
-      console.error('Error searching NFTs:', error);
+      safeLogger.error('Error searching NFTs:', error);
       throw new Error('Failed to search NFTs');
     }
   }

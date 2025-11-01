@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { UniswapV3Service } from './uniswapV3Service';
 import { MultiChainConfig, CrossChainQuote, SwapParams, SwapQuote, TokenInfo } from '../types/uniswapV3';
 
@@ -113,7 +114,7 @@ export class MultiChainDEXService {
       const network = await provider.getNetwork();
       return network.chainId;
     } catch (error) {
-      console.error('Error detecting network:', error);
+      safeLogger.error('Error detecting network:', error);
       return 1; // Default to Ethereum mainnet
     }
   }
@@ -150,7 +151,7 @@ export class MultiChainDEXService {
         
         return { chainId, quote };
       } catch (error) {
-        console.error(`Error getting quote for chain ${chainId}:`, error);
+        safeLogger.error(`Error getting quote for chain ${chainId}:`, error);
         return null;
       }
     });

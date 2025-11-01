@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { projectManagementService } from '../services/projectManagementService';
 import { 
   StartTimeTrackingRequest,
@@ -30,7 +32,7 @@ export class ProjectManagementController {
         data: timeTracking
       });
     } catch (error) {
-      console.error('Error starting time tracking:', error);
+      safeLogger.error('Error starting time tracking:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to start time tracking'
@@ -53,7 +55,7 @@ export class ProjectManagementController {
         data: timeTracking
       });
     } catch (error) {
-      console.error('Error stopping time tracking:', error);
+      safeLogger.error('Error stopping time tracking:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to stop time tracking'
@@ -71,7 +73,7 @@ export class ProjectManagementController {
         data: timeTracking
       });
     } catch (error) {
-      console.error('Error getting time tracking:', error);
+      safeLogger.error('Error getting time tracking:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get time tracking'
@@ -93,7 +95,7 @@ export class ProjectManagementController {
         data: activeTracking
       });
     } catch (error) {
-      console.error('Error getting active time tracking:', error);
+      safeLogger.error('Error getting active time tracking:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get active time tracking'
@@ -117,7 +119,7 @@ export class ProjectManagementController {
         data: deliverable
       });
     } catch (error) {
-      console.error('Error creating deliverable:', error);
+      safeLogger.error('Error creating deliverable:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create deliverable'
@@ -141,7 +143,7 @@ export class ProjectManagementController {
         data: deliverable
       });
     } catch (error) {
-      console.error('Error updating deliverable:', error);
+      safeLogger.error('Error updating deliverable:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update deliverable'
@@ -159,7 +161,7 @@ export class ProjectManagementController {
         data: deliverables
       });
     } catch (error) {
-      console.error('Error getting deliverables:', error);
+      safeLogger.error('Error getting deliverables:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get deliverables'
@@ -183,7 +185,7 @@ export class ProjectManagementController {
         data: payment
       });
     } catch (error) {
-      console.error('Error creating milestone payment:', error);
+      safeLogger.error('Error creating milestone payment:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create milestone payment'
@@ -203,7 +205,7 @@ export class ProjectManagementController {
         data: payment
       });
     } catch (error) {
-      console.error('Error processing milestone payment:', error);
+      safeLogger.error('Error processing milestone payment:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process milestone payment'
@@ -227,7 +229,7 @@ export class ProjectManagementController {
         data: thread
       });
     } catch (error) {
-      console.error('Error creating project thread:', error);
+      safeLogger.error('Error creating project thread:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create project thread'
@@ -250,7 +252,7 @@ export class ProjectManagementController {
         data: message
       });
     } catch (error) {
-      console.error('Error sending project message:', error);
+      safeLogger.error('Error sending project message:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send project message'
@@ -268,7 +270,7 @@ export class ProjectManagementController {
         data: threads
       });
     } catch (error) {
-      console.error('Error getting project threads:', error);
+      safeLogger.error('Error getting project threads:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get project threads'
@@ -292,7 +294,7 @@ export class ProjectManagementController {
         data: messages
       });
     } catch (error) {
-      console.error('Error getting project messages:', error);
+      safeLogger.error('Error getting project messages:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get project messages'
@@ -316,7 +318,7 @@ export class ProjectManagementController {
         data: approval
       });
     } catch (error) {
-      console.error('Error creating approval:', error);
+      safeLogger.error('Error creating approval:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create approval'
@@ -343,7 +345,7 @@ export class ProjectManagementController {
         data: approval
       });
     } catch (error) {
-      console.error('Error processing approval:', error);
+      safeLogger.error('Error processing approval:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process approval'
@@ -367,7 +369,7 @@ export class ProjectManagementController {
         data: file
       });
     } catch (error) {
-      console.error('Error uploading project file:', error);
+      safeLogger.error('Error uploading project file:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to upload project file'
@@ -390,7 +392,7 @@ export class ProjectManagementController {
         data: files
       });
     } catch (error) {
-      console.error('Error getting project files:', error);
+      safeLogger.error('Error getting project files:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get project files'
@@ -414,7 +416,7 @@ export class ProjectManagementController {
         data: dashboard
       });
     } catch (error) {
-      console.error('Error getting project dashboard:', error);
+      safeLogger.error('Error getting project dashboard:', error);
       res.status(400).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to get project dashboard'

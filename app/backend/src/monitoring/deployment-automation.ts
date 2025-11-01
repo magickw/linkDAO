@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { safeLogger } from '../utils/safeLogger';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
@@ -571,14 +572,14 @@ class DeploymentAutomationService {
         body: JSON.stringify(payload)
       });
     } catch (error) {
-      console.warn('Failed to send Slack notification:', error);
+      safeLogger.warn('Failed to send Slack notification:', error);
     }
   }
 
   private async sendEmailNotification(event: string, deployment: DeploymentStatus): Promise<void> {
     // Email notification implementation would go here
     // This is a placeholder for actual email service integration
-    console.log(`Would send email notification for ${event}:`, deployment);
+    safeLogger.info(`Would send email notification for ${event}:`, deployment);
   }
 
   private generateDeploymentId(): string {

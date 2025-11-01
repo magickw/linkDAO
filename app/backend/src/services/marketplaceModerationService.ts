@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { ReputationService } from './reputationService';
 import { AIModerationOrchestrator, ContentInput } from './aiModerationOrchestrator';
 import EvidenceStorageService from './evidenceStorageService';
@@ -248,7 +249,7 @@ export class MarketplaceModerationService {
       return result;
 
     } catch (error) {
-      console.error('Marketplace moderation error:', error);
+      safeLogger.error('Marketplace moderation error:', error);
       
       // Return safe fallback
       return {
@@ -340,7 +341,7 @@ export class MarketplaceModerationService {
       };
 
     } catch (error) {
-      console.error('NFT verification error:', error);
+      safeLogger.error('NFT verification error:', error);
       return {
         status: 'flagged',
         ownershipVerified: false,
@@ -410,7 +411,7 @@ export class MarketplaceModerationService {
       };
 
     } catch (error) {
-      console.error('Seller verification error:', error);
+      safeLogger.error('Seller verification error:', error);
       return {
         tier: 'new',
         kycStatus: 'none',
@@ -491,7 +492,7 @@ export class MarketplaceModerationService {
       };
 
     } catch (error) {
-      console.error('Counterfeit detection error:', error);
+      safeLogger.error('Counterfeit detection error:', error);
       return {
         isCounterfeit: false,
         confidence: 0,
@@ -591,7 +592,7 @@ export class MarketplaceModerationService {
       };
 
     } catch (error) {
-      console.error('Scam detection error:', error);
+      safeLogger.error('Scam detection error:', error);
       return {
         isScam: false,
         confidence: 0,
@@ -718,7 +719,7 @@ export class MarketplaceModerationService {
       });
       return bundle.ipfsHash;
     } catch (error) {
-      console.error('Evidence storage error:', error);
+      safeLogger.error('Evidence storage error:', error);
       return '';
     }
   }
@@ -731,7 +732,7 @@ export class MarketplaceModerationService {
   private async logModerationDecision(result: MarketplaceModerationResult): Promise<void> {
     try {
       // Log moderation decision for analytics
-      console.log('Marketplace moderation decision:', {
+      safeLogger.info('Marketplace moderation decision:', {
         listingId: result.listingId,
         decision: result.overallDecision,
         confidence: result.confidence,
@@ -739,7 +740,7 @@ export class MarketplaceModerationService {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Moderation logging error:', error);
+      safeLogger.error('Moderation logging error:', error);
     }
   }
 

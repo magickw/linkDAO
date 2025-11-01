@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import compression from 'compression';
 import { constants } from 'zlib';
 import { performance } from 'perf_hooks';
@@ -341,7 +342,7 @@ export class CompressionOptimizationMiddleware {
 
       return data;
     } catch (error) {
-      console.error('Error optimizing JSON for compression:', error);
+      safeLogger.error('Error optimizing JSON for compression:', error);
       return data;
     }
   }
@@ -436,7 +437,7 @@ export class CompressionOptimizationMiddleware {
 
       return content;
     } catch (error) {
-      console.error('Error minifying content:', error);
+      safeLogger.error('Error minifying content:', error);
       return content;
     }
   }

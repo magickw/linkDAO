@@ -1,4 +1,5 @@
 import { db } from '../db/index';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, sum, count, gte, lte, sql } from 'drizzle-orm';
 import { 
   marketplaceRewards, 
@@ -102,7 +103,7 @@ class MarketplaceRewardsService {
    */
   async processMarketplaceRewards(data: MarketplaceTransactionData): Promise<void> {
     try {
-      console.log('Processing marketplace rewards for order:', data.orderId);
+      safeLogger.info('Processing marketplace rewards for order:', data.orderId);
 
       // Calculate base reward amounts
       const baseRewardPercentage = 0.5; // 0.5% of transaction value
@@ -182,10 +183,10 @@ class MarketplaceRewardsService {
         await this.updateChallengeProgress(data.sellerId, 'seller', data.transactionAmount);
       }
 
-      console.log(`Marketplace rewards processed: Buyer: ${buyerReward}, Seller: ${sellerReward}`);
+      safeLogger.info(`Marketplace rewards processed: Buyer: ${buyerReward}, Seller: ${sellerReward}`);
 
     } catch (error) {
-      console.error('Error processing marketplace rewards:', error);
+      safeLogger.error('Error processing marketplace rewards:', error);
     }
   }
 
@@ -223,7 +224,7 @@ class MarketplaceRewardsService {
       return this.volumeTiers[0]; // Default to Bronze tier
 
     } catch (error) {
-      console.error('Error getting user volume tier:', error);
+      safeLogger.error('Error getting user volume tier:', error);
       return this.volumeTiers[0];
     }
   }
@@ -328,7 +329,7 @@ class MarketplaceRewardsService {
       }
 
     } catch (error) {
-      console.error('Error updating challenge progress:', error);
+      safeLogger.error('Error updating challenge progress:', error);
     }
   }
 
@@ -379,7 +380,7 @@ class MarketplaceRewardsService {
       }
 
     } catch (error) {
-      console.error('Error processing challenge completion:', error);
+      safeLogger.error('Error processing challenge completion:', error);
     }
   }
 
@@ -414,7 +415,7 @@ class MarketplaceRewardsService {
       };
 
     } catch (error) {
-      console.error('Error creating marketplace challenge:', error);
+      safeLogger.error('Error creating marketplace challenge:', error);
       return {
         success: false,
         message: 'Failed to create marketplace challenge'
@@ -483,7 +484,7 @@ class MarketplaceRewardsService {
       };
 
     } catch (error) {
-      console.error('Error getting user marketplace stats:', error);
+      safeLogger.error('Error getting user marketplace stats:', error);
       return {
         totalTransactions: 0,
         totalVolume: 0,
@@ -546,7 +547,7 @@ class MarketplaceRewardsService {
       return challenges;
 
     } catch (error) {
-      console.error('Error getting active marketplace challenges:', error);
+      safeLogger.error('Error getting active marketplace challenges:', error);
       return [];
     }
   }
@@ -581,7 +582,7 @@ class MarketplaceRewardsService {
         .offset(offset);
 
     } catch (error) {
-      console.error('Error getting marketplace rewards history:', error);
+      safeLogger.error('Error getting marketplace rewards history:', error);
       return [];
     }
   }

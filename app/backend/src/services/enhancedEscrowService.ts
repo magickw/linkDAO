@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
 import { PaymentValidationService } from './paymentValidationService';
@@ -183,7 +184,7 @@ export class EnhancedEscrowService {
       result.isValid = result.errors.length === 0;
       return result;
     } catch (error) {
-      console.error('Error validating escrow creation:', error);
+      safeLogger.error('Error validating escrow creation:', error);
       result.errors.push('Escrow validation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return result;
     }
@@ -243,9 +244,9 @@ export class EnhancedEscrowService {
       const escrowId = dbEscrow.id.toString();
 
       // In a real implementation, interact with smart contract here
-      console.log(`Creating enhanced escrow ${escrowId} for listing ${listingId}`);
-      console.log(`Buyer: ${buyerAddress}, Seller: ${sellerAddress}`);
-      console.log(`Token: ${tokenAddress}, Amount: ${amount}`);
+      safeLogger.info(`Creating enhanced escrow ${escrowId} for listing ${listingId}`);
+      safeLogger.info(`Buyer: ${buyerAddress}, Seller: ${sellerAddress}`);
+      safeLogger.info(`Token: ${tokenAddress}, Amount: ${amount}`);
 
       // Send notifications
       await Promise.all([
@@ -255,7 +256,7 @@ export class EnhancedEscrowService {
 
       return escrowId;
     } catch (error) {
-      console.error('Error creating enhanced escrow:', error);
+      safeLogger.error('Error creating enhanced escrow:', error);
       throw error;
     }
   }
@@ -294,7 +295,7 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, interact with smart contract
-      console.log(`Locking ${amount} ${tokenAddress} in escrow ${escrowId}`);
+      safeLogger.info(`Locking ${amount} ${tokenAddress} in escrow ${escrowId}`);
       
       // Update escrow status in database
       await databaseService.updateEscrow(parseInt(escrowId), {
@@ -307,9 +308,9 @@ export class EnhancedEscrowService {
         notificationService.sendOrderNotification(escrow.sellerWalletAddress, 'ESCROW_FUNDED', escrowId)
       ]);
 
-      console.log(`Successfully locked funds in escrow ${escrowId}`);
+      safeLogger.info(`Successfully locked funds in escrow ${escrowId}`);
     } catch (error) {
-      console.error('Error locking funds in escrow:', error);
+      safeLogger.error('Error locking funds in escrow:', error);
       
       // Send error notification to buyer
       const escrow = await this.getEscrow(escrowId);
@@ -338,14 +339,14 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Confirming delivery for escrow ${escrowId}: ${deliveryInfo}`);
+      safeLogger.info(`Confirming delivery for escrow ${escrowId}: ${deliveryInfo}`);
       
       // Update escrow in database
       await databaseService.updateEscrow(parseInt(escrowId), {
         // In a real implementation, we would store delivery info
       });
     } catch (error) {
-      console.error('Error confirming delivery:', error);
+      safeLogger.error('Error confirming delivery:', error);
       throw error;
     }
   }
@@ -362,14 +363,14 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Approving escrow ${escrowId} by buyer ${buyerAddress}`);
+      safeLogger.info(`Approving escrow ${escrowId} by buyer ${buyerAddress}`);
       
       // Update escrow in database
       await databaseService.updateEscrow(parseInt(escrowId), {
         buyerApproved: true
       });
     } catch (error) {
-      console.error('Error approving escrow:', error);
+      safeLogger.error('Error approving escrow:', error);
       throw error;
     }
   }
@@ -387,14 +388,14 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Opening dispute for escrow ${escrowId} by ${userAddress}: ${reason}`);
+      safeLogger.info(`Opening dispute for escrow ${escrowId} by ${userAddress}: ${reason}`);
       
       // Update escrow in database
       await databaseService.updateEscrow(parseInt(escrowId), {
         disputeOpened: true
       });
     } catch (error) {
-      console.error('Error opening dispute:', error);
+      safeLogger.error('Error opening dispute:', error);
       throw error;
     }
   }
@@ -412,9 +413,9 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Submitting evidence for escrow ${escrowId} by ${userAddress}: ${evidence}`);
+      safeLogger.info(`Submitting evidence for escrow ${escrowId} by ${userAddress}: ${evidence}`);
     } catch (error) {
-      console.error('Error submitting evidence:', error);
+      safeLogger.error('Error submitting evidence:', error);
       throw error;
     }
   }
@@ -432,9 +433,9 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Casting vote for escrow ${escrowId} by ${voterAddress}: ${voteForBuyer ? 'Buyer' : 'Seller'}`);
+      safeLogger.info(`Casting vote for escrow ${escrowId} by ${voterAddress}: ${voteForBuyer ? 'Buyer' : 'Seller'}`);
     } catch (error) {
-      console.error('Error casting vote:', error);
+      safeLogger.error('Error casting vote:', error);
       throw error;
     }
   }
@@ -472,7 +473,7 @@ export class EnhancedEscrowService {
       
       return escrow;
     } catch (error) {
-      console.error('Error getting escrow:', error);
+      safeLogger.error('Error getting escrow:', error);
       throw error;
     }
   }
@@ -491,10 +492,10 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, we would interact with the smart contract
-      console.log(`Getting reputation score for ${userAddress}`);
+      safeLogger.info(`Getting reputation score for ${userAddress}`);
       return 50; // Default score
     } catch (error) {
-      console.error('Error getting user reputation:', error);
+      safeLogger.error('Error getting user reputation:', error);
       return 0;
     }
   }
@@ -533,7 +534,7 @@ export class EnhancedEscrowService {
         resolvedAt: escrow.resolvedAt ? new Date(escrow.resolvedAt) : undefined
       };
     } catch (error) {
-      console.error('Error getting escrow status:', error);
+      safeLogger.error('Error getting escrow status:', error);
       return null;
     }
   }
@@ -605,7 +606,7 @@ export class EnhancedEscrowService {
 
       return options;
     } catch (error) {
-      console.error('Error getting escrow recovery options:', error);
+      safeLogger.error('Error getting escrow recovery options:', error);
       return {
         canCancel: false,
         canRefund: false,
@@ -646,7 +647,7 @@ export class EnhancedEscrowService {
       }
 
       // In a real implementation, interact with smart contract
-      console.log(`Cancelling escrow ${escrowId} by ${cancellerAddress}: ${reason}`);
+      safeLogger.info(`Cancelling escrow ${escrowId} by ${cancellerAddress}: ${reason}`);
 
       // Update database
       await databaseService.updateEscrow(parseInt(escrowId), {
@@ -662,9 +663,9 @@ export class EnhancedEscrowService {
         notificationService.sendOrderNotification(otherParty, 'ESCROW_CANCELLED', escrowId, { reason, cancelledBy: cancellerAddress })
       ]);
 
-      console.log(`Successfully cancelled escrow ${escrowId}`);
+      safeLogger.info(`Successfully cancelled escrow ${escrowId}`);
     } catch (error) {
-      console.error('Error cancelling escrow:', error);
+      safeLogger.error('Error cancelling escrow:', error);
       throw error;
     }
   }
@@ -684,7 +685,7 @@ export class EnhancedEscrowService {
         throw new Error('Unable to get escrow status');
       }
 
-      console.log(`Retrying ${operation} operation for escrow ${escrowId}`);
+      safeLogger.info(`Retrying ${operation} operation for escrow ${escrowId}`);
 
       switch (operation) {
         case 'fund':
@@ -706,16 +707,16 @@ export class EnhancedEscrowService {
             throw new Error('Escrow is not in disputed state for resolution retry');
           }
           // In a real implementation, retry dispute resolution
-          console.log(`Retrying dispute resolution for escrow ${escrowId}`);
+          safeLogger.info(`Retrying dispute resolution for escrow ${escrowId}`);
           break;
 
         default:
           throw new Error(`Unknown operation: ${operation}`);
       }
 
-      console.log(`Successfully retried ${operation} for escrow ${escrowId}`);
+      safeLogger.info(`Successfully retried ${operation} for escrow ${escrowId}`);
     } catch (error) {
-      console.error(`Error retrying ${operation} for escrow ${escrowId}:`, error);
+      safeLogger.error(`Error retrying ${operation} for escrow ${escrowId}:`, error);
       throw error;
     }
   }
@@ -728,9 +729,9 @@ export class EnhancedEscrowService {
   async sendNotification(userAddress: string, message: string): Promise<void> {
     try {
       // In a real implementation, this would send actual notifications
-      console.log(`Notification to ${userAddress}: ${message}`);
+      safeLogger.info(`Notification to ${userAddress}: ${message}`);
     } catch (error) {
-      console.error('Error sending notification:', error);
+      safeLogger.error('Error sending notification:', error);
     }
   }
 }

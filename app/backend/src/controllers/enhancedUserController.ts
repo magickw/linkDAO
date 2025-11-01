@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { EnhancedUserService, UserRecommendationFilters, UserSearchFilters } from '../services/enhancedUserService';
 
 export class EnhancedUserController {
@@ -29,7 +31,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error in getUserProfile:', error);
+      safeLogger.error('Error in getUserProfile:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -55,7 +57,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error in getUserProfileByAddress:', error);
+      safeLogger.error('Error in getUserProfileByAddress:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -81,7 +83,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error in getUserProfileByHandle:', error);
+      safeLogger.error('Error in getUserProfileByHandle:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -115,7 +117,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: suggestions });
     } catch (error) {
-      console.error('Error in getSuggestedUsers:', error);
+      safeLogger.error('Error in getSuggestedUsers:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -150,7 +152,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: results });
     } catch (error) {
-      console.error('Error in searchUsers:', error);
+      safeLogger.error('Error in searchUsers:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -176,7 +178,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, message: 'User followed successfully' });
     } catch (error) {
-      console.error('Error in followUser:', error);
+      safeLogger.error('Error in followUser:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -202,7 +204,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, message: 'User unfollowed successfully' });
     } catch (error) {
-      console.error('Error in unfollowUser:', error);
+      safeLogger.error('Error in unfollowUser:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -227,7 +229,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: followers });
     } catch (error) {
-      console.error('Error in getFollowers:', error);
+      safeLogger.error('Error in getFollowers:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -252,7 +254,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: following });
     } catch (error) {
-      console.error('Error in getFollowing:', error);
+      safeLogger.error('Error in getFollowing:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -273,7 +275,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: { isFollowing } });
     } catch (error) {
-      console.error('Error in checkFollowStatus:', error);
+      safeLogger.error('Error in checkFollowStatus:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -291,7 +293,7 @@ export class EnhancedUserController {
 
       res.json({ success: true, data: trendingUsers });
     } catch (error) {
-      console.error('Error in getTrendingUsers:', error);
+      safeLogger.error('Error in getTrendingUsers:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }

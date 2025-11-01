@@ -63,7 +63,7 @@ export class ExchangeRateService {
       
       return rate;
     } catch (error) {
-      console.error(`Error fetching exchange rate for ${fromCurrency}/${toCurrency}:`, error);
+      safeLogger.error(`Error fetching exchange rate for ${fromCurrency}/${toCurrency}:`, error);
       
       // Return cached rate if available, even if expired
       if (cached) {
@@ -334,7 +334,7 @@ export class ExchangeRateService {
         spread: rate * 0.002,
       };
     } catch (error) {
-      console.error(`Error fetching real exchange rate for ${fromCurrency}/${toCurrency}:`, error);
+      safeLogger.error(`Error fetching real exchange rate for ${fromCurrency}/${toCurrency}:`, error);
       throw new Error(`Unable to get real exchange rate for ${fromCurrency}/${toCurrency}`);
     }
   }

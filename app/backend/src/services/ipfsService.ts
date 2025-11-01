@@ -1,4 +1,5 @@
 import type { IPFSHTTPClient } from 'ipfs-http-client';
+import { safeLogger } from '../utils/safeLogger';
 import { Readable } from 'stream';
 
 // IPFS configuration
@@ -83,7 +84,7 @@ class IPFSService {
         });
       }
     } catch (error) {
-      console.error('Failed to initialize IPFS client:', error);
+      safeLogger.error('Failed to initialize IPFS client:', error);
     }
   }
 
@@ -142,7 +143,7 @@ class IPFSService {
         };
       }
     } catch (error) {
-      console.error('Error uploading file to IPFS:', error);
+      safeLogger.error('Error uploading file to IPFS:', error);
       throw new Error('Failed to upload file to IPFS');
     }
   }
@@ -167,7 +168,7 @@ class IPFSService {
         size: result.size,
       };
     } catch (error) {
-      console.error('Error uploading metadata to IPFS:', error);
+      safeLogger.error('Error uploading metadata to IPFS:', error);
       throw new Error('Failed to upload metadata to IPFS');
     }
   }
@@ -186,7 +187,7 @@ class IPFSService {
 
       return results;
     } catch (error) {
-      console.error('Error uploading multiple files to IPFS:', error);
+      safeLogger.error('Error uploading multiple files to IPFS:', error);
       throw new Error('Failed to upload files to IPFS');
     }
   }
@@ -199,7 +200,7 @@ class IPFSService {
       const client = await this.ensureClient();
       await client.pin.add(hash);
     } catch (error) {
-      console.error('Error pinning content to IPFS:', error);
+      safeLogger.error('Error pinning content to IPFS:', error);
       throw new Error('Failed to pin content to IPFS');
     }
   }
@@ -212,7 +213,7 @@ class IPFSService {
       const client = await this.ensureClient();
       await client.pin.rm(hash);
     } catch (error) {
-      console.error('Error unpinning content from IPFS:', error);
+      safeLogger.error('Error unpinning content from IPFS:', error);
       throw new Error('Failed to unpin content from IPFS');
     }
   }
@@ -231,7 +232,7 @@ class IPFSService {
 
       return Buffer.concat(chunks);
     } catch (error) {
-      console.error('Error getting content from IPFS:', error);
+      safeLogger.error('Error getting content from IPFS:', error);
       throw new Error('Failed to get content from IPFS');
     }
   }
@@ -244,7 +245,7 @@ class IPFSService {
       const content = await this.getContent(hash);
       return JSON.parse(content.toString());
     } catch (error) {
-      console.error('Error getting metadata from IPFS:', error);
+      safeLogger.error('Error getting metadata from IPFS:', error);
       throw new Error('Failed to get metadata from IPFS');
     }
   }
@@ -358,7 +359,7 @@ class IPFSService {
 
       return results;
     } catch (error) {
-      console.error('Error batch uploading collection:', error);
+      safeLogger.error('Error batch uploading collection:', error);
       throw new Error('Failed to batch upload collection');
     }
   }

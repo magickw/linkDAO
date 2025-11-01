@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { disputeService } from "../services/disputeService";
 import { databaseService } from "../services/databaseService";
 import { eq, desc } from "drizzle-orm";
@@ -39,7 +41,7 @@ export class DisputeController {
         totalPages: Math.ceil(totalCount / parseInt(limit as string))
       });
     } catch (error) {
-      console.error("Error fetching disputes:", error);
+      safeLogger.error("Error fetching disputes:", error);
       res.status(500).json({ error: "Failed to fetch disputes" });
     }
   }
@@ -57,7 +59,7 @@ export class DisputeController {
       
       res.json(disputeDetails);
     } catch (error) {
-      console.error("Error fetching dispute:", error);
+      safeLogger.error("Error fetching dispute:", error);
       res.status(500).json({ error: "Failed to fetch dispute" });
     }
   }
@@ -83,7 +85,7 @@ export class DisputeController {
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error assigning dispute:", error);
+      safeLogger.error("Error assigning dispute:", error);
       res.status(500).json({ error: "Failed to assign dispute" });
     }
   }
@@ -121,7 +123,7 @@ export class DisputeController {
       
       res.json({ success: true });
     } catch (error) {
-      console.error("Error resolving dispute:", error);
+      safeLogger.error("Error resolving dispute:", error);
       res.status(500).json({ error: "Failed to resolve dispute" });
     }
   }
@@ -134,11 +136,11 @@ export class DisputeController {
 
       // In a real implementation, we would store notes in a separate table
       // For now, we'll just log it
-      console.log(`Note added to dispute ${disputeId}: ${note}`);
+      safeLogger.info(`Note added to dispute ${disputeId}: ${note}`);
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error adding dispute note:", error);
+      safeLogger.error("Error adding dispute note:", error);
       res.status(500).json({ error: "Failed to add dispute note" });
     }
   }
@@ -174,7 +176,7 @@ export class DisputeController {
         evidence
       });
     } catch (error) {
-      console.error("Error uploading evidence:", error);
+      safeLogger.error("Error uploading evidence:", error);
       res.status(500).json({ error: "Failed to upload evidence" });
     }
   }
@@ -184,11 +186,11 @@ export class DisputeController {
       const { disputeId, evidenceId } = req.params;
 
       // In production, delete from cloud storage and database
-      console.log(`Deleting evidence ${evidenceId} from dispute ${disputeId}`);
+      safeLogger.info(`Deleting evidence ${evidenceId} from dispute ${disputeId}`);
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error deleting evidence:", error);
+      safeLogger.error("Error deleting evidence:", error);
       res.status(500).json({ error: "Failed to delete evidence" });
     }
   }
@@ -199,11 +201,11 @@ export class DisputeController {
       const { status } = req.body;
 
       // In production, update evidence status in database
-      console.log(`Updating evidence ${evidenceId} status to ${status}`);
+      safeLogger.info(`Updating evidence ${evidenceId} status to ${status}`);
 
       res.json({ success: true });
     } catch (error) {
-      console.error("Error updating evidence status:", error);
+      safeLogger.error("Error updating evidence status:", error);
       res.status(500).json({ error: "Failed to update evidence status" });
     }
   }
@@ -247,7 +249,7 @@ export class DisputeController {
 
       res.json({ messages });
     } catch (error) {
-      console.error("Error fetching dispute messages:", error);
+      safeLogger.error("Error fetching dispute messages:", error);
       res.status(500).json({ error: "Failed to fetch dispute messages" });
     }
   }
@@ -268,14 +270,14 @@ export class DisputeController {
         attachments: []
       };
 
-      console.log(`Message sent to dispute ${disputeId}:`, newMessage);
+      safeLogger.info(`Message sent to dispute ${disputeId}:`, newMessage);
 
       res.json({
         success: true,
         message: newMessage
       });
     } catch (error) {
-      console.error("Error sending message:", error);
+      safeLogger.error("Error sending message:", error);
       res.status(500).json({ error: "Failed to send message" });
     }
   }

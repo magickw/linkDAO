@@ -17,6 +17,7 @@ import {
   ProductAnalytics
 } from '../models/Product';
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { MetadataService } from './metadataService';
 import { priceOracleService } from './priceOracleService';
 import { ValidationHelper, ValidationError } from '../models/validation';
@@ -674,7 +675,7 @@ export class ProductService {
           lastUpdated: new Date()
         };
       } catch (error) {
-        console.error('Failed to convert product price:', error);
+        safeLogger.error('Failed to convert product price:', error);
         // Continue with original price data
       }
     }

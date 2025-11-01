@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   registerMobilePushToken,
   unregisterMobilePushToken,
@@ -22,21 +23,21 @@ router.use(authenticateToken);
  * @desc    Register a mobile push notification token
  * @access  Private
  */
-router.post('/push/register', registerMobilePushToken);
+router.post('/push/register', csrfProtection,  registerMobilePushToken);
 
 /**
  * @route   DELETE /api/mobile/push/unregister
  * @desc    Unregister a mobile push notification token
  * @access  Private
  */
-router.delete('/push/unregister', unregisterMobilePushToken);
+router.delete('/push/unregister', csrfProtection,  unregisterMobilePushToken);
 
 /**
  * @route   POST /api/mobile/push/preferences
  * @desc    Update mobile notification preferences
  * @access  Private
  */
-router.post('/push/preferences', updateMobileNotificationPreferences);
+router.post('/push/preferences', csrfProtection,  updateMobileNotificationPreferences);
 
 /**
  * @route   GET /api/mobile/push/preferences
@@ -50,7 +51,7 @@ router.get('/push/preferences', getMobileNotificationPreferences);
  * @desc    Sync offline actions
  * @access  Private
  */
-router.post('/offline/sync', syncOfflineActions);
+router.post('/offline/sync', csrfProtection,  syncOfflineActions);
 
 /**
  * @route   GET /api/mobile/offline/content
@@ -64,7 +65,7 @@ router.get('/offline/content', getOfflineContent);
  * @desc    Prepare offline content for caching
  * @access  Private
  */
-router.post('/offline/prepare', prepareOfflineContent);
+router.post('/offline/prepare', csrfProtection,  prepareOfflineContent);
 
 /**
  * @route   GET /api/mobile/offline/stats
@@ -78,6 +79,6 @@ router.get('/offline/stats', getOfflineStats);
  * @desc    Upload image from mobile device
  * @access  Private
  */
-router.post('/upload/image', uploadImage);
+router.post('/upload/image', csrfProtection,  uploadImage);
 
 export default router;

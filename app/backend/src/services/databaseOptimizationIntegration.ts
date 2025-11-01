@@ -5,6 +5,7 @@
  */
 
 import { Pool } from 'pg';
+import { safeLogger } from '../utils/safeLogger';
 import EnhancedDatabaseOptimizationService from './enhancedDatabaseOptimizationService';
 import DatabaseConnectionOptimizer from './databaseConnectionOptimizer';
 import { queryResultCachingMiddleware } from '../middleware/queryResultCachingMiddleware';
@@ -107,7 +108,7 @@ export class DatabaseOptimizationIntegration {
       try {
         await this.generateOptimizationReport();
       } catch (error) {
-        console.error('Error generating optimization report:', error);
+        safeLogger.error('Error generating optimization report:', error);
       }
     }, this.config.reportingInterval);
 
@@ -116,7 +117,7 @@ export class DatabaseOptimizationIntegration {
       try {
         await this.runOptimizationCycle();
       } catch (error) {
-        console.error('Error running optimization cycle:', error);
+        safeLogger.error('Error running optimization cycle:', error);
       }
     }, this.config.optimizationInterval);
   }
@@ -250,7 +251,7 @@ export class DatabaseOptimizationIntegration {
         const redisStats = await cacheService.getStats();
         caching.redisCacheHitRate = redisStats.hitRate;
       } catch (error) {
-        console.warn('Could not get Redis cache stats:', error);
+        safeLogger.warn('Could not get Redis cache stats:', error);
       }
 
       // Add caching recommendations
@@ -336,17 +337,17 @@ export class DatabaseOptimizationIntegration {
     this.lastReport = report;
 
     // Log the report
-    console.log('Database Optimization Report Generated:');
-    console.log(`- Average Query Time: ${performance.averageQueryTime.toFixed(2)}ms`);
-    console.log(`- Slow Queries: ${performance.slowQueries}`);
-    console.log(`- Cache Hit Rate: ${(caching.queryResultCacheHitRate * 100).toFixed(1)}%`);
-    console.log(`- Pool Utilization: ${performance.connectionPoolUtilization.toFixed(1)}%`);
-    console.log(`- Recommendations: ${recommendations.length}`);
+    safeLogger.info('Database Optimization Report Generated:');
+    safeLogger.info(`- Average Query Time: ${performance.averageQueryTime.toFixed(2)}ms`);
+    safeLogger.info(`- Slow Queries: ${performance.slowQueries}`);
+    safeLogger.info(`- Cache Hit Rate: ${(caching.queryResultCacheHitRate * 100).toFixed(1)}%`);
+    safeLogger.info(`- Pool Utilization: ${performance.connectionPoolUtilization.toFixed(1)}%`);
+    safeLogger.info(`- Recommendations: ${recommendations.length}`);
 
     if (recommendations.length > 0) {
-      console.log('Top Recommendations:');
+      safeLogger.info('Top Recommendations:');
       recommendations.slice(0, 3).forEach((rec, index) => {
-        console.log(`  ${index + 1}. [${rec.priority.toUpperCase()}] ${rec.description}`);
+        safeLogger.info(`  ${index + 1}. [${rec.priority.toUpperCase()}] ${rec.description}`);
       });
     }
 
@@ -357,7 +358,7 @@ export class DatabaseOptimizationIntegration {
    * Run optimization cycle
    */
   private async runOptimizationCycle(): Promise<void> {
-    console.log('🔧 Starting database optimization cycle...');
+    safeLogger.info('🔧 Starting database optimization cycle...');
 
     const results = {
       indexesCreated: 0,
@@ -403,18 +404,18 @@ export class DatabaseOptimizationIntegration {
         }
       }
 
-      console.log('✅ Database optimization cycle completed:');
-      console.log(`- Indexes created: ${results.indexesCreated}`);
-      console.log(`- Indexes dropped: ${results.indexesDropped}`);
-      console.log(`- Optimizations applied: ${results.optimizationsApplied}`);
+      safeLogger.info('✅ Database optimization cycle completed:');
+      safeLogger.info(`- Indexes created: ${results.indexesCreated}`);
+      safeLogger.info(`- Indexes dropped: ${results.indexesDropped}`);
+      safeLogger.info(`- Optimizations applied: ${results.optimizationsApplied}`);
       
       if (results.errors.length > 0) {
-        console.log(`- Errors: ${results.errors.length}`);
-        results.errors.forEach(error => console.error(`  - ${error}`));
+        safeLogger.info(`- Errors: ${results.errors.length}`);
+        results.errors.forEach(error => safeLogger.error(`  - ${error}`));
       }
 
     } catch (error) {
-      console.error('Database optimization cycle failed:', error);
+      safeLogger.error('Database optimization cycle failed:', error);
     }
   }
 
@@ -434,7 +435,7 @@ export class DatabaseOptimizationIntegration {
       ]);
 
     } catch (error) {
-      console.error('Cache warming failed:', error);
+      safeLogger.error('Cache warming failed:', error);
     }
   }
 
@@ -487,15 +488,15 @@ export class DatabaseOptimizationIntegration {
 
         case 'queries':
           // Query optimizations are applied automatically during execution
-          console.log('Query optimizations will be applied automatically during execution');
+          safeLogger.info('Query optimizations will be applied automatically during execution');
           break;
       }
 
-      console.log(`✅ Applied recommendation: ${recommendation.description}`);
+      safeLogger.info(`✅ Applied recommendation: ${recommendation.description}`);
       return true;
 
     } catch (error) {
-      console.error(`❌ Failed to apply recommendation: ${error}`);
+      safeLogger.error(`❌ Failed to apply recommendation: ${error}`);
       return false;
     }
   }

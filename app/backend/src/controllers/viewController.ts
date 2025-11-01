@@ -5,6 +5,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { viewService } from '../services/viewService';
 
 class ViewController {
@@ -36,7 +38,7 @@ class ViewController {
         message: tracked ? 'View tracked' : 'View already recorded'
       });
     } catch (error) {
-      console.error('Error in trackView:', error);
+      safeLogger.error('Error in trackView:', error);
       res.status(500).json({ error: 'Failed to track view' });
     }
   }
@@ -57,7 +59,7 @@ class ViewController {
 
       res.json({ postId, viewCount: count });
     } catch (error) {
-      console.error('Error in getViewCount:', error);
+      safeLogger.error('Error in getViewCount:', error);
       res.status(500).json({ error: 'Failed to get view count' });
     }
   }
@@ -78,7 +80,7 @@ class ViewController {
 
       res.json({ postId, ...analytics });
     } catch (error) {
-      console.error('Error in getViewAnalytics:', error);
+      safeLogger.error('Error in getViewAnalytics:', error);
       res.status(500).json({ error: 'Failed to get view analytics' });
     }
   }
@@ -118,7 +120,7 @@ class ViewController {
         message: `Tracked ${trackedCount} of ${postIds.length} views`
       });
     } catch (error) {
-      console.error('Error in trackBatchViews:', error);
+      safeLogger.error('Error in trackBatchViews:', error);
       res.status(500).json({ error: 'Failed to track batch views' });
     }
   }

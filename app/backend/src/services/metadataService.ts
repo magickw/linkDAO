@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 // IPFSHTTPClient type import may need to be adjusted for newer versions
 
 // IPFS configuration
@@ -33,7 +34,7 @@ export class MetadataService {
       // For Pinata, we need to use a different configuration
       if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
         // Configure for Pinata gateway (read-only operations)
-        console.log('Configuring IPFS client for Pinata gateway');
+        safeLogger.info('Configuring IPFS client for Pinata gateway');
         const client = create({
           host: 'api.pinata.cloud',
           port: 443,
@@ -45,7 +46,7 @@ export class MetadataService {
         });
         
         // Test connection with a simple request
-        console.log('Testing Pinata connection...');
+        safeLogger.info('Testing Pinata connection...');
         return client;
       } else if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret) {
         // Generic IPFS with authentication
@@ -68,8 +69,8 @@ export class MetadataService {
         return client;
       }
     } catch (error) {
-      console.error('Failed to initialize IPFS client:', error);
-      console.warn('IPFS not available, using fallback storage');
+      safeLogger.error('Failed to initialize IPFS client:', error);
+      safeLogger.warn('IPFS not available, using fallback storage');
       return null;
     }
   }
@@ -87,16 +88,16 @@ export class MetadataService {
         const crypto = require('crypto');
         const hash = crypto.createHash('sha256').update(content).digest('hex');
         const fallbackCid = `Qm${hash.substring(0, 44)}`; // Valid CID format
-        console.warn(`IPFS unavailable, using fallback CID: ${fallbackCid}`);
+        safeLogger.warn(`IPFS unavailable, using fallback CID: ${fallbackCid}`);
         return fallbackCid;
       }
       
       // For Pinata, use the add method
       const { IpfsHash } = await ipfsClient.add(content);
-      console.log(`Content uploaded to IPFS: ${IpfsHash}`);
+      safeLogger.info(`Content uploaded to IPFS: ${IpfsHash}`);
       return IpfsHash;
     } catch (error) {
-      console.error('Error uploading to IPFS:', error);
+      safeLogger.error('Error uploading to IPFS:', error);
       // Generate deterministic fallback CID
       const crypto = require('crypto');
       const hash = crypto.createHash('sha256').update(content).digest('hex');
@@ -114,7 +115,7 @@ export class MetadataService {
       // Check if Arweave wallet is configured
       const walletKey = process.env.ARWEAVE_WALLET_KEY;
       if (!walletKey) {
-        console.warn('Arweave wallet not configured, using content hash as transaction ID');
+        safeLogger.warn('Arweave wallet not configured, using content hash as transaction ID');
         const crypto = require('crypto');
         const hash = crypto.createHash('sha256').update(content).digest('hex');
         return `ar_${hash.substring(0, 43)}`; // Arweave-like transaction ID
@@ -129,12 +130,12 @@ export class MetadataService {
       // await arweave.transactions.post(transaction);
       // return transaction.id;
       
-      console.log('Arweave upload simulated:', content.substring(0, 50) + '...');
+      safeLogger.info('Arweave upload simulated:', content.substring(0, 50) + '...');
       const crypto = require('crypto');
       const hash = crypto.createHash('sha256').update(content).digest('hex');
       return `ar_${hash.substring(0, 43)}`;
     } catch (error) {
-      console.error('Error uploading to Arweave:', error);
+      safeLogger.error('Error uploading to Arweave:', error);
       throw error;
     }
   }
@@ -153,7 +154,7 @@ export class MetadataService {
           const response = await axios.get(`https://ipfs.io/ipfs/${cid}`, { timeout: 5000 });
           return response.data;
         } catch (gatewayError) {
-          console.warn(`IPFS and gateway unavailable for CID: ${cid}`);
+          safeLogger.warn(`IPFS and gateway unavailable for CID: ${cid}`);
           throw new Error(`Content not available: ${cid}`);
         }
       }
@@ -164,7 +165,7 @@ export class MetadataService {
       }
       return Buffer.concat(chunks).toString();
     } catch (error) {
-      console.error('Error retrieving from IPFS:', error);
+      safeLogger.error('Error retrieving from IPFS:', error);
       throw new Error(`Failed to retrieve content: ${cid}`);
     }
   }
@@ -183,7 +184,7 @@ export class MetadataService {
       });
       return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
     } catch (error) {
-      console.error('Error retrieving from Arweave:', error);
+      safeLogger.error('Error retrieving from Arweave:', error);
       throw new Error(`Failed to retrieve Arweave content: ${txId}`);
     }
   }
@@ -197,14 +198,14 @@ export class MetadataService {
     try {
       // If IPFS client is not available, skip pinning
       if (!ipfsClient) {
-        console.warn('IPFS client not available, skipping pinning');
+        safeLogger.warn('IPFS client not available, skipping pinning');
         return;
       }
       
       await ipfsClient.pin.add(cid as any);
-      console.log('Pinned to IPFS:', cid);
+      safeLogger.info('Pinned to IPFS:', cid);
     } catch (error) {
-      console.error('Error pinning to IPFS:', error);
+      safeLogger.error('Error pinning to IPFS:', error);
       // Don't throw error for pinning, as it's not critical
     }
   }
@@ -222,10 +223,10 @@ export class MetadataService {
       // Then, upload it to Arweave
       const txId = await this.uploadToArweave(content);
       
-      console.log(`Mirrored ${cid} to Arweave as ${txId}`);
+      safeLogger.info(`Mirrored ${cid} to Arweave as ${txId}`);
       return txId;
     } catch (error) {
-      console.error('Error mirroring to Arweave:', error);
+      safeLogger.error('Error mirroring to Arweave:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import sharp from 'sharp';
 
 export interface PerceptualHashResult {
@@ -43,7 +44,7 @@ export class PerceptualHashingService {
         confidence: 1.0
       };
     } catch (error) {
-      console.error('Error generating perceptual hash:', error);
+      safeLogger.error('Error generating perceptual hash:', error);
       throw new Error('Failed to generate perceptual hash');
     }
   }
@@ -141,7 +142,7 @@ export class PerceptualHashingService {
 
       return this.generateImageHash(frameBuffer);
     } catch (error) {
-      console.error('Error generating video hash:', error);
+      safeLogger.error('Error generating video hash:', error);
       throw new Error('Failed to generate video hash');
     }
   }

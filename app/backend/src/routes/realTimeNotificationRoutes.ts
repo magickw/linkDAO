@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, param, query, validationResult } from 'express-validator';
 import RealTimeNotificationService from '../services/realTimeNotificationService';
 
@@ -39,7 +41,7 @@ router.get('/stats', ensureNotificationService, (req: any, res) => {
       data: stats
     });
   } catch (error) {
-    console.error('Error getting notification stats:', error);
+    safeLogger.error('Error getting notification stats:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get notification stats'
@@ -48,7 +50,7 @@ router.get('/stats', ensureNotificationService, (req: any, res) => {
 });
 
 // Send mention notification
-router.post('/mention',
+router.post('/mention', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -70,7 +72,7 @@ router.post('/mention',
         message: 'Mention notification sent'
       });
     } catch (error) {
-      console.error('Error sending mention notification:', error);
+      safeLogger.error('Error sending mention notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send mention notification'
@@ -80,7 +82,7 @@ router.post('/mention',
 );
 
 // Send tip notification
-router.post('/tip',
+router.post('/tip', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -103,7 +105,7 @@ router.post('/tip',
         message: 'Tip notification sent'
       });
     } catch (error) {
-      console.error('Error sending tip notification:', error);
+      safeLogger.error('Error sending tip notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send tip notification'
@@ -113,7 +115,7 @@ router.post('/tip',
 );
 
 // Send governance notification
-router.post('/governance',
+router.post('/governance', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -141,7 +143,7 @@ router.post('/governance',
         message: 'Governance notification sent'
       });
     } catch (error) {
-      console.error('Error sending governance notification:', error);
+      safeLogger.error('Error sending governance notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send governance notification'
@@ -151,7 +153,7 @@ router.post('/governance',
 );
 
 // Send community notification
-router.post('/community',
+router.post('/community', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -172,7 +174,7 @@ router.post('/community',
         message: 'Community notification sent'
       });
     } catch (error) {
-      console.error('Error sending community notification:', error);
+      safeLogger.error('Error sending community notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send community notification'
@@ -182,7 +184,7 @@ router.post('/community',
 );
 
 // Send reaction notification
-router.post('/reaction',
+router.post('/reaction', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -205,7 +207,7 @@ router.post('/reaction',
         message: 'Reaction notification sent'
       });
     } catch (error) {
-      console.error('Error sending reaction notification:', error);
+      safeLogger.error('Error sending reaction notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send reaction notification'
@@ -215,7 +217,7 @@ router.post('/reaction',
 );
 
 // Notify new comment
-router.post('/comment',
+router.post('/comment', csrfProtection, 
   ensureNotificationService,
   [
     body('postId').isString().notEmpty(),
@@ -236,7 +238,7 @@ router.post('/comment',
         message: 'Comment notification sent'
       });
     } catch (error) {
-      console.error('Error sending comment notification:', error);
+      safeLogger.error('Error sending comment notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send comment notification'
@@ -246,7 +248,7 @@ router.post('/comment',
 );
 
 // Notify reaction update
-router.post('/reaction-update',
+router.post('/reaction-update', csrfProtection, 
   ensureNotificationService,
   [
     body('postId').isString().notEmpty(),
@@ -268,7 +270,7 @@ router.post('/reaction-update',
         message: 'Reaction update sent'
       });
     } catch (error) {
-      console.error('Error sending reaction update:', error);
+      safeLogger.error('Error sending reaction update:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send reaction update'
@@ -278,7 +280,7 @@ router.post('/reaction-update',
 );
 
 // Send batch notifications
-router.post('/batch',
+router.post('/batch', csrfProtection, 
   ensureNotificationService,
   [
     body('userId').isString().notEmpty(),
@@ -299,7 +301,7 @@ router.post('/batch',
         message: `Sent ${notifications.length} notifications`
       });
     } catch (error) {
-      console.error('Error sending batch notifications:', error);
+      safeLogger.error('Error sending batch notifications:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send batch notifications'
@@ -309,7 +311,7 @@ router.post('/batch',
 );
 
 // Broadcast to all users
-router.post('/broadcast',
+router.post('/broadcast', csrfProtection, 
   ensureNotificationService,
   [
     body('type').isString().notEmpty(),
@@ -326,7 +328,7 @@ router.post('/broadcast',
         message: 'Broadcast sent to all users'
       });
     } catch (error) {
-      console.error('Error broadcasting message:', error);
+      safeLogger.error('Error broadcasting message:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to broadcast message'
@@ -336,7 +338,7 @@ router.post('/broadcast',
 );
 
 // Test endpoint to generate sample notifications
-router.post('/test/:type',
+router.post('/test/:type', csrfProtection, 
   ensureNotificationService,
   [
     param('type').isIn(['mention', 'tip', 'governance', 'community', 'reaction']),
@@ -420,7 +422,7 @@ router.post('/test/:type',
         message: `Test ${type} notification sent to user ${userId}`
       });
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      safeLogger.error('Error sending test notification:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to send test notification'

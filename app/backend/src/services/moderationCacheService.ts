@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { TextHashResult } from './textHashingService';
 import { PerceptualHashResult } from './perceptualHashingService';
 
@@ -70,11 +71,11 @@ export class ModerationCacheService {
     });
 
     this.redis.on('error', (error) => {
-      console.error('Redis connection error:', error);
+      safeLogger.error('Redis connection error:', error);
     });
 
     this.redis.on('connect', () => {
-      console.log('Connected to Redis cache');
+      safeLogger.info('Connected to Redis cache');
     });
   }
 

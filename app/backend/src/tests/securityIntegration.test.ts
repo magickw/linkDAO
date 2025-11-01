@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import request from 'supertest';
 import { Express } from 'express';
 import { securityMonitoringService, SecurityEventType, SecuritySeverity } from '../services/securityMonitoringService';
@@ -657,7 +658,7 @@ describe('Security Performance Tests', () => {
     const duration = endTime - startTime;
 
     expect(duration).toBeLessThan(10000); // Should complete within 10 seconds
-    console.log(`Processed ${eventCount} security events in ${duration}ms`);
+    safeLogger.info(`Processed ${eventCount} security events in ${duration}ms`);
   });
 
   test('should handle concurrent key operations', async () => {
@@ -678,7 +679,7 @@ describe('Security Performance Tests', () => {
 
     expect(keys.length).toBe(keyCount);
     expect(duration).toBeLessThan(30000); // Should complete within 30 seconds
-    console.log(`Generated ${keyCount} keys in ${duration}ms`);
+    safeLogger.info(`Generated ${keyCount} keys in ${duration}ms`);
   });
 
   test('should handle large audit log queries', async () => {
@@ -694,6 +695,6 @@ describe('Security Performance Tests', () => {
 
     expect(auditTrail.logs).toBeDefined();
     expect(duration).toBeLessThan(5000); // Should complete within 5 seconds
-    console.log(`Retrieved audit trail in ${duration}ms`);
+    safeLogger.info(`Retrieved audit trail in ${duration}ms`);
   });
 });

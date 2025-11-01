@@ -1,4 +1,5 @@
 import { CDNIntegrationService } from './cdnIntegrationService';
+import { safeLogger } from '../utils/safeLogger';
 import ipfsService from './ipfsService';
 import { createHash } from 'crypto';
 
@@ -95,7 +96,7 @@ class CDNDistributionService {
         );
       }
     } catch (error) {
-      console.warn('CDN initialization failed:', error);
+      safeLogger.warn('CDN initialization failed:', error);
     }
   }
 
@@ -134,7 +135,7 @@ class CDNDistributionService {
           result.primaryUrl = this.primaryCDN.generateCDNUrl(cdnKey, options.transformations);
           
         } catch (cdnError) {
-          console.warn('Primary CDN upload failed:', cdnError);
+          safeLogger.warn('Primary CDN upload failed:', cdnError);
           result.primaryUrl = result.ipfsUrls[0]; // Fallback to IPFS
         }
       } else {
@@ -151,7 +152,7 @@ class CDNDistributionService {
             await cdn.uploadAsset(cdnKey, buffer, contentType, cachePolicy);
             return cdn.generateCDNUrl(cdnKey, options.transformations);
           } catch (error) {
-            console.warn(`Fallback CDN ${index} upload failed:`, error);
+            safeLogger.warn(`Fallback CDN ${index} upload failed:`, error);
             return null;
           }
         });
@@ -166,7 +167,7 @@ class CDNDistributionService {
       return result;
 
     } catch (error) {
-      console.error('CDN distribution error:', error);
+      safeLogger.error('CDN distribution error:', error);
       result.primaryUrl = result.ipfsUrls[0];
       result.distributionTime = Date.now() - startTime;
       return result;
@@ -205,7 +206,7 @@ class CDNDistributionService {
       return this.primaryCDN.generateCDNUrl(cdnKey, transformations);
 
     } catch (error) {
-      console.error('Error generating optimized URL:', error);
+      safeLogger.error('Error generating optimized URL:', error);
       return `${this.config.ipfsGateways[0]}${ipfsHash}`;
     }
   }
@@ -234,7 +235,7 @@ class CDNDistributionService {
         try {
           result.primary = await this.primaryCDN.invalidateCache(cacheKeys);
         } catch (error) {
-          console.warn('Primary CDN invalidation failed:', error);
+          safeLogger.warn('Primary CDN invalidation failed:', error);
         }
       }
 
@@ -245,7 +246,7 @@ class CDNDistributionService {
           const invalidationId = await cdn.invalidateCache(fallbackKeys);
           return { index, invalidationId };
         } catch (error) {
-          console.warn(`Fallback CDN ${index} invalidation failed:`, error);
+          safeLogger.warn(`Fallback CDN ${index} invalidation failed:`, error);
           return { index, invalidationId: null };
         }
       });
@@ -255,7 +256,7 @@ class CDNDistributionService {
       return result;
 
     } catch (error) {
-      console.error('Cache invalidation error:', error);
+      safeLogger.error('Cache invalidation error:', error);
       return result;
     }
   }
@@ -286,7 +287,7 @@ class CDNDistributionService {
       return urls;
 
     } catch (error) {
-      console.error('Error generating responsive URLs:', error);
+      safeLogger.error('Error generating responsive URLs:', error);
       // Fallback to IPFS
       const fallbackUrl = `${this.config.ipfsGateways[0]}${ipfsHash}`;
       breakpoints.forEach(bp => {
@@ -396,7 +397,7 @@ class CDNDistributionService {
       };
 
     } catch (error) {
-      console.error('Error getting CDN analytics:', error);
+      safeLogger.error('Error getting CDN analytics:', error);
       return {
         requests: 0,
         bandwidth: 0,
@@ -470,14 +471,14 @@ class CDNDistributionService {
     try {
       // This would integrate with your database to find unused images
       // and remove them from CDN storage
-      console.log(`Cleanup would remove assets older than ${olderThanDays} days`);
+      safeLogger.info(`Cleanup would remove assets older than ${olderThanDays} days`);
       
       // Implementation would go here
       
       return result;
 
     } catch (error) {
-      console.error('Cleanup error:', error);
+      safeLogger.error('Cleanup error:', error);
       result.errors.push(error instanceof Error ? error.message : 'Unknown error');
       return result;
     }

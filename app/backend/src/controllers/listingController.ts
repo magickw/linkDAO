@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { UnifiedMarketplaceService } from '../services/unifiedMarketplaceService';
 import { CreateListingInput, UpdateListingInput, ListingStatus } from '../services/listingService';
 import { ProductSearchFilters, ProductSortOptions, PaginationOptions } from '../models/Product';
@@ -37,7 +39,7 @@ export class ListingController {
         message: 'Listing created successfully'
       });
     } catch (error: any) {
-      console.error('Error creating listing:', error);
+      safeLogger.error('Error creating listing:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -77,7 +79,7 @@ export class ListingController {
         listing
       });
     } catch (error: any) {
-      console.error('Error fetching listing:', error);
+      safeLogger.error('Error fetching listing:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch listing'
@@ -111,7 +113,7 @@ export class ListingController {
         message: 'Listing updated successfully'
       });
     } catch (error: any) {
-      console.error('Error updating listing:', error);
+      safeLogger.error('Error updating listing:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -171,7 +173,7 @@ export class ListingController {
         ...result
       });
     } catch (error: any) {
-      console.error('Error fetching marketplace listings:', error);
+      safeLogger.error('Error fetching marketplace listings:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch marketplace listings'
@@ -223,7 +225,7 @@ export class ListingController {
         ...result
       });
     } catch (error: any) {
-      console.error('Error searching listings:', error);
+      safeLogger.error('Error searching listings:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to search listings'
@@ -259,7 +261,7 @@ export class ListingController {
         message: 'Listing published successfully'
       });
     } catch (error: any) {
-      console.error('Error publishing listing:', error);
+      safeLogger.error('Error publishing listing:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -304,7 +306,7 @@ export class ListingController {
         message: 'Listing unpublished successfully'
       });
     } catch (error: any) {
-      console.error('Error unpublishing listing:', error);
+      safeLogger.error('Error unpublishing listing:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -361,7 +363,7 @@ export class ListingController {
         ...result
       });
     } catch (error: any) {
-      console.error('Error fetching seller listings:', error);
+      safeLogger.error('Error fetching seller listings:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch seller listings'
@@ -403,7 +405,7 @@ export class ListingController {
         stats
       });
     } catch (error: any) {
-      console.error('Error fetching listing stats:', error);
+      safeLogger.error('Error fetching listing stats:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch listing statistics'
@@ -429,7 +431,7 @@ export class ListingController {
         validation
       });
     } catch (error: any) {
-      console.error('Error validating listing:', error);
+      safeLogger.error('Error validating listing:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to validate listing'
@@ -462,7 +464,7 @@ export class ListingController {
         blockchainListing
       });
     } catch (error: any) {
-      console.error('Error publishing to blockchain:', error);
+      safeLogger.error('Error publishing to blockchain:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -496,7 +498,7 @@ export class ListingController {
         syncResult
       });
     } catch (error: any) {
-      console.error('Error syncing with blockchain:', error);
+      safeLogger.error('Error syncing with blockchain:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to sync with blockchain'
@@ -520,7 +522,7 @@ export class ListingController {
         blockchainData
       });
     } catch (error: any) {
-      console.error('Error fetching blockchain data:', error);
+      safeLogger.error('Error fetching blockchain data:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch blockchain data'

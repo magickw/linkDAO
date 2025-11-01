@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { contentIngestionController } from '../controllers/contentIngestionController';
 import { 
   handleFileUploads, 
@@ -22,7 +23,7 @@ router.use(generalLimiter);
  * POST /api/content/submit
  * Submit content for moderation
  */
-router.post('/submit',
+router.post('/submit', csrfProtection, 
   contentRateLimit,
   handleFileUploads,
   validateContent,
@@ -33,7 +34,7 @@ router.post('/submit',
  * POST /api/content/submit/post
  * Submit a post for moderation
  */
-router.post('/submit/post',
+router.post('/submit/post', csrfProtection, 
   contentRateLimit,
   validateContentType(['post']),
   validateUserReputation(0), // No minimum reputation for posts
@@ -46,7 +47,7 @@ router.post('/submit/post',
  * POST /api/content/submit/comment
  * Submit a comment for moderation
  */
-router.post('/submit/comment',
+router.post('/submit/comment', csrfProtection, 
   contentRateLimit,
   validateContentType(['comment']),
   validateUserReputation(0), // No minimum reputation for comments
@@ -59,7 +60,7 @@ router.post('/submit/comment',
  * POST /api/content/submit/listing
  * Submit a marketplace listing for moderation
  */
-router.post('/submit/listing',
+router.post('/submit/listing', csrfProtection, 
   contentRateLimit,
   validateContentType(['listing']),
   validateUserReputation(10), // Minimum reputation for listings
@@ -72,7 +73,7 @@ router.post('/submit/listing',
  * POST /api/content/submit/dm
  * Submit a direct message for moderation (opt-in only)
  */
-router.post('/submit/dm',
+router.post('/submit/dm', csrfProtection, 
   contentRateLimit,
   validateContentType(['dm']),
   validateUserReputation(0), // No minimum reputation for DMs
@@ -85,7 +86,7 @@ router.post('/submit/dm',
  * POST /api/content/submit/username
  * Submit a username for moderation
  */
-router.post('/submit/username',
+router.post('/submit/username', csrfProtection, 
   contentRateLimit,
   validateContentType(['username']),
   validateUserReputation(0), // No minimum reputation for usernames
@@ -105,7 +106,7 @@ router.get('/status/:contentId',
  * POST /api/content/retry/:contentId
  * Retry failed moderation
  */
-router.post('/retry/:contentId',
+router.post('/retry/:contentId', csrfProtection, 
   contentRateLimit,
   contentIngestionController.retryModeration
 );
@@ -131,7 +132,7 @@ router.get('/admin/stats',
  * POST /api/content/admin/cleanup
  * Clean up expired staged content (admin only)
  */
-router.post('/admin/cleanup',
+router.post('/admin/cleanup', csrfProtection, 
   contentIngestionController.cleanupStagedContent
 );
 

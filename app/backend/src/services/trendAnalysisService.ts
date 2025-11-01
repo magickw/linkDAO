@@ -1,4 +1,5 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { users, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
@@ -148,7 +149,7 @@ export class TrendAnalysisService {
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(analyses));
       return analyses;
     } catch (error) {
-      console.error('Error analyzing trends:', error);
+      safeLogger.error('Error analyzing trends:', error);
       throw new Error('Failed to analyze trends');
     }
   }
@@ -180,7 +181,7 @@ export class TrendAnalysisService {
       await this.redis.setex(cacheKey, this.CACHE_TTL * 2, JSON.stringify(patterns));
       return patterns;
     } catch (error) {
-      console.error('Error detecting seasonal patterns:', error);
+      safeLogger.error('Error detecting seasonal patterns:', error);
       throw new Error('Failed to detect seasonal patterns');
     }
   }
@@ -256,7 +257,7 @@ export class TrendAnalysisService {
 
       return alerts;
     } catch (error) {
-      console.error('Error generating trend alerts:', error);
+      safeLogger.error('Error generating trend alerts:', error);
       throw new Error('Failed to generate trend alerts');
     }
   }
@@ -333,7 +334,7 @@ export class TrendAnalysisService {
         insights
       };
     } catch (error) {
-      console.error('Error creating trend visualization:', error);
+      safeLogger.error('Error creating trend visualization:', error);
       throw new Error('Failed to create trend visualization');
     }
   }
@@ -394,7 +395,7 @@ export class TrendAnalysisService {
 
       return { forecasts, model, accuracy };
     } catch (error) {
-      console.error('Error forecasting metric:', error);
+      safeLogger.error('Error forecasting metric:', error);
       throw new Error('Failed to forecast metric');
     }
   }
@@ -468,7 +469,7 @@ export class TrendAnalysisService {
         }
       };
     } catch (error) {
-      console.error('Error getting trend statistics:', error);
+      safeLogger.error('Error getting trend statistics:', error);
       throw new Error('Failed to get trend statistics');
     }
   }
@@ -559,7 +560,7 @@ export class TrendAnalysisService {
         value: Number(row.value)
       }));
     } catch (error) {
-      console.error('Error getting metric data:', error);
+      safeLogger.error('Error getting metric data:', error);
       return [];
     }
   }
@@ -1011,7 +1012,7 @@ export class TrendAnalysisService {
         )
       `);
     } catch (error) {
-      console.error('Error storing trend alert:', error);
+      safeLogger.error('Error storing trend alert:', error);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { Redis } from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { predictiveAnalyticsService } from './predictiveAnalyticsService';
 import { anomalyDetectionService } from './anomalyDetectionService';
 import { automatedInsightService } from './automatedInsightService';
@@ -74,11 +75,11 @@ export class AIInsightsEngine {
   async start(): Promise<void> {
     try {
       if (this.isRunning) {
-        console.log('AI Insights Engine is already running');
+        safeLogger.info('AI Insights Engine is already running');
         return;
       }
 
-      console.log('Starting AI Insights Engine...');
+      safeLogger.info('Starting AI Insights Engine...');
       this.isRunning = true;
 
       // Initial run
@@ -91,9 +92,9 @@ export class AIInsightsEngine {
       );
 
       await this.updateEngineStatus('started');
-      console.log(`AI Insights Engine started with ${this.config.refreshInterval}min refresh interval`);
+      safeLogger.info(`AI Insights Engine started with ${this.config.refreshInterval}min refresh interval`);
     } catch (error) {
-      console.error('Error starting AI Insights Engine:', error);
+      safeLogger.error('Error starting AI Insights Engine:', error);
       this.isRunning = false;
       throw error;
     }
@@ -105,11 +106,11 @@ export class AIInsightsEngine {
   async stop(): Promise<void> {
     try {
       if (!this.isRunning) {
-        console.log('AI Insights Engine is not running');
+        safeLogger.info('AI Insights Engine is not running');
         return;
       }
 
-      console.log('Stopping AI Insights Engine...');
+      safeLogger.info('Stopping AI Insights Engine...');
       this.isRunning = false;
 
       if (this.intervalId) {
@@ -118,9 +119,9 @@ export class AIInsightsEngine {
       }
 
       await this.updateEngineStatus('stopped');
-      console.log('AI Insights Engine stopped');
+      safeLogger.info('AI Insights Engine stopped');
     } catch (error) {
-      console.error('Error stopping AI Insights Engine:', error);
+      safeLogger.error('Error stopping AI Insights Engine:', error);
       throw error;
     }
   }
@@ -133,7 +134,7 @@ export class AIInsightsEngine {
   ): Promise<ComprehensiveInsightReport> {
     try {
       const startTime = Date.now();
-      console.log(`Generating comprehensive insights report for ${timeframe} timeframe...`);
+      safeLogger.info(`Generating comprehensive insights report for ${timeframe} timeframe...`);
 
       // Generate insights from all components in parallel
       const [
@@ -188,11 +189,11 @@ export class AIInsightsEngine {
       await this.storeReport(report);
 
       const processingTime = Date.now() - startTime;
-      console.log(`Comprehensive report generated in ${processingTime}ms`);
+      safeLogger.info(`Comprehensive report generated in ${processingTime}ms`);
 
       return report;
     } catch (error) {
-      console.error('Error generating comprehensive report:', error);
+      safeLogger.error('Error generating comprehensive report:', error);
       throw new Error('Failed to generate comprehensive insights report');
     }
   }
@@ -225,7 +226,7 @@ export class AIInsightsEngine {
         }
       };
     } catch (error) {
-      console.error('Error getting engine status:', error);
+      safeLogger.error('Error getting engine status:', error);
       throw new Error('Failed to get engine status');
     }
   }
@@ -244,9 +245,9 @@ export class AIInsightsEngine {
       }
 
       await this.redis.set('ai_insights_engine:config', JSON.stringify(this.config));
-      console.log('AI Insights Engine configuration updated');
+      safeLogger.info('AI Insights Engine configuration updated');
     } catch (error) {
-      console.error('Error updating engine configuration:', error);
+      safeLogger.error('Error updating engine configuration:', error);
       throw new Error('Failed to update engine configuration');
     }
   }
@@ -285,7 +286,7 @@ export class AIInsightsEngine {
       await this.redis.setex(cacheKey, 300, JSON.stringify(limitedInsights)); // 5 min cache
       return limitedInsights;
     } catch (error) {
-      console.error('Error getting insights:', error);
+      safeLogger.error('Error getting insights:', error);
       throw new Error('Failed to get insights');
     }
   }
@@ -352,7 +353,7 @@ export class AIInsightsEngine {
         }
       };
     } catch (error) {
-      console.error('Error getting performance analytics:', error);
+      safeLogger.error('Error getting performance analytics:', error);
       throw new Error('Failed to get performance analytics');
     }
   }
@@ -362,7 +363,7 @@ export class AIInsightsEngine {
   private async runInsightGeneration(): Promise<void> {
     try {
       const startTime = Date.now();
-      console.log('Running AI insights generation cycle...');
+      safeLogger.info('Running AI insights generation cycle...');
 
       // Run all enabled components
       const promises = [];
@@ -388,9 +389,9 @@ export class AIInsightsEngine {
       const processingTime = Date.now() - startTime;
       await this.updatePerformanceMetrics(processingTime);
 
-      console.log(`AI insights generation cycle completed in ${processingTime}ms`);
+      safeLogger.info(`AI insights generation cycle completed in ${processingTime}ms`);
     } catch (error) {
-      console.error('Error in insight generation cycle:', error);
+      safeLogger.error('Error in insight generation cycle:', error);
       await this.recordError(error);
     }
   }
@@ -400,7 +401,7 @@ export class AIInsightsEngine {
       await automatedInsightService.generateInsights();
       await this.updateComponentStatus('automatedInsights', 'active');
     } catch (error) {
-      console.error('Error in automated insights:', error);
+      safeLogger.error('Error in automated insights:', error);
       await this.updateComponentStatus('automatedInsights', 'error');
     }
   }
@@ -410,7 +411,7 @@ export class AIInsightsEngine {
       await anomalyDetectionService.monitorRealTimeAnomalies();
       await this.updateComponentStatus('anomalyDetection', 'active');
     } catch (error) {
-      console.error('Error in anomaly detection:', error);
+      safeLogger.error('Error in anomaly detection:', error);
       await this.updateComponentStatus('anomalyDetection', 'error');
     }
   }
@@ -425,7 +426,7 @@ export class AIInsightsEngine {
       ]);
       await this.updateComponentStatus('predictiveAnalytics', 'active');
     } catch (error) {
-      console.error('Error in predictive analytics:', error);
+      safeLogger.error('Error in predictive analytics:', error);
       await this.updateComponentStatus('predictiveAnalytics', 'error');
     }
   }
@@ -436,7 +437,7 @@ export class AIInsightsEngine {
       await trendAnalysisService.analyzeTrends(metrics);
       await this.updateComponentStatus('trendAnalysis', 'active');
     } catch (error) {
-      console.error('Error in trend analysis:', error);
+      safeLogger.error('Error in trend analysis:', error);
       await this.updateComponentStatus('trendAnalysis', 'error');
     }
   }
@@ -462,7 +463,7 @@ export class AIInsightsEngine {
         ...businessMetrics.map(p => ({ type: 'business_metric', ...p }))
       ];
     } catch (error) {
-      console.error('Error generating predictions:', error);
+      safeLogger.error('Error generating predictions:', error);
       return [];
     }
   }
@@ -473,7 +474,7 @@ export class AIInsightsEngine {
       const trends = await trendAnalysisService.analyzeTrends(metrics);
       return trends;
     } catch (error) {
-      console.error('Error generating trend analysis:', error);
+      safeLogger.error('Error generating trend analysis:', error);
       return [];
     }
   }
@@ -551,7 +552,7 @@ export class AIInsightsEngine {
       // Keep reference to latest report
       await this.redis.set('ai_insights:latest_report', reportKey);
     } catch (error) {
-      console.error('Error storing report:', error);
+      safeLogger.error('Error storing report:', error);
     }
   }
 
@@ -564,7 +565,7 @@ export class AIInsightsEngine {
       };
       await this.redis.set('ai_insights_engine:status', JSON.stringify(statusData));
     } catch (error) {
-      console.error('Error updating engine status:', error);
+      safeLogger.error('Error updating engine status:', error);
     }
   }
 
@@ -575,7 +576,7 @@ export class AIInsightsEngine {
     try {
       await this.redis.hset('ai_insights_engine:components', component, status);
     } catch (error) {
-      console.error('Error updating component status:', error);
+      safeLogger.error('Error updating component status:', error);
     }
   }
 
@@ -604,7 +605,7 @@ export class AIInsightsEngine {
 
       await this.redis.set('ai_insights_engine:performance', JSON.stringify(performance));
     } catch (error) {
-      console.error('Error updating performance metrics:', error);
+      safeLogger.error('Error updating performance metrics:', error);
     }
   }
 
@@ -622,7 +623,7 @@ export class AIInsightsEngine {
 
       await this.redis.set('ai_insights_engine:performance', JSON.stringify(performance));
     } catch (err) {
-      console.error('Error recording error:', err);
+      safeLogger.error('Error recording error:', err);
     }
   }
 }

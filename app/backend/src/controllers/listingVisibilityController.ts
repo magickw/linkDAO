@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { ListingPublicationService } from '../services/listingPublicationService';
 import { ProductListingService } from '../services/listingService';
 import { ValidationError } from '../models/validation';
@@ -49,7 +51,7 @@ export class ListingVisibilityController {
         listing: await this.listingService.getListingById(id)
       });
     } catch (error: any) {
-      console.error('Error publishing listing immediately:', error);
+      safeLogger.error('Error publishing listing immediately:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -103,7 +105,7 @@ export class ListingVisibilityController {
         listing: await this.listingService.getListingById(id)
       });
     } catch (error: any) {
-      console.error('Error unpublishing listing immediately:', error);
+      safeLogger.error('Error unpublishing listing immediately:', error);
       
       if (error instanceof ValidationError) {
         return res.status(400).json({
@@ -143,7 +145,7 @@ export class ListingVisibilityController {
         status
       });
     } catch (error: any) {
-      console.error('Error fetching publication status:', error);
+      safeLogger.error('Error fetching publication status:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch publication status'
@@ -190,7 +192,7 @@ export class ListingVisibilityController {
         }
       });
     } catch (error: any) {
-      console.error('Error batch publishing listings:', error);
+      safeLogger.error('Error batch publishing listings:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to batch publish listings'
@@ -237,7 +239,7 @@ export class ListingVisibilityController {
         }
       });
     } catch (error: any) {
-      console.error('Error batch unpublishing listings:', error);
+      safeLogger.error('Error batch unpublishing listings:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to batch unpublish listings'
@@ -295,7 +297,7 @@ export class ListingVisibilityController {
         ...realTimeResult
       });
     } catch (error: any) {
-      console.error('Error fetching real-time marketplace feed:', error);
+      safeLogger.error('Error fetching real-time marketplace feed:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch real-time marketplace feed'
@@ -326,7 +328,7 @@ export class ListingVisibilityController {
 
       // Update cache with fresh data
       // This would integrate with the cache refresh logic
-      console.log(`Cache refreshed for ${freshListings.total} listings`);
+      safeLogger.info(`Cache refreshed for ${freshListings.total} listings`);
 
       return res.json({
         success: true,
@@ -339,7 +341,7 @@ export class ListingVisibilityController {
         }
       });
     } catch (error: any) {
-      console.error('Error refreshing marketplace cache:', error);
+      safeLogger.error('Error refreshing marketplace cache:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to refresh marketplace cache'
@@ -386,7 +388,7 @@ export class ListingVisibilityController {
         metrics
       });
     } catch (error: any) {
-      console.error('Error fetching visibility metrics:', error);
+      safeLogger.error('Error fetching visibility metrics:', error);
       return res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to fetch visibility metrics'

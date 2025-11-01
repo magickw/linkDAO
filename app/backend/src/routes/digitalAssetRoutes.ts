@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { digitalAssetController, uploadMiddleware } from '../controllers/digitalAssetController';
 import { authenticateToken } from '../middleware/auth';
 import rateLimit from 'express-rate-limit';

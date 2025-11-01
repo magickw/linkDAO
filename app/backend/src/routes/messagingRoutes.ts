@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { messagingController } from '../controllers/messagingController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -29,7 +30,7 @@ router.get('/conversations',
 );
 
 // Start new conversation
-router.post('/conversations',
+router.post('/conversations', csrfProtection, 
   validateRequest({
     body: {
       participantAddress: { type: 'string', required: true },
@@ -68,7 +69,7 @@ router.get('/conversations/:id/messages',
 );
 
 // Send message
-router.post('/conversations/:id/messages',
+router.post('/conversations/:id/messages', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -85,7 +86,7 @@ router.post('/conversations/:id/messages',
 );
 
 // Mark conversation as read
-router.put('/conversations/:id/read',
+router.put('/conversations/:id/read', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -95,7 +96,7 @@ router.put('/conversations/:id/read',
 );
 
 // Delete conversation
-router.delete('/conversations/:id',
+router.delete('/conversations/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -105,7 +106,7 @@ router.delete('/conversations/:id',
 );
 
 // Archive conversation
-router.put('/conversations/:id/archive',
+router.put('/conversations/:id/archive', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -115,7 +116,7 @@ router.put('/conversations/:id/archive',
 );
 
 // Unarchive conversation
-router.put('/conversations/:id/unarchive',
+router.put('/conversations/:id/unarchive', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -125,7 +126,7 @@ router.put('/conversations/:id/unarchive',
 );
 
 // Encrypt message content
-router.post('/messages/:id/encrypt',
+router.post('/messages/:id/encrypt', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -139,7 +140,7 @@ router.post('/messages/:id/encrypt',
 );
 
 // Decrypt message content
-router.post('/messages/:id/decrypt',
+router.post('/messages/:id/decrypt', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -153,7 +154,7 @@ router.post('/messages/:id/decrypt',
 );
 
 // Update message delivery status
-router.put('/messages/:id/status',
+router.put('/messages/:id/status', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -166,7 +167,7 @@ router.put('/messages/:id/status',
 );
 
 // Delete message
-router.delete('/messages/:id',
+router.delete('/messages/:id', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -199,7 +200,7 @@ router.get('/messages/:id/thread',
 );
 
 // Block user
-router.post('/block',
+router.post('/block', csrfProtection, 
   validateRequest({
     body: {
       userAddress: { type: 'string', required: true },
@@ -210,7 +211,7 @@ router.post('/block',
 );
 
 // Unblock user
-router.delete('/block/:userAddress',
+router.delete('/block/:userAddress', csrfProtection, 
   validateRequest({
     params: {
       userAddress: { type: 'string', required: true }
@@ -225,7 +226,7 @@ router.get('/blocked',
 );
 
 // Report conversation or message
-router.post('/report',
+router.post('/report', csrfProtection, 
   validateRequest({
     body: {
       targetType: { type: 'string', required: true, enum: ['conversation', 'message'] },
@@ -248,7 +249,7 @@ router.get('/conversations/:id/participants',
 );
 
 // Add participant to group conversation
-router.post('/conversations/:id/participants',
+router.post('/conversations/:id/participants', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -261,7 +262,7 @@ router.post('/conversations/:id/participants',
 );
 
 // Remove participant from group conversation
-router.delete('/conversations/:id/participants/:userAddress',
+router.delete('/conversations/:id/participants/:userAddress', csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true },

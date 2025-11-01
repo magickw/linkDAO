@@ -1,9 +1,10 @@
 import { db } from '../db/connection';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 
 async function createSellerPerformanceTables() {
   try {
-    console.log('Creating seller performance tables...');
+    safeLogger.info('Creating seller performance tables...');
 
     // Create seller scorecards table
     await db.execute(sql`
@@ -126,9 +127,9 @@ async function createSellerPerformanceTables() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_seller_growth_projections_wallet ON seller_growth_projections(seller_wallet_address)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_seller_growth_projections_type ON seller_growth_projections(projection_type)`);
 
-    console.log('Seller performance tables created successfully!');
+    safeLogger.info('Seller performance tables created successfully!');
   } catch (error) {
-    console.error('Error creating seller performance tables:', error);
+    safeLogger.error('Error creating seller performance tables:', error);
     throw error;
   }
 }
@@ -136,10 +137,10 @@ async function createSellerPerformanceTables() {
 // Run the script
 createSellerPerformanceTables()
   .then(() => {
-    console.log('Script completed successfully');
+    safeLogger.info('Script completed successfully');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Script failed:', error);
+    safeLogger.error('Script failed:', error);
     process.exit(1);
   });

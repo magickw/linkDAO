@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 import { aiCacheService } from './aiCacheService';
 
@@ -17,7 +18,7 @@ export class OpenAIService {
 
   private constructor() {
     if (!process.env.OPENAI_API_KEY) {
-      console.warn('OPENAI_API_KEY not set. AI features will be disabled.');
+      safeLogger.warn('OPENAI_API_KEY not set. AI features will be disabled.');
       this.client = null as any;
     } else {
       this.client = new OpenAI({
@@ -143,7 +144,7 @@ export class OpenAIService {
         recommendations: analysis.recommendations || [],
       };
     } catch (error) {
-      console.error('AI moderation error:', error);
+      safeLogger.error('AI moderation error:', error);
       throw new Error('Failed to moderate content with AI');
     }
   }
@@ -212,7 +213,7 @@ export class OpenAIService {
 
       return completion.choices[0].message.content || 'No insights generated';
     } catch (error) {
-      console.error('Insight generation error:', error);
+      safeLogger.error('Insight generation error:', error);
       throw new Error('Failed to generate insights');
     }
   }
@@ -281,7 +282,7 @@ export class OpenAIService {
         insights: prediction.insights || 'No insights available',
       };
     } catch (error) {
-      console.error('Trend prediction error:', error);
+      safeLogger.error('Trend prediction error:', error);
       throw new Error('Failed to predict trends');
     }
   }
@@ -371,7 +372,7 @@ export class OpenAIService {
         recommendations: analysis.recommendations || [],
       };
     } catch (error) {
-      console.error('Anomaly detection error:', error);
+      safeLogger.error('Anomaly detection error:', error);
       throw new Error('Failed to detect anomalies');
     }
   }

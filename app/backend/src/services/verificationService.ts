@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { safeLogger } from '../utils/safeLogger';
 import twilio from 'twilio';
 import crypto from 'crypto';
 
@@ -38,15 +39,15 @@ export class VerificationService {
     };
 
     if (!emailConfig.auth.user || !emailConfig.auth.pass) {
-      console.warn('⚠️  Email service not configured. Set SMTP_USER and SMTP_PASS environment variables.');
+      safeLogger.warn('⚠️  Email service not configured. Set SMTP_USER and SMTP_PASS environment variables.');
       return;
     }
 
     try {
       this.emailTransporter = nodemailer.createTransporter(emailConfig);
-      console.log('✅ Email service initialized');
+      safeLogger.info('✅ Email service initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize email service:', error);
+      safeLogger.error('❌ Failed to initialize email service:', error);
     }
   }
 
@@ -55,15 +56,15 @@ export class VerificationService {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
 
     if (!accountSid || !authToken) {
-      console.warn('⚠️  SMS service not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+      safeLogger.warn('⚠️  SMS service not configured. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
       return;
     }
 
     try {
       this.twilioClient = twilio(accountSid, authToken);
-      console.log('✅ SMS service initialized');
+      safeLogger.info('✅ SMS service initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize SMS service:', error);
+      safeLogger.error('❌ Failed to initialize SMS service:', error);
     }
   }
 
@@ -128,7 +129,7 @@ export class VerificationService {
         this.emailAttempts.delete(email);
       }, 60 * 60 * 1000);
 
-      console.log(`✅ Verification email sent to ${email}`);
+      safeLogger.info(`✅ Verification email sent to ${email}`);
 
       return {
         success: true,
@@ -136,7 +137,7 @@ export class VerificationService {
       };
 
     } catch (error) {
-      console.error('❌ Failed to send email verification:', error);
+      safeLogger.error('❌ Failed to send email verification:', error);
       return {
         success: false,
         message: 'Failed to send verification email. Please try again.',
@@ -205,7 +206,7 @@ export class VerificationService {
         this.phoneAttempts.delete(phone);
       }, 60 * 60 * 1000);
 
-      console.log(`✅ Verification SMS sent to ${phone}`);
+      safeLogger.info(`✅ Verification SMS sent to ${phone}`);
 
       return {
         success: true,
@@ -213,7 +214,7 @@ export class VerificationService {
       };
 
     } catch (error) {
-      console.error('❌ Failed to send SMS verification:', error);
+      safeLogger.error('❌ Failed to send SMS verification:', error);
       return {
         success: false,
         message: 'Failed to send verification code. Please try again.',
@@ -271,7 +272,7 @@ export class VerificationService {
       // Success - remove the code
       this.verificationCodes.delete(verificationKey);
 
-      console.log(`✅ Email ${email} verified successfully`);
+      safeLogger.info(`✅ Email ${email} verified successfully`);
 
       return {
         success: true,
@@ -279,7 +280,7 @@ export class VerificationService {
       };
 
     } catch (error) {
-      console.error('❌ Failed to verify email:', error);
+      safeLogger.error('❌ Failed to verify email:', error);
       return {
         success: false,
         message: 'Verification failed. Please try again.',
@@ -337,7 +338,7 @@ export class VerificationService {
       // Success - remove the code
       this.verificationCodes.delete(verificationKey);
 
-      console.log(`✅ Phone ${phone} verified successfully`);
+      safeLogger.info(`✅ Phone ${phone} verified successfully`);
 
       return {
         success: true,
@@ -345,7 +346,7 @@ export class VerificationService {
       };
 
     } catch (error) {
-      console.error('❌ Failed to verify phone:', error);
+      safeLogger.error('❌ Failed to verify phone:', error);
       return {
         success: false,
         message: 'Verification failed. Please try again.',
@@ -520,7 +521,7 @@ export class VerificationService {
       await this.emailTransporter.verify();
       return true;
     } catch (error) {
-      console.error('Email service test failed:', error);
+      safeLogger.error('Email service test failed:', error);
       return false;
     }
   }

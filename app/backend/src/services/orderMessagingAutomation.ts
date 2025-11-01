@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   orders, 
   products, 
@@ -52,14 +53,14 @@ export class OrderMessagingAutomation {
 
       // 4. Notify seller via WebSocket
       // Note: This would typically be implemented with a WebSocket service
-      console.log(`New order message for seller ${order.seller.walletAddress}`, {
+      safeLogger.info(`New order message for seller ${order.seller.walletAddress}`, {
         conversation_id: conversation.id,
         order_id: orderId
       });
 
       return conversation;
     } catch (error) {
-      console.error('Error handling order created event:', error);
+      safeLogger.error('Error handling order created event:', error);
       throw new Error('Failed to handle order created event');
     }
   }
@@ -95,7 +96,7 @@ export class OrderMessagingAutomation {
 
       return conversation;
     } catch (error) {
-      console.error('Error handling order shipped event:', error);
+      safeLogger.error('Error handling order shipped event:', error);
       throw new Error('Failed to handle order shipped event');
     }
   }
@@ -124,7 +125,7 @@ export class OrderMessagingAutomation {
 
       return conversation;
     } catch (error) {
-      console.error('Error handling payment received event:', error);
+      safeLogger.error('Error handling payment received event:', error);
       throw new Error('Failed to handle payment received event');
     }
   }
@@ -183,7 +184,7 @@ export class OrderMessagingAutomation {
         // Add moderator as participant
         // Note: This would require the conversationParticipants table to have a userId field
         // that references the users table
-        console.log(`Added moderator ${moderator.id} to dispute conversation ${conversation.id}`);
+        safeLogger.info(`Added moderator ${moderator.id} to dispute conversation ${conversation.id}`);
       }
 
       // Notify all parties
@@ -198,7 +199,7 @@ export class OrderMessagingAutomation {
 
       return conversation;
     } catch (error) {
-      console.error('Error handling dispute opened event:', error);
+      safeLogger.error('Error handling dispute opened event:', error);
       throw new Error('Failed to handle dispute opened event');
     }
   }

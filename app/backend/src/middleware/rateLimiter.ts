@@ -1,4 +1,5 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { safeLogger } from '../utils/safeLogger';
 import { Request, Response } from 'express';
 
 // General rate limiter for all requests
@@ -13,7 +14,7 @@ export const generalLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req: Request, res: Response) => {
-    console.warn(`Rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+    safeLogger.warn(`Rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
     res.status(429).json({
       error: 'Too many requests',
       message: 'Too many requests from this IP, please try again later.',
@@ -38,7 +39,7 @@ export const apiLimiter = rateLimit({
     return req.path === '/health' || req.path === '/api/health';
   },
   handler: (req: Request, res: Response) => {
-    console.warn(`API rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+    safeLogger.warn(`API rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
     res.status(429).json({
       error: 'API rate limit exceeded',
       message: 'Too many API requests from this IP, please try again later.',
@@ -60,7 +61,7 @@ export const feedLimiter = rateLimit({
   legacyHeaders: false,
   // keyGenerator: ipKeyGenerator, // Removed to fix compilation error
   handler: (req: Request, res: Response) => {
-    console.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}`);
+    safeLogger.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}`);
     res.status(429).json({
       error: 'Feed rate limit exceeded',
       message: 'Too many feed requests, please try again in a minute.',
@@ -81,7 +82,7 @@ export const createPostLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
-    console.warn(`Post creation rate limit exceeded for IP: ${req.ip}`);
+    safeLogger.warn(`Post creation rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
       error: 'Post creation rate limit exceeded',
       message: 'Too many posts created, please try again later.',

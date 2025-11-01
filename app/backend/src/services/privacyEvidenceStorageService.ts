@@ -1,4 +1,5 @@
 import { createHash, createCipher, createDecipher, randomBytes } from 'crypto';
+import { safeLogger } from '../utils/safeLogger';
 import { piiDetectionService } from './piiDetectionService';
 import { geofencingComplianceService } from './geofencingComplianceService';
 
@@ -443,14 +444,14 @@ export class PrivacyEvidenceStorageService {
     this.evidenceStore.set(evidence.id, evidence);
     
     // TODO: Persist to database
-    console.log(`Stored evidence bundle ${evidence.id}`);
+    safeLogger.info(`Stored evidence bundle ${evidence.id}`);
   }
 
   private async updateEvidenceBundle(evidence: EvidenceBundle): Promise<void> {
     this.evidenceStore.set(evidence.id, evidence);
     
     // TODO: Update in database
-    console.log(`Updated evidence bundle ${evidence.id}`);
+    safeLogger.info(`Updated evidence bundle ${evidence.id}`);
   }
 
   private async deleteExpiredEvidence(evidenceId: string): Promise<void> {
@@ -458,20 +459,20 @@ export class PrivacyEvidenceStorageService {
     this.encryptionKeys.delete(evidenceId);
     
     // TODO: Remove from database and IPFS
-    console.log(`Deleted expired evidence ${evidenceId}`);
+    safeLogger.info(`Deleted expired evidence ${evidenceId}`);
   }
 
   private async storeToIPFS(evidence: EvidenceBundle): Promise<string> {
     // TODO: Implement IPFS storage
     // For now, return a mock CID
     const mockCid = `Qm${randomBytes(22).toString('base64').replace(/[^a-zA-Z0-9]/g, '')}`;
-    console.log(`Stored evidence ${evidence.id} to IPFS: ${mockCid}`);
+    safeLogger.info(`Stored evidence ${evidence.id} to IPFS: ${mockCid}`);
     return mockCid;
   }
 
   private async markIPFSDeleted(evidenceId: string): Promise<void> {
     // TODO: Implement IPFS deletion marking
-    console.log(`Marked IPFS evidence ${evidenceId} as deleted`);
+    safeLogger.info(`Marked IPFS evidence ${evidenceId} as deleted`);
   }
 }
 

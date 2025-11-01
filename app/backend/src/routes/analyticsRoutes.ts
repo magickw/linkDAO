@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { analyticsController } from '../controllers/analyticsController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { apiLimiter } from '../middleware/rateLimiter';
@@ -86,7 +87,7 @@ router.get('/health', analyticsController.getPlatformHealth.bind(analyticsContro
  * @body eventData - Event-specific data
  * @body metadata - Optional metadata (pageUrl, userAgent, etc.)
  */
-router.post('/track/event', analyticsController.trackUserEvent.bind(analyticsController));
+router.post('/track/event', csrfProtection,  analyticsController.trackUserEvent.bind(analyticsController));
 
 /**
  * @route POST /api/analytics/track/transaction
@@ -99,7 +100,7 @@ router.post('/track/event', analyticsController.trackUserEvent.bind(analyticsCon
  * @body currency - Currency used
  * @body Additional transaction metadata
  */
-router.post('/track/transaction', analyticsController.trackTransaction.bind(analyticsController));
+router.post('/track/transaction', csrfProtection,  analyticsController.trackTransaction.bind(analyticsController));
 
 /**
  * @route POST /api/analytics/report
@@ -108,7 +109,7 @@ router.post('/track/transaction', analyticsController.trackTransaction.bind(anal
  * @body reportType - Type of report to generate
  * @body parameters - Report parameters
  */
-router.post('/report', analyticsController.generateReport.bind(analyticsController));
+router.post('/report', csrfProtection,  analyticsController.generateReport.bind(analyticsController));
 
 /**
  * @route GET /api/analytics/export

@@ -72,8 +72,16 @@ export class DataEncryptionService {
    * Derive master key from environment
    */
   private deriveMasterKey(): Buffer {
-    const password = process.env.ENCRYPTION_PASSWORD || 'default-password-change-in-production';
-    const salt = process.env.ENCRYPTION_SALT || 'default-salt-change-in-production';
+    const password = process.env.ENCRYPTION_PASSWORD;
+    const salt = process.env.ENCRYPTION_SALT;
+    
+    if (!password || !salt) {
+      throw new Error('ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be set in environment variables');
+    }
+    
+    if (password.length < 32 || salt.length < 32) {
+      throw new Error('ENCRYPTION_PASSWORD and ENCRYPTION_SALT must be at least 32 characters');
+    }
     
     return crypto.pbkdf2Sync(password, salt, this.config.iterations, this.config.keyLength, 'sha512');
   }
@@ -195,7 +203,7 @@ export class DataEncryptionService {
   async encryptData(data: string, dataType?: string): Promise<EncryptedData> {
     try {
       const iv = crypto.randomBytes(this.config.ivLength);
-      const cipher = crypto.createCipher(this.config.algorithm, this.masterKey);
+      const cipher = crypto.createCipheriv(this.config.algorithm, this.masterKey, iv);
       cipher.setAAD(Buffer.from(dataType || 'general'));
 
       let encrypted = cipher.update(data, 'utf8', 'hex');
@@ -230,7 +238,8 @@ export class DataEncryptionService {
    */
   async decryptData(encryptedData: EncryptedData): Promise<string> {
     try {
-      const decipher = crypto.createDecipher(encryptedData.algorithm, this.masterKey);
+      const iv = Buffer.from(encryptedData.iv, 'hex');
+      const decipher = crypto.createDecipheriv(encryptedData.algorithm, this.masterKey, iv);
       
       if (encryptedData.tag) {
         decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));

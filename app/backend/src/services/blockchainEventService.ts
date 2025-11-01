@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
 import { BlockchainEvent, EscrowEvent } from '../models/Order';
@@ -51,7 +52,7 @@ export class BlockchainEventService {
         this.marketplaceContract = new ethers.Contract(marketplaceAddress, MARKETPLACE_ABI, this.provider);
       }
     } catch (error) {
-      console.error('Error initializing contracts:', error);
+      safeLogger.error('Error initializing contracts:', error);
     }
   }
 
@@ -61,7 +62,7 @@ export class BlockchainEventService {
   async monitorOrderEvents(orderId: string, escrowId: string): Promise<void> {
     try {
       if (!this.escrowContract) {
-        console.warn('Escrow contract not initialized, skipping event monitoring');
+        safeLogger.warn('Escrow contract not initialized, skipping event monitoring');
         return;
       }
 
@@ -88,9 +89,9 @@ export class BlockchainEventService {
 
       this.eventListeners.set(listenerKey, escrowEventHandlers);
 
-      console.log(`Started monitoring blockchain events for order ${orderId}`);
+      safeLogger.info(`Started monitoring blockchain events for order ${orderId}`);
     } catch (error) {
-      console.error('Error setting up blockchain event monitoring:', error);
+      safeLogger.error('Error setting up blockchain event monitoring:', error);
     }
   }
 
@@ -109,10 +110,10 @@ export class BlockchainEventService {
         });
 
         this.eventListeners.delete(listenerKey);
-        console.log(`Stopped monitoring blockchain events for order ${orderId}`);
+        safeLogger.info(`Stopped monitoring blockchain events for order ${orderId}`);
       }
     } catch (error) {
-      console.error('Error stopping blockchain event monitoring:', error);
+      safeLogger.error('Error stopping blockchain event monitoring:', error);
     }
   }
 
@@ -152,7 +153,7 @@ export class BlockchainEventService {
 
       return events.sort((a, b) => a.blockNumber - b.blockNumber);
     } catch (error) {
-      console.error('Error getting order events:', error);
+      safeLogger.error('Error getting order events:', error);
       return [];
     }
   }
@@ -169,7 +170,7 @@ export class BlockchainEventService {
 
       if (lastSyncedBlock >= currentBlock) return;
 
-      console.log(`Syncing events from block ${lastSyncedBlock} to ${currentBlock}`);
+      safeLogger.info(`Syncing events from block ${lastSyncedBlock} to ${currentBlock}`);
 
       // Get all events since last sync
       const events = await this.escrowContract.queryFilter(
@@ -185,9 +186,9 @@ export class BlockchainEventService {
       // Update last synced block
       await databaseService.updateLastSyncedBlock(currentBlock);
 
-      console.log(`Synced ${events.length} events up to block ${currentBlock}`);
+      safeLogger.info(`Synced ${events.length} events up to block ${currentBlock}`);
     } catch (error) {
-      console.error('Error syncing blockchain events:', error);
+      safeLogger.error('Error syncing blockchain events:', error);
     }
   }
 
@@ -215,7 +216,7 @@ export class BlockchainEventService {
         notificationService.sendOrderNotification(seller, 'ESCROW_CREATED', orderId)
       ]);
     } catch (error) {
-      console.error('Error handling EscrowCreated event:', error);
+      safeLogger.error('Error handling EscrowCreated event:', error);
     }
   }
 
@@ -248,7 +249,7 @@ export class BlockchainEventService {
         }
       }
     } catch (error) {
-      console.error('Error handling FundsLocked event:', error);
+      safeLogger.error('Error handling FundsLocked event:', error);
     }
   }
 
@@ -284,7 +285,7 @@ export class BlockchainEventService {
         }
       }
     } catch (error) {
-      console.error('Error handling DeliveryConfirmed event:', error);
+      safeLogger.error('Error handling DeliveryConfirmed event:', error);
     }
   }
 
@@ -306,7 +307,7 @@ export class BlockchainEventService {
       // Send notification
       await notificationService.sendOrderNotification(approver, 'ESCROW_APPROVED', orderId);
     } catch (error) {
-      console.error('Error handling EscrowApproved event:', error);
+      safeLogger.error('Error handling EscrowApproved event:', error);
     }
   }
 
@@ -340,7 +341,7 @@ export class BlockchainEventService {
         }
       }
     } catch (error) {
-      console.error('Error handling DisputeOpened event:', error);
+      safeLogger.error('Error handling DisputeOpened event:', error);
     }
   }
 
@@ -376,7 +377,7 @@ export class BlockchainEventService {
         }
       }
     } catch (error) {
-      console.error('Error handling DisputeResolved event:', error);
+      safeLogger.error('Error handling DisputeResolved event:', error);
     }
   }
 
@@ -399,7 +400,7 @@ export class BlockchainEventService {
       // Send notification
       await notificationService.sendOrderNotification(recipient, 'PAYMENT_RELEASED', orderId, { amount });
     } catch (error) {
-      console.error('Error handling PaymentReleased event:', error);
+      safeLogger.error('Error handling PaymentReleased event:', error);
     }
   }
 
@@ -421,7 +422,7 @@ export class BlockchainEventService {
       // Send notification
       await notificationService.sendOrderNotification(submitter, 'EVIDENCE_SUBMITTED', orderId);
     } catch (error) {
-      console.error('Error handling EvidenceSubmitted event:', error);
+      safeLogger.error('Error handling EvidenceSubmitted event:', error);
     }
   }
 
@@ -443,7 +444,7 @@ export class BlockchainEventService {
       // Send notification
       await notificationService.sendOrderNotification(voter, 'VOTE_CAST', orderId, { voteForBuyer });
     } catch (error) {
-      console.error('Error handling VoteCast event:', error);
+      safeLogger.error('Error handling VoteCast event:', error);
     }
   }
 
@@ -463,7 +464,7 @@ export class BlockchainEventService {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error processing event:', error);
+      safeLogger.error('Error processing event:', error);
     }
   }
 
@@ -471,7 +472,7 @@ export class BlockchainEventService {
     try {
       await databaseService.storeBlockchainEvent(event);
     } catch (error) {
-      console.error('Error storing blockchain event:', error);
+      safeLogger.error('Error storing blockchain event:', error);
     }
   }
 
@@ -479,7 +480,7 @@ export class BlockchainEventService {
     try {
       await databaseService.updateOrder(parseInt(orderId), { status: status.toLowerCase() });
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
     }
   }
 
@@ -490,11 +491,11 @@ export class BlockchainEventService {
     // Sync events every 30 seconds
     setInterval(() => {
       this.syncEvents().catch(error => {
-        console.error('Error in periodic event sync:', error);
+        safeLogger.error('Error in periodic event sync:', error);
       });
     }, 30000);
 
-    console.log('Started periodic blockchain event synchronization');
+    safeLogger.info('Started periodic blockchain event synchronization');
   }
 
   /**
@@ -509,9 +510,9 @@ export class BlockchainEventService {
         this.marketplaceContract.removeAllListeners();
       }
       this.eventListeners.clear();
-      console.log('Stopped all blockchain event monitoring');
+      safeLogger.info('Stopped all blockchain event monitoring');
     } catch (error) {
-      console.error('Error stopping event monitoring:', error);
+      safeLogger.error('Error stopping event monitoring:', error);
     }
   }
 }

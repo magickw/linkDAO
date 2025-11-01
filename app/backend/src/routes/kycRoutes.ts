@@ -1,4 +1,6 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { KYCVerificationService } from '../services/kycVerificationService';
 import { KYCVerificationRequest } from '../services/kycVerificationService';
 
@@ -6,7 +8,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
   const router = express.Router();
 
   // Initiate KYC verification
-  router.post('/initiate', async (req, res) => {
+  router.post('/initiate', csrfProtection,  async (req, res) => {
     try {
       const { userId, personalInfo, documents, verificationLevel = 'basic' } = req.body;
 
@@ -46,7 +48,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         expiresAt: result.expiresAt,
       });
     } catch (error) {
-      console.error('KYC initiation error:', error);
+      safeLogger.error('KYC initiation error:', error);
       res.status(500).json({
         error: 'Failed to initiate KYC verification',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -82,7 +84,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         }
       });
     } catch (error) {
-      console.error('KYC status retrieval error:', error);
+      safeLogger.error('KYC status retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve verification status',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -116,7 +118,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         expiresAt: verification.expiresAt,
       });
     } catch (error) {
-      console.error('User KYC status retrieval error:', error);
+      safeLogger.error('User KYC status retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve user verification status',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -125,7 +127,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
   });
 
   // Check if verification is required for amount
-  router.post('/check-requirement', async (req, res) => {
+  router.post('/check-requirement', csrfProtection,  async (req, res) => {
     try {
       const { userId, amount } = req.body;
 
@@ -151,7 +153,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         limits: kycService.getPurchaseLimits(requiredLevel),
       });
     } catch (error) {
-      console.error('KYC requirement check error:', error);
+      safeLogger.error('KYC requirement check error:', error);
       res.status(500).json({
         error: 'Failed to check verification requirement',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -178,7 +180,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         limits,
       });
     } catch (error) {
-      console.error('KYC limits retrieval error:', error);
+      safeLogger.error('KYC limits retrieval error:', error);
       res.status(500).json({
         error: 'Failed to retrieve limits',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -204,7 +206,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
         report,
       });
     } catch (error) {
-      console.error('Compliance report generation error:', error);
+      safeLogger.error('Compliance report generation error:', error);
       res.status(500).json({
         error: 'Failed to generate compliance report',
         message: error instanceof Error ? error.message : 'Unknown error'
@@ -213,7 +215,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
   });
 
   // Webhook endpoints for different providers
-  router.post('/webhook/jumio', express.raw({ type: 'application/json' }), async (req, res) => {
+  router.post('/webhook/jumio', csrfProtection,  express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       const signature = req.headers['x-jumio-signature'] as string;
       
@@ -229,12 +231,12 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error('Jumio webhook error:', error);
+      safeLogger.error('Jumio webhook error:', error);
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 
-  router.post('/webhook/onfido', express.raw({ type: 'application/json' }), async (req, res) => {
+  router.post('/webhook/onfido', csrfProtection,  express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       const signature = req.headers['x-sha1-signature'] as string;
       
@@ -250,12 +252,12 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error('Onfido webhook error:', error);
+      safeLogger.error('Onfido webhook error:', error);
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });
 
-  router.post('/webhook/sumsub', express.raw({ type: 'application/json' }), async (req, res) => {
+  router.post('/webhook/sumsub', csrfProtection,  express.raw({ type: 'application/json' }), async (req, res) => {
     try {
       const signature = req.headers['x-payload-digest'] as string;
       
@@ -271,7 +273,7 @@ export function createKYCRoutes(kycService: KYCVerificationService): express.Rou
 
       res.status(200).json({ received: true });
     } catch (error) {
-      console.error('Sumsub webhook error:', error);
+      safeLogger.error('Sumsub webhook error:', error);
       res.status(500).json({ error: 'Webhook processing failed' });
     }
   });

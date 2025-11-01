@@ -1,4 +1,5 @@
 import { contentModerationML, MLModerationResult } from './ai/contentModerationML';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { posts, communityModerationActions, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -87,7 +88,7 @@ export class CommunityAIModerationService {
         shouldNotifyModerators
       };
     } catch (error) {
-      console.error('Error analyzing post:', error);
+      safeLogger.error('Error analyzing post:', error);
       throw error;
     }
   }
@@ -113,7 +114,7 @@ export class CommunityAIModerationService {
         // Small delay to respect rate limits
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Error analyzing post ${postId}:`, error);
+        safeLogger.error(`Error analyzing post ${postId}:`, error);
       }
     }
 
@@ -141,7 +142,7 @@ export class CommunityAIModerationService {
 
       return violations.length;
     } catch (error) {
-      console.error('Error fetching violations:', error);
+      safeLogger.error('Error fetching violations:', error);
       return 0;
     }
   }
@@ -256,10 +257,10 @@ export class CommunityAIModerationService {
       // If removing, update post status
       if (action === 'remove') {
         // Would update post to removed status
-        console.log(`Post ${postId} auto-removed by AI moderation`);
+        safeLogger.info(`Post ${postId} auto-removed by AI moderation`);
       }
     } catch (error) {
-      console.error('Error executing moderation action:', error);
+      safeLogger.error('Error executing moderation action:', error);
     }
   }
 
@@ -292,7 +293,7 @@ export class CommunityAIModerationService {
     config: Partial<CommunityModerationConfig>
   ): Promise<void> {
     // In production, save to database
-    console.log('Updating moderation config for', communityId, config);
+    safeLogger.info('Updating moderation config for', communityId, config);
   }
 
   /**
@@ -334,7 +335,7 @@ export class CommunityAIModerationService {
         avgRiskScore: 0.42, // Would calculate from stored results
       };
     } catch (error) {
-      console.error('Error fetching moderation stats:', error);
+      safeLogger.error('Error fetching moderation stats:', error);
       return {
         totalAnalyzed: 0,
         autoApproved: 0,

@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { posts, reactions, tips, users, postTags, views, bookmarks, shares, follows } from '../db/schema';
 import { eq, desc, and, inArray, sql, gt, isNull } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
@@ -202,7 +203,7 @@ export class FeedService {
         }
       };
     } catch (error) {
-      console.error('Error getting enhanced feed:', error);
+      safeLogger.error('Error getting enhanced feed:', error);
       throw new Error('Failed to retrieve feed');
     }
   }
@@ -218,7 +219,7 @@ export class FeedService {
       if (page === 1) {
         const cachedTrending = await trendingCacheService.getTrendingScores(timeRange);
         if (cachedTrending) {
-          console.log(`Cache hit for trending ${timeRange}`);
+          safeLogger.info(`Cache hit for trending ${timeRange}`);
           return {
             posts: cachedTrending.slice(0, limit),
             pagination: {
@@ -233,7 +234,7 @@ export class FeedService {
       }
 
       // Cache miss - calculate trending scores
-      console.log(`Cache miss for trending ${timeRange} - calculating...`);
+      safeLogger.info(`Cache miss for trending ${timeRange} - calculating...`);
       // Get posts with engagement metrics using a single optimized query
       const trendingPosts = await db
         .select({
@@ -345,7 +346,7 @@ export class FeedService {
       if (page === 1) {
         const topPosts = postsWithAdvancedScoring.slice(0, 100);
         await trendingCacheService.setTrendingScores(timeRange, topPosts);
-        console.log(`Cached trending ${timeRange} (${topPosts.length} posts)`);
+        safeLogger.info(`Cached trending ${timeRange} (${topPosts.length} posts)`);
       }
 
       // Get total count for pagination
@@ -365,7 +366,7 @@ export class FeedService {
         }
       };
     } catch (error) {
-      console.error('Error getting trending posts:', error);
+      safeLogger.error('Error getting trending posts:', error);
       throw new Error('Failed to retrieve trending posts');
     }
   }
@@ -404,7 +405,7 @@ export class FeedService {
                       ((hashtag.recentActivity || 0) * 0.2)
       }));
     } catch (error) {
-      console.error('Error getting trending hashtags:', error);
+      safeLogger.error('Error getting trending hashtags:', error);
       throw new Error('Failed to retrieve trending hashtags');
     }
   }
@@ -481,7 +482,7 @@ export class FeedService {
         tipMetrics: tipData[0] || { count: 0, totalAmount: 0, avgAmount: 0 }
       };
     } catch (error) {
-      console.error('Error getting content popularity metrics:', error);
+      safeLogger.error('Error getting content popularity metrics:', error);
       throw new Error('Failed to retrieve content popularity metrics');
     }
   }
@@ -552,7 +553,7 @@ export class FeedService {
 
       return postResponse;
     } catch (error) {
-      console.error('Error creating post:', error);
+      safeLogger.error('Error creating post:', error);
       throw new Error('Failed to create post');
     }
   }
@@ -614,7 +615,7 @@ export class FeedService {
 
       return updatedPost[0];
     } catch (error) {
-      console.error('Error updating post:', error);
+      safeLogger.error('Error updating post:', error);
       throw new Error('Failed to update post');
     }
   }
@@ -658,7 +659,7 @@ export class FeedService {
 
       return true;
     } catch (error) {
-      console.error('Error deleting post:', error);
+      safeLogger.error('Error deleting post:', error);
       throw new Error('Failed to delete post');
     }
   }
@@ -718,7 +719,7 @@ export class FeedService {
 
       return reaction[0];
     } catch (error) {
-      console.error('Error adding reaction:', error);
+      safeLogger.error('Error adding reaction:', error);
       throw new Error('Failed to add reaction');
     }
   }
@@ -758,7 +759,7 @@ export class FeedService {
 
       return tip[0];
     } catch (error) {
-      console.error('Error sending tip:', error);
+      safeLogger.error('Error sending tip:', error);
       throw new Error('Failed to send tip');
     }
   }
@@ -842,7 +843,7 @@ export class FeedService {
         )
       };
     } catch (error) {
-      console.error('Error getting engagement data:', error);
+      safeLogger.error('Error getting engagement data:', error);
       throw new Error('Failed to retrieve engagement data');
     }
   }
@@ -881,7 +882,7 @@ export class FeedService {
         sharedAt: new Date()
       };
     } catch (error) {
-      console.error('Error sharing post:', error);
+      safeLogger.error('Error sharing post:', error);
       throw new Error('Failed to share post');
     }
   }
@@ -980,7 +981,7 @@ export class FeedService {
         }
       };
     } catch (error) {
-      console.error('Error getting post comments:', error);
+      safeLogger.error('Error getting post comments:', error);
       throw new Error('Failed to retrieve post comments');
     }
   }
@@ -1044,7 +1045,7 @@ export class FeedService {
         engagementScore: 0
       };
     } catch (error) {
-      console.error('Error adding comment:', error);
+      safeLogger.error('Error adding comment:', error);
       throw new Error('Failed to add comment');
     }
   }
@@ -1132,7 +1133,7 @@ export class FeedService {
         }
       };
     } catch (error) {
-      console.error('Error getting comment replies:', error);
+      safeLogger.error('Error getting comment replies:', error);
       throw new Error('Failed to retrieve comment replies');
     }
   }
@@ -1192,7 +1193,7 @@ export class FeedService {
         recentReactions: reactionData.slice(0, 10) // Last 10 reactions
       };
     } catch (error) {
-      console.error('Error getting post reactions:', error);
+      safeLogger.error('Error getting post reactions:', error);
       throw new Error('Failed to retrieve post reactions');
     }
   }
@@ -1228,7 +1229,7 @@ export class FeedService {
         sharedAt: new Date()
       };
     } catch (error) {
-      console.error('Error adding post share:', error);
+      safeLogger.error('Error adding post share:', error);
       throw new Error('Failed to share post');
     }
   }
@@ -1252,7 +1253,7 @@ export class FeedService {
         bookmarkedAt: new Date()
       };
     } catch (error) {
-      console.error('Error toggling bookmark:', error);
+      safeLogger.error('Error toggling bookmark:', error);
       throw new Error('Failed to toggle bookmark');
     }
   }
@@ -1440,7 +1441,7 @@ export class FeedService {
         engagementGrowth: 0 // TODO: Calculate growth percentage
       };
     } catch (error) {
-      console.error('Error getting community engagement metrics:', error);
+      safeLogger.error('Error getting community engagement metrics:', error);
       throw new Error('Failed to retrieve community engagement metrics');
     }
   }
@@ -1543,7 +1544,7 @@ export class FeedService {
         metric
       }));
     } catch (error) {
-      console.error('Error getting community leaderboard:', error);
+      safeLogger.error('Error getting community leaderboard:', error);
       throw new Error('Failed to retrieve community leaderboard');
     }
   }
@@ -1608,7 +1609,7 @@ export class FeedService {
         totalUsers: reactionsData.length + tipsData.length
       };
     } catch (error) {
-      console.error('Error getting liked by data:', error);
+      safeLogger.error('Error getting liked by data:', error);
       throw new Error('Failed to retrieve liked by data');
     }
   }
@@ -1642,7 +1643,7 @@ export class FeedService {
         })
         .where(eq(posts.id, postIdInt));
     } catch (error) {
-      console.error('Error updating engagement score:', error);
+      safeLogger.error('Error updating engagement score:', error);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { VendorModerationService, ModerationResult } from '../aiModerationOrchestrator';
+import { safeLogger } from '../utils/safeLogger';
 
 interface GoogleVisionResponse {
   responses: Array<{
@@ -28,7 +29,7 @@ export class GoogleVisionService implements VendorModerationService {
   constructor() {
     this.apiKey = process.env.GOOGLE_VISION_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('Google Vision API key not found in environment variables');
+      safeLogger.warn('Google Vision API key not found in environment variables');
     }
   }
 
@@ -135,7 +136,7 @@ export class GoogleVisionService implements VendorModerationService {
       };
 
     } catch (error) {
-      console.error('Google Vision API error:', error);
+      safeLogger.error('Google Vision API error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       return {
@@ -163,7 +164,7 @@ export class GoogleVisionService implements VendorModerationService {
       const testResult = await this.scanImage(testImageUrl);
       return testResult.success;
     } catch (error) {
-      console.error('Google Vision health check failed:', error);
+      safeLogger.error('Google Vision health check failed:', error);
       return false;
     }
   }

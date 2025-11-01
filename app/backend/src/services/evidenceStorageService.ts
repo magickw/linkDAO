@@ -1,4 +1,5 @@
 import IPFSService from './ipfsService';
+import { safeLogger } from '../utils/safeLogger';
 import { EvidenceBundle, ModerationCase, AIModelResult } from '../models/ModerationModels';
 import crypto from 'crypto';
 
@@ -74,7 +75,7 @@ class EvidenceStorageService {
         verificationHash,
       };
     } catch (error) {
-      console.error('Error storing evidence bundle:', error);
+      safeLogger.error('Error storing evidence bundle:', error);
       throw new Error(`Failed to store evidence bundle: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -99,7 +100,7 @@ class EvidenceStorageService {
         retrievedAt: new Date(),
       };
     } catch (error) {
-      console.error('Error retrieving evidence bundle:', error);
+      safeLogger.error('Error retrieving evidence bundle:', error);
       throw new Error(`Failed to retrieve evidence bundle: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -214,7 +215,7 @@ class EvidenceStorageService {
       const actualHash = this.generateVerificationHash(bundle);
       return actualHash === expectedHash;
     } catch (error) {
-      console.error('Error verifying bundle integrity:', error);
+      safeLogger.error('Error verifying bundle integrity:', error);
       return false;
     }
   }
@@ -258,7 +259,7 @@ class EvidenceStorageService {
 
       return result.hash;
     } catch (error) {
-      console.error('Error creating audit record:', error);
+      safeLogger.error('Error creating audit record:', error);
       throw new Error(`Failed to create audit record: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -271,7 +272,7 @@ class EvidenceStorageService {
       const content = await IPFSService.getContent(ipfsHash);
       return JSON.parse(content.toString());
     } catch (error) {
-      console.error('Error retrieving audit record:', error);
+      safeLogger.error('Error retrieving audit record:', error);
       throw new Error(`Failed to retrieve audit record: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -287,7 +288,7 @@ class EvidenceStorageService {
         const result = await this.storeEvidenceBundle(input);
         results.push(result);
       } catch (error) {
-        console.error(`Error storing evidence bundle for case ${input.caseId}:`, error);
+        safeLogger.error(`Error storing evidence bundle for case ${input.caseId}:`, error);
         // Continue with other bundles even if one fails
       }
     }
@@ -337,7 +338,7 @@ class EvidenceStorageService {
   async cleanupExpiredEvidence(retentionDays: number = this.RETENTION_DAYS): Promise<number> {
     // This would typically be implemented with a database query to find expired evidence
     // and then unpin from IPFS. For now, return 0 as placeholder.
-    console.log(`Cleanup would remove evidence older than ${retentionDays} days`);
+    safeLogger.info(`Cleanup would remove evidence older than ${retentionDays} days`);
     return 0;
   }
 

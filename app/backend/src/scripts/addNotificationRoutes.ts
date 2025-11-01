@@ -1,4 +1,5 @@
 import express from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import cors from 'cors';
 import realTimeNotificationRoutes from '../routes/realTimeNotificationRoutes';
 
@@ -25,7 +26,7 @@ app.get('/health', (req, res) => {
 
 // Error handling middleware
 app.use((error: any, req: any, res: any, next: any) => {
-  console.error('Unhandled error:', error);
+  safeLogger.error('Unhandled error:', error);
   res.status(500).json({
     success: false,
     error: 'Internal server error'
@@ -37,21 +38,21 @@ const PORT = process.env.PORT || 3000;
 const WS_PORT = process.env.WS_PORT || 3001;
 
 app.listen(PORT, () => {
-  console.log(`HTTP server running on port ${PORT}`);
-  console.log(`WebSocket server will run on port ${WS_PORT}`);
-  console.log('Available endpoints:');
-  console.log(`  GET  /health - Health check`);
-  console.log(`  GET  /api/notifications/stats - Service statistics`);
-  console.log(`  POST /api/notifications/mention - Send mention notification`);
-  console.log(`  POST /api/notifications/tip - Send tip notification`);
-  console.log(`  POST /api/notifications/governance - Send governance notification`);
-  console.log(`  POST /api/notifications/community - Send community notification`);
-  console.log(`  POST /api/notifications/reaction - Send reaction notification`);
-  console.log(`  POST /api/notifications/comment - Notify new comment`);
-  console.log(`  POST /api/notifications/reaction-update - Notify reaction update`);
-  console.log(`  POST /api/notifications/batch - Send batch notifications`);
-  console.log(`  POST /api/notifications/broadcast - Broadcast to all users`);
-  console.log(`  POST /api/notifications/test/:type - Send test notification`);
+  safeLogger.info(`HTTP server running on port ${PORT}`);
+  safeLogger.info(`WebSocket server will run on port ${WS_PORT}`);
+  safeLogger.info('Available endpoints:');
+  safeLogger.info(`  GET  /health - Health check`);
+  safeLogger.info(`  GET  /api/notifications/stats - Service statistics`);
+  safeLogger.info(`  POST /api/notifications/mention - Send mention notification`);
+  safeLogger.info(`  POST /api/notifications/tip - Send tip notification`);
+  safeLogger.info(`  POST /api/notifications/governance - Send governance notification`);
+  safeLogger.info(`  POST /api/notifications/community - Send community notification`);
+  safeLogger.info(`  POST /api/notifications/reaction - Send reaction notification`);
+  safeLogger.info(`  POST /api/notifications/comment - Notify new comment`);
+  safeLogger.info(`  POST /api/notifications/reaction-update - Notify reaction update`);
+  safeLogger.info(`  POST /api/notifications/batch - Send batch notifications`);
+  safeLogger.info(`  POST /api/notifications/broadcast - Broadcast to all users`);
+  safeLogger.info(`  POST /api/notifications/test/:type - Send test notification`);
 });
 
 export default app;

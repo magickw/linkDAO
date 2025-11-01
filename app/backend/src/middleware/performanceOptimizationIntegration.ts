@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { Pool } from 'pg';
 import { ResponseCachingMiddleware } from './responseCachingMiddleware';
 import DatabaseOptimizationMiddleware from './databaseOptimizationMiddleware';
@@ -307,7 +308,7 @@ export class PerformanceOptimizationIntegration {
       }
 
     } catch (error) {
-      console.error('Error updating performance metrics:', error);
+      safeLogger.error('Error updating performance metrics:', error);
     }
   }
 
@@ -316,7 +317,7 @@ export class PerformanceOptimizationIntegration {
    */
   private async runAutoOptimization(): Promise<void> {
     try {
-      console.log('Running automatic performance optimization...');
+      safeLogger.info('Running automatic performance optimization...');
 
       // Optimize connection pool
       if (this.config.enableConnectionPooling && this.connectionPoolOptimizer) {
@@ -328,23 +329,23 @@ export class PerformanceOptimizationIntegration {
         const recommendations = await this.databaseIndexOptimizer.generateIndexRecommendations();
         
         if (recommendations.length > 0) {
-          console.log(`Generated ${recommendations.length} index recommendations`);
+          safeLogger.info(`Generated ${recommendations.length} index recommendations`);
           
           // Auto-apply critical recommendations
           const criticalRecs = recommendations.filter(rec => rec.priority === 'critical');
           for (const rec of criticalRecs.slice(0, 3)) { // Limit to 3 at a time
             const result = await this.databaseIndexOptimizer.createIndex(rec);
             if (result.success) {
-              console.log(`Auto-applied critical index: ${rec.createStatement}`);
+              safeLogger.info(`Auto-applied critical index: ${rec.createStatement}`);
             }
           }
         }
       }
 
-      console.log('Automatic optimization completed');
+      safeLogger.info('Automatic optimization completed');
 
     } catch (error) {
-      console.error('Auto-optimization error:', error);
+      safeLogger.error('Auto-optimization error:', error);
     }
   }
 

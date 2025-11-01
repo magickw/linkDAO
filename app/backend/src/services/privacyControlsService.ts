@@ -4,6 +4,7 @@
  */
 
 import { securityConfig } from '../config/securityConfig';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface PrivacySettings {
   userId: string;
@@ -165,7 +166,7 @@ export class PrivacyControlsService {
         updatedAt: now
       };
     } catch (error) {
-      console.error('Error getting privacy settings:', error);
+      safeLogger.error('Error getting privacy settings:', error);
       throw new Error('Failed to retrieve privacy settings');
     }
   }
@@ -198,10 +199,10 @@ export class PrivacyControlsService {
       });
 
       // In production, save to database
-      console.log(`Privacy settings updated for user ${userId}`);
+      safeLogger.info(`Privacy settings updated for user ${userId}`);
       return updatedSettings;
     } catch (error) {
-      console.error('Error updating privacy settings:', error);
+      safeLogger.error('Error updating privacy settings:', error);
       throw new Error('Failed to update privacy settings');
     }
   }
@@ -240,7 +241,7 @@ export class PrivacyControlsService {
       });
 
       // In production, queue the export job
-      console.log(`Data export requested for user ${userId}: ${requestType}`);
+      safeLogger.info(`Data export requested for user ${userId}: ${requestType}`);
       
       // Simulate processing
       setTimeout(() => {
@@ -249,7 +250,7 @@ export class PrivacyControlsService {
 
       return exportRequest;
     } catch (error) {
-      console.error('Error requesting data export:', error);
+      safeLogger.error('Error requesting data export:', error);
       throw new Error('Failed to request data export');
     }
   }
@@ -290,9 +291,9 @@ export class PrivacyControlsService {
         severity: 'low'
       });
 
-      console.log(`Data export completed for user ${request.userId}: ${request.id}`);
+      safeLogger.info(`Data export completed for user ${request.userId}: ${request.id}`);
     } catch (error) {
-      console.error('Error processing data export:', error);
+      safeLogger.error('Error processing data export:', error);
       request.status = 'failed';
     }
   }
@@ -335,10 +336,10 @@ export class PrivacyControlsService {
         severity: 'high'
       });
 
-      console.log(`Data deletion requested for user ${userId}: ${deletionType}`);
+      safeLogger.info(`Data deletion requested for user ${userId}: ${deletionType}`);
       return deletionRequest;
     } catch (error) {
-      console.error('Error requesting data deletion:', error);
+      safeLogger.error('Error requesting data deletion:', error);
       throw new Error('Failed to request data deletion');
     }
   }
@@ -368,10 +369,10 @@ export class PrivacyControlsService {
       });
 
       // In production, queue the deletion job
-      console.log(`Data deletion confirmed: ${requestId}`);
+      safeLogger.info(`Data deletion confirmed: ${requestId}`);
       return true;
     } catch (error) {
-      console.error('Error confirming data deletion:', error);
+      safeLogger.error('Error confirming data deletion:', error);
       return false;
     }
   }
@@ -414,10 +415,10 @@ export class PrivacyControlsService {
         severity: 'medium'
       });
 
-      console.log(`Consent ${granted ? 'granted' : 'revoked'} for user ${userId}: ${consentType}`);
+      safeLogger.info(`Consent ${granted ? 'granted' : 'revoked'} for user ${userId}: ${consentType}`);
       return consentRecord;
     } catch (error) {
-      console.error('Error recording consent:', error);
+      safeLogger.error('Error recording consent:', error);
       throw new Error('Failed to record consent');
     }
   }
@@ -431,7 +432,7 @@ export class PrivacyControlsService {
       // For now, return empty array
       return [];
     } catch (error) {
-      console.error('Error getting consent history:', error);
+      safeLogger.error('Error getting consent history:', error);
       throw new Error('Failed to retrieve consent history');
     }
   }
@@ -449,7 +450,7 @@ export class PrivacyControlsService {
       // For now, return empty array
       return [];
     } catch (error) {
-      console.error('Error getting audit log:', error);
+      safeLogger.error('Error getting audit log:', error);
       throw new Error('Failed to retrieve audit log');
     }
   }
@@ -497,7 +498,7 @@ export class PrivacyControlsService {
           return true;
       }
     } catch (error) {
-      console.error('Error checking action permission:', error);
+      safeLogger.error('Error checking action permission:', error);
       return false;
     }
   }
@@ -552,7 +553,7 @@ export class PrivacyControlsService {
         dataUsageStats
       };
     } catch (error) {
-      console.error('Error getting privacy dashboard:', error);
+      safeLogger.error('Error getting privacy dashboard:', error);
       throw new Error('Failed to retrieve privacy dashboard');
     }
   }
@@ -609,9 +610,9 @@ export class PrivacyControlsService {
       };
 
       // In production, save to database
-      console.log('Audit entry logged:', auditEntry);
+      safeLogger.info('Audit entry logged:', auditEntry);
     } catch (error) {
-      console.error('Error logging audit entry:', error);
+      safeLogger.error('Error logging audit entry:', error);
     }
   }
 }

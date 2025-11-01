@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { proposals, users, communities, votes, votingDelegations, votingPowerSnapshots, governanceSettings } from '../db/schema';
 import { eq, desc, and, gte, lte, sql, sum } from 'drizzle-orm';
@@ -106,7 +107,7 @@ export class GovernanceService {
         daoId: data.daoId
       };
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      safeLogger.error('Error creating proposal:', error);
       throw new Error('Failed to create proposal');
     }
   }
@@ -140,7 +141,7 @@ export class GovernanceService {
 
       return parseFloat(result[0]?.total || '0');
     } catch (error) {
-      console.error(`Error calculating ${voteType} votes for proposal ${proposalId}:`, error);
+      safeLogger.error(`Error calculating ${voteType} votes for proposal ${proposalId}:`, error);
       return 0;
     }
   }
@@ -174,7 +175,7 @@ export class GovernanceService {
 
       return result;
     } catch (error) {
-      console.error('Error fetching DAO proposals:', error);
+      safeLogger.error('Error fetching DAO proposals:', error);
       return [];
     }
   }
@@ -215,7 +216,7 @@ export class GovernanceService {
 
       return result;
     } catch (error) {
-      console.error('Error fetching active proposals:', error);
+      safeLogger.error('Error fetching active proposals:', error);
       return [];
     }
   }
@@ -244,7 +245,7 @@ export class GovernanceService {
         return this.getMockProposalData(proposalId);
       }
     } catch (error) {
-      console.error('Governance data fetch failed:', error);
+      safeLogger.error('Governance data fetch failed:', error);
       return this.getMockProposalData(proposalId);
     }
   }
@@ -279,7 +280,7 @@ export class GovernanceService {
         daoId: proposal.daoId || undefined
       };
     } catch (error) {
-      console.error('Error fetching proposal from database:', error);
+      safeLogger.error('Error fetching proposal from database:', error);
       return null;
     }
   }
@@ -323,7 +324,7 @@ export class GovernanceService {
 
       return true;
     } catch (error) {
-      console.error('Error voting on proposal:', error);
+      safeLogger.error('Error voting on proposal:', error);
       return false;
     }
   }
@@ -352,7 +353,7 @@ export class GovernanceService {
 
       return true;
     } catch (error) {
-      console.error('Error delegating voting power:', error);
+      safeLogger.error('Error delegating voting power:', error);
       return false;
     }
   }
@@ -369,7 +370,7 @@ export class GovernanceService {
       // Fallback to mock data for development
       return this.getMockTreasuryData(daoId);
     } catch (error) {
-      console.error('Error fetching treasury data:', error);
+      safeLogger.error('Error fetching treasury data:', error);
       return this.getMockTreasuryData(daoId);
     }
   }
@@ -386,7 +387,7 @@ export class GovernanceService {
       // For now, return null to use mock data
       return null;
     } catch (error) {
-      console.error('Error fetching on-chain treasury data:', error);
+      safeLogger.error('Error fetching on-chain treasury data:', error);
       return null;
     }
   }
@@ -447,7 +448,7 @@ export class GovernanceService {
       // Fallback to mock data for development
       return this.getMockVotingPower(userId, daoId);
     } catch (error) {
-      console.error('Error fetching voting power:', error);
+      safeLogger.error('Error fetching voting power:', error);
       return this.getMockVotingPower(userId, daoId);
     }
   }
@@ -464,7 +465,7 @@ export class GovernanceService {
       // For now, return null to use mock data
       return null;
     } catch (error) {
-      console.error('Error fetching on-chain voting power:', error);
+      safeLogger.error('Error fetching on-chain voting power:', error);
       return null;
     }
   }
@@ -670,7 +671,7 @@ export class GovernanceService {
         requiredMajority: 50
       }));
     } catch (error) {
-      console.error('Proposals fetch failed:', error);
+      safeLogger.error('Proposals fetch failed:', error);
       return [];
     }
   }
@@ -735,7 +736,7 @@ export class GovernanceService {
         requiredMajority: 50
       }));
     } catch (error) {
-      console.error('Proposal search failed:', error);
+      safeLogger.error('Proposal search failed:', error);
       return [];
     }
   }

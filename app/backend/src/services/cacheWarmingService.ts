@@ -1,4 +1,5 @@
 import { cacheService } from './cacheService';
+import { safeLogger } from '../utils/safeLogger';
 
 import { sellerProfileService } from './sellerProfileService';
 import { marketplaceListingsService } from './marketplaceListingsService';
@@ -45,7 +46,7 @@ export class CacheWarmingService {
 
   // Warm popular seller profiles
   async warmPopularSellerProfiles(limit: number = 10): Promise<void> { // Reduced from 50 to 10
-    console.log(`Warming ${limit} popular seller profiles...`);
+    safeLogger.info(`Warming ${limit} popular seller profiles...`);
 
     // This would typically query for popular sellers from analytics
     // For now, we'll create placeholder jobs
@@ -65,7 +66,7 @@ export class CacheWarmingService {
 
   // Warm popular listings
   async warmPopularListings(): Promise<void> {
-    console.log('Warming popular listings...');
+    safeLogger.info('Warming popular listings...');
 
     // Reduce the number of filter combinations to warm
     const popularFilters: MarketplaceListingFilters[] = [
@@ -88,7 +89,7 @@ export class CacheWarmingService {
 
   // Warm reputation data for active users
   async warmActiveUserReputations(limit: number = 20): Promise<void> { // Reduced from 100 to 20
-    console.log(`Warming reputation data for ${limit} active users...`);
+    safeLogger.info(`Warming reputation data for ${limit} active users...`);
 
     const activeUserAddresses = await this.getActiveUserAddresses(limit);
 
@@ -106,7 +107,7 @@ export class CacheWarmingService {
 
   // Warm search results for popular queries
   async warmPopularSearchResults(): Promise<void> {
-    console.log('Warming popular search results...');
+    safeLogger.info('Warming popular search results...');
 
     const popularQueries = [
       'nft',
@@ -133,7 +134,7 @@ export class CacheWarmingService {
 
   // Warm category data
   async warmCategoryData(): Promise<void> {
-    console.log('Warming category data...');
+    safeLogger.info('Warming category data...');
 
     await this.scheduleWarmup({
       key: 'categories:all',
@@ -155,7 +156,7 @@ export class CacheWarmingService {
   // Execute all warmup jobs
   async executeWarmup(): Promise<WarmupStats> {
     if (this.isWarming) {
-      console.log('Cache warming already in progress');
+      safeLogger.info('Cache warming already in progress');
       return this.stats;
     }
 
@@ -167,7 +168,7 @@ export class CacheWarmingService {
       startTime: Date.now()
     };
 
-    console.log(`Starting cache warming with ${this.stats.totalJobs} jobs...`);
+    safeLogger.info(`Starting cache warming with ${this.stats.totalJobs} jobs...`);
 
     // Process jobs in smaller batches to avoid overwhelming the system
     const batchSize = 3; // Reduced from 5 to 3
@@ -187,8 +188,8 @@ export class CacheWarmingService {
     this.stats.duration = this.stats.endTime - this.stats.startTime;
     this.isWarming = false;
 
-    console.log(`Cache warming completed in ${this.stats.duration}ms`);
-    console.log(`Success: ${this.stats.completedJobs}, Failed: ${this.stats.failedJobs}`);
+    safeLogger.info(`Cache warming completed in ${this.stats.duration}ms`);
+    safeLogger.info(`Success: ${this.stats.completedJobs}, Failed: ${this.stats.failedJobs}`);
 
     return this.stats;
   }
@@ -196,7 +197,7 @@ export class CacheWarmingService {
   // Execute a single warmup job
   private async executeWarmupJob(job: WarmupJob): Promise<void> {
     try {
-      console.log(`Warming cache: ${job.key} (priority: ${job.priority})`);
+      safeLogger.info(`Warming cache: ${job.key} (priority: ${job.priority})`);
       
       const data = await job.loader();
       
@@ -217,10 +218,10 @@ export class CacheWarmingService {
       await cacheService.set(job.key, data, job.ttl);
       
       this.stats.completedJobs++;
-      console.log(`✅ Warmed: ${job.key}`);
+      safeLogger.info(`✅ Warmed: ${job.key}`);
     } catch (error) {
       this.stats.failedJobs++;
-      console.error(`❌ Failed to warm ${job.key}:`, error);
+      safeLogger.error(`❌ Failed to warm ${job.key}:`, error);
     }
   }
 
@@ -237,7 +238,7 @@ export class CacheWarmingService {
       try {
         await this.performFullWarmup();
       } catch (error) {
-        console.error('Periodic cache warming failed:', error);
+        safeLogger.error('Periodic cache warming failed:', error);
       }
     }, 60 * 60 * 1000); // 1 hour
 
@@ -246,14 +247,14 @@ export class CacheWarmingService {
       try {
         await this.performQuickWarmup();
       } catch (error) {
-        console.error('Quick cache warming failed:', error);
+        safeLogger.error('Quick cache warming failed:', error);
       }
     }, 15 * 60 * 1000); // 15 minutes
   }
 
   // Perform full warmup
   async performFullWarmup(): Promise<WarmupStats> {
-    console.log('Starting full cache warmup...');
+    safeLogger.info('Starting full cache warmup...');
 
     // Clear existing queue
     this.warmupQueue = [];
@@ -272,7 +273,7 @@ export class CacheWarmingService {
 
   // Perform quick warmup (only high priority items)
   async performQuickWarmup(): Promise<WarmupStats> {
-    console.log('Starting quick cache warmup...');
+    safeLogger.info('Starting quick cache warmup...');
 
     // Clear existing queue
     this.warmupQueue = [];

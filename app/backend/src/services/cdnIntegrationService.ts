@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import { safeLogger } from '../utils/safeLogger';
 import { createHash } from 'crypto';
 import { Redis } from 'ioredis';
 
@@ -97,7 +98,7 @@ export class CDNIntegrationService {
       
       return metadata;
     } catch (error) {
-      console.error('Error uploading to S3:', error);
+      safeLogger.error('Error uploading to S3:', error);
       throw new Error(`Failed to upload asset: ${error.message}`);
     }
   }
@@ -137,7 +138,7 @@ export class CDNIntegrationService {
     try {
       return await Promise.all(uploadPromises);
     } catch (error) {
-      console.error('Batch upload error:', error);
+      safeLogger.error('Batch upload error:', error);
       throw error;
     }
   }
@@ -159,7 +160,7 @@ export class CDNIntegrationService {
       const result = await this.cloudFront.createInvalidation(invalidationParams).promise();
       return result.Invalidation?.Id || '';
     } catch (error) {
-      console.error('Error creating invalidation:', error);
+      safeLogger.error('Error creating invalidation:', error);
       throw new Error(`Failed to invalidate cache: ${error.message}`);
     }
   }
@@ -214,7 +215,7 @@ export class CDNIntegrationService {
       // Invalidate CDN
       await this.invalidateCache([key]);
     } catch (error) {
-      console.error('Error deleting asset:', error);
+      safeLogger.error('Error deleting asset:', error);
       throw error;
     }
   }
@@ -304,7 +305,7 @@ export class CDNIntegrationService {
         JSON.stringify(metadata)
       );
     } catch (error) {
-      console.error('Error caching asset metadata:', error);
+      safeLogger.error('Error caching asset metadata:', error);
     }
   }
 
@@ -336,7 +337,7 @@ export class CDNIntegrationService {
         averageSize: totalCount > 0 ? totalSize / totalCount : 0,
       };
     } catch (error) {
-      console.error('Error getting usage stats:', error);
+      safeLogger.error('Error getting usage stats:', error);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   sellerScorecards, 
@@ -92,7 +93,7 @@ class SellerScorecardService {
         lastCalculatedAt: scorecard.lastCalculatedAt || new Date()
       };
     } catch (error) {
-      console.error('Error calculating seller scorecard:', error);
+      safeLogger.error('Error calculating seller scorecard:', error);
       throw new Error('Failed to calculate seller scorecard');
     }
   }
@@ -146,7 +147,7 @@ class SellerScorecardService {
       // Calculate new scorecard
       return await this.calculateSellerScorecard(sellerWalletAddress);
     } catch (error) {
-      console.error('Error getting seller scorecard:', error);
+      safeLogger.error('Error getting seller scorecard:', error);
       return null;
     }
   }
@@ -213,7 +214,7 @@ class SellerScorecardService {
         repeatCustomerRate: 0.15 // Mock data - would need customer analysis
       };
     } catch (error) {
-      console.error('Error getting performance metrics:', error);
+      safeLogger.error('Error getting performance metrics:', error);
       return {
         totalOrders: 0,
         completedOrders: 0,
@@ -298,7 +299,7 @@ class SellerScorecardService {
       if (growthRate > -10) return 40;
       return 20;
     } catch (error) {
-      console.error('Error calculating growth rate score:', error);
+      safeLogger.error('Error calculating growth rate score:', error);
       return 50; // Default neutral score
     }
   }
@@ -321,7 +322,7 @@ class SellerScorecardService {
 
       return Number(result[0]?.revenue || 0);
     } catch (error) {
-      console.error('Error getting revenue for period:', error);
+      safeLogger.error('Error getting revenue for period:', error);
       return 0;
     }
   }
@@ -396,7 +397,7 @@ class SellerScorecardService {
 
       return trends;
     } catch (error) {
-      console.error('Error getting performance trends:', error);
+      safeLogger.error('Error getting performance trends:', error);
       return [];
     }
   }
@@ -496,7 +497,7 @@ class SellerScorecardService {
         return created[0];
       }
     } catch (error) {
-      console.error('Error saving scorecard:', error);
+      safeLogger.error('Error saving scorecard:', error);
       throw error;
     }
   }
@@ -526,7 +527,7 @@ class SellerScorecardService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error creating performance alert:', error);
+      safeLogger.error('Error creating performance alert:', error);
       throw error;
     }
   }
@@ -556,7 +557,7 @@ class SellerScorecardService {
         createdAt: alert.createdAt
       }));
     } catch (error) {
-      console.error('Error getting performance alerts:', error);
+      safeLogger.error('Error getting performance alerts:', error);
       return [];
     }
   }
@@ -581,7 +582,7 @@ class SellerScorecardService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error recording performance history:', error);
+      safeLogger.error('Error recording performance history:', error);
       throw error;
     }
   }

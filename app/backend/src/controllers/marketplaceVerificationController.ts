@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { marketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService';
 import { z } from 'zod';
 
@@ -63,7 +65,7 @@ export class MarketplaceVerificationController {
         verification: result
       });
     } catch (error) {
-      console.error('Error verifying high-value listing:', error);
+      safeLogger.error('Error verifying high-value listing:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to verify listing'
@@ -101,7 +103,7 @@ export class MarketplaceVerificationController {
         counterfeit: result
       });
     } catch (error) {
-      console.error('Error detecting counterfeit:', error);
+      safeLogger.error('Error detecting counterfeit:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to detect counterfeit'
@@ -148,7 +150,7 @@ export class MarketplaceVerificationController {
         }
       });
     } catch (error) {
-      console.error('Error verifying proof of ownership:', error);
+      safeLogger.error('Error verifying proof of ownership:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to verify proof of ownership'
@@ -176,7 +178,7 @@ export class MarketplaceVerificationController {
         verification: result
       });
     } catch (error) {
-      console.error('Error getting seller verification tier:', error);
+      safeLogger.error('Error getting seller verification tier:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to get seller verification tier'
@@ -215,7 +217,7 @@ export class MarketplaceVerificationController {
         scam: result
       });
     } catch (error) {
-      console.error('Error detecting scam patterns:', error);
+      safeLogger.error('Error detecting scam patterns:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to detect scam patterns'
@@ -326,7 +328,7 @@ export class MarketplaceVerificationController {
         }
       });
     } catch (error) {
-      console.error('Error verifying marketplace listing:', error);
+      safeLogger.error('Error verifying marketplace listing:', error);
       res.status(500).json({
         error: 'Internal server error',
         message: 'Failed to verify marketplace listing'

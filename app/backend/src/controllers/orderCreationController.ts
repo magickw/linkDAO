@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   OrderCreationService, 
   OrderCreationRequest, 
@@ -332,13 +334,13 @@ export class OrderCreationController {
       // Test key components
       try {
         // Test database connectivity
-        console.log('Testing database connectivity...');
+        safeLogger.info('Testing database connectivity...');
         
         // Test notification service
-        console.log('Testing notification service...');
+        safeLogger.info('Testing notification service...');
         
         // Test shipping service
-        console.log('Testing shipping service...');
+        safeLogger.info('Testing shipping service...');
 
       } catch (error) {
         healthStatus.databaseConnection = 'unhealthy';

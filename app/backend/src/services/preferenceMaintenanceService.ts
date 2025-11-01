@@ -4,6 +4,7 @@
  */
 
 import cron from 'node-cron';
+import { safeLogger } from '../utils/safeLogger';
 import { userPreferenceService } from './userPreferenceService';
 import { preferenceLearningService } from './preferencelearningService';
 import { db } from '../db/connection';
@@ -19,11 +20,11 @@ export class PreferenceMaintenanceService {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('Preference maintenance service is already running');
+      safeLogger.info('Preference maintenance service is already running');
       return;
     }
 
-    console.log('Starting preference maintenance service...');
+    safeLogger.info('Starting preference maintenance service...');
 
     // Cleanup expired overrides every hour
     const cleanupJob = cron.schedule('0 * * * *', async () => {
@@ -62,7 +63,7 @@ export class PreferenceMaintenanceService {
     this.scheduledJobs = [cleanupJob, decayJob, retrainJob, historyCleanupJob];
     this.isRunning = true;
 
-    console.log('Preference maintenance service started with 4 scheduled jobs');
+    safeLogger.info('Preference maintenance service started with 4 scheduled jobs');
   }
 
   /**
@@ -70,11 +71,11 @@ export class PreferenceMaintenanceService {
    */
   stop(): void {
     if (!this.isRunning) {
-      console.log('Preference maintenance service is not running');
+      safeLogger.info('Preference maintenance service is not running');
       return;
     }
 
-    console.log('Stopping preference maintenance service...');
+    safeLogger.info('Stopping preference maintenance service...');
 
     this.scheduledJobs.forEach(job => {
       job.stop();
@@ -84,7 +85,7 @@ export class PreferenceMaintenanceService {
     this.scheduledJobs = [];
     this.isRunning = false;
 
-    console.log('Preference maintenance service stopped');
+    safeLogger.info('Preference maintenance service stopped');
   }
 
   /**
@@ -111,7 +112,7 @@ export class PreferenceMaintenanceService {
     retrainResults: number;
     historyCleanupResults: number;
   }> {
-    console.log('Running manual preference maintenance...');
+    safeLogger.info('Running manual preference maintenance...');
 
     const [cleanupResults, decayResults, retrainResults, historyCleanupResults] = await Promise.all([
       this.cleanupExpiredOverrides(),
@@ -137,12 +138,12 @@ export class PreferenceMaintenanceService {
    */
   private async cleanupExpiredOverrides(): Promise<number> {
     try {
-      console.log('Cleaning up expired preference overrides...');
+      safeLogger.info('Cleaning up expired preference overrides...');
       const deletedCount = await userPreferenceService.cleanupExpiredOverrides();
-      console.log(`Cleaned up ${deletedCount} expired preference overrides`);
+      safeLogger.info(`Cleaned up ${deletedCount} expired preference overrides`);
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up expired overrides:', error);
+      safeLogger.error('Error cleaning up expired overrides:', error);
       return 0;
     }
   }
@@ -152,7 +153,7 @@ export class PreferenceMaintenanceService {
    */
   private async applyPreferenceDecay(): Promise<number> {
     try {
-      console.log('Applying preference decay...');
+      safeLogger.info('Applying preference decay...');
       
       // Get all users with preferences that haven't been updated recently
       const staleThreshold = new Date();
@@ -183,7 +184,7 @@ export class PreferenceMaintenanceService {
               await preferenceLearningService.analyzeAndUpdatePreferences(pref.userId);
               processedCount++;
             } catch (error) {
-              console.error(`Error applying decay for user ${pref.userId}:`, error);
+              safeLogger.error(`Error applying decay for user ${pref.userId}:`, error);
             }
           })
         );
@@ -194,10 +195,10 @@ export class PreferenceMaintenanceService {
         }
       }
 
-      console.log(`Applied preference decay to ${processedCount} users`);
+      safeLogger.info(`Applied preference decay to ${processedCount} users`);
       return processedCount;
     } catch (error) {
-      console.error('Error applying preference decay:', error);
+      safeLogger.error('Error applying preference decay:', error);
       return 0;
     }
   }
@@ -207,7 +208,7 @@ export class PreferenceMaintenanceService {
    */
   private async retrainLearningModels(): Promise<number> {
     try {
-      console.log('Retraining learning models...');
+      safeLogger.info('Retraining learning models...');
       
       // Get users with recent activity (transactions in last 30 days)
       const activeThreshold = new Date();
@@ -239,7 +240,7 @@ export class PreferenceMaintenanceService {
               await preferenceLearningService.analyzeAndUpdatePreferences(user.userId);
               retrainedCount++;
             } catch (error) {
-              console.error(`Error retraining model for user ${user.userId}:`, error);
+              safeLogger.error(`Error retraining model for user ${user.userId}:`, error);
             }
           })
         );
@@ -250,10 +251,10 @@ export class PreferenceMaintenanceService {
         }
       }
 
-      console.log(`Retrained learning models for ${retrainedCount} users`);
+      safeLogger.info(`Retrained learning models for ${retrainedCount} users`);
       return retrainedCount;
     } catch (error) {
-      console.error('Error retraining learning models:', error);
+      safeLogger.error('Error retraining learning models:', error);
       return 0;
     }
   }
@@ -263,7 +264,7 @@ export class PreferenceMaintenanceService {
    */
   private async cleanupOldUsageHistory(): Promise<number> {
     try {
-      console.log('Cleaning up old usage history...');
+      safeLogger.info('Cleaning up old usage history...');
       
       const cutoffDate = new Date();
       cutoffDate.setFullYear(cutoffDate.getFullYear() - 1); // 1 year ago
@@ -273,10 +274,10 @@ export class PreferenceMaintenanceService {
         .where(lt(paymentMethodPreferences.createdAt, cutoffDate));
 
       const deletedCount = result.rowCount || 0;
-      console.log(`Cleaned up ${deletedCount} old usage history records`);
+      safeLogger.info(`Cleaned up ${deletedCount} old usage history records`);
       return deletedCount;
     } catch (error) {
-      console.error('Error cleaning up old usage history:', error);
+      safeLogger.error('Error cleaning up old usage history:', error);
       return 0;
     }
   }
@@ -313,7 +314,7 @@ export class PreferenceMaintenanceService {
         lastCleanup: this.lastMaintenanceRun
       };
     } catch (error) {
-      console.error('Error getting maintenance stats:', error);
+      safeLogger.error('Error getting maintenance stats:', error);
       return {
         totalUsers: 0,
         usersWithPreferences: 0,
@@ -329,12 +330,12 @@ export class PreferenceMaintenanceService {
    */
   async forceUserPreferenceUpdate(userId: string): Promise<boolean> {
     try {
-      console.log(`Forcing preference update for user: ${userId}`);
+      safeLogger.info(`Forcing preference update for user: ${userId}`);
       await preferenceLearningService.analyzeAndUpdatePreferences(userId);
-      console.log(`Successfully updated preferences for user: ${userId}`);
+      safeLogger.info(`Successfully updated preferences for user: ${userId}`);
       return true;
     } catch (error) {
-      console.error(`Error forcing preference update for user ${userId}:`, error);
+      safeLogger.error(`Error forcing preference update for user ${userId}:`, error);
       return false;
     }
   }
@@ -349,10 +350,10 @@ export class PreferenceMaintenanceService {
         .set({ learningEnabled: false })
         .where(eq(paymentMethodPreferences.userId, userId));
       
-      console.log(`Disabled learning for user: ${userId}`);
+      safeLogger.info(`Disabled learning for user: ${userId}`);
       return true;
     } catch (error) {
-      console.error(`Error disabling learning for user ${userId}:`, error);
+      safeLogger.error(`Error disabling learning for user ${userId}:`, error);
       return false;
     }
   }
@@ -367,10 +368,10 @@ export class PreferenceMaintenanceService {
         .set({ learningEnabled: true })
         .where(eq(paymentMethodPreferences.userId, userId));
       
-      console.log(`Enabled learning for user: ${userId}`);
+      safeLogger.info(`Enabled learning for user: ${userId}`);
       return true;
     } catch (error) {
-      console.error(`Error enabling learning for user ${userId}:`, error);
+      safeLogger.error(`Error enabling learning for user ${userId}:`, error);
       return false;
     }
   }

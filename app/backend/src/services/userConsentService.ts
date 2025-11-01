@@ -1,4 +1,5 @@
 import { eq, and } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { z } from 'zod';
 
@@ -429,7 +430,7 @@ export class UserConsentService {
     this.consentRecords.set(record.userId, userConsents);
 
     // TODO: Persist to database
-    console.log(`Stored consent record for user ${record.userId}:`, record);
+    safeLogger.info(`Stored consent record for user ${record.userId}:`, record);
   }
 
   private async updateConsentRecord(record: ConsentRecord): Promise<void> {
@@ -442,7 +443,7 @@ export class UserConsentService {
     }
 
     // TODO: Update in database
-    console.log(`Updated consent record for user ${record.userId}:`, record);
+    safeLogger.info(`Updated consent record for user ${record.userId}:`, record);
   }
 
   private async withdrawPreviousConsents(

@@ -1,4 +1,5 @@
 import { PaymentValidationService, PaymentValidationRequest } from './paymentValidationService';
+import { safeLogger } from '../utils/safeLogger';
 import { ExchangeRateService } from './exchangeRateService';
 import { DatabaseService } from './databaseService';
 
@@ -131,7 +132,7 @@ export class PaymentMethodAvailabilityService {
 
       return availabilityChecks;
     } catch (error) {
-      console.error('Error checking payment method availability:', error);
+      safeLogger.error('Error checking payment method availability:', error);
       return [];
     }
   }
@@ -161,7 +162,7 @@ export class PaymentMethodAvailabilityService {
 
       return mockProfile;
     } catch (error) {
-      console.error('Error getting user payment profile:', error);
+      safeLogger.error('Error getting user payment profile:', error);
       // Return default profile
       return {
         userAddress,

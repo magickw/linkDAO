@@ -6,6 +6,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { securityConfig } from '../config/securityConfig';
 import crypto from 'crypto';
 
@@ -146,7 +147,7 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
 
     next();
   } catch (error) {
-    console.error('Input validation error:', error);
+    safeLogger.error('Input validation error:', error);
     next();
   }
 };
@@ -220,7 +221,7 @@ export const securityAuditLogging = async (req: SecurityRequest, res: Response, 
     
     // Log slow requests (potential DoS)
     if (responseTime > 5000) { // 5 seconds
-      console.log(`Slow request: ${req.method} ${req.path} took ${responseTime}ms`);
+      safeLogger.info(`Slow request: ${req.method} ${req.path} took ${responseTime}ms`);
     }
 
     return originalEnd.call(this, chunk, encoding);

@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { CachingStrategiesService } from '../../services/cachingStrategiesService';
 import { ServiceWorkerCacheService } from '../../services/serviceWorkerCacheService';
@@ -95,7 +96,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(p95Time).toBeLessThan(100); // 95th percentile should be reasonable
       expect(maxTime).toBeLessThan(200); // No request should be extremely slow
 
-      console.log(`NetworkFirst Strategy Performance:
+      safeLogger.info(`NetworkFirst Strategy Performance:
         Average: ${averageTime.toFixed(2)}ms
         P95: ${p95Time.toFixed(2)}ms
         Max: ${maxTime.toFixed(2)}ms`);
@@ -135,7 +136,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(averageTime).toBeLessThan(5);
       expect(maxTime).toBeLessThan(20);
 
-      console.log(`CacheFirst Strategy Performance:
+      safeLogger.info(`CacheFirst Strategy Performance:
         Average: ${averageTime.toFixed(2)}ms
         Max: ${maxTime.toFixed(2)}ms`);
     });
@@ -182,7 +183,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(averageTime).toBeLessThan(10);
       expect(maxTime).toBeLessThan(50);
 
-      console.log(`StaleWhileRevalidate Strategy Performance:
+      safeLogger.info(`StaleWhileRevalidate Strategy Performance:
         Average: ${averageTime.toFixed(2)}ms
         Max: ${maxTime.toFixed(2)}ms`);
     });
@@ -219,7 +220,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgSetTime).toBeLessThan(0.1);
       expect(avgGetTime).toBeLessThan(0.05);
 
-      console.log(`Memory Cache Performance:
+      safeLogger.info(`Memory Cache Performance:
         Average Set: ${avgSetTime.toFixed(4)}ms
         Average Get: ${avgGetTime.toFixed(4)}ms`);
     });
@@ -254,7 +255,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgSetTime).toBeLessThan(5);
       expect(avgGetTime).toBeLessThan(3);
 
-      console.log(`Redis Cache Performance:
+      safeLogger.info(`Redis Cache Performance:
         Average Set: ${avgSetTime.toFixed(2)}ms
         Average Get: ${avgGetTime.toFixed(2)}ms`);
     });
@@ -287,7 +288,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(firstCallTime).toBeGreaterThan(8); // Should include fallback time
       expect(subsequentCallsAvg).toBeLessThan(2); // Should be cached
 
-      console.log(`Cache Hierarchy Performance:
+      safeLogger.info(`Cache Hierarchy Performance:
         First Call: ${firstCallTime.toFixed(2)}ms
         Subsequent Calls Average: ${subsequentCallsAvg.toFixed(2)}ms`);
     });
@@ -323,7 +324,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgPreloadTime).toBeLessThan(20);
       expect(maxPreloadTime).toBeLessThan(100);
 
-      console.log(`Predictive Preloading Performance:
+      safeLogger.info(`Predictive Preloading Performance:
         Average: ${avgPreloadTime.toFixed(2)}ms
         Max: ${maxPreloadTime.toFixed(2)}ms`);
     });
@@ -360,7 +361,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgInvalidationTime).toBeLessThan(50);
       expect(maxInvalidationTime).toBeLessThan(200);
 
-      console.log(`Cache Invalidation Performance:
+      safeLogger.info(`Cache Invalidation Performance:
         Average: ${avgInvalidationTime.toFixed(2)}ms
         Max: ${maxInvalidationTime.toFixed(2)}ms`);
     });
@@ -392,7 +393,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgQueueTime).toBeLessThan(2);
       expect(maxQueueTime).toBeLessThan(10);
 
-      console.log(`Offline Action Queuing Performance:
+      safeLogger.info(`Offline Action Queuing Performance:
         Average: ${avgQueueTime.toFixed(2)}ms
         Max: ${maxQueueTime.toFixed(2)}ms`);
     });
@@ -434,7 +435,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(compressedSetTime).toBeLessThan(uncompressedSetTime * 2);
       expect(compressedGetTime).toBeLessThan(uncompressedGetTime * 2);
 
-      console.log(`Cache Compression Performance:
+      safeLogger.info(`Cache Compression Performance:
         Uncompressed Set: ${uncompressedSetTime.toFixed(2)}ms
         Compressed Set: ${compressedSetTime.toFixed(2)}ms
         Uncompressed Get: ${uncompressedGetTime.toFixed(2)}ms
@@ -476,7 +477,7 @@ describe('Caching Strategies Performance Tests', () => {
       expect(avgSetTime).toBeLessThan(10);
       expect(avgGetTime).toBeLessThan(5);
 
-      console.log(`Concurrent Cache Operations Performance:
+      safeLogger.info(`Concurrent Cache Operations Performance:
         ${concurrentOperations} concurrent sets: ${setConcurrentTime.toFixed(2)}ms (${avgSetTime.toFixed(2)}ms avg)
         ${concurrentOperations} concurrent gets: ${getConcurrentTime.toFixed(2)}ms (${avgGetTime.toFixed(2)}ms avg)`);
     });
@@ -509,7 +510,7 @@ describe('Caching Strategies Performance Tests', () => {
       const avgContentionTime = contentionTime / concurrentAccess;
       expect(avgContentionTime).toBeLessThan(20);
 
-      console.log(`Cache Contention Performance:
+      safeLogger.info(`Cache Contention Performance:
         ${concurrentAccess} concurrent read-modify-write operations: ${contentionTime.toFixed(2)}ms (${avgContentionTime.toFixed(2)}ms avg)`);
     });
   });

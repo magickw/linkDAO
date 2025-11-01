@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
@@ -49,7 +50,7 @@ class ProductionDataSeeder {
   }
 
   async seedSellerProfiles(): Promise<void> {
-    console.log("🌱 Seeding seller profiles...");
+    safeLogger.info("🌱 Seeding seller profiles...");
     
     const sampleProfiles: SellerProfile[] = [
       {
@@ -96,19 +97,19 @@ class ProductionDataSeeder {
               NOW(), NOW()
             )
           `;
-          console.log(`  ✓ Created seller profile: ${profile.displayName}`);
+          safeLogger.info(`  ✓ Created seller profile: ${profile.displayName}`);
         } else {
-          console.log(`  ⚠ Seller profile already exists: ${profile.displayName}`);
+          safeLogger.info(`  ⚠ Seller profile already exists: ${profile.displayName}`);
         }
       }
     } catch (error) {
-      console.error("❌ Error seeding seller profiles:", error);
+      safeLogger.error("❌ Error seeding seller profiles:", error);
       throw error;
     }
   }
 
   async seedMarketplaceListings(): Promise<void> {
-    console.log("🌱 Seeding marketplace listings...");
+    safeLogger.info("🌱 Seeding marketplace listings...");
     
     const sampleListings: MarketplaceListing[] = [
       {
@@ -165,19 +166,19 @@ class ProductionDataSeeder {
               NOW(), NOW()
             )
           `;
-          console.log(`  ✓ Created listing: ${listing.title}`);
+          safeLogger.info(`  ✓ Created listing: ${listing.title}`);
         } else {
-          console.log(`  ⚠ Listing already exists: ${listing.title}`);
+          safeLogger.info(`  ⚠ Listing already exists: ${listing.title}`);
         }
       }
     } catch (error) {
-      console.error("❌ Error seeding marketplace listings:", error);
+      safeLogger.error("❌ Error seeding marketplace listings:", error);
       throw error;
     }
   }
 
   async seedUserReputation(): Promise<void> {
-    console.log("🌱 Seeding user reputation data...");
+    safeLogger.info("🌱 Seeding user reputation data...");
     
     const sampleReputations: UserReputation[] = [
       {
@@ -222,63 +223,63 @@ class ProductionDataSeeder {
               ${reputation.negativeReviews}, NOW()
             )
           `;
-          console.log(`  ✓ Created reputation for: ${reputation.walletAddress.slice(0, 10)}...`);
+          safeLogger.info(`  ✓ Created reputation for: ${reputation.walletAddress.slice(0, 10)}...`);
         } else {
-          console.log(`  ⚠ Reputation already exists for: ${reputation.walletAddress.slice(0, 10)}...`);
+          safeLogger.info(`  ⚠ Reputation already exists for: ${reputation.walletAddress.slice(0, 10)}...`);
         }
       }
     } catch (error) {
-      console.error("❌ Error seeding user reputation:", error);
+      safeLogger.error("❌ Error seeding user reputation:", error);
       throw error;
     }
   }
 
   async verifySeededData(): Promise<void> {
-    console.log("🔍 Verifying seeded data...");
+    safeLogger.info("🔍 Verifying seeded data...");
     
     try {
       const profileCount = await this.client`SELECT COUNT(*) FROM seller_profiles`;
       const listingCount = await this.client`SELECT COUNT(*) FROM marketplace_listings`;
       const reputationCount = await this.client`SELECT COUNT(*) FROM user_reputation`;
       
-      console.log(`  ✓ Seller profiles: ${profileCount[0].count}`);
-      console.log(`  ✓ Marketplace listings: ${listingCount[0].count}`);
-      console.log(`  ✓ User reputations: ${reputationCount[0].count}`);
+      safeLogger.info(`  ✓ Seller profiles: ${profileCount[0].count}`);
+      safeLogger.info(`  ✓ Marketplace listings: ${listingCount[0].count}`);
+      safeLogger.info(`  ✓ User reputations: ${reputationCount[0].count}`);
       
       if (profileCount[0].count === '0' || listingCount[0].count === '0') {
         throw new Error("Seeded data verification failed - no data found");
       }
       
     } catch (error) {
-      console.error("❌ Error verifying seeded data:", error);
+      safeLogger.error("❌ Error verifying seeded data:", error);
       throw error;
     }
   }
 }
 
 async function main() {
-  console.log("🌱 Production Data Seeding Script");
-  console.log("=================================");
+  safeLogger.info("🌱 Production Data Seeding Script");
+  safeLogger.info("=================================");
   
   if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL environment variable is required");
+    safeLogger.error("❌ DATABASE_URL environment variable is required");
     process.exit(1);
   }
 
   const seeder = new ProductionDataSeeder(process.env.DATABASE_URL);
   
   try {
-    console.log("🚀 Starting data seeding process...");
+    safeLogger.info("🚀 Starting data seeding process...");
     
     await seeder.seedSellerProfiles();
     await seeder.seedMarketplaceListings();
     await seeder.seedUserReputation();
     await seeder.verifySeededData();
     
-    console.log("🎉 Data seeding completed successfully!");
+    safeLogger.info("🎉 Data seeding completed successfully!");
     
   } catch (error) {
-    console.error("💥 Data seeding failed:", error);
+    safeLogger.error("💥 Data seeding failed:", error);
     process.exit(1);
   } finally {
     await seeder.close();
@@ -287,7 +288,7 @@ async function main() {
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n⚠ Seeding interrupted by user');
+  safeLogger.info('\n⚠ Seeding interrupted by user');
   process.exit(1);
 });
 

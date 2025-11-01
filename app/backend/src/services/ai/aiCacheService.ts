@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import crypto from 'crypto';
 
 /**
@@ -34,7 +35,7 @@ export class AICacheService {
           maxRetriesPerRequest: 3,
           retryStrategy: (times) => {
             if (times > 3) {
-              console.warn('Redis connection failed after 3 retries. Caching disabled.');
+              safeLogger.warn('Redis connection failed after 3 retries. Caching disabled.');
               return null;
             }
             return Math.min(times * 100, 2000);
@@ -42,20 +43,20 @@ export class AICacheService {
         });
 
         this.redis.on('connect', () => {
-          console.log('✅ AI Cache (Redis) connected successfully');
+          safeLogger.info('✅ AI Cache (Redis) connected successfully');
           this.useCache = true;
         });
 
         this.redis.on('error', (err) => {
-          console.error('Redis connection error:', err.message);
+          safeLogger.error('Redis connection error:', err.message);
           this.useCache = false;
         });
       } else {
-        console.warn('REDIS_URL not configured. AI caching disabled.');
+        safeLogger.warn('REDIS_URL not configured. AI caching disabled.');
         this.useCache = false;
       }
     } catch (error) {
-      console.error('Failed to initialize Redis:', error);
+      safeLogger.error('Failed to initialize Redis:', error);
       this.useCache = false;
     }
   }
@@ -91,7 +92,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_LONG, JSON.stringify(result));
     } catch (error) {
-      console.error('Failed to cache moderation result:', error);
+      safeLogger.error('Failed to cache moderation result:', error);
     }
   }
 
@@ -103,7 +104,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached moderation:', error);
+      safeLogger.error('Failed to retrieve cached moderation:', error);
       return null;
     }
   }
@@ -119,7 +120,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_MEDIUM, JSON.stringify(prediction));
     } catch (error) {
-      console.error('Failed to cache churn prediction:', error);
+      safeLogger.error('Failed to cache churn prediction:', error);
     }
   }
 
@@ -131,7 +132,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached churn prediction:', error);
+      safeLogger.error('Failed to retrieve cached churn prediction:', error);
       return null;
     }
   }
@@ -147,7 +148,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_SHORT, JSON.stringify(result));
     } catch (error) {
-      console.error('Failed to cache anomaly detection:', error);
+      safeLogger.error('Failed to cache anomaly detection:', error);
     }
   }
 
@@ -159,7 +160,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached anomaly detection:', error);
+      safeLogger.error('Failed to retrieve cached anomaly detection:', error);
       return null;
     }
   }
@@ -175,7 +176,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_MEDIUM, JSON.stringify(analysis));
     } catch (error) {
-      console.error('Failed to cache platform health:', error);
+      safeLogger.error('Failed to cache platform health:', error);
     }
   }
 
@@ -187,7 +188,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached platform health:', error);
+      safeLogger.error('Failed to retrieve cached platform health:', error);
       return null;
     }
   }
@@ -203,7 +204,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_MEDIUM, JSON.stringify(prediction));
     } catch (error) {
-      console.error('Failed to cache seller performance:', error);
+      safeLogger.error('Failed to cache seller performance:', error);
     }
   }
 
@@ -215,7 +216,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached seller performance:', error);
+      safeLogger.error('Failed to retrieve cached seller performance:', error);
       return null;
     }
   }
@@ -231,7 +232,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_MEDIUM, insight);
     } catch (error) {
-      console.error('Failed to cache insight:', error);
+      safeLogger.error('Failed to cache insight:', error);
     }
   }
 
@@ -242,7 +243,7 @@ export class AICacheService {
     try {
       return await this.redis!.get(key);
     } catch (error) {
-      console.error('Failed to retrieve cached insight:', error);
+      safeLogger.error('Failed to retrieve cached insight:', error);
       return null;
     }
   }
@@ -258,7 +259,7 @@ export class AICacheService {
     try {
       await this.redis!.setex(key, this.TTL_VERY_LONG, JSON.stringify(prediction));
     } catch (error) {
-      console.error('Failed to cache trend prediction:', error);
+      safeLogger.error('Failed to cache trend prediction:', error);
     }
   }
 
@@ -270,7 +271,7 @@ export class AICacheService {
       const cached = await this.redis!.get(key);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Failed to retrieve cached trend prediction:', error);
+      safeLogger.error('Failed to retrieve cached trend prediction:', error);
       return null;
     }
   }
@@ -285,7 +286,7 @@ export class AICacheService {
     try {
       await this.redis!.del(key);
     } catch (error) {
-      console.error('Failed to invalidate moderation cache:', error);
+      safeLogger.error('Failed to invalidate moderation cache:', error);
     }
   }
 
@@ -296,7 +297,7 @@ export class AICacheService {
     try {
       await this.redis!.del(key);
     } catch (error) {
-      console.error('Failed to invalidate churn prediction cache:', error);
+      safeLogger.error('Failed to invalidate churn prediction cache:', error);
     }
   }
 
@@ -310,10 +311,10 @@ export class AICacheService {
       const keys = await this.redis!.keys('ai:*');
       if (keys.length > 0) {
         await this.redis!.del(...keys);
-        console.log(`Cleared ${keys.length} AI cache entries`);
+        safeLogger.info(`Cleared ${keys.length} AI cache entries`);
       }
     } catch (error) {
-      console.error('Failed to clear AI cache:', error);
+      safeLogger.error('Failed to clear AI cache:', error);
     }
   }
 
@@ -348,7 +349,7 @@ export class AICacheService {
         keysByNamespace,
       };
     } catch (error) {
-      console.error('Failed to get cache stats:', error);
+      safeLogger.error('Failed to get cache stats:', error);
       return {
         totalKeys: 0,
         cacheEnabled: false,
@@ -377,7 +378,7 @@ export class AICacheService {
         estimatedSavings: cacheHits * avgCostPerRequest,
       };
     } catch (error) {
-      console.error('Failed to estimate savings:', error);
+      safeLogger.error('Failed to estimate savings:', error);
       return { cacheHits: 0, estimatedSavings: 0 };
     }
   }

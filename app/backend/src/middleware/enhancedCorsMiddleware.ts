@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { ApiResponse } from '../utils/apiResponse';
 
 export interface CorsSecurityConfig {
@@ -131,7 +132,7 @@ export class EnhancedCorsMiddleware {
         this.handleActualRequest(req, res, context);
         next();
       } catch (error) {
-        console.error('CORS middleware error:', error);
+        safeLogger.error('CORS middleware error:', error);
         this.handleCorsError(res, context, 'Internal CORS processing error');
       }
     };
@@ -384,7 +385,7 @@ export class EnhancedCorsMiddleware {
    */
   private handleCorsError(res: Response, context: CorsSecurityContext, message: string): void {
     if (this.config.logBlocked) {
-      console.warn('CORS request blocked', {
+      safeLogger.warn('CORS request blocked', {
         message,
         origin: context.origin,
         method: context.method,
@@ -437,7 +438,7 @@ export class EnhancedCorsMiddleware {
   public addAllowedOrigin(origin: string): void {
     if (!this.config.allowedOrigins.includes(origin)) {
       this.config.allowedOrigins.push(origin);
-      console.info('Added new allowed CORS origin', { origin });
+      safeLogger.info('Added new allowed CORS origin', { origin });
     }
   }
 
@@ -448,7 +449,7 @@ export class EnhancedCorsMiddleware {
     const index = this.config.allowedOrigins.indexOf(origin);
     if (index > -1) {
       this.config.allowedOrigins.splice(index, 1);
-      console.info('Removed allowed CORS origin', { origin });
+      safeLogger.info('Removed allowed CORS origin', { origin });
     }
   }
 

@@ -4,6 +4,7 @@
  */
 
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import {
   getMarketplaceAnalytics,
   getTimeSeriesData,
@@ -35,6 +36,6 @@ router.get('/seller-performance', getSellerPerformanceAnalytics);
 router.get('/export', exportAnalyticsData);
 
 // Configuration
-router.post('/alerts/configure', configureAnalyticsAlerts);
+router.post('/alerts/configure', csrfProtection,  configureAnalyticsAlerts);
 
 export { router as advancedAnalyticsRouter };

@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { blockchainService } from './blockchainIntegration';
 
@@ -82,7 +83,7 @@ export class BadgesAchievementsService {
 
       return earnedBadges;
     } catch (error) {
-      console.error('Error checking and awarding badges:', error);
+      safeLogger.error('Error checking and awarding badges:', error);
       return [];
     }
   }
@@ -136,7 +137,7 @@ export class BadgesAchievementsService {
           return false;
       }
     } catch (error) {
-      console.error('Error checking badge criteria:', error);
+      safeLogger.error('Error checking badge criteria:', error);
       return false;
     }
   }
@@ -175,9 +176,9 @@ export class BadgesAchievementsService {
         await this.awardRewards(userAddress, badge.rewards);
       }
 
-      console.log(`Badge ${badgeId} awarded to ${userAddress}`);
+      safeLogger.info(`Badge ${badgeId} awarded to ${userAddress}`);
     } catch (error) {
-      console.error('Error awarding badge:', error);
+      safeLogger.error('Error awarding badge:', error);
       throw error;
     }
   }
@@ -220,7 +221,7 @@ export class BadgesAchievementsService {
         await this.awardBadge(userAddress, badgeId, communityId);
       }
     } catch (error) {
-      console.error('Error tracking badge progress:', error);
+      safeLogger.error('Error tracking badge progress:', error);
     }
   }
 
@@ -248,7 +249,7 @@ export class BadgesAchievementsService {
 
       return earned;
     } catch (error) {
-      console.error('Error checking achievements:', error);
+      safeLogger.error('Error checking achievements:', error);
       return [];
     }
   }
@@ -289,9 +290,9 @@ export class BadgesAchievementsService {
         }
       }
 
-      console.log(`Achievement ${achievementId} awarded to ${userAddress}`);
+      safeLogger.info(`Achievement ${achievementId} awarded to ${userAddress}`);
     } catch (error) {
-      console.error('Error awarding achievement:', error);
+      safeLogger.error('Error awarding achievement:', error);
     }
   }
 
@@ -309,7 +310,7 @@ export class BadgesAchievementsService {
       // });
       return null;
     } catch (error) {
-      console.error('Error getting quest progress:', error);
+      safeLogger.error('Error getting quest progress:', error);
       return null;
     }
   }
@@ -354,7 +355,7 @@ export class BadgesAchievementsService {
         // Mark rewards as claimed
       }
     } catch (error) {
-      console.error('Error updating quest progress:', error);
+      safeLogger.error('Error updating quest progress:', error);
     }
   }
 
@@ -385,7 +386,7 @@ export class BadgesAchievementsService {
       // });
       return [];
     } catch (error) {
-      console.error('Error getting leaderboard:', error);
+      safeLogger.error('Error getting leaderboard:', error);
       return [];
     }
   }
@@ -404,9 +405,9 @@ export class BadgesAchievementsService {
       // Calculate reputation leaderboard
       await this.calculateReputationLeaderboard(communityId);
 
-      console.log('Leaderboards updated');
+      safeLogger.info('Leaderboards updated');
     } catch (error) {
-      console.error('Error updating leaderboards:', error);
+      safeLogger.error('Error updating leaderboards:', error);
     }
   }
 
@@ -416,12 +417,12 @@ export class BadgesAchievementsService {
   private async awardRewards(userAddress: string, rewards: any): Promise<void> {
     if (rewards.tokens) {
       // Award tokens via smart contract or internal system
-      console.log(`Awarding ${rewards.tokens} tokens to ${userAddress}`);
+      safeLogger.info(`Awarding ${rewards.tokens} tokens to ${userAddress}`);
     }
 
     if (rewards.nft) {
       // Mint NFT
-      console.log(`Minting NFT ${rewards.nft} for ${userAddress}`);
+      safeLogger.info(`Minting NFT ${rewards.nft} for ${userAddress}`);
     }
 
     if (rewards.badge) {
@@ -432,7 +433,7 @@ export class BadgesAchievementsService {
 
   private async awardAchievementPoints(userAddress: string, points: number): Promise<void> {
     // Update user's achievement points
-    console.log(`Awarding ${points} achievement points to ${userAddress}`);
+    safeLogger.info(`Awarding ${points} achievement points to ${userAddress}`);
   }
 
   private async getUnearnedBadges(userAddress: string, communityId?: string): Promise<Badge[]> {

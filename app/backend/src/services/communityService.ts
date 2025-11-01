@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions, communityGovernanceProposals, communityGovernanceVotes, communityModerationActions, communityDelegations, communityProxyVotes, communityMultiSigApprovals, communityAutomatedExecutions, communityTokenGatedContent, communityUserContentAccess, communitySubscriptionTiers, communityUserSubscriptions, communityTreasuryPools, communityCreatorRewards, communityStaking, communityStakingRewards, communityReferralPrograms, communityUserReferrals } from '../db/schema';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull } from 'drizzle-orm';
 import { feedService } from './feedService';
@@ -241,7 +242,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error listing communities:', error);
+      safeLogger.error('Error listing communities:', error);
       throw new Error('Failed to list communities');
     }
   }
@@ -310,7 +311,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error getting trending communities:', error);
+      safeLogger.error('Error getting trending communities:', error);
       throw new Error('Failed to get trending communities');
     }
   }
@@ -424,7 +425,7 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      console.error('Error getting community details:', error);
+      safeLogger.error('Error getting community details:', error);
       throw new Error('Failed to get community details');
     }
   }
@@ -528,7 +529,7 @@ export class CommunityService {
         creatorAddress: data.creatorAddress,
       };
     } catch (error) {
-      console.error('Error creating community:', error);
+      safeLogger.error('Error creating community:', error);
       throw new Error('Failed to create community');
     }
   }
@@ -642,7 +643,7 @@ export class CommunityService {
         updatedAt: community.updatedAt,
       };
     } catch (error) {
-      console.error('Error updating community:', error);
+      safeLogger.error('Error updating community:', error);
       throw new Error('Failed to update community');
     }
   }
@@ -691,7 +692,7 @@ export class CommunityService {
         growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
       }));
     } catch (error) {
-      console.error('Error getting all communities:', error);
+      safeLogger.error('Error getting all communities:', error);
       throw new Error('Failed to get all communities');
     }
   }
@@ -775,7 +776,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error joining community:', error);
+      safeLogger.error('Error joining community:', error);
       throw new Error('Failed to join community');
     }
   }
@@ -836,7 +837,7 @@ export class CommunityService {
 
       return { success: true, data: null };
     } catch (error) {
-      console.error('Error leaving community:', error);
+      safeLogger.error('Error leaving community:', error);
       throw new Error('Failed to leave community');
     }
   }
@@ -964,7 +965,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error getting community posts:', error);
+      safeLogger.error('Error getting community posts:', error);
       throw new Error('Failed to get community posts');
     }
   }
@@ -1089,7 +1090,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error creating community post:', error);
+      safeLogger.error('Error creating community post:', error);
       throw new Error('Failed to create community post');
     }
   }
@@ -1173,7 +1174,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error getting community members:', error);
+      safeLogger.error('Error getting community members:', error);
       throw new Error('Failed to get community members');
     }
   }
@@ -1264,7 +1265,7 @@ export class CommunityService {
         lastCalculatedAt: stats?.lastCalculatedAt || null,
       };
     } catch (error) {
-      console.error('Error getting community stats:', error);
+      safeLogger.error('Error getting community stats:', error);
       throw new Error('Failed to get community stats');
     }
   }
@@ -1364,7 +1365,7 @@ export class CommunityService {
         });
 
     } catch (error) {
-      console.error('Error updating community stats:', error);
+      safeLogger.error('Error updating community stats:', error);
       // Don't throw error as this is a background operation
     }
   }
@@ -1396,7 +1397,7 @@ export class CommunityService {
 
       return { success: true, message: 'Post approved successfully' };
     } catch (error) {
-      console.error('Error approving post:', error);
+      safeLogger.error('Error approving post:', error);
       throw new Error('Failed to approve post');
     }
   }
@@ -1428,7 +1429,7 @@ export class CommunityService {
 
       return { success: true, message: 'Post rejected successfully' };
     } catch (error) {
-      console.error('Error rejecting post:', error);
+      safeLogger.error('Error rejecting post:', error);
       throw new Error('Failed to reject post');
     }
   }
@@ -1465,7 +1466,7 @@ export class CommunityService {
         pagination: { page, limit, total: pendingPosts.length }
       };
     } catch (error) {
-      console.error('Error getting moderation queue:', error);
+      safeLogger.error('Error getting moderation queue:', error);
       throw new Error('Failed to get moderation queue');
     }
   }
@@ -1499,7 +1500,7 @@ export class CommunityService {
 
       return { success: true, message: 'Content flagged for review' };
     } catch (error) {
-      console.error('Error flagging content:', error);
+      safeLogger.error('Error flagging content:', error);
       throw new Error('Failed to flag content');
     }
   }
@@ -1661,7 +1662,7 @@ export class CommunityService {
 
       return { success: true, data: result };
     } catch (error) {
-      console.error('Error moderating content:', error);
+      safeLogger.error('Error moderating content:', error);
       throw new Error('Failed to moderate content');
     }
   }
@@ -1741,7 +1742,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error getting governance proposals:', error);
+      safeLogger.error('Error getting governance proposals:', error);
       throw new Error('Failed to get governance proposals');
     }
   }
@@ -1844,7 +1845,7 @@ export class CommunityService {
         }
       };
     } catch (error) {
-      console.error('Error creating governance proposal:', error);
+      safeLogger.error('Error creating governance proposal:', error);
       throw new Error('Failed to create governance proposal');
     }
   }
@@ -1951,7 +1952,7 @@ export class CommunityService {
 
       return false;
     } catch (error) {
-      console.error('Error checking content access:', error);
+      safeLogger.error('Error checking content access:', error);
       return false;
     }
   }
@@ -1990,7 +1991,7 @@ export class CommunityService {
 
       return true;
     } catch (error) {
-      console.error('Error granting content access:', error);
+      safeLogger.error('Error granting content access:', error);
       return false;
     }
   }
@@ -2041,7 +2042,7 @@ export class CommunityService {
         updatedAt: newContent.updatedAt,
       };
     } catch (error) {
-      console.error('Error creating token-gated content:', error);
+      safeLogger.error('Error creating token-gated content:', error);
       throw new Error('Failed to create token-gated content');
     }
   }
@@ -2076,7 +2077,7 @@ export class CommunityService {
         updatedAt: gatedContent.updatedAt,
       };
     } catch (error) {
-      console.error('Error getting token-gated content:', error);
+      safeLogger.error('Error getting token-gated content:', error);
       throw new Error('Failed to get token-gated content');
     }
   }
@@ -2129,7 +2130,7 @@ export class CommunityService {
         updatedAt: newTier.updatedAt,
       };
     } catch (error) {
-      console.error('Error creating subscription tier:', error);
+      safeLogger.error('Error creating subscription tier:', error);
       throw new Error('Failed to create subscription tier');
     }
   }
@@ -2164,7 +2165,7 @@ export class CommunityService {
         updatedAt: tier.updatedAt,
       }));
     } catch (error) {
-      console.error('Error getting subscription tiers:', error);
+      safeLogger.error('Error getting subscription tiers:', error);
       throw new Error('Failed to get subscription tiers');
     }
   }
@@ -2237,7 +2238,7 @@ export class CommunityService {
         updatedAt: newSubscription.updatedAt,
       };
     } catch (error) {
-      console.error('Error subscribing user:', error);
+      safeLogger.error('Error subscribing user:', error);
       throw new Error('Failed to subscribe user');
     }
   }
@@ -2287,7 +2288,7 @@ export class CommunityService {
         } : null,
       }));
     } catch (error) {
-      console.error('Error getting user subscriptions:', error);
+      safeLogger.error('Error getting user subscriptions:', error);
       throw new Error('Failed to get user subscriptions');
     }
   }
@@ -2368,7 +2369,7 @@ export class CommunityService {
         };
       }
     } catch (error) {
-      console.error('Error creating or updating treasury pool:', error);
+      safeLogger.error('Error creating or updating treasury pool:', error);
       throw new Error('Failed to create or update treasury pool');
     }
   }
@@ -2417,7 +2418,7 @@ export class CommunityService {
         distributedAt: newReward.distributedAt,
       };
     } catch (error) {
-      console.error('Error distributing creator rewards:', error);
+      safeLogger.error('Error distributing creator rewards:', error);
       throw new Error('Failed to distribute creator rewards');
     }
   }
@@ -2453,7 +2454,7 @@ export class CommunityService {
         distributedAt: reward.distributedAt,
       }));
     } catch (error) {
-      console.error('Error getting creator rewards:', error);
+      safeLogger.error('Error getting creator rewards:', error);
       throw new Error('Failed to get creator rewards');
     }
   }
@@ -2541,7 +2542,7 @@ export class CommunityService {
         };
       }
     } catch (error) {
-      console.error('Error staking tokens:', error);
+      safeLogger.error('Error staking tokens:', error);
       throw new Error('Failed to stake tokens');
     }
   }
@@ -2586,7 +2587,7 @@ export class CommunityService {
         updatedAt: stake.updatedAt,
       };
     } catch (error) {
-      console.error('Error unstaking tokens:', error);
+      safeLogger.error('Error unstaking tokens:', error);
       throw new Error('Failed to unstake tokens');
     }
   }
@@ -2622,7 +2623,7 @@ export class CommunityService {
         updatedAt: stake.updatedAt,
       }));
     } catch (error) {
-      console.error('Error getting user staking information:', error);
+      safeLogger.error('Error getting user staking information:', error);
       throw new Error('Failed to get user staking information');
     }
   }
@@ -2678,7 +2679,7 @@ export class CommunityService {
         distributedAt: newReward.distributedAt,
       };
     } catch (error) {
-      console.error('Error distributing staking rewards:', error);
+      safeLogger.error('Error distributing staking rewards:', error);
       throw new Error('Failed to distribute staking rewards');
     }
   }
@@ -2733,7 +2734,7 @@ export class CommunityService {
         updatedAt: newProgram.updatedAt,
       };
     } catch (error) {
-      console.error('Error creating referral program:', error);
+      safeLogger.error('Error creating referral program:', error);
       throw new Error('Failed to create referral program');
     }
   }
@@ -2797,7 +2798,7 @@ export class CommunityService {
         rewardedAt: newReferral.rewardedAt,
       };
     } catch (error) {
-      console.error('Error recording user referral:', error);
+      safeLogger.error('Error recording user referral:', error);
       throw new Error('Failed to record user referral');
     }
   }
@@ -2834,7 +2835,7 @@ export class CommunityService {
         updatedAt: prog.updatedAt,
       };
     } catch (error) {
-      console.error('Error getting referral program:', error);
+      safeLogger.error('Error getting referral program:', error);
       throw new Error('Failed to get referral program');
     }
   }
@@ -2874,7 +2875,7 @@ export class CommunityService {
         rewardedAt: referral.rewardedAt,
       }));
     } catch (error) {
-      console.error('Error getting user referrals:', error);
+      safeLogger.error('Error getting user referrals:', error);
       throw new Error('Failed to get user referrals');
     }
   }
@@ -2936,7 +2937,7 @@ export class CommunityService {
         postCount: 0 // Could be calculated if needed
       }));
     } catch (error) {
-      console.error('Error searching authors:', error);
+      safeLogger.error('Error searching authors:', error);
       throw new Error('Failed to search authors');
     }
   }
@@ -2991,7 +2992,7 @@ export class CommunityService {
 
       return Math.floor(votingPower * 100) / 100; // Round to 2 decimal places
     } catch (error) {
-      console.error('Error calculating voting power:', error);
+      safeLogger.error('Error calculating voting power:', error);
       return 1;
     }
   }
@@ -3063,7 +3064,7 @@ export class CommunityService {
         .where(eq(communityGovernanceProposals.id, proposalId));
 
     } catch (error) {
-      console.error('Error updating proposal status:', error);
+      safeLogger.error('Error updating proposal status:', error);
       throw new Error('Failed to update proposal status');
     }
   }
@@ -3165,7 +3166,7 @@ export class CommunityService {
       };
 
     } catch (error) {
-      console.error('Error executing proposal:', error);
+      safeLogger.error('Error executing proposal:', error);
       return { success: false, message: 'Failed to execute proposal' };
     }
   }
@@ -3184,7 +3185,7 @@ export class CommunityService {
         .where(eq(communities.id, communityId));
       return { success: true, message: 'Community settings updated' };
     } catch (error) {
-      console.error('Error executing settings update:', error);
+      safeLogger.error('Error executing settings update:', error);
       return { success: false, message: 'Failed to update settings' };
     }
   }
@@ -3206,7 +3207,7 @@ export class CommunityService {
         );
       return { success: true, message: `Member promoted to ${newRole}` };
     } catch (error) {
-      console.error('Error executing member promotion:', error);
+      safeLogger.error('Error executing member promotion:', error);
       return { success: false, message: 'Failed to promote member' };
     }
   }
@@ -3222,7 +3223,7 @@ export class CommunityService {
         note: 'Smart contract execution required'
       };
     } catch (error) {
-      console.error('Error executing treasury allocation:', error);
+      safeLogger.error('Error executing treasury allocation:', error);
       return { success: false, message: 'Failed to allocate treasury funds' };
     }
   }
@@ -3239,7 +3240,7 @@ export class CommunityService {
         .where(eq(communities.id, communityId));
       return { success: true, message: 'Community rules updated' };
     } catch (error) {
-      console.error('Error executing rule change:', error);
+      safeLogger.error('Error executing rule change:', error);
       return { success: false, message: 'Failed to update rules' };
     }
   }

@@ -1,4 +1,5 @@
 import * as Redis from 'redis';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -15,7 +16,7 @@ export class RedisService {
       redisUrl = 'redis://localhost:6379';
     }
     
-    console.log('🔗 Attempting Redis connection to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+    safeLogger.info('🔗 Attempting Redis connection to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
     this.client = Redis.createClient({
       url: redisUrl,
@@ -25,22 +26,22 @@ export class RedisService {
     });
 
     this.client.on('error', (err) => {
-      console.error('Redis Client Error:', err);
+      safeLogger.error('Redis Client Error:', err);
       this.isConnected = false;
     });
 
     this.client.on('connect', () => {
-      console.log('Redis Client Connected');
+      safeLogger.info('Redis Client Connected');
       this.isConnected = true;
     });
 
     this.client.on('ready', () => {
-      console.log('Redis Client Ready');
+      safeLogger.info('Redis Client Ready');
       this.isConnected = true;
     });
 
     this.client.on('end', () => {
-      console.log('Redis Client Disconnected');
+      safeLogger.info('Redis Client Disconnected');
       this.isConnected = false;
     });
   }
@@ -50,7 +51,7 @@ export class RedisService {
       try {
         await this.client.connect();
       } catch (error) {
-        console.error('Failed to connect to Redis:', error);
+        safeLogger.error('Failed to connect to Redis:', error);
         throw error;
       }
     }
@@ -224,7 +225,7 @@ export class RedisService {
       await this.ping();
       return true;
     } catch (error) {
-      console.error("Redis connection test failed:", error);
+      safeLogger.error("Redis connection test failed:", error);
       throw error;
     }
   }

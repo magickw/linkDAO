@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   eq, 
   and, 
@@ -12,8 +13,7 @@ import {
   inArray,
   isNull
 } from 'drizzle-orm';
-import { 
-  communities, 
+import {  communities, 
   communityMembers, 
   communityStats, 
   posts, 
@@ -273,7 +273,7 @@ export class CommunityHealthService {
         lastUpdated: new Date()
       };
     } catch (error) {
-      console.error('Error getting community health metrics:', error);
+      safeLogger.error('Error getting community health metrics:', error);
       throw new Error('Failed to retrieve community health metrics');
     }
   }
@@ -314,7 +314,7 @@ export class CommunityHealthService {
       
       return trends;
     } catch (error) {
-      console.error('Error getting community health trends:', error);
+      safeLogger.error('Error getting community health trends:', error);
       throw new Error('Failed to retrieve community health trends');
     }
   }
@@ -377,7 +377,7 @@ export class CommunityHealthService {
 
       return comparisons;
     } catch (error) {
-      console.error('Error getting community comparisons:', error);
+      safeLogger.error('Error getting community comparisons:', error);
       throw new Error('Failed to retrieve community comparisons');
     }
   }
@@ -474,7 +474,7 @@ export class CommunityHealthService {
 
       return alerts;
     } catch (error) {
-      console.error('Error getting health alerts:', error);
+      safeLogger.error('Error getting health alerts:', error);
       throw new Error('Failed to retrieve health alerts');
     }
   }
@@ -581,7 +581,7 @@ export class CommunityHealthService {
         } : null
       };
     } catch (error) {
-      console.error('Error getting real-time health snapshot:', error);
+      safeLogger.error('Error getting real-time health snapshot:', error);
       throw new Error('Failed to retrieve real-time health snapshot');
     }
   }

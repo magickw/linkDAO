@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, moderationAuditLog, moderationAppeals, users } from '../db/schema';
 import { eq, desc, and, gte, lte, sql, count, avg, ne, isNotNull } from 'drizzle-orm';
 import { similarCaseMatchingService } from './similarCaseMatchingService';
@@ -169,7 +170,7 @@ export class ModerationQualityAssuranceService {
       return audit;
 
     } catch (error) {
-      console.error('Error auditing moderation decision:', error);
+      safeLogger.error('Error auditing moderation decision:', error);
       throw new Error('Failed to audit moderation decision');
     }
   }
@@ -220,7 +221,7 @@ export class ModerationQualityAssuranceService {
       };
 
     } catch (error) {
-      console.error('Error calculating quality metrics:', error);
+      safeLogger.error('Error calculating quality metrics:', error);
       throw new Error('Failed to calculate quality metrics');
     }
   }
@@ -265,7 +266,7 @@ export class ModerationQualityAssuranceService {
       };
 
     } catch (error) {
-      console.error('Error evaluating moderator performance:', error);
+      safeLogger.error('Error evaluating moderator performance:', error);
       throw new Error('Failed to evaluate moderator performance');
     }
   }
@@ -295,7 +296,7 @@ export class ModerationQualityAssuranceService {
       return feedbackRecord;
 
     } catch (error) {
-      console.error('Error processing feedback:', error);
+      safeLogger.error('Error processing feedback:', error);
       throw new Error('Failed to process feedback');
     }
   }
@@ -330,7 +331,7 @@ export class ModerationQualityAssuranceService {
       return session;
 
     } catch (error) {
-      console.error('Error creating calibration session:', error);
+      safeLogger.error('Error creating calibration session:', error);
       throw new Error('Failed to create calibration session');
     }
   }
@@ -362,7 +363,7 @@ export class ModerationQualityAssuranceService {
       return result;
 
     } catch (error) {
-      console.error('Error processing calibration results:', error);
+      safeLogger.error('Error processing calibration results:', error);
       throw new Error('Failed to process calibration results');
     }
   }
@@ -768,30 +769,30 @@ export class ModerationQualityAssuranceService {
   // Storage methods (simplified implementations)
   private async storeAuditRecord(audit: QualityAudit): Promise<void> {
     // Store audit record in database
-    console.log('Storing audit record:', audit.auditId);
+    safeLogger.info('Storing audit record:', audit.auditId);
   }
 
   private async storeFeedback(feedback: FeedbackLoop): Promise<void> {
     // Store feedback in database
-    console.log('Storing feedback:', feedback.feedbackId);
+    safeLogger.info('Storing feedback:', feedback.feedbackId);
   }
 
   private async processFeedbackForImprovement(feedback: FeedbackLoop): Promise<void> {
     // Process feedback for AI model improvement
     if (feedback.feedbackType === 'negative') {
       // Update model training data
-      console.log('Processing negative feedback for model improvement');
+      safeLogger.info('Processing negative feedback for model improvement');
     }
   }
 
   private async updateModeratorFeedback(feedback: FeedbackLoop): Promise<void> {
     // Update moderator performance records
-    console.log('Updating moderator feedback:', feedback.moderatorId);
+    safeLogger.info('Updating moderator feedback:', feedback.moderatorId);
   }
 
   private async storeCalibrationSession(session: CalibrationSession): Promise<void> {
     // Store calibration session
-    console.log('Storing calibration session:', session.sessionId);
+    safeLogger.info('Storing calibration session:', session.sessionId);
   }
 
   private async getCalibrationSession(sessionId: string): Promise<CalibrationSession | null> {
@@ -830,12 +831,12 @@ export class ModerationQualityAssuranceService {
 
   private async storeCalibrationResult(sessionId: string, result: CalibrationResult): Promise<void> {
     // Store calibration result
-    console.log('Storing calibration result for session:', sessionId);
+    safeLogger.info('Storing calibration result for session:', sessionId);
   }
 
   private async updateSessionConsensus(sessionId: string): Promise<void> {
     // Update session consensus rate
-    console.log('Updating session consensus for:', sessionId);
+    safeLogger.info('Updating session consensus for:', sessionId);
   }
 }
 

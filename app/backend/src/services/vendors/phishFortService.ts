@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface PhishFortResult {
   status: 'safe' | 'malicious' | 'suspicious' | 'error';
@@ -30,7 +31,7 @@ export class PhishFortService {
   constructor() {
     this.apiKey = process.env.PHISHFORT_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('PhishFort API key not configured');
+      safeLogger.warn('PhishFort API key not configured');
     }
   }
 
@@ -56,7 +57,7 @@ export class PhishFortService {
 
       return this.processResponse(response.data, analysisTimeMs);
     } catch (error) {
-      console.error('PhishFort API error:', error);
+      safeLogger.error('PhishFort API error:', error);
       return {
         status: 'error',
         threatTypes: [],
@@ -108,7 +109,7 @@ export class PhishFortService {
 
       return this.processResponse(response.data, analysisTimeMs);
     } catch (error) {
-      console.error('PhishFort domain API error:', error);
+      safeLogger.error('PhishFort domain API error:', error);
       return {
         status: 'error',
         threatTypes: [],
@@ -138,7 +139,7 @@ export class PhishFortService {
         confidence: response.data.confidence || 0,
       };
     } catch (error) {
-      console.error('PhishFort crypto intel error:', error);
+      safeLogger.error('PhishFort crypto intel error:', error);
       return {
         isCryptoRelated: false,
         scamTypes: [],
@@ -174,7 +175,7 @@ export class PhishFortService {
         return await Promise.all(urls.map(url => this.checkUrl(url)));
       }
     } catch (error) {
-      console.error('PhishFort batch API error:', error);
+      safeLogger.error('PhishFort batch API error:', error);
       // Fallback to individual requests
       return await Promise.all(urls.map(url => this.checkUrl(url)));
     }

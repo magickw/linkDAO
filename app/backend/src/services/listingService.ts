@@ -11,6 +11,7 @@ import {
     ProductSearchResult
 } from '../models/Product';
 import { ProductService } from './productService';
+import { safeLogger } from '../utils/safeLogger';
 import { BlockchainMarketplaceService } from './marketplaceService';
 import ImageStorageService from './imageStorageService';
 import { DatabaseService } from './databaseService';
@@ -159,7 +160,7 @@ export class ProductListingService {
 
             return result;
         } catch (error) {
-            console.error('Error creating listing:', error);
+            safeLogger.error('Error creating listing:', error);
             throw new ValidationError(
                 `Failed to create listing: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 'creation'
@@ -240,7 +241,7 @@ export class ProductListingService {
 
             return result;
         } catch (error) {
-            console.error('Error updating listing:', error);
+            safeLogger.error('Error updating listing:', error);
             throw new ValidationError(
                 `Failed to update listing: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 'update'
@@ -271,7 +272,7 @@ export class ProductListingService {
 
             return product;
         } catch (error) {
-            console.error('Error getting listing:', error);
+            safeLogger.error('Error getting listing:', error);
             return null;
         }
     }
@@ -307,7 +308,7 @@ export class ProductListingService {
                 products: enhancedProducts
             };
         } catch (error) {
-            console.error('Error getting marketplace listings:', error);
+            safeLogger.error('Error getting marketplace listings:', error);
             throw new ValidationError('Failed to get marketplace listings', 'search');
         }
     }
@@ -363,7 +364,7 @@ export class ProductListingService {
 
             return blockchainListing;
         } catch (error) {
-            console.error('Error publishing to blockchain:', error);
+            safeLogger.error('Error publishing to blockchain:', error);
             throw new ValidationError(
                 `Failed to publish to blockchain: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 'blockchain'
@@ -407,7 +408,7 @@ export class ProductListingService {
 
             return { productListing, blockchainListing, synced: true };
         } catch (error) {
-            console.error('Error syncing with blockchain:', error);
+            safeLogger.error('Error syncing with blockchain:', error);
             return { productListing: null, blockchainListing: null, synced: false };
         }
     }
@@ -445,7 +446,7 @@ export class ProductListingService {
 
             return { listing, bids, offers, escrow };
         } catch (error) {
-            console.error('Error getting blockchain data:', error);
+            safeLogger.error('Error getting blockchain data:', error);
             return { listing: null, bids: [], offers: [], escrow: null };
         }
     }
@@ -463,7 +464,7 @@ export class ProductListingService {
             // Find the product listing by blockchain listing ID
             const productListing = await this.findByBlockchainListingId(event.listingId);
             if (!productListing) {
-                console.warn(`No product listing found for blockchain listing ${event.listingId}`);
+                safeLogger.warn(`No product listing found for blockchain listing ${event.listingId}`);
                 return;
             }
 
@@ -483,7 +484,7 @@ export class ProductListingService {
                     break;
             }
         } catch (error) {
-            console.error('Error handling blockchain event:', error);
+            safeLogger.error('Error handling blockchain event:', error);
         }
     }
 
@@ -684,7 +685,7 @@ export class ProductListingService {
 
         if (input.inventory !== undefined && input.inventory < current.inventory) {
             // This is normal for sales, just log it
-            console.log(`Inventory reduced from ${current.inventory} to ${input.inventory}`);
+            safeLogger.info(`Inventory reduced from ${current.inventory} to ${input.inventory}`);
         }
 
         // Calculate updated completeness
@@ -727,7 +728,7 @@ export class ProductListingService {
         try {
             await this.redisService.cacheProductListing(listingId, listing, 900); // 15 minutes
         } catch (error) {
-            console.error('Error caching listing data:', error);
+            safeLogger.error('Error caching listing data:', error);
         }
     }
 
@@ -740,7 +741,7 @@ export class ProductListingService {
             // Also invalidate related caches
             await this.redisService.del(`marketplace:*`);
         } catch (error) {
-            console.error('Error invalidating listing cache:', error);
+            safeLogger.error('Error invalidating listing cache:', error);
         }
     }
 
@@ -749,7 +750,7 @@ export class ProductListingService {
      */
     private async logListingActivity(listingId: string, action: string, metadata: any): Promise<void> {
         // This would integrate with an activity logging service
-        console.log(`Listing ${listingId}: ${action}`, metadata);
+        safeLogger.info(`Listing ${listingId}: ${action}`, metadata);
     }
 
     // ========================================
@@ -787,7 +788,7 @@ export class ProductListingService {
                 return this.mapProductFromDb(result[0]);
             }
         } catch (error) {
-            console.error('Error finding product by blockchain listing ID:', error);
+            safeLogger.error('Error finding product by blockchain listing ID:', error);
         }
         
         return null;

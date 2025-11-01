@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { userPreferenceService, TransactionContext } from '../services/userPreferenceService';
 
 export class UserPreferenceController {
@@ -30,7 +32,7 @@ export class UserPreferenceController {
         data: preferences
       });
     } catch (error) {
-      console.error('Error getting user preferences:', error);
+      safeLogger.error('Error getting user preferences:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user preferences'
@@ -62,7 +64,7 @@ export class UserPreferenceController {
         message: 'Payment preference updated successfully'
       });
     } catch (error) {
-      console.error('Error updating payment preference:', error);
+      safeLogger.error('Error updating payment preference:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update payment preference'
@@ -113,7 +115,7 @@ export class UserPreferenceController {
         }
       });
     } catch (error) {
-      console.error('Error getting payment recommendation:', error);
+      safeLogger.error('Error getting payment recommendation:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get payment recommendation'
@@ -169,7 +171,7 @@ export class UserPreferenceController {
         message: 'Preference override added successfully'
       });
     } catch (error) {
-      console.error('Error adding preference override:', error);
+      safeLogger.error('Error adding preference override:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to add preference override'
@@ -200,7 +202,7 @@ export class UserPreferenceController {
         message: 'User preferences reset successfully'
       });
     } catch (error) {
-      console.error('Error resetting user preferences:', error);
+      safeLogger.error('Error resetting user preferences:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to reset user preferences'
@@ -244,7 +246,7 @@ export class UserPreferenceController {
         }
       });
     } catch (error) {
-      console.error('Error getting user payment analytics:', error);
+      safeLogger.error('Error getting user payment analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user payment analytics'
@@ -274,7 +276,7 @@ export class UserPreferenceController {
         data: { deletedCount }
       });
     } catch (error) {
-      console.error('Error cleaning up expired overrides:', error);
+      safeLogger.error('Error cleaning up expired overrides:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to cleanup expired overrides'
@@ -319,7 +321,7 @@ export class UserPreferenceController {
         }
       });
     } catch (error) {
-      console.error('Error calculating preference score:', error);
+      safeLogger.error('Error calculating preference score:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to calculate preference score'

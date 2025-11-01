@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { gracefulDegradationService } from './gracefulDegradationService';
 import { circuitBreakerService } from './circuitBreakerService';
 
@@ -85,7 +86,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
         this.processMetrics(metrics);
         this.checkAlertRules(metrics);
       } catch (error) {
-        console.error('Error collecting system metrics:', error);
+        safeLogger.error('Error collecting system metrics:', error);
         this.emit('monitoringError', { error: (error as Error).message });
       }
     }, this.monitoringIntervalMs);
@@ -246,7 +247,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
       this.handleCriticalAlert(alert);
     }
 
-    console.log(`🚨 ALERT [${alert.severity.toUpperCase()}]: ${alert.message}`);
+    safeLogger.info(`🚨 ALERT [${alert.severity.toUpperCase()}]: ${alert.message}`);
   }
 
   /**
@@ -265,7 +266,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
         await this.handleEmergencyDegradation(alert);
       }
     } catch (error) {
-      console.error('Error handling critical alert:', error);
+      safeLogger.error('Error handling critical alert:', error);
       this.emit('criticalAlertHandlingFailed', {
         alert,
         error: (error as Error).message
@@ -277,17 +278,17 @@ export class SystemHealthMonitoringService extends EventEmitter {
    * Handle service failure alerts
    */
   private async handleServiceFailure(alert: SystemAlert): Promise<void> {
-    console.log('🔧 Attempting automatic service recovery...');
+    safeLogger.info('🔧 Attempting automatic service recovery...');
     
     // Attempt to recover failed services
     const recoverySuccess = await gracefulDegradationService.attemptRecovery();
     
     if (recoverySuccess) {
       this.emit('automaticRecoverySuccess', { alert });
-      console.log('✅ Automatic service recovery successful');
+      safeLogger.info('✅ Automatic service recovery successful');
     } else {
       this.emit('automaticRecoveryFailed', { alert });
-      console.log('❌ Automatic service recovery failed');
+      safeLogger.info('❌ Automatic service recovery failed');
     }
   }
 
@@ -295,7 +296,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
    * Handle memory pressure alerts
    */
   private async handleMemoryPressure(alert: SystemAlert): Promise<void> {
-    console.log('🧹 Attempting memory cleanup...');
+    safeLogger.info('🧹 Attempting memory cleanup...');
     
     try {
       // Force garbage collection if available
@@ -314,10 +315,10 @@ export class SystemHealthMonitoringService extends EventEmitter {
       }
       
       this.emit('memoryCleanupCompleted', { alert });
-      console.log('✅ Memory cleanup completed');
+      safeLogger.info('✅ Memory cleanup completed');
     } catch (error) {
       this.emit('memoryCleanupFailed', { alert, error: (error as Error).message });
-      console.log('❌ Memory cleanup failed:', error);
+      safeLogger.info('❌ Memory cleanup failed:', error);
     }
   }
 
@@ -325,7 +326,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
    * Handle emergency degradation alerts
    */
   private async handleEmergencyDegradation(alert: SystemAlert): Promise<void> {
-    console.log('🚨 Handling emergency degradation...');
+    safeLogger.info('🚨 Handling emergency degradation...');
     
     // Force system into safe mode
     gracefulDegradationService.forceDegradedMode('Emergency alert triggered');
@@ -333,7 +334,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
     // Notify external systems
     this.emit('emergencyModeActivated', { alert });
     
-    console.log('🛡️ Emergency mode activated');
+    safeLogger.info('🛡️ Emergency mode activated');
   }
 
   /**
@@ -346,20 +347,20 @@ export class SystemHealthMonitoringService extends EventEmitter {
         
         // Only attempt recovery if system is degraded but not in emergency
         if (systemHealth.degradationState.mode === 'degraded') {
-          console.log('🔄 Attempting scheduled recovery...');
+          safeLogger.info('🔄 Attempting scheduled recovery...');
           
           const recoverySuccess = await gracefulDegradationService.attemptRecovery();
           
           if (recoverySuccess) {
             this.emit('scheduledRecoverySuccess');
-            console.log('✅ Scheduled recovery successful');
+            safeLogger.info('✅ Scheduled recovery successful');
           } else {
             this.emit('scheduledRecoveryFailed');
-            console.log('❌ Scheduled recovery failed');
+            safeLogger.info('❌ Scheduled recovery failed');
           }
         }
       } catch (error) {
-        console.error('Error in scheduled recovery:', error);
+        safeLogger.error('Error in scheduled recovery:', error);
         this.emit('scheduledRecoveryError', { error: (error as Error).message });
       }
     }, this.recoveryIntervalMs);

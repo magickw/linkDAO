@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { NotificationService } from './notificationService';
 import { PaymentValidationService } from './paymentValidationService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
@@ -139,7 +140,7 @@ export class OrderPaymentIntegrationService {
     }
   ): Promise<PaymentTransaction> {
     try {
-      console.log(`💳 Creating payment transaction for order ${orderId}`);
+      safeLogger.info(`💳 Creating payment transaction for order ${orderId}`);
 
       // Generate unique transaction ID
       const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -178,11 +179,11 @@ export class OrderPaymentIntegrationService {
         paymentDetails: JSON.stringify(paymentDetails)
       });
 
-      console.log(`✅ Payment transaction ${transactionId} created for order ${orderId}`);
+      safeLogger.info(`✅ Payment transaction ${transactionId} created for order ${orderId}`);
       return transaction;
 
     } catch (error) {
-      console.error('Error creating payment transaction:', error);
+      safeLogger.error('Error creating payment transaction:', error);
       throw error;
     }
   }
@@ -203,7 +204,7 @@ export class OrderPaymentIntegrationService {
     }
   ): Promise<PaymentSyncResult> {
     try {
-      console.log(`🔄 Updating payment transaction ${transactionId} to status ${status}`);
+      safeLogger.info(`🔄 Updating payment transaction ${transactionId} to status ${status}`);
 
       // Get current transaction
       const transaction = await this.getPaymentTransaction(transactionId);
@@ -237,7 +238,7 @@ export class OrderPaymentIntegrationService {
         await this.generatePaymentReceipt(transactionId);
       }
 
-      console.log(`✅ Payment transaction ${transactionId} updated: ${previousStatus} -> ${status}`);
+      safeLogger.info(`✅ Payment transaction ${transactionId} updated: ${previousStatus} -> ${status}`);
 
       return {
         orderId: transaction.orderId,
@@ -251,7 +252,7 @@ export class OrderPaymentIntegrationService {
       };
 
     } catch (error) {
-      console.error('Error updating payment transaction status:', error);
+      safeLogger.error('Error updating payment transaction status:', error);
       throw error;
     }
   }
@@ -265,7 +266,7 @@ export class OrderPaymentIntegrationService {
     paymentDetails?: any
   ): Promise<{ notifications: { buyer: boolean; seller: boolean } }> {
     try {
-      console.log(`🔄 Syncing order ${orderId} with payment status ${paymentStatus}`);
+      safeLogger.info(`🔄 Syncing order ${orderId} with payment status ${paymentStatus}`);
 
       const order = await this.databaseService.getOrderById(parseInt(orderId));
       if (!order) {
@@ -314,13 +315,13 @@ export class OrderPaymentIntegrationService {
         notifications.buyer = await this.sendBuyerNotification(orderId, newOrderStatus, paymentStatus);
         notifications.seller = await this.sendSellerNotification(orderId, newOrderStatus, paymentStatus);
 
-        console.log(`📋 Order ${orderId} status updated: ${order.status} -> ${newOrderStatus}`);
+        safeLogger.info(`📋 Order ${orderId} status updated: ${order.status} -> ${newOrderStatus}`);
       }
 
       return { notifications };
 
     } catch (error) {
-      console.error('Error syncing order with payment status:', error);
+      safeLogger.error('Error syncing order with payment status:', error);
       return { notifications: { buyer: false, seller: false } };
     }
   }
@@ -380,7 +381,7 @@ export class OrderPaymentIntegrationService {
       };
 
     } catch (error) {
-      console.error('Error getting order payment status:', error);
+      safeLogger.error('Error getting order payment status:', error);
       return null;
     }
   }
@@ -390,7 +391,7 @@ export class OrderPaymentIntegrationService {
    */
   async monitorBlockchainTransaction(transactionHash: string, orderId: string): Promise<void> {
     try {
-      console.log(`👀 Monitoring blockchain transaction ${transactionHash} for order ${orderId}`);
+      safeLogger.info(`👀 Monitoring blockchain transaction ${transactionHash} for order ${orderId}`);
 
       const checkTransaction = async () => {
         try {
@@ -416,13 +417,13 @@ export class OrderPaymentIntegrationService {
               });
             }
 
-            console.log(`✅ Transaction ${transactionHash} confirmed with status: ${status}`);
+            safeLogger.info(`✅ Transaction ${transactionHash} confirmed with status: ${status}`);
           } else {
             // Transaction not yet mined, check again later
             setTimeout(checkTransaction, 30000); // Check every 30 seconds
           }
         } catch (error) {
-          console.error('Error checking transaction:', error);
+          safeLogger.error('Error checking transaction:', error);
           setTimeout(checkTransaction, 60000); // Retry in 1 minute on error
         }
       };
@@ -431,7 +432,7 @@ export class OrderPaymentIntegrationService {
       checkTransaction();
 
     } catch (error) {
-      console.error('Error starting blockchain transaction monitoring:', error);
+      safeLogger.error('Error starting blockchain transaction monitoring:', error);
     }
   }
 
@@ -478,11 +479,11 @@ export class OrderPaymentIntegrationService {
         receiptUrl: receipt.receiptUrl
       });
 
-      console.log(`🧾 Payment receipt ${receiptNumber} generated for transaction ${transactionId}`);
+      safeLogger.info(`🧾 Payment receipt ${receiptNumber} generated for transaction ${transactionId}`);
       return receipt;
 
     } catch (error) {
-      console.error('Error generating payment receipt:', error);
+      safeLogger.error('Error generating payment receipt:', error);
       throw error;
     }
   }
@@ -492,7 +493,7 @@ export class OrderPaymentIntegrationService {
    */
   async retryPayment(orderId: string, paymentMethod?: 'crypto' | 'fiat' | 'escrow'): Promise<PaymentTransaction> {
     try {
-      console.log(`🔄 Retrying payment for order ${orderId}`);
+      safeLogger.info(`🔄 Retrying payment for order ${orderId}`);
 
       const orderPaymentStatus = await this.getOrderPaymentStatus(orderId);
       if (!orderPaymentStatus) {
@@ -526,11 +527,11 @@ export class OrderPaymentIntegrationService {
         }
       );
 
-      console.log(`🔄 Payment retry transaction ${retryTransaction.id} created for order ${orderId}`);
+      safeLogger.info(`🔄 Payment retry transaction ${retryTransaction.id} created for order ${orderId}`);
       return retryTransaction;
 
     } catch (error) {
-      console.error('Error retrying payment:', error);
+      safeLogger.error('Error retrying payment:', error);
       throw error;
     }
   }
@@ -544,7 +545,7 @@ export class OrderPaymentIntegrationService {
     reason?: string
   ): Promise<{ success: boolean; refundTransactionId?: string }> {
     try {
-      console.log(`💰 Processing refund for order ${orderId}`);
+      safeLogger.info(`💰 Processing refund for order ${orderId}`);
 
       const orderPaymentStatus = await this.getOrderPaymentStatus(orderId);
       if (!orderPaymentStatus) {
@@ -620,11 +621,11 @@ export class OrderPaymentIntegrationService {
         }
       );
 
-      console.log(`✅ Refund processed for order ${orderId}: ${refundAmount} ${originalTransaction.currency}`);
+      safeLogger.info(`✅ Refund processed for order ${orderId}: ${refundAmount} ${originalTransaction.currency}`);
       return { success: true, refundTransactionId: refundTransaction.id };
 
     } catch (error) {
-      console.error('Error processing refund:', error);
+      safeLogger.error('Error processing refund:', error);
       return { success: false };
     }
   }
@@ -791,7 +792,7 @@ export class OrderPaymentIntegrationService {
 
       return true;
     } catch (error) {
-      console.error('Error sending buyer notification:', error);
+      safeLogger.error('Error sending buyer notification:', error);
       return false;
     }
   }
@@ -817,7 +818,7 @@ export class OrderPaymentIntegrationService {
 
       return true;
     } catch (error) {
-      console.error('Error sending seller notification:', error);
+      safeLogger.error('Error sending seller notification:', error);
       return false;
     }
   }

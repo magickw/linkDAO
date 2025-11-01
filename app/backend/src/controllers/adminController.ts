@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { analyticsService } from "../services/analyticsService";
 import { databaseService } from "../services/databaseService";
 import AuditLoggingService from "../services/auditLoggingService";
@@ -31,7 +33,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error creating policy configuration:", error);
+      safeLogger.error("Error creating policy configuration:", error);
       res.status(500).json({ success: false, error: "Failed to create policy configuration" });
     }
   }
@@ -57,7 +59,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error updating policy configuration:", error);
+      safeLogger.error("Error updating policy configuration:", error);
       res.status(500).json({ success: false, error: "Failed to update policy configuration" });
     }
   }
@@ -70,7 +72,7 @@ export class AdminController {
       );
       res.json({ success: true, data: configs });
     } catch (error) {
-      console.error("Error fetching policy configurations:", error);
+      safeLogger.error("Error fetching policy configurations:", error);
       res.status(500).json({ success: false, error: "Failed to fetch policy configurations" });
     }
   }
@@ -91,7 +93,7 @@ export class AdminController {
         message: "Policy configuration deleted successfully"
       });
     } catch (error) {
-      console.error("Error deleting policy configuration:", error);
+      safeLogger.error("Error deleting policy configuration:", error);
       res.status(500).json({ success: false, error: "Failed to delete policy configuration" });
     }
   }
@@ -113,7 +115,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error creating threshold configuration:", error);
+      safeLogger.error("Error creating threshold configuration:", error);
       res.status(500).json({ success: false, error: "Failed to create threshold configuration" });
     }
   }
@@ -139,7 +141,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error updating threshold configuration:", error);
+      safeLogger.error("Error updating threshold configuration:", error);
       res.status(500).json({ success: false, error: "Failed to update threshold configuration" });
     }
   }
@@ -153,7 +155,7 @@ export class AdminController {
       );
       res.json({ success: true, data: configs });
     } catch (error) {
-      console.error("Error fetching threshold configurations:", error);
+      safeLogger.error("Error fetching threshold configurations:", error);
       res.status(500).json({ success: false, error: "Failed to fetch threshold configurations" });
     }
   }
@@ -175,7 +177,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error creating vendor configuration:", error);
+      safeLogger.error("Error creating vendor configuration:", error);
       res.status(500).json({ success: false, error: "Failed to create vendor configuration" });
     }
   }
@@ -201,7 +203,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error updating vendor configuration:", error);
+      safeLogger.error("Error updating vendor configuration:", error);
       res.status(500).json({ success: false, error: "Failed to update vendor configuration" });
     }
   }
@@ -215,7 +217,7 @@ export class AdminController {
       );
       res.json({ success: true, data: configs });
     } catch (error) {
-      console.error("Error fetching vendor configurations:", error);
+      safeLogger.error("Error fetching vendor configurations:", error);
       res.status(500).json({ success: false, error: "Failed to fetch vendor configurations" });
     }
   }
@@ -236,7 +238,7 @@ export class AdminController {
         message: "Vendor health status updated successfully"
       });
     } catch (error) {
-      console.error("Error updating vendor health status:", error);
+      safeLogger.error("Error updating vendor health status:", error);
       res.status(500).json({ success: false, error: "Failed to update vendor health status" });
     }
   }
@@ -258,7 +260,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error creating alert configuration:", error);
+      safeLogger.error("Error creating alert configuration:", error);
       res.status(500).json({ success: false, error: "Failed to create alert configuration" });
     }
   }
@@ -284,7 +286,7 @@ export class AdminController {
         data: config
       });
     } catch (error) {
-      console.error("Error updating alert configuration:", error);
+      safeLogger.error("Error updating alert configuration:", error);
       res.status(500).json({ success: false, error: "Failed to update alert configuration" });
     }
   }
@@ -297,7 +299,7 @@ export class AdminController {
       );
       res.json({ success: true, data: configs });
     } catch (error) {
-      console.error("Error fetching alert configurations:", error);
+      safeLogger.error("Error fetching alert configurations:", error);
       res.status(500).json({ success: false, error: "Failed to fetch alert configurations" });
     }
   }
@@ -335,7 +337,7 @@ export class AdminController {
         systemHealth: 95 // Placeholder - would need to calculate from actual metrics
       });
     } catch (error) {
-      console.error("Error fetching dashboard metrics:", error);
+      safeLogger.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ error: "Failed to fetch dashboard metrics" });
     }
   }
@@ -389,7 +391,7 @@ export class AdminController {
         recentActions
       });
     } catch (error) {
-      console.error("Error fetching admin stats:", error);
+      safeLogger.error("Error fetching admin stats:", error);
       res.status(500).json({ error: "Failed to fetch admin stats" });
     }
   }
@@ -563,7 +565,7 @@ export class AdminController {
         total: activities.length
       });
     } catch (error) {
-      console.error('Error fetching user activity:', error);
+      safeLogger.error('Error fetching user activity:', error);
       res.status(500).json({ error: "Failed to fetch user activity" });
     }
   }

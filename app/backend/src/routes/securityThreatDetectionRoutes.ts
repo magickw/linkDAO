@@ -6,6 +6,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { securityThreatDetectionService } from '../services/securityThreatDetectionService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -76,7 +78,7 @@ router.get('/dashboard', adminAuthMiddleware, async (req: AuthenticatedRequest, 
       data: dashboard,
     });
   } catch (error) {
-    console.error('Error getting threat detection dashboard:', error);
+    safeLogger.error('Error getting threat detection dashboard:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get threat detection dashboard',
@@ -131,7 +133,7 @@ router.get('/detections', adminAuthMiddleware, async (req: AuthenticatedRequest,
       },
     });
   } catch (error) {
-    console.error('Error getting threat detections:', error);
+    safeLogger.error('Error getting threat detections:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get threat detections',
@@ -161,7 +163,7 @@ router.get('/detections/:detectionId', adminAuthMiddleware, async (req: Authenti
       data: detection,
     });
   } catch (error) {
-    console.error('Error getting threat detection:', error);
+    safeLogger.error('Error getting threat detection:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get threat detection',
@@ -172,7 +174,7 @@ router.get('/detections/:detectionId', adminAuthMiddleware, async (req: Authenti
 /**
  * Update threat detection status
  */
-router.patch('/detections/:detectionId/status', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.patch('/detections/:detectionId/status', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { detectionId } = req.params;
     const { status, notes, assignedTo } = req.body;
@@ -198,7 +200,7 @@ router.patch('/detections/:detectionId/status', adminAuthMiddleware, async (req:
       message: 'Threat detection status updated successfully',
     });
   } catch (error) {
-    console.error('Error updating threat detection status:', error);
+    safeLogger.error('Error updating threat detection status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update threat detection status',
@@ -248,7 +250,7 @@ router.get('/patterns', adminAuthMiddleware, async (req: AuthenticatedRequest, r
       data: patterns,
     });
   } catch (error) {
-    console.error('Error getting threat patterns:', error);
+    safeLogger.error('Error getting threat patterns:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get threat patterns',
@@ -259,7 +261,7 @@ router.get('/patterns', adminAuthMiddleware, async (req: AuthenticatedRequest, r
 /**
  * Update threat pattern
  */
-router.patch('/patterns/:patternId', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.patch('/patterns/:patternId', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { patternId } = req.params;
     const updates = req.body;
@@ -279,7 +281,7 @@ router.patch('/patterns/:patternId', adminAuthMiddleware, async (req: Authentica
       message: 'Threat pattern updated successfully',
     });
   } catch (error) {
-    console.error('Error updating threat pattern:', error);
+    safeLogger.error('Error updating threat pattern:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to update threat pattern',
@@ -356,7 +358,7 @@ router.get('/behavioral-profiles', adminAuthMiddleware, async (req: Authenticate
       },
     });
   } catch (error) {
-    console.error('Error getting behavioral profiles:', error);
+    safeLogger.error('Error getting behavioral profiles:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get behavioral profiles',
@@ -385,7 +387,7 @@ router.get('/behavioral-profiles/:entityId', adminAuthMiddleware, async (req: Au
       data: profile,
     });
   } catch (error) {
-    console.error('Error getting behavioral profile:', error);
+    safeLogger.error('Error getting behavioral profile:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get behavioral profile',
@@ -455,7 +457,7 @@ router.get('/intelligence', adminAuthMiddleware, async (req: AuthenticatedReques
       },
     });
   } catch (error) {
-    console.error('Error getting threat intelligence:', error);
+    safeLogger.error('Error getting threat intelligence:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to get threat intelligence',
@@ -466,7 +468,7 @@ router.get('/intelligence', adminAuthMiddleware, async (req: AuthenticatedReques
 /**
  * Trigger manual threat analysis
  */
-router.post('/analyze', adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
+router.post('/analyze', csrfProtection,  adminAuthMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { entityId, entityType, timeWindow = 3600000 } = req.body; // Default 1 hour
 
@@ -503,7 +505,7 @@ router.post('/analyze', adminAuthMiddleware, async (req: AuthenticatedRequest, r
       data: analysisResult,
     });
   } catch (error) {
-    console.error('Error performing threat analysis:', error);
+    safeLogger.error('Error performing threat analysis:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to perform threat analysis',

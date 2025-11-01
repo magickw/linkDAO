@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import multer from 'multer';
 import imageStorageService from '../services/imageStorageService';
 
@@ -90,7 +92,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Image upload error:', error);
+      safeLogger.error('Image upload error:', error);
       
       if (error instanceof Error) {
         if (error.message.includes('validation failed')) {
@@ -155,7 +157,7 @@ export class ImageStorageController {
           );
           results.push(result);
         } catch (error) {
-          console.error(`Error uploading file ${file.originalname}:`, error);
+          safeLogger.error(`Error uploading file ${file.originalname}:`, error);
           errors.push({
             filename: file.originalname,
             error: error instanceof Error ? error.message : 'Upload failed'
@@ -173,7 +175,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Multiple image upload error:', error);
+      safeLogger.error('Multiple image upload error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to upload images'
@@ -212,7 +214,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Get image error:', error);
+      safeLogger.error('Get image error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve image'
@@ -248,7 +250,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Get images by usage error:', error);
+      safeLogger.error('Get images by usage error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve images'
@@ -288,7 +290,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Delete image error:', error);
+      safeLogger.error('Delete image error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to delete image'
@@ -320,7 +322,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Image validation error:', error);
+      safeLogger.error('Image validation error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to validate image'
@@ -347,7 +349,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Get storage stats error:', error);
+      safeLogger.error('Get storage stats error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to retrieve storage statistics'
@@ -392,7 +394,7 @@ export class ImageStorageController {
       });
 
     } catch (error) {
-      console.error('Generate thumbnails error:', error);
+      safeLogger.error('Generate thumbnails error:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate thumbnails'

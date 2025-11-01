@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { SellerError, SellerErrorType } from '../types/sellerError';
 
 export interface AuthenticatedRequest extends Request {
@@ -45,7 +46,7 @@ export const validateSellerAccess = (
 
     next();
   } catch (error) {
-    console.error('Seller access validation error:', error);
+    safeLogger.error('Seller access validation error:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error',
@@ -74,7 +75,7 @@ export const validateSellerTier = (requiredTier: string) => {
       // For now, we'll assume all authenticated users have basic access
       next();
     } catch (error) {
-      console.error('Seller tier validation error:', error);
+      safeLogger.error('Seller tier validation error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error',

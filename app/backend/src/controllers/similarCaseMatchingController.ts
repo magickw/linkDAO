@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { similarCaseMatchingService } from '../services/similarCaseMatchingService';
 import { z } from 'zod';
 
@@ -77,7 +79,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error finding similar cases:', error);
+      safeLogger.error('Error finding similar cases:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -117,7 +119,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error building precedent database:', error);
+      safeLogger.error('Error building precedent database:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error building precedent database'
@@ -162,7 +164,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error analyzing consistency:', error);
+      safeLogger.error('Error analyzing consistency:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -212,7 +214,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error generating decision recommendation:', error);
+      safeLogger.error('Error generating decision recommendation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -275,7 +277,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error searching precedents:', error);
+      safeLogger.error('Error searching precedents:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -323,7 +325,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error analyzing patterns:', error);
+      safeLogger.error('Error analyzing patterns:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error analyzing patterns'
@@ -369,7 +371,7 @@ export class SimilarCaseMatchingController {
       });
 
     } catch (error) {
-      console.error('Error analyzing moderation patterns:', error);
+      safeLogger.error('Error analyzing moderation patterns:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error analyzing moderation patterns'

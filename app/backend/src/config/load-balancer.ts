@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -89,19 +90,19 @@ class LoadBalancerManager {
       };
     });
 
-    console.log(`🔄 Initialized ${this.servers.length} server instances`);
+    safeLogger.info(`🔄 Initialized ${this.servers.length} server instances`);
     this.servers.forEach(server => {
-      console.log(`  - ${server.id}: ${server.host}:${server.port} (weight: ${server.weight})`);
+      safeLogger.info(`  - ${server.id}: ${server.host}:${server.port} (weight: ${server.weight})`);
     });
   }
 
   private startHealthChecks(): void {
     if (!this.config.healthCheck.enabled) {
-      console.log('⚠️ Health checks disabled');
+      safeLogger.info('⚠️ Health checks disabled');
       return;
     }
 
-    console.log(`🏥 Starting health checks every ${this.config.healthCheck.interval}ms`);
+    safeLogger.info(`🏥 Starting health checks every ${this.config.healthCheck.interval}ms`);
     
     this.healthCheckInterval = setInterval(() => {
       this.performHealthChecks();
@@ -119,9 +120,9 @@ class LoadBalancerManager {
     const totalServers = this.servers.length;
     
     if (healthyServers === 0) {
-      console.error('❌ All servers are unhealthy!');
+      safeLogger.error('❌ All servers are unhealthy!');
     } else if (healthyServers < totalServers) {
-      console.warn(`⚠️ ${totalServers - healthyServers} servers are unhealthy`);
+      safeLogger.warn(`⚠️ ${totalServers - healthyServers} servers are unhealthy`);
     }
   }
 
@@ -144,7 +145,7 @@ class LoadBalancerManager {
       const isHealthy = response.status === this.config.healthCheck.expectedStatus;
       
       if (server.healthy !== isHealthy) {
-        console.log(`${isHealthy ? '✅' : '❌'} ${server.id} health changed: ${isHealthy ? 'healthy' : 'unhealthy'}`);
+        safeLogger.info(`${isHealthy ? '✅' : '❌'} ${server.id} health changed: ${isHealthy ? 'healthy' : 'unhealthy'}`);
       }
       
       server.healthy = isHealthy;
@@ -153,7 +154,7 @@ class LoadBalancerManager {
       
     } catch (error) {
       if (server.healthy) {
-        console.log(`❌ ${server.id} became unhealthy: ${error}`);
+        safeLogger.info(`❌ ${server.id} became unhealthy: ${error}`);
       }
       
       server.healthy = false;
@@ -342,7 +343,7 @@ class LoadBalancerManager {
 
   // Graceful shutdown
   async shutdown(): Promise<void> {
-    console.log('🛑 Shutting down load balancer...');
+    safeLogger.info('🛑 Shutting down load balancer...');
     
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
@@ -361,7 +362,7 @@ class LoadBalancerManager {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    console.log('✅ Load balancer shutdown complete');
+    safeLogger.info('✅ Load balancer shutdown complete');
   }
 }
 

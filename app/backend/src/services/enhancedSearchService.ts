@@ -1,4 +1,5 @@
 import { DatabaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 
 // Mock enhanced search service for demonstration
 export class EnhancedSearchService {
@@ -244,7 +245,7 @@ export class EnhancedSearchService {
      */
     async updateLearningData(userId: string, learningData: any): Promise<void> {
         // In a real implementation, this would update the user's learning profile
-        console.log(`Updating learning data for user ${userId}:`, learningData);
+        safeLogger.info(`Updating learning data for user ${userId}:`, learningData);
     }
 
     /**
@@ -252,7 +253,7 @@ export class EnhancedSearchService {
      */
     async trackSearchAnalytics(analytics: any): Promise<void> {
         // In a real implementation, this would store analytics data
-        console.log('Tracking search analytics:', analytics);
+        safeLogger.info('Tracking search analytics:', analytics);
     }
 
     /**
@@ -268,7 +269,7 @@ export class EnhancedSearchService {
         sessionId?: string
     ): Promise<void> {
         // In a real implementation, this would store click-through data
-        console.log('Tracking click-through:', { query, resultType, resultId, position, userId });
+        safeLogger.info('Tracking click-through:', { query, resultType, resultId, position, userId });
     }
 
     // Mock data generation methods

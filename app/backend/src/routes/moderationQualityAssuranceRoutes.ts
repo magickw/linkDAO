@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { moderationQualityAssuranceController } from '../controllers/moderationQualityAssuranceController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -27,7 +28,7 @@ router.use(qaRateLimit);
  * @access Admin
  * @body AuditDecisionSchema
  */
-router.post('/audit', moderationQualityAssuranceController.auditDecision);
+router.post('/audit', csrfProtection,  moderationQualityAssuranceController.auditDecision);
 
 /**
  * @route GET /api/moderation-qa/metrics
@@ -43,7 +44,7 @@ router.get('/metrics', moderationQualityAssuranceController.getQualityMetrics);
  * @access Admin
  * @body PerformanceEvaluationSchema
  */
-router.post('/evaluate', moderationQualityAssuranceController.evaluatePerformance);
+router.post('/evaluate', csrfProtection,  moderationQualityAssuranceController.evaluatePerformance);
 
 /**
  * @route POST /api/moderation-qa/feedback
@@ -51,7 +52,7 @@ router.post('/evaluate', moderationQualityAssuranceController.evaluatePerformanc
  * @access Admin
  * @body FeedbackSchema
  */
-router.post('/feedback', moderationQualityAssuranceController.submitFeedback);
+router.post('/feedback', csrfProtection,  moderationQualityAssuranceController.submitFeedback);
 
 /**
  * @route POST /api/moderation-qa/calibration/create
@@ -59,7 +60,7 @@ router.post('/feedback', moderationQualityAssuranceController.submitFeedback);
  * @access Admin
  * @body CalibrationSessionSchema
  */
-router.post('/calibration/create', moderationQualityAssuranceController.createCalibrationSession);
+router.post('/calibration/create', csrfProtection,  moderationQualityAssuranceController.createCalibrationSession);
 
 /**
  * @route POST /api/moderation-qa/calibration/submit
@@ -67,7 +68,7 @@ router.post('/calibration/create', moderationQualityAssuranceController.createCa
  * @access Admin
  * @body CalibrationResultSchema
  */
-router.post('/calibration/submit', moderationQualityAssuranceController.submitCalibrationResults);
+router.post('/calibration/submit', csrfProtection,  moderationQualityAssuranceController.submitCalibrationResults);
 
 /**
  * @route GET /api/moderation-qa/training-recommendations

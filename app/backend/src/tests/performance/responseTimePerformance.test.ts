@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import express from 'express';
 import request from 'supertest';
@@ -209,7 +210,7 @@ describe('Response Time Performance Tests', () => {
       expect(p95Time).toBeLessThan(500); // 95th percentile under 500ms
       expect(maxTime).toBeLessThan(1000); // No request over 1 second
 
-      console.log(`Feed API Response Times:
+      safeLogger.info(`Feed API Response Times:
         Average: ${averageTime.toFixed(2)}ms
         P95: ${p95Time.toFixed(2)}ms
         Max: ${maxTime.toFixed(2)}ms`);
@@ -256,7 +257,7 @@ describe('Response Time Performance Tests', () => {
       expect(totalTime).toBeLessThan(5000); // Total time under 5 seconds
       expect(averageTime).toBeLessThan(250); // Average per request under 250ms
 
-      console.log(`Concurrent API Requests Performance:
+      safeLogger.info(`Concurrent API Requests Performance:
         Total Requests: ${allRequests.length}
         Total Time: ${totalTime.toFixed(2)}ms
         Average per Request: ${averageTime.toFixed(2)}ms`);
@@ -298,7 +299,7 @@ describe('Response Time Performance Tests', () => {
       expect(averageResponseTime).toBeLessThan(300);
       expect(errorRate).toBeLessThan(0.05); // Less than 5% error rate
 
-      console.log(`Load Test Performance:
+      safeLogger.info(`Load Test Performance:
         Total Requests: ${responseTimes.length + errors.length}
         Average Response Time: ${averageResponseTime.toFixed(2)}ms
         Error Rate: ${(errorRate * 100).toFixed(2)}%`);
@@ -407,7 +408,7 @@ describe('Response Time Performance Tests', () => {
         expect(averageTime).toBeLessThan(100); // Average under 100ms
         expect(maxTime).toBeLessThan(300); // No query over 300ms
 
-        console.log(`${query.name} Performance:
+        safeLogger.info(`${query.name} Performance:
           Average: ${averageTime.toFixed(2)}ms
           Max: ${maxTime.toFixed(2)}ms`);
       }
@@ -474,7 +475,7 @@ describe('Response Time Performance Tests', () => {
       expect(averageTime).toBeLessThan(500); // Average under 500ms
       expect(maxTime).toBeLessThan(1000); // No query over 1 second
 
-      console.log(`Complex Aggregation Query Performance:
+      safeLogger.info(`Complex Aggregation Query Performance:
         Average: ${averageTime.toFixed(2)}ms
         Max: ${maxTime.toFixed(2)}ms`);
     });
@@ -518,7 +519,7 @@ describe('Response Time Performance Tests', () => {
       expect(poolStats.totalCount).toBeGreaterThan(0);
       expect(poolStats.waitingCount).toBe(0); // No queries should be waiting
 
-      console.log(`Connection Pool Performance:
+      safeLogger.info(`Connection Pool Performance:
         Concurrent Queries: ${concurrentQueries}
         Total Time: ${totalTime.toFixed(2)}ms
         Average per Query: ${averageTime.toFixed(2)}ms
@@ -569,7 +570,7 @@ describe('Response Time Performance Tests', () => {
       expect(p95Latency).toBeLessThan(50); // 95th percentile under 50ms
       expect(maxLatency).toBeLessThan(100); // No message over 100ms
 
-      console.log(`WebSocket Message Latency:
+      safeLogger.info(`WebSocket Message Latency:
         Average: ${averageLatency.toFixed(2)}ms
         P95: ${p95Latency.toFixed(2)}ms
         Max: ${maxLatency.toFixed(2)}ms`);
@@ -623,7 +624,7 @@ describe('Response Time Performance Tests', () => {
       expect(deliveryRate).toBeGreaterThan(0.95); // At least 95% delivery rate
       expect(averageLatency).toBeLessThan(20); // Average latency under 20ms
 
-      console.log(`High-Frequency Updates Performance:
+      safeLogger.info(`High-Frequency Updates Performance:
         Expected Updates: ${expectedUpdates}
         Received Updates: ${receivedUpdates.length}
         Delivery Rate: ${(deliveryRate * 100).toFixed(2)}%
@@ -677,7 +678,7 @@ describe('Response Time Performance Tests', () => {
       expect(maxConnectionTime).toBeLessThan(500); // No connection over 500ms
       expect(broadcastTime).toBeLessThan(1000); // Broadcast to all clients under 1 second
 
-      console.log(`WebSocket Scaling Performance:
+      safeLogger.info(`WebSocket Scaling Performance:
         Connections: ${connectionCount}
         Average Connection Time: ${averageConnectionTime.toFixed(2)}ms
         Max Connection Time: ${maxConnectionTime.toFixed(2)}ms
@@ -741,7 +742,7 @@ describe('Response Time Performance Tests', () => {
         expect(averageWorkflowTime).toBeLessThan(1000); // Average workflow under 1 second
         expect(maxWorkflowTime).toBeLessThan(2000); // No workflow over 2 seconds
 
-        console.log(`${workflow.name} Performance:
+        safeLogger.info(`${workflow.name} Performance:
           Average: ${averageWorkflowTime.toFixed(2)}ms
           Max: ${maxWorkflowTime.toFixed(2)}ms`);
       }

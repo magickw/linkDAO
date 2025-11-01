@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import cors from 'cors';
@@ -124,7 +125,7 @@ class APIGatewayManager {
   }
 
   setupMiddleware(): void {
-    console.log('🛡️ Setting up API Gateway middleware...');
+    safeLogger.info('🛡️ Setting up API Gateway middleware...');
 
     // Security headers
     this.app.use(helmet(this.config.security));
@@ -152,7 +153,7 @@ class APIGatewayManager {
     // API-specific rate limits
     this.setupAPISpecificRateLimits();
 
-    console.log('✅ API Gateway middleware configured');
+    safeLogger.info('✅ API Gateway middleware configured');
   }
 
   private requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -170,7 +171,7 @@ class APIGatewayManager {
     const requestId = req.headers['x-request-id'];
 
     // Log request
-    console.log(`📥 ${req.method} ${req.path} [${requestId}]`);
+    safeLogger.info(`📥 ${req.method} ${req.path} [${requestId}]`);
 
     // Log response when finished
     res.on('finish', () => {
@@ -178,7 +179,7 @@ class APIGatewayManager {
       const status = res.statusCode;
       const statusEmoji = status >= 400 ? '❌' : status >= 300 ? '⚠️' : '✅';
 
-      console.log(`📤 ${statusEmoji} ${status} ${req.method} ${req.path} [${requestId}] ${duration}ms`);
+      safeLogger.info(`📤 ${statusEmoji} ${status} ${req.method} ${req.path} [${requestId}] ${duration}ms`);
     });
 
     next();
@@ -311,7 +312,7 @@ class APIGatewayManager {
     this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
       const requestId = req.headers['x-request-id'];
 
-      console.error(`💥 Error [${requestId}]:`, error);
+      safeLogger.error(`💥 Error [${requestId}]:`, error);
 
       res.status(500).json({
         success: false,

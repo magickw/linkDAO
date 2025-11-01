@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   HybridPaymentOrchestrator, 
   HybridCheckoutRequest, 
@@ -299,7 +301,7 @@ export class HybridPaymentController {
       }
 
       // Mock implementation - in production, handle actual payment method switching
-      console.log(`Switching payment method for order ${orderId} to ${newMethod}. Reason: ${reason}`);
+      safeLogger.info(`Switching payment method for order ${orderId} to ${newMethod}. Reason: ${reason}`);
 
       return res.json({
         success: true,
@@ -385,7 +387,7 @@ export class HybridPaymentController {
       // Test core services
       try {
         // In production, test actual service connections
-        console.log('Testing hybrid payment system health...');
+        safeLogger.info('Testing hybrid payment system health...');
       } catch (error) {
         healthStatus.hybridOrchestrator = 'unhealthy';
       }

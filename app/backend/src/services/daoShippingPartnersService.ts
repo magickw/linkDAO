@@ -4,6 +4,7 @@
  */
 
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 
 export interface ShippingPartner {
@@ -268,7 +269,7 @@ export class DAOShippingPartnersService {
 
       return filteredPartners;
     } catch (error) {
-      console.error('Error getting shipping partners:', error);
+      safeLogger.error('Error getting shipping partners:', error);
       throw error;
     }
   }
@@ -281,7 +282,7 @@ export class DAOShippingPartnersService {
       const partners = await this.getAllPartners();
       return partners.find(p => p.id === partnerId) || null;
     } catch (error) {
-      console.error('Error getting partner by ID:', error);
+      safeLogger.error('Error getting partner by ID:', error);
       throw error;
     }
   }
@@ -338,7 +339,7 @@ export class DAOShippingPartnersService {
 
       return quote;
     } catch (error) {
-      console.error('Error creating shipping quote:', error);
+      safeLogger.error('Error creating shipping quote:', error);
       throw error;
     }
   }
@@ -382,7 +383,7 @@ export class DAOShippingPartnersService {
         }
       ];
     } catch (error) {
-      console.error('Error getting active proposals:', error);
+      safeLogger.error('Error getting active proposals:', error);
       throw error;
     }
   }
@@ -408,7 +409,7 @@ export class DAOShippingPartnersService {
       // 3. Record vote in database
       // 4. Update proposal vote counts
       
-      console.log(`Vote submitted: ${vote} by ${voterAddress} on proposal ${proposalId} with power ${votingPower}`);
+      safeLogger.info(`Vote submitted: ${vote} by ${voterAddress} on proposal ${proposalId} with power ${votingPower}`);
       
       // Mock implementation
       const proposals = await this.getActiveProposals();
@@ -422,7 +423,7 @@ export class DAOShippingPartnersService {
       proposal.votes[vote] += votingPower;
       
     } catch (error) {
-      console.error('Error submitting proposal vote:', error);
+      safeLogger.error('Error submitting proposal vote:', error);
       throw error;
     }
   }
@@ -475,11 +476,11 @@ export class DAOShippingPartnersService {
       };
       
       // In a real implementation, save to database
-      console.log('Created new partner proposal:', proposal);
+      safeLogger.info('Created new partner proposal:', proposal);
       
       return proposalId;
     } catch (error) {
-      console.error('Error creating partner proposal:', error);
+      safeLogger.error('Error creating partner proposal:', error);
       throw error;
     }
   }
@@ -495,9 +496,9 @@ export class DAOShippingPartnersService {
   }): Promise<void> {
     try {
       // In a real implementation, update partner metrics in database
-      console.log(`Updating metrics for partner ${partnerId}:`, metrics);
+      safeLogger.info(`Updating metrics for partner ${partnerId}:`, metrics);
     } catch (error) {
-      console.error('Error updating partner metrics:', error);
+      safeLogger.error('Error updating partner metrics:', error);
       throw error;
     }
   }
@@ -522,7 +523,7 @@ export class DAOShippingPartnersService {
         topPerformingPartners: ['global_express', 'eco_logistics']
       };
     } catch (error) {
-      console.error('Error getting partner analytics:', error);
+      safeLogger.error('Error getting partner analytics:', error);
       throw error;
     }
   }
@@ -555,7 +556,7 @@ export class DAOShippingPartnersService {
         }
       };
     } catch (error) {
-      console.error('Error verifying partner requirements:', error);
+      safeLogger.error('Error verifying partner requirements:', error);
       throw error;
     }
   }

@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerDashboardService } from '../services/sellerDashboardService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
@@ -27,7 +29,7 @@ router.get('/seller/dashboard/:walletAddress',
 
       return successResponse(res, stats, 200);
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      safeLogger.error('Error fetching dashboard stats:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -73,7 +75,7 @@ router.get('/seller/notifications/:walletAddress',
 
       return successResponse(res, notifications, 200);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      safeLogger.error('Error fetching notifications:', error);
 
       return errorResponse(
         res,
@@ -89,7 +91,7 @@ router.get('/seller/notifications/:walletAddress',
  * PUT /api/marketplace/seller/notifications/:notificationId/read
  * Mark notification as read
  */
-router.put('/seller/notifications/:notificationId/read',
+router.put('/seller/notifications/:notificationId/read', csrfProtection, 
   rateLimitWithCache(req => `mark_notification_read:${req.ip}`, 30, 60),
   cachingMiddleware.invalidate('sellerNotifications'),
   async (req: Request, res: Response) => {
@@ -100,7 +102,7 @@ router.put('/seller/notifications/:notificationId/read',
 
       return successResponse(res, { message: 'Notification marked as read' }, 200);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      safeLogger.error('Error marking notification as read:', error);
 
       if (error instanceof Error && error.message.includes('not found')) {
         return notFoundResponse(res, 'Notification not found');
@@ -139,7 +141,7 @@ router.get('/seller/analytics/:walletAddress',
 
       return successResponse(res, analytics, 200);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      safeLogger.error('Error fetching analytics:', error);
 
       return errorResponse(
         res,

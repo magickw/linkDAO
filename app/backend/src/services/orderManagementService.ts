@@ -1,4 +1,5 @@
 import { eq, and, desc, sql, gte, lte, count, or } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   orders,
@@ -217,7 +218,7 @@ class OrderManagementService {
         })),
       };
     } catch (error) {
-      console.error('Error getting order details:', error);
+      safeLogger.error('Error getting order details:', error);
       throw error;
     }
   }
@@ -319,7 +320,7 @@ class OrderManagementService {
 
       return ordersWithDetails;
     } catch (error) {
-      console.error('Error getting user orders:', error);
+      safeLogger.error('Error getting user orders:', error);
       throw error;
     }
   }
@@ -367,7 +368,7 @@ class OrderManagementService {
 
       return true;
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
       throw error;
     }
   }
@@ -419,7 +420,7 @@ class OrderManagementService {
 
       return true;
     } catch (error) {
-      console.error('Error adding order tracking:', error);
+      safeLogger.error('Error adding order tracking:', error);
       throw error;
     }
   }
@@ -558,7 +559,7 @@ class OrderManagementService {
         },
       };
     } catch (error) {
-      console.error('Error getting order analytics:', error);
+      safeLogger.error('Error getting order analytics:', error);
       throw error;
     }
   }
@@ -609,7 +610,7 @@ class OrderManagementService {
         createdAt: order.createdAt?.toISOString() || new Date().toISOString(),
       }));
     } catch (error) {
-      console.error('Error getting recent orders:', error);
+      safeLogger.error('Error getting recent orders:', error);
       throw error;
     }
   }
@@ -729,7 +730,7 @@ class OrderManagementService {
         hasPrevious: offset > 0,
       };
     } catch (error) {
-      console.error('Error searching orders:', error);
+      safeLogger.error('Error searching orders:', error);
       throw error;
     }
   }
@@ -743,7 +744,7 @@ class OrderManagementService {
   ): Promise<void> {
     // Implementation for handling status change transactions
     // This would typically involve updating payment status, escrow status, etc.
-    console.log(`Handling status change for order ${order.id} to ${newStatus}`);
+    safeLogger.info(`Handling status change for order ${order.id} to ${newStatus}`);
   }
 }
 

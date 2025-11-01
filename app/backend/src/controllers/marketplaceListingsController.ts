@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { MarketplaceListingsService } from '../services/marketplaceListingsService';
 import { createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { MarketplaceListingFilters } from '../types/marketplaceListing';
@@ -52,7 +54,7 @@ export class MarketplaceListingsController {
 
       res.json(createSuccessResponse(result));
     } catch (error) {
-      console.error('Error in getListings:', error);
+      safeLogger.error('Error in getListings:', error);
       res.status(500).json(createErrorResponse(
         'LISTINGS_FETCH_ERROR',
         'Failed to retrieve marketplace listings',
@@ -89,7 +91,7 @@ export class MarketplaceListingsController {
 
       res.json(createSuccessResponse(listing));
     } catch (error) {
-      console.error('Error in getListingById:', error);
+      safeLogger.error('Error in getListingById:', error);
       res.status(500).json(createErrorResponse(
         'LISTING_FETCH_ERROR',
         'Failed to retrieve marketplace listing',
@@ -153,7 +155,7 @@ export class MarketplaceListingsController {
 
       res.status(201).json(createSuccessResponse(listing));
     } catch (error) {
-      console.error('Error in createListing:', error);
+      safeLogger.error('Error in createListing:', error);
       res.status(500).json(createErrorResponse(
         'LISTING_CREATE_ERROR',
         'Failed to create marketplace listing',
@@ -220,7 +222,7 @@ export class MarketplaceListingsController {
 
       res.json(createSuccessResponse(listing));
     } catch (error) {
-      console.error('Error in updateListing:', error);
+      safeLogger.error('Error in updateListing:', error);
       
       if (error instanceof Error && error.message.includes('Unauthorized')) {
         res.status(403).json(createErrorResponse(
@@ -275,7 +277,7 @@ export class MarketplaceListingsController {
 
       res.json(createSuccessResponse({ message: 'Listing deleted successfully' }));
     } catch (error) {
-      console.error('Error in deleteListing:', error);
+      safeLogger.error('Error in deleteListing:', error);
       
       if (error instanceof Error && error.message.includes('Unauthorized')) {
         res.status(403).json(createErrorResponse(
@@ -302,7 +304,7 @@ export class MarketplaceListingsController {
       const categories = await this.listingsService.getCategories();
       res.json(createSuccessResponse(categories));
     } catch (error) {
-      console.error('Error in getCategories:', error);
+      safeLogger.error('Error in getCategories:', error);
       res.status(500).json(createErrorResponse(
         'CATEGORIES_FETCH_ERROR',
         'Failed to retrieve categories',
@@ -338,7 +340,7 @@ export class MarketplaceListingsController {
       };
       res.json(response);
     } catch (error) {
-      console.error('Error in getFallbackListings:', error);
+      safeLogger.error('Error in getFallbackListings:', error);
       res.status(500).json(createErrorResponse(
         'FALLBACK_ERROR',
         'Failed to retrieve fallback listings data',

@@ -12,6 +12,7 @@ import {
   adminRateLimit,
   auditAdminAction
 } from '../middleware/adminAuthMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
 
 const router = Router();
 
@@ -25,37 +26,37 @@ router.use(adminRateLimit());
 router.use(auditAdminAction('admin_operation'));
 
 // Policy Configuration Routes (requires system.settings permission)
-router.post('/policies', requirePermission('system.settings'), adminController.createPolicyConfiguration.bind(adminController));
-router.put('/policies/:id', requirePermission('system.settings'), adminController.updatePolicyConfiguration.bind(adminController));
+router.post('/policies', csrfProtection, requirePermission('system.settings'), adminController.createPolicyConfiguration.bind(adminController));
+router.put('/policies/:id', csrfProtection, requirePermission('system.settings'), adminController.updatePolicyConfiguration.bind(adminController));
 router.get('/policies', requirePermission('system.settings'), adminController.getPolicyConfigurations.bind(adminController));
-router.delete('/policies/:id', requirePermission('system.settings'), adminRateLimit(10, 15 * 60 * 1000), adminController.deletePolicyConfiguration.bind(adminController));
+router.delete('/policies/:id', csrfProtection, requirePermission('system.settings'), adminRateLimit(10, 15 * 60 * 1000), adminController.deletePolicyConfiguration.bind(adminController));
 
 // Threshold Configuration Routes (requires system.settings permission)
-router.post('/thresholds', requirePermission('system.settings'), adminController.createThresholdConfiguration.bind(adminController));
-router.put('/thresholds/:id', requirePermission('system.settings'), adminController.updateThresholdConfiguration.bind(adminController));
+router.post('/thresholds', csrfProtection, requirePermission('system.settings'), adminController.createThresholdConfiguration.bind(adminController));
+router.put('/thresholds/:id', csrfProtection, requirePermission('system.settings'), adminController.updateThresholdConfiguration.bind(adminController));
 router.get('/thresholds', requirePermission('system.settings'), adminController.getThresholdConfigurations.bind(adminController));
 
 // Vendor Configuration Routes (requires system.settings permission)
-router.post('/vendors', requirePermission('system.settings'), adminController.createVendorConfiguration.bind(adminController));
-router.put('/vendors/:id', requirePermission('system.settings'), adminController.updateVendorConfiguration.bind(adminController));
+router.post('/vendors', csrfProtection, requirePermission('system.settings'), adminController.createVendorConfiguration.bind(adminController));
+router.put('/vendors/:id', csrfProtection, requirePermission('system.settings'), adminController.updateVendorConfiguration.bind(adminController));
 router.get('/vendors', requirePermission('system.settings'), adminController.getVendorConfigurations.bind(adminController));
-router.patch('/vendors/:id/health', requirePermission('system.settings'), adminController.updateVendorHealthStatus.bind(adminController));
+router.patch('/vendors/:id/health', csrfProtection, requirePermission('system.settings'), adminController.updateVendorHealthStatus.bind(adminController));
 
 // Alert Configuration Routes (requires system.settings permission)
-router.post('/alerts', requirePermission('system.settings'), adminController.createAlertConfiguration.bind(adminController));
-router.put('/alerts/:id', requirePermission('system.settings'), adminController.updateAlertConfiguration.bind(adminController));
+router.post('/alerts', csrfProtection, requirePermission('system.settings'), adminController.createAlertConfiguration.bind(adminController));
+router.put('/alerts/:id', csrfProtection, requirePermission('system.settings'), adminController.updateAlertConfiguration.bind(adminController));
 router.get('/alerts', requirePermission('system.settings'), adminController.getAlertConfigurations.bind(adminController));
 
 // Admin Notification Routes
 router.get('/notifications', adminNotificationController.getAdminNotifications);
 router.get('/notifications/unread-count', adminNotificationController.getUnreadNotificationCount);
 router.get('/notifications/stats', adminNotificationController.getNotificationStats);
-router.patch('/notifications/:notificationId/read', adminNotificationController.markNotificationAsRead);
-router.patch('/notifications/read-all', adminNotificationController.markAllNotificationsAsRead);
+router.patch('/notifications/:notificationId/read', csrfProtection, adminNotificationController.markNotificationAsRead);
+router.patch('/notifications/read-all', csrfProtection, adminNotificationController.markAllNotificationsAsRead);
 
 // Mobile Push Notification Routes
-router.post('/mobile/push/register', adminNotificationController.registerMobilePushToken);
-router.delete('/mobile/push/unregister', adminNotificationController.unregisterMobilePushToken);
+router.post('/mobile/push/register', csrfProtection, adminNotificationController.registerMobilePushToken);
+router.delete('/mobile/push/unregister', csrfProtection, adminNotificationController.unregisterMobilePushToken);
 
 // System Status Dashboard Routes (all authenticated admins can view)
 router.get('/dashboard/metrics', adminController.getDashboardMetrics.bind(adminController));

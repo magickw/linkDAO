@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { 
   EnhancedEscrowService, 
   EscrowCreationRequest, 
@@ -460,7 +462,7 @@ export class EnhancedEscrowController {
       // Test contract connection
       try {
         // In a real implementation, test contract call
-        console.log('Testing escrow contract connection...');
+        safeLogger.info('Testing escrow contract connection...');
       } catch (error) {
         healthStatus.contractConnection = 'unhealthy';
       }

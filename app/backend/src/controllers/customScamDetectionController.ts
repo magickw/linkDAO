@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { CustomScamDetectionService, ContentInput } from '../services/customScamDetectionService';
 import { logger } from '../utils/logger';
 

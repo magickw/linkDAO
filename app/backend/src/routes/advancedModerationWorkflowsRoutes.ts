@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { advancedModerationWorkflowsController } from '../controllers/advancedModerationWorkflowsController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
@@ -45,7 +46,7 @@ router.get('/workflows/:workflowId', advancedModerationWorkflowsController.getWo
  * @access Admin
  * @body WorkflowSchema
  */
-router.post('/workflows', advancedModerationWorkflowsController.createWorkflow);
+router.post('/workflows', csrfProtection,  advancedModerationWorkflowsController.createWorkflow);
 
 /**
  * @route PUT /api/advanced-moderation/workflows/:workflowId
@@ -54,7 +55,7 @@ router.post('/workflows', advancedModerationWorkflowsController.createWorkflow);
  * @param workflowId - ID of the workflow to update
  * @body WorkflowSchema
  */
-router.put('/workflows/:workflowId', advancedModerationWorkflowsController.updateWorkflow);
+router.put('/workflows/:workflowId', csrfProtection,  advancedModerationWorkflowsController.updateWorkflow);
 
 /**
  * @route DELETE /api/advanced-moderation/workflows/:workflowId
@@ -62,7 +63,7 @@ router.put('/workflows/:workflowId', advancedModerationWorkflowsController.updat
  * @access Admin
  * @param workflowId - ID of the workflow to delete
  */
-router.delete('/workflows/:workflowId', advancedModerationWorkflowsController.deleteWorkflow);
+router.delete('/workflows/:workflowId', csrfProtection,  advancedModerationWorkflowsController.deleteWorkflow);
 
 /**
  * @route GET /api/advanced-moderation/rules
@@ -85,7 +86,7 @@ router.get('/rules/:ruleId', advancedModerationWorkflowsController.getRuleById);
  * @access Admin
  * @body RuleSchema
  */
-router.post('/rules', advancedModerationWorkflowsController.createRule);
+router.post('/rules', csrfProtection,  advancedModerationWorkflowsController.createRule);
 
 /**
  * @route PUT /api/advanced-moderation/rules/:ruleId
@@ -94,7 +95,7 @@ router.post('/rules', advancedModerationWorkflowsController.createRule);
  * @param ruleId - ID of the rule to update
  * @body RuleSchema
  */
-router.put('/rules/:ruleId', advancedModerationWorkflowsController.updateRule);
+router.put('/rules/:ruleId', csrfProtection,  advancedModerationWorkflowsController.updateRule);
 
 /**
  * @route DELETE /api/advanced-moderation/rules/:ruleId
@@ -102,7 +103,7 @@ router.put('/rules/:ruleId', advancedModerationWorkflowsController.updateRule);
  * @access Admin
  * @param ruleId - ID of the rule to delete
  */
-router.delete('/rules/:ruleId', advancedModerationWorkflowsController.deleteRule);
+router.delete('/rules/:ruleId', csrfProtection,  advancedModerationWorkflowsController.deleteRule);
 
 /**
  * @route POST /api/advanced-moderation/process
@@ -110,7 +111,7 @@ router.delete('/rules/:ruleId', advancedModerationWorkflowsController.deleteRule
  * @access Admin
  * @body ProcessContentSchema
  */
-router.post('/process', advancedModerationWorkflowsController.processContent);
+router.post('/process', csrfProtection,  advancedModerationWorkflowsController.processContent);
 
 /**
  * @route GET /api/advanced-moderation/statistics

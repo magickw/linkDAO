@@ -125,6 +125,12 @@ export const sellerVerifications = pgTable("seller_verifications", {
   rejectionReason: text("rejection_reason"),
   notes: text("notes"),
   
+  // Progress tracking
+  progressStatus: varchar("progress_status", { 
+    enum: ['submitted', 'documents_verified', 'manual_review', 'approved', 'rejected'] 
+  }).default('submitted'),
+  progressUpdatedAt: timestamp("progress_updated_at").defaultNow(),
+  
   reputationScore: integer("reputation_score").default(0),
   totalVolume: numeric("total_volume", { precision: 20, scale: 8 }).default("0"),
   successfulTransactions: integer("successful_transactions").default(0),

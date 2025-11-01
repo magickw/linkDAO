@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import { MultiChainDEXService } from './multiChainDEXService';
 import { SwapParams, TokenInfo } from '../types/uniswapV3';
 
@@ -238,7 +239,7 @@ export class AdvancedTradingService {
       this.portfolios.set(userId, positions);
       return positions;
     } catch (error) {
-      console.error('Error updating portfolio:', error);
+      safeLogger.error('Error updating portfolio:', error);
       throw new Error('Failed to update portfolio');
     }
   }
@@ -382,20 +383,20 @@ export class AdvancedTradingService {
           order.transactionHash!
         );
 
-        console.log(`Limit order ${orderId} filled at price ${currentPrice}`);
+        safeLogger.info(`Limit order ${orderId} filled at price ${currentPrice}`);
       } else {
         // Check if order expired
         if (new Date() > order.expiresAt) {
           order.status = 'expired';
           this.limitOrders.set(orderId, order);
-          console.log(`Limit order ${orderId} expired`);
+          safeLogger.info(`Limit order ${orderId} expired`);
         } else {
           // Continue monitoring (in real implementation, this would be handled by a job queue)
           setTimeout(() => this.monitorLimitOrder(orderId), 30000); // Check every 30 seconds
         }
       }
     } catch (error) {
-      console.error(`Error monitoring limit order ${orderId}:`, error);
+      safeLogger.error(`Error monitoring limit order ${orderId}:`, error);
       // Retry monitoring after delay
       setTimeout(() => this.monitorLimitOrder(orderId), 60000);
     }
@@ -436,13 +437,13 @@ export class AdvancedTradingService {
         this.priceAlerts.set(alertId, alert);
 
         // In a real implementation, this would send a notification
-        console.log(`Price alert ${alertId} triggered: ${alert.tokenIn.symbol}/${alert.tokenOut.symbol} is ${alert.condition} ${targetPrice}`);
+        safeLogger.info(`Price alert ${alertId} triggered: ${alert.tokenIn.symbol}/${alert.tokenOut.symbol} is ${alert.condition} ${targetPrice}`);
       } else {
         // Continue monitoring
         setTimeout(() => this.monitorPriceAlert(alertId), 60000); // Check every minute
       }
     } catch (error) {
-      console.error(`Error monitoring price alert ${alertId}:`, error);
+      safeLogger.error(`Error monitoring price alert ${alertId}:`, error);
       // Retry monitoring after delay
       setTimeout(() => this.monitorPriceAlert(alertId), 120000);
     }

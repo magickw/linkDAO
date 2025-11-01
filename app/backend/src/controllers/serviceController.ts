@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { serviceService } from '../services/serviceService';
 import { CreateServiceRequest, UpdateServiceRequest, CreateBookingRequest, ServiceSearchFilters } from '../types/service';
 
@@ -9,7 +11,7 @@ export class ServiceController {
       const categories = await serviceService.getCategories();
       return res.json({ success: true, data: categories });
     } catch (error) {
-      console.error('Error fetching service categories:', error);
+      safeLogger.error('Error fetching service categories:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch categories' });
     }
   }
@@ -27,7 +29,7 @@ export class ServiceController {
       
       return res.status(201).json({ success: true, data: service });
     } catch (error) {
-      console.error('Error creating service:', error);
+      safeLogger.error('Error creating service:', error);
       return res.status(500).json({ success: false, error: 'Failed to create service' });
     }
   }
@@ -45,7 +47,7 @@ export class ServiceController {
       const service = await serviceService.updateService(serviceId, providerId, updateData);
       return res.json({ success: true, data: service });
     } catch (error) {
-      console.error('Error updating service:', error);
+      safeLogger.error('Error updating service:', error);
       return res.status(500).json({ success: false, error: 'Failed to update service' });
     }
   }
@@ -61,7 +63,7 @@ export class ServiceController {
 
       return res.json({ success: true, data: service });
     } catch (error) {
-      console.error('Error fetching service:', error);
+      safeLogger.error('Error fetching service:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch service' });
     }
   }
@@ -75,7 +77,7 @@ export class ServiceController {
       const result = await serviceService.searchServices(filters, page, limit);
       return res.json({ success: true, data: result });
     } catch (error) {
-      console.error('Error searching services:', error);
+      safeLogger.error('Error searching services:', error);
       return res.status(500).json({ success: false, error: 'Failed to search services' });
     }
   }
@@ -90,7 +92,7 @@ export class ServiceController {
       const services = await serviceService.getProviderServices(providerId);
       return res.json({ success: true, data: services });
     } catch (error) {
-      console.error('Error fetching provider services:', error);
+      safeLogger.error('Error fetching provider services:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch services' });
     }
   }
@@ -109,7 +111,7 @@ export class ServiceController {
       const result = await serviceService.setServiceAvailability(serviceId, providerId, availability);
       return res.json({ success: true, data: result });
     } catch (error) {
-      console.error('Error setting availability:', error);
+      safeLogger.error('Error setting availability:', error);
       return res.status(500).json({ success: false, error: 'Failed to set availability' });
     }
   }
@@ -120,7 +122,7 @@ export class ServiceController {
       const availability = await serviceService.getServiceAvailability(serviceId);
       return res.json({ success: true, data: availability });
     } catch (error) {
-      console.error('Error fetching availability:', error);
+      safeLogger.error('Error fetching availability:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch availability' });
     }
   }
@@ -138,7 +140,7 @@ export class ServiceController {
       
       return res.status(201).json({ success: true, data: booking });
     } catch (error) {
-      console.error('Error creating booking:', error);
+      safeLogger.error('Error creating booking:', error);
       return res.status(500).json({ success: false, error: 'Failed to create booking' });
     }
   }
@@ -160,7 +162,7 @@ export class ServiceController {
 
       return res.json({ success: true, data: booking });
     } catch (error) {
-      console.error('Error fetching booking:', error);
+      safeLogger.error('Error fetching booking:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch booking' });
     }
   }
@@ -177,7 +179,7 @@ export class ServiceController {
       const bookings = await serviceService.getUserBookings(userId, role as 'client' | 'provider');
       return res.json({ success: true, data: bookings });
     } catch (error) {
-      console.error('Error fetching user bookings:', error);
+      safeLogger.error('Error fetching user bookings:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch bookings' });
     }
   }
@@ -195,7 +197,7 @@ export class ServiceController {
       const booking = await serviceService.updateBookingStatus(bookingId, userId, status);
       return res.json({ success: true, data: booking });
     } catch (error) {
-      console.error('Error updating booking status:', error);
+      safeLogger.error('Error updating booking status:', error);
       return res.status(500).json({ success: false, error: 'Failed to update booking status' });
     }
   }
@@ -213,7 +215,7 @@ export class ServiceController {
       
       return res.status(201).json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error creating provider profile:', error);
+      safeLogger.error('Error creating provider profile:', error);
       return res.status(500).json({ success: false, error: 'Failed to create provider profile' });
     }
   }
@@ -230,7 +232,7 @@ export class ServiceController {
       
       return res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error updating provider profile:', error);
+      safeLogger.error('Error updating provider profile:', error);
       return res.status(500).json({ success: false, error: 'Failed to update provider profile' });
     }
   }
@@ -246,7 +248,7 @@ export class ServiceController {
 
       return res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('Error fetching provider profile:', error);
+      safeLogger.error('Error fetching provider profile:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch provider profile' });
     }
   }
@@ -270,7 +272,7 @@ export class ServiceController {
 
       return res.json({ success: true, data: milestone });
     } catch (error) {
-      console.error('Error updating milestone:', error);
+      safeLogger.error('Error updating milestone:', error);
       return res.status(500).json({ success: false, error: 'Failed to update milestone' });
     }
   }
@@ -287,7 +289,7 @@ export class ServiceController {
       const milestones = await serviceService.getBookingMilestones(bookingId, userId);
       return res.json({ success: true, data: milestones });
     } catch (error) {
-      console.error('Error fetching milestones:', error);
+      safeLogger.error('Error fetching milestones:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch milestones' });
     }
   }
@@ -303,7 +305,7 @@ export class ServiceController {
       const stats = await serviceService.getProviderStats(providerId);
       return res.json({ success: true, data: stats });
     } catch (error) {
-      console.error('Error fetching provider stats:', error);
+      safeLogger.error('Error fetching provider stats:', error);
       return res.status(500).json({ success: false, error: 'Failed to fetch stats' });
     }
   }

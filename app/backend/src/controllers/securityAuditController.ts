@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { securityAuditLoggingService, AuditQuery } from '../services/securityAuditLoggingService';
 
 export class SecurityAuditController {
@@ -43,7 +45,7 @@ export class SecurityAuditController {
         }
       });
     } catch (error) {
-      console.error('Error querying audit events:', error);
+      safeLogger.error('Error querying audit events:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to query audit events'
@@ -77,7 +79,7 @@ export class SecurityAuditController {
         data: report
       });
     } catch (error) {
-      console.error('Error generating audit report:', error);
+      safeLogger.error('Error generating audit report:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to generate audit report'
@@ -133,7 +135,7 @@ export class SecurityAuditController {
         data: { eventId }
       });
     } catch (error) {
-      console.error('Error logging security event:', error);
+      safeLogger.error('Error logging security event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to log security event'
@@ -165,7 +167,7 @@ export class SecurityAuditController {
         data: { eventId }
       });
     } catch (error) {
-      console.error('Error logging authentication event:', error);
+      safeLogger.error('Error logging authentication event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to log authentication event'
@@ -204,7 +206,7 @@ export class SecurityAuditController {
         data: { eventId }
       });
     } catch (error) {
-      console.error('Error logging data access event:', error);
+      safeLogger.error('Error logging data access event:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to log data access event'
@@ -243,7 +245,7 @@ export class SecurityAuditController {
         data: { eventId }
       });
     } catch (error) {
-      console.error('Error logging admin action:', error);
+      safeLogger.error('Error logging admin action:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to log admin action'
@@ -281,7 +283,7 @@ export class SecurityAuditController {
         data: { eventId }
       });
     } catch (error) {
-      console.error('Error logging security incident:', error);
+      safeLogger.error('Error logging security incident:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to log security incident'
@@ -329,7 +331,7 @@ export class SecurityAuditController {
         data: { ruleId }
       });
     } catch (error) {
-      console.error('Error creating compliance rule:', error);
+      safeLogger.error('Error creating compliance rule:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create compliance rule'
@@ -377,7 +379,7 @@ export class SecurityAuditController {
         data: { policyId }
       });
     } catch (error) {
-      console.error('Error creating retention policy:', error);
+      safeLogger.error('Error creating retention policy:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to create retention policy'
@@ -415,7 +417,7 @@ export class SecurityAuditController {
         data: { exportId, format, encrypted: encrypt }
       });
     } catch (error) {
-      console.error('Error exporting audit data:', error);
+      safeLogger.error('Error exporting audit data:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to export audit data'
@@ -468,7 +470,7 @@ export class SecurityAuditController {
         data: statistics
       });
     } catch (error) {
-      console.error('Error getting audit statistics:', error);
+      safeLogger.error('Error getting audit statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get audit statistics'
@@ -521,7 +523,7 @@ export class SecurityAuditController {
         data: complianceSummary
       });
     } catch (error) {
-      console.error('Error getting compliance summary:', error);
+      safeLogger.error('Error getting compliance summary:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to get compliance summary'

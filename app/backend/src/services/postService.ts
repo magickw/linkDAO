@@ -1,4 +1,5 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
+import { safeLogger } from '../utils/safeLogger';
 import { MetadataService } from './metadataService';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
@@ -112,7 +113,7 @@ export class PostService {
     };
 
     // Log moderation result for analytics
-    console.log(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);
+    safeLogger.info(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);
 
     return post;
   }
@@ -121,7 +122,7 @@ export class PostService {
     // Convert string ID to number
     const postId = parseInt(id);
     if (isNaN(postId)) {
-      console.log(`Invalid post ID: ${id}`);
+      safeLogger.info(`Invalid post ID: ${id}`);
       return undefined;
     }
     
@@ -130,14 +131,14 @@ export class PostService {
       const dbPost = await databaseService.getPostById(postId);
       
       if (!dbPost) {
-        console.log(`Post not found with ID: ${postId}`);
+        safeLogger.info(`Post not found with ID: ${postId}`);
         return undefined;
       }
       
       // Get user profile for author info
       const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
       if (!author) {
-        console.log(`Author not found for post ID: ${postId}, authorId: ${dbPost.authorId}`);
+        safeLogger.info(`Author not found for post ID: ${postId}, authorId: ${dbPost.authorId}`);
         // Instead of returning undefined, create a minimal response with unknown author
         return {
           id: dbPost.id.toString(),
@@ -162,7 +163,7 @@ export class PostService {
         onchainRef: '',
       };
     } catch (error) {
-      console.error('Error getting post by ID:', error);
+      safeLogger.error('Error getting post by ID:', error);
       return undefined;
     }
   }
@@ -221,7 +222,7 @@ export class PostService {
       
       return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
-      console.error('Error getting posts by tag:', error);
+      safeLogger.error('Error getting posts by tag:', error);
       return [];
     }
   }
@@ -278,7 +279,7 @@ export class PostService {
         onchainRef: existingPost.onchainRef
       };
     } catch (error) {
-      console.error('Error updating post:', error);
+      safeLogger.error('Error updating post:', error);
       return undefined;
     }
   }
@@ -300,14 +301,14 @@ export class PostService {
       const deleted = await databaseService.deletePost(postId);
       
       if (deleted) {
-        console.log(`Post ${id} deleted successfully`);
+        safeLogger.info(`Post ${id} deleted successfully`);
         // Note: In production, you might want to unpin from IPFS
         // await this.metadataService.unpinFromIPFS(existingPost.contentCid);
       }
       
       return deleted;
     } catch (error) {
-      console.error('Error deleting post:', error);
+      safeLogger.error('Error deleting post:', error);
       return false;
     }
   }
@@ -343,7 +344,7 @@ export class PostService {
       
       return posts;
     } catch (error) {
-      console.error('Error getting all posts:', error);
+      safeLogger.error('Error getting all posts:', error);
       return [];
     }
   }
@@ -407,7 +408,7 @@ export class PostService {
       
       return posts;
     } catch (error) {
-      console.error("Error getting personalized feed:", error);
+      safeLogger.error("Error getting personalized feed:", error);
       throw error;
     }
   }

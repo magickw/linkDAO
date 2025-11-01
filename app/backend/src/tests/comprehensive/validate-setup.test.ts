@@ -4,6 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { createTestApp } from '../utils/testApp';
 import { TestDatabase } from '../utils/testDatabase';
 import { MockAIServices } from '../utils/mockAIServices';
@@ -294,7 +295,7 @@ describe('Comprehensive Test Suite Setup Validation', () => {
         components: ['database', 'ai_services', 'generators', 'utilities']
       });
       
-      console.log('✅ Comprehensive test suite is ready for execution');
+      safeLogger.info('✅ Comprehensive test suite is ready for execution');
     });
   });
 });

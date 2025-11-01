@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, param } from 'express-validator';
 import { EnhancedEscrowController } from '../controllers/enhancedEscrowController';
 import { validateRequest } from '../middleware/validateRequest';
@@ -19,7 +20,7 @@ router.use(rateLimiter({
  * @desc Validate escrow creation request
  * @access Public
  */
-router.post('/validate',
+router.post('/validate', csrfProtection, 
   [
     body('listingId')
       .isString()
@@ -58,7 +59,7 @@ router.post('/validate',
  * @desc Create a new escrow
  * @access Public
  */
-router.post('/create',
+router.post('/create', csrfProtection, 
   [
     body('listingId')
       .isString()
@@ -89,7 +90,7 @@ router.post('/create',
  * @desc Lock funds in escrow
  * @access Public
  */
-router.post('/:escrowId/lock-funds',
+router.post('/:escrowId/lock-funds', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -160,7 +161,7 @@ router.get('/:escrowId/recovery-options',
  * @desc Confirm delivery
  * @access Public
  */
-router.post('/:escrowId/confirm-delivery',
+router.post('/:escrowId/confirm-delivery', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -180,7 +181,7 @@ router.post('/:escrowId/confirm-delivery',
  * @desc Approve escrow (buyer confirms receipt)
  * @access Public
  */
-router.post('/:escrowId/approve',
+router.post('/:escrowId/approve', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -200,7 +201,7 @@ router.post('/:escrowId/approve',
  * @desc Open dispute
  * @access Public
  */
-router.post('/:escrowId/dispute',
+router.post('/:escrowId/dispute', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -224,7 +225,7 @@ router.post('/:escrowId/dispute',
  * @desc Submit evidence for dispute
  * @access Public
  */
-router.post('/:escrowId/evidence',
+router.post('/:escrowId/evidence', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -248,7 +249,7 @@ router.post('/:escrowId/evidence',
  * @desc Cast vote in community dispute resolution
  * @access Public
  */
-router.post('/:escrowId/vote',
+router.post('/:escrowId/vote', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -271,7 +272,7 @@ router.post('/:escrowId/vote',
  * @desc Cancel escrow
  * @access Public
  */
-router.post('/:escrowId/cancel',
+router.post('/:escrowId/cancel', csrfProtection, 
   [
     param('escrowId')
       .isString()
@@ -295,7 +296,7 @@ router.post('/:escrowId/cancel',
  * @desc Retry escrow operation
  * @access Public
  */
-router.post('/:escrowId/retry',
+router.post('/:escrowId/retry', csrfProtection, 
   [
     param('escrowId')
       .isString()

@@ -1,4 +1,5 @@
 import { databaseService } from './databaseService';
+import { safeLogger } from '../utils/safeLogger';
 import { moderationCases, contentReports } from '../db/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { aiContentRiskScoringService } from './aiContentRiskScoringService';
@@ -100,7 +101,7 @@ export class AIContentModerationService {
       };
 
     } catch (error) {
-      console.error('Error in spam detection:', error);
+      safeLogger.error('Error in spam detection:', error);
       return {
         isSpam: false,
         confidence: 0,
@@ -137,7 +138,7 @@ export class AIContentModerationService {
       };
 
     } catch (error) {
-      console.error('Error in content policy enforcement:', error);
+      safeLogger.error('Error in content policy enforcement:', error);
       return {
         violatesPolicy: false,
         policyType: 'error',
@@ -197,7 +198,7 @@ export class AIContentModerationService {
       };
 
     } catch (error) {
-      console.error('Error in toxicity detection:', error);
+      safeLogger.error('Error in toxicity detection:', error);
       return {
         isToxic: false,
         toxicityType: 'other',
@@ -279,7 +280,7 @@ export class AIContentModerationService {
       };
 
     } catch (error) {
-      console.error('Error in copyright detection:', error);
+      safeLogger.error('Error in copyright detection:', error);
       return {
         potentialInfringement: false,
         confidence: 0,
@@ -350,7 +351,7 @@ export class AIContentModerationService {
       return report;
 
     } catch (error) {
-      console.error('Error in content moderation:', error);
+      safeLogger.error('Error in content moderation:', error);
       
       // Return safe fallback report
       return {
@@ -552,7 +553,7 @@ export class AIContentModerationService {
       });
 
     } catch (error) {
-      console.error('Error storing moderation result:', error);
+      safeLogger.error('Error storing moderation result:', error);
       // Don't throw - this is for analytics, not critical path
     }
   }

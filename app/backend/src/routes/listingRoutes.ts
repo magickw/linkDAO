@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { ListingController } from '../controllers/listingController';
 import { ListingVisibilityController } from '../controllers/listingVisibilityController';
 import { ListingImageController } from '../controllers/listingImageController';
@@ -79,7 +80,7 @@ router.get('/seller/:sellerId',
  * POST /api/listings
  * Requirements: 3.1, 3.2, 3.4
  */
-router.post('/',
+router.post('/', csrfProtection, 
   authenticateToken,
   apiLimiter, // 10 listings per minute
   listingController.createListing.bind(listingController)
@@ -90,7 +91,7 @@ router.post('/',
  * PUT /api/listings/:id
  * Requirements: 3.1, 3.4
  */
-router.put('/:id',
+router.put('/:id', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 updates per minute
   listingController.updateListing.bind(listingController)
@@ -101,7 +102,7 @@ router.put('/:id',
  * POST /api/listings/:id/publish
  * Requirements: 3.2, 3.3
  */
-router.post('/:id/publish',
+router.post('/:id/publish', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 publishes per minute
   listingController.publishListing.bind(listingController)
@@ -112,7 +113,7 @@ router.post('/:id/publish',
  * POST /api/listings/:id/unpublish
  * Requirements: 3.2, 3.4
  */
-router.post('/:id/unpublish',
+router.post('/:id/unpublish', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 unpublishes per minute
   listingController.unpublishListing.bind(listingController)
@@ -123,7 +124,7 @@ router.post('/:id/unpublish',
  * POST /api/listings/validate
  * Requirements: 3.1, 3.4
  */
-router.post('/validate',
+router.post('/validate', csrfProtection, 
   authenticateToken,
   apiLimiter, // 50 validations per minute
   listingController.validateListing.bind(listingController)
@@ -136,7 +137,7 @@ router.post('/validate',
  * POST /api/listings/:id/publish-immediate
  * Requirements: 3.2, 3.3
  */
-router.post('/:id/publish-immediate',
+router.post('/:id/publish-immediate', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 immediate publishes per minute
   listingVisibilityController.publishListingImmediate.bind(listingVisibilityController)
@@ -147,7 +148,7 @@ router.post('/:id/publish-immediate',
  * POST /api/listings/:id/unpublish-immediate
  * Requirements: 3.2, 3.4
  */
-router.post('/:id/unpublish-immediate',
+router.post('/:id/unpublish-immediate', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 immediate unpublishes per minute
   listingVisibilityController.unpublishListingImmediate.bind(listingVisibilityController)
@@ -178,7 +179,7 @@ router.get('/:id/visibility-metrics',
  * POST /api/listings/batch-publish
  * Requirements: 3.2, 3.3
  */
-router.post('/batch-publish',
+router.post('/batch-publish', csrfProtection, 
   authenticateToken,
   apiLimiter, // 5 batch operations per 5 minutes
   listingVisibilityController.batchPublishListings.bind(listingVisibilityController)
@@ -189,7 +190,7 @@ router.post('/batch-publish',
  * POST /api/listings/batch-unpublish
  * Requirements: 3.2, 3.4
  */
-router.post('/batch-unpublish',
+router.post('/batch-unpublish', csrfProtection, 
   authenticateToken,
   apiLimiter, // 5 batch operations per 5 minutes
   listingVisibilityController.batchUnpublishListings.bind(listingVisibilityController)
@@ -200,7 +201,7 @@ router.post('/batch-unpublish',
  * POST /api/listings/marketplace/refresh-cache
  * Requirements: 3.2, 3.3
  */
-router.post('/marketplace/refresh-cache',
+router.post('/marketplace/refresh-cache', csrfProtection, 
   authenticateToken,
   apiLimiter, // 2 cache refreshes per 5 minutes
   listingVisibilityController.refreshMarketplaceCache.bind(listingVisibilityController)
@@ -213,7 +214,7 @@ router.post('/marketplace/refresh-cache',
  * POST /api/listings/:id/images
  * Requirements: 2.1, 3.1, 3.4
  */
-router.post('/:id/images',
+router.post('/:id/images', csrfProtection, 
   authenticateToken,
   apiLimiter, // 10 image uploads per minute
   listingImageController.getUploadMiddleware(),
@@ -255,7 +256,7 @@ router.get('/:id/images/optimized',
  * PUT /api/listings/:id/images/primary
  * Requirements: 2.1, 3.1, 3.4
  */
-router.put('/:id/images/primary',
+router.put('/:id/images/primary', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 updates per minute
   listingImageController.setPrimaryImage.bind(listingImageController)
@@ -266,7 +267,7 @@ router.put('/:id/images/primary',
  * PUT /api/listings/:id/images/reorder
  * Requirements: 2.1, 3.1, 3.4
  */
-router.put('/:id/images/reorder',
+router.put('/:id/images/reorder', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 reorders per minute
   listingImageController.reorderImages.bind(listingImageController)
@@ -287,7 +288,7 @@ router.get('/:id/images/:imageId/urls',
  * DELETE /api/listings/:id/images/:imageId
  * Requirements: 2.1, 3.1, 3.4
  */
-router.delete('/:id/images/:imageId',
+router.delete('/:id/images/:imageId', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 deletions per minute
   listingImageController.deleteImage.bind(listingImageController)
@@ -298,7 +299,7 @@ router.delete('/:id/images/:imageId',
  * POST /api/listings/images/batch
  * Requirements: 2.1, 3.1
  */
-router.post('/images/batch',
+router.post('/images/batch', csrfProtection, 
   authenticateToken,
   apiLimiter, // 5 batch operations per 5 minutes
   listingImageController.batchProcessImages.bind(listingImageController)
@@ -311,7 +312,7 @@ router.post('/images/batch',
  * POST /api/listings/:id/publish-blockchain
  * Requirements: Blockchain integration
  */
-router.post('/:id/publish-blockchain',
+router.post('/:id/publish-blockchain', csrfProtection, 
   authenticateToken,
   apiLimiter, // 10 blockchain publishes per minute
   listingController.publishToBlockchain.bind(listingController)
@@ -322,7 +323,7 @@ router.post('/:id/publish-blockchain',
  * POST /api/listings/:id/sync-blockchain
  * Requirements: Blockchain synchronization
  */
-router.post('/:id/sync-blockchain',
+router.post('/:id/sync-blockchain', csrfProtection, 
   authenticateToken,
   apiLimiter, // 20 sync operations per minute
   listingController.syncWithBlockchain.bind(listingController)

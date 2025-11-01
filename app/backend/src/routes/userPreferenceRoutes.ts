@@ -4,6 +4,8 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { userPreferenceService } from '../services/userPreferenceService';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { body, param, query, validationResult } from 'express-validator';
@@ -49,7 +51,7 @@ router.get(
         data: preferences
       });
     } catch (error) {
-      console.error('Error getting user preferences:', error);
+      safeLogger.error('Error getting user preferences:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user preferences'
@@ -101,7 +103,7 @@ router.post(
         message: 'Payment preference updated successfully'
       });
     } catch (error) {
-      console.error('Error updating payment preference:', error);
+      safeLogger.error('Error updating payment preference:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update payment preference'
@@ -154,7 +156,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Error getting payment recommendation:', error);
+      safeLogger.error('Error getting payment recommendation:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get payment recommendation'
@@ -213,7 +215,7 @@ router.post(
         message: 'Preference override added successfully'
       });
     } catch (error) {
-      console.error('Error adding preference override:', error);
+      safeLogger.error('Error adding preference override:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to add preference override'
@@ -258,7 +260,7 @@ router.delete(
         message: 'User preferences reset successfully'
       });
     } catch (error) {
-      console.error('Error resetting user preferences:', error);
+      safeLogger.error('Error resetting user preferences:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to reset user preferences'
@@ -305,7 +307,7 @@ router.get(
         data: analytics
       });
     } catch (error) {
-      console.error('Error getting user payment analytics:', error);
+      safeLogger.error('Error getting user payment analytics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to get user payment analytics'
@@ -337,7 +339,7 @@ router.post(
         message: `Cleaned up ${deletedCount} expired preference overrides`
       });
     } catch (error) {
-      console.error('Error cleaning up expired overrides:', error);
+      safeLogger.error('Error cleaning up expired overrides:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to cleanup expired overrides'

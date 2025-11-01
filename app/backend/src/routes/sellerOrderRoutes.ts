@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerOrderService } from '../services/sellerOrderService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
@@ -53,7 +55,7 @@ router.get('/seller/orders/:walletAddress',
 
       return successResponse(res, result, 200);
     } catch (error) {
-      console.error('Error fetching seller orders:', error);
+      safeLogger.error('Error fetching seller orders:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -75,7 +77,7 @@ router.get('/seller/orders/:walletAddress',
  * PUT /api/marketplace/seller/orders/:orderId/status
  * Update order status
  */
-router.put('/seller/orders/:orderId/status',
+router.put('/seller/orders/:orderId/status', csrfProtection, 
   rateLimitWithCache(req => `order_status_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -107,7 +109,7 @@ router.put('/seller/orders/:orderId/status',
         newStatus: status
       }, 200);
     } catch (error) {
-      console.error('Error updating order status:', error);
+      safeLogger.error('Error updating order status:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -132,7 +134,7 @@ router.put('/seller/orders/:orderId/status',
  * PUT /api/marketplace/seller/orders/:orderId/tracking
  * Update order tracking information
  */
-router.put('/seller/orders/:orderId/tracking',
+router.put('/seller/orders/:orderId/tracking', csrfProtection, 
   rateLimitWithCache(req => `order_tracking_update:${req.ip}`, 30, 60), // 30 requests per minute
   cachingMiddleware.invalidate('sellerOrders'),
   async (req: Request, res: Response) => {
@@ -179,7 +181,7 @@ router.put('/seller/orders/:orderId/tracking',
         trackingCarrier: trackingCarrier.trim(),
       }, 200);
     } catch (error) {
-      console.error('Error updating order tracking:', error);
+      safeLogger.error('Error updating order tracking:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -223,7 +225,7 @@ router.get('/seller/orders/detail/:orderId',
 
       return successResponse(res, order, 200);
     } catch (error) {
-      console.error('Error fetching order details:', error);
+      safeLogger.error('Error fetching order details:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {

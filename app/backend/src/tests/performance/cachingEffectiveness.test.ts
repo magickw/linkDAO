@@ -4,6 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';
@@ -224,8 +225,8 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.hitRate).toBeGreaterThan(0.8); // 80% hit rate
       expect(metrics.avgHitTime).toBeLessThan(metrics.avgMissTime);
 
-      console.log(`Community cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
-      console.log(`Avg hit time: ${metrics.avgHitTime.toFixed(2)}ms, Avg miss time: ${metrics.avgMissTime.toFixed(2)}ms`);
+      safeLogger.info(`Community cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Avg hit time: ${metrics.avgHitTime.toFixed(2)}ms, Avg miss time: ${metrics.avgMissTime.toFixed(2)}ms`);
     });
 
     it('should achieve high hit rate for repeated product queries', async () => {
@@ -241,7 +242,7 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.totalRequests).toBe(15);
       expect(metrics.hitRate).toBeGreaterThan(0.85); // 85% hit rate
       
-      console.log(`Product cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Product cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
 
     it('should handle mixed query patterns effectively', async () => {
@@ -270,7 +271,7 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.hitRate).toBeGreaterThan(0.4); // 40% hit rate for mixed pattern
       expect(metrics.totalRequests).toBeGreaterThan(25);
 
-      console.log(`Mixed pattern cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Mixed pattern cache hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
   });
 
@@ -293,8 +294,8 @@ describe('Caching Effectiveness Tests', () => {
       const improvement = ((missTime - hitTime) / missTime) * 100;
       expect(improvement).toBeGreaterThan(50); // At least 50% improvement
 
-      console.log(`Cache miss: ${missTime.toFixed(2)}ms, Cache hit: ${hitTime.toFixed(2)}ms`);
-      console.log(`Performance improvement: ${improvement.toFixed(1)}%`);
+      safeLogger.info(`Cache miss: ${missTime.toFixed(2)}ms, Cache hit: ${hitTime.toFixed(2)}ms`);
+      safeLogger.info(`Performance improvement: ${improvement.toFixed(1)}%`);
     });
 
     it('should handle concurrent requests efficiently with caching', async () => {
@@ -319,7 +320,7 @@ describe('Caching Effectiveness Tests', () => {
       const metrics = cache.getMetrics();
       expect(metrics.hitRate).toBeGreaterThan(0.95); // 95% hit rate
 
-      console.log(`20 concurrent cached requests completed in ${totalTime.toFixed(2)}ms`);
+      safeLogger.info(`20 concurrent cached requests completed in ${totalTime.toFixed(2)}ms`);
     });
 
     it('should maintain performance under high load with caching', async () => {
@@ -351,8 +352,8 @@ describe('Caching Effectiveness Tests', () => {
       const metrics = cache.getMetrics();
       expect(metrics.hitRate).toBeGreaterThan(0.8); // 80% hit rate under load
 
-      console.log(`High load test: ${avgTimePerRequest.toFixed(2)}ms avg per request`);
-      console.log(`Hit rate under load: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`High load test: ${avgTimePerRequest.toFixed(2)}ms avg per request`);
+      safeLogger.info(`Hit rate under load: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
   });
 
@@ -386,7 +387,7 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.hits).toBe(1); // Only the second request should hit
       expect(metrics.misses).toBe(2); // First and third should miss
 
-      console.log(`Cache expiration test - Hits: ${metrics.hits}, Misses: ${metrics.misses}`);
+      safeLogger.info(`Cache expiration test - Hits: ${metrics.hits}, Misses: ${metrics.misses}`);
     });
 
     it('should handle cache size limits effectively', async () => {
@@ -424,7 +425,7 @@ describe('Caching Effectiveness Tests', () => {
       // Should have some cache misses due to eviction
       expect(metrics.misses).toBeGreaterThan(5);
 
-      console.log(`Cache size limit test - Total requests: ${metrics.totalRequests}, Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Cache size limit test - Total requests: ${metrics.totalRequests}, Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
   });
 
@@ -460,7 +461,7 @@ describe('Caching Effectiveness Tests', () => {
         
         expect(metrics.hitRate).toBeGreaterThan(testCase.expectedHitRate);
 
-        console.log(`${testCase.name} - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}% (expected: ${(testCase.expectedHitRate * 100).toFixed(1)}%)`);
+        safeLogger.info(`${testCase.name} - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}% (expected: ${(testCase.expectedHitRate * 100).toFixed(1)}%)`);
       }
     });
 
@@ -485,8 +486,8 @@ describe('Caching Effectiveness Tests', () => {
 
       const metrics = cache.getMetrics();
       
-      console.log(`Cache memory test - Requests: ${metrics.totalRequests}, Memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
-      console.log(`Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Cache memory test - Requests: ${metrics.totalRequests}, Memory increase: ${(memoryIncrease / 1024 / 1024).toFixed(2)}MB`);
+      safeLogger.info(`Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
   });
 
@@ -522,7 +523,7 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.hitRate).toBeGreaterThan(0.6); // 60% hit rate for realistic usage
       expect(metrics.totalRequests).toBe(35); // 7 requests * 5 sessions
 
-      console.log(`User browsing simulation - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`User browsing simulation - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
 
     it('should handle API pagination caching effectively', async () => {
@@ -542,7 +543,7 @@ describe('Caching Effectiveness Tests', () => {
       expect(metrics.hitRate).toBeGreaterThan(0.4); // Some pages accessed multiple times
       expect(metrics.totalRequests).toBe(7);
 
-      console.log(`Pagination caching - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
+      safeLogger.info(`Pagination caching - Hit rate: ${(metrics.hitRate * 100).toFixed(1)}%`);
     });
   });
 });

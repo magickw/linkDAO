@@ -1,4 +1,5 @@
 import { eq, lt, and, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   moderationCases, 
@@ -409,7 +410,7 @@ export class DataRetentionService {
         }
       } catch (error) {
         // Continue with other records even if one fails
-        console.error(`Failed to process moderation case ${record.id}:`, error);
+        safeLogger.error(`Failed to process moderation case ${record.id}:`, error);
       }
     }
 
@@ -449,7 +450,7 @@ export class DataRetentionService {
           deleted++;
         }
       } catch (error) {
-        console.error(`Failed to process content report ${record.id}:`, error);
+        safeLogger.error(`Failed to process content report ${record.id}:`, error);
       }
     }
 
@@ -489,7 +490,7 @@ export class DataRetentionService {
           deleted++;
         }
       } catch (error) {
-        console.error(`Failed to process moderation action ${record.id}:`, error);
+        safeLogger.error(`Failed to process moderation action ${record.id}:`, error);
       }
     }
 
@@ -529,7 +530,7 @@ export class DataRetentionService {
           deleted++;
         }
       } catch (error) {
-        console.error(`Failed to process moderation appeal ${record.id}:`, error);
+        safeLogger.error(`Failed to process moderation appeal ${record.id}:`, error);
       }
     }
 
@@ -555,7 +556,7 @@ export class DataRetentionService {
     };
 
     // TODO: Implement actual archiving to cold storage
-    console.log(`Archiving ${tableName} record ${record.id}:`, archiveData);
+    safeLogger.info(`Archiving ${tableName} record ${record.id}:`, archiveData);
   }
 
   private async logRetentionAction(log: RetentionAuditLog): Promise<void> {
@@ -567,7 +568,7 @@ export class DataRetentionService {
     }
 
     // TODO: Persist audit logs to database
-    console.log('Retention action logged:', log);
+    safeLogger.info('Retention action logged:', log);
   }
 }
 

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { AppError, ValidationError, UnauthorizedError } from '../middleware/errorHandler';
 import { MarketplaceRegistrationService } from '../services/marketplaceRegistrationService';
 

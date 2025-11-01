@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import * as dotenv from "dotenv";
@@ -14,11 +15,11 @@ async function runProductMigration() {
   const connectionString = process.env.DATABASE_URL;
   
   if (!connectionString) {
-    console.error("❌ DATABASE_URL environment variable is not set");
+    safeLogger.error("❌ DATABASE_URL environment variable is not set");
     process.exit(1);
   }
 
-  console.log("🚀 Starting product tables migration...");
+  safeLogger.info("🚀 Starting product tables migration...");
 
   try {
     // Create connection
@@ -30,10 +31,10 @@ async function runProductMigration() {
     const db = drizzle(sql);
 
     // Execute migration step by step
-    console.log("📝 Executing product migration...");
+    safeLogger.info("📝 Executing product migration...");
 
     // Step 1: Create Categories Table
-    console.log("   1/6: Creating categories table...");
+    safeLogger.info("   1/6: Creating categories table...");
     try {
       await sql`
         CREATE TABLE IF NOT EXISTS "categories" (
@@ -53,11 +54,11 @@ async function runProductMigration() {
       `;
     } catch (error: any) {
       if (error.code !== '42P07') throw error;
-      console.log("   ⚠️  Categories table already exists");
+      safeLogger.info("   ⚠️  Categories table already exists");
     }
 
     // Step 2: Create Products Table
-    console.log("   2/6: Creating products table...");
+    safeLogger.info("   2/6: Creating products table...");
     try {
       await sql`
         CREATE TABLE IF NOT EXISTS "products" (
@@ -83,11 +84,11 @@ async function runProductMigration() {
       `;
     } catch (error: any) {
       if (error.code !== '42P07') throw error;
-      console.log("   ⚠️  Products table already exists");
+      safeLogger.info("   ⚠️  Products table already exists");
     }
 
     // Step 3: Create Product Tags Table
-    console.log("   3/6: Creating product_tags table...");
+    safeLogger.info("   3/6: Creating product_tags table...");
     try {
       await sql`
         CREATE TABLE IF NOT EXISTS "product_tags" (
@@ -99,11 +100,11 @@ async function runProductMigration() {
       `;
     } catch (error: any) {
       if (error.code !== '42P07') throw error;
-      console.log("   ⚠️  Product tags table already exists");
+      safeLogger.info("   ⚠️  Product tags table already exists");
     }
 
     // Step 4: Add Foreign Key Constraints
-    console.log("   4/6: Adding foreign key constraints...");
+    safeLogger.info("   4/6: Adding foreign key constraints...");
     const constraints = [
       {
         name: "categories_parent_id_categories_id_fk",
@@ -132,7 +133,7 @@ async function runProductMigration() {
         await sql.unsafe(constraint.sql);
       } catch (error: any) {
         if (error.code === '42710') {
-          console.log(`   ⚠️  Constraint ${constraint.name} already exists`);
+          safeLogger.info(`   ⚠️  Constraint ${constraint.name} already exists`);
         } else {
           throw error;
         }
@@ -140,7 +141,7 @@ async function runProductMigration() {
     }
 
     // Step 5: Create Indexes
-    console.log("   5/6: Creating indexes...");
+    safeLogger.info("   5/6: Creating indexes...");
     const indexes = [
       'CREATE INDEX IF NOT EXISTS "product_tag_idx" ON "product_tags" USING btree ("product_id","tag")',
       'CREATE INDEX IF NOT EXISTS "tag_idx" ON "product_tags" USING btree ("tag")',
@@ -158,7 +159,7 @@ async function runProductMigration() {
         await sql.unsafe(indexSql);
       } catch (error: any) {
         if (error.code === '42P07') {
-          console.log(`   ⚠️  Index already exists`);
+          safeLogger.info(`   ⚠️  Index already exists`);
         } else {
           throw error;
         }
@@ -166,7 +167,7 @@ async function runProductMigration() {
     }
 
     // Step 6: Add product_id to listings table and insert default categories
-    console.log("   6/6: Adding product_id to listings and inserting default categories...");
+    safeLogger.info("   6/6: Adding product_id to listings and inserting default categories...");
     
     try {
       await sql`ALTER TABLE "listings" ADD COLUMN IF NOT EXISTS "product_id" uuid`;
@@ -177,7 +178,7 @@ async function runProductMigration() {
       `;
     } catch (error: any) {
       if (error.code === '42701' || error.code === '42710') {
-        console.log(`   ⚠️  Listings modifications already exist`);
+        safeLogger.info(`   ⚠️  Listings modifications already exist`);
       } else {
         throw error;
       }
@@ -200,11 +201,11 @@ async function runProductMigration() {
         ON CONFLICT (slug) DO NOTHING
       `;
     } catch (error: any) {
-      console.log(`   ⚠️  Default categories may already exist: ${error.message}`);
+      safeLogger.info(`   ⚠️  Default categories may already exist: ${error.message}`);
     }
 
     // Verify tables were created
-    console.log("🔍 Verifying table creation...");
+    safeLogger.info("🔍 Verifying table creation...");
     
     const tables = await sql`
       SELECT table_name 
@@ -214,20 +215,20 @@ async function runProductMigration() {
       ORDER BY table_name;
     `;
 
-    console.log("✅ Created tables:");
+    safeLogger.info("✅ Created tables:");
     tables.forEach((table: any) => {
-      console.log(`   - ${table.table_name}`);
+      safeLogger.info(`   - ${table.table_name}`);
     });
 
     // Check category count
     const categoryCount = await sql`SELECT COUNT(*) as count FROM categories`;
-    console.log(`📊 Default categories inserted: ${categoryCount[0].count}`);
+    safeLogger.info(`📊 Default categories inserted: ${categoryCount[0].count}`);
 
     await sql.end();
-    console.log("🎉 Product migration completed successfully!");
+    safeLogger.info("🎉 Product migration completed successfully!");
 
   } catch (error) {
-    console.error("❌ Migration failed:", error);
+    safeLogger.error("❌ Migration failed:", error);
     process.exit(1);
   }
 }

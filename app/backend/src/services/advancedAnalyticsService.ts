@@ -4,6 +4,7 @@
  */
 
 import { eq, and, desc, sql, gte, lte } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 
 export interface AnalyticsTimeRange {
@@ -108,7 +109,7 @@ export class AdvancedAnalyticsService {
 
       return mockAnalytics;
     } catch (error) {
-      console.error('Error getting marketplace analytics:', error);
+      safeLogger.error('Error getting marketplace analytics:', error);
       throw error;
     }
   }
@@ -193,7 +194,7 @@ export class AdvancedAnalyticsService {
       
       return points;
     } catch (error) {
-      console.error('Error getting time series data:', error);
+      safeLogger.error('Error getting time series data:', error);
       throw error;
     }
   }
@@ -341,7 +342,7 @@ export class AdvancedAnalyticsService {
       
       return insights;
     } catch (error) {
-      console.error('Error generating insights:', error);
+      safeLogger.error('Error generating insights:', error);
       throw error;
     }
   }
@@ -368,7 +369,7 @@ export class AdvancedAnalyticsService {
         escrowVolume: parseFloat((Math.random() * 10 + 25).toFixed(2))
       };
     } catch (error) {
-      console.error('Error getting real-time metrics:', error);
+      safeLogger.error('Error getting real-time metrics:', error);
       throw error;
     }
   }
@@ -406,7 +407,7 @@ export class AdvancedAnalyticsService {
         ]
       };
     } catch (error) {
-      console.error('Error getting user behavior analytics:', error);
+      safeLogger.error('Error getting user behavior analytics:', error);
       throw error;
     }
   }
@@ -447,7 +448,7 @@ export class AdvancedAnalyticsService {
         }
       };
     } catch (error) {
-      console.error('Error getting seller performance analytics:', error);
+      safeLogger.error('Error getting seller performance analytics:', error);
       throw error;
     }
   }
@@ -469,7 +470,7 @@ export class AdvancedAnalyticsService {
       
       return { downloadUrl, filename };
     } catch (error) {
-      console.error('Error exporting analytics data:', error);
+      safeLogger.error('Error exporting analytics data:', error);
       throw error;
     }
   }
@@ -485,9 +486,9 @@ export class AdvancedAnalyticsService {
   }): Promise<void> {
     try {
       // In a real implementation, this would store alert configuration
-      console.log('Analytics alerts configured:', config);
+      safeLogger.info('Analytics alerts configured:', config);
     } catch (error) {
-      console.error('Error configuring analytics alerts:', error);
+      safeLogger.error('Error configuring analytics alerts:', error);
       throw error;
     }
   }

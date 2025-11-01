@@ -1,4 +1,5 @@
 import type { IPFSHTTPClient } from 'ipfs-http-client';
+import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -85,7 +86,7 @@ class ContentStagingService {
     try {
       await fs.mkdir(this.stagingDir, { recursive: true });
     } catch (error) {
-      console.error('Failed to create staging directory:', error);
+      safeLogger.error('Failed to create staging directory:', error);
     }
   }
 
@@ -276,7 +277,7 @@ class ContentStagingService {
 
       return cid;
     } catch (error) {
-      console.error('Failed to publish content to IPFS:', error);
+      safeLogger.error('Failed to publish content to IPFS:', error);
       return null;
     }
   }
@@ -304,7 +305,7 @@ class ContentStagingService {
 
       return cleanedCount;
     } catch (error) {
-      console.error('Failed to cleanup expired content:', error);
+      safeLogger.error('Failed to cleanup expired content:', error);
       return 0;
     }
   }
@@ -350,7 +351,7 @@ class ContentStagingService {
         newestFile
       };
     } catch (error) {
-      console.error('Failed to get staging stats:', error);
+      safeLogger.error('Failed to get staging stats:', error);
       return {
         totalFiles: 0,
         totalSize: 0,

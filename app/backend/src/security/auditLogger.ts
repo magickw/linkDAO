@@ -4,6 +4,7 @@
  */
 
 import { Request } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -136,7 +137,7 @@ export class AuditLogger {
       });
 
     } catch (error) {
-      console.error('Failed to initialize audit logger:', error);
+      safeLogger.error('Failed to initialize audit logger:', error);
     }
   }
 
@@ -165,7 +166,7 @@ export class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to log audit entry:', error);
+      safeLogger.error('Failed to log audit entry:', error);
     }
   }
 
@@ -417,7 +418,7 @@ export class AuditLogger {
       };
 
     } catch (error) {
-      console.error('Failed to get security metrics:', error);
+      safeLogger.error('Failed to get security metrics:', error);
       throw error;
     }
   }
@@ -487,7 +488,7 @@ export class AuditLogger {
         .slice(offset, offset + limit);
 
     } catch (error) {
-      console.error('Failed to search logs:', error);
+      safeLogger.error('Failed to search logs:', error);
       throw error;
     }
   }
@@ -520,7 +521,7 @@ export class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to flush audit logs:', error);
+      safeLogger.error('Failed to flush audit logs:', error);
       // Put logs back in buffer for retry
       this.logBuffer.unshift(...logsToFlush);
     }
@@ -551,7 +552,7 @@ export class AuditLogger {
       await this.rotateLogsIfNeeded(logFile);
 
     } catch (error) {
-      console.error('Failed to write logs to file:', error);
+      safeLogger.error('Failed to write logs to file:', error);
       throw error;
     }
   }
@@ -563,9 +564,9 @@ export class AuditLogger {
     try {
       // This would typically use your database connection
       // For now, we'll just log to console
-      console.log(`Would write ${logs.length} audit logs to database`);
+      safeLogger.info(`Would write ${logs.length} audit logs to database`);
     } catch (error) {
-      console.error('Failed to write logs to database:', error);
+      safeLogger.error('Failed to write logs to database:', error);
       throw error;
     }
   }
@@ -593,7 +594,7 @@ export class AuditLogger {
       }
 
     } catch (error) {
-      console.error('Failed to send logs to remote endpoint:', error);
+      safeLogger.error('Failed to send logs to remote endpoint:', error);
       throw error;
     }
   }
@@ -656,7 +657,7 @@ export class AuditLogger {
 
   private startFlushInterval(): void {
     this.flushInterval = setInterval(() => {
-      this.flush().catch(console.error);
+      this.flush().catch(safeLogger.error);
     }, 5000); // Flush every 5 seconds
   }
 
@@ -674,7 +675,7 @@ export class AuditLogger {
         }
       }
     } catch (error) {
-      console.error('Failed to rotate logs:', error);
+      safeLogger.error('Failed to rotate logs:', error);
     }
   }
 

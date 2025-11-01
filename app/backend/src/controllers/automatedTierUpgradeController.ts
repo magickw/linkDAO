@@ -4,6 +4,8 @@
  */
 
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { getAutomatedTierUpgradeService } from '../services/automatedTierUpgradeService';
 import { z } from 'zod';
 
@@ -33,7 +35,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error getting tier progression tracking:', error);
+      safeLogger.error('Error getting tier progression tracking:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -70,7 +72,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error triggering tier evaluation:', error);
+      safeLogger.error('Error triggering tier evaluation:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -102,7 +104,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error getting tier criteria:', error);
+      safeLogger.error('Error getting tier criteria:', error);
       
       res.status(500).json({
         success: false,
@@ -127,7 +129,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error getting evaluation statistics:', error);
+      safeLogger.error('Error getting evaluation statistics:', error);
       
       res.status(500).json({
         success: false,
@@ -147,7 +149,7 @@ class AutomatedTierUpgradeController {
       
       // Run batch evaluation asynchronously
       getAutomatedTierUpgradeService().runBatchTierEvaluation()
-        .catch(error => console.error('Batch evaluation error:', error));
+        .catch(error => safeLogger.error('Batch evaluation error:', error));
 
       res.json({
         success: true,
@@ -156,7 +158,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error running batch evaluation:', error);
+      safeLogger.error('Error running batch evaluation:', error);
       
       res.status(500).json({
         success: false,
@@ -196,7 +198,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error getting tier evaluation history:', error);
+      safeLogger.error('Error getting tier evaluation history:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -236,7 +238,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Error getting tier upgrade notifications:', error);
+      safeLogger.error('Error getting tier upgrade notifications:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -271,7 +273,7 @@ class AutomatedTierUpgradeController {
       });
 
     } catch (error) {
-      console.error('Health check error:', error);
+      safeLogger.error('Health check error:', error);
       
       res.status(503).json({
         success: false,

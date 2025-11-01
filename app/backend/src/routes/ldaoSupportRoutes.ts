@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { body, param, query, validationResult } from 'express-validator';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { ldaoSupportService } from '../services/ldaoSupportService';
@@ -22,7 +24,7 @@ const validateRequest = (req: any, res: any, next: any) => {
 // Support Ticket Routes
 
 // Create a new support ticket
-router.post('/tickets',
+router.post('/tickets', csrfProtection, 
   authMiddleware,
   rateLimitingMiddleware({ windowMs: 15 * 60 * 1000, max: 5 }), // 5 tickets per 15 minutes
   [
@@ -65,7 +67,7 @@ router.post('/tickets',
         data: ticket
       });
     } catch (error) {
-      console.error('Error creating support ticket:', error);
+      safeLogger.error('Error creating support ticket:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create support ticket'
@@ -87,7 +89,7 @@ router.get('/tickets',
         data: tickets
       });
     } catch (error) {
-      console.error('Error fetching support tickets:', error);
+      safeLogger.error('Error fetching support tickets:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch support tickets'
@@ -132,7 +134,7 @@ router.get('/tickets/:ticketId',
         data: ticket
       });
     } catch (error) {
-      console.error('Error fetching support ticket:', error);
+      safeLogger.error('Error fetching support ticket:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch support ticket'
@@ -142,7 +144,7 @@ router.get('/tickets/:ticketId',
 );
 
 // Add response to support ticket
-router.post('/tickets/:ticketId/responses',
+router.post('/tickets/:ticketId/responses', csrfProtection, 
   authMiddleware,
   rateLimitingMiddleware({ windowMs: 5 * 60 * 1000, max: 10 }), // 10 responses per 5 minutes
   [
@@ -188,7 +190,7 @@ router.post('/tickets/:ticketId/responses',
         message: 'Response added successfully'
       });
     } catch (error) {
-      console.error('Error adding ticket response:', error);
+      safeLogger.error('Error adding ticket response:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to add response'
@@ -228,7 +230,7 @@ router.get('/faq',
         data: faqs
       });
     } catch (error) {
-      console.error('Error fetching FAQ items:', error);
+      safeLogger.error('Error fetching FAQ items:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch FAQ items'
@@ -238,7 +240,7 @@ router.get('/faq',
 );
 
 // Mark FAQ as helpful/not helpful
-router.post('/faq/:faqId/feedback',
+router.post('/faq/:faqId/feedback', csrfProtection, 
   rateLimitingMiddleware({ windowMs: 60 * 1000, max: 5 }), // 5 feedback per minute
   [
     param('faqId')
@@ -261,7 +263,7 @@ router.post('/faq/:faqId/feedback',
         message: 'Feedback recorded successfully'
       });
     } catch (error) {
-      console.error('Error recording FAQ feedback:', error);
+      safeLogger.error('Error recording FAQ feedback:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to record feedback'
@@ -271,7 +273,7 @@ router.post('/faq/:faqId/feedback',
 );
 
 // Increment FAQ views
-router.post('/faq/:faqId/view',
+router.post('/faq/:faqId/view', csrfProtection, 
   [
     param('faqId')
       .matches(/^faq-\d+$/)
@@ -288,7 +290,7 @@ router.post('/faq/:faqId/view',
         message: 'View recorded'
       });
     } catch (error) {
-      console.error('Error recording FAQ view:', error);
+      safeLogger.error('Error recording FAQ view:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to record view'
@@ -300,7 +302,7 @@ router.post('/faq/:faqId/view',
 // Live Chat Routes
 
 // Initiate live chat session
-router.post('/chat/initiate',
+router.post('/chat/initiate', csrfProtection, 
   authMiddleware,
   rateLimitingMiddleware({ windowMs: 60 * 1000, max: 3 }), // 3 chat initiations per minute
   [
@@ -326,7 +328,7 @@ router.post('/chat/initiate',
         }
       });
     } catch (error) {
-      console.error('Error initiating live chat:', error);
+      safeLogger.error('Error initiating live chat:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to initiate live chat'
@@ -356,7 +358,7 @@ router.get('/metrics',
         data: metrics
       });
     } catch (error) {
-      console.error('Error fetching support metrics:', error);
+      safeLogger.error('Error fetching support metrics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to fetch support metrics'
@@ -368,7 +370,7 @@ router.get('/metrics',
 // Staff Routes (Admin/Staff only)
 
 // Update ticket status (Staff only)
-router.patch('/tickets/:ticketId/status',
+router.patch('/tickets/:ticketId/status', csrfProtection, 
   authMiddleware,
   [
     param('ticketId')
@@ -408,7 +410,7 @@ router.patch('/tickets/:ticketId/status',
         data: updatedTicket
       });
     } catch (error) {
-      console.error('Error updating ticket status:', error);
+      safeLogger.error('Error updating ticket status:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to update ticket status'
@@ -418,7 +420,7 @@ router.patch('/tickets/:ticketId/status',
 );
 
 // Create FAQ item (Staff only)
-router.post('/faq',
+router.post('/faq', csrfProtection, 
   authMiddleware,
   [
     body('question')
@@ -463,7 +465,7 @@ router.post('/faq',
         data: faq
       });
     } catch (error) {
-      console.error('Error creating FAQ item:', error);
+      safeLogger.error('Error creating FAQ item:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create FAQ item'

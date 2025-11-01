@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import * as dotenv from "dotenv";
 
@@ -11,11 +12,11 @@ async function verifyProductMigration() {
   const connectionString = process.env.DATABASE_URL;
   
   if (!connectionString) {
-    console.error("❌ DATABASE_URL environment variable is not set");
+    safeLogger.error("❌ DATABASE_URL environment variable is not set");
     process.exit(1);
   }
 
-  console.log("🔍 Verifying product migration...");
+  safeLogger.info("🔍 Verifying product migration...");
 
   try {
     const sql = postgres(connectionString, {
@@ -24,7 +25,7 @@ async function verifyProductMigration() {
     });
 
     // Check if tables exist
-    console.log("\n📋 Checking table existence:");
+    safeLogger.info("\n📋 Checking table existence:");
     const tables = await sql`
       SELECT table_name, 
              (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as column_count
@@ -35,16 +36,16 @@ async function verifyProductMigration() {
     `;
 
     if (tables.length === 0) {
-      console.log("❌ No product tables found. Migration may not have run.");
+      safeLogger.info("❌ No product tables found. Migration may not have run.");
       process.exit(1);
     }
 
     tables.forEach((table: any) => {
-      console.log(`   ✅ ${table.table_name} (${table.column_count} columns)`);
+      safeLogger.info(`   ✅ ${table.table_name} (${table.column_count} columns)`);
     });
 
     // Check indexes
-    console.log("\n🔗 Checking indexes:");
+    safeLogger.info("\n🔗 Checking indexes:");
     const indexes = await sql`
       SELECT indexname, tablename 
       FROM pg_indexes 
@@ -62,12 +63,12 @@ async function verifyProductMigration() {
     });
 
     Object.entries(indexesByTable).forEach(([table, idxList]) => {
-      console.log(`   ${table}: ${idxList.length} indexes`);
-      idxList.forEach(idx => console.log(`     - ${idx}`));
+      safeLogger.info(`   ${table}: ${idxList.length} indexes`);
+      idxList.forEach(idx => safeLogger.info(`     - ${idx}`));
     });
 
     // Check foreign keys
-    console.log("\n🔗 Checking foreign key constraints:");
+    safeLogger.info("\n🔗 Checking foreign key constraints:");
     const foreignKeys = await sql`
       SELECT 
         tc.table_name, 
@@ -88,14 +89,14 @@ async function verifyProductMigration() {
     `;
 
     foreignKeys.forEach((fk: any) => {
-      console.log(`   ✅ ${fk.table_name}.${fk.column_name} → ${fk.foreign_table_name}.${fk.foreign_column_name}`);
+      safeLogger.info(`   ✅ ${fk.table_name}.${fk.column_name} → ${fk.foreign_table_name}.${fk.foreign_column_name}`);
     });
 
     // Check sample data
-    console.log("\n📊 Checking sample data:");
+    safeLogger.info("\n📊 Checking sample data:");
     
     const categoryCount = await sql`SELECT COUNT(*) as count FROM categories`;
-    console.log(`   Categories: ${categoryCount[0].count} records`);
+    safeLogger.info(`   Categories: ${categoryCount[0].count} records`);
 
     if (categoryCount[0].count > 0) {
       const sampleCategories = await sql`
@@ -104,20 +105,20 @@ async function verifyProductMigration() {
         ORDER BY sort_order, name 
         LIMIT 5
       `;
-      console.log("   Sample categories:");
+      safeLogger.info("   Sample categories:");
       sampleCategories.forEach((cat: any) => {
-        console.log(`     - ${cat.name} (${cat.slug}) ${cat.is_active ? '✅' : '❌'}`);
+        safeLogger.info(`     - ${cat.name} (${cat.slug}) ${cat.is_active ? '✅' : '❌'}`);
       });
     }
 
     const productCount = await sql`SELECT COUNT(*) as count FROM products`;
-    console.log(`   Products: ${productCount[0].count} records`);
+    safeLogger.info(`   Products: ${productCount[0].count} records`);
 
     const productTagCount = await sql`SELECT COUNT(*) as count FROM product_tags`;
-    console.log(`   Product Tags: ${productTagCount[0].count} records`);
+    safeLogger.info(`   Product Tags: ${productTagCount[0].count} records`);
 
     // Test basic operations
-    console.log("\n🧪 Testing basic operations:");
+    safeLogger.info("\n🧪 Testing basic operations:");
     
     try {
       // Test category insertion
@@ -126,7 +127,7 @@ async function verifyProductMigration() {
         VALUES ('Test Category', 'test-category-' || extract(epoch from now()), 'Test category for verification', '["Test Category"]', 999)
         RETURNING id, name
       `;
-      console.log(`   ✅ Category insertion: ${testCategory[0].name}`);
+      safeLogger.info(`   ✅ Category insertion: ${testCategory[0].name}`);
 
       // Test product insertion
       const testProduct = await sql`
@@ -150,34 +151,34 @@ async function verifyProductMigration() {
       `;
       
       if (testProduct.length > 0) {
-        console.log(`   ✅ Product insertion: ${testProduct[0].title}`);
+        safeLogger.info(`   ✅ Product insertion: ${testProduct[0].title}`);
 
         // Test product tag insertion
         await sql`
           INSERT INTO product_tags (product_id, tag)
           VALUES (${testProduct[0].id}, 'test-tag')
         `;
-        console.log(`   ✅ Product tag insertion`);
+        safeLogger.info(`   ✅ Product tag insertion`);
 
         // Clean up test data
         await sql`DELETE FROM product_tags WHERE product_id = ${testProduct[0].id}`;
         await sql`DELETE FROM products WHERE id = ${testProduct[0].id}`;
       } else {
-        console.log(`   ⚠️  Product insertion skipped (no users found)`);
+        safeLogger.info(`   ⚠️  Product insertion skipped (no users found)`);
       }
 
       await sql`DELETE FROM categories WHERE id = ${testCategory[0].id}`;
-      console.log(`   ✅ Test data cleanup completed`);
+      safeLogger.info(`   ✅ Test data cleanup completed`);
 
     } catch (error) {
-      console.log(`   ❌ Operation test failed: ${error}`);
+      safeLogger.info(`   ❌ Operation test failed: ${error}`);
     }
 
     await sql.end();
-    console.log("\n🎉 Product migration verification completed successfully!");
+    safeLogger.info("\n🎉 Product migration verification completed successfully!");
 
   } catch (error) {
-    console.error("❌ Verification failed:", error);
+    safeLogger.error("❌ Verification failed:", error);
     process.exit(1);
   }
 }

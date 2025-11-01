@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { cohortAnalysisController } from '../controllers/cohortAnalysisController';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
@@ -34,7 +35,7 @@ router.get('/', cohortAnalysisController.getCohortAnalysis.bind(cohortAnalysisCo
  * @body cohortB - Second cohort period identifier
  * @body cohortType - Cohort type: daily, weekly, monthly (default: monthly)
  */
-router.post('/compare', cohortAnalysisController.compareCohorts.bind(cohortAnalysisController));
+router.post('/compare', csrfProtection,  cohortAnalysisController.compareCohorts.bind(cohortAnalysisController));
 
 /**
  * @route GET /api/admin/cohort-analysis/user/:userId

@@ -5,10 +5,11 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { sql } from 'drizzle-orm';
 
 async function runMigration() {
-  console.log('🔄 Running migration: Add Views Table...\n');
+  safeLogger.info('🔄 Running migration: Add Views Table...\n');
 
   try {
     // Create views table
@@ -25,18 +26,18 @@ async function runMigration() {
         CONSTRAINT fk_views_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
-    console.log('✅ Created views table');
+    safeLogger.info('✅ Created views table');
 
     // Create indexes
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS view_post_user_idx ON views(post_id, user_id)
     `);
-    console.log('✅ Created view_post_user_idx index');
+    safeLogger.info('✅ Created view_post_user_idx index');
 
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS view_post_created_idx ON views(post_id, created_at)
     `);
-    console.log('✅ Created view_post_created_idx index');
+    safeLogger.info('✅ Created view_post_created_idx index');
 
     // Add comments
     await db.execute(sql`
@@ -48,12 +49,12 @@ async function runMigration() {
     await db.execute(sql`
       COMMENT ON COLUMN views.ip_address IS 'Used for deduplication of anonymous views'
     `);
-    console.log('✅ Added table comments');
+    safeLogger.info('✅ Added table comments');
 
-    console.log('\n✅ Migration completed successfully!\n');
+    safeLogger.info('\n✅ Migration completed successfully!\n');
     process.exit(0);
   } catch (error) {
-    console.error('\n❌ Migration failed:', error);
+    safeLogger.error('\n❌ Migration failed:', error);
     process.exit(1);
   }
 }

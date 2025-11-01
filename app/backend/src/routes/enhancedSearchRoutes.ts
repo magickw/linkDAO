@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { EnhancedSearchController } from '../controllers/enhancedSearchController';
 
 const router = Router();
@@ -25,13 +26,13 @@ router.get('/recommendations/communities/enhanced', enhancedSearchController.get
 router.get('/recommendations/users/enhanced', enhancedSearchController.getUserRecommendations.bind(enhancedSearchController));
 
 // User actions
-router.post('/bookmarks', enhancedSearchController.bookmarkItem.bind(enhancedSearchController));
-router.post('/follow', enhancedSearchController.followItem.bind(enhancedSearchController));
-router.post('/communities/:communityId/join', enhancedSearchController.joinCommunity.bind(enhancedSearchController));
+router.post('/bookmarks', csrfProtection,  enhancedSearchController.bookmarkItem.bind(enhancedSearchController));
+router.post('/follow', csrfProtection,  enhancedSearchController.followItem.bind(enhancedSearchController));
+router.post('/communities/:communityId/join', csrfProtection,  enhancedSearchController.joinCommunity.bind(enhancedSearchController));
 
 // Learning and analytics
-router.put('/learning/:userId', enhancedSearchController.updateLearningData.bind(enhancedSearchController));
-router.post('/analytics/search', enhancedSearchController.trackSearchAnalytics.bind(enhancedSearchController));
-router.post('/analytics/click-through', enhancedSearchController.trackClickThrough.bind(enhancedSearchController));
+router.put('/learning/:userId', csrfProtection,  enhancedSearchController.updateLearningData.bind(enhancedSearchController));
+router.post('/analytics/search', csrfProtection,  enhancedSearchController.trackSearchAnalytics.bind(enhancedSearchController));
+router.post('/analytics/click-through', csrfProtection,  enhancedSearchController.trackClickThrough.bind(enhancedSearchController));
 
 export default router;

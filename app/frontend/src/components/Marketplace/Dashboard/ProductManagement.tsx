@@ -197,7 +197,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-white">Product Management</h2>
-        <Link href="/dashboard/products/new" passHref>
+        <Link href="/marketplace/seller/products/new" passHref>
           <Button>
             <PlusIcon className="h-4 w-4 mr-2" />
             Add Product

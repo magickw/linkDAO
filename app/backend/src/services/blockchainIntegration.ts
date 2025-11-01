@@ -4,6 +4,7 @@
  */
 
 import { ethers } from 'ethers';
+import { safeLogger } from '../utils/safeLogger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -103,7 +104,7 @@ export class BlockchainIntegrationService {
         minimumRequired: minimumBalance,
       };
     } catch (error) {
-      console.error('Error checking token balance:', error);
+      safeLogger.error('Error checking token balance:', error);
       return {
         hasBalance: false,
         balance: '0',
@@ -158,7 +159,7 @@ export class BlockchainIntegrationService {
           }
         } catch (error) {
           // tokenOfOwnerByIndex might not be implemented
-          console.warn('Could not fetch token IDs:', error);
+          safeLogger.warn('Could not fetch token IDs:', error);
         }
       }
 
@@ -168,7 +169,7 @@ export class BlockchainIntegrationService {
         balance: balance.toNumber(),
       };
     } catch (error) {
-      console.error('Error checking NFT ownership:', error);
+      safeLogger.error('Error checking NFT ownership:', error);
       return {
         ownsNFT: false,
         tokenIds: [],
@@ -200,7 +201,7 @@ export class BlockchainIntegrationService {
         minimumRequired: minimumStaked,
       };
     } catch (error) {
-      console.error('Error checking staking requirement:', error);
+      safeLogger.error('Error checking staking requirement:', error);
       return {
         hasStaked: false,
         stakedAmount: '0',
@@ -232,7 +233,7 @@ export class BlockchainIntegrationService {
         minimumRequired: minimumPower,
       };
     } catch (error) {
-      console.error('Error checking voting power:', error);
+      safeLogger.error('Error checking voting power:', error);
       return {
         hasVotingPower: false,
         votingPower: '0',
@@ -249,7 +250,7 @@ export class BlockchainIntegrationService {
       const reputation = await this.reputation.getUserReputation(userAddress);
       return reputation.toNumber();
     } catch (error) {
-      console.error('Error getting user reputation:', error);
+      safeLogger.error('Error getting user reputation:', error);
       return 0;
     }
   }
@@ -280,7 +281,7 @@ export class BlockchainIntegrationService {
         stateName: stateNames[state] || 'Unknown',
       };
     } catch (error) {
-      console.error('Error getting proposal state:', error);
+      safeLogger.error('Error getting proposal state:', error);
       return {
         state: -1,
         stateName: 'Error',
@@ -309,7 +310,7 @@ export class BlockchainIntegrationService {
         canceled: info.canceled,
       };
     } catch (error) {
-      console.error('Error getting proposal info:', error);
+      safeLogger.error('Error getting proposal info:', error);
       return null;
     }
   }
@@ -339,7 +340,7 @@ export class BlockchainIntegrationService {
         ],
       };
     } catch (error) {
-      console.error('Error getting treasury balance:', error);
+      safeLogger.error('Error getting treasury balance:', error);
       return {
         eth: '0',
         ldao: '0',
@@ -376,7 +377,7 @@ export class BlockchainIntegrationService {
         results.set(address, hasBalance);
       });
     } catch (error) {
-      console.error('Error batch checking balances:', error);
+      safeLogger.error('Error batch checking balances:', error);
     }
 
     return results;
@@ -389,7 +390,7 @@ export class BlockchainIntegrationService {
     try {
       return await this.provider.getBlockNumber();
     } catch (error) {
-      console.error('Error getting current block:', error);
+      safeLogger.error('Error getting current block:', error);
       return 0;
     }
   }
@@ -417,7 +418,7 @@ export class BlockchainIntegrationService {
         to: receipt.to,
       };
     } catch (error) {
-      console.error('Error verifying transaction:', error);
+      safeLogger.error('Error verifying transaction:', error);
       return { confirmed: false };
     }
   }

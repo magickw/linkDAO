@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface GDPRCompliantUser {
   userId: string;
@@ -154,7 +155,7 @@ class GDPRComplianceService extends EventEmitter {
       this.emit('initialized');
       
     } catch (error) {
-      console.error('Failed to initialize GDPR compliance service:', error);
+      safeLogger.error('Failed to initialize GDPR compliance service:', error);
       throw error;
     }
   }

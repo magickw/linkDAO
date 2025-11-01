@@ -5,6 +5,7 @@ const create = () => ({
   add: async () => ({ path: 'mock-ipfs-hash' })
 });
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { imageStorage } from '../db/schema';
 import crypto from 'crypto';
 
@@ -60,7 +61,7 @@ class ImageUploadService {
     try {
       this.ipfsClient = create({ url: ipfsUrl });
     } catch (error) {
-      console.warn('IPFS client initialization failed, will use fallback storage:', error);
+      safeLogger.warn('IPFS client initialization failed, will use fallback storage:', error);
       this.ipfsClient = null;
     }
 
@@ -95,7 +96,7 @@ class ImageUploadService {
     if (!this.ipfsClient) {
       // Fallback: generate a hash-based identifier
       const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
-      console.warn('IPFS not available, using hash-based identifier:', hash);
+      safeLogger.warn('IPFS not available, using hash-based identifier:', hash);
       return hash;
     }
 
@@ -105,7 +106,7 @@ class ImageUploadService {
       });
       return result.path; // This is the IPFS hash (CID)
     } catch (error) {
-      console.error('IPFS upload failed:', error);
+      safeLogger.error('IPFS upload failed:', error);
       // Fallback to hash-based identifier
       const hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
       return hash;
@@ -212,7 +213,7 @@ class ImageUploadService {
         const result = await this.uploadImage(file, options);
         results.push(result);
       } catch (error) {
-        console.error('Failed to upload image:', error);
+        safeLogger.error('Failed to upload image:', error);
         // Continue with other files even if one fails
       }
     }
@@ -225,14 +226,14 @@ class ImageUploadService {
    */
   async deleteImage(ipfsHash: string): Promise<void> {
     if (!this.ipfsClient) {
-      console.warn('IPFS not available, skipping delete');
+      safeLogger.warn('IPFS not available, skipping delete');
       return;
     }
 
     try {
       await this.ipfsClient.pin.rm(ipfsHash);
     } catch (error) {
-      console.error('Failed to unpin from IPFS:', error);
+      safeLogger.error('Failed to unpin from IPFS:', error);
       // Don't throw error, as the image might still be accessible
     }
 
@@ -269,7 +270,7 @@ class ImageUploadService {
         })
         .where(db.eq(imageStorage.ipfsHash, ipfsHash));
     } catch (error) {
-      console.error('Failed to track image access:', error);
+      safeLogger.error('Failed to track image access:', error);
       // Non-critical, don't throw
     }
   }

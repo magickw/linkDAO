@@ -1,4 +1,5 @@
 import { db } from '../db/connectionPool';
+import { safeLogger } from '../utils/safeLogger';
 import { notifications, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -42,7 +43,7 @@ export class AppealNotificationService {
 
       await this.sendNotification(notification);
     } catch (error) {
-      console.error('Error sending appeal submission notification:', error);
+      safeLogger.error('Error sending appeal submission notification:', error);
     }
   }
 
@@ -84,7 +85,7 @@ export class AppealNotificationService {
 
       await this.sendNotification(notification);
     } catch (error) {
-      console.error('Error sending appeal status change notification:', error);
+      safeLogger.error('Error sending appeal status change notification:', error);
     }
   }
 
@@ -112,7 +113,7 @@ export class AppealNotificationService {
 
       await this.sendNotification(notification);
     } catch (error) {
-      console.error('Error sending jury selection notification:', error);
+      safeLogger.error('Error sending jury selection notification:', error);
     }
   }
 
@@ -142,7 +143,7 @@ export class AppealNotificationService {
         await this.sendNotification(notification);
       }
     } catch (error) {
-      console.error('Error sending voting started notifications:', error);
+      safeLogger.error('Error sending voting started notifications:', error);
     }
   }
 
@@ -194,7 +195,7 @@ export class AppealNotificationService {
         await this.sendNotification(jurorNotification);
       }
     } catch (error) {
-      console.error('Error sending decision reached notifications:', error);
+      safeLogger.error('Error sending decision reached notifications:', error);
     }
   }
 
@@ -232,7 +233,7 @@ export class AppealNotificationService {
 
       await this.sendNotification(notification);
     } catch (error) {
-      console.error('Error sending outcome executed notification:', error);
+      safeLogger.error('Error sending outcome executed notification:', error);
     }
   }
 
@@ -257,7 +258,7 @@ export class AppealNotificationService {
         await this.sendPushNotification(notification);
       }
     } catch (error) {
-      console.error('Error sending notification:', error);
+      safeLogger.error('Error sending notification:', error);
     }
   }
 
@@ -275,7 +276,7 @@ export class AppealNotificationService {
         createdAt: new Date()
       });
     } catch (error) {
-      console.error('Error sending in-app notification:', error);
+      safeLogger.error('Error sending in-app notification:', error);
     }
   }
 
@@ -286,12 +287,12 @@ export class AppealNotificationService {
     try {
       // TODO: Implement email sending
       // This would integrate with an email service like SendGrid, AWS SES, etc.
-      console.log(`Email notification would be sent to user ${notification.userId}:`, {
+      safeLogger.info(`Email notification would be sent to user ${notification.userId}:`, {
         subject: notification.title,
         body: notification.message
       });
     } catch (error) {
-      console.error('Error sending email notification:', error);
+      safeLogger.error('Error sending email notification:', error);
     }
   }
 
@@ -302,12 +303,12 @@ export class AppealNotificationService {
     try {
       // TODO: Implement push notification sending
       // This would integrate with Firebase Cloud Messaging, Apple Push Notifications, etc.
-      console.log(`Push notification would be sent to user ${notification.userId}:`, {
+      safeLogger.info(`Push notification would be sent to user ${notification.userId}:`, {
         title: notification.title,
         body: notification.message
       });
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      safeLogger.error('Error sending push notification:', error);
     }
   }
 
@@ -324,7 +325,7 @@ export class AppealNotificationService {
         inApp: true
       };
     } catch (error) {
-      console.error('Error getting user notification preferences:', error);
+      safeLogger.error('Error getting user notification preferences:', error);
       return {
         email: false,
         push: false,
@@ -363,9 +364,9 @@ export class AppealNotificationService {
   async markNotificationsAsRead(userId: string, notificationIds: number[]): Promise<void> {
     try {
       // TODO: Implement notification read status update
-      console.log(`Marking notifications as read for user ${userId}:`, notificationIds);
+      safeLogger.info(`Marking notifications as read for user ${userId}:`, notificationIds);
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
+      safeLogger.error('Error marking notifications as read:', error);
     }
   }
 
@@ -377,7 +378,7 @@ export class AppealNotificationService {
       // TODO: Implement unread count retrieval
       return 0;
     } catch (error) {
-      console.error('Error getting unread notification count:', error);
+      safeLogger.error('Error getting unread notification count:', error);
       return 0;
     }
   }

@@ -1,4 +1,5 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { 
   sellers, 
@@ -112,7 +113,7 @@ class SellerService {
       try {
         reputation = await reputationService.getReputation(walletAddress);
       } catch (error) {
-        console.warn('Could not fetch reputation data:', error);
+        safeLogger.warn('Could not fetch reputation data:', error);
         // Continue without reputation data
       }
       
@@ -138,7 +139,7 @@ class SellerService {
         profileCompleteness: completeness,
       } as any;
     } catch (error) {
-      console.error('Error fetching seller profile:', error);
+      safeLogger.error('Error fetching seller profile:', error);
       throw new Error('Failed to fetch seller profile');
     }
   }
@@ -208,7 +209,7 @@ class SellerService {
 
       return createdProfile;
     } catch (error) {
-      console.error('Error creating seller profile:', error);
+      safeLogger.error('Error creating seller profile:', error);
       throw error;
     }
   }
@@ -279,7 +280,7 @@ class SellerService {
 
       return updatedProfile;
     } catch (error) {
-      console.error('Error updating seller profile:', error);
+      safeLogger.error('Error updating seller profile:', error);
       throw error;
     }
   }
@@ -362,7 +363,7 @@ class SellerService {
         imageUploadResults: Object.keys(imageUploadResults).length > 0 ? imageUploadResults : undefined,
       };
     } catch (error) {
-      console.error('Error updating seller profile with images:', error);
+      safeLogger.error('Error updating seller profile with images:', error);
       throw error;
     }
   }
@@ -471,7 +472,7 @@ class SellerService {
         updatedAt: new Date(),
       });
     } catch (error) {
-      console.error('Error creating ENS verification record:', error);
+      safeLogger.error('Error creating ENS verification record:', error);
       // Don't throw error as this is not critical for profile update
     }
   }
@@ -483,7 +484,7 @@ class SellerService {
         .set({ isActive: false, updatedAt: new Date() })
         .where(eq(ensVerifications.walletAddress, walletAddress));
     } catch (error) {
-      console.error('Error deactivating ENS verification record:', error);
+      safeLogger.error('Error deactivating ENS verification record:', error);
       // Don't throw error as this is not critical for profile update
     }
   }
@@ -667,7 +668,7 @@ class SellerService {
         reputationScore: Number(reputation.reputationScore),
       };
     } catch (error) {
-      console.error('Error fetching seller stats:', error);
+      safeLogger.error('Error fetching seller stats:', error);
       throw error;
     }
   }
@@ -724,7 +725,7 @@ class SellerService {
         message: `${verificationType} verification completed successfully`,
       };
     } catch (error) {
-      console.error('Error verifying seller profile:', error);
+      safeLogger.error('Error verifying seller profile:', error);
       return {
         success: false,
         message: `Failed to verify ${verificationType}: ${error.message}`,
@@ -816,7 +817,7 @@ class SellerService {
       });
 
     } catch (error) {
-      console.error('Error updating seller reputation:', error);
+      safeLogger.error('Error updating seller reputation:', error);
       throw error;
     }
   }
@@ -847,7 +848,7 @@ class SellerService {
         createdAt: activity.createdAt.toISOString(),
       }));
     } catch (error) {
-      console.error('Error getting seller activities:', error);
+      safeLogger.error('Error getting seller activities:', error);
       throw error;
     }
   }
@@ -884,7 +885,7 @@ class SellerService {
         isActive: badge.isActive,
       }));
     } catch (error) {
-      console.error('Error getting seller badges:', error);
+      safeLogger.error('Error getting seller badges:', error);
       throw error;
     }
   }
@@ -910,7 +911,7 @@ class SellerService {
         .limit(1);
 
       if (existingBadge.length > 0) {
-        console.log(`Badge ${badgeType} already exists for seller ${walletAddress}`);
+        safeLogger.info(`Badge ${badgeType} already exists for seller ${walletAddress}`);
         return;
       }
 
@@ -936,7 +937,7 @@ class SellerService {
       });
 
     } catch (error) {
-      console.error('Error awarding seller badge:', error);
+      safeLogger.error('Error awarding seller badge:', error);
       throw error;
     }
   }
@@ -946,7 +947,7 @@ class SellerService {
     try {
       return await transactionService.getTransactionHistory(walletAddress, limit);
     } catch (error) {
-      console.error('Error getting seller transaction history:', error);
+      safeLogger.error('Error getting seller transaction history:', error);
       throw error;
     }
   }
@@ -955,7 +956,7 @@ class SellerService {
     try {
       return await transactionService.getTransactionSummary(walletAddress, days);
     } catch (error) {
-      console.error('Error getting seller transaction summary:', error);
+      safeLogger.error('Error getting seller transaction summary:', error);
       throw error;
     }
   }
@@ -1013,7 +1014,7 @@ class SellerService {
         };
       });
     } catch (error) {
-      console.error('Error getting seller orders:', error);
+      safeLogger.error('Error getting seller orders:', error);
       throw error;
     }
   }
@@ -1053,7 +1054,7 @@ class SellerService {
         recentOrders: orders.slice(0, 10),
       };
     } catch (error) {
-      console.error('Error getting seller dashboard data:', error);
+      safeLogger.error('Error getting seller dashboard data:', error);
       throw error;
     }
   }

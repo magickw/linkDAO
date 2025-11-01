@@ -196,7 +196,7 @@ export const validateSecurityConfig = (): void => {
     throw new Error('MASTER_ENCRYPTION_KEY must be at least 64 characters (32 bytes hex)');
   }
 
-  console.log('Security configuration validated successfully');
+  safeLogger.info('Security configuration validated successfully');
 };
 
 export default securityConfig;

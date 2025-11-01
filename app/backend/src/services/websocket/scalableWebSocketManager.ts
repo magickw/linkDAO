@@ -1,4 +1,5 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { safeLogger } from '../utils/safeLogger';
 import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import http from 'http';
@@ -90,7 +91,7 @@ export class ScalableWebSocketManager {
     // Set up Socket.IO event handlers
     this.setupSocketHandlers();
 
-    console.log('Scalable WebSocket Manager initialized with Redis adapter');
+    safeLogger.info('Scalable WebSocket Manager initialized with Redis adapter');
   }
 
   /**
@@ -99,9 +100,9 @@ export class ScalableWebSocketManager {
   private setupRedisPubSub() {
     this.subClient.subscribe(REDIS_PUBLISH_CHANNEL, (err) => {
       if (err) {
-        console.error('Failed to subscribe to Redis channel:', err);
+        safeLogger.error('Failed to subscribe to Redis channel:', err);
       } else {
-        console.log(`Subscribed to Redis channel: ${REDIS_PUBLISH_CHANNEL}`);
+        safeLogger.info(`Subscribed to Redis channel: ${REDIS_PUBLISH_CHANNEL}`);
       }
     });
 
@@ -111,7 +112,7 @@ export class ScalableWebSocketManager {
           const broadcast: BroadcastMessage = JSON.parse(message);
           this.handleBroadcastMessage(broadcast);
         } catch (error) {
-          console.error('Error parsing broadcast message:', error);
+          safeLogger.error('Error parsing broadcast message:', error);
         }
       }
     });
@@ -145,7 +146,7 @@ export class ScalableWebSocketManager {
     });
 
     this.io.on('error', (error) => {
-      console.error('Socket.IO error:', error);
+      safeLogger.error('Socket.IO error:', error);
       this.metrics.errors++;
     });
   }
@@ -170,7 +171,7 @@ export class ScalableWebSocketManager {
       this.metrics.connectionsByRole[adminUser.role] = 
         (this.metrics.connectionsByRole[adminUser.role] || 0) + 1;
 
-      console.log(`Admin connected: ${adminUser.email} (${adminUser.role})`);
+      safeLogger.info(`Admin connected: ${adminUser.email} (${adminUser.role})`);
 
       // Join role-based room
       socket.join(`role:${adminUser.role}`);
@@ -194,7 +195,7 @@ export class ScalableWebSocketManager {
       });
 
     } catch (error) {
-      console.error('Connection handling error:', error);
+      safeLogger.error('Connection handling error:', error);
       this.metrics.errors++;
       socket.disconnect();
     }
@@ -222,7 +223,7 @@ export class ScalableWebSocketManager {
 
       return adminUser;
     } catch (error) {
-      console.error('Socket authentication error:', error);
+      safeLogger.error('Socket authentication error:', error);
       return null;
     }
   }
@@ -265,7 +266,7 @@ export class ScalableWebSocketManager {
    * Handle admin actions via WebSocket
    */
   private handleAdminAction(socket: Socket, adminUser: AdminUser, data: any) {
-    console.log(`Admin action from ${adminUser.email}:`, data.action);
+    safeLogger.info(`Admin action from ${adminUser.email}:`, data.action);
     
     // Emit confirmation
     socket.emit('action:acknowledged', {
@@ -285,7 +286,7 @@ export class ScalableWebSocketManager {
    * Handle client disconnection
    */
   private handleDisconnection(socket: Socket, adminUser: AdminUser) {
-    console.log(`Admin disconnected: ${adminUser.email}`);
+    safeLogger.info(`Admin disconnected: ${adminUser.email}`);
     
     this.connectedClients.delete(socket.id);
     this.metrics.totalConnections--;
@@ -323,7 +324,7 @@ export class ScalableWebSocketManager {
 
       this.metrics.messagesSent++;
     } catch (error) {
-      console.error('Broadcast error:', error);
+      safeLogger.error('Broadcast error:', error);
       this.metrics.errors++;
       throw error;
     }
@@ -381,7 +382,7 @@ export class ScalableWebSocketManager {
    * Graceful shutdown
    */
   async shutdown(): Promise<void> {
-    console.log('Shutting down WebSocket manager...');
+    safeLogger.info('Shutting down WebSocket manager...');
     
     // Disconnect all clients
     this.io.disconnectSockets();
@@ -393,7 +394,7 @@ export class ScalableWebSocketManager {
     // Close Socket.IO server
     this.io.close();
     
-    console.log('WebSocket manager shut down successfully');
+    safeLogger.info('WebSocket manager shut down successfully');
   }
 }
 

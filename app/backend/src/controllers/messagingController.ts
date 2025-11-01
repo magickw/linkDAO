@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { messagingService } from '../services/messagingService';
 import { apiResponse } from '../utils/apiResponse';
 
@@ -27,7 +29,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(conversations, 'Conversations retrieved successfully'));
     } catch (error) {
-      console.error('Error getting conversations:', error);
+      safeLogger.error('Error getting conversations:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve conversations'));
     }
   }
@@ -63,7 +65,7 @@ export class MessagingController {
 
       res.status(201).json(apiResponse.success(conversation.data, 'Conversation started successfully'));
     } catch (error) {
-      console.error('Error starting conversation:', error);
+      safeLogger.error('Error starting conversation:', error);
       res.status(500).json(apiResponse.error('Failed to start conversation'));
     }
   }
@@ -91,7 +93,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(conversation, 'Conversation details retrieved successfully'));
     } catch (error) {
-      console.error('Error getting conversation details:', error);
+      safeLogger.error('Error getting conversation details:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve conversation details'));
     }
   }
@@ -129,7 +131,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(messages.data, 'Messages retrieved successfully'));
     } catch (error) {
-      console.error('Error getting conversation messages:', error);
+      safeLogger.error('Error getting conversation messages:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve messages'));
     }
   }
@@ -181,7 +183,7 @@ export class MessagingController {
 
       res.status(201).json(apiResponse.success(message.data, 'Message sent successfully'));
     } catch (error) {
-      console.error('Error sending message:', error);
+      safeLogger.error('Error sending message:', error);
       res.status(500).json(apiResponse.error('Failed to send message'));
     }
   }
@@ -209,7 +211,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Conversation marked as read'));
     } catch (error) {
-      console.error('Error marking conversation as read:', error);
+      safeLogger.error('Error marking conversation as read:', error);
       res.status(500).json(apiResponse.error('Failed to mark conversation as read'));
     }
   }
@@ -237,7 +239,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Conversation deleted successfully'));
     } catch (error) {
-      console.error('Error deleting conversation:', error);
+      safeLogger.error('Error deleting conversation:', error);
       res.status(500).json(apiResponse.error('Failed to delete conversation'));
     }
   }
@@ -265,7 +267,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Conversation archived successfully'));
     } catch (error) {
-      console.error('Error archiving conversation:', error);
+      safeLogger.error('Error archiving conversation:', error);
       res.status(500).json(apiResponse.error('Failed to archive conversation'));
     }
   }
@@ -293,7 +295,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Conversation unarchived successfully'));
     } catch (error) {
-      console.error('Error unarchiving conversation:', error);
+      safeLogger.error('Error unarchiving conversation:', error);
       res.status(500).json(apiResponse.error('Failed to unarchive conversation'));
     }
   }
@@ -324,7 +326,7 @@ export class MessagingController {
 
       res.json(apiResponse.success((encryptedMessage as any).data, 'Message encrypted successfully'));
     } catch (error) {
-      console.error('Error encrypting message:', error);
+      safeLogger.error('Error encrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to encrypt message'));
     }
   }
@@ -355,7 +357,7 @@ export class MessagingController {
 
       res.json(apiResponse.success((decryptedMessage as any).data, 'Message decrypted successfully'));
     } catch (error) {
-      console.error('Error decrypting message:', error);
+      safeLogger.error('Error decrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to decrypt message'));
     }
   }
@@ -385,7 +387,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(result.data, 'Message status updated successfully'));
     } catch (error) {
-      console.error('Error updating message status:', error);
+      safeLogger.error('Error updating message status:', error);
       res.status(500).json(apiResponse.error('Failed to update message status'));
     }
   }
@@ -413,7 +415,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Message deleted successfully'));
     } catch (error) {
-      console.error('Error deleting message:', error);
+      safeLogger.error('Error deleting message:', error);
       res.status(500).json(apiResponse.error('Failed to delete message'));
     }
   }
@@ -444,7 +446,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(searchResults, 'Message search completed successfully'));
     } catch (error) {
-      console.error('Error searching messages:', error);
+      safeLogger.error('Error searching messages:', error);
       res.status(500).json(apiResponse.error('Failed to search messages'));
     }
   }
@@ -472,7 +474,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(thread.data, 'Message thread retrieved successfully'));
     } catch (error) {
-      console.error('Error getting message thread:', error);
+      safeLogger.error('Error getting message thread:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve message thread'));
     }
   }
@@ -501,7 +503,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'User blocked successfully'));
     } catch (error) {
-      console.error('Error blocking user:', error);
+      safeLogger.error('Error blocking user:', error);
       res.status(500).json(apiResponse.error('Failed to block user'));
     }
   }
@@ -529,7 +531,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'User unblocked successfully'));
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      safeLogger.error('Error unblocking user:', error);
       res.status(500).json(apiResponse.error('Failed to unblock user'));
     }
   }
@@ -547,7 +549,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(blockedUsers, 'Blocked users retrieved successfully'));
     } catch (error) {
-      console.error('Error getting blocked users:', error);
+      safeLogger.error('Error getting blocked users:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve blocked users'));
     }
   }
@@ -578,7 +580,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Content reported successfully'));
     } catch (error) {
-      console.error('Error reporting content:', error);
+      safeLogger.error('Error reporting content:', error);
       res.status(500).json(apiResponse.error('Failed to report content'));
     }
   }
@@ -606,7 +608,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(participants.data, 'Participants retrieved successfully'));
     } catch (error) {
-      console.error('Error getting conversation participants:', error);
+      safeLogger.error('Error getting conversation participants:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve participants'));
     }
   }
@@ -636,7 +638,7 @@ export class MessagingController {
 
       res.json(apiResponse.success((result as any).data, 'Participant added successfully'));
     } catch (error) {
-      console.error('Error adding participant:', error);
+      safeLogger.error('Error adding participant:', error);
       res.status(500).json(apiResponse.error('Failed to add participant'));
     }
   }
@@ -665,7 +667,7 @@ export class MessagingController {
 
       res.json(apiResponse.success(null, 'Participant removed successfully'));
     } catch (error) {
-      console.error('Error removing participant:', error);
+      safeLogger.error('Error removing participant:', error);
       res.status(500).json(apiResponse.error('Failed to remove participant'));
     }
   }

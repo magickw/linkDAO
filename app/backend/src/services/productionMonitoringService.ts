@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { performance } from 'perf_hooks';
 
 interface MonitoringMetrics {
@@ -64,11 +65,11 @@ class ProductionMonitoringService extends EventEmitter {
    */
   startMonitoring(intervalMs: number = 30000): void {
     if (this.isMonitoring) {
-      console.warn('Monitoring is already running');
+      safeLogger.warn('Monitoring is already running');
       return;
     }
 
-    console.log('🔍 Starting production monitoring...');
+    safeLogger.info('🔍 Starting production monitoring...');
     this.isMonitoring = true;
 
     this.monitoringInterval = setInterval(async () => {
@@ -77,7 +78,7 @@ class ProductionMonitoringService extends EventEmitter {
         await this.checkAlerts();
         await this.runHealthChecks();
       } catch (error) {
-        console.error('Error during monitoring cycle:', error);
+        safeLogger.error('Error during monitoring cycle:', error);
         this.emit('monitoring-error', error);
       }
     }, intervalMs);
@@ -93,7 +94,7 @@ class ProductionMonitoringService extends EventEmitter {
       return;
     }
 
-    console.log('🛑 Stopping production monitoring...');
+    safeLogger.info('🛑 Stopping production monitoring...');
     
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
@@ -133,7 +134,7 @@ class ProductionMonitoringService extends EventEmitter {
       this.emit('metrics-collected', metrics);
 
     } catch (error) {
-      console.error('Error collecting metrics:', error);
+      safeLogger.error('Error collecting metrics:', error);
       throw error;
     }
   }
@@ -192,7 +193,7 @@ class ProductionMonitoringService extends EventEmitter {
       this.alerts = this.alerts.slice(-100);
     }
 
-    console.warn(`🚨 Alert triggered: ${alert.message} (Severity: ${alert.severity})`);
+    safeLogger.warn(`🚨 Alert triggered: ${alert.message} (Severity: ${alert.severity})`);
     this.emit('alert-triggered', alert);
 
     // Send notifications based on severity
@@ -208,18 +209,18 @@ class ProductionMonitoringService extends EventEmitter {
       // like Slack, PagerDuty, email, etc.
       
       if (alert.severity === 'critical') {
-        console.error(`🚨 CRITICAL ALERT: ${alert.message}`);
+        safeLogger.error(`🚨 CRITICAL ALERT: ${alert.message}`);
         // Send immediate notification to on-call team
       } else if (alert.severity === 'high') {
-        console.warn(`⚠️  HIGH ALERT: ${alert.message}`);
+        safeLogger.warn(`⚠️  HIGH ALERT: ${alert.message}`);
         // Send notification to team channel
       } else {
-        console.log(`ℹ️  Alert: ${alert.message}`);
+        safeLogger.info(`ℹ️  Alert: ${alert.message}`);
         // Log to monitoring dashboard
       }
 
     } catch (error) {
-      console.error('Error sending alert notification:', error);
+      safeLogger.error('Error sending alert notification:', error);
     }
   }
 
@@ -235,7 +236,7 @@ class ProductionMonitoringService extends EventEmitter {
         healthResults.push(result);
 
         if (result.status === 'unhealthy') {
-          console.error(`❌ Health check failed for ${serviceName}: ${result.details?.error}`);
+          safeLogger.error(`❌ Health check failed for ${serviceName}: ${result.details?.error}`);
           this.emit('health-check-failed', result);
         }
 
@@ -248,7 +249,7 @@ class ProductionMonitoringService extends EventEmitter {
         };
 
         healthResults.push(result);
-        console.error(`❌ Health check error for ${serviceName}:`, error);
+        safeLogger.error(`❌ Health check error for ${serviceName}:`, error);
         this.emit('health-check-failed', result);
       }
     }

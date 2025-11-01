@@ -1,4 +1,5 @@
 import { Redis, Cluster } from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 import { LRUCache } from 'lru-cache';
 import { performance } from 'perf_hooks';
 
@@ -78,15 +79,15 @@ export class CachingStrategiesService {
 
   private setupEventHandlers(): void {
     this.redis.on('error', (error) => {
-      console.error('Redis error:', error);
+      safeLogger.error('Redis error:', error);
     });
 
     this.redis.on('connect', () => {
-      console.log('Redis connected');
+      safeLogger.info('Redis connected');
     });
 
     this.redis.on('ready', () => {
-      console.log('Redis ready');
+      safeLogger.info('Redis ready');
     });
   }
 
@@ -126,7 +127,7 @@ export class CachingStrategiesService {
     } finally {
       const duration = performance.now() - startTime;
       if (duration > 100) { // Log slow cache operations
-        console.warn(`Slow cache operation for key ${key}: ${duration.toFixed(2)}ms`);
+        safeLogger.warn(`Slow cache operation for key ${key}: ${duration.toFixed(2)}ms`);
       }
     }
   }
@@ -142,7 +143,7 @@ export class CachingStrategiesService {
       
       this.stats.sets++;
     } catch (error) {
-      console.error('Error setting cache:', error);
+      safeLogger.error('Error setting cache:', error);
       throw error;
     }
   }
@@ -154,7 +155,7 @@ export class CachingStrategiesService {
       await this.redis.del(key);
       this.stats.deletes++;
     } catch (error) {
-      console.error('Error deleting from cache:', error);
+      safeLogger.error('Error deleting from cache:', error);
       throw error;
     }
   }
@@ -194,7 +195,7 @@ export class CachingStrategiesService {
           }
         });
       } catch (error) {
-        console.error('Error in mget:', error);
+        safeLogger.error('Error in mget:', error);
         redisKeys.forEach(() => this.stats.misses++);
       }
     }
@@ -218,7 +219,7 @@ export class CachingStrategiesService {
       await pipeline.exec();
       this.stats.sets += entries.length;
     } catch (error) {
-      console.error('Error in mset:', error);
+      safeLogger.error('Error in mset:', error);
       throw error;
     }
   }
@@ -239,7 +240,7 @@ export class CachingStrategiesService {
       // Then update cache
       await this.set(key, data, ttl);
     } catch (error) {
-      console.error('Write-through cache error:', error);
+      safeLogger.error('Write-through cache error:', error);
       throw error;
     }
   }
@@ -260,12 +261,12 @@ export class CachingStrategiesService {
         try {
           await persistFunction(data);
         } catch (error) {
-          console.error('Write-behind persist error:', error);
+          safeLogger.error('Write-behind persist error:', error);
           // Could implement retry logic here
         }
       });
     } catch (error) {
-      console.error('Write-behind cache error:', error);
+      safeLogger.error('Write-behind cache error:', error);
       throw error;
     }
   }
@@ -293,7 +294,7 @@ export class CachingStrategiesService {
               const fresh = await loadFunction();
               await this.set(key, fresh, ttl);
             } catch (error) {
-              console.error('Background refresh error:', error);
+              safeLogger.error('Background refresh error:', error);
             }
           });
         }
@@ -326,7 +327,7 @@ export class CachingStrategiesService {
       this.stats.deletes += deleted;
       return deleted;
     } catch (error) {
-      console.error('Error invalidating pattern:', error);
+      safeLogger.error('Error invalidating pattern:', error);
       throw error;
     }
   }
@@ -340,7 +341,7 @@ export class CachingStrategiesService {
         const data = await loader();
         await this.set(key, data, ttl);
       } catch (error) {
-        console.error(`Error warming cache for key ${key}:`, error);
+        safeLogger.error(`Error warming cache for key ${key}:`, error);
       }
     });
 
@@ -372,7 +373,7 @@ export class CachingStrategiesService {
       const result = await this.redis.get(key);
       return result ? JSON.parse(result) : null;
     } catch (error) {
-      console.error('Redis get error:', error);
+      safeLogger.error('Redis get error:', error);
       return null;
     }
   }
@@ -381,7 +382,7 @@ export class CachingStrategiesService {
     try {
       await this.redis.setex(key, ttl, JSON.stringify(data));
     } catch (error) {
-      console.error('Redis set error:', error);
+      safeLogger.error('Redis set error:', error);
       throw error;
     }
   }
@@ -399,7 +400,7 @@ export class CachingStrategiesService {
       const info = await this.redis.info();
       return this.parseRedisInfo(info);
     } catch (error) {
-      console.error('Error getting Redis info:', error);
+      safeLogger.error('Error getting Redis info:', error);
       return null;
     }
   }

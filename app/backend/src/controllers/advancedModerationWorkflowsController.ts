@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import { advancedModerationWorkflowsService } from '../services/advancedModerationWorkflowsService';
 import { z } from 'zod';
 
@@ -73,7 +75,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error retrieving workflows:', error);
+      safeLogger.error('Error retrieving workflows:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving workflows'
@@ -113,7 +115,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error retrieving workflow:', error);
+      safeLogger.error('Error retrieving workflow:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving workflow'
@@ -138,7 +140,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error creating workflow:', error);
+      safeLogger.error('Error creating workflow:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -191,7 +193,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error updating workflow:', error);
+      safeLogger.error('Error updating workflow:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -241,7 +243,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error deleting workflow:', error);
+      safeLogger.error('Error deleting workflow:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error deleting workflow'
@@ -263,7 +265,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error retrieving rules:', error);
+      safeLogger.error('Error retrieving rules:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving rules'
@@ -303,7 +305,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error retrieving rule:', error);
+      safeLogger.error('Error retrieving rule:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving rule'
@@ -328,7 +330,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error creating rule:', error);
+      safeLogger.error('Error creating rule:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -381,7 +383,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error updating rule:', error);
+      safeLogger.error('Error updating rule:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -431,7 +433,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error deleting rule:', error);
+      safeLogger.error('Error deleting rule:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error deleting rule'
@@ -455,7 +457,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error processing content:', error);
+      safeLogger.error('Error processing content:', error);
       
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -491,7 +493,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error retrieving statistics:', error);
+      safeLogger.error('Error retrieving statistics:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error retrieving statistics'
@@ -521,7 +523,7 @@ export class AdvancedModerationWorkflowsController {
       });
 
     } catch (error) {
-      console.error('Error in health check:', error);
+      safeLogger.error('Error in health check:', error);
       res.status(503).json({
         success: false,
         error: 'Service unhealthy',

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface GoogleSafeBrowsingResult {
   status: 'safe' | 'malicious' | 'suspicious' | 'error';
@@ -33,7 +34,7 @@ export class GoogleSafeBrowsingService {
   constructor() {
     this.apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('Google Safe Browsing API key not configured');
+      safeLogger.warn('Google Safe Browsing API key not configured');
     }
   }
 
@@ -78,7 +79,7 @@ export class GoogleSafeBrowsingService {
         analysisTimeMs,
       };
     } catch (error) {
-      console.error('Google Safe Browsing API error:', error);
+      safeLogger.error('Google Safe Browsing API error:', error);
       return {
         status: 'error',
         threatTypes: [],
@@ -163,7 +164,7 @@ export class GoogleSafeBrowsingService {
         };
       });
     } catch (error) {
-      console.error('Google Safe Browsing batch API error:', error);
+      safeLogger.error('Google Safe Browsing batch API error:', error);
       return urls.map(() => ({
         status: 'error' as const,
         threatTypes: [],

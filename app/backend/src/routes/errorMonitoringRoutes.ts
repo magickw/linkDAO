@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { ErrorMonitoringController } from '../controllers/errorMonitoringController';
 
 const router = Router();
@@ -19,7 +20,7 @@ router.get('/health', ErrorMonitoringController.getHealthStatus);
 router.get('/:errorId', ErrorMonitoringController.getErrorDetails);
 
 // Resolve an error
-router.patch('/:errorId/resolve', ErrorMonitoringController.resolveError);
+router.patch('/:errorId/resolve', csrfProtection,  ErrorMonitoringController.resolveError);
 
 // Export error logs
 router.get('/export/logs', ErrorMonitoringController.exportLogs);

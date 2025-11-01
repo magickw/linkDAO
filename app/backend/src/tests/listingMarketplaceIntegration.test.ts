@@ -1,5 +1,4 @@
 import { MarketplaceService } from '../../../frontend/src/services';
-import { MarketplaceService } from '../../../frontend/src/services';
 import { ProductListingService, CreateListingInput } from '../services/listingService';
 import { BlockchainMarketplaceService } from '../services/marketplaceService';
 import { ProductService } from '../services/productService';

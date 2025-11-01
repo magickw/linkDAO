@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
@@ -278,7 +279,7 @@ export const validateContent = async (
     next();
 
   } catch (error) {
-    console.error('Content validation error:', error);
+    safeLogger.error('Content validation error:', error);
     res.status(500).json({
       error: 'Content validation failed',
       code: 'VALIDATION_ERROR',

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { dataOperationMonitoringService } from '../services/dataOperationMonitoringService';
 import { monitoringDashboardService } from '../services/monitoringDashboardService';
 import { performanceMonitoringService } from '../services/performanceMonitoringService';
@@ -155,7 +156,7 @@ router.get('/alerts', async (req: Request, res: Response) => {
 });
 
 // Resolve alert
-router.post('/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+router.post('/alerts/:alertId/resolve', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
     const resolved = dataOperationMonitoringService.resolveAlert(alertId);
@@ -401,7 +402,7 @@ router.get('/alerting', async (req: Request, res: Response) => {
 });
 
 // Acknowledge alert
-router.post('/alerting/alerts/:alertId/acknowledge', async (req: Request, res: Response) => {
+router.post('/alerting/alerts/:alertId/acknowledge', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
     const { acknowledgedBy } = req.body;
@@ -437,7 +438,7 @@ router.post('/alerting/alerts/:alertId/acknowledge', async (req: Request, res: R
 });
 
 // Resolve alerting alert
-router.post('/alerting/alerts/:alertId/resolve', async (req: Request, res: Response) => {
+router.post('/alerting/alerts/:alertId/resolve', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { alertId } = req.params;
     const resolved = await dataIssueAlertingService.resolveAlert(alertId);
@@ -492,7 +493,7 @@ router.get('/ux', async (req: Request, res: Response) => {
 });
 
 // Record UX metrics (for frontend to report)
-router.post('/ux/page-load', async (req: Request, res: Response) => {
+router.post('/ux/page-load', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const {
       sessionId,
@@ -539,7 +540,7 @@ router.post('/ux/page-load', async (req: Request, res: Response) => {
 });
 
 // Record UX interaction
-router.post('/ux/interaction', async (req: Request, res: Response) => {
+router.post('/ux/interaction', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { sessionId, type, element, page, metadata } = req.body;
 
@@ -572,7 +573,7 @@ router.post('/ux/interaction', async (req: Request, res: Response) => {
 });
 
 // Record UX error
-router.post('/ux/error', async (req: Request, res: Response) => {
+router.post('/ux/error', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { sessionId, type, message, stack, page, severity } = req.body;
 
@@ -606,7 +607,7 @@ router.post('/ux/error', async (req: Request, res: Response) => {
 });
 
 // Start UX session
-router.post('/ux/session/start', async (req: Request, res: Response) => {
+router.post('/ux/session/start', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { sessionId, userAgent, userId } = req.body;
 
@@ -634,7 +635,7 @@ router.post('/ux/session/start', async (req: Request, res: Response) => {
 });
 
 // End UX session
-router.post('/ux/session/end', async (req: Request, res: Response) => {
+router.post('/ux/session/end', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.body;
 
@@ -662,7 +663,7 @@ router.post('/ux/session/end', async (req: Request, res: Response) => {
 });
 
 // Reset metrics (for testing/maintenance)
-router.post('/reset', async (req: Request, res: Response) => {
+router.post('/reset', csrfProtection,  async (req: Request, res: Response) => {
   try {
     // Only allow in development or with proper authorization
     if (process.env.NODE_ENV === 'production' && !req.headers.authorization) {

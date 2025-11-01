@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { safeLogger } from '../utils/safeLogger';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import dotenv from "dotenv";
@@ -28,7 +29,7 @@ async function testDatabaseConnection(connectionString: string): Promise<void> {
   
   try {
     await client`SELECT 1`;
-    console.log("✓ Database connection successful");
+    safeLogger.info("✓ Database connection successful");
   } catch (error) {
     throw new Error(`Database connection failed: ${error}`);
   } finally {
@@ -48,10 +49,10 @@ async function backupDatabase(connectionString: string): Promise<void> {
       WHERE table_schema = 'public'
     `;
     
-    console.log(`✓ Database backup preparation completed. Found ${tables.length} tables`);
-    console.log(`  Backup timestamp: ${timestamp}`);
+    safeLogger.info(`✓ Database backup preparation completed. Found ${tables.length} tables`);
+    safeLogger.info(`  Backup timestamp: ${timestamp}`);
   } catch (error) {
-    console.warn(`⚠ Backup preparation failed: ${error}`);
+    safeLogger.warn(`⚠ Backup preparation failed: ${error}`);
   } finally {
     await client.end();
   }
@@ -88,27 +89,27 @@ async function runProductionMigrations(): Promise<MigrationStatus> {
   };
 
   try {
-    console.log("🚀 Starting production database migrations...");
+    safeLogger.info("🚀 Starting production database migrations...");
     
     // Get list of migration files for logging
     const migrationFiles = await getMigrationFiles();
-    console.log(`📋 Found ${migrationFiles.length} migration files`);
+    safeLogger.info(`📋 Found ${migrationFiles.length} migration files`);
     
     // Run migrations with error handling
     await migrate(db, { migrationsFolder: "./drizzle" });
     
     status.success = true;
     status.appliedMigrations = migrationFiles;
-    console.log("✅ All migrations completed successfully!");
+    safeLogger.info("✅ All migrations completed successfully!");
     
   } catch (error) {
     status.success = false;
     status.errors.push(error instanceof Error ? error.message : String(error));
-    console.error("❌ Migration failed:", error);
+    safeLogger.error("❌ Migration failed:", error);
     
     // Try to get more specific error information
     if (error instanceof Error && error.message.includes('relation')) {
-      console.error("💡 This might be a schema-related error. Check table dependencies.");
+      safeLogger.error("💡 This might be a schema-related error. Check table dependencies.");
     }
   } finally {
     await client.end();
@@ -143,7 +144,7 @@ async function verifyMigrationSuccess(connectionString: string): Promise<void> {
       }
     }
     
-    console.log("✓ Migration verification completed - all critical tables present");
+    safeLogger.info("✓ Migration verification completed - all critical tables present");
     
   } catch (error) {
     throw new Error(`Migration verification failed: ${error}`);
@@ -153,53 +154,53 @@ async function verifyMigrationSuccess(connectionString: string): Promise<void> {
 }
 
 async function main() {
-  console.log("🏭 Production Database Migration Script");
-  console.log("=====================================");
+  safeLogger.info("🏭 Production Database Migration Script");
+  safeLogger.info("=====================================");
   
   try {
     // Step 1: Validate environment
-    console.log("1️⃣ Validating environment...");
+    safeLogger.info("1️⃣ Validating environment...");
     await validateEnvironment();
     
     // Step 2: Test database connection
-    console.log("2️⃣ Testing database connection...");
+    safeLogger.info("2️⃣ Testing database connection...");
     await testDatabaseConnection(process.env.DATABASE_URL!);
     
     // Step 3: Backup preparation
-    console.log("3️⃣ Preparing database backup...");
+    safeLogger.info("3️⃣ Preparing database backup...");
     await backupDatabase(process.env.DATABASE_URL!);
     
     // Step 4: Run migrations
-    console.log("4️⃣ Running migrations...");
+    safeLogger.info("4️⃣ Running migrations...");
     const migrationStatus = await runProductionMigrations();
     
     if (!migrationStatus.success) {
-      console.error("❌ Migration failed!");
-      console.error("Errors:", migrationStatus.errors);
+      safeLogger.error("❌ Migration failed!");
+      safeLogger.error("Errors:", migrationStatus.errors);
       process.exit(1);
     }
     
     // Step 5: Verify migration success
-    console.log("5️⃣ Verifying migration success...");
+    safeLogger.info("5️⃣ Verifying migration success...");
     await verifyMigrationSuccess(process.env.DATABASE_URL!);
     
-    console.log("🎉 Production migration completed successfully!");
-    console.log(`📊 Applied ${migrationStatus.appliedMigrations.length} migrations`);
+    safeLogger.info("🎉 Production migration completed successfully!");
+    safeLogger.info(`📊 Applied ${migrationStatus.appliedMigrations.length} migrations`);
     
   } catch (error) {
-    console.error("💥 Production migration failed:", error);
+    safeLogger.error("💥 Production migration failed:", error);
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n⚠ Migration interrupted by user');
+  safeLogger.info('\n⚠ Migration interrupted by user');
   process.exit(1);
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n⚠ Migration terminated');
+  safeLogger.info('\n⚠ Migration terminated');
   process.exit(1);
 });
 

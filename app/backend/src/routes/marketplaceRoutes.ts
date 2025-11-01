@@ -1,4 +1,5 @@
 import express from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { marketplaceController } from '../controllers/marketplaceController';
 import { validateRequest } from '../middleware/validation';
 
@@ -80,7 +81,7 @@ router.get('/test', (req, res) => {
 });
 
 // POST /api/marketplace/test/create - Create a test product
-router.post('/test/create', async (req, res) => {
+router.post('/test/create', csrfProtection,  async (req, res) => {
   try {
     // This is a simplified test endpoint to create a product
     res.json({

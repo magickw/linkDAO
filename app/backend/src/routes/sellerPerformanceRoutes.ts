@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerPerformanceMonitoringService } from '../services/sellerPerformanceMonitoringService';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
@@ -101,7 +103,7 @@ router.post(
         }
       });
     } catch (error) {
-      console.error('Error storing performance metrics:', error);
+      safeLogger.error('Error storing performance metrics:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to store performance metrics',
@@ -129,7 +131,7 @@ router.get(
         data: dashboardData
       });
     } catch (error) {
-      console.error('Error getting performance dashboard:', error);
+      safeLogger.error('Error getting performance dashboard:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance dashboard',
@@ -162,7 +164,7 @@ router.post(
         data: testResult
       });
     } catch (error) {
-      console.error('Error running performance regression test:', error);
+      safeLogger.error('Error running performance regression test:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to run performance regression test',
@@ -194,7 +196,7 @@ router.get(
         data: alerts
       });
     } catch (error) {
-      console.error('Error getting performance alerts:', error);
+      safeLogger.error('Error getting performance alerts:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance alerts',
@@ -227,7 +229,7 @@ router.post(
         data: alert
       });
     } catch (error) {
-      console.error('Error creating performance alert:', error);
+      safeLogger.error('Error creating performance alert:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create performance alert',
@@ -255,7 +257,7 @@ router.put(
         message: 'Performance alert resolved successfully'
       });
     } catch (error) {
-      console.error('Error resolving performance alert:', error);
+      safeLogger.error('Error resolving performance alert:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to resolve performance alert',
@@ -283,7 +285,7 @@ router.get(
         data: recommendations
       });
     } catch (error) {
-      console.error('Error getting performance recommendations:', error);
+      safeLogger.error('Error getting performance recommendations:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance recommendations',
@@ -317,7 +319,7 @@ router.get(
         data: trends
       });
     } catch (error) {
-      console.error('Error getting performance trends:', error);
+      safeLogger.error('Error getting performance trends:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve performance trends',

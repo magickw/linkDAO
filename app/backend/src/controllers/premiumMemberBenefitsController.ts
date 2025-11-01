@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+import { safeLogger } from '../utils/safeLogger';
 import PremiumMemberBenefitsService from '../services/premiumMemberBenefitsService';
 
 const premiumBenefitsService = new PremiumMemberBenefitsService();
@@ -24,7 +26,7 @@ export const checkPremiumMembershipStatus = async (req: Request, res: Response) 
       data: status
     });
   } catch (error) {
-    console.error('Error checking premium membership status:', error);
+    safeLogger.error('Error checking premium membership status:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to check premium membership status'
@@ -53,7 +55,7 @@ export const getExclusiveStakingPools = async (req: Request, res: Response) => {
       data: pools
     });
   } catch (error) {
-    console.error('Error fetching exclusive staking pools:', error);
+    safeLogger.error('Error fetching exclusive staking pools:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch exclusive staking pools'
@@ -86,7 +88,7 @@ export const calculatePremiumPenaltyDiscount = async (req: Request, res: Respons
       data: discount
     });
   } catch (error) {
-    console.error('Error calculating premium penalty discount:', error);
+    safeLogger.error('Error calculating premium penalty discount:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to calculate penalty discount'
@@ -122,7 +124,7 @@ export const getPremiumAnalytics = async (req: Request, res: Response) => {
       data: analytics
     });
   } catch (error) {
-    console.error('Error fetching premium analytics:', error);
+    safeLogger.error('Error fetching premium analytics:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch premium analytics'
@@ -172,7 +174,7 @@ export const createCustomStakingOption = async (req: Request, res: Response) => 
       data: result
     });
   } catch (error) {
-    console.error('Error creating custom staking option:', error);
+    safeLogger.error('Error creating custom staking option:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to create custom staking option'
@@ -201,7 +203,7 @@ export const getPremiumStakingEvents = async (req: Request, res: Response) => {
       data: events
     });
   } catch (error) {
-    console.error('Error fetching premium staking events:', error);
+    safeLogger.error('Error fetching premium staking events:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch premium staking events'
@@ -249,7 +251,7 @@ export const getPremiumMemberDashboard = async (req: Request, res: Response) => 
       data: dashboard
     });
   } catch (error) {
-    console.error('Error fetching premium member dashboard:', error);
+    safeLogger.error('Error fetching premium member dashboard:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch premium member dashboard'
@@ -314,7 +316,7 @@ export const validatePremiumAccess = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error validating premium access:', error);
+    safeLogger.error('Error validating premium access:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to validate premium access'

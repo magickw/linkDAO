@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { UserProfileService } from '../services/userProfileService';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
 import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';

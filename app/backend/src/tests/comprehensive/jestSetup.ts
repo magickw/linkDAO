@@ -5,6 +5,7 @@
  */
 
 import { expect } from '@jest/globals';
+import { safeLogger } from '../utils/safeLogger';
 
 // Custom matchers
 expect.extend({
@@ -216,9 +217,9 @@ declare global {
 const originalConsole = { ...console };
 
 if (process.env.LOG_LEVEL === 'error') {
-  console.log = () => {};
-  console.info = () => {};
-  console.warn = () => {};
+  safeLogger.info = () => {};
+  safeLogger.info = () => {};
+  safeLogger.warn = () => {};
   console.debug = () => {};
 }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { adminConfigurationService } from '../services/adminConfigurationService';
+import { safeLogger } from '../utils/safeLogger';
 import { systemStatusDashboardService } from '../services/systemStatusDashboardService';
 import { auditLogAnalysisService } from '../services/auditLogAnalysisService';
 
@@ -16,7 +17,7 @@ class AdminConfigurationValidator {
   private results: ValidationResult[] = [];
 
   async runValidation(): Promise<void> {
-    console.log('🔧 Starting Admin Configuration System Validation...\n');
+    safeLogger.info('🔧 Starting Admin Configuration System Validation...\n');
 
     await this.validatePolicyConfiguration();
     await this.validateThresholdConfiguration();
@@ -29,7 +30,7 @@ class AdminConfigurationValidator {
   }
 
   private async validatePolicyConfiguration(): Promise<void> {
-    console.log('📋 Validating Policy Configuration Management...');
+    safeLogger.info('📋 Validating Policy Configuration Management...');
 
     // Test policy creation
     await this.runTest('Policy Configuration', 'Create Policy', async () => {
@@ -89,7 +90,7 @@ class AdminConfigurationValidator {
   }
 
   private async validateThresholdConfiguration(): Promise<void> {
-    console.log('🎯 Validating Threshold Configuration Management...');
+    safeLogger.info('🎯 Validating Threshold Configuration Management...');
 
     // Test threshold creation
     await this.runTest('Threshold Configuration', 'Create Threshold', async () => {
@@ -132,7 +133,7 @@ class AdminConfigurationValidator {
   }
 
   private async validateVendorConfiguration(): Promise<void> {
-    console.log('🏭 Validating Vendor Configuration Management...');
+    safeLogger.info('🏭 Validating Vendor Configuration Management...');
 
     // Test vendor creation
     await this.runTest('Vendor Configuration', 'Create Vendor', async () => {
@@ -184,7 +185,7 @@ class AdminConfigurationValidator {
   }
 
   private async validateAlertConfiguration(): Promise<void> {
-    console.log('🚨 Validating Alert Configuration Management...');
+    safeLogger.info('🚨 Validating Alert Configuration Management...');
 
     // Test alert creation
     await this.runTest('Alert Configuration', 'Create Alert', async () => {
@@ -225,7 +226,7 @@ class AdminConfigurationValidator {
   }
 
   private async validateSystemStatusDashboard(): Promise<void> {
-    console.log('📊 Validating System Status Dashboard...');
+    safeLogger.info('📊 Validating System Status Dashboard...');
 
     // Test metrics recording
     await this.runTest('System Status Dashboard', 'Record Metrics', async () => {
@@ -283,7 +284,7 @@ class AdminConfigurationValidator {
   }
 
   private async validateAuditLogAnalysis(): Promise<void> {
-    console.log('📝 Validating Audit Log Analysis...');
+    safeLogger.info('📝 Validating Audit Log Analysis...');
 
     // Test audit log search
     await this.runTest('Audit Log Analysis', 'Search Audit Logs', async () => {
@@ -371,7 +372,7 @@ class AdminConfigurationValidator {
         duration
       });
       
-      console.log(`  ✅ ${test} (${duration}ms)`);
+      safeLogger.info(`  ✅ ${test} (${duration}ms)`);
     } catch (error) {
       const duration = Date.now() - startTime;
       
@@ -383,39 +384,39 @@ class AdminConfigurationValidator {
         duration
       });
       
-      console.log(`  ❌ ${test} (${duration}ms): ${error instanceof Error ? error.message : 'Unknown error'}`);
+      safeLogger.info(`  ❌ ${test} (${duration}ms): ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private printResults(): void {
-    console.log('\n📊 Validation Results Summary:');
-    console.log('================================');
+    safeLogger.info('\n📊 Validation Results Summary:');
+    safeLogger.info('================================');
 
     const passed = this.results.filter(r => r.status === 'PASS').length;
     const failed = this.results.filter(r => r.status === 'FAIL').length;
     const total = this.results.length;
 
-    console.log(`Total Tests: ${total}`);
-    console.log(`Passed: ${passed} ✅`);
-    console.log(`Failed: ${failed} ❌`);
-    console.log(`Success Rate: ${((passed / total) * 100).toFixed(1)}%`);
+    safeLogger.info(`Total Tests: ${total}`);
+    safeLogger.info(`Passed: ${passed} ✅`);
+    safeLogger.info(`Failed: ${failed} ❌`);
+    safeLogger.info(`Success Rate: ${((passed / total) * 100).toFixed(1)}%`);
 
     if (failed > 0) {
-      console.log('\n❌ Failed Tests:');
+      safeLogger.info('\n❌ Failed Tests:');
       this.results
         .filter(r => r.status === 'FAIL')
         .forEach(result => {
-          console.log(`  • ${result.component} - ${result.test}: ${result.message}`);
+          safeLogger.info(`  • ${result.component} - ${result.test}: ${result.message}`);
         });
     }
 
     const totalDuration = this.results.reduce((sum, r) => sum + (r.duration || 0), 0);
-    console.log(`\nTotal Duration: ${totalDuration}ms`);
+    safeLogger.info(`\nTotal Duration: ${totalDuration}ms`);
 
     if (failed === 0) {
-      console.log('\n🎉 All admin configuration tests passed!');
+      safeLogger.info('\n🎉 All admin configuration tests passed!');
     } else {
-      console.log('\n⚠️  Some tests failed. Please check the implementation.');
+      safeLogger.info('\n⚠️  Some tests failed. Please check the implementation.');
       process.exit(1);
     }
   }
@@ -425,7 +426,7 @@ class AdminConfigurationValidator {
 if (require.main === module) {
   const validator = new AdminConfigurationValidator();
   validator.runValidation().catch(error => {
-    console.error('Validation failed:', error);
+    safeLogger.error('Validation failed:', error);
     process.exit(1);
   });
 }

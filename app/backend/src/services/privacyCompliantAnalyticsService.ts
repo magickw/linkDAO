@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface UserConsent {
   userId: string;
@@ -89,7 +90,7 @@ class PrivacyCompliantAnalyticsService extends EventEmitter {
       this.emit('initialized');
       
     } catch (error) {
-      console.error('Failed to initialize privacy-compliant analytics:', error);
+      safeLogger.error('Failed to initialize privacy-compliant analytics:', error);
       throw error;
     }
   }
@@ -182,7 +183,7 @@ class PrivacyCompliantAnalyticsService extends EventEmitter {
   ): Promise<void> {
     const rule = this.dataMinimizationRules.get(eventType);
     if (!rule) {
-      console.warn(`No data minimization rule found for event type: ${eventType}`);
+      safeLogger.warn(`No data minimization rule found for event type: ${eventType}`);
       return;
     }
 

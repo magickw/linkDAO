@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 
 export interface CommunityEvent {
@@ -114,7 +115,7 @@ export class CommunityEventsService {
 
       return event;
     } catch (error) {
-      console.error('Error creating event:', error);
+      safeLogger.error('Error creating event:', error);
       throw error;
     }
   }
@@ -152,7 +153,7 @@ export class CommunityEventsService {
 
       return updated;
     } catch (error) {
-      console.error('Error updating event:', error);
+      safeLogger.error('Error updating event:', error);
       throw error;
     }
   }
@@ -179,7 +180,7 @@ export class CommunityEventsService {
 
       return event;
     } catch (error) {
-      console.error('Error publishing event:', error);
+      safeLogger.error('Error publishing event:', error);
       throw error;
     }
   }
@@ -249,7 +250,7 @@ export class CommunityEventsService {
 
       return rsvp;
     } catch (error) {
-      console.error('Error creating RSVP:', error);
+      safeLogger.error('Error creating RSVP:', error);
       throw error;
     }
   }
@@ -271,7 +272,7 @@ export class CommunityEventsService {
 
       return rsvp;
     } catch (error) {
-      console.error('Error checking in to event:', error);
+      safeLogger.error('Error checking in to event:', error);
       throw error;
     }
   }
@@ -302,7 +303,7 @@ export class CommunityEventsService {
 
       return rsvp;
     } catch (error) {
-      console.error('Error submitting feedback:', error);
+      safeLogger.error('Error submitting feedback:', error);
       throw error;
     }
   }
@@ -322,7 +323,7 @@ export class CommunityEventsService {
 
       return [];
     } catch (error) {
-      console.error('Error getting upcoming events:', error);
+      safeLogger.error('Error getting upcoming events:', error);
       return [];
     }
   }
@@ -343,7 +344,7 @@ export class CommunityEventsService {
 
       return [];
     } catch (error) {
-      console.error('Error getting user events:', error);
+      safeLogger.error('Error getting user events:', error);
       return [];
     }
   }
@@ -356,7 +357,7 @@ export class CommunityEventsService {
       // Query RSVPs for this event where status = 'going'
       return [];
     } catch (error) {
-      console.error('Error getting attendees:', error);
+      safeLogger.error('Error getting attendees:', error);
       return [];
     }
   }
@@ -375,7 +376,7 @@ export class CommunityEventsService {
       const ical = this.generateICalFormat(event);
       return ical;
     } catch (error) {
-      console.error('Error exporting to calendar:', error);
+      safeLogger.error('Error exporting to calendar:', error);
       throw error;
     }
   }
@@ -419,7 +420,7 @@ export class CommunityEventsService {
         feedbackCount: feedbacks.length,
       };
     } catch (error) {
-      console.error('Error getting event analytics:', error);
+      safeLogger.error('Error getting event analytics:', error);
       throw error;
     }
   }
@@ -457,7 +458,7 @@ export class CommunityEventsService {
         }
       }
     } catch (error) {
-      console.error('Error setting reminders:', error);
+      safeLogger.error('Error setting reminders:', error);
     }
   }
 
@@ -488,7 +489,7 @@ export class CommunityEventsService {
 
   private async notifyAttendeesOfChanges(eventId: string, event: CommunityEvent): Promise<void> {
     // Implementation for sending notifications
-    console.log(`Notifying attendees of changes to event ${eventId}`);
+    safeLogger.info(`Notifying attendees of changes to event ${eventId}`);
   }
 
   private async checkEventAccess(userAddress: string, event: CommunityEvent): Promise<boolean> {

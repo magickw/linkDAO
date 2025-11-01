@@ -6,6 +6,7 @@
  */
 
 import { Router } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { successResponse } from '../utils/apiResponse';
 import fs from 'fs';
 import path from 'path';
@@ -165,7 +166,7 @@ router.get('/', (req, res) => {
     res.setHeader('Content-Type', 'text/html');
     res.send(fullHtml);
   } catch (error) {
-    console.error('Error serving API documentation:', error);
+    safeLogger.error('Error serving API documentation:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -645,7 +646,7 @@ const profileResponse = await fetch('/api/auth/profile', {
           code: `
 const response = await fetch('/api/marketplace/listings?page=1&limit=20');
 const data = await response.json();
-console.log(data.data.listings);`
+safeLogger.info(data.data.listings);`
         },
         {
           title: 'Filter by category',

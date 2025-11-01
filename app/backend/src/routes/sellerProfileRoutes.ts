@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import { safeLogger } from '../utils/safeLogger';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { sellerProfileService } from '../services/sellerProfileService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
 import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
@@ -39,7 +41,7 @@ router.get('/seller/:walletAddress',
 
     return successResponse(res, profile, 200);
   } catch (error) {
-    console.error('Error fetching seller profile:', error);
+    safeLogger.error('Error fetching seller profile:', error);
     
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {
@@ -63,7 +65,7 @@ router.get('/seller/:walletAddress',
  * PUT /api/marketplace/seller/{walletAddress}
  * Update existing seller profile
  */
-router.put('/seller/:walletAddress',
+router.put('/seller/:walletAddress', csrfProtection, 
   rateLimitWithCache(req => `seller_profile_update:${req.ip}`, 10, 60), // 10 updates per minute
   cachingMiddleware.invalidate('sellerProfile'),
   async (req: Request, res: Response) => {
@@ -88,7 +90,7 @@ router.put('/seller/:walletAddress',
     const profile = await sellerProfileService.updateProfile(walletAddress, updates);
     return successResponse(res, profile, 200);
   } catch (error) {
-    console.error('Error updating seller profile:', error);
+    safeLogger.error('Error updating seller profile:', error);
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -116,7 +118,7 @@ router.put('/seller/:walletAddress',
  * POST /api/marketplace/seller/profile
  * Create or update seller profile
  */
-router.post('/seller/profile',
+router.post('/seller/profile', csrfProtection, 
   rateLimitWithCache(req => `seller_profile_update:${req.ip}`, 10, 60), // 10 updates per minute
   cachingMiddleware.invalidate('sellerProfile'),
   async (req: Request, res: Response) => {
@@ -173,7 +175,7 @@ router.post('/seller/profile',
 
     return successResponse(res, profile, existingProfile ? 200 : 201);
   } catch (error) {
-    console.error('Error creating/updating seller profile:', error);
+    safeLogger.error('Error creating/updating seller profile:', error);
     
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address') || error.message.includes('Invalid ENS handle')) {
@@ -225,7 +227,7 @@ router.get('/seller/onboarding/:walletAddress',
     
     return successResponse(res, onboardingStatus, 200);
   } catch (error) {
-    console.error('Error fetching onboarding status:', error);
+    safeLogger.error('Error fetching onboarding status:', error);
     
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {
@@ -249,7 +251,7 @@ router.get('/seller/onboarding/:walletAddress',
  * PUT /api/marketplace/seller/onboarding/{walletAddress}/{step}
  * Update specific onboarding step
  */
-router.put('/seller/onboarding/:walletAddress/:step', async (req: Request, res: Response) => {
+router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { walletAddress, step } = req.params;
     const { completed } = req.body;
@@ -288,7 +290,7 @@ router.put('/seller/onboarding/:walletAddress/:step', async (req: Request, res: 
     
     return successResponse(res, onboardingStatus, 200);
   } catch (error) {
-    console.error('Error updating onboarding step:', error);
+    safeLogger.error('Error updating onboarding step:', error);
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {

@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { safeLogger } from '../utils/safeLogger';
 import { Redis } from 'ioredis';
 import { performance } from 'perf_hooks';
 import * as crypto from 'crypto';
@@ -162,13 +163,13 @@ export class ErrorTrackingService extends EventEmitter {
         return errorId;
       }
     } catch (trackingError) {
-      console.error('Error tracking failed:', trackingError);
+      safeLogger.error('Error tracking failed:', trackingError);
       // Don't throw - we don't want error tracking to break the application
       return 'tracking-failed';
     } finally {
       const duration = performance.now() - startTime;
       if (duration > 100) {
-        console.warn(`Slow error tracking: ${duration.toFixed(2)}ms`);
+        safeLogger.warn(`Slow error tracking: ${duration.toFixed(2)}ms`);
       }
     }
   }
@@ -594,9 +595,9 @@ export class ErrorTrackingService extends EventEmitter {
         });
       }
       
-      console.log('Error cleanup completed');
+      safeLogger.info('Error cleanup completed');
     } catch (error) {
-      console.error('Error cleanup failed:', error);
+      safeLogger.error('Error cleanup failed:', error);
     }
   }
 

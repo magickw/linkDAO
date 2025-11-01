@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { LDAOAcquisitionController } from '../controllers/ldaoAcquisitionController';
 import { LDAOAcquisitionService } from '../services/ldaoAcquisitionService';
 import { ldaoAcquisitionConfig } from '../config/ldaoAcquisitionConfig';

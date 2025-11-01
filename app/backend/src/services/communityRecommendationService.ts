@@ -1,4 +1,5 @@
 import { getAIService } from './aiService';
+import { safeLogger } from '../utils/safeLogger';
 import { communityService } from './communityService';
 import { analyticsService } from './analyticsService';
 
@@ -94,7 +95,7 @@ export class CommunityRecommendationService {
       
       return sortedRecommendations;
     } catch (error) {
-      console.error('Error generating community recommendations:', error);
+      safeLogger.error('Error generating community recommendations:', error);
       
       // Track error analytics
       await analyticsService.trackEvent('ai_recommendations_error', {
@@ -206,7 +207,7 @@ export class CommunityRecommendationService {
           recommendations = JSON.parse(jsonMatch[0]);
         }
       } catch (parseError) {
-        console.warn('Failed to parse AI recommendations response:', parseError);
+        safeLogger.warn('Failed to parse AI recommendations response:', parseError);
         // Fallback to simple parsing
         recommendations = this.parseRecommendationsFromText(response.content, communities);
       }
@@ -233,7 +234,7 @@ export class CommunityRecommendationService {
         };
       }).filter(Boolean) as CommunityRecommendation[];
     } catch (error) {
-      console.error('Error getting AI recommendations:', error);
+      safeLogger.error('Error getting AI recommendations:', error);
       // Return empty array on error
       return [];
     }
@@ -266,7 +267,7 @@ export class CommunityRecommendationService {
         growthRate: community.growthRate || 0
       }));
     } catch (error) {
-      console.error('Error getting trending communities:', error);
+      safeLogger.error('Error getting trending communities:', error);
       // Return empty array on error
       return [];
     }

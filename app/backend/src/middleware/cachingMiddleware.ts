@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { safeLogger } from '../utils/safeLogger';
 import { cacheService } from '../services/cacheService';
 
 interface CacheOptions {
@@ -83,7 +84,7 @@ class CachingMiddleware {
         const cachedData = await cacheService.get(cacheKey);
         
         if (cachedData && req.method === 'GET') {
-          console.log(`Cache hit: ${cacheKey}`);
+          safeLogger.info(`Cache hit: ${cacheKey}`);
           
           // Set cache headers
           res.set({
@@ -104,7 +105,7 @@ class CachingMiddleware {
           if (options.condition!(req, res)) {
             // Cache the response asynchronously
             cacheService.set(cacheKey, data, options.ttl).catch(error => {
-              console.error(`Failed to cache response for ${cacheKey}:`, error);
+              safeLogger.error(`Failed to cache response for ${cacheKey}:`, error);
             });
             
             // Set cache headers
@@ -120,7 +121,7 @@ class CachingMiddleware {
 
         next();
       } catch (error) {
-        console.error(`Caching middleware error for ${cacheKey}:`, error);
+        safeLogger.error(`Caching middleware error for ${cacheKey}:`, error);
         // Continue without caching on error
         next();
       }
@@ -145,7 +146,7 @@ class CachingMiddleware {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           // Invalidate related cache entries
           invalidateRelatedCache(req, type, options).catch(error => {
-            console.error('Cache invalidation failed:', error);
+            safeLogger.error('Cache invalidation failed:', error);
           });
         }
         
@@ -181,7 +182,7 @@ class CachingMiddleware {
     return async (req: Request, res: Response, next: NextFunction) => {
       // Warm cache in background
       warmCacheInBackground(urls).catch(error => {
-        console.error('Cache warming failed:', error);
+        safeLogger.error('Cache warming failed:', error);
       });
       
       next();
@@ -199,7 +200,7 @@ class CachingMiddleware {
           timestamp: new Date().toISOString()
         });
       } catch (error) {
-        console.error('Failed to get cache stats:', error);
+        safeLogger.error('Failed to get cache stats:', error);
         res.status(500).json({
           success: false,
           error: 'Failed to retrieve cache statistics'
@@ -219,7 +220,7 @@ class CachingMiddleware {
           timestamp: new Date().toISOString()
         });
       } catch (error) {
-        console.error('Cache health check failed:', error);
+        safeLogger.error('Cache health check failed:', error);
         res.status(500).json({
           success: false,
           error: 'Cache health check failed'
@@ -268,9 +269,9 @@ async function invalidateRelatedCache(
         break;
     }
 
-    console.log(`Cache invalidated for ${type} after ${req.method} ${req.originalUrl}`);
+    safeLogger.info(`Cache invalidated for ${type} after ${req.method} ${req.originalUrl}`);
   } catch (error) {
-    console.error(`Failed to invalidate cache for ${type}:`, error);
+    safeLogger.error(`Failed to invalidate cache for ${type}:`, error);
   }
 }
 
@@ -278,14 +279,14 @@ async function invalidateRelatedCache(
 async function warmCacheInBackground(urls: string[]): Promise<void> {
   try {
     // This would typically fetch popular content and cache it
-    console.log(`Warming cache for ${urls.length} URLs`);
+    safeLogger.info(`Warming cache for ${urls.length} URLs`);
     
     // Example: warm popular listings
     await cacheService.warmCache();
     
-    console.log('Cache warming completed');
+    safeLogger.info('Cache warming completed');
   } catch (error) {
-    console.error('Cache warming failed:', error);
+    safeLogger.error('Cache warming failed:', error);
   }
 }
 
@@ -317,7 +318,7 @@ export function rateLimitWithCache(
 
       next();
     } catch (error) {
-      console.error('Rate limiting error:', error);
+      safeLogger.error('Rate limiting error:', error);
       // Continue without rate limiting on error
       next();
     }

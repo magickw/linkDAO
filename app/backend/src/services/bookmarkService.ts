@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db';
+import { safeLogger } from '../utils/safeLogger';
 import { bookmarks, posts } from '../db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
@@ -47,7 +48,7 @@ class BookmarkService {
 
       return true;
     } catch (error) {
-      console.error('Error adding bookmark:', error);
+      safeLogger.error('Error adding bookmark:', error);
       throw new Error('Failed to add bookmark');
     }
   }
@@ -66,7 +67,7 @@ class BookmarkService {
 
       return true;
     } catch (error) {
-      console.error('Error removing bookmark:', error);
+      safeLogger.error('Error removing bookmark:', error);
       throw new Error('Failed to remove bookmark');
     }
   }
@@ -93,7 +94,7 @@ class BookmarkService {
         return { bookmarked: true };
       }
     } catch (error) {
-      console.error('Error toggling bookmark:', error);
+      safeLogger.error('Error toggling bookmark:', error);
       throw new Error('Failed to toggle bookmark');
     }
   }
@@ -114,7 +115,7 @@ class BookmarkService {
 
       return result.length > 0;
     } catch (error) {
-      console.error('Error checking bookmark:', error);
+      safeLogger.error('Error checking bookmark:', error);
       return false;
     }
   }
@@ -154,7 +155,7 @@ class BookmarkService {
         }
       };
     } catch (error) {
-      console.error('Error getting user bookmarks:', error);
+      safeLogger.error('Error getting user bookmarks:', error);
       throw new Error('Failed to retrieve bookmarks');
     }
   }
@@ -171,7 +172,7 @@ class BookmarkService {
 
       return result[0]?.count || 0;
     } catch (error) {
-      console.error('Error getting bookmark count:', error);
+      safeLogger.error('Error getting bookmark count:', error);
       return 0;
     }
   }
