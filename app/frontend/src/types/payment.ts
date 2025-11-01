@@ -40,6 +40,10 @@ export interface PaymentRequest {
   listingId?: number;
   sellerId?: string;
   escrowEnabled?: boolean;
+  // Escrow configuration
+  deliveryDeadline?: number; // Unix timestamp
+  resolutionMethod?: 0 | 1 | 2; // 0: Arbitrator, 1: Voting, 2: Timeout
+  arbiter?: string; // Address of arbitrator
 }
 
 export interface TransactionResult {

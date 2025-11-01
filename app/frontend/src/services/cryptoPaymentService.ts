@@ -50,6 +50,11 @@ export class CryptoPaymentService {
       // Check token balance
       await this.checkTokenBalance(request.token, request.amount);
 
+      // For ERC-20 tokens, check and request approval if needed
+      if (!request.token.isNative) {
+        await this.ensureTokenApproval(request.token, request.recipient, request.amount);
+      }
+
       // Estimate gas fees
       const gasEstimate = await this.estimateTransactionGas(request);
 
@@ -86,6 +91,15 @@ export class CryptoPaymentService {
 
       // Check token balance
       await this.checkTokenBalance(request.token, request.amount);
+
+      // For ERC-20 tokens, check and request approval for escrow contract if needed
+      if (!request.token.isNative) {
+        const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[request.chainId];
+        if (!escrowAddress) {
+          throw new Error(`Escrow contract not deployed on chain ID ${request.chainId}`);
+        }
+        await this.ensureTokenApproval(request.token, escrowAddress, request.amount);
+      }
 
       // Estimate gas fees
       const gasEstimate = await this.estimateTransactionGas(request);
@@ -130,6 +144,11 @@ export class CryptoPaymentService {
     const accounts = await this.walletClient.getAddresses();
     const buyerAddress = accounts[0];
 
+    // Use configurable escrow parameters or defaults
+    const deliveryDeadline = request.deliveryDeadline || 0; // 0 means no deadline
+    const resolutionMethod = request.resolutionMethod ?? 0; // Default to arbitrator
+    const arbiter = request.arbiter || recipient; // Default to seller as arbiter (will be changed by smart contract)
+
     return await this.walletClient.writeContract({
       address: escrowAddress as `0x${string}`,
       abi: enhancedEscrowABI,
@@ -139,8 +158,8 @@ export class CryptoPaymentService {
         recipient as `0x${string}`,
         token.address as `0x${string}`,
         amount,
-        0n, // deliveryDeadline, 0 for now
-        0, // resolutionMethod, 0 for now
+        BigInt(deliveryDeadline),
+        resolutionMethod,
       ],
       value: token.isNative ? amount : 0n,
       chain: undefined,
@@ -449,7 +468,7 @@ export class CryptoPaymentService {
     if (!this.walletClient) {
       throw new Error('Wallet client not initialized');
     }
-    
+
     const accounts = await this.walletClient.getAddresses();
     const userAddress = accounts[0];
 
@@ -463,7 +482,7 @@ export class CryptoPaymentService {
     if (!this.publicClient) {
       throw new Error('Public client not initialized');
     }
-    
+
     if (token.isNative) {
       balance = await this.publicClient.getBalance({ address: userAddress });
     } else {
@@ -479,6 +498,64 @@ export class CryptoPaymentService {
 
     if (balance < amount) {
       throw new Error(`Insufficient ${token.symbol} balance`);
+    }
+  }
+
+  /**
+   * Ensure ERC-20 token approval for spending
+   */
+  private async ensureTokenApproval(
+    token: PaymentToken,
+    spender: string,
+    amount: bigint
+  ): Promise<void> {
+    if (!this.walletClient || !this.publicClient) {
+      throw new Error('Wallet or public client not initialized');
+    }
+
+    const accounts = await this.walletClient.getAddresses();
+    const userAddress = accounts[0];
+
+    if (!userAddress) {
+      throw new Error('No wallet connected');
+    }
+
+    // Check current allowance
+    const currentAllowance = await this.publicClient.readContract({
+      address: token.address as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [userAddress, spender as `0x${string}`],
+      authorizationList: []
+    }) as bigint;
+
+    // If allowance is sufficient, no need to approve
+    if (currentAllowance >= amount) {
+      return;
+    }
+
+    // Request approval for the exact amount needed
+    // Note: Some users prefer infinite approval for UX, but exact amount is safer
+    const approvalHash = await this.walletClient.writeContract({
+      address: token.address as `0x${string}`,
+      abi: erc20Abi,
+      functionName: 'approve',
+      args: [spender as `0x${string}`, amount],
+      chain: undefined,
+      account: userAddress
+    });
+
+    // Wait for approval transaction to be mined
+    if (!this.publicClient) {
+      throw new Error('Public client not initialized');
+    }
+
+    const receipt = await this.publicClient.waitForTransactionReceipt({
+      hash: approvalHash
+    });
+
+    if (receipt.status !== 'success') {
+      throw new Error('Token approval failed');
     }
   }
 

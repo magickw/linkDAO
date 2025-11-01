@@ -54,7 +54,11 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentSteps, setPaymentSteps] = useState<PaymentStep[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [gasEstimate, setGasEstimate] = useState<string>('');
+  const [gasEstimate, setGasEstimate] = useState<{
+    gasLimit: bigint;
+    gasPrice: bigint;
+    totalCostETH: string;
+  } | null>(null);
   const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC' | 'DAI'>('ETH');
   const [createEscrowReceipt, setCreateEscrowReceipt] = useState<{ transactionHash: string; gasUsed?: string } | null>(null);
 
@@ -103,13 +107,28 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
   // Gas estimation
   useEffect(() => {
     const estimateGas = async () => {
-      if (isConnected && address) {
+      if (isConnected && address && paymentRequest.totalAmount) {
         try {
-          // TODO: Implement proper gas estimation
-          // For now, we'll use a placeholder value
-          setGasEstimate('0.01 ETH');
+          // Estimate gas for the transaction
+          // For now, use a conservative estimate
+          // In production, this should call the actual contract to estimate gas
+          const estimatedGasLimit = 200000n; // 200k gas limit for escrow creation
+          const estimatedGasPrice = 30000000000n; // 30 gwei
+          const totalCost = estimatedGasLimit * estimatedGasPrice;
+
+          setGasEstimate({
+            gasLimit: estimatedGasLimit,
+            gasPrice: estimatedGasPrice,
+            totalCostETH: formatUnits(totalCost, 18)
+          });
         } catch (error) {
           console.error('Gas estimation failed:', error);
+          // Set a default estimate on error
+          setGasEstimate({
+            gasLimit: 200000n,
+            gasPrice: 30000000000n,
+            totalCostETH: '0.006' // 200k * 30 gwei
+          });
         }
       }
     };
@@ -323,7 +342,9 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
           </div>
           <div className="flex justify-between">
             <span className="text-white/70">Network Fee (Est.):</span>
-            <span className="text-white">{gasEstimate ? `${parseInt(gasEstimate) * 20 / 1e9} ETH` : 'Calculating...'}</span>
+            <span className="text-white">
+              {gasEstimate ? `${parseFloat(gasEstimate.totalCostETH).toFixed(6)} ETH` : 'Calculating...'}
+            </span>
           </div>
           {paymentRequest.escrowEnabled && (
             <div className="flex justify-between">
@@ -333,7 +354,17 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
           )}
           <div className="border-t border-white/20 pt-3 flex justify-between font-semibold">
             <span className="text-white">Total:</span>
-            <span className="text-white">{formatCurrency(paymentRequest.totalAmount || '0', selectedToken)}</span>
+            <span className="text-white">
+              {paymentRequest.totalAmount && gasEstimate
+                ? formatCurrency(
+                    (parseFloat(paymentRequest.totalAmount) +
+                     parseFloat(gasEstimate.totalCostETH) +
+                     (paymentRequest.escrowEnabled ? parseFloat(paymentRequest.totalAmount) * 0.01 : 0)
+                    ).toString(),
+                    selectedToken
+                  )
+                : 'Calculating...'}
+            </span>
           </div>
         </div>
 

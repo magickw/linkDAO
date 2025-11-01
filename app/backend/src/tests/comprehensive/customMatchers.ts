@@ -32,7 +32,7 @@ declare global {
 // Ethereum address validation
 expect.extend({
   toHaveValidEthereumAddress(received: string) {
-    const isValid = ethers.utils.isAddress(received);
+    const isValid = ethers.isAddress(received);
     
     return {
       message: () => `expected ${received} to be a valid Ethereum address`,
@@ -307,7 +307,7 @@ expect.extend({
                    typeof received.status === 'string' &&
                    validStatuses.includes(received.status) &&
                    typeof received.userAddress === 'string' &&
-                   ethers.utils.isAddress(received.userAddress) &&
+                   ethers.isAddress(received.userAddress) &&
                    received.submittedAt instanceof Date &&
                    (received.status !== 'pending' ? received.reviewedAt instanceof Date : true);
     
@@ -325,7 +325,7 @@ expect.extend({
                    typeof received.transactionId === 'string' &&
                    typeof received.action === 'string' &&
                    typeof received.userAddress === 'string' &&
-                   ethers.utils.isAddress(received.userAddress) &&
+                   ethers.isAddress(received.userAddress) &&
                    received.timestamp instanceof Date &&
                    typeof received.details === 'object' &&
                    received.transactionId.length > 0 &&

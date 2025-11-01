@@ -24,12 +24,12 @@ export const MATIC: PaymentToken = {
 
 // Stablecoins
 export const USDC_MAINNET: PaymentToken = {
-  address: '0xA0b86a33E6441c8C06DD2b7c94b7E6E8b8b8b8b8',
+  address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Correct USDC address on Ethereum mainnet
   symbol: 'USDC',
   name: 'USD Coin',
   decimals: 6,
   chainId: mainnet.id,
-  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+  logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
 };
 
 export const USDC_POLYGON: PaymentToken = {
@@ -177,9 +177,14 @@ export const getChainConfig = (chainId: number): ChainConfig | undefined => {
 
 // Payment configuration
 export const PAYMENT_CONFIG = {
-  // Escrow contract address
+  // Escrow contract addresses per chain
   ESCROW_CONTRACT_ADDRESS: {
-    [sepolia.id]: '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1',
+    [mainnet.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to mainnet
+    [polygon.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Polygon
+    [arbitrum.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Arbitrum
+    [base.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Base
+    [sepolia.id]: '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1', // Deployed on Sepolia testnet
+    [baseSepolia.id]: '0x0000000000000000000000000000000000000000', // TODO: Deploy to Base Sepolia
   },
 
   // Transaction confirmation requirements

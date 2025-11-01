@@ -68,13 +68,13 @@ export interface VotingPowerCheck {
 }
 
 export class BlockchainIntegrationService {
-  private provider: ethers.providers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider;
   private ldaoToken: ethers.Contract;
   private governance: ethers.Contract;
   private reputation: ethers.Contract;
 
   constructor() {
-    this.provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    this.provider = new ethers.JsonRpcProvider(RPC_URL);
     this.ldaoToken = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, this.provider);
     this.governance = new ethers.Contract(GOVERNANCE_ADDRESS, GOVERNANCE_ABI, this.provider);
     this.reputation = new ethers.Contract(REPUTATION_ADDRESS, REPUTATION_ABI, this.provider);
@@ -94,7 +94,7 @@ export class BlockchainIntegrationService {
         : this.ldaoToken;
 
       const balance = await token.balanceOf(userAddress);
-      const balanceFormatted = ethers.utils.formatEther(balance);
+      const balanceFormatted = ethers.formatEther(balance);
       const minimumBN = ethers.utils.parseEther(minimumBalance);
 
       return {
@@ -191,8 +191,8 @@ export class BlockchainIntegrationService {
         : this.ldaoToken;
 
       const staked = await token.totalStaked(userAddress);
-      const stakedFormatted = ethers.utils.formatEther(staked);
-      const minimumBN = ethers.utils.parseEther(minimumStaked);
+      const stakedFormatted = ethers.formatEther(staked);
+      const minimumBN = ethers.parseEther(minimumStaked);
 
       return {
         hasStaked: staked.gte(minimumBN),
@@ -223,8 +223,8 @@ export class BlockchainIntegrationService {
         : this.ldaoToken;
 
       const power = await token.votingPower(userAddress);
-      const powerFormatted = ethers.utils.formatEther(power);
-      const minimumBN = ethers.utils.parseEther(minimumPower);
+      const powerFormatted = ethers.formatEther(power);
+      const minimumBN = ethers.parseEther(minimumPower);
 
       return {
         hasVotingPower: power.gte(minimumBN),
@@ -302,9 +302,9 @@ export class BlockchainIntegrationService {
         description: info.description,
         startBlock: info.startBlock.toNumber(),
         endBlock: info.endBlock.toNumber(),
-        forVotes: ethers.utils.formatEther(info.forVotes),
-        againstVotes: ethers.utils.formatEther(info.againstVotes),
-        abstainVotes: ethers.utils.formatEther(info.abstainVotes),
+        forVotes: ethers.formatEther(info.forVotes),
+        againstVotes: ethers.formatEther(info.againstVotes),
+        abstainVotes: ethers.formatEther(info.abstainVotes),
         executed: info.executed,
         canceled: info.canceled,
       };
@@ -325,11 +325,11 @@ export class BlockchainIntegrationService {
     try {
       // Get ETH balance
       const ethBalance = await this.provider.getBalance(treasuryAddress);
-      const ethFormatted = ethers.utils.formatEther(ethBalance);
+      const ethFormatted = ethers.formatEther(ethBalance);
 
       // Get LDAO balance
       const ldaoBalance = await this.ldaoToken.balanceOf(treasuryAddress);
-      const ldaoFormatted = ethers.utils.formatEther(ldaoBalance);
+      const ldaoFormatted = ethers.formatEther(ldaoBalance);
 
       return {
         eth: ethFormatted,
@@ -358,7 +358,7 @@ export class BlockchainIntegrationService {
     const results = new Map<string, boolean>();
 
     try {
-      const minimumBN = ethers.utils.parseEther(minimumBalance);
+      const minimumBN = ethers.parseEther(minimumBalance);
 
       // Check balances in parallel
       const checks = await Promise.all(

@@ -5,7 +5,7 @@ import { AlphaRouter, SwapType } from '@uniswap/smart-order-router';
 import { IUniswapV3Service, SwapQuote, SwapParams, SwapResult, LiquidityInfo } from '../types/uniswapV3';
 
 export class UniswapV3Service implements IUniswapV3Service {
-  private provider: ethers.providers.JsonRpcProvider;
+  private provider: ethers.JsonRpcProvider;
   private alphaRouter: AlphaRouter;
   private chainId: number;
   private quoterAddress: string;
@@ -17,7 +17,7 @@ export class UniswapV3Service implements IUniswapV3Service {
     quoterAddress: string = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6',
     routerAddress: string = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
   ) {
-    this.provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
     this.quoterAddress = quoterAddress;
     this.routerAddress = routerAddress;
@@ -55,7 +55,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       // Create currency amount
       const currencyAmount = CurrencyAmount.fromRawAmount(
         tokenInInstance,
-        ethers.utils.parseUnits(amountIn.toString(), tokenIn.decimals).toString()
+        ethers.parseUnits(amountIn.toString(), tokenIn.decimals).toString()
       );
 
       // Get route using AlphaRouter
@@ -64,7 +64,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         tokenOutInstance,
         TradeType.EXACT_INPUT,
         {
-          recipient: params.recipient || ethers.constants.AddressZero,
+          recipient: params.recipient || ethers.ZeroAddress,
           slippageTolerance: new Percent(Math.floor(slippageTolerance * 100), 10000),
           deadline: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
           type: SwapType.SWAP_ROUTER_02,
@@ -119,7 +119,7 @@ export class UniswapV3Service implements IUniswapV3Service {
         data: quote.methodParameters.calldata,
         value: quote.methodParameters.value,
         gasLimit: quote.gasEstimate,
-        gasPrice: await this.provider.getGasPrice(),
+        gasPrice: (await this.provider.getFeeData()).gasPrice || BigInt(0),
       };
 
       const txResponse = await wallet.sendTransaction(transaction);
@@ -213,7 +213,7 @@ export class UniswapV3Service implements IUniswapV3Service {
   /**
    * Estimate gas for a transaction
    */
-  private async estimateGas(methodParameters: any): Promise<ethers.BigNumber> {
+  private async estimateGas(methodParameters: any): Promise<bigint> {
     try {
       return await this.provider.estimateGas({
         to: methodParameters.to,
@@ -222,7 +222,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       });
     } catch (error) {
       console.error('Error estimating gas:', error);
-      return ethers.BigNumber.from('200000'); // Default gas limit
+      return BigInt(200000); // Default gas limit
     }
   }
 
@@ -232,20 +232,21 @@ export class UniswapV3Service implements IUniswapV3Service {
   private async getPoolAddress(tokenA: string, tokenB: string, fee: number): Promise<string> {
     // This would typically use the Uniswap V3 Factory contract to get the pool address
     // For now, returning a placeholder
-    return ethers.constants.AddressZero;
+    return ethers.ZeroAddress;
   }
 
   /**
    * Get current gas price with optimization
    */
-  async getOptimizedGasPrice(): Promise<ethers.BigNumber> {
+  async getOptimizedGasPrice(): Promise<bigint> {
     try {
-      const gasPrice = await this.provider.getGasPrice();
+      const feeData = await this.provider.getFeeData();
+      const gasPrice = feeData.gasPrice || BigInt(0);
       // Add 10% buffer for faster execution
-      return gasPrice.mul(110).div(100);
+      return (gasPrice * BigInt(110)) / BigInt(100);
     } catch (error) {
       console.error('Error getting gas price:', error);
-      return ethers.utils.parseUnits('20', 'gwei'); // Fallback gas price
+      return ethers.parseUnits('20', 'gwei'); // Fallback gas price
     }
   }
 

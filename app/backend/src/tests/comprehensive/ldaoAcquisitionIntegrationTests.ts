@@ -102,7 +102,7 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
     await bridgeContract.deployed();
 
     // Transfer tokens to treasury
-    const treasurySupply = ethers.utils.parseEther('100000000'); // 100M tokens
+    const treasurySupply = ethers.parseEther('100000000'); // 100M tokens
     await ldaoToken.transfer(treasury.address, treasurySupply);
   }
 
@@ -141,9 +141,9 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
 
     test('should validate contract interconnections', async () => {
       // Test treasury can mint tokens
-      const mintAmount = ethers.utils.parseEther('1000');
+      const mintAmount = ethers.parseEther('1000');
       await treasury.connect(user1).purchaseWithETH(mintAmount, {
-        value: ethers.utils.parseEther('1')
+        value: ethers.parseEther('1')
       });
 
       const userBalance = await ldaoToken.balanceOf(user1.address);
@@ -194,7 +194,7 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
 
       // Verify tokens were minted
       const userBalance = await ldaoToken.balanceOf(user1.address);
-      expect(userBalance).to.equal(ethers.utils.parseEther('1000'));
+      expect(userBalance).to.equal(ethers.parseEther('1000'));
     });
 
     test('should complete end-to-end crypto purchase workflow', async () => {
@@ -215,7 +215,7 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
 
       // Verify on-chain transaction
       const userBalance = await ldaoToken.balanceOf(user1.address);
-      expect(userBalance).to.equal(ethers.utils.parseEther('500'));
+      expect(userBalance).to.equal(ethers.parseEther('500'));
 
       // Verify treasury received payment
       const treasuryETHBalance = await ethers.provider.getBalance(treasury.address);

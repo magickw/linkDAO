@@ -108,7 +108,7 @@ export class MultiChainDEXService {
   /**
    * Detect current network from provider
    */
-  async detectNetwork(provider: ethers.providers.Provider): Promise<number> {
+  async detectNetwork(provider: ethers.Provider): Promise<number> {
     try {
       const network = await provider.getNetwork();
       return network.chainId;

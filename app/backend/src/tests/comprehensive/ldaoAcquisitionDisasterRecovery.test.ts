@@ -191,7 +191,7 @@ describe('LDAO Acquisition System - Disaster Recovery Tests', () => {
     test('should handle network congestion and high gas fees', async () => {
       // Simulate network congestion
       testEnv.simulateNetworkConditions('ethereum', {
-        gasPrice: ethers.utils.parseUnits('200', 'gwei'), // High gas price
+        gasPrice: ethers.parseUnits('200', 'gwei'), // High gas price
         blockTime: 30000, // 30 second blocks
         congestionLevel: 'high'
       });
@@ -201,7 +201,7 @@ describe('LDAO Acquisition System - Disaster Recovery Tests', () => {
         toToken: 'LDAO',
         amount: 1,
         userAddress: '0x1234567890123456789012345678901234567890',
-        maxGasPrice: ethers.utils.parseUnits('100', 'gwei').toString()
+        maxGasPrice: ethers.parseUnits('100', 'gwei').toString()
       };
 
       const response = await request(app)
@@ -406,7 +406,7 @@ describe('LDAO Acquisition System - Disaster Recovery Tests', () => {
         paymentMethod: 'crypto',
         paymentToken: 'ETH',
         userAddress: '0x1234567890123456789012345678901234567890',
-        maxGasPrice: ethers.utils.parseUnits('50', 'gwei').toString()
+        maxGasPrice: ethers.parseUnits('50', 'gwei').toString()
       };
 
       const response = await request(app)
