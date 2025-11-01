@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { SellerVerificationService } from '../services/sellerVerificationService';
 import { ValidationError } from '../models/validation';
-import { verifyAuth } from '../middleware/authMiddleware';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { db } from '../db';
 import { sellerVerifications } from '../database/schemas/sellerVerification';
 import { eq } from 'drizzle-orm';

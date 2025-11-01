@@ -1,8 +1,8 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { db } from '../db';
 import { sellerVerifications } from '../database/schemas/sellerVerification';
 import { sellers } from '../db/schema';
-import { SellerVerification, VerificationRequest, VerificationStatus } from '../types/sellerVerification';
+import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
 import { ValidationError } from '../models/validation';
 
 export class SellerVerificationService {
@@ -12,13 +12,13 @@ export class SellerVerificationService {
   async submitVerification(sellerId: string, request: VerificationRequest): Promise<SellerVerification> {
     // Validate EIN format if provided
     if (request.ein && !this.isValidEIN(request.ein)) {
-      throw new ValidationError('Invalid EIN format. Expected format: ##-#######');
+      throw new ValidationError('Invalid EIN format. Expected format: ##-#######', 'ein');
     }
 
     // Check if seller already has a pending verification
     const existingVerification = await this.getActiveVerification(sellerId);
     if (existingVerification && existingVerification.status === 'pending') {
-      throw new ValidationError('Seller already has a pending verification request');
+      throw new ValidationError('Seller already has a pending verification request', 'sellerId');
     }
 
     // Create new verification record
@@ -436,7 +436,7 @@ export class SellerVerificationService {
   }
 
   /**
-   * Check if verification has expired
+   * Check for expired verifications and update their status
    */
   async checkExpiredVerifications(): Promise<void> {
     const now = new Date();
@@ -446,7 +446,7 @@ export class SellerVerificationService {
       .where(
         and(
           eq(sellerVerifications.status, 'verified'),
-          sellerVerifications.expiresAt.lt(now)
+          lt(sellerVerifications.expiresAt, now)
         )
       );
 
