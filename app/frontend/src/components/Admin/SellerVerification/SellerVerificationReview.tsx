@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/design-system/components/Card';
-import { Button } from '@/design-system/components/Button';
-import { Badge } from '@/design-system/components/Badge';
-import { Textarea } from '@/design-system/components/Textarea';
+// Import from the correct paths in the LinkDAO project
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { TextArea } from '@/components/ui/textarea';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
-import { Alert } from '@/design-system/components/Alert';
+import { Alert } from '@/components/ui/alert';
 
 interface VerificationRequest {
   id: string;
@@ -166,7 +167,7 @@ export const SellerVerificationReview: React.FC = () => {
 
   if (error) {
     return (
-      <Alert variant="error">
+      <Alert variant="destructive">
         {error}
       </Alert>
     );
@@ -213,7 +214,7 @@ export const SellerVerificationReview: React.FC = () => {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                         {request.legalName || 'Unnamed Business'}
                       </h3>
-                      <Badge variant={request.status === 'pending' ? 'warning' : 'secondary'}>
+                      <Badge variant={request.status === 'pending' ? 'destructive' : 'secondary'}>
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </Badge>
                     </div>
@@ -276,7 +277,7 @@ export const SellerVerificationReview: React.FC = () => {
                   <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <Button
                       onClick={() => handleApprove(request.id)}
-                      variant="success"
+                      variant="default"
                       disabled={actionLoading === request.id}
                       className="flex-1"
                     >
@@ -291,7 +292,7 @@ export const SellerVerificationReview: React.FC = () => {
                     </Button>
                     
                     <div className="flex-1 space-y-3">
-                      <Textarea
+                      <TextArea
                         placeholder="Reason for rejection (required)"
                         value={rejectionReason[request.id] || ''}
                         onChange={(e) => setRejectionReason(prev => ({
@@ -302,7 +303,7 @@ export const SellerVerificationReview: React.FC = () => {
                       />
                       <Button
                         onClick={() => handleReject(request.id)}
-                        variant="error"
+                        variant="destructive"
                         disabled={actionLoading === request.id || !rejectionReason[request.id]}
                         className="w-full"
                       >

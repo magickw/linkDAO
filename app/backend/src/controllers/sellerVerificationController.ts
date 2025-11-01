@@ -214,5 +214,3 @@ export class SellerVerificationController {
     }
   }
 }
-
-export const sellerVerificationController = new SellerVerificationController();

@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { body, param } from 'express-validator';
-import { sellerVerificationController } from '../controllers/sellerVerificationController';
+import { SellerVerificationController } from '../controllers/sellerVerificationController';
 import { authMiddleware, adminMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
-const controller = sellerVerificationController;
+const controller = new SellerVerificationController();
 
 // Validation middleware
 const submitVerificationValidation = [

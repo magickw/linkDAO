@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from '@/design-system/components/Button';
-import { Input } from '@/design-system/components/Input';
-import { Textarea } from '@/design-system/components/Textarea';
-import { Card } from '@/design-system/components/Card';
-import { Alert } from '@/design-system/components/Alert';
+// Import from the correct paths in the LinkDAO project
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { TextArea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
 
 // Zod schema for form validation
@@ -97,9 +98,10 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
             Your verification request has been submitted successfully. 
             We'll review your information and notify you of the status within 2-3 business days.
           </p>
-          <Button onClick={() => setSubmitSuccess(false)} variant="primary">
+          <Button onClick={() => setSubmitSuccess(false)} variant="default">
             Submit Another Request
           </Button>
+
         </div>
       </Card>
     );
@@ -118,7 +120,7 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
         </div>
 
         {submitError && (
-          <Alert variant="error" className="mb-6">
+          <Alert variant="destructive" className="mb-6">
             {submitError}
           </Alert>
         )}
@@ -136,10 +138,12 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
                   {...field}
                   id="legalName"
                   placeholder="Acme Corporation LLC"
-                  error={errors.legalName?.message}
                 />
               )}
             />
+            {errors.legalName?.message && (
+              <p className="mt-1 text-sm text-red-600">{errors.legalName?.message}</p>
+            )}
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               The official legal name of your business as registered with the government
             </p>
@@ -157,10 +161,13 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
                   {...field}
                   id="ein"
                   placeholder="12-3456789"
-                  error={errors.ein?.message}
                 />
               )}
             />
+            {errors.ein?.message && (
+              <p className="mt-1 text-sm text-red-600">{errors.ein?.message}</p>
+            )}
+
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Optional for individuals. Format: ##-#######
             </p>
@@ -174,15 +181,18 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
               name="businessAddress"
               control={control}
               render={({ field }) => (
-                <Textarea
+                <TextArea
                   {...field}
                   id="businessAddress"
                   rows={3}
                   placeholder="123 Business Street, Suite 100, City, State ZIP"
-                  error={errors.businessAddress?.message}
                 />
               )}
             />
+            {errors.businessAddress?.message && (
+              <p className="mt-1 text-sm text-red-600">{errors.businessAddress?.message}</p>
+            )}
+
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Complete business address including street, city, state, and ZIP code
             </p>
@@ -208,7 +218,7 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
           <div className="flex justify-end">
             <Button
               type="submit"
-              variant="primary"
+              variant="default"
               disabled={isSubmitting}
               className="w-full sm:w-auto"
             >

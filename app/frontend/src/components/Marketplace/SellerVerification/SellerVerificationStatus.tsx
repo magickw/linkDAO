@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/design-system/components/Card';
-import { Badge } from '@/design-system/components/Badge';
+// Import from the correct paths in the LinkDAO project
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
-import { Alert } from '@/design-system/components/Alert';
+import { Alert } from '@/components/ui/alert';
 
 interface SellerVerificationStatusProps {
   sellerId: string;
@@ -53,7 +54,7 @@ export const SellerVerificationStatus: React.FC<SellerVerificationStatusProps> =
     return (
       <Card className="max-w-2xl mx-auto">
         <div className="p-6">
-          <Alert variant="error">
+          <Alert variant="destructive">
             {error}
           </Alert>
         </div>
@@ -76,13 +77,13 @@ export const SellerVerificationStatus: React.FC<SellerVerificationStatusProps> =
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'verified':
-        return <Badge variant="success">Verified</Badge>;
+        return <Badge variant="default">Verified</Badge>;
       case 'pending':
-        return <Badge variant="warning">Pending Review</Badge>;
+        return <Badge variant="destructive">Pending Review</Badge>;
       case 'rejected':
-        return <Badge variant="error">Rejected</Badge>;
+        return <Badge variant="destructive">Rejected</Badge>;
       case 'expired':
-        return <Badge variant="error">Expired</Badge>;
+        return <Badge variant="destructive">Expired</Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
