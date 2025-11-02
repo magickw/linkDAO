@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export interface PhishFortResult {
   status: 'safe' | 'malicious' | 'suspicious' | 'error';

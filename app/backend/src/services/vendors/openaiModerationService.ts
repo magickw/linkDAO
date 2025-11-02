@@ -1,5 +1,5 @@
 import { VendorModerationService, ModerationResult } from '../aiModerationOrchestrator';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 interface OpenAIModerationResponse {
   id: string;
