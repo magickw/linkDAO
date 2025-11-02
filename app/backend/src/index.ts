@@ -687,38 +687,32 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(({ cacheService, cacheWarmingService }) => {
-    // MEMORY OPTIMIZATION: Disable WebSocket on Render free tier
-    if (!process.env.RENDER) {
-      try {
-        const webSocketService = initializeWebSocket(httpServer);
-        console.log('✅ WebSocket service initialized');
-        console.log(`🔌 WebSocket ready for real-time updates`);
-      } catch (error) {
-        console.warn('⚠️ WebSocket service initialization failed:', error);
-      }
-    } else {
-      console.log('⚠️ WebSocket disabled on Render to save memory');
+    // WebSocket service (enabled with Render Pro 2GB RAM)
+    try {
+      const webSocketService = initializeWebSocket(httpServer);
+      console.log('✅ WebSocket service initialized');
+      console.log(`🔌 WebSocket ready for real-time updates`);
+    } catch (error) {
+      console.warn('⚠️ WebSocket service initialization failed:', error);
     }
 
-    // DISABLED: Admin WebSocket service (saves ~30MB memory)
-    // try {
-    //   const adminWebSocketService = initializeAdminWebSocket(httpServer);
-    //   console.log('✅ Admin WebSocket service initialized');
-    //   console.log(`🔧 Admin real-time dashboard ready`);
-    // } catch (error) {
-    //   console.warn('⚠️ Admin WebSocket service initialization failed:', error);
-    // }
-    console.log('⚠️ Admin WebSocket disabled to save memory');
+    // Admin WebSocket service
+    try {
+      const adminWebSocketService = initializeAdminWebSocket(httpServer);
+      console.log('✅ Admin WebSocket service initialized');
+      console.log(`🔧 Admin real-time dashboard ready`);
+    } catch (error) {
+      console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+    }
 
-    // DISABLED: Seller WebSocket service (saves ~30MB memory)
-    // try {
-    //   const sellerWebSocketService = initializeSellerWebSocket();
-    //   console.log('✅ Seller WebSocket service initialized');
-    //   console.log(`🛒 Seller real-time updates ready`);
-    // } catch (error) {
-    //   console.warn('⚠️ Seller WebSocket service initialization failed:', error);
-    // }
-    console.log('⚠️ Seller WebSocket disabled to save memory');
+    // Seller WebSocket service
+    try {
+      const sellerWebSocketService = initializeSellerWebSocket();
+      console.log('✅ Seller WebSocket service initialized');
+      console.log(`🛒 Seller real-time updates ready`);
+    } catch (error) {
+      console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+    }
     
     // Initialize cache service
     try {
@@ -739,47 +733,43 @@ httpServer.listen(PORT, '0.0.0.0', () => {
         console.log('⚠️ Cache service not available');
       }
 
-      // DISABLED: Cache warming (saves ~30MB memory)
-      // setTimeout(() => {
-      //   try {
-      //     cacheWarmingService.performQuickWarmup().then(() => {
-      //       console.log('✅ Initial cache warming completed');
-      //     }).catch((error: any) => {
-      //       console.warn('⚠️ Initial cache warming failed:', error);
-      //     });
-      //   } catch (error) {
-      //     console.warn('⚠️ Initial cache warming failed:', error);
-      //   }
-      // }, 5000); // Wait 5 seconds after server start
-      console.log('⚠️ Cache warming disabled to save memory');
+      // Cache warming
+      setTimeout(() => {
+        try {
+          if (cacheWarmingService && typeof cacheWarmingService.performQuickWarmup === 'function') {
+            cacheWarmingService.performQuickWarmup().then(() => {
+              console.log('✅ Initial cache warming completed');
+            }).catch((error: any) => {
+              console.warn('⚠️ Initial cache warming failed:', error);
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ Initial cache warming failed:', error);
+        }
+      }, 5000);
 
     } catch (error) {
       console.warn('⚠️ Cache service initialization failed:', error);
       console.log('📝 Server will continue without caching');
     }
 
-    // DISABLED: Comprehensive monitoring (saves ~50MB memory)
-    // try {
-    //   comprehensiveMonitoringService.startMonitoring(60000); // Monitor every minute
-    //   console.log('✅ Comprehensive monitoring service started');
-    //   console.log('📊 System health monitoring active');
-    // } catch (error) {
-    //   console.warn('⚠️ Monitoring service initialization failed:', error);
-    // }
-    console.log('⚠️ Comprehensive monitoring disabled to save memory');
+    // Comprehensive monitoring
+    try {
+      comprehensiveMonitoringService.startMonitoring(60000);
+      console.log('✅ Comprehensive monitoring service started');
+      console.log('📊 System health monitoring active');
+    } catch (error) {
+      console.warn('⚠️ Monitoring service initialization failed:', error);
+    }
 
 
-    // MEMORY OPTIMIZATION: Disable order event listener on Render
-    if (!process.env.RENDER) {
-      try {
-        orderEventListenerService.startListening();
-        console.log('✅ Order event listener started');
-        console.log('🔄 Listening for order events to trigger messaging automation');
-      } catch (error) {
-        console.warn('⚠️ Order event listener failed to start:', error);
-      }
-    } else {
-      console.log('⚠️ Order event listener disabled on Render to save memory');
+    // Order event listener
+    try {
+      orderEventListenerService.startListening();
+      console.log('✅ Order event listener started');
+      console.log('🔄 Listening for order events to trigger messaging automation');
+    } catch (error) {
+      console.warn('⚠️ Order event listener failed to start:', error);
     }
   }).catch((error) => {
     console.error('Failed to initialize services:', error);

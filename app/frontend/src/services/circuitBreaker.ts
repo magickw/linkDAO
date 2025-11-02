@@ -26,18 +26,23 @@ class CircuitBreaker {
   ) {}
   
   async execute<T>(operation: () => Promise<T>, fallback?: () => T): Promise<T> {
-    if (this.state === 'OPEN') {
-      if (Date.now() - this.lastFailureTime > this.config.recoveryTimeout) {
-        this.state = 'HALF_OPEN';
-        this.successCount = 0;
-        console.log('Circuit breaker moving to HALF_OPEN state');
-      } else {
-        if (fallback) {
-          console.log('Circuit breaker is OPEN, using fallback');
-          return fallback();
-        }
-        throw new Error('Service temporarily unavailable - circuit breaker is OPEN');
+    // Store the initial state to check later if it changed
+    const initialState = this.state;
+    
+    // Check if circuit is open and not yet ready for retry
+    if (initialState === 'OPEN' && Date.now() - this.lastFailureTime <= this.config.recoveryTimeout) {
+      if (fallback) {
+        console.log('Circuit breaker is OPEN, using fallback');
+        return fallback();
       }
+      throw new Error('Service temporarily unavailable - circuit breaker is OPEN');
+    }
+    
+    // If circuit is open but timeout has passed, move to HALF_OPEN
+    if (initialState === 'OPEN') {
+      this.state = 'HALF_OPEN';
+      this.successCount = 0;
+      console.log('Circuit breaker moving to HALF_OPEN state');
     }
     
     try {
@@ -47,8 +52,15 @@ class CircuitBreaker {
     } catch (error) {
       this.onFailure(error);
       
-      if (fallback && this.state === 'OPEN') {
+      // Check if circuit has just opened due to this failure
+      if (fallback && this.state === 'OPEN' && initialState !== 'OPEN') {
         console.log('Operation failed and circuit is OPEN, using fallback');
+        return fallback();
+      }
+      
+      // If the circuit was already open and we're using fallback, use it
+      if (fallback && initialState === 'OPEN') {
+        console.log('Operation failed and circuit was OPEN, using fallback');
         return fallback();
       }
       

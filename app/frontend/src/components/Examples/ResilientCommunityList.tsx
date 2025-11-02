@@ -2,6 +2,7 @@ import React from 'react';
 import { useCommunities } from '../../hooks/useResilientAPI';
 import ServiceUnavailableHandler from '../ErrorHandling/ServiceUnavailableHandler';
 import { Loader2, Users, Globe } from 'lucide-react';
+import { Community } from '../../models';
 
 /**
  * Example component showing how to use resilient API hooks
@@ -18,7 +19,7 @@ export const ResilientCommunityList: React.FC = () => {
     circuitBreakerState 
   } = useCommunities({ isPublic: true, limit: 10 });
 
-  if (loading && !communities?.length) {
+  if (loading && (!communities || communities.length === 0)) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -39,7 +40,7 @@ export const ResilientCommunityList: React.FC = () => {
 
       {/* Communities List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {communities?.map((community) => (
+        {communities?.map((community: Community) => (
           <div
             key={community.id}
             className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { requestManager } from '../services/requestManager';
 import { apiCircuitBreaker } from '../services/circuitBreaker';
 import { useRequestCoalescing } from './useRequestCoalescing';
+import { Community } from '../models/Community';
 
 interface UseResilientAPIOptions {
   cacheKey?: string;
@@ -166,17 +167,29 @@ export function useResilientAPI<T>(
 export function useCommunities(params?: any) {
   const url = '/api/communities' + (params ? `?${new URLSearchParams(params).toString()}` : '');
   
-  return useResilientAPI(url, { method: 'GET' }, {
+  return useResilientAPI<Community[]>(url, { method: 'GET' }, {
     cacheKey: `communities:${JSON.stringify(params || {})}`,
     cacheTTL: 120000, // 2 minutes
     fallbackData: [
       {
         id: 'linkdao',
         name: 'LinkDAO',
+        displayName: 'LinkDAO',
         description: 'The main LinkDAO community',
+        rules: [],
         memberCount: 1000,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        category: 'dao',
+        tags: [],
         isPublic: true,
-        category: 'dao'
+        moderators: [],
+        settings: {
+          allowedPostTypes: [],
+          requireApproval: false,
+          minimumReputation: 0,
+          stakingRequirements: []
+        }
       }
     ]
   });
