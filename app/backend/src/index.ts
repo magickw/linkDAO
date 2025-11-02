@@ -1,3 +1,43 @@
+// CRITICAL: Register error handlers FIRST before any imports
+process.on('uncaughtException', (error) => {
+  // Bypass ALL logging systems - write directly to stdout
+  const errorDetails = {
+    timestamp: new Date().toISOString(),
+    type: 'UNCAUGHT_EXCEPTION',
+    message: error.message,
+    name: error.name,
+    code: (error as any).code,
+    stack: error.stack,
+    errno: (error as any).errno,
+    syscall: (error as any).syscall,
+    address: (error as any).address,
+    port: (error as any).port
+  };
+
+  process.stdout.write('\n=== UNCAUGHT EXCEPTION (RAW OUTPUT) ===\n');
+  process.stdout.write(JSON.stringify(errorDetails, null, 2));
+  process.stdout.write('\n=====================================\n\n');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  const rejectionDetails = {
+    timestamp: new Date().toISOString(),
+    type: 'UNHANDLED_REJECTION',
+    reason: reason instanceof Error ? {
+      message: reason.message,
+      name: reason.name,
+      stack: reason.stack,
+      code: (reason as any).code
+    } : String(reason)
+  };
+
+  process.stdout.write('\n=== UNHANDLED REJECTION (RAW OUTPUT) ===\n');
+  process.stdout.write(JSON.stringify(rejectionDetails, null, 2));
+  process.stdout.write('\n======================================\n\n');
+  // Don't exit on unhandled rejection, just log it
+});
+
 import express from 'express';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
@@ -823,30 +863,6 @@ const gracefulShutdown = async (signal: string) => {
     process.exit(1);
   }, 10000);
 };
-
-// Handle unhandled rejections and exceptions
-process.on('unhandledRejection', (reason, promise) => {
-  process.stdout.write('\n🚨 UNHANDLED REJECTION:\n');
-  process.stdout.write(`Reason: ${reason instanceof Error ? reason.message : String(reason)}\n`);
-  if (reason instanceof Error && reason.stack) {
-    process.stdout.write(`Stack: ${reason.stack}\n`);
-  }
-  process.stdout.write('\n');
-  // Don't exit - log and continue
-});
-
-process.on('uncaughtException', (error) => {
-  // Write directly to stdout to bypass all logging systems
-  process.stdout.write('\n========== UNCAUGHT EXCEPTION ==========\n');
-  process.stdout.write(`Message: ${error.message}\n`);
-  process.stdout.write(`Name: ${error.name}\n`);
-  process.stdout.write(`Code: ${(error as any).code || 'N/A'}\n`);
-  process.stdout.write(`Stack:\n${error.stack}\n`);
-  process.stdout.write('========================================\n\n');
-  
-  // For uncaught exceptions, we should gracefully shutdown
-  gracefulShutdown('uncaughtException');
-});
 
 // Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
