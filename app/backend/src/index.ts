@@ -455,20 +455,43 @@ import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
 // Import DEX trading routes
-import dexTradingRoutes from './routes/dexTradingRoutes';
-import stakingRoutes from './routes/stakingRoutes';
+let dexTradingRoutes: any;
+let stakingRoutes: any;
+let ldaoPostLaunchMonitoringRoutes: any;
 
-// Import LDAO post-launch monitoring routes
-import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
+try {
+  process.stdout.write('Loading DEX trading routes...\n');
+  dexTradingRoutes = require('./routes/dexTradingRoutes').default;
+  process.stdout.write('✅ DEX trading routes loaded\n');
+} catch (error) {
+  process.stdout.write(`❌ Failed to load DEX trading routes: ${error}\n`);
+}
+
+try {
+  process.stdout.write('Loading staking routes...\n');
+  stakingRoutes = require('./routes/stakingRoutes').default;
+  process.stdout.write('✅ Staking routes loaded\n');
+} catch (error) {
+  process.stdout.write(`❌ Failed to load staking routes: ${error}\n`);
+}
+
+try {
+  process.stdout.write('Loading LDAO post-launch monitoring routes...\n');
+  const ldaoModule = require('./routes/ldaoPostLaunchMonitoringRoutes');
+  ldaoPostLaunchMonitoringRoutes = ldaoModule.ldaoPostLaunchMonitoringRoutes;
+  process.stdout.write('✅ LDAO post-launch monitoring routes loaded\n');
+} catch (error) {
+  process.stdout.write(`❌ Failed to load LDAO post-launch monitoring routes: ${error}\n`);
+}
 
 // DEX trading routes
-app.use('/api/dex', dexTradingRoutes);
+if (dexTradingRoutes) app.use('/api/dex', dexTradingRoutes);
 
 // Staking routes
-app.use('/api/staking', stakingRoutes);
+if (stakingRoutes) app.use('/api/staking', stakingRoutes);
 
 // LDAO post-launch monitoring routes
-app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
+if (ldaoPostLaunchMonitoringRoutes) app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
@@ -674,8 +697,8 @@ app.use('/api/*', (req, res) => {
   });
 });
 
-console.log('📝 All routes and middleware registered successfully');
-console.log(`📡 Attempting to start server on port ${PORT}...`);
+process.stdout.write('📝 All routes and middleware registered successfully\n');
+process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
 
 // Start server
 httpServer.listen(PORT, '0.0.0.0', () => {
@@ -830,21 +853,23 @@ const gracefulShutdown = async (signal: string) => {
 
 // Handle unhandled rejections and exceptions
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Unhandled Rejection:', {
-    reason: reason instanceof Error ? reason.message : String(reason),
-    stack: reason instanceof Error ? reason.stack : undefined
-  });
+  process.stdout.write('\n🚨 UNHANDLED REJECTION:\n');
+  process.stdout.write(`Reason: ${reason instanceof Error ? reason.message : String(reason)}\n`);
+  if (reason instanceof Error && reason.stack) {
+    process.stdout.write(`Stack: ${reason.stack}\n`);
+  }
+  process.stdout.write('\n');
   // Don't exit - log and continue
 });
 
 process.on('uncaughtException', (error) => {
-  // Log to console FIRST before any structured logging
-  console.log('\n========== UNCAUGHT EXCEPTION ==========');
-  console.log('Error Message:', error.message);
-  console.log('Error Name:', error.name);
-  console.log('Error Code:', (error as any).code);
-  console.log('Error Stack:', error.stack);
-  console.log('========================================\n');
+  // Write directly to stdout to bypass all logging systems
+  process.stdout.write('\n========== UNCAUGHT EXCEPTION ==========\n');
+  process.stdout.write(`Message: ${error.message}\n`);
+  process.stdout.write(`Name: ${error.name}\n`);
+  process.stdout.write(`Code: ${(error as any).code || 'N/A'}\n`);
+  process.stdout.write(`Stack:\n${error.stack}\n`);
+  process.stdout.write('========================================\n\n');
   
   // For uncaught exceptions, we should gracefully shutdown
   gracefulShutdown('uncaughtException');
