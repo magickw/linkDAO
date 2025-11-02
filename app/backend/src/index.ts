@@ -454,44 +454,17 @@ import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 // Import content performance routes
 import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
-// Import DEX trading routes
-let dexTradingRoutes: any;
-let stakingRoutes: any;
-let ldaoPostLaunchMonitoringRoutes: any;
+// TEMPORARILY DISABLED: These routes cause crashes during module loading
+// TODO: Fix and re-enable after identifying the root cause
+// import dexTradingRoutes from './routes/dexTradingRoutes';
+// import stakingRoutes from './routes/stakingRoutes';
+// import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
 
-try {
-  process.stdout.write('Loading DEX trading routes...\n');
-  dexTradingRoutes = require('./routes/dexTradingRoutes').default;
-  process.stdout.write('✅ DEX trading routes loaded\n');
-} catch (error) {
-  process.stdout.write(`❌ Failed to load DEX trading routes: ${error}\n`);
-}
+// app.use('/api/dex', dexTradingRoutes);
+// app.use('/api/staking', stakingRoutes);
+// app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
-try {
-  process.stdout.write('Loading staking routes...\n');
-  stakingRoutes = require('./routes/stakingRoutes').default;
-  process.stdout.write('✅ Staking routes loaded\n');
-} catch (error) {
-  process.stdout.write(`❌ Failed to load staking routes: ${error}\n`);
-}
-
-try {
-  process.stdout.write('Loading LDAO post-launch monitoring routes...\n');
-  const ldaoModule = require('./routes/ldaoPostLaunchMonitoringRoutes');
-  ldaoPostLaunchMonitoringRoutes = ldaoModule.ldaoPostLaunchMonitoringRoutes;
-  process.stdout.write('✅ LDAO post-launch monitoring routes loaded\n');
-} catch (error) {
-  process.stdout.write(`❌ Failed to load LDAO post-launch monitoring routes: ${error}\n`);
-}
-
-// DEX trading routes
-if (dexTradingRoutes) app.use('/api/dex', dexTradingRoutes);
-
-// Staking routes
-if (stakingRoutes) app.use('/api/staking', stakingRoutes);
-
-// LDAO post-launch monitoring routes
-if (ldaoPostLaunchMonitoringRoutes) app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
+process.stdout.write('⚠️  DEX, Staking, and LDAO monitoring routes temporarily disabled\n');
 
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
