@@ -840,12 +840,20 @@ const gracefulShutdown = async (signal: string) => {
 
 // Handle unhandled rejections and exceptions
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('🚨 Unhandled Rejection:', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined
+  });
   // Don't exit - log and continue
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  console.error('🚨 Uncaught Exception:', {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+    code: (error as any).code
+  });
   // For uncaught exceptions, we should gracefully shutdown
   gracefulShutdown('uncaughtException');
 });

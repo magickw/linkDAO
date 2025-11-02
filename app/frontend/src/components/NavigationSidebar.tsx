@@ -297,7 +297,9 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               <div className="p-4">
                 {enhancedUser ? (
                   <EnhancedUserCard
-                    user={enhancedUser as any}
+                    user={enhancedUser}
+                    address={address}
+                    profile={enhancedUser}
                     onClick={() => {/* Handle profile click */}}
                   />
                 ) : address ? (

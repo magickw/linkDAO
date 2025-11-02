@@ -18,11 +18,12 @@ interface RequestConfig {
 class RequestManager {
   private pendingRequests = new Map<string, PendingRequest>();
   private requestCounts = new Map<string, { count: number; windowStart: number }>();
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
-  private readonly MAX_REQUESTS_PER_MINUTE = 30; // Increased from 20 to 30
-  private readonly DEFAULT_TIMEOUT = 15000; // Increased from 10s to 15s
-  private readonly DEFAULT_RETRIES = 1; // Reduced from 2 to 1
-  private readonly DEFAULT_RETRY_DELAY = 2000; // Increased from 1s to 2s
+  private readonly MAX_REQUESTS_PER_MINUTE = 10; // Reduced to prevent rate limiting
+  private readonly DEFAULT_TIMEOUT = 20000; // Increased to 20s for slower responses
+  private readonly DEFAULT_RETRIES = 2; // Increased retries for 503 errors
+  private readonly DEFAULT_RETRY_DELAY = 3000; // Longer delay between retries
 
   /**
    * Make a managed API request with deduplication and rate limiting
@@ -41,8 +42,23 @@ class RequestManager {
 
     const requestKey = this.getRequestKey(url, options);
 
+    // Check cache first for GET requests
+    if (!options.method || options.method === 'GET') {
+      const cached = this.cache.get(requestKey);
+      if (cached && Date.now() - cached.timestamp < cached.ttl) {
+        console.log('Returning cached response:', requestKey);
+        return cached.data;
+      }
+    }
+
     // Check rate limit
     if (!this.checkRateLimit(url)) {
+      // Try to return cached data if available during rate limiting
+      const cached = this.cache.get(requestKey);
+      if (cached) {
+        console.log('Rate limited, returning stale cache:', requestKey);
+        return cached.data;
+      }
       throw new Error('Rate limit exceeded. Please try again later.');
     }
 
@@ -77,7 +93,19 @@ class RequestManager {
     }
 
     try {
-      return await requestPromise;
+      const result = await requestPromise;
+      
+      // Cache successful GET responses
+      if ((!options.method || options.method === 'GET') && result) {
+        const ttl = this.getTTL(url);
+        this.cache.set(requestKey, {
+          data: result,
+          timestamp: Date.now(),
+          ttl
+        });
+      }
+      
+      return result;
     } catch (error: unknown) {
       // Ensure 503 errors have the proper properties for service handling
       if (error instanceof Error) {
@@ -86,10 +114,29 @@ class RequestManager {
           errorWithStatus.isServiceUnavailable = true;
           errorWithStatus.status = 503;
           console.log('Request manager caught 503 error, properly formatted for service layer:', error.message);
+          
+          // Try to return cached data for 503 errors
+          const cached = this.cache.get(requestKey);
+          if (cached) {
+            console.log('Service unavailable, returning stale cache:', requestKey);
+            return cached.data;
+          }
         }
       }
       throw error;
     }
+  }
+
+  /**
+   * Get cache TTL based on URL
+   */
+  private getTTL(url: string): number {
+    if (url.includes('/api/feed')) return 30000; // 30 seconds
+    if (url.includes('/api/communities')) return 120000; // 2 minutes
+    if (url.includes('/api/profiles')) return 300000; // 5 minutes
+    if (url.includes('/api/governance')) return 180000; // 3 minutes
+    if (url.includes('/api/marketplace')) return 60000; // 1 minute
+    return 60000; // Default 1 minute
   }
 
   /**
@@ -117,7 +164,7 @@ class RequestManager {
 
         // Specific handling for 503 Service Unavailable
         if ((error as any).isServiceUnavailable || (error as any).status === 503) {
-          const serviceUnavailableDelay = 5000 * Math.pow(2, attempt); // Longer delay for 503
+          const serviceUnavailableDelay = Math.min(10000 * Math.pow(2, attempt), 60000); // Cap at 1 minute
           console.log(`Backend service unavailable. Retrying in ${serviceUnavailableDelay}ms (attempt ${attempt + 1}/${retries + 1}):`, url);
           await this.sleep(serviceUnavailableDelay);
           continue; // Continue to the next retry attempt

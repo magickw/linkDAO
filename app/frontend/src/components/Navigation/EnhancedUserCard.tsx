@@ -1,49 +1,52 @@
 import React from 'react';
-
-interface User {
-  id: string;
-  username: string;
-  displayName: string;
-  avatar: string;
-  reputation?: {
-    level: string;
-    totalScore: number;
-  };
-}
+import { UserProfile } from '@/models/UserProfile';
 
 interface EnhancedUserCardProps {
-  user: User;
+  user: UserProfile | null;
+  address: string | undefined;
+  profile: UserProfile | null;
   onClick?: () => void;
   className?: string;
 }
 
 export const EnhancedUserCard: React.FC<EnhancedUserCardProps> = ({
   user,
+  address,
+  profile,
   onClick,
   className = ''
 }) => {
+  // Use profile data if available, otherwise fall back to wallet address
+  const displayName = profile?.handle || profile?.ens || (address ? `User ${address.slice(0, 6)}...${address.slice(-4)}` : 'Anonymous');
+  const username = profile?.handle ? `@${profile.handle}` : profile?.ens || (address ? address.slice(0, 10) : '');
+  const avatar = profile?.avatarCid || '';
+
   return (
     <div
       className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer ${className}`}
       onClick={onClick}
     >
-      <img
-        src={user.avatar}
-        alt={user.displayName}
-        className="w-10 h-10 rounded-full object-cover"
-      />
+      {avatar ? (
+        <img
+          src={avatar}
+          alt={displayName}
+          className="w-10 h-10 rounded-full object-cover"
+        />
+      ) : (
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+          {displayName.charAt(0).toUpperCase()}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="font-medium text-gray-900 dark:text-white truncate">
-          {user.displayName}
+          {displayName}
         </div>
         <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-          @{user.username}
+          {username}
         </div>
-        {user.reputation && (
+        {profile && (
           <div className="text-xs text-blue-600 dark:text-blue-400">
-            {typeof user.reputation.level === 'string' 
-              ? user.reputation.level 
-              : (user.reputation.level as any)?.name || 'Level'} • {user.reputation.totalScore} pts
+            Member
           </div>
         )}
       </div>

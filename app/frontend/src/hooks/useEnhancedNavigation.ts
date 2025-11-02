@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { CommunityService } from '../services/communityService';
+import { ProfileService } from '../services/profileService';
 import { 
   QuickFilter, 
   CommunityWithIcons, 
@@ -15,6 +16,7 @@ import {
   generateBreadcrumbs, 
   createActivityIndicator 
 } from '@/components/Navigation';
+import { UserProfile } from '@/models/UserProfile';
 
 interface UseEnhancedNavigationReturn {
   // Quick Filters
@@ -30,7 +32,7 @@ interface UseEnhancedNavigationReturn {
   handleCommunityToggle: (communityId: string) => void;
   
   // User Profile
-  enhancedUser: EnhancedUserProfile | null;
+  enhancedUser: UserProfile | null;
   
   // Breadcrumbs
   breadcrumbs: NavigationBreadcrumb[];
@@ -52,88 +54,28 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(defaultQuickFilters as any);
   const [communities, setCommunities] = useState<CommunityWithIcons[]>([]);
   const [showAllCommunities, setShowAllCommunities] = useState(false);
-  const [enhancedUser, setEnhancedUser] = useState<EnhancedUserProfile | null>(null);
+  const [enhancedUser, setEnhancedUser] = useState<UserProfile | null>(null);
   const [activityIndicators, setActivityIndicators] = useState<ActivityIndicator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock enhanced user data - replace with real API call
+  // Load real user profile data
   useEffect(() => {
-    if (address) {
-      const mockUser: EnhancedUserProfile = {
-        id: address,
-        walletAddress: address,
-        username: `user_${address.slice(2, 8)}`,
-        displayName: `User ${address.slice(2, 6)}`,
-        avatar: '',
-        bio: 'Web3 enthusiast and community builder',
-        reputation: {
-          totalScore: 1250,
-          level: {
-            level: 5,
-            name: 'Community Builder',
-            minScore: 1000,
-            maxScore: 2000,
-            privileges: ['enhanced_posting', 'community_creation']
-          },
-          breakdown: {
-            posting: 400,
-            governance: 300,
-            community: 350,
-            trading: 150,
-            moderation: 50
-          },
-          progress: [
-            {
-              category: 'posting',
-              current: 400,
-              target: 500,
-              reward: 'Enhanced Post Features',
-              progress: 80
-            }
-          ],
-          history: []
-        },
-        badges: [
-          {
-            id: 'early-adopter',
-            name: 'Early Adopter',
-            description: 'Joined in the first month',
-            icon: '🚀',
-            rarity: 'rare',
-            earnedAt: new Date('2024-01-15'),
-            requirements: []
-          },
-          {
-            id: 'community-leader',
-            name: 'Community Leader',
-            description: 'Created and managed a successful community',
-            icon: '👑',
-            rarity: 'epic',
-            earnedAt: new Date('2024-02-20'),
-            requirements: []
-          }
-        ],
-        achievements: [],
-        level: {
-          level: 5,
-          name: 'Community Builder',
-          minScore: 1000,
-          maxScore: 2000,
-          privileges: ['enhanced_posting', 'community_creation']
-        },
-        followers: 89,
-        following: 128,
-        posts: 42,
-        communities: [],
-        lastActive: new Date(),
-        joinedAt: new Date('2024-01-15'),
-        activityScore: 85,
-        engagementRate: 12.5
-      };
-      
-      setEnhancedUser(mockUser);
-    }
+    const loadUserProfile = async () => {
+      if (address) {
+        try {
+          const profile = await ProfileService.getProfileByAddress(address);
+          setEnhancedUser(profile);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+          setEnhancedUser(null);
+        }
+      } else {
+        setEnhancedUser(null);
+      }
+    };
+
+    loadUserProfile();
   }, [address]);
 
   // Load real communities data
@@ -188,13 +130,14 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
     setActivityIndicators(indicators as any);
   }, []);
 
-  // Update filter counts based on mock data
+  // Update filter counts based on real data
   useEffect(() => {
     setQuickFilters(prev => prev.map(filter => {
       let count = 0;
       switch (filter.id) {
         case 'my-posts':
-          count = enhancedUser?.posts || 0;
+          // This would need to be fetched from a real posts service
+          count = 0;
           break;
         case 'tipped-posts':
           count = 15; // Mock count

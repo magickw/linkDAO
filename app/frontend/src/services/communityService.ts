@@ -6,6 +6,9 @@ import {
 import { CommunityOfflineCacheService } from './communityOfflineCacheService';
 import { fetchWithRetry, RetryOptions } from './retryUtils';
 import { communityPerformanceService } from './communityPerformanceService';
+import { requestManager } from './requestManager';
+import { communityCircuitBreaker } from './circuitBreaker';
+import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -265,7 +268,7 @@ export class CommunityService {
   }
 
   /**
-   * Get all communities with offline support
+   * Get all communities with offline support and request coalescing
    * @param params - Optional query parameters
    * @returns Array of communities
    */
@@ -276,80 +279,72 @@ export class CommunityService {
     limit?: number;
     offset?: number;
   }): Promise<Community[]> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    // Create cache key based on parameters
+    const cacheKey = `communities:${JSON.stringify(params || {})}`;
     
-    try {
-      let url = `${BACKEND_API_BASE_URL}/api/communities`;
-      const searchParams = new URLSearchParams();
-      
-      if (params) {
-        if (params.category) searchParams.append('category', params.category);
-        if (params.tags) searchParams.append('tags', params.tags.join(','));
-        if (params.isPublic !== undefined) searchParams.append('isPublic', params.isPublic.toString());
-        if (params.limit) searchParams.append('limit', params.limit.toString());
-        if (params.offset) searchParams.append('offset', params.offset.toString());
-      }
-      
-      if (searchParams.toString()) {
-        url += `?${searchParams.toString()}`;
-      }
-      
-      const response = await fetchWithRetry(
-        url,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
+    // Use circuit breaker and request coalescing
+    return communityCircuitBreaker.execute(
+      () => globalRequestCoalescer.request(
+        cacheKey,
+        async () => {
+          let url = `${BACKEND_API_BASE_URL}/api/communities`;
+          const searchParams = new URLSearchParams();
+          
+          if (params) {
+            if (params.category) searchParams.append('category', params.category);
+            if (params.tags) searchParams.append('tags', params.tags.join(','));
+            if (params.isPublic !== undefined) searchParams.append('isPublic', params.isPublic.toString());
+            if (params.limit) searchParams.append('limit', params.limit.toString());
+            if (params.offset) searchParams.append('offset', params.offset.toString());
+          }
+          
+          if (searchParams.toString()) {
+            url += `?${searchParams.toString()}`;
+          }
+          
+          const response = await requestManager.request(url, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }, {
+            timeout: 15000,
+            retries: 2,
+            deduplicate: true
+          });
+          
+          // Normalize payload to an array regardless of envelope shape
+          let communities: Community[] = [];
+          if (Array.isArray(response)) communities = response;
+          else if (Array.isArray(response?.data)) communities = response.data;
+          else if (Array.isArray(response?.communities)) communities = response.communities;
+          else if (Array.isArray(response?.results)) communities = response.results;
+          else if (Array.isArray(response?.items)) communities = response.items;
+          else if (Array.isArray(response?.data?.items)) communities = response.data.items;
+          else communities = [];
+          
+          return communities;
         },
-        COMMUNITY_RETRY_OPTIONS
-      );
-      
-      clearTimeout(timeoutId);
-      
-      // Gracefully handle common non-success statuses
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Unauthenticated/Unauthorized — return empty array in context where user may not be logged in
-          return [];
-        }
-        if (response.status === 503) {
-          // Service unavailable - return empty array instead of throwing to prevent UI crashes
-          console.warn('Community service unavailable (503), returning empty array');
-          return [];
-        }
-        if (response.status === 429) {
-          // Rate limited - return empty array instead of throwing to prevent UI crashes
-          console.warn('Community service rate limited (429), returning empty array');
-          return [];
-        }
-        const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || `Failed to fetch communities (HTTP ${response.status})`);
+        120000 // 2 minute cache
+      ),
+      () => {
+        // Fallback data when circuit is open
+        console.log('Using fallback communities data');
+        return [
+          {
+            id: 'linkdao',
+            name: 'LinkDAO',
+            description: 'The main LinkDAO community',
+            memberCount: 1000,
+            isPublic: true,
+            category: 'dao',
+            tags: ['dao', 'governance'],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          } as Community
+        ];
       }
-      
-      const json = await safeJson(response);
-      // Normalize payload to an array regardless of envelope shape
-      let communities: Community[] = [];
-      if (Array.isArray(json)) communities = json;
-      else if (Array.isArray(json?.data)) communities = json.data;
-      else if (Array.isArray(json?.communities)) communities = json.communities;
-      else if (Array.isArray(json?.results)) communities = json.results;
-      else if (Array.isArray(json?.items)) communities = json.items;
-      else if (Array.isArray(json?.data?.items)) communities = json.data.items;
-      else communities = [];
-      
-      return communities;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      
-      throw error;
-    }
+    );
   }
 
   /**
