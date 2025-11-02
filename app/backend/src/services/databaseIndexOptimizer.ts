@@ -504,6 +504,42 @@ export class DatabaseIndexOptimizer {
   }
 
   /**
+   * Validate DDL statement to prevent SQL injection
+   */
+  private isValidDDLStatement(statement: string): boolean {
+    const trimmedStatement = statement.trim();
+
+    // Only allow CREATE INDEX and DROP INDEX statements
+    const allowedPatterns = [
+      /^CREATE\s+INDEX\s+CONCURRENTLY/i,
+      /^CREATE\s+UNIQUE\s+INDEX\s+CONCURRENTLY/i,
+      /^DROP\s+INDEX\s+CONCURRENTLY/i,
+      /^DROP\s+INDEX\s+IF\s+EXISTS\s+CONCURRENTLY/i
+    ];
+
+    const isAllowedOperation = allowedPatterns.some(pattern => pattern.test(trimmedStatement));
+    if (!isAllowedOperation) {
+      return false;
+    }
+
+    // Block dangerous patterns even in allowed statements
+    const dangerousPatterns = [
+      /;\s*(SELECT|INSERT|UPDATE|DELETE|DROP\s+TABLE|DROP\s+DATABASE|CREATE\s+TABLE|ALTER|EXEC|GRANT)/i,
+      /--/,  // SQL comments
+      /\/\*/,  // Block comments
+      /xp_/i,  // Extended stored procedures
+      /sp_/i,  // System stored procedures
+    ];
+
+    const hasDangerousPattern = dangerousPatterns.some(pattern => pattern.test(trimmedStatement));
+    if (hasDangerousPattern) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Create recommended index
    */
   async createIndex(recommendation: IndexRecommendation): Promise<{
@@ -513,14 +549,34 @@ export class DatabaseIndexOptimizer {
   }> {
     const client = await this.pool.connect();
     const startTime = performance.now();
-    
+
     try {
+      // Validate DDL statement before execution
+      if (!this.isValidDDLStatement(recommendation.createStatement)) {
+        return {
+          success: false,
+          message: 'Invalid or unauthorized DDL statement. Only CREATE INDEX and DROP INDEX operations are allowed.'
+        };
+      }
+
+      // Log the operation for audit trail
+      safeLogger.info('Creating database index', {
+        statement: recommendation.createStatement,
+        tableName: recommendation.tableName,
+        priority: recommendation.priority
+      });
+
       await client.query(recommendation.createStatement);
       const executionTime = performance.now() - startTime;
-      
+
       // Remove the recommendation since it's been implemented
       this.indexRecommendations = this.indexRecommendations.filter(rec => rec !== recommendation);
-      
+
+      safeLogger.info('Index created successfully', {
+        statement: recommendation.createStatement,
+        executionTime
+      });
+
       return {
         success: true,
         message: `Index created successfully: ${recommendation.createStatement}`,
@@ -528,6 +584,10 @@ export class DatabaseIndexOptimizer {
       };
 
     } catch (error) {
+      safeLogger.error('Failed to create index', {
+        error,
+        statement: recommendation.createStatement
+      });
       return {
         success: false,
         message: `Failed to create index: ${error}`
@@ -538,6 +598,19 @@ export class DatabaseIndexOptimizer {
   }
 
   /**
+   * Safely quote PostgreSQL identifier to prevent SQL injection
+   */
+  private quoteIdentifier(identifier: string): string {
+    // Validate identifier format
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier)) {
+      throw new Error(`Invalid identifier format: ${identifier}`);
+    }
+
+    // Quote identifier for PostgreSQL
+    return `"${identifier.replace(/"/g, '""')}"`;
+  }
+
+  /**
    * Drop unused indexes
    */
   async dropUnusedIndexes(minUsageThreshold: number = 100): Promise<{
@@ -545,9 +618,9 @@ export class DatabaseIndexOptimizer {
     spaceReclaimed: string;
   }> {
     const indexStats = await this.analyzeIndexUsage();
-    const unusedIndexes = indexStats.filter(stat => 
-      stat.indexScans < minUsageThreshold && 
-      !stat.isUnique && 
+    const unusedIndexes = indexStats.filter(stat =>
+      stat.indexScans < minUsageThreshold &&
+      !stat.isUnique &&
       !stat.indexName.endsWith('_pkey')
     );
 
@@ -555,13 +628,24 @@ export class DatabaseIndexOptimizer {
     let totalSpaceReclaimed = 0;
 
     const client = await this.pool.connect();
-    
+
     try {
       for (const index of unusedIndexes) {
         try {
-          await client.query(`DROP INDEX CONCURRENTLY ${index.indexName}`);
+          // Safely quote identifier to prevent SQL injection
+          const quotedIndexName = this.quoteIdentifier(index.indexName);
+          const dropStatement = `DROP INDEX CONCURRENTLY ${quotedIndexName}`;
+
+          // Log the operation for audit trail
+          safeLogger.info('Dropping unused index', {
+            indexName: index.indexName,
+            indexScans: index.indexScans,
+            indexSize: index.indexSize
+          });
+
+          await client.query(dropStatement);
           droppedIndexes.push(index.indexName);
-          
+
           // Parse size string to estimate space reclaimed
           const sizeMatch = index.indexSize.match(/(\d+(?:\.\d+)?)\s*(\w+)/);
           if (sizeMatch) {
@@ -570,6 +654,10 @@ export class DatabaseIndexOptimizer {
             const multiplier = unit === 'gb' ? 1024 : unit === 'mb' ? 1 : 0.001;
             totalSpaceReclaimed += size * multiplier;
           }
+
+          safeLogger.info('Index dropped successfully', {
+            indexName: index.indexName
+          });
         } catch (error) {
           safeLogger.error(`Failed to drop index ${index.indexName}:`, error);
         }
