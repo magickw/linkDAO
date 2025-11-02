@@ -29,25 +29,44 @@ export class MetadataService {
   private async initializeIpfsClient(): Promise<any | null> {
     try {
       // Use require instead of import for CommonJS compatibility
-      const { create } = require('ipfs-http-client');
+      let create;
+      try {
+        const ipfsModule = require('ipfs-http-client');
+        create = ipfsModule.create;
+        if (!create) {
+          safeLogger.warn('ipfs-http-client module loaded but create function not found');
+          return null;
+        }
+      } catch (requireError) {
+        safeLogger.error('Failed to require ipfs-http-client:', requireError);
+        safeLogger.warn('IPFS module not available, using fallback storage');
+        return null;
+      }
       
       // For Pinata, we need to use a different configuration
       if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
         // Configure for Pinata gateway (read-only operations)
         safeLogger.info('Configuring IPFS client for Pinata gateway');
-        const client = create({
-          host: 'api.pinata.cloud',
-          port: 443,
-          protocol: 'https',
-          headers: {
-            Authorization: `Bearer ${IPFS_CONFIG.projectId}`
-          },
-          apiPath: '/data'
-        });
-        
-        // Test connection with a simple request
-        safeLogger.info('Testing Pinata connection...');
-        return client;
+        try {
+          const client = create({
+            host: 'api.pinata.cloud',
+            port: 443,
+            protocol: 'https',
+            headers: {
+              Authorization: `Bearer ${IPFS_CONFIG.projectId}`
+            },
+            apiPath: '/data'
+          });
+          
+          // Test connection with a simple request
+          safeLogger.info('Testing Pinata connection...');
+          safeLogger.info('✅ Pinata client created successfully');
+          return client;
+        } catch (pinataError) {
+          safeLogger.error('Pinata client creation failed:', pinataError);
+          safeLogger.warn('Pinata not available, using fallback storage');
+          return null;
+        }
       } else if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret) {
         // Generic IPFS with authentication
         const client = create({
