@@ -101,7 +101,7 @@ export function useResilientAPI<T>(
         error: null,
         isServiceAvailable: true,
         isFromCache: false
-      }));
+      } as APIState<T>));
     } catch (error) {
       const err = error as Error;
       const isServiceUnavailable = (error as any)?.isServiceUnavailable || 

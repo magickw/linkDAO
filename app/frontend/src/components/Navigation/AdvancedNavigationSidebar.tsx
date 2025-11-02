@@ -20,7 +20,7 @@ const AdvancedNavigationSidebar: React.FC = () => {
     <div className="h-full flex flex-col bg-white dark:bg-gray-800">
       {/* Enhanced User Profile Card */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        {enhancedUser && <EnhancedUserCard user={enhancedUser as any} />}
+        {enhancedUser && <EnhancedUserCard user={enhancedUser} address={enhancedUser.walletAddress} profile={enhancedUser} />}
       </div>
 
       {/* Navigation Breadcrumbs */}

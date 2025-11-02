@@ -177,12 +177,12 @@ describe('Navigation Components', () => {
       render(
         <EnhancedUserCard 
           user={mockUser} 
-          balance="1.5" 
+          address={mockUser.walletAddress}
+          profile={mockUser}
         />
       );
       
       expect(screen.getByText('Test User')).toBeInTheDocument();
-      expect(screen.getByText('1.5 ETH')).toBeInTheDocument();
       expect(screen.getByText('Community Builder')).toBeInTheDocument();
     });
 
@@ -190,7 +190,8 @@ describe('Navigation Components', () => {
       render(
         <EnhancedUserCard 
           user={mockUser} 
-          balance="1.5" 
+          address={mockUser.walletAddress}
+          profile={mockUser}
         />
       );
       
@@ -201,7 +202,8 @@ describe('Navigation Components', () => {
       render(
         <EnhancedUserCard 
           user={mockUser} 
-          balance="1.5" 
+          address={mockUser.walletAddress}
+          profile={mockUser}
         />
       );
       

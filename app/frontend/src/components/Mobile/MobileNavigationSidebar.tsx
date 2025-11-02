@@ -6,11 +6,13 @@ import { QuickFilterPanel } from '@/components/Navigation/QuickFilterPanel';
 import { CommunityIconList } from '@/components/Navigation/CommunityIconList';
 import { EnhancedUserCard } from '@/components/Navigation/EnhancedUserCard';
 import { ActivityIndicators } from '@/components/Navigation/ActivityIndicators';
+import { UserProfile } from '@/models/UserProfile';
 
 interface MobileNavigationSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any; // Replace with proper user type
+  user: UserProfile | null;
+  address: string | undefined;
   communities: any[]; // Replace with proper community type
   activeFilters: any[]; // Replace with proper filter type
   onFilterChange: (filters: any[]) => void;
@@ -23,6 +25,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
   isOpen,
   onClose,
   user,
+  address,
   communities,
   activeFilters,
   onFilterChange,
@@ -123,6 +126,8 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <EnhancedUserCard
                   user={user}
+                  address={address}
+                  profile={user}
                   onClick={handleUserProfileClick}
                   className="mobile-optimized cursor-pointer"
                 />

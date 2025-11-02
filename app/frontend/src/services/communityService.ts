@@ -316,11 +316,11 @@ export class CommunityService {
           // Normalize payload to an array regardless of envelope shape
           let communities: Community[] = [];
           if (Array.isArray(response)) communities = response;
-          else if (Array.isArray(response?.data)) communities = response.data;
-          else if (Array.isArray(response?.communities)) communities = response.communities;
-          else if (Array.isArray(response?.results)) communities = response.results;
-          else if (Array.isArray(response?.items)) communities = response.items;
-          else if (Array.isArray(response?.data?.items)) communities = response.data.items;
+          else if (response && typeof response === 'object' && Array.isArray((response as any)?.data)) communities = (response as any).data;
+          else if (response && typeof response === 'object' && Array.isArray((response as any)?.communities)) communities = (response as any).communities;
+          else if (response && typeof response === 'object' && Array.isArray((response as any)?.results)) communities = (response as any).results;
+          else if (response && typeof response === 'object' && Array.isArray((response as any)?.items)) communities = (response as any).items;
+          else if (response && typeof response === 'object' && (response as any)?.data && typeof (response as any).data === 'object' && Array.isArray((response as any).data?.items)) communities = (response as any).data.items;
           else communities = [];
           
           return communities;

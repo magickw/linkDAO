@@ -838,6 +838,11 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (error) => {
+  console.error('🚨 UNCAUGHT EXCEPTION DETAILS:');
+  console.error('Message:', error.message);
+  console.error('Name:', error.name);
+  console.error('Code:', (error as any).code);
+  console.error('Stack:', error.stack);
   console.error('🚨 Uncaught Exception:', {
     message: error.message,
     stack: error.stack,
