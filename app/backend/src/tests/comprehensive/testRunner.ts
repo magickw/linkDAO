@@ -6,7 +6,7 @@
  */
 
 import { ComprehensiveTestSuite } from './testSuite';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 import fs from 'fs/promises';
 import path from 'path';

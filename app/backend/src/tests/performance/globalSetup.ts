@@ -3,7 +3,7 @@
  */
 
 import { performance } from 'perf_hooks';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export default async function globalSetup() {
   safeLogger.info('🚀 Setting up global performance test environment...');

@@ -11,7 +11,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, afterEach, test, expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { TestEnvironment } from './testEnvironment';
 import { LDAOAcquisitionService } from '../../services/ldaoAcquisitionService';
 import request from 'supertest';

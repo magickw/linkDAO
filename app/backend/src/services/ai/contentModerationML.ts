@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export interface MLModerationResult {
   riskScore: number;

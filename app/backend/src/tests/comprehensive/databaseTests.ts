@@ -6,7 +6,7 @@
  */
 
 import { Pool } from 'pg';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { describe, test, expect } from '@jest/globals';
 
 export interface DatabaseTestResults {

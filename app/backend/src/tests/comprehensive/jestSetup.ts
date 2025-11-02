@@ -5,7 +5,7 @@
  */
 
 import { expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 // Custom matchers
 expect.extend({

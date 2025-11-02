@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 interface NotificationChannel {
   type: 'push' | 'email' | 'sms' | 'webhook' | 'slack' | 'in_app';

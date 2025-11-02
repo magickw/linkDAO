@@ -4,7 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../../db/schema';

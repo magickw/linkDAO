@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 /**
  * Security Test Setup

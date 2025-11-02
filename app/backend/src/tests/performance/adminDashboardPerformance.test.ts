@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import request from 'supertest';
 import { performance } from 'perf_hooks';
 import { app } from '../../index';

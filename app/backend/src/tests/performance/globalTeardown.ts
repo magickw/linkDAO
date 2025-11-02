@@ -3,7 +3,7 @@
  */
 
 import { performance } from 'perf_hooks';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 export default async function globalTeardown() {
   safeLogger.info('🧹 Starting global performance test cleanup...');

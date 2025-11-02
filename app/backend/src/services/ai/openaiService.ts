@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import crypto from 'crypto';
 import { aiCacheService } from './aiCacheService';
 

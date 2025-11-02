@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 // Global test setup for bridge tests
 beforeAll(async () => {

@@ -5,7 +5,7 @@
  */
 
 import { viewService } from '../../services/viewService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { db } from '../../db';
 import { posts, users } from '../../db/schema';
 import { eq } from 'drizzle-orm';

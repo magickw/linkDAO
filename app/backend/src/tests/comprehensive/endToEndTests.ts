@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { Browser, Page } from 'playwright';
 
 export interface E2ETestResults {

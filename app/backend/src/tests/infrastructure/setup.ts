@@ -4,7 +4,7 @@
  */
 
 import { config } from 'dotenv';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import path from 'path';
 
 // Load test environment variables

@@ -1,5 +1,5 @@
 import express, { Express } from 'express';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import cors from 'cors';
 import { jest } from '@jest/globals';
 

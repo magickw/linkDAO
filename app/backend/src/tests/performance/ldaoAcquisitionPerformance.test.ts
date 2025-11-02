@@ -10,7 +10,7 @@
  */
 
 import { describe, beforeAll, afterAll, beforeEach, test, expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { TestEnvironment } from '../comprehensive/testEnvironment';
 import { LDAOAcquisitionService } from '../../services/ldaoAcquisitionService';

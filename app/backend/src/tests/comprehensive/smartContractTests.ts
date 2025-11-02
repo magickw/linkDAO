@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { expect } from '@jest/globals';
 
 export interface ContractCoverage {

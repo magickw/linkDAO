@@ -5,7 +5,7 @@
  */
 
 import { db } from '../../db';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { posts } from '../../db/schema';
 import { sql, eq } from 'drizzle-orm';
 

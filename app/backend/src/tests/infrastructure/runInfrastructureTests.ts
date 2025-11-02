@@ -4,7 +4,7 @@
  */
 
 import { execSync } from 'child_process';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import path from 'path';
 
 interface TestResult {

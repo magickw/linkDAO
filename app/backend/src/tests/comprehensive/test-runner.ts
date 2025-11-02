@@ -4,7 +4,7 @@
  */
 
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { TestSuiteOrchestrator } from '../utils/testSuiteOrchestrator';
 import { TestReporter } from '../utils/testReporter';
 import { TestEnvironmentManager } from '../utils/testEnvironmentManager';

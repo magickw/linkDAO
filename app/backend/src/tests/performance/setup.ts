@@ -4,7 +4,7 @@
  */
 
 import { beforeAll, afterAll } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 // Global performance test setup
 beforeAll(async () => {

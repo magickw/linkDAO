@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { performance } from 'perf_hooks';
 import { EventEmitter } from 'events';
 import { DatabaseOptimizationService } from '../../services/databaseOptimizationService';

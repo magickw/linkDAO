@@ -1,5 +1,5 @@
 import { openaiService } from './openaiService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 /**
  * Content Moderation AI Service

@@ -6,7 +6,7 @@
  */
 
 import { Pool } from 'pg';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { Redis } from 'ioredis';
 import { ethers } from 'ethers';
 import { drizzle } from 'drizzle-orm/postgres-js';

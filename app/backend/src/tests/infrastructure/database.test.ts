@@ -4,7 +4,7 @@
  */
 
 import { db } from '../../db/connection';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { posts, communities, conversations, messages } from '../../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 

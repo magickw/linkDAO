@@ -1,5 +1,5 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { createAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import http from 'http';

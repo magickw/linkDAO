@@ -9,7 +9,7 @@
  */
 
 import { bookmarkService } from '../../services/bookmarkService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import { shareService } from '../../services/shareService';
 import { trendingCacheService } from '../../services/trendingCacheService';
 import { db } from '../../db';

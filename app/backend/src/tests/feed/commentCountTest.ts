@@ -5,7 +5,7 @@
  */
 
 import { feedService } from '../../services/feedService';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 
 async function testCommentCounting() {
   safeLogger.info('🧪 Testing Comment Count Implementation...\n');

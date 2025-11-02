@@ -5,7 +5,7 @@
  */
 
 import fs from 'fs/promises';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import path from 'path';
 
 interface TestResult {

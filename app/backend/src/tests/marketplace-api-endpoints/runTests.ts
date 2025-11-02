@@ -8,7 +8,7 @@
  */
 
 import { execSync } from 'child_process';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from '../../utils/safeLogger';
 import path from 'path';
 
 const testDir = path.join(__dirname);
