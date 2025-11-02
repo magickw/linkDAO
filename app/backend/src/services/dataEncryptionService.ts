@@ -602,4 +602,22 @@ export class DataEncryptionService {
   }
 }
 
-export const dataEncryptionService = new DataEncryptionService();
+// Only instantiate if encryption env vars are set
+// This allows the application to run without encryption in development/staging
+let dataEncryptionService: DataEncryptionService | null = null;
+
+try {
+  if (process.env.ENCRYPTION_PASSWORD && process.env.ENCRYPTION_SALT) {
+    dataEncryptionService = new DataEncryptionService();
+    console.log('✅ Data encryption service initialized');
+  } else {
+    console.warn('⚠️  ENCRYPTION_PASSWORD and ENCRYPTION_SALT not set - data encryption service disabled');
+    console.warn('⚠️  For production deployments, these environment variables must be configured');
+  }
+} catch (error) {
+  console.error('❌ Failed to initialize data encryption service:', error);
+  console.warn('⚠️  Application will continue without data encryption');
+  dataEncryptionService = null;
+}
+
+export { dataEncryptionService };
