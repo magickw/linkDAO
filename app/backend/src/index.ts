@@ -446,6 +446,9 @@ import ensValidationRoutes from './routes/ensValidationRoutes';
 import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
+// Import database schema
+import { users } from './db/schema';
+import { eq } from 'drizzle-orm';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -591,6 +594,88 @@ app.use('/api/marketplace', ensValidationRoutes);
 
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
+
+// Add the missing endpoint that matches the frontend expectation
+app.get('/api/profiles/address/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Ethereum address'
+      });
+    }
+    
+    // Import the database service
+    const { db } = await import('./db/index');
+    
+    // Query the database
+    const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
+    
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    // Transform the user data to match the frontend UserProfile interface
+    const user = result[0];
+    let profileData = {};
+    
+    try {
+      if (user.profileCid) {
+        profileData = JSON.parse(user.profileCid);
+      }
+    } catch (e) {
+      console.log('Failed to parse profile data for user:', user.walletAddress);
+    }
+    
+    const profile = {
+      id: user.id,
+      walletAddress: user.walletAddress,
+      handle: user.handle || '',
+      ens: profileData.ens || '',
+      avatarCid: profileData.avatarCid || profileData.profilePicture || '',
+      bioCid: profileData.bioCid || profileData.bio || '',
+      email: profileData.email || '',
+      billingFirstName: profileData.billingFirstName || '',
+      billingLastName: profileData.billingLastName || '',
+      billingCompany: profileData.billingCompany || '',
+      billingAddress1: profileData.billingAddress1 || '',
+      billingAddress2: profileData.billingAddress2 || '',
+      billingCity: profileData.billingCity || '',
+      billingState: profileData.billingState || '',
+      billingZipCode: profileData.billingZipCode || '',
+      billingCountry: profileData.billingCountry || '',
+      billingPhone: profileData.billingPhone || '',
+      shippingFirstName: profileData.shippingFirstName || '',
+      shippingLastName: profileData.shippingLastName || '',
+      shippingCompany: profileData.shippingCompany || '',
+      shippingAddress1: profileData.shippingAddress1 || '',
+      shippingAddress2: profileData.shippingAddress2 || '',
+      shippingCity: profileData.shippingCity || '',
+      shippingState: profileData.shippingState || '',
+      shippingZipCode: profileData.shippingZipCode || '',
+      shippingCountry: profileData.shippingCountry || '',
+      shippingPhone: profileData.shippingPhone || '',
+      createdAt: new Date(user.createdAt),
+      updatedAt: new Date(user.updatedAt)
+    };
+    
+    res.json({
+      success: true,
+      data: profile
+    });
+  } catch (error) {
+    console.error('Error fetching profile by address:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Marketplace listings routes (legacy support)
 app.use('/api/marketplace', marketplaceListingsRoutes);
