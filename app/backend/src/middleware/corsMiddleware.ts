@@ -56,7 +56,13 @@ const CORS_CONFIGS = {
   },
   
   production: {
-    allowedOrigins: ['*'],
+    allowedOrigins: [
+      'https://www.linkdao.io',
+      'https://linkdao.io',
+      'https://linkdao.vercel.app',
+      'https://linkdao-*.vercel.app', // Vercel preview deployments
+      'https://*.vercel.app'
+    ],
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Origin',
@@ -167,8 +173,25 @@ export class CorsManager {
           return callback(null, true);
         }
 
-        // Check if origin is in allowed list
+        // Check if origin exactly matches allowed list
         if (this.config.allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Check for wildcard patterns (e.g., *.vercel.app)
+        const isWildcardMatch = this.config.allowedOrigins.some(allowed => {
+          if (allowed.includes('*')) {
+            // Convert wildcard pattern to regex
+            const pattern = allowed
+              .replace(/\./g, '\\.')
+              .replace(/\*/g, '.*');
+            const regex = new RegExp(`^${pattern}$`);
+            return regex.test(origin);
+          }
+          return false;
+        });
+
+        if (isWildcardMatch) {
           return callback(null, true);
         }
 

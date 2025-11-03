@@ -8,20 +8,106 @@ This guide addresses common issues encountered in the LinkDAO platform, their ro
 
 ## Table of Contents
 
-1. [Backend Service Issues (503 Errors)](#backend-service-issues-503-errors)
-2. [Missing API Endpoints (404 Errors)](#missing-api-endpoints-404-errors)
-3. [Rate Limiting Issues](#rate-limiting-issues)
-4. [WebSocket Connection Failures](#websocket-connection-failures)
-5. [Service Worker and CSP Violations](#service-worker-and-csp-violations)
-6. [RPC Node Rate Limits](#rpc-node-rate-limits)
-7. [Authentication Issues](#authentication-issues)
-8. [Database Connection Problems](#database-connection-problems)
-9. [Memory Issues on Render](#memory-issues-on-render)
-10. [External API Failures](#external-api-failures)
+1. [CORS Errors (Critical)](#1-cors-errors-critical)
+2. [Backend Service Issues (503 Errors)](#2-backend-service-issues-503-errors)
+3. [Missing API Endpoints (404 Errors)](#3-missing-api-endpoints-404-errors)
+4. [Rate Limiting Issues](#4-rate-limiting-issues)
+5. [WebSocket Connection Failures](#5-websocket-connection-failures)
+6. [Service Worker and CSP Violations](#6-service-worker-and-csp-violations)
+7. [RPC Node Rate Limits](#7-rpc-node-rate-limits)
+8. [Authentication Issues](#8-authentication-issues)
+9. [Database Connection Problems](#9-database-connection-problems)
+10. [Memory Issues on Render](#10-memory-issues-on-render)
+11. [External API Failures](#11-external-api-failures)
 
 ---
 
-## 1. Backend Service Issues (503 Errors)
+## 1. CORS Errors (Critical)
+
+### Symptoms
+```
+Error: Not allowed by CORS
+Access to fetch at 'https://linkdao-backend.onrender.com/api/*' from origin 'https://www.linkdao.io'
+has been blocked by CORS policy
+```
+
+### Root Cause
+The backend CORS configuration doesn't include the frontend domain in the allowed origins list.
+
+### Solutions
+
+#### Immediate Fix (Environment Variable - No Code Deploy Required)
+
+1. **Add CORS_ORIGIN Environment Variable in Render**:
+   - Go to https://dashboard.render.com
+   - Select `linkdao-backend` service
+   - Navigate to "Environment" tab
+   - Add environment variable:
+     ```
+     Key: CORS_ORIGIN
+     Value: https://www.linkdao.io,https://linkdao.io
+     ```
+   - Save (will auto-restart service)
+
+2. **Verify Fix**:
+   ```bash
+   curl -H "Origin: https://www.linkdao.io" \
+     -H "Access-Control-Request-Method: GET" \
+     -X OPTIONS \
+     https://linkdao-backend.onrender.com/health
+
+   # Should return Access-Control-Allow-Origin: https://www.linkdao.io
+   ```
+
+#### Permanent Fix (Code Change)
+
+**Status**: ✅ FIXED in `app/backend/src/middleware/corsMiddleware.ts:59-65`
+
+The production CORS configuration now includes:
+- `https://www.linkdao.io`
+- `https://linkdao.io`
+- `https://linkdao-frontend.vercel.app`
+- `https://linkdao-frontend-*.vercel.app` (preview deployments)
+- `https://*.vercel.app` (all Vercel apps)
+
+#### Common Mistakes
+
+❌ **Don't use**: `origin: '*'` with `credentials: true` (incompatible)
+❌ **Don't use**: `www.linkdao.io` (missing `https://`)
+❌ **Don't use**: `https://www.linkdao.io/` (trailing slash)
+
+✅ **Do use**: `https://www.linkdao.io` (exact format)
+
+#### Debugging CORS Issues
+
+1. **Check Exact Origin Being Sent**:
+   ```javascript
+   // In browser console on www.linkdao.io:
+   console.log(window.location.origin);
+   // Should output: "https://www.linkdao.io"
+   ```
+
+2. **Check Backend Logs**:
+   ```
+   Look for: "CORS origin blocked"
+   Will show: origin, allowedOrigins, timestamp
+   ```
+
+3. **Test With curl**:
+   ```bash
+   curl -v -H "Origin: https://www.linkdao.io" \
+     https://linkdao-backend.onrender.com/api/feed/enhanced
+
+   # Look for Access-Control-Allow-Origin header in response
+   ```
+
+#### See Also
+- [CORS Fix Documentation](../technical/CORS_FIX_2025_11_03.md)
+- [CORS Middleware Source](../../app/backend/src/middleware/corsMiddleware.ts)
+
+---
+
+## 2. Backend Service Issues (503 Errors)
 
 ### Symptoms
 ```
