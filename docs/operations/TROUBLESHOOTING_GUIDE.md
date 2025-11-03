@@ -818,7 +818,7 @@ console.log(rateLimitHandler.getCircuitBreakerStatus());
 ```
 
 ### 3. Monitor Rate Limits in Browser Console
-```javascript
+```
 // Service Worker rate limit logs
 // Look for: "Rate limit exceeded for: ..."
 // Filter console by "Rate limit"

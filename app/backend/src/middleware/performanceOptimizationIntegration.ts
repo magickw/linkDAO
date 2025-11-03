@@ -60,7 +60,7 @@ export class PerformanceOptimizationIntegration {
     enableAutoOptimization: true,
   };
 
-  constructor(pool: Pool, config: PerformanceOptimizationConfig) {
+  constructor(pool: Pool, config: OptimizationConfig) {
     this.pool = pool;
     this.config = { ...this.defaultConfig, ...config };
     this.metrics = this.initializeMetrics();
