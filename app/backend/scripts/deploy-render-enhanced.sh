@@ -11,9 +11,9 @@ echo "Node version: $(node --version)"
 echo "NPM version: $(npm --version)"
 echo "TypeScript version: $(npx tsc --version)"
 
-# Set memory limits
-export NODE_OPTIONS="--max-old-space-size=2048"
-echo "Memory limit: $NODE_OPTIONS"
+# Set memory limits for Node.js processes
+export NODE_OPTIONS="--max-old-space-size=4096"
+echo "Memory limit for Node.js processes: $NODE_OPTIONS"
 
 # Show current directory
 echo "📂 Current directory: $(pwd)"
@@ -25,13 +25,14 @@ echo "🧹 Cleaning previous builds..."
 rm -rf dist
 mkdir -p dist
 
-# Strategy 1: Try full TypeScript compilation (BEST APPROACH)
-echo "🔨 Strategy 1: Attempting full TypeScript compilation..."
+# Strategy 1: Try full TypeScript compilation with increased memory (BEST APPROACH)
+echo "🔨 Strategy 1: Attempting full TypeScript compilation with increased memory..."
 echo "Running: npx tsc --project tsconfig.json --noEmitOnError false"
 
 # Temporarily disable strict error mode to allow compilation to complete
 set +e
-npx tsc --project tsconfig.json --noEmitOnError false
+# Run TypeScript compilation with increased memory limits
+NODE_OPTIONS="--max-old-space-size=4096" npx tsc --project tsconfig.json --noEmitOnError false
 TSC_EXIT_CODE=$?
 set -e
 
@@ -44,6 +45,41 @@ if [ -f "dist/index.js" ]; then
     echo "📊 File size: $(ls -lh dist/index.js | awk '{print $5}')"
     echo "📊 Files in dist/: $(find dist -name '*.js' | wc -l) JavaScript files"
     echo "🎉 Primary deployment strategy succeeded!"
+    
+    # Ensure the entry point uses the compiled JavaScript instead of ts-node
+    if [ -f "dist/index.js" ]; then
+        echo "🔧 Updating entry point to use compiled JavaScript..."
+        cat > dist/index.js << 'EOF'
+#!/usr/bin/env node
+
+/**
+ * Production Server Entry Point (JavaScript)
+ * 
+ * This is the main entry point for the LinkDAO backend in production.
+ * It directly loads the compiled JavaScript version for optimal performance.
+ */
+
+console.log('🚀 Starting LinkDAO Backend Production Server...');
+
+// Try to use the optimized production version first
+try {
+  // This will load and start the server
+  require('./index.production.optimized.js');
+  console.log('✅ LinkDAO Backend Optimized Server started successfully');
+} catch (error) {
+  console.log('⚠️  Optimized version not available, trying emergency version...');
+  try {
+    require('./index.emergency.js');
+    console.log('✅ LinkDAO Backend Emergency Server started successfully');
+  } catch (emergencyError) {
+    console.error('❌ Failed to start LinkDAO Backend:', emergencyError.message);
+    console.error('Stack:', emergencyError.stack);
+    process.exit(1);
+  }
+}
+EOF
+    fi
+    
     exit 0
 else
     echo "❌ dist/index.js was NOT created by TypeScript compilation"
@@ -54,10 +90,45 @@ fi
 # Strategy 2: Try with tsconfig.prod.json if it exists
 echo "🔨 Strategy 2: Attempting TypeScript compilation with tsconfig.prod.json..."
 if [ -f "tsconfig.prod.json" ]; then
-    if npx tsc --project tsconfig.prod.json --noEmitOnError false 2>&1; then
+    if NODE_OPTIONS="--max-old-space-size=4096" npx tsc --project tsconfig.prod.json --noEmitOnError false 2>&1; then
         echo "✅ Full TypeScript compilation successful"
         if [ -f "dist/index.js" ]; then
             echo "🎉 Primary deployment strategy succeeded!"
+            
+            # Ensure the entry point uses the compiled JavaScript instead of ts-node
+            if [ -f "dist/index.js" ]; then
+                echo "🔧 Updating entry point to use compiled JavaScript..."
+                cat > dist/index.js << 'EOF'
+#!/usr/bin/env node
+
+/**
+ * Production Server Entry Point (JavaScript)
+ * 
+ * This is the main entry point for the LinkDAO backend in production.
+ * It directly loads the compiled JavaScript version for optimal performance.
+ */
+
+console.log('🚀 Starting LinkDAO Backend Production Server...');
+
+// Try to use the optimized production version first
+try {
+  // This will load and start the server
+  require('./index.production.optimized.js');
+  console.log('✅ LinkDAO Backend Optimized Server started successfully');
+} catch (error) {
+  console.log('⚠️  Optimized version not available, trying emergency version...');
+  try {
+    require('./index.emergency.js');
+    console.log('✅ LinkDAO Backend Emergency Server started successfully');
+  } catch (emergencyError) {
+    console.error('❌ Failed to start LinkDAO Backend:', emergencyError.message);
+    console.error('Stack:', emergencyError.stack);
+    process.exit(1);
+  }
+}
+EOF
+            fi
+            
             exit 0
         fi
     else
@@ -84,7 +155,9 @@ if [ -f "src/index.ts" ]; then
     "noImplicitAny": false,
     "noEmitOnError": false,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": [
     "src/index.ts"
@@ -97,10 +170,45 @@ if [ -f "src/index.ts" ]; then
 }
 EOF
 
-    if npx tsc --project tsconfig.emergency.json 2>&1; then
+    if NODE_OPTIONS="--max-old-space-size=4096" npx tsc --project tsconfig.emergency.json 2>&1; then
         echo "✅ Minimal TypeScript compilation successful"
         if [ -f "dist/index.js" ]; then
             echo "🎉 Fallback deployment strategy succeeded!"
+            
+            # Ensure the entry point uses the compiled JavaScript instead of ts-node
+            if [ -f "dist/index.js" ]; then
+                echo "🔧 Updating entry point to use compiled JavaScript..."
+                cat > dist/index.js << 'EOF'
+#!/usr/bin/env node
+
+/**
+ * Production Server Entry Point (JavaScript)
+ * 
+ * This is the main entry point for the LinkDAO backend in production.
+ * It directly loads the compiled JavaScript version for optimal performance.
+ */
+
+console.log('🚀 Starting LinkDAO Backend Production Server...');
+
+// Try to use the optimized production version first
+try {
+  // This will load and start the server
+  require('./index.production.optimized.js');
+  console.log('✅ LinkDAO Backend Optimized Server started successfully');
+} catch (error) {
+  console.log('⚠️  Optimized version not available, trying emergency version...');
+  try {
+    require('./index.emergency.js');
+    console.log('✅ LinkDAO Backend Emergency Server started successfully');
+  } catch (emergencyError) {
+    console.error('❌ Failed to start LinkDAO Backend:', emergencyError.message);
+    console.error('Stack:', emergencyError.stack);
+    process.exit(1);
+  }
+}
+EOF
+            fi
+            
             rm -f tsconfig.emergency.json
             exit 0
         fi
@@ -119,7 +227,7 @@ if [ -d "src" ]; then
     # Try to find any working entry point
     if [ -f "src/simpleServer.ts" ]; then
         echo "📋 Found simpleServer.ts, trying to compile it..."
-        npx tsc src/simpleServer.ts --outDir dist --target ES2020 --module commonjs --skipLibCheck --allowJs 2>/dev/null || true
+        NODE_OPTIONS="--max-old-space-size=4096" npx tsc src/simpleServer.ts --outDir dist --target ES2020 --module commonjs --skipLibCheck --allowJs 2>/dev/null || true
         if [ -f "dist/simpleServer.js" ]; then
             mv dist/simpleServer.js dist/index.js
             echo "✅ Simple server compilation successful"

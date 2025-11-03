@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 /**
  * Token Reaction Controller
  * Handles HTTP requests for token-based reactions

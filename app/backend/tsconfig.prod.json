@@ -14,7 +14,9 @@
     "strictNullChecks": false,
     "strictFunctionTypes": false,
     "noImplicitReturns": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "maxNodeModuleJsDepth": 0,
+    "disableSizeLimit": true
   },
   "include": [
     "src/**/*"
@@ -22,13 +24,12 @@
   "exclude": [
     "node_modules",
     "dist",
+    "coverage",
+    "scripts",
+    "load-tests",
+    "docs",
+    "src/tests",
     "**/*.test.ts",
-    "**/*.spec.ts", 
-    "tests/**/*",
-    "coverage/**/*",
-    "scripts/**/*",
-    "load-tests/**/*",
-    "docs/**/*",
-    "src/tests/**/*"
+    "**/*.spec.ts"
   ]
 }

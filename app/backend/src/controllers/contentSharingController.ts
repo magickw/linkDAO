@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 /**
  * Content Sharing Controller
  * Handles content sharing between feed, communities, and messages

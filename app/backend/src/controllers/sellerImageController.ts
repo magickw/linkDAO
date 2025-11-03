@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 /**
  * Seller Image Controller
  * Handles image upload, processing, and management for seller system

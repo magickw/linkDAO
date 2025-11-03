@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 /**
  * User Preference Controller
  * Handles HTTP requests for user payment preferences

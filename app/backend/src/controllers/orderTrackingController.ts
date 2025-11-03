@@ -1,3 +1,4 @@
+/// <reference path="../types/express.d.ts" />
 /**
  * Order Tracking Controller - Handles order tracking and display system requests
  * Features: Order history, search, filtering, timeline, and notifications
