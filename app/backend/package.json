@@ -4,6 +4,7 @@
   "description": "LinkDao Web3 Marketplace Backend",
   "main": "src/index.production.js",
   "scripts": {
+    "postinstall": "npm run build",
     "build": "bash scripts/build-production.sh",
     "build:tsc": "tsc --project tsconfig.json --noEmitOnError false || echo 'TypeScript compilation had errors but continuing'",
     "start": "node --max-old-space-size=1536 --expose-gc dist/index.js",
