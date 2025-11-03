@@ -1,4 +1,12 @@
-import { CdpClient } from '@coinbase/cdp-sdk';
+// Use dynamic import to handle missing dependencies gracefully
+let CdpClient: any = null;
+try {
+  const cdpSdk = require('@coinbase/cdp-sdk');
+  CdpClient = cdpSdk.CdpClient;
+} catch (error) {
+  console.warn('CDP SDK not available, x402 payments will use mock implementation:', error);
+}
+
 import { safeLogger } from '../utils/safeLogger';
 
 export interface X402PaymentRequest {
@@ -19,22 +27,27 @@ export interface X402PaymentResult {
 }
 
 export class X402PaymentService {
-  private cdpClient: CdpClient | null = null;
+  private cdpClient: any | null = null;
 
   constructor() {
     // Initialize CDP client with API key and secret from environment variables
     try {
-      const apiKeyId = process.env.CDP_API_KEY_ID || process.env.COINBASE_API_KEY;
-      const apiKeySecret = process.env.CDP_API_KEY_SECRET || process.env.COINBASE_API_SECRET;
-      
-      if (apiKeyId && apiKeySecret) {
-        this.cdpClient = new CdpClient({
-          apiKeyId,
-          apiKeySecret,
-        });
-        safeLogger.info('CDP client initialized successfully');
+      if (CdpClient) {
+        const apiKeyId = process.env.CDP_API_KEY_ID || process.env.COINBASE_API_KEY;
+        const apiKeySecret = process.env.CDP_API_KEY_SECRET || process.env.COINBASE_API_SECRET;
+        
+        if (apiKeyId && apiKeySecret) {
+          this.cdpClient = new CdpClient({
+            apiKeyId,
+            apiKeySecret,
+          });
+          safeLogger.info('CDP client initialized successfully');
+        } else {
+          safeLogger.warn('CDP API credentials not found. x402 payments will use mock implementation.');
+          this.cdpClient = null;
+        }
       } else {
-        safeLogger.warn('CDP API credentials not found. x402 payments will use mock implementation.');
+        safeLogger.warn('CDP SDK not available. x402 payments will use mock implementation.');
         this.cdpClient = null;
       }
     } catch (error) {

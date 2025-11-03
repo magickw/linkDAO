@@ -627,7 +627,12 @@ import { orderEventListenerService } from './services/orderEventListenerService'
 import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
 
 // Import x402 payment routes
-import x402PaymentRoutes from './routes/x402PaymentRoutes';
+let x402PaymentRoutes: any = null;
+try {
+  x402PaymentRoutes = require('./routes/x402PaymentRoutes').default;
+} catch (error) {
+  console.warn('x402 payment routes not available:', error);
+}
 
 // Import receipt routes
 import receiptRoutes from './routes/receiptRoutes';
@@ -636,7 +641,9 @@ import receiptRoutes from './routes/receiptRoutes';
 app.use('/api/order-events', orderEventHandlerRoutes);
 
 // x402 payment routes
-app.use('/api/x402', x402PaymentRoutes);
+if (x402PaymentRoutes) {
+  app.use('/api/x402', x402PaymentRoutes);
+}
 
 // Receipt routes
 app.use('/api', receiptRoutes);
