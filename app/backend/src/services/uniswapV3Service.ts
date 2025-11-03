@@ -27,7 +27,7 @@ export class UniswapV3Service implements IUniswapV3Service {
     try {
       this.alphaRouter = new AlphaRouter({
         chainId: this.chainId,
-        provider: this.provider,
+        provider: this.provider as any, // Type assertion to handle compatibility issues
       });
     } catch (error) {
       safeLogger.warn('Failed to initialize AlphaRouter, DEX swap functionality will be limited:', error);
@@ -96,12 +96,34 @@ export class UniswapV3Service implements IUniswapV3Service {
         amountOutMinimum: route.quote.multiply(new Percent(10000 - Math.floor(slippageTolerance * 100), 10000)).toFixed(),
         priceImpact: route.estimatedGasUsedQuoteToken?.toFixed() || '0',
         gasEstimate: gasEstimate.toString(),
-        route: route.route.map(r => ({
-          tokenIn: r.tokenIn.address,
-          tokenOut: r.tokenOut.address,
-          fee: r.pools[0]?.fee || 0,
-          pool: r.pools[0]?.token0.address || '',
-        })),
+        route: route.route.map(r => {
+          // Handle different route types (V2 vs V3)
+          if ('tokenIn' in r && 'tokenOut' in r && 'pools' in r) {
+            // V3 route
+            return {
+              tokenIn: (r as any).tokenIn.address,
+              tokenOut: (r as any).tokenOut.address,
+              fee: (r as any).pools[0]?.fee || 0,
+              pool: (r as any).pools[0]?.token0?.address || '',
+            };
+          } else if ('pair' in r) {
+            // V2 route
+            return {
+              tokenIn: (r as any).pair.token0.address,
+              tokenOut: (r as any).pair.token1.address,
+              fee: 3000, // Standard V2 fee
+              pool: (r as any).pair.liquidityToken.address,
+            };
+          } else {
+            // Fallback
+            return {
+              tokenIn: '',
+              tokenOut: '',
+              fee: 0,
+              pool: '',
+            };
+          }
+        }),
         methodParameters: route.methodParameters,
         blockNumber: await this.provider.getBlockNumber(),
         timestamp: Date.now(),
@@ -138,7 +160,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       const receipt = await txResponse.wait();
 
       return {
-        transactionHash: receipt.transactionHash,
+        transactionHash: receipt.hash || (receipt as any).transactionHash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
         status: receipt.status === 1 ? 'success' : 'failed',

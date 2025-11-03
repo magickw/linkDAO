@@ -7,18 +7,16 @@ import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();
 
-// Apply authentication middleware to all feed routes
-router.use(authMiddleware);
-
-// Apply rate limiting
+// Apply rate limiting to all routes
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many feed requests from this IP'
 }));
 
-// Get personalized feed with filtering
+// Get personalized feed with filtering (requires authentication)
 router.get('/enhanced', 
+  authMiddleware, // Apply auth only to this route
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
@@ -31,7 +29,7 @@ router.get('/enhanced',
   feedController.getEnhancedFeed
 );
 
-// Get trending posts
+// Get trending posts (public access)
 router.get('/trending',
   validateRequest({
     query: {
@@ -43,8 +41,10 @@ router.get('/trending',
   feedController.getTrendingPosts
 );
 
-// Create new post
-router.post('/', csrfProtection, 
+// Create new post (requires authentication)
+router.post('/', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     body: {
       content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
@@ -57,8 +57,10 @@ router.post('/', csrfProtection,
   feedController.createPost
 );
 
-// Update post
-router.put('/:id', csrfProtection, 
+// Update post (requires authentication)
+router.put('/:id', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -71,8 +73,10 @@ router.put('/:id', csrfProtection,
   feedController.updatePost
 );
 
-// Delete post
-router.delete('/:id', csrfProtection, 
+// Delete post (requires authentication)
+router.delete('/:id', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -81,8 +85,10 @@ router.delete('/:id', csrfProtection,
   feedController.deletePost
 );
 
-// Add reaction to post
-router.post('/:id/react', csrfProtection, 
+// Add reaction to post (requires authentication)
+router.post('/:id/react', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -95,8 +101,10 @@ router.post('/:id/react', csrfProtection,
   feedController.addReaction
 );
 
-// Send tip to post author
-router.post('/:id/tip', csrfProtection, 
+// Send tip to post author (requires authentication)
+router.post('/:id/tip', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -110,7 +118,7 @@ router.post('/:id/tip', csrfProtection,
   feedController.sendTip
 );
 
-// Get detailed engagement data for post
+// Get detailed engagement data for post (public access)
 router.get('/:id/engagement',
   validateRequest({
     params: {
@@ -120,8 +128,10 @@ router.get('/:id/engagement',
   feedController.getEngagementData
 );
 
-// Share post
-router.post('/:id/share', csrfProtection, 
+// Share post (requires authentication)
+router.post('/:id/share', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -135,7 +145,7 @@ router.post('/:id/share', csrfProtection,
   feedController.sharePost
 );
 
-// Get post comments
+// Get post comments (public access)
 router.get('/:id/comments',
   validateRequest({
     params: {
@@ -150,8 +160,10 @@ router.get('/:id/comments',
   feedController.getPostComments
 );
 
-// Add comment to post
-router.post('/:id/comments', csrfProtection, 
+// Add comment to post (requires authentication)
+router.post('/:id/comments', 
+  authMiddleware, // Apply auth only to this route
+  csrfProtection, 
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -164,7 +176,7 @@ router.post('/:id/comments', csrfProtection,
   feedController.addComment
 );
 
-// Get community engagement metrics
+// Get community engagement metrics (public access)
 router.get('/community/:communityId/metrics',
   validateRequest({
     params: {
@@ -177,7 +189,7 @@ router.get('/community/:communityId/metrics',
   feedController.getCommunityEngagementMetrics
 );
 
-// Get community leaderboard
+// Get community leaderboard (public access)
 router.get('/community/:communityId/leaderboard',
   validateRequest({
     params: {
@@ -191,7 +203,7 @@ router.get('/community/:communityId/leaderboard',
   feedController.getCommunityLeaderboard
 );
 
-// Get liked by data for post
+// Get liked by data for post (public access)
 router.get('/posts/:postId/engagement',
   validateRequest({
     params: {
@@ -199,76 +211,6 @@ router.get('/posts/:postId/engagement',
     }
   }),
   feedController.getLikedByData
-);
-
-// Get trending hashtags
-router.get('/hashtags/trending',
-  validateRequest({
-    query: {
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
-      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month'] }
-    }
-  }),
-  feedController.getTrendingHashtags
-);
-
-// Get content popularity metrics
-router.get('/posts/:postId/popularity',
-  validateRequest({
-    params: {
-      postId: { type: 'string', required: true }
-    }
-  }),
-  feedController.getContentPopularityMetrics
-);
-
-// Get comment replies
-router.get('/comments/:commentId/replies',
-  validateRequest({
-    params: {
-      commentId: { type: 'string', required: true }
-    },
-    query: {
-      page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
-      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'top'] }
-    }
-  }),
-  feedController.getCommentReplies
-);
-
-// Get post reactions
-router.get('/posts/:postId/reactions',
-  validateRequest({
-    params: {
-      postId: { type: 'string', required: true }
-    }
-  }),
-  feedController.getPostReactions
-);
-
-// Enhanced post sharing
-router.post('/posts/:postId/share', csrfProtection, 
-  validateRequest({
-    params: {
-      postId: { type: 'string', required: true }
-    },
-    body: {
-      platform: { type: 'string', required: true, enum: ['twitter', 'discord', 'telegram', 'copy_link'] },
-      message: { type: 'string', optional: true, maxLength: 500 }
-    }
-  }),
-  feedController.sharePostEnhanced
-);
-
-// Toggle bookmark
-router.post('/posts/:postId/bookmark', csrfProtection, 
-  validateRequest({
-    params: {
-      postId: { type: 'string', required: true }
-    }
-  }),
-  feedController.toggleBookmark
 );
 
 export default router;

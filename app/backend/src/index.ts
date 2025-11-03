@@ -348,8 +348,8 @@ import messagingRoutes from './routes/messagingRoutes';
 // Import notification preferences routes
 // DISABLED: Heavy routes that load massive dependencies (~200MB)
 // These load Firebase Admin SDK and other heavy packages
-// import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
-// import mobileRoutes from './routes/mobileRoutes';
+import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+import mobileRoutes from './routes/mobileRoutes';
 
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
@@ -391,8 +391,8 @@ app.use('/api/messaging', messagingRoutes);
 
 // Use notification preferences routes
 // DISABLED: Heavy routes (saves ~200MB memory)
-// app.use('/api/notification-preferences', notificationPreferencesRoutes);
-// app.use('/api/mobile', mobileRoutes);
+app.use('/api/notification-preferences', notificationPreferencesRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
@@ -498,15 +498,15 @@ import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
 // TEMPORARILY DISABLED: These routes cause crashes during module loading
 // TODO: Fix and re-enable after identifying the root cause
-// import dexTradingRoutes from './routes/dexTradingRoutes';
-// import stakingRoutes from './routes/stakingRoutes';
-// import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
+import dexTradingRoutes from './routes/dexTradingRoutes';
+import stakingRoutes from './routes/stakingRoutes';
+import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
 
-// app.use('/api/dex', dexTradingRoutes);
-// app.use('/api/staking', stakingRoutes);
-// app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
+app.use('/api/dex', dexTradingRoutes);
+app.use('/api/staking', stakingRoutes);
+app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
-process.stdout.write('⚠️  DEX, Staking, and LDAO monitoring routes temporarily disabled\n');
+process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
 
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());

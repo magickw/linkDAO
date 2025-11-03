@@ -61,7 +61,8 @@ const CORS_CONFIGS = {
       'https://linkdao.io',
       'https://linkdao.vercel.app',
       'https://linkdao-*.vercel.app', // Vercel preview deployments
-      'https://*.vercel.app'
+      'https://*.vercel.app',
+      'https://linkdao-backend.onrender.com' // Add Render backend origin
     ],
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [

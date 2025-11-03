@@ -107,12 +107,12 @@ export class MultiChainDEXService {
   }
 
   /**
-   * Detect current network from provider
+   * Detect network from provider
    */
   async detectNetwork(provider: ethers.Provider): Promise<number> {
     try {
       const network = await provider.getNetwork();
-      return network.chainId;
+      return Number(network.chainId);
     } catch (error) {
       safeLogger.error('Error detecting network:', error);
       return 1; // Default to Ethereum mainnet
