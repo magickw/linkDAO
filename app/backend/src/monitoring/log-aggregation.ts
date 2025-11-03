@@ -46,8 +46,13 @@ class LogAggregationService {
   }
 
   private loadConfiguration(): LogAggregationConfig {
+    // Use a local log directory instead of /var/log for development
+    const defaultLogDir = process.env.NODE_ENV === 'production' 
+      ? (process.env.LOG_DIR || '/var/log/marketplace-api')
+      : (process.env.LOG_DIR || './logs');
+
     return {
-      logDir: process.env.LOG_DIR || '/var/log/marketplace-api',
+      logDir: defaultLogDir,
       maxFileSize: parseInt(process.env.LOG_MAX_FILE_SIZE || '104857600'), // 100MB
       maxFiles: parseInt(process.env.LOG_MAX_FILES || '10'),
       rotationInterval: parseInt(process.env.LOG_ROTATION_INTERVAL || '86400000'), // 24 hours
@@ -67,8 +72,8 @@ class LogAggregationService {
       await fs.mkdir(this.config.logDir, { recursive: true });
       safeLogger.info(`📁 Log directory initialized: ${this.config.logDir}`);
     } catch (error) {
-      safeLogger.error('Failed to initialize log directory:', error);
-      throw error;
+      safeLogger.warn(`⚠️ Failed to initialize log directory (${this.config.logDir}), using console logging only:`, error);
+      // Don't throw the error to prevent crashing the application
     }
   }
 
@@ -424,38 +429,46 @@ class LogAggregationService {
       const start = Date.now();
       const requestId = req.headers['x-request-id'] || `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Log request
-      this.info(
-        `${req.method} ${req.path}`,
-        'api-request',
-        {
-          method: req.method,
-          path: req.path,
-          userAgent: req.headers['user-agent'],
-          ip: req.ip,
-          query: req.query
-        },
-        requestId
-      );
+      // Log request (with error handling)
+      try {
+        this.info(
+          `${req.method} ${req.path}`,
+          'api-request',
+          {
+            method: req.method,
+            path: req.path,
+            userAgent: req.headers['user-agent'],
+            ip: req.ip,
+            query: req.query
+          },
+          requestId
+        );
+      } catch (error) {
+        // Silently ignore logging errors to prevent middleware from crashing
+      }
 
       // Log response
       res.on('finish', () => {
         const duration = Date.now() - start;
         const level = res.statusCode >= 400 ? 'error' : 'info';
         
-        this.log({
-          level,
-          message: `${req.method} ${req.path} - ${res.statusCode}`,
-          service: 'api-response',
-          metadata: {
-            method: req.method,
-            path: req.path,
-            statusCode: res.statusCode,
-            duration,
-            contentLength: res.get('content-length')
-          },
-          requestId
-        });
+        try {
+          this.log({
+            level,
+            message: `${req.method} ${req.path} - ${res.statusCode}`,
+            service: 'api-response',
+            metadata: {
+              method: req.method,
+              path: req.path,
+              statusCode: res.statusCode,
+              duration,
+              contentLength: res.get('content-length')
+            },
+            requestId
+          });
+        } catch (error) {
+          // Silently ignore logging errors to prevent middleware from crashing
+        }
       });
 
       next();

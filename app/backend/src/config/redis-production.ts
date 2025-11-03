@@ -149,15 +149,23 @@ class RedisProductionManager {
         });
       }
 
-      // Test connection
-      await this.client.ping();
+      // Test connection with timeout
+      await Promise.race([
+        this.client.ping(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+        )
+      ]);
       safeLogger.info('🏓 Redis ping successful');
 
       return this.client;
 
     } catch (error) {
       safeLogger.error('💥 Redis connection failed:', error);
-      throw error;
+      safeLogger.warn('⚠️ Continuing without Redis - caching will be disabled');
+      // Don't throw the error to prevent crashing the application
+      this.client = null;
+      return null as any;
     }
   }
 
@@ -260,7 +268,7 @@ export function getRedisManager(): RedisProductionManager {
   return redisManager;
 }
 
-export async function initializeRedis(): Promise<Redis | Cluster> {
+export async function initializeRedis(): Promise<Redis | Cluster | null> {
   const manager = getRedisManager();
   return await manager.connect();
 }

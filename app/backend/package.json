@@ -5,7 +5,8 @@
   "main": "src/index.production.js",
   "scripts": {
     "build": "tsc --project tsconfig.json --noEmitOnError false || echo 'TypeScript compilation had errors but continuing'",
-    "start": "node --max-old-space-size=1536 -r ts-node/register/transpile-only --transpile-only src/index.ts",
+    "start": "node --max-old-space-size=1536 src/index.production.js",
+    "start:production": "node --max-old-space-size=1536 src/index.production.js",
     "start:compiled": "node --max-old-space-size=450 --optimize-for-size dist/index.js",
     "start:optimized": "node --max-old-space-size=450 --optimize-for-size src/index.production.optimized.js",
     "start:ts": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",

@@ -384,13 +384,14 @@ class ErrorTrackingService {
 
   // Express middleware for automatic error tracking
   errorTrackingMiddleware() {
-    return (error: Error, req: any, res: any, next: any) => {
+    return (err: any, req: any, res: any, next: any) => {
+      // Track the error
       const context: ErrorContext = {
         requestId: req.headers['x-request-id'],
-        userId: req.user?.id,
+        userId: req.userId,
         userAgent: req.headers['user-agent'],
         ip: req.ip,
-        url: req.originalUrl,
+        url: req.url,
         method: req.method,
         headers: req.headers,
         body: req.body,
@@ -398,8 +399,17 @@ class ErrorTrackingService {
         params: req.params
       };
 
-      this.trackError(error, context);
-      next(error);
+      // Use setImmediate to avoid blocking the response
+      setImmediate(async () => {
+        try {
+          await this.trackError(err, context);
+        } catch (trackingError) {
+          // Don't let tracking errors affect the main application
+          safeLogger.warn('⚠️ Failed to track error:', trackingError);
+        }
+      });
+
+      next(err);
     };
   }
 

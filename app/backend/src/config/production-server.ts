@@ -59,7 +59,12 @@ class ProductionServerManager {
     try {
       // Initialize Redis connection
       safeLogger.info('1️⃣ Initializing Redis...');
-      await initializeRedis();
+      const redisResult = await initializeRedis();
+      if (redisResult) {
+        safeLogger.info('✅ Redis initialized successfully');
+      } else {
+        safeLogger.warn('⚠️ Redis initialization skipped - continuing without caching');
+      }
 
       // Setup API Gateway middleware
       safeLogger.info('2️⃣ Setting up API Gateway...');
@@ -95,14 +100,18 @@ class ProductionServerManager {
   private async setupRoutes(): Promise<void> {
     // Setup monitoring integration first
     safeLogger.info('4️⃣a Setting up monitoring integration...');
-    const { getMonitoringIntegrationService } = await import('../monitoring/monitoring-integration');
-    const monitoringService = getMonitoringIntegrationService();
-    
-    // Setup monitoring middleware
-    monitoringService.setupMiddleware(this.app);
-    
-    // Setup monitoring routes
-    monitoringService.setupMonitoringRoutes(this.app);
+    try {
+      const { getMonitoringIntegrationService } = await import('../monitoring/monitoring-integration');
+      const monitoringService = getMonitoringIntegrationService();
+      
+      // Setup monitoring middleware
+      monitoringService.setupMiddleware(this.app);
+      
+      // Setup monitoring routes
+      monitoringService.setupMonitoringRoutes(this.app);
+    } catch (error) {
+      safeLogger.warn('⚠️ Monitoring integration not available:', error);
+    }
     
     // Import and setup your application routes here
     // This is where you'd import your actual API routes

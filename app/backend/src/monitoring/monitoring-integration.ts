@@ -543,14 +543,26 @@ class MonitoringIntegrationService {
 
   // Middleware setup
   setupMiddleware(app: express.Application): void {
-    // Request logging middleware
-    app.use(this.logService.requestLoggingMiddleware());
+    try {
+      // Request logging middleware
+      app.use(this.logService.requestLoggingMiddleware());
+    } catch (error) {
+      safeLogger.warn('⚠️ Request logging middleware not available:', error);
+    }
 
-    // Health monitoring middleware
-    app.use(this.healthService.trackingMiddleware());
+    try {
+      // Health monitoring middleware
+      app.use(this.healthService.trackingMiddleware());
+    } catch (error) {
+      safeLogger.warn('⚠️ Health monitoring middleware not available:', error);
+    }
 
-    // Error tracking middleware (should be last)
-    app.use(this.errorService.errorTrackingMiddleware());
+    try {
+      // Error tracking middleware (should be last)
+      app.use(this.errorService.errorTrackingMiddleware());
+    } catch (error) {
+      safeLogger.warn('⚠️ Error tracking middleware not available:', error);
+    }
   }
 
   async shutdown(): Promise<void> {
