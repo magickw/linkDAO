@@ -13,7 +13,7 @@ import { eq, lt, and } from 'drizzle-orm';
 
 export class PreferenceMaintenanceService {
   private isRunning = false;
-  private scheduledJobs: cron.ScheduledTask[] = [];
+  private scheduledJobs: any[] = [];
 
   /**
    * Start all scheduled maintenance tasks
@@ -29,29 +29,21 @@ export class PreferenceMaintenanceService {
     // Cleanup expired overrides every hour
     const cleanupJob = cron.schedule('0 * * * *', async () => {
       await this.cleanupExpiredOverrides();
-    }, {
-      scheduled: false
     });
 
     // Update preference decay every 6 hours
     const decayJob = cron.schedule('0 */6 * * *', async () => {
       await this.applyPreferenceDecay();
-    }, {
-      scheduled: false
     });
 
     // Retrain learning models daily at 2 AM
     const retrainJob = cron.schedule('0 2 * * *', async () => {
       await this.retrainLearningModels();
-    }, {
-      scheduled: false
     });
 
     // Cleanup old usage history weekly
     const historyCleanupJob = cron.schedule('0 3 * * 0', async () => {
       await this.cleanupOldUsageHistory();
-    }, {
-      scheduled: false
     });
 
     // Start all jobs

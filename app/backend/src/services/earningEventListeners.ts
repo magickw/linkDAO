@@ -265,7 +265,7 @@ class EarningEventListeners extends EventEmitter {
       // User reputation factor
       if (event.authorId) {
         try {
-          const userReputation = await reputationService.getUserReputation(event.authorId);
+          const userReputation = await reputationService.getReputation(event.authorId);
           const reputationMultiplier = Math.min(0.3, userReputation.score / 1000);
           qualityScore += reputationMultiplier;
         } catch (error) {
@@ -297,7 +297,7 @@ class EarningEventListeners extends EventEmitter {
       // User reputation factor
       if (event.authorId) {
         try {
-          const userReputation = await reputationService.getUserReputation(event.authorId);
+          const userReputation = await reputationService.getReputation(event.authorId);
           const reputationMultiplier = Math.min(0.2, userReputation.score / 1000);
           qualityScore += reputationMultiplier;
         } catch (error) {

@@ -1,8 +1,23 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { marketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService';
+import { MarketplaceVerificationService } from '../services/marketplaceVerificationService';
+import { MarketplaceModerationService } from '../services/marketplaceModerationService';
 import { z } from 'zod';
+
+// Define the ProofOfOwnership interface
+interface ProofOfOwnership {
+  signature: string;
+  message: string;
+  walletAddress: string;
+  tokenId: string;
+  contractAddress: string;
+  timestamp: number;
+}
+
+// Create instances of the services
+const marketplaceVerificationService = new MarketplaceVerificationService();
+const marketplaceModerationService = new MarketplaceModerationService();
 
 const VerifyListingSchema = z.object({
   listingId: z.string(),
@@ -92,15 +107,32 @@ export class MarketplaceVerificationController {
 
       const { title, description, metadata } = validation.data;
 
-      const result = await marketplaceVerificationService.detectCounterfeit(
-        title,
-        description,
-        metadata || {}
-      );
+      // Create a mock input for the moderation service
+      const mockInput = {
+        id: 'counterfeit-check',
+        type: 'listing' as const,
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        metadata: metadata || {},
+        listingData: {
+          title: title || '',
+          description: description || '',
+          price: '0',
+          currency: 'USD',
+          category: 'general',
+          images: [],
+          isHighValue: false,
+          sellerAddress: '0x0000000000000000000000000000000000000000'
+        },
+        text: `${title} ${description}`
+      };
+
+      const result = await marketplaceModerationService.moderateMarketplaceListing(mockInput);
 
       res.json({
         success: true,
-        counterfeit: result
+        counterfeit: result.counterfeitDetection
       });
     } catch (error) {
       safeLogger.error('Error detecting counterfeit:', error);
@@ -205,16 +237,32 @@ export class MarketplaceVerificationController {
 
       const { title, description, priceETH, sellerReputation } = validation.data;
 
-      const result = marketplaceVerificationService.detectScamPatterns(
-        title,
-        description,
-        priceETH,
-        sellerReputation
-      );
+      // Create a mock input for the moderation service
+      const mockInput = {
+        id: 'scam-check',
+        type: 'listing' as const,
+        userId: 'system',
+        userReputation: sellerReputation || 50,
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        metadata: {},
+        listingData: {
+          title: title || '',
+          description: description || '',
+          price: priceETH.toString() || '0',
+          currency: 'ETH',
+          category: 'general',
+          images: [],
+          isHighValue: priceETH > 1,
+          sellerAddress: '0x0000000000000000000000000000000000000000'
+        },
+        text: `${title} ${description}`
+      };
+
+      const result = await marketplaceModerationService.moderateMarketplaceListing(mockInput);
 
       res.json({
         success: true,
-        scam: result
+        scam: result.scamDetection
       });
     } catch (error) {
       safeLogger.error('Error detecting scam patterns:', error);
@@ -248,12 +296,53 @@ export class MarketplaceVerificationController {
         });
       }
 
+      // Create mock inputs for the moderation service
+      const counterfeitInput = {
+        id: `counterfeit-check-${listingId}`,
+        type: 'listing' as const,
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        metadata: metadata || {},
+        listingData: {
+          title: title || '',
+          description: description || '',
+          price: '0',
+          currency: 'USD',
+          category: 'general',
+          images: [],
+          isHighValue: false,
+          sellerAddress: '0x0000000000000000000000000000000000000000'
+        },
+        text: `${title} ${description}`
+      };
+
+      const scamInput = {
+        id: `scam-check-${listingId}`,
+        type: 'listing' as const,
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        metadata: {},
+        listingData: {
+          title: title || '',
+          description: description || '',
+          price: priceETH?.toString() || '0',
+          currency: 'ETH',
+          category: 'general',
+          images: [],
+          isHighValue: (priceETH || 0) > 1,
+          sellerAddress: '0x0000000000000000000000000000000000000000'
+        },
+        text: `${title} ${description}`
+      };
+
       // Run all verification checks in parallel
       const [
         highValueVerification,
-        counterfeitDetection,
+        counterfeitResult,
         sellerVerification,
-        scamDetection,
+        scamResult,
         ownershipVerification
       ] = await Promise.all([
         marketplaceVerificationService.verifyHighValueListing(
@@ -262,38 +351,32 @@ export class MarketplaceVerificationController {
           priceUSD || 0,
           priceETH || 0
         ),
-        marketplaceVerificationService.detectCounterfeit(
-          title,
-          description,
-          metadata || {}
-        ),
+        marketplaceModerationService.moderateMarketplaceListing(counterfeitInput),
         marketplaceVerificationService.getSellerVerificationTier(sellerAddress),
-        marketplaceVerificationService.detectScamPatterns(
-          title,
-          description,
-          priceETH || 0,
-          0 // We'll get this from seller verification
-        ),
+        marketplaceModerationService.moderateMarketplaceListing(scamInput),
         proofOfOwnership ? 
           marketplaceVerificationService.verifyProofOfOwnership(proofOfOwnership) : 
           Promise.resolve(false)
       ]);
+
+      const counterfeitDetection = counterfeitResult.counterfeitDetection;
+      const scamDetection = scamResult.scamDetection;
 
       // Calculate overall risk score
       let riskScore = 0;
       const issues: string[] = [];
 
       if (counterfeitDetection.isCounterfeit) {
-        riskScore += counterfeitDetection.confidence;
-        issues.push(`Potential counterfeit (${counterfeitDetection.confidence}% confidence)`);
+        riskScore += counterfeitDetection.confidence * 100;
+        issues.push(`Potential counterfeit (${Math.round(counterfeitDetection.confidence * 100)}% confidence)`);
       }
 
       if (scamDetection.isScam) {
-        riskScore += scamDetection.confidence;
-        issues.push(`Scam patterns detected (${scamDetection.confidence}% confidence)`);
+        riskScore += scamDetection.confidence * 100;
+        issues.push(`Scam patterns detected (${Math.round(scamDetection.confidence * 100)}% confidence)`);
       }
 
-      if (!sellerVerification.verified) {
+      if (sellerVerification.verificationStatus !== 'verified') {
         riskScore += 30;
         issues.push('Seller not verified');
       }

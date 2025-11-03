@@ -1,3 +1,5 @@
+import { safeLogger } from '../utils/safeLogger';
+
 interface SecurityScanResult {
   status: 'safe' | 'warning' | 'blocked';
   score: number;

@@ -485,7 +485,7 @@ export class PreferenceLearningService {
   ): Promise<void> {
     // Update preference scores based on user selection
     // This would integrate with the userPreferenceService
-    safeLogger.info('Updating preference scores for user:', userId, 'method:', selectedMethod);
+    safeLogger.info(`Updating preference scores for user: ${userId}, method: ${selectedMethod}`);
   }
 
   private async getRecentSelections(userId: string, limit: number): Promise<any[]> {

@@ -188,7 +188,7 @@ export class AuditLogger {
       walletAddress,
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details,
       result: action === 'login_failed' ? 'failure' : 'success'
     });
@@ -213,7 +213,7 @@ export class AuditLogger {
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
       resource,
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details,
       result: allowed ? 'success' : 'blocked'
     });
@@ -237,7 +237,7 @@ export class AuditLogger {
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
       resource,
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details,
       result: 'success'
     });
@@ -263,7 +263,7 @@ export class AuditLogger {
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
       resource,
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details: {
         ...details,
         oldValue: this.sanitizeValue(oldValue),
@@ -293,7 +293,7 @@ export class AuditLogger {
       walletAddress,
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details: {
         ...details,
         transactionHash,
@@ -322,7 +322,7 @@ export class AuditLogger {
       userId,
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       riskScore,
       details,
       result: level === 'critical' ? 'blocked' : 'success'
@@ -349,7 +349,7 @@ export class AuditLogger {
       ipAddress: this.getClientIP(req),
       userAgent: req.get('User-Agent'),
       resource: `${contentType}:${contentId}`,
-      sessionId: req.session?.id,
+      sessionId: (req as any).session?.id,
       details: {
         ...details,
         contentId,

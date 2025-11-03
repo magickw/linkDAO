@@ -101,8 +101,8 @@ export class HealthCheckService extends EventEmitter {
     this.dbPool = dbPool;
     this.startTime = new Date();
     
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-      retryDelayOnFailover: 100,
+    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    this.redis = new Redis(redisUrl, {
       enableReadyCheck: false,
       maxRetriesPerRequest: 3,
       keyPrefix: 'health:'
@@ -619,12 +619,12 @@ export class HealthCheckService extends EventEmitter {
       const keyspaceInfo = this.parseRedisInfo(info, 'keyspace');
       
       // Check slow log
-      const slowLog = await this.redis.slowlog('get', 5);
+      const slowLog: any = await this.redis.call('SLOWLOG', 'GET', 5);
       
       health.details.detailed = {
         keyspace: keyspaceInfo,
-        slowQueries: slowLog.length,
-        lastSlowQuery: slowLog[0] || null
+        slowQueries: slowLog ? slowLog.length : 0,
+        lastSlowQuery: slowLog && slowLog[0] ? slowLog[0] : null
       };
       
       health.checks.functionality = true;

@@ -2907,33 +2907,29 @@ export class CommunityService {
         .select({
           id: users.id,
           username: users.handle,
-          displayName: users.ensName,
           address: users.walletAddress,
-          avatar: users.avatar,
-          reputation: users.reputation,
-          isVerified: users.isVerified
+          // Using available columns since ensName, avatar, reputation, and isVerified don't exist
         })
         .from(users)
         .leftJoin(posts, eq(posts.authorId, users.id))
         .where(
           or(
             like(users.handle, `%${query}%`),
-            like(users.ensName, `%${query}%`),
             like(users.walletAddress, `%${query}%`)
           )
         )
-        .groupBy(users.id, users.handle, users.ensName, users.walletAddress, users.avatar, users.reputation, users.isVerified)
+        .groupBy(users.id, users.handle, users.walletAddress)
         .having(gt(count(posts.id), 0)) // Only users who have posted
         .limit(10);
 
       return authors.map(author => ({
         id: author.id,
         username: author.username || author.address,
-        displayName: author.displayName || author.username || author.address,
+        displayName: author.username || author.address,
         address: author.address,
-        avatar: author.avatar,
-        reputation: author.reputation || 0,
-        isVerified: author.isVerified || false,
+        avatar: null, // No avatar column in users table
+        reputation: 0, // No reputation column in users table
+        isVerified: false, // No isVerified column in users table
         postCount: 0 // Could be calculated if needed
       }));
     } catch (error) {
@@ -3066,6 +3062,44 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error updating proposal status:', error);
       throw new Error('Failed to update proposal status');
+    }
+  }
+
+  /**
+   * Validate proposal type and metadata
+   */
+  private validateProposalType(type: string, metadata: any): { isValid: boolean; error?: string } {
+    // Basic validation - in a real implementation, you would have more specific validation
+    // based on the proposal type and required metadata fields
+    
+    if (!type) {
+      return { isValid: false, error: 'Proposal type is required' };
+    }
+    
+    // Add validation logic based on proposal type
+    switch (type) {
+      case 'general':
+        // General proposals don't require special metadata
+        return { isValid: true };
+      case 'parameter_change':
+        if (!metadata || !metadata.parameter || !metadata.newValue) {
+          return { isValid: false, error: 'Parameter change proposals require parameter and newValue in metadata' };
+        }
+        return { isValid: true };
+      case 'treasury':
+        if (!metadata || !metadata.amount || !metadata.recipient) {
+          return { isValid: false, error: 'Treasury proposals require amount and recipient in metadata' };
+        }
+        return { isValid: true };
+      case 'membership':
+        if (!metadata || !metadata.action || !metadata.address) {
+          return { isValid: false, error: 'Membership proposals require action and address in metadata' };
+        }
+        return { isValid: true };
+      default:
+        // Allow unknown types but warn
+        safeLogger.warn(`Unknown proposal type: ${type}`);
+        return { isValid: true };
     }
   }
 

@@ -455,10 +455,15 @@ export class LoadBalancingService extends EventEmitter {
     const startTime = performance.now();
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.healthCheckConfig.timeout);
+      
       const response = await fetch(`http://${server.host}:${server.port}${this.healthCheckConfig.endpoint}`, {
         method: 'GET',
-        timeout: this.healthCheckConfig.timeout
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       const endTime = performance.now();
       const responseTime = endTime - startTime;

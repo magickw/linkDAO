@@ -108,6 +108,11 @@ export class RedisService {
     await this.client.del(key);
   }
 
+  async expire(key: string, ttl: number): Promise<void> {
+    await this.ensureConnected();
+    await this.client.expire(key, ttl);
+  }
+
   async exists(key: string): Promise<boolean> {
     await this.ensureConnected();
     const result = await this.client.exists(key);

@@ -59,7 +59,7 @@ class ImageUploadService {
     // Initialize IPFS client
     const ipfsUrl = process.env.IPFS_URL || 'http://127.0.0.1:5001';
     try {
-      this.ipfsClient = create({ url: ipfsUrl });
+      this.ipfsClient = create();
     } catch (error) {
       safeLogger.warn('IPFS client initialization failed, will use fallback storage:', error);
       this.ipfsClient = null;

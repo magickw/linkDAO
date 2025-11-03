@@ -134,7 +134,7 @@ async function testOrderSystem() {
       safeLogger.info(`   ${index + 1}. ${event.eventType}: ${event.description}`);
       safeLogger.info(`      Timestamp: ${event.timestamp}`);
     });
-    safeLogger.info();
+    safeLogger.info('');
 
     // Step 8: Get Order Analytics
     safeLogger.info('📊 Step 8: Retrieving order analytics...');

@@ -1,3 +1,5 @@
+import { safeLogger } from '../utils/safeLogger';
+
 export interface ExchangeRate {
   fromCurrency: string;
   toCurrency: string;

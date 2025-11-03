@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { safeLogger } from '../utils/safeLogger';
 import { EventEmitter } from 'events';
 import { securityConfig } from '../config/securityConfig';
-import securityMonitoringService, { SecurityEventType, SecuritySeverity } from './securityMonitoringService';
+import { securityMonitoringService, SecurityEventType, SecuritySeverity } from './securityMonitoringService';
 import AuditLoggingService from './auditLoggingService';
 import { EncryptionService } from './encryptionService';
 
@@ -171,7 +171,7 @@ class SellerSecurityService extends EventEmitter {
         
         if (!hasPermission) {
           await this.securityMonitoring.recordSecurityEvent({
-            type: SecurityEventType.AUTHORIZATION_VIOLATION,
+            type: 'AUTHORIZATION_VIOLATION',
             severity: SecuritySeverity.MEDIUM,
             source: 'seller_security_service',
             userId: request.requestorAddress,
@@ -195,7 +195,7 @@ class SellerSecurityService extends EventEmitter {
       safeLogger.error('Error validating seller access:', error);
       
       await this.securityMonitoring.recordSecurityEvent({
-        type: SecurityEventType.SYSTEM_COMPROMISE,
+        type: 'SYSTEM_INTRUSION',
         severity: SecuritySeverity.HIGH,
         source: 'seller_security_service',
         userId: request.requestorAddress,
@@ -216,7 +216,7 @@ class SellerSecurityService extends EventEmitter {
       const storedNonce = this.verificationNonces.get(verification.walletAddress);
       if (!storedNonce || storedNonce.nonce !== verification.nonce) {
         await this.securityMonitoring.recordSecurityEvent({
-          type: SecurityEventType.AUTHENTICATION_FAILURE,
+          type: 'AUTHENTICATION_FAILURE',
           severity: SecuritySeverity.MEDIUM,
           source: 'seller_security_service',
           userId: verification.walletAddress,
@@ -229,7 +229,7 @@ class SellerSecurityService extends EventEmitter {
       const now = Date.now();
       if (now - verification.timestamp > 300000) {
         await this.securityMonitoring.recordSecurityEvent({
-          type: SecurityEventType.AUTHENTICATION_FAILURE,
+          type: 'AUTHENTICATION_FAILURE',
           severity: SecuritySeverity.LOW,
           source: 'seller_security_service',
           userId: verification.walletAddress,
@@ -254,7 +254,7 @@ class SellerSecurityService extends EventEmitter {
 
       if (!isValidSignature) {
         await this.securityMonitoring.recordSecurityEvent({
-          type: SecurityEventType.AUTHENTICATION_FAILURE,
+          type: 'AUTHENTICATION_FAILURE',
           severity: SecuritySeverity.HIGH,
           source: 'seller_security_service',
           userId: verification.walletAddress,
@@ -281,7 +281,7 @@ class SellerSecurityService extends EventEmitter {
       safeLogger.error('Error verifying wallet ownership:', error);
       
       await this.securityMonitoring.recordSecurityEvent({
-        type: SecurityEventType.SYSTEM_COMPROMISE,
+        type: 'SYSTEM_INTRUSION',
         severity: SecuritySeverity.HIGH,
         source: 'seller_security_service',
         userId: verification.walletAddress,

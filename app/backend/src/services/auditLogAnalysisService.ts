@@ -1,9 +1,9 @@
-import { db } from '../db/connectionPool';
+import { db } from '../db';
 import { 
   admin_audit_logs,
-  moderation_cases,
-  content_reports,
-  moderation_appeals
+  moderationCases,
+  contentReports,
+  moderationAppeals
 } from '../db/schema';
 import { eq, and, gte, lte, desc, like, count, sql } from 'drizzle-orm';
 

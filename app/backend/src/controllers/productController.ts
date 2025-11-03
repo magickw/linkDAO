@@ -534,11 +534,11 @@ export class ProductController {
               const result = await productService.bulkUploadProducts(bulkUpload);
               resolve(res.json(result));
             } catch (error: any) {
-              reject(new AppError(500, error.message));
+              reject(new AppError(error.message, 500));
             }
           })
           .on('error', (error: any) => {
-            reject(new AppError(400, `CSV parsing error: ${error.message}`));
+            reject(new AppError(`CSV parsing error: ${error.message}`, 400));
           });
       });
     } catch (error: any) {

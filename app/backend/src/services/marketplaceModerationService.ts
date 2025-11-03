@@ -1,6 +1,7 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { ReputationService } from './reputationService';
+import { reputationService } from './reputationService';
+import { kycService } from './kycService';
 import { AIModerationOrchestrator, ContentInput } from './aiModerationOrchestrator';
 import EvidenceStorageService from './evidenceStorageService';
 import { UserProfileService } from './userProfileService';
@@ -115,7 +116,7 @@ export interface MarketplaceModerationResult {
 
 export class MarketplaceModerationService {
   private databaseService: DatabaseService;
-  private reputationService: ReputationService;
+  private reputationService: typeof reputationService;
   private aiOrchestrator: AIModerationOrchestrator;
   private evidenceStorage: typeof EvidenceStorageService;
   private userProfileService: UserProfileService;
@@ -161,7 +162,7 @@ export class MarketplaceModerationService {
 
   constructor() {
     this.databaseService = new DatabaseService();
-    this.reputationService = new ReputationService();
+    this.reputationService = reputationService;
     this.aiOrchestrator = new AIModerationOrchestrator();
     this.evidenceStorage = EvidenceStorageService;
     this.userProfileService = new UserProfileService();
@@ -357,14 +358,14 @@ export class MarketplaceModerationService {
   private async verifySellerTier(sellerAddress: string): Promise<SellerVerificationResult> {
     try {
       // Get seller reputation and history
-      const reputation = await this.reputationService.getUserReputation(sellerAddress);
+      const reputation = await this.reputationService.getReputation(sellerAddress);
       const userProfile = await this.userProfileService.getProfileByAddress(sellerAddress);
       
       // Calculate transaction history (simplified)
       const transactionHistory = await this.getSellerTransactionCount(sellerAddress);
       
       // Use overall score from reputation service
-      const reputationScore = reputation?.overallScore || 0;
+      const reputationScore = reputation?.score || 0;
       
       // Determine seller tier based on reputation and history
       let tier: z.infer<typeof SellerTier>;
@@ -401,9 +402,18 @@ export class MarketplaceModerationService {
         verificationRequirements.push('enhanced_kyc', 'transaction_monitoring');
       }
 
+      // Get KYC status from kycService
+      let kycStatus: 'none' | 'pending' | 'verified' | 'rejected' = 'none';
+      try {
+        const kycData = await kycService.getKYCStatus(sellerAddress);
+        kycStatus = kycData.status as 'none' | 'pending' | 'verified' | 'rejected';
+      } catch (kycError) {
+        safeLogger.warn('Failed to get KYC status for seller:', kycError);
+      }
+
       return {
         tier,
-        kycStatus: (userProfile?.kycStatus as 'none' | 'pending' | 'verified' | 'rejected') || 'none',
+        kycStatus,
         reputationScore,
         transactionHistory,
         riskLevel,

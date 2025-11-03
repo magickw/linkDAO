@@ -546,7 +546,7 @@ class CryptoScamDetector {
 
   private checkSuspiciousUrls(text: string): { detected: boolean; confidence: number } {
     const urlRegex = /https?:\/\/[^\s]+/g;
-    const urls = text.match(urlRegex) || [];
+    const urls: string[] = text.match(urlRegex) || [];
     
     const suspiciousUrls = urls.filter(url => 
       this.SUSPICIOUS_DOMAINS.some(domain => url.includes(domain))
@@ -922,7 +922,7 @@ class PhishingDetector {
 
   private checkSuspiciousLinks(text: string): { detected: boolean; confidence: number } {
     const urlRegex = /https?:\/\/[^\s]+/g;
-    const urls = text.match(urlRegex) || [];
+    const urls: string[] = text.match(urlRegex) || [];
     
     // Check for URL shorteners or suspicious domains
     const suspiciousDomains = [

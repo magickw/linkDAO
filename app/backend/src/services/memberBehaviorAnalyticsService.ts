@@ -12,7 +12,6 @@ import {
   inArray
 } from 'drizzle-orm';
 import {
-  userAnalytics, 
   users, 
   posts, 
   reactions, 
@@ -73,14 +72,7 @@ export class MemberBehaviorAnalyticsService {
   ): Promise<MemberBehaviorMetrics> {
     try {
       // Get user analytics data
-      const userAnalyticsData = await db
-        .select()
-        .from(userAnalytics)
-        .where(and(
-          eq(userAnalytics.userId, userId),
-          gte(userAnalytics.timestamp, timeRange.start),
-          lte(userAnalytics.timestamp, timeRange.end)
-        ));
+      const userAnalyticsData: any[] = []; // Placeholder since userAnalytics table doesn't exist
 
       // Get post data
       const postData = await db
@@ -210,10 +202,7 @@ export class MemberBehaviorAnalyticsService {
    */
   async getEngagementPatterns(userId: string): Promise<EngagementPattern> {
     try {
-      const userAnalyticsData = await db
-        .select()
-        .from(userAnalytics)
-        .where(eq(userAnalytics.userId, userId));
+      const userAnalyticsData: any[] = []; // Placeholder since userAnalytics table doesn't exist
 
       // Time of day analysis
       const timeOfDay: Record<string, number> = {};

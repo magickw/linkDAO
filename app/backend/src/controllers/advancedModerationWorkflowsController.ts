@@ -130,7 +130,7 @@ export class AdvancedModerationWorkflowsController {
     try {
       const validatedInput = WorkflowSchema.parse(req.body);
       
-      const workflow = await advancedModerationWorkflowsService.createWorkflow(validatedInput);
+      const workflow = await advancedModerationWorkflowsService.createWorkflow(validatedInput as any);
       
       res.status(201).json({
         success: true,
@@ -175,7 +175,7 @@ export class AdvancedModerationWorkflowsController {
       
       const validatedInput = WorkflowSchema.parse(req.body);
       
-      const workflow = await advancedModerationWorkflowsService.updateWorkflow(workflowId, validatedInput);
+      const workflow = await advancedModerationWorkflowsService.updateWorkflow(workflowId, validatedInput as any);
       
       if (!workflow) {
         res.status(404).json({
@@ -320,7 +320,7 @@ export class AdvancedModerationWorkflowsController {
     try {
       const validatedInput = RuleSchema.parse(req.body);
       
-      const rule = await advancedModerationWorkflowsService.createRule(validatedInput);
+      const rule = await advancedModerationWorkflowsService.createRule(validatedInput as any);
       
       res.status(201).json({
         success: true,
@@ -365,7 +365,7 @@ export class AdvancedModerationWorkflowsController {
       
       const validatedInput = RuleSchema.parse(req.body);
       
-      const rule = await advancedModerationWorkflowsService.updateRule(ruleId, validatedInput);
+      const rule = await advancedModerationWorkflowsService.updateRule(ruleId, validatedInput as any);
       
       if (!rule) {
         res.status(404).json({
@@ -448,7 +448,7 @@ export class AdvancedModerationWorkflowsController {
     try {
       const validatedInput = ProcessContentSchema.parse(req.body);
       
-      const moderationCase = await advancedModerationWorkflowsService.processContent(validatedInput);
+      const moderationCase = await advancedModerationWorkflowsService.processContent(validatedInput as any);
       
       res.json({
         success: true,

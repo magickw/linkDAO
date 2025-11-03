@@ -402,7 +402,7 @@ export class EscalationManagementService extends EventEmitter {
             notificationTemplate: {
               subject: 'Content Moderation Task Escalated',
               body: 'A content moderation task has been escalated due to timeout.',
-              channels: ['email', 'in_app'] as const,
+              channels: ['email', 'in_app'] as ('email' | 'sms' | 'push' | 'in_app')[],
               priority: 'high' as const
             }
           },
@@ -412,7 +412,7 @@ export class EscalationManagementService extends EventEmitter {
             notificationTemplate: {
               subject: 'SLA Breach - Moderation Task',
               body: 'A moderation task has breached its SLA and requires immediate attention.',
-              channels: ['email', 'sms', 'in_app'] as const,
+              channels: ['email', 'sms', 'in_app'] as ('email' | 'sms' | 'push' | 'in_app')[],
               priority: 'urgent' as const
             }
           }
@@ -424,12 +424,12 @@ export class EscalationManagementService extends EventEmitter {
         taskType: 'resolve',
         rules: [
           {
-            condition: 'complexity' as const,
+            condition: 'manual' as const,
             escalateTo: 'senior_resolver',
             notificationTemplate: {
               subject: 'Complex Dispute Escalated',
               body: 'A complex dispute has been escalated for expert review.',
-              channels: ['email', 'in_app'] as const,
+              channels: ['email', 'in_app'] as ('email' | 'sms' | 'push' | 'in_app')[],
               priority: 'high' as const
             }
           },
@@ -439,7 +439,7 @@ export class EscalationManagementService extends EventEmitter {
             notificationTemplate: {
               subject: 'Manual Dispute Escalation',
               body: 'A dispute has been manually escalated for management review.',
-              channels: ['email', 'in_app'] as const,
+              channels: ['email', 'in_app'] as ('email' | 'sms' | 'push' | 'in_app')[],
               priority: 'medium' as const
             }
           }

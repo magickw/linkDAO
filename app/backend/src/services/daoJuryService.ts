@@ -74,14 +74,16 @@ const JurorSelectionSchema = z.object({
 const VoteCommitmentSchema = z.object({
   jurorId: z.string().uuid(),
   appealId: z.number().positive(),
-  commitment: z.string().length(64) // SHA-256 hash
+  commitment: z.string().length(64), // SHA-256 hash
+  timestamp: z.date().optional()
 });
 
 const VoteRevealSchema = z.object({
   jurorId: z.string().uuid(),
   appealId: z.number().positive(),
   vote: z.enum(['uphold', 'overturn', 'partial']),
-  nonce: z.string().min(32) // Random nonce for commitment
+  nonce: z.string().min(32), // Random nonce for commitment
+  timestamp: z.date().optional()
 });
 
 export class DaoJuryService {
@@ -306,7 +308,7 @@ export class DaoJuryService {
         .update(appealJurors)
         .set({
           voteCommitment: validatedCommitment.commitment,
-          voteTimestamp: validatedCommitment.timestamp
+          voteTimestamp: validatedCommitment.timestamp || new Date()
         })
         .where(
           and(
@@ -393,7 +395,7 @@ export class DaoJuryService {
         .update(appealJurors)
         .set({
           voteReveal: validatedReveal.vote,
-          voteTimestamp: validatedReveal.timestamp
+          voteTimestamp: validatedReveal.timestamp || new Date()
         })
         .where(
           and(

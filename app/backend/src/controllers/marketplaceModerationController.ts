@@ -69,9 +69,21 @@ export class MarketplaceModerationController {
         userReputation: validatedData.userReputation,
         walletAddress: validatedData.walletAddress,
         metadata: validatedData.metadata,
-        listingData: validatedData.listingData,
-        text: `${validatedData.listingData.title} ${validatedData.listingData.description}`,
-        media: validatedData.listingData.images.map(url => ({
+        listingData: {
+          title: validatedData.listingData.title || '',
+          description: validatedData.listingData.description || '',
+          price: validatedData.listingData.price || '0',
+          currency: validatedData.listingData.currency || 'USD',
+          category: validatedData.listingData.category || 'general',
+          images: validatedData.listingData.images || [],
+          nftContract: validatedData.listingData.nftContract,
+          tokenId: validatedData.listingData.tokenId,
+          brandKeywords: validatedData.listingData.brandKeywords,
+          isHighValue: validatedData.listingData.isHighValue || false,
+          sellerAddress: validatedData.listingData.sellerAddress || '0x0000000000000000000000000000000000000000'
+        },
+        text: `${validatedData.listingData.title || ''} ${validatedData.listingData.description || ''}`,
+        media: (validatedData.listingData.images || []).map(url => ({
           url,
           type: 'image' as const,
           mimeType: 'image/jpeg',
@@ -379,8 +391,20 @@ export class MarketplaceModerationController {
               userReputation: validatedData.userReputation,
               walletAddress: validatedData.walletAddress,
               metadata: validatedData.metadata,
-              listingData: validatedData.listingData,
-              text: `${validatedData.listingData.title} ${validatedData.listingData.description}`,
+              listingData: {
+                title: validatedData.listingData.title || '',
+                description: validatedData.listingData.description || '',
+                price: validatedData.listingData.price || '0',
+                currency: validatedData.listingData.currency || 'USD',
+                category: validatedData.listingData.category || 'general',
+                images: validatedData.listingData.images || [],
+                nftContract: validatedData.listingData.nftContract,
+                tokenId: validatedData.listingData.tokenId,
+                brandKeywords: validatedData.listingData.brandKeywords,
+                isHighValue: validatedData.listingData.isHighValue || false,
+                sellerAddress: validatedData.listingData.sellerAddress || '0x0000000000000000000000000000000000000000'
+              },
+              text: `${validatedData.listingData.title || ''} ${validatedData.listingData.description || ''}`,
               media: validatedData.listingData.images.map(url => ({
                 url,
                 type: 'image' as const,

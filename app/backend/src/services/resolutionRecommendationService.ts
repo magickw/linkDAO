@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, gte, lte, inArray } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { disputes, disputeEvidence, users, escrows } from '../db/schema';
+import { disputes, users, escrows, disputeEvidence } from '../db/schema';
 import { aiEvidenceAnalysisService } from './aiEvidenceAnalysisService';
 import { automatedCaseManagementService } from './automatedCaseManagementService';
 

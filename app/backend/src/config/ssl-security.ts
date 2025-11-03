@@ -150,9 +150,9 @@ class SecurityManager {
   // Encryption utilities
   encrypt(text: string, key?: string): { encrypted: string; iv: string; tag: string } {
     const encryptionKey = key ? crypto.scryptSync(key, 'salt', 32) : crypto.randomBytes(32);
-    const iv = crypto.randomBytes(this.config.encryption.ivLength);
+    const iv = crypto.randomBytes(12); // GCM mode typically uses 12-byte IV
     
-    const cipher = crypto.createCipher(this.config.encryption.algorithm, encryptionKey);
+    const cipher: any = crypto.createCipheriv(this.config.encryption.algorithm, encryptionKey, iv);
     cipher.setAAD(Buffer.from('marketplace-api', 'utf8'));
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -172,7 +172,7 @@ class SecurityManager {
     const iv = Buffer.from(encryptedData.iv, 'hex');
     const tag = Buffer.from(encryptedData.tag, 'hex');
     
-    const decipher = crypto.createDecipher(this.config.encryption.algorithm, encryptionKey);
+    const decipher: any = crypto.createDecipheriv(this.config.encryption.algorithm, encryptionKey, iv);
     decipher.setAAD(Buffer.from('marketplace-api', 'utf8'));
     decipher.setAuthTag(tag);
     

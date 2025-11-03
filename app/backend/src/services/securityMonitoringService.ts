@@ -67,6 +67,37 @@ export interface SecurityDashboard {
   compliance_status: 'COMPLIANT' | 'NON_COMPLIANT' | 'UNDER_REVIEW';
 }
 
+export enum SecuritySeverity {
+  INFO = 'INFO',
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
+}
+
+export type SecurityEventType = 
+  | 'AUTHENTICATION_FAILURE'
+  | 'AUTHORIZATION_VIOLATION'
+  | 'DATA_BREACH_ATTEMPT'
+  | 'PRIVILEGE_ESCALATION'
+  | 'MALWARE_DETECTED'
+  | 'UNUSUAL_ACTIVITY'
+  | 'SYSTEM_INTRUSION'
+  | 'CONFIGURATION_CHANGE';
+
+export interface SecurityEvent {
+  id: string;
+  timestamp: Date;
+  type: SecurityEventType;
+  severity: SecuritySeverity;
+  source: string;
+  description: string;
+  userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  details?: Record<string, any>;
+}
+
 export class SecurityMonitoringService extends EventEmitter {
   private alerts: Map<string, SecurityAlert> = new Map();
   private metrics: Map<string, SecurityMetric[]> = new Map();
@@ -77,6 +108,115 @@ export class SecurityMonitoringService extends EventEmitter {
     super();
     this.initializeMonitoringRules();
     this.startMetricsCollection();
+  }
+
+  /**
+   * Record a security event
+   */
+  async recordSecurityEvent(eventData: {
+    type: SecurityEventType;
+    severity: SecuritySeverity;
+    source: string;
+    details?: Record<string, any>;
+    ipAddress?: string;
+    userAgent?: string;
+    userId?: string;
+  }): Promise<SecurityEvent> {
+    const event: SecurityEvent = {
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+      type: eventData.type,
+      severity: eventData.severity,
+      source: eventData.source,
+      description: eventData.details?.reason || 'Security event recorded',
+      userId: eventData.userId,
+      ipAddress: eventData.ipAddress,
+      userAgent: eventData.userAgent,
+      details: eventData.details
+    };
+
+    logger.info('Security event recorded', {
+      eventId: event.id,
+      type: event.type,
+      severity: event.severity,
+      source: event.source,
+      userId: event.userId
+    });
+
+    this.emit('securityEvent', event);
+
+    // Create alert if severity is high enough
+    if ([SecuritySeverity.HIGH, SecuritySeverity.CRITICAL].includes(event.severity)) {
+      await this.createAlertFromEvent(event);
+    }
+
+    return event;
+  }
+
+  /**
+   * Create alert from security event
+   */
+  private async createAlertFromEvent(event: SecurityEvent): Promise<void> {
+    const alertId = crypto.randomUUID();
+    
+    // Convert SecuritySeverity enum to string literal
+    const severity = event.severity as string as SecurityAlert['severity'];
+    
+    const alert: SecurityAlert = {
+      id: alertId,
+      timestamp: event.timestamp,
+      alert_type: this.getAlertTypeFromEventType(event.type),
+      severity: severity,
+      title: `${event.type} detected`,
+      description: event.description || 'Security alert generated from event',
+      source: event.source,
+      affected_resources: event.userId ? [event.userId] : [],
+      indicators: event.ipAddress ? [{
+        indicator_type: 'IP',
+        value: event.ipAddress,
+        confidence: 0.8,
+        first_seen: event.timestamp,
+        last_seen: event.timestamp,
+        occurrences: 1
+      }] : [],
+      status: 'OPEN'
+    };
+
+    this.alerts.set(alertId, alert);
+
+    logger.warn('Security alert created from event', {
+      alertId,
+      eventType: event.type,
+      severity: event.severity
+    });
+
+    this.emit('securityAlert', alert);
+  }
+
+  /**
+   * Get alert type from event type
+   */
+  private getAlertTypeFromEventType(eventType: SecurityEventType): SecurityAlert['alert_type'] {
+    switch (eventType) {
+      case 'AUTHENTICATION_FAILURE':
+        return 'AUTHENTICATION_ANOMALY';
+      case 'AUTHORIZATION_VIOLATION':
+        return 'SYSTEM_INTRUSION';
+      case 'DATA_BREACH_ATTEMPT':
+        return 'DATA_BREACH';
+      case 'PRIVILEGE_ESCALATION':
+        return 'SYSTEM_INTRUSION';
+      case 'MALWARE_DETECTED':
+        return 'SYSTEM_INTRUSION';
+      case 'UNUSUAL_ACTIVITY':
+        return 'SYSTEM_INTRUSION';
+      case 'SYSTEM_INTRUSION':
+        return 'SYSTEM_INTRUSION';
+      case 'CONFIGURATION_CHANGE':
+        return 'SYSTEM_INTRUSION';
+      default:
+        return 'SYSTEM_INTRUSION';
+    }
   }
 
   /**
@@ -632,16 +772,59 @@ export class SecurityMonitoringService extends EventEmitter {
   }
 
   /**
+   * Get security metrics
+   */
+  getSecurityMetrics(): any {
+    // Return mock metrics for now
+    return {
+      totalEvents: this.alerts.size,
+      activeAlerts: Array.from(this.alerts.values()).filter(a => a.status === 'OPEN').length,
+      criticalAlerts: Array.from(this.alerts.values()).filter(a => a.severity === 'CRITICAL').length,
+      warningAlerts: Array.from(this.alerts.values()).filter(a => a.severity === 'HIGH' || a.severity === 'MEDIUM').length,
+      infoAlerts: Array.from(this.alerts.values()).filter(a => a.severity === 'LOW').length,
+      recentEvents: [],
+      topEventTypes: [],
+      severityDistribution: {
+        critical: Array.from(this.alerts.values()).filter(a => a.severity === 'CRITICAL').length,
+        high: Array.from(this.alerts.values()).filter(a => a.severity === 'HIGH').length,
+        medium: Array.from(this.alerts.values()).filter(a => a.severity === 'MEDIUM').length,
+        low: Array.from(this.alerts.values()).filter(a => a.severity === 'LOW').length,
+        info: 0
+      }
+    };
+  }
+
+  /**
+   * Acknowledge security alert
+   */
+  async acknowledgeAlert(alertId: string, userId: string): Promise<void> {
+    const alert = this.alerts.get(alertId);
+    if (alert) {
+      alert.status = 'INVESTIGATING';
+      alert.assigned_to = userId;
+      // In a real implementation, you would update the database
+    }
+  }
+
+  /**
+   * Resolve security alert
+   */
+  async resolveAlert(alertId: string, userId: string, resolution: string): Promise<void> {
+    const alert = this.alerts.get(alertId);
+    if (alert) {
+      alert.status = 'RESOLVED';
+      alert.resolution_notes = resolution;
+      alert.resolved_at = new Date();
+      alert.assigned_to = userId;
+      // In a real implementation, you would update the database
+    }
+  }
+
+  /**
    * Get alerts by status
    */
-  getAlerts(status?: SecurityAlert['status']): SecurityAlert[] {
-    const alerts = Array.from(this.alerts.values());
-    
-    if (status) {
-      return alerts.filter(a => a.status === status);
-    }
-    
-    return alerts;
+  getAlerts(status: SecurityAlert['status']): SecurityAlert[] {
+    return Array.from(this.alerts.values()).filter(alert => alert.status === status);
   }
 
   /**
@@ -660,6 +843,17 @@ export class SecurityMonitoringService extends EventEmitter {
    */
   getThreatIntelligence(): ThreatIntelligence[] {
     return Array.from(this.threatIntelligence.values());
+  }
+
+  // Added for securityAnalyticsService compatibility
+  getRecentEvents(limit: number = 100): any[] {
+    // Return empty array as placeholder since we don't have events stored
+    return [];
+  }
+
+  getActiveAlerts(): any[] {
+    // Return active alerts
+    return this.getAlerts('OPEN');
   }
 }
 

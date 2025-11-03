@@ -3,6 +3,8 @@
  * Simple CDN integration for image optimization and delivery
  */
 
+import { safeLogger } from '../utils/safeLogger';
+
 export interface CDNUploadOptions {
   quality?: number;
   format?: 'jpeg' | 'png' | 'webp';

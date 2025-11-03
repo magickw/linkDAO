@@ -63,10 +63,16 @@ async function runDiagnostics() {
   if (process.env.NODE_ENV === 'production') {
     safeLogger.info('\n🌐 Network Connectivity Test:');
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      
       const response = await fetch('https://httpbin.org/get', {
         method: 'GET',
-        timeout: 5000
+        signal: controller.signal
       });
+      
+      clearTimeout(timeout);
+      
       if (response.ok) {
         safeLogger.info('✅ External network connectivity working');
       } else {

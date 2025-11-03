@@ -49,6 +49,24 @@ export class DatabaseService {
     this.checkConnection();
     return this.db;
   }
+
+  /**
+   * Execute raw SQL query
+   * @param query SQL query string
+   * @param params Query parameters
+   * @returns Query result
+   */
+  public async query(query: string, params: any[] = []) {
+    this.checkConnection();
+    try {
+      // Use the drizzle ORM's execute method for raw SQL queries
+      const result = await this.db.execute(sql.raw(query), params);
+      return { rows: result };
+    } catch (error) {
+      safeLogger.error('Database query error:', error);
+      throw error;
+    }
+  }
   // User operations
   async createUser(address: string, handle?: string, profileCid?: string) {
     this.checkConnection();
@@ -1045,6 +1063,37 @@ export class DatabaseService {
         .where(eq(schema.trackingRecords.orderId, parseInt(orderId)))
         .returning();
       return updated !== null;
+    });
+  }
+
+  async getTrackingRecord(orderId: number) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select()
+        .from(schema.trackingRecords)
+        .where(eq(schema.trackingRecords.orderId, orderId))
+        .limit(1);
+      return result[0] || null;
+    });
+  }
+
+  async getOrderStatusCounts(userId: string, userType: 'buyer' | 'seller') {
+    return this.executeQuery(async () => {
+      const result = await this.db.select({
+        status: schema.orders.status,
+        count: sql<number>`count(*)`
+      })
+      .from(schema.orders)
+      .where(userType === 'buyer' 
+        ? eq(schema.orders.buyerId, userId)
+        : eq(schema.orders.sellerId, userId))
+      .groupBy(schema.orders.status);
+
+      const counts: Record<string, number> = {};
+      result.forEach(row => {
+        counts[row.status] = parseInt(row.count as any);
+      });
+
+      return counts;
     });
   }
 

@@ -1,9 +1,19 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
 import { sellerVerifications, marketplaceVerifications } from '../db/marketplaceSchema';
 import { SellerVerification, VerificationRequest } from '../types/sellerVerification';
 import { ValidationError } from '../models/validation';
+
+// Define the ProofOfOwnership interface
+export interface ProofOfOwnership {
+  signature: string;
+  message: string;
+  walletAddress: string;
+  tokenId: string;
+  contractAddress: string;
+  timestamp: number;
+}
 
 export class MarketplaceVerificationService {
   /**
@@ -12,13 +22,13 @@ export class MarketplaceVerificationService {
   async submitSellerVerification(userId: string, request: VerificationRequest): Promise<SellerVerification> {
     // Validate EIN format if provided
     if (request.ein && !this.isValidEIN(request.ein)) {
-      throw new ValidationError('Invalid EIN format. Expected format: ##-#######');
+      throw new ValidationError('Invalid EIN format. Expected format: ##-#######', 'ein', 'INVALID_EIN_FORMAT');
     }
 
     // Check if user already has a pending verification
     const existingVerification = await this.getActiveSellerVerification(userId);
     if (existingVerification && existingVerification.status === 'pending') {
-      throw new ValidationError('User already has a pending verification request');
+      throw new ValidationError('User already has a pending verification request', 'userId', 'DUPLICATE_VERIFICATION');
     }
 
     // Create new verification record
@@ -278,6 +288,109 @@ export class MarketplaceVerificationService {
   }
 
   /**
+   * Verify high-value NFT listing
+   */
+  async verifyHighValueListing(
+    listingId: string,
+    sellerAddress: string,
+    priceUSD: number,
+    priceETH: number
+  ): Promise<any> {
+    try {
+      // Mock implementation - in a real system, you would:
+      // 1. Verify the seller's identity and verification status
+      // 2. Check the NFT contract and token ID on-chain
+      // 3. Validate the price against market data
+      // 4. Check for any red flags or suspicious patterns
+      
+      const sellerVerification = await this.getActiveSellerVerification(sellerAddress);
+      const isSellerVerified = sellerVerification?.status === 'verified';
+      
+      // Simple mock verification logic
+      const isVerified = isSellerVerified && priceETH > 0.1; // Minimum 0.1 ETH for high-value verification
+      
+      return {
+        listingId,
+        sellerAddress,
+        isVerified,
+        verificationLevel: isVerified ? 'high' : 'standard',
+        riskScore: isVerified ? 'low' : 'medium',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          priceUSD,
+          priceETH,
+          sellerVerified: isSellerVerified
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error verifying high-value listing:', error);
+      throw new Error('Failed to verify high-value listing');
+    }
+  }
+
+  /**
+   * Verify proof of ownership signature
+   */
+  async verifyProofOfOwnership(proof: ProofOfOwnership): Promise<boolean> {
+    try {
+      // Mock implementation - in a real system, you would:
+      // 1. Verify the signature using the wallet address and message
+      // 2. Check that the signature hasn't expired (based on timestamp)
+      // 3. Verify that the wallet owns the specified NFT
+      
+      // Simple mock verification - check if signature is not empty and not expired
+      const isSignatureValid = proof.signature && proof.signature.length > 0;
+      const isNotExpired = Date.now() - proof.timestamp < 3600000; // 1 hour expiration
+      
+      return isSignatureValid && isNotExpired;
+    } catch (error) {
+      safeLogger.error('Error verifying proof of ownership:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get seller verification tier
+   */
+  async getSellerVerificationTier(sellerAddress: string): Promise<any> {
+    try {
+      // Mock implementation - in a real system, you would:
+      // 1. Check the seller's verification status
+      // 2. Look up their transaction history and reputation
+      // 3. Calculate their tier based on various factors
+      
+      const sellerVerification = await this.getActiveSellerVerification(sellerAddress);
+      
+      let tier = 'unverified';
+      let reputationScore = 0;
+      
+      if (sellerVerification) {
+        if (sellerVerification.status === 'verified') {
+          tier = 'verified';
+          reputationScore = 80;
+        } else if (sellerVerification.status === 'pending') {
+          tier = 'pending';
+          reputationScore = 50;
+        } else {
+          tier = 'rejected';
+          reputationScore = 20;
+        }
+      }
+      
+      return {
+        sellerAddress,
+        tier,
+        reputationScore,
+        verificationStatus: sellerVerification?.status || 'none',
+        nextTierRequirements: tier === 'unverified' ? ['submit_verification'] : []
+      };
+    } catch (error) {
+      safeLogger.error('Error getting seller verification tier:', error);
+      throw new Error('Failed to get seller verification tier');
+    }
+  }
+
+  /**
    * Check if verifications have expired
    */
   async checkExpiredVerifications(): Promise<void> {
@@ -288,7 +401,7 @@ export class MarketplaceVerificationService {
       .where(
         and(
           eq(sellerVerifications.status, 'verified'),
-          sellerVerifications.expiresAt.lt(now)
+          lt(sellerVerifications.expiresAt, now)
         )
       );
 

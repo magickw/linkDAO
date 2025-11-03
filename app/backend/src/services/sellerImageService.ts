@@ -7,7 +7,7 @@
 
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { imageStorageService } from './imageStorageService';
+import imageStorageService from './imageStorageService';
 import { cdnService } from './cdnService';
 import { SellerError, SellerErrorType } from '../types/sellerError';
 
@@ -102,14 +102,14 @@ class SellerImageService {
 
       return {
         id: imageRecord.id,
-        originalUrl: storageResults.main.url,
+        originalUrl: storageResults.main.cdnUrl, // Use cdnUrl instead of url
         cdnUrl: cdnUrls.main,
         thumbnails: cdnUrls.thumbnails,
         metadata: {
-          width: processedImages.main.metadata.width!,
-          height: processedImages.main.metadata.height!,
+          width: processedImages.main.info.width,
+          height: processedImages.main.info.height,
           size: processedImages.main.data.length,
-          format: processedImages.main.metadata.format!,
+          format: processedImages.main.info.format,
           originalSize: input.size,
           compressionRatio: Math.round((1 - processedImages.main.data.length / input.size) * 100),
         },
@@ -257,7 +257,6 @@ class SellerImageService {
       {
         userId: input.userId,
         usageType: input.context,
-        quality: 85,
         generateThumbnails: false, // We're generating our own
       }
     );
@@ -270,7 +269,6 @@ class SellerImageService {
         {
           userId: input.userId,
           usageType: input.context,
-          quality: 80,
           generateThumbnails: false,
         }
       ),
@@ -280,7 +278,6 @@ class SellerImageService {
         {
           userId: input.userId,
           usageType: input.context,
-          quality: 85,
           generateThumbnails: false,
         }
       ),
@@ -290,7 +287,6 @@ class SellerImageService {
         {
           userId: input.userId,
           usageType: input.context,
-          quality: 90,
           generateThumbnails: false,
         }
       ),

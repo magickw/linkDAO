@@ -113,10 +113,10 @@ export interface KYCConfiguration {
     premium_verification: string[];
   };
   purchase_limits: {
-    unverified: { daily: number; monthly: number; annual: number };
-    basic: { daily: number; monthly: number; annual: number };
-    enhanced: { daily: number; monthly: number; annual: number };
-    premium: { daily: number; monthly: number; annual: number };
+    unverified: { daily_limit: number; monthly_limit: number; annual_limit: number };
+    basic: { daily_limit: number; monthly_limit: number; annual_limit: number };
+    enhanced: { daily_limit: number; monthly_limit: number; annual_limit: number };
+    premium: { daily_limit: number; monthly_limit: number; annual_limit: number };
   };
 }
 
@@ -150,7 +150,12 @@ export class KYCComplianceService extends EventEmitter {
         next_review_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
       },
       compliance_flags: [],
-      purchase_limits: this.configuration.purchase_limits.unverified
+      purchase_limits: {
+        daily_limit: this.configuration.purchase_limits.unverified.daily_limit,
+        monthly_limit: this.configuration.purchase_limits.unverified.monthly_limit,
+        annual_limit: this.configuration.purchase_limits.unverified.annual_limit,
+        lifetime_limit: 0
+      }
     };
 
     this.kycProfiles.set(userId, profile);
@@ -519,7 +524,7 @@ export class KYCComplianceService extends EventEmitter {
     // Geographic risk assessment
     if (profile.personal_info.nationality) {
       const geoRisk = await this.assessGeographicRisk(profile.personal_info.nationality);
-      if (geoRisk.score > 0) {
+      if (geoRisk.impact_score > 0) {
         riskFactors.push(geoRisk);
         totalRiskScore += geoRisk.impact_score;
       }
@@ -571,10 +576,20 @@ export class KYCComplianceService extends EventEmitter {
     // Determine verification level based on completed checks and documents
     if (passedChecks.length >= 3 && verifiedDocuments.length >= 2) {
       profile.verification_level = 'ENHANCED';
-      profile.purchase_limits = this.configuration.purchase_limits.enhanced;
+      profile.purchase_limits = {
+        daily_limit: this.configuration.purchase_limits.enhanced.daily_limit,
+        monthly_limit: this.configuration.purchase_limits.enhanced.monthly_limit,
+        annual_limit: this.configuration.purchase_limits.enhanced.annual_limit,
+        lifetime_limit: 0
+      };
     } else if (passedChecks.length >= 2 && verifiedDocuments.length >= 1) {
       profile.verification_level = 'BASIC';
-      profile.purchase_limits = this.configuration.purchase_limits.basic;
+      profile.purchase_limits = {
+        daily_limit: this.configuration.purchase_limits.basic.daily_limit,
+        monthly_limit: this.configuration.purchase_limits.basic.monthly_limit,
+        annual_limit: this.configuration.purchase_limits.basic.annual_limit,
+        lifetime_limit: 0
+      };
     }
 
     // Update status
@@ -730,10 +745,10 @@ export class KYCComplianceService extends EventEmitter {
         premium_verification: ['PASSPORT', 'UTILITY_BILL', 'BANK_STATEMENT']
       },
       purchase_limits: {
-        unverified: { daily: 100, monthly: 500, annual: 2000 },
-        basic: { daily: 1000, monthly: 5000, annual: 20000 },
-        enhanced: { daily: 10000, monthly: 50000, annual: 200000 },
-        premium: { daily: 50000, monthly: 250000, annual: 1000000 }
+        unverified: { daily_limit: 100, monthly_limit: 500, annual_limit: 2000 },
+        basic: { daily_limit: 1000, monthly_limit: 5000, annual_limit: 20000 },
+        enhanced: { daily_limit: 10000, monthly_limit: 50000, annual_limit: 200000 },
+        premium: { daily_limit: 50000, monthly_limit: 250000, annual_limit: 1000000 }
       }
     };
   }

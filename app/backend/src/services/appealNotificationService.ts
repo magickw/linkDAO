@@ -1,4 +1,4 @@
-import { db } from '../db/connectionPool';
+import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { notifications, users } from '../db/schema';
 import { eq } from 'drizzle-orm';

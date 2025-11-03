@@ -6,6 +6,7 @@ import { ValidationError } from '../models/validation';
 import { users } from '../db/schema';
 import { SellerVerificationAuditService } from './sellerVerificationAuditService';
 import { SellerVerificationNotificationService } from './sellerVerificationNotificationService';
+import { safeLogger } from '../utils/safeLogger';
 
 export class UnifiedSellerVerificationService {
   /**
@@ -340,7 +341,7 @@ export class UnifiedSellerVerificationService {
       
       // Get user information for the notification
       const [user] = await db.select().from(marketplaceUsers)
-        .where(eq(marketplaceUsers.userId, verification.userId));
+        .where(eq(marketplaceUsers.userId, verification.sellerId));
       
       await SellerVerificationNotificationService.notifyNewVerificationRequest(
         adminIds,

@@ -540,4 +540,5 @@ export class EmailService {
   }
 }
 
-export default EmailService.getInstance();
+export const emailService = EmailService.getInstance();
+export default emailService;

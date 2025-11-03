@@ -8,7 +8,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import SellerSecurityService, { SellerRole, SellerAccessRequest } from '../services/sellerSecurityService';
-import securityMonitoringService, { SecurityEventType, SecuritySeverity } from '../services/securityMonitoringService';
+import { securityMonitoringService } from '../services/securityMonitoringService';
+import { SecurityEventType, SecuritySeverity } from '../services/securityMonitoringService';
 import { errorResponse, validationErrorResponse } from '../utils/apiResponse';
 
 // Extend Express Request interface
@@ -45,7 +46,7 @@ class SellerSecurityMiddleware {
         const sessionId = req.headers['x-session-id'] as string;
 
         if (!walletAddress) {
-          return validationErrorResponse(res, 'Wallet address is required');
+          return validationErrorResponse(res, [{ field: 'walletAddress', message: 'Wallet address is required' }]);
         }
 
         // Create access request
@@ -63,7 +64,7 @@ class SellerSecurityMiddleware {
         
         if (!isValid) {
           await this.securityMonitoring.recordSecurityEvent({
-            type: SecurityEventType.AUTHORIZATION_VIOLATION,
+            type: 'AUTHORIZATION_VIOLATION',
             severity: SecuritySeverity.MEDIUM,
             source: 'seller_security_middleware',
             userId: requestorAddress || walletAddress as string,
@@ -77,7 +78,7 @@ class SellerSecurityMiddleware {
             }
           });
 
-          return errorResponse(res, 'Access denied', 403);
+          return errorResponse(res, 'ACCESS_DENIED', 'Access denied', 403);
         }
 
         // Validate session if provided
@@ -98,7 +99,7 @@ class SellerSecurityMiddleware {
         safeLogger.error('Seller security validation error:', error);
         
         await this.securityMonitoring.recordSecurityEvent({
-          type: SecurityEventType.SYSTEM_COMPROMISE,
+          type: 'SYSTEM_INTRUSION',
           severity: SecuritySeverity.HIGH,
           source: 'seller_security_middleware',
           userId: req.headers['x-wallet-address'] as string,
@@ -106,7 +107,7 @@ class SellerSecurityMiddleware {
           details: { error: error.message, route: req.path }
         });
 
-        return errorResponse(res, 'Security validation failed', 500);
+        return errorResponse(res, 'SECURITY_VALIDATION_FAILED', 'Security validation failed', 500);
       }
     };
   };
@@ -120,7 +121,7 @@ class SellerSecurityMiddleware {
         const { walletAddress, signature, message, timestamp, nonce } = req.body;
 
         if (!walletAddress || !signature || !message || !timestamp || !nonce) {
-          return validationErrorResponse(res, 'Wallet ownership verification data is required');
+          return validationErrorResponse(res, [{ field: 'walletVerification', message: 'Wallet ownership verification data is required' }]);
         }
 
         const verification = {
@@ -135,7 +136,7 @@ class SellerSecurityMiddleware {
         
         if (!isValid) {
           await this.securityMonitoring.recordSecurityEvent({
-            type: SecurityEventType.AUTHENTICATION_FAILURE,
+            type: 'AUTHENTICATION_FAILURE',
             severity: SecuritySeverity.HIGH,
             source: 'seller_security_middleware',
             userId: walletAddress,
@@ -147,13 +148,13 @@ class SellerSecurityMiddleware {
             }
           });
 
-          return errorResponse(res, 'Wallet ownership verification failed', 401);
+          return errorResponse(res, 'WALLET_OWNERSHIP_VERIFICATION_FAILED', 'Wallet ownership verification failed', 401);
         }
 
         next();
       } catch (error) {
         safeLogger.error('Wallet ownership verification error:', error);
-        return errorResponse(res, 'Verification failed', 500);
+        return errorResponse(res, 'VERIFICATION_FAILED', 'Verification failed', 500);
       }
     };
   };
@@ -165,7 +166,7 @@ class SellerSecurityMiddleware {
     return async (req: Request, res: Response, next: NextFunction) => {
       try {
         if (!req.sellerSecurity) {
-          return errorResponse(res, 'Security context not found', 401);
+          return errorResponse(res, 'SECURITY_CONTEXT_NOT_FOUND', 'Security context not found', 401);
         }
 
         const userRole = req.sellerSecurity.role;
@@ -179,7 +180,7 @@ class SellerSecurityMiddleware {
 
         if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
           await this.securityMonitoring.recordSecurityEvent({
-            type: SecurityEventType.AUTHORIZATION_VIOLATION,
+            type: 'AUTHORIZATION_VIOLATION',
             severity: SecuritySeverity.MEDIUM,
             source: 'seller_security_middleware',
             userId: req.sellerSecurity.walletAddress,
@@ -192,13 +193,23 @@ class SellerSecurityMiddleware {
             }
           });
 
-          return errorResponse(res, 'Insufficient permissions', 403);
+          return errorResponse(res, 'INSUFFICIENT_PERMISSIONS', 'Insufficient permissions', 403);
         }
 
         next();
       } catch (error) {
         safeLogger.error('Role validation error:', error);
-        return errorResponse(res, 'Role validation failed', 500);
+        
+        await this.securityMonitoring.recordSecurityEvent({
+          type: 'SYSTEM_INTRUSION',
+          severity: SecuritySeverity.HIGH,
+          source: 'seller_security_middleware',
+          userId: req.sellerSecurity?.walletAddress,
+          ipAddress: req.ip,
+          details: { error: error.message, route: req.path }
+        });
+
+        return errorResponse(res, 'ROLE_VALIDATION_FAILED', 'Role validation failed', 500);
       }
     };
   };
@@ -250,7 +261,7 @@ class SellerSecurityMiddleware {
 
         if (requestData.count > maxRequests) {
           await this.securityMonitoring.recordSecurityEvent({
-            type: SecurityEventType.RATE_LIMIT_EXCEEDED,
+            type: 'UNUSUAL_ACTIVITY',
             severity: SecuritySeverity.MEDIUM,
             source: 'seller_security_middleware',
             userId: walletAddress as string,
@@ -263,7 +274,7 @@ class SellerSecurityMiddleware {
             }
           });
 
-          return errorResponse(res, 'Rate limit exceeded', 429);
+          return errorResponse(res, 'RATE_LIMIT_EXCEEDED', 'Rate limit exceeded', 429);
         }
 
         // Set rate limit headers
@@ -332,7 +343,7 @@ class SellerSecurityMiddleware {
       const { walletAddress } = req.body;
 
       if (!walletAddress) {
-        return validationErrorResponse(res, 'Wallet address is required');
+        return validationErrorResponse(res, [{ field: 'walletAddress', message: 'Wallet address is required' }]);
       }
 
       const nonce = this.sellerSecurityService.generateVerificationNonce(walletAddress);
@@ -347,7 +358,7 @@ class SellerSecurityMiddleware {
       });
     } catch (error) {
       safeLogger.error('Error generating verification nonce:', error);
-      return errorResponse(res, 'Failed to generate verification nonce', 500);
+      return errorResponse(res, 'FAILED_TO_GENERATE_VERIFICATION_NONCE', 'Failed to generate verification nonce', 500);
     }
   };
 
@@ -359,7 +370,7 @@ class SellerSecurityMiddleware {
       const { walletAddress, role = SellerRole.OWNER } = req.body;
 
       if (!walletAddress) {
-        return validationErrorResponse(res, 'Wallet address is required');
+        return validationErrorResponse(res, [{ field: 'walletAddress', message: 'Wallet address is required' }]);
       }
 
       const sessionId = await this.sellerSecurityService.createSecuritySession(
@@ -378,7 +389,7 @@ class SellerSecurityMiddleware {
       });
     } catch (error) {
       safeLogger.error('Error creating security session:', error);
-      return errorResponse(res, 'Failed to create security session', 500);
+      return errorResponse(res, 'FAILED_TO_CREATE_SECURITY_SESSION', 'Failed to create security session', 500);
     }
   };
 
@@ -390,7 +401,7 @@ class SellerSecurityMiddleware {
       const { sessionId } = req.body;
 
       if (!sessionId) {
-        return validationErrorResponse(res, 'Session ID is required');
+        return validationErrorResponse(res, [{ field: 'sessionId', message: 'Session ID is required' }]);
       }
 
       const success = await this.sellerSecurityService.revokeSecuritySession(sessionId);
@@ -401,7 +412,7 @@ class SellerSecurityMiddleware {
       });
     } catch (error) {
       safeLogger.error('Error revoking security session:', error);
-      return errorResponse(res, 'Failed to revoke security session', 500);
+      return errorResponse(res, 'FAILED_TO_REVOKE_SECURITY_SESSION', 'Failed to revoke security session', 500);
     }
   };
 }

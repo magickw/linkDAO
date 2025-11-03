@@ -304,9 +304,9 @@ export class PrivacyControlsService {
   static async requestDataDeletion(
     userId: string,
     deletionType: DataDeletionRequest['deletionType'],
+    auditInfo: { ipAddress: string; userAgent: string },
     specificData?: string[],
-    scheduledFor?: Date,
-    auditInfo: { ipAddress: string; userAgent: string }
+    scheduledFor?: Date
   ): Promise<DataDeletionRequest> {
     try {
       const requestId = `deletion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

@@ -351,7 +351,18 @@ export class SellerPerformanceMonitoringService {
    */
   async createPerformanceAlert(
     sellerId: string,
-    alertData: Omit<PerformanceAlert, 'id' | 'timestamp' | 'resolved'>
+    alertData: {
+      alertType: 'performance' | 'error' | 'availability' | 'security';
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      title: string;
+      description: string;
+      metrics: any;
+      actions: Array<{
+        action: string;
+        description: string;
+        automated: boolean;
+      }>;
+    }
   ): Promise<PerformanceAlert> {
     try {
       const alertId = `alert-${sellerId}-${Date.now()}`;
@@ -642,10 +653,20 @@ export class SellerPerformanceMonitoringService {
   ): Promise<void> {
     const regressionPercentage = ((currentValue - baselineValue) / baselineValue) * 100;
     
-    await this.createPerformanceAlert(sellerId, {
-      alertType: 'performance',
-      severity: regressionPercentage > 100 ? 'critical' : 
-               regressionPercentage > 50 ? 'high' : 'medium',
+    // Determine severity
+    let severity: 'low' | 'medium' | 'high' | 'critical';
+    if (regressionPercentage > 100) {
+      severity = 'critical';
+    } else if (regressionPercentage > 50) {
+      severity = 'high';
+    } else {
+      severity = 'medium';
+    }
+    
+    // Create alert data without sellerId since it's passed separately
+    const alertData = {
+      alertType: 'performance' as const,
+      severity,
       title: `Performance Regression Detected: ${metric}`,
       description: `${metric} has regressed by ${regressionPercentage.toFixed(1)}% from baseline`,
       metrics: { metric, currentValue, baselineValue, regressionPercentage },
@@ -661,7 +682,9 @@ export class SellerPerformanceMonitoringService {
           automated: false
         }
       ]
-    });
+    };
+    
+    await this.createPerformanceAlert(sellerId, alertData);
   }
 
   private async updatePerformanceBaselines(

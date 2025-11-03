@@ -64,11 +64,7 @@ export class ModerationCacheService {
   };
 
   constructor(redisUrl?: string) {
-    this.redis = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379', {
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
-    });
+    this.redis = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379');
 
     this.redis.on('error', (error) => {
       safeLogger.error('Redis connection error:', error);
@@ -351,7 +347,7 @@ export class ModerationCacheService {
     if (sampleSize > 0) {
       const sampleKeys = keys.slice(0, sampleSize);
       const pipeline = this.redis.pipeline();
-      sampleKeys.forEach(key => pipeline.memory('usage', key));
+      sampleKeys.forEach(key => pipeline.memory('USAGE', key));
       
       const results = await pipeline.exec();
       const totalSampleSize = results?.reduce((sum, result) => {

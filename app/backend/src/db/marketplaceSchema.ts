@@ -91,6 +91,7 @@ export const marketplaceVerifications = pgTable("marketplace_verifications", {
 export const sellerVerifications = pgTable("seller_verifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  currentTier: varchar("current_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
   status: varchar("status", { 
     enum: ['pending', 'verified', 'rejected', 'expired'] 
   }).notNull().default('pending'),
@@ -204,3 +205,69 @@ export const marketplaceConfig = pgTable("marketplace_config", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Marketplace rewards tracking
+export const marketplaceRewards = pgTable("marketplace_rewards", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  orderId: integer("order_id").notNull(),
+  buyerId: uuid("buyer_id").references(() => users.id, { onDelete: "cascade" }),
+  sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }),
+  transactionAmount: numeric("transaction_amount", { precision: 20, scale: 8 }).notNull(),
+  buyerReward: numeric("buyer_reward", { precision: 20, scale: 8 }).notNull(),
+  sellerReward: numeric("seller_reward", { precision: 20, scale: 8 }).notNull(),
+  rewardTier: varchar("reward_tier", { length: 20 }).notNull(),
+  bonusMultiplier: numeric("bonus_multiplier", { precision: 5, scale: 2 }).notNull(),
+  processedAt: timestamp("processed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  buyerIdIdx: index("marketplace_rewards_buyer_id_idx").on(table.buyerId),
+  sellerIdIdx: index("marketplace_rewards_seller_id_idx").on(table.sellerId),
+  orderIdIdx: index("marketplace_rewards_order_id_idx").on(table.orderId),
+  processedAtIdx: index("marketplace_rewards_processed_at_idx").on(table.processedAt),
+}));
+
+// Marketplace earning challenges
+export const earningChallenges = pgTable("earning_challenges", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  challengeType: varchar("challenge_type", { length: 20 }).notNull(), // 'daily' | 'weekly' | 'monthly' | 'milestone'
+  activityType: varchar("activity_type", { length: 50 }).notNull(), // 'marketplace' | 'referral' | 'community'
+  targetValue: numeric("target_value", { precision: 20, scale: 8 }).notNull(),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
+  bonusMultiplier: numeric("bonus_multiplier", { precision: 5, scale: 2 }).default("1.00"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  maxParticipants: integer("max_participants"),
+  currentParticipants: integer("current_participants").default(0),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  challengeTypeIdx: index("earning_challenges_type_idx").on(table.challengeType),
+  activityTypeIdx: index("earning_challenges_activity_type_idx").on(table.activityType),
+  isActiveIdx: index("earning_challenges_is_active_idx").on(table.isActive),
+  startDateIdx: index("earning_challenges_start_date_idx").on(table.startDate),
+}));
+
+// User challenge progress tracking
+export const userChallengeProgress = pgTable("user_challenge_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  challengeId: uuid("challenge_id").references(() => earningChallenges.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  currentProgress: numeric("current_progress", { precision: 20, scale: 8 }).notNull(),
+  targetValue: numeric("target_value", { precision: 20, scale: 8 }).notNull(),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  rewardClaimed: boolean("reward_claimed").default(false),
+  rewardClaimedAt: timestamp("reward_claimed_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  challengeUserIdx: index("user_challenge_progress_challenge_user_idx").on(table.challengeId, table.userId),
+  userIdx: index("user_challenge_progress_user_idx").on(table.userId),
+  isCompletedIdx: index("user_challenge_progress_is_completed_idx").on(table.isCompleted),
+  rewardClaimedIdx: index("user_challenge_progress_reward_claimed_idx").on(table.rewardClaimed),
+}));

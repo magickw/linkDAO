@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
-import { userStakingInfo, stakingPositions, stakingTiers, stakingEvents } from '../db/schema';
+import { stakingPositions } from '../db/schema';
 import { eq, and, desc, gte, sum, count } from 'drizzle-orm';
 
 export interface PremiumMemberBenefits {
@@ -69,20 +69,22 @@ export class PremiumMemberBenefitsService {
     benefits: PremiumMemberBenefits;
   }> {
     try {
-      const userInfo = await db.select()
-        .from(userStakingInfo)
-        .where(eq(userStakingInfo.userId, userId))
-        .limit(1);
+      // Get all active staking positions for the user
+      const positions = await db.select()
+        .from(stakingPositions)
+        .where(and(
+          eq(stakingPositions.userId, userId),
+          eq(stakingPositions.status, 'active')
+        ));
 
+      // Calculate total staked amount
       let totalStaked = ethers.parseEther("0");
-      let isPremium = false;
-      let isVip = false;
-
-      if (userInfo.length > 0) {
-        totalStaked = ethers.parseEther(userInfo[0].totalStaked);
-        isPremium = totalStaked >= this.PREMIUM_THRESHOLD;
-        isVip = totalStaked >= this.VIP_THRESHOLD;
+      for (const position of positions) {
+        totalStaked += ethers.parseEther(position.amount);
       }
+
+      const isPremium = totalStaked >= this.PREMIUM_THRESHOLD;
+      const isVip = totalStaked >= this.VIP_THRESHOLD;
 
       const membershipTier = isVip ? 'vip' : isPremium ? 'premium' : 'basic';
       const benefits = this.getPremiumBenefits(membershipTier);
@@ -309,7 +311,7 @@ export class PremiumMemberBenefitsService {
         .from(stakingPositions)
         .where(and(
           eq(stakingPositions.userId, userId),
-          eq(stakingPositions.isActive, true)
+          eq(stakingPositions.status, 'active')
         ));
 
       if (positions.length === 0) {

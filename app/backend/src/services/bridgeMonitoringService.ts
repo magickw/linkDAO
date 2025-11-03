@@ -1,9 +1,10 @@
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
-import { db } from '../db/connection';
 import { bridgeTransactions, bridgeEvents, bridgeMetrics } from '../db/schema';
-import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
+import { db } from '../db/connection';
+import { eq, and, gte, lte, desc, sql, isNotNull } from 'drizzle-orm';
 import { convertBigIntToStrings, stringifyWithBigInt, jsonToBigInt } from '../utils/bigIntSerializer';
 
 export interface BridgeTransaction {
@@ -255,41 +256,46 @@ export class BridgeMonitoringService extends EventEmitter {
   /**
    * Process individual bridge event
    */
-  private async processBridgeEvent(chainId: number, event: ethers.EventLog): Promise<void> {
+  private async processBridgeEvent(chainId: number, event: ethers.Log | ethers.EventLog): Promise<void> {
     try {
-      const eventName = event.fragment?.name;
+      // Check if this is an EventLog with fragment information
+      if (!('fragment' in event) || !event.fragment) return;
+      
+      const eventName = event.fragment.name;
       if (!eventName) return;
 
       const block = await event.getBlock();
       const timestamp = new Date(block.timestamp * 1000);
 
-      switch (eventName) {
-        case 'BridgeInitiated':
-          await this.handleBridgeInitiated(chainId, event, timestamp);
-          break;
-        case 'BridgeCompleted':
-          await this.handleBridgeCompleted(chainId, event, timestamp);
-          break;
-        case 'BridgeFailed':
-          await this.handleBridgeFailed(chainId, event, timestamp);
-          break;
-        case 'ValidatorSigned':
-          await this.handleValidatorSigned(chainId, event, timestamp);
-          break;
+      // Only process if it's an EventLog (has the required properties)
+      if ('args' in event && 'transactionHash' in event) {
+        switch (eventName) {
+          case 'BridgeInitiated':
+            await this.handleBridgeInitiated(chainId, event as ethers.EventLog, timestamp);
+            break;
+          case 'BridgeCompleted':
+            await this.handleBridgeCompleted(chainId, event as ethers.EventLog, timestamp);
+            break;
+          case 'BridgeFailed':
+            await this.handleBridgeFailed(chainId, event as ethers.EventLog, timestamp);
+            break;
+          case 'ValidatorSigned':
+            await this.handleValidatorSigned(chainId, event as ethers.EventLog, timestamp);
+            break;
+        }
       }
 
       // Store event
       await this.storeEvent({
-        transactionId: `${chainId}-${event.args?.nonce || event.transactionHash}`,
+        transactionId: `${chainId}-${('args' in event && event.args?.nonce) || event.transactionHash}`,
         eventType: eventName.toLowerCase().replace('bridge', '') as any,
         blockNumber: event.blockNumber,
         txHash: event.transactionHash,
         timestamp,
         data: {
           chainId,
-          args: event.args,
-          gasUsed: event.gasUsed?.toString(),
-          gasPrice: event.gasPrice?.toString()
+          args: 'args' in event ? event.args : undefined,
+          // gasUsed and gasPrice are not available on all event types
         }
       });
 
@@ -301,9 +307,12 @@ export class BridgeMonitoringService extends EventEmitter {
   /**
    * Process individual validator event
    */
-  private async processValidatorEvent(chainId: number, event: ethers.EventLog): Promise<void> {
+  private async processValidatorEvent(chainId: number, event: ethers.Log | ethers.EventLog): Promise<void> {
     try {
-      const eventName = event.fragment?.name;
+      // Check if this is an EventLog with fragment information
+      if (!('fragment' in event) || !event.fragment) return;
+      
+      const eventName = event.fragment.name;
       if (!eventName) return;
 
       const block = await event.getBlock();
@@ -318,7 +327,7 @@ export class BridgeMonitoringService extends EventEmitter {
         timestamp,
         data: {
           chainId,
-          args: event.args,
+          args: 'args' in event ? event.args : undefined,
           eventName
         }
       });
@@ -326,7 +335,7 @@ export class BridgeMonitoringService extends EventEmitter {
       this.emit('validator_event', {
         chainId,
         eventName,
-        args: event.args,
+        args: 'args' in event ? event.args : undefined,
         timestamp
       });
 
@@ -582,7 +591,7 @@ export class BridgeMonitoringService extends EventEmitter {
       const transactions = await db
         .select()
         .from(bridgeTransactions)
-        .where(gte(bridgeTransactions.timestamp, oneDayAgo));
+        .where(gte(bridgeTransactions.createdAt, oneDayAgo));
 
       const totalTransactions = transactions.length;
       const completedTransactions = transactions.filter(tx => tx.status === 'completed');
@@ -593,9 +602,10 @@ export class BridgeMonitoringService extends EventEmitter {
       const totalFees = transactions.reduce((sum, tx) => sum + BigInt(tx.fee), 0n);
 
       // Calculate average completion time
+      // Note: Database returns createdAt column, not timestamp property
       const completionTimes = completedTransactions
-        .filter(tx => tx.completedAt)
-        .map(tx => tx.completedAt!.getTime() - tx.timestamp.getTime());
+        .filter(tx => tx.completedAt && tx.createdAt)
+        .map(tx => tx.completedAt!.getTime() - tx.createdAt.getTime());
       
       const averageCompletionTime = completionTimes.length > 0
         ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
@@ -685,7 +695,7 @@ export class BridgeMonitoringService extends EventEmitter {
       }
       
       const transactions = await query
-        .orderBy(desc(bridgeTransactions.timestamp))
+        .orderBy(desc(bridgeTransactions.createdAt))
         .limit(limit)
         .offset(offset);
 
@@ -815,12 +825,244 @@ export class BridgeMonitoringService extends EventEmitter {
         .where(
           and(
             eq(bridgeTransactions.status, 'pending'),
-            lte(bridgeTransactions.timestamp, oneDayAgo)
+            lte(bridgeTransactions.createdAt, oneDayAgo)
           )
         );
     } catch (error) {
       logger.error('Error getting stuck transactions:', error);
       return [];
+    }
+  }
+
+  /**
+   * Send alert for bridge events
+   */
+  private async sendAlert(alert: {
+    type: string;
+    severity: string;
+    message: string;
+    details: any;
+    timestamp: Date;
+  }): Promise<void> {
+    // In a real implementation, this would integrate with a notification service
+    // For now, we'll just log the alert
+    safeLogger.warn(`Bridge Alert: ${alert.type} - ${alert.message}`, alert);
+    
+    // Emit event for external listeners
+    this.emit('bridge_alert', alert);
+  }
+
+  async checkAndAlertStuckTransactions(): Promise<void> {
+    try {
+      // Check for stuck transactions (pending for more than 24 hours)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      const stuckTransactions = await db
+        .select()
+        .from(bridgeTransactions)
+        .where(
+          and(
+            eq(bridgeTransactions.status, 'pending'),
+            lte(bridgeTransactions.createdAt, oneDayAgo)
+          )
+        )
+        .limit(100);
+
+      for (const transaction of stuckTransactions) {
+        // Send alert for stuck transaction
+        await this.sendAlert({
+          type: 'STUCK_TRANSACTION',
+          severity: 'HIGH',
+          message: `Bridge transaction ${transaction.id} has been pending for more than 24 hours`,
+          details: {
+            transactionId: transaction.id,
+            userId: transaction.userId,
+            fromChain: transaction.fromChain,
+            toChain: transaction.toChain,
+            amount: transaction.amount,
+            bridgeProvider: transaction.bridgeProvider,
+          },
+          timestamp: new Date(),
+        });
+
+        // Update transaction status to 'stuck'
+        await db
+          .update(bridgeTransactions)
+          .set({
+            status: 'stuck',
+            updatedAt: new Date(),
+          })
+          .where(eq(bridgeTransactions.id, transaction.id));
+      }
+    } catch (error) {
+      safeLogger.error('Error checking stuck transactions:', error);
+    }
+  }
+
+  async getTransactionHistory(
+    userId: string,
+    status?: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ transactions: any[]; pagination: any }> {
+    try {
+      let query = db.select().from(bridgeTransactions);
+      
+      // Apply filters
+      if (userId) {
+        query = query.where(eq(bridgeTransactions.userId, userId));
+      }
+      
+      if (status) {
+        query = query.where(eq(bridgeTransactions.status, status as any));
+      }
+      
+      // Apply pagination
+      const offset = (page - 1) * limit;
+      query = query
+        .orderBy(desc(bridgeTransactions.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const transactions = await query;
+
+      // Get total count for pagination
+      let totalQuery = db.select({ count: sql<number>`count(*)` }).from(bridgeTransactions);
+      if (userId) {
+        totalQuery = totalQuery.where(eq(bridgeTransactions.userId, userId));
+      }
+      if (status) {
+        totalQuery = totalQuery.where(eq(bridgeTransactions.status, status as any));
+      }
+      
+      const totalResult = await totalQuery;
+      const total = Number(totalResult[0].count);
+
+      return {
+        transactions,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      safeLogger.error('Error getting transaction history:', error);
+      throw new Error('Failed to get transaction history');
+    }
+  }
+
+  async getBridgeMetrics(timeframe: '24h' | '7d' | '30d' = '7d'): Promise<any> {
+    try {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (timeframe) {
+        case '24h':
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+
+      // Get transaction counts by status
+      const statusCounts = await db
+        .select({
+          status: bridgeTransactions.status,
+          count: sql<number>`count(*)`,
+        })
+        .from(bridgeTransactions)
+        .where(gte(bridgeTransactions.createdAt, startDate))
+        .groupBy(bridgeTransactions.status);
+
+      // Get transaction volume by chain pair
+      const chainVolume = await db
+        .select({
+          fromChain: bridgeTransactions.fromChain,
+          toChain: bridgeTransactions.toChain,
+          totalAmount: sql<number>`sum(${bridgeTransactions.amount})`,
+          transactionCount: sql<number>`count(*)`,
+        })
+        .from(bridgeTransactions)
+        .where(gte(bridgeTransactions.createdAt, startDate))
+        .groupBy(bridgeTransactions.fromChain, bridgeTransactions.toChain);
+
+      // Get average completion time
+      const avgCompletionTime = await db
+        .select({
+          avgTime: sql<number>`avg(${bridgeTransactions.actualTime})`,
+        })
+        .from(bridgeTransactions)
+        .where(
+          and(
+            gte(bridgeTransactions.createdAt, startDate),
+            isNotNull(bridgeTransactions.actualTime)
+          )
+        );
+
+      // Get top bridge providers
+      const providerStats = await db
+        .select({
+          provider: bridgeTransactions.bridgeProvider,
+          totalTransactions: sql<number>`count(*)`,
+          successRate: sql<number>`avg(case when ${bridgeTransactions.status} = 'completed' then 1 else 0 end)`,
+          totalVolume: sql<number>`sum(${bridgeTransactions.amount})`,
+        })
+        .from(bridgeTransactions)
+        .where(gte(bridgeTransactions.createdAt, startDate))
+        .groupBy(bridgeTransactions.bridgeProvider);
+
+      return {
+        timeframe,
+        totalTransactions: statusCounts.reduce((sum, item) => sum + Number(item.count), 0),
+        statusBreakdown: statusCounts.map(item => ({
+          status: item.status,
+          count: Number(item.count),
+        })),
+        chainVolume: chainVolume.map(item => ({
+          fromChain: item.fromChain,
+          toChain: item.toChain,
+          totalAmount: Number(item.totalAmount),
+          transactionCount: Number(item.transactionCount),
+        })),
+        averageCompletionTime: avgCompletionTime[0] ? Number(avgCompletionTime[0].avgTime) : 0,
+        providerStats: providerStats.map(item => ({
+          provider: item.provider,
+          totalTransactions: Number(item.totalTransactions),
+          successRate: Number(item.successRate),
+          totalVolume: Number(item.totalVolume),
+        })),
+      };
+    } catch (error) {
+      safeLogger.error('Error getting bridge metrics:', error);
+      throw new Error('Failed to get bridge metrics');
+    }
+  }
+
+  async cleanupOldTransactions(): Promise<void> {
+    try {
+      // Delete completed transactions older than 30 days
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      
+      const deletedCount = await db
+        .delete(bridgeTransactions)
+        .where(
+          and(
+            eq(bridgeTransactions.status, 'completed'),
+            lte(bridgeTransactions.createdAt, thirtyDaysAgo)
+          )
+        );
+
+      safeLogger.info(`Cleaned up ${deletedCount.rowCount} old bridge transactions`);
+    } catch (error) {
+      safeLogger.error('Error cleaning up old transactions:', error);
     }
   }
 }

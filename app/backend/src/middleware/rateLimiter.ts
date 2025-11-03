@@ -90,3 +90,26 @@ export const createPostLimiter = rateLimit({
     });
   }
 });
+
+// Generic rate limiter function
+export const rateLimiter = (options: { windowMs: number; max: number; message?: string }) => {
+  return rateLimit({
+    windowMs: options.windowMs,
+    max: options.max,
+    message: {
+      error: 'Rate limit exceeded',
+      message: options.message || 'Too many requests, please try again later.',
+      retryAfter: `${options.windowMs / 60000} minutes`
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response) => {
+      safeLogger.warn(`Rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+      res.status(429).json({
+        error: 'Rate limit exceeded',
+        message: options.message || 'Too many requests, please try again later.',
+        retryAfter: `${options.windowMs / 60000} minutes`
+      });
+    }
+  });
+};

@@ -7,7 +7,7 @@ import {
   errorResponse,
   validationErrorResponse,
 } from '../utils/apiResponse';
-import { apiRateLimit, createCustomRateLimit } from '../middleware/marketplaceSecurity';
+import { createCustomRateLimit } from '../middleware/marketplaceSecurity';
 
 const router = Router();
 

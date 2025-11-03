@@ -1,15 +1,12 @@
-import { db } from '../db';
+import { db } from '../db/connection';
 import { safeLogger } from '../utils/safeLogger';
 import { 
   offlineContentCache, 
-  offlineActionQueue,
-  eq,
-  and,
-  lt,
-  desc,
-  sql
+  offlineActionQueue
 } from '../db/schema';
-import { Post, Community } from '../../types';
+import { eq, and, lt, desc, sql } from 'drizzle-orm';
+import { Post } from '../models/Post';
+import { Community } from '../types/community';
 
 export interface CachedContent {
   id: string;

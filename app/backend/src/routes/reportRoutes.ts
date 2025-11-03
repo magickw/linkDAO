@@ -3,41 +3,40 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { reportController } from '../controllers/reportController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimiter } from '../middleware/rateLimiter';
-import { validateRequest } from '../middleware/validateRequest';
-import { z } from 'zod';
+import { validateRequest } from '../middleware/validation';
 
 const router = Router();
 
-// Validation schemas
-const submitReportSchema = z.object({
-  body: z.object({
-    contentId: z.string().min(1).max(64),
-    contentType: z.enum(['post', 'comment', 'listing', 'dm', 'username', 'nft', 'service']),
-    reason: z.string().min(1).max(48),
-    details: z.string().optional().nullable(),
-    category: z.enum(['spam', 'harassment', 'hate_speech', 'violence', 'nsfw', 'scam', 'copyright', 'other']).optional()
-  })
-});
+// Validation schemas (converted from Zod to ValidationSchema format)
+const submitReportSchema = {
+  body: {
+    contentId: { type: 'string', required: true, minLength: 1, maxLength: 64 },
+    contentType: { type: 'string', required: true, enum: ['post', 'comment', 'listing', 'dm', 'username', 'nft', 'service'] },
+    reason: { type: 'string', required: true, minLength: 1, maxLength: 48 },
+    details: { type: 'string', optional: true },
+    category: { type: 'string', optional: true, enum: ['spam', 'harassment', 'hate_speech', 'violence', 'nsfw', 'scam', 'copyright', 'other'] }
+  }
+};
 
-const getReportsSchema = z.object({
-  query: z.object({
-    contentId: z.string().optional(),
-    status: z.enum(['open', 'under_review', 'resolved', 'dismissed']).optional(),
-    page: z.string().transform(Number).optional(),
-    limit: z.string().transform(Number).optional()
-  })
-});
+const getReportsSchema = {
+  query: {
+    contentId: { type: 'string', optional: true },
+    status: { type: 'string', optional: true, enum: ['open', 'under_review', 'resolved', 'dismissed'] },
+    page: { type: 'number', optional: true },
+    limit: { type: 'number', optional: true }
+  }
+};
 
-const updateReportStatusSchema = z.object({
-  params: z.object({
-    reportId: z.string().transform(Number)
-  }),
-  body: z.object({
-    status: z.enum(['under_review', 'resolved', 'dismissed']),
-    resolution: z.string().optional(),
-    moderatorNotes: z.string().optional()
-  })
-});
+const updateReportStatusSchema = {
+  params: {
+    reportId: { type: 'number', required: true }
+  },
+  body: {
+    status: { type: 'string', required: true, enum: ['under_review', 'resolved', 'dismissed'] },
+    resolution: { type: 'string', optional: true },
+    moderatorNotes: { type: 'string', optional: true }
+  }
+};
 
 // Public routes
 router.post('/submit', csrfProtection,  

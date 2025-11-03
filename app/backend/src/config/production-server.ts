@@ -248,7 +248,7 @@ class ProductionServerManager {
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      safeLogger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+      safeLogger.error('💥 Unhandled Rejection', { promise, reason });
       this.gracefulShutdown(1);
     });
   }

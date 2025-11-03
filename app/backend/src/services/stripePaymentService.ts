@@ -7,7 +7,7 @@ export interface StripeConfig {
   secretKey: string;
   webhookSecret: string;
   publishableKey: string;
-  apiVersion: '2025-09-30.clover';
+  apiVersion: '2023-10-16';
 }
 
 export interface StripePaymentIntent {

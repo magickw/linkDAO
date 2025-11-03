@@ -44,14 +44,14 @@ interface CacheWarmupJob {
 }
 
 export class MarketplaceCachingService extends CachingStrategiesService {
-  private config: MarketplaceCacheConfig;
+  private marketplaceConfig: MarketplaceCacheConfig; // Renamed to avoid conflict
   private invalidationRules: Map<string, CacheInvalidationRule> = new Map();
   private warmupQueue: CacheWarmupJob[] = [];
   private isWarmupRunning = false;
 
   constructor(config: MarketplaceCacheConfig) {
-    super(config);
-    this.config = config;
+    super(config); // Pass config to parent class
+    this.marketplaceConfig = config; // Store marketplace-specific config
     this.setupMarketplaceInvalidationRules();
     this.startWarmupProcessor();
   }
@@ -60,7 +60,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
 
   // Product caching with smart invalidation
   async cacheProduct(productId: string, productData: any): Promise<void> {
-    const ttl = this.config.marketplace.productCacheTTL;
+    const ttl = this.marketplaceConfig.marketplace.productCacheTTL;
     
     await Promise.all([
       this.set(`product:${productId}`, productData, ttl),
@@ -73,7 +73,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       await this.set(
         `product:${productId}:images`, 
         productData.images, 
-        this.config.marketplace.imageCacheTTL
+        this.marketplaceConfig.marketplace.imageCacheTTL
       );
     }
   }
@@ -105,7 +105,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
 
   // User/Seller caching
   async cacheUserProfile(userId: string, userData: any): Promise<void> {
-    const ttl = this.config.marketplace.userCacheTTL;
+    const ttl = this.marketplaceConfig.marketplace.userCacheTTL;
     
     await Promise.all([
       this.set(`user:${userId}`, userData, ttl),
@@ -130,7 +130,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     await this.set(
       `seller:${sellerId}:stats`, 
       stats, 
-      this.config.marketplace.userCacheTTL
+      this.marketplaceConfig.marketplace.userCacheTTL
     );
   }
 
@@ -140,7 +140,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
 
   // Order caching
   async cacheOrder(orderId: string, orderData: any): Promise<void> {
-    const ttl = this.config.marketplace.orderCacheTTL;
+    const ttl = this.marketplaceConfig.marketplace.orderCacheTTL;
     
     await Promise.all([
       this.set(`order:${orderId}`, orderData, ttl),
@@ -179,7 +179,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     pagination: { page: number; limit: number }
   ): Promise<void> {
     const searchKey = this.generateSearchKey(query, filters, pagination);
-    await this.set(searchKey, results, this.config.marketplace.searchCacheTTL);
+    await this.set(searchKey, results, this.marketplaceConfig.marketplace.searchCacheTTL);
     
     // Cache individual products from search results
     const productCachePromises = results.map(product => 
@@ -209,7 +209,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     await this.set(
       `image:${imageId}:metadata`, 
       metadata, 
-      this.config.marketplace.imageCacheTTL
+      this.marketplaceConfig.marketplace.imageCacheTTL
     );
   }
 
@@ -238,7 +238,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
       'monthly': 7200      // 2 hours
     };
     
-    return ttlMap[timeframe] || 300;
+    return ttlMap[timeframe] || 3600; // Default to 1 hour
   }
 
   // Set operations for collections
@@ -355,7 +355,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
           return { id: i, title: `Popular Product ${i}` };
         },
         priority: 'high',
-        ttl: this.config.marketplace.productCacheTTL
+        ttl: this.marketplaceConfig.marketplace.productCacheTTL
       });
     }
   }
@@ -369,7 +369,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
           return { sellerId, totalSales: 0, rating: 0 };
         },
         priority: 'medium',
-        ttl: this.config.marketplace.userCacheTTL
+        ttl: this.marketplaceConfig.marketplace.userCacheTTL
       });
     }
   }
@@ -457,7 +457,7 @@ export class MarketplaceCachingService extends CachingStrategiesService {
     try {
       // This would typically scan for expired keys and remove them
       // Redis handles this automatically, but we can force cleanup
-      const keys = await this.redis.keys(`${this.config.redis.keyPrefix}*`);
+      const keys = await this.redis.keys(`${this.marketplaceConfig.redis.keyPrefix}*`);
       const expiredKeys: string[] = [];
       
       for (const key of keys.slice(0, 1000)) { // Limit to prevent blocking

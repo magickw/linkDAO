@@ -1,10 +1,10 @@
-import { db } from '../db/connectionPool';
+import { db } from '../db';
 import { 
   system_metrics, 
   vendor_configurations,
-  moderation_cases,
-  content_reports,
-  moderation_appeals
+  moderationCases,
+  contentReports,
+  moderationAppeals
 } from '../db/schema';
 import { eq, gte, lte, desc, count, avg, sum } from 'drizzle-orm';
 
@@ -133,7 +133,7 @@ export class SystemStatusDashboardService {
     // Determine overall system status
     let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     
-    const components = {
+    const components: Record<string, 'healthy' | 'degraded' | 'unhealthy'> = {
       vendors: vendorHealth.unhealthyVendors > 0 ? 'unhealthy' : 
                vendorHealth.degradedVendors > 0 ? 'degraded' : 'healthy',
       moderation: 'healthy', // Based on recent metrics
@@ -187,20 +187,20 @@ export class SystemStatusDashboardService {
   // Private helper methods
   private async getModerationStats(timeRange: { start: Date; end: Date }) {
     const totalCasesResult = await db.select({ count: count() })
-      .from(moderation_cases)
+      .from(moderationCases)
       .where(
-        gte(moderation_cases.createdAt, timeRange.start)
+        gte(moderationCases.createdAt, timeRange.start)
       );
 
     const statusCounts = await db.select({
-      status: moderation_cases.status,
+      status: moderationCases.status,
       count: count()
     })
-    .from(moderation_cases)
+    .from(moderationCases)
     .where(
-      gte(moderation_cases.createdAt, timeRange.start)
+      gte(moderationCases.createdAt, timeRange.start)
     )
-    .groupBy(moderation_cases.status);
+    .groupBy(moderationCases.status);
 
     const avgProcessingTime = await this.getAverageMetric('processing_time', timeRange);
 
@@ -240,20 +240,20 @@ export class SystemStatusDashboardService {
 
   private async getCommunityReportsStats(timeRange: { start: Date; end: Date }) {
     const totalReportsResult = await db.select({ count: count() })
-      .from(content_reports)
+      .from(contentReports)
       .where(
-        gte(content_reports.createdAt, timeRange.start)
+        gte(contentReports.createdAt, timeRange.start)
       );
 
     const statusCounts = await db.select({
-      status: content_reports.status,
+      status: contentReports.status,
       count: count()
     })
-    .from(content_reports)
+    .from(contentReports)
     .where(
-      gte(content_reports.createdAt, timeRange.start)
+      gte(contentReports.createdAt, timeRange.start)
     )
-    .groupBy(content_reports.status);
+    .groupBy(contentReports.status);
 
     const statusMap = statusCounts.reduce((acc, item) => {
       acc[item.status || 'unknown'] = item.count;
@@ -272,20 +272,20 @@ export class SystemStatusDashboardService {
 
   private async getAppealsStats(timeRange: { start: Date; end: Date }) {
     const totalAppealsResult = await db.select({ count: count() })
-      .from(moderation_appeals)
+      .from(moderationAppeals)
       .where(
-        gte(moderation_appeals.createdAt, timeRange.start)
+        gte(moderationAppeals.createdAt, timeRange.start)
       );
 
     const statusCounts = await db.select({
-      status: moderation_appeals.status,
+      status: moderationAppeals.status,
       count: count()
     })
-    .from(moderation_appeals)
+    .from(moderationAppeals)
     .where(
-      gte(moderation_appeals.createdAt, timeRange.start)
+      gte(moderationAppeals.createdAt, timeRange.start)
     )
-    .groupBy(moderation_appeals.status);
+    .groupBy(moderationAppeals.status);
 
     const statusMap = statusCounts.reduce((acc, item) => {
       acc[item.status || 'unknown'] = item.count;

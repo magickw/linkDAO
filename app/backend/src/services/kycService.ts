@@ -364,3 +364,5 @@ export class KYCService {
     return limits[tier as keyof typeof limits] || limits.none;
   }
 }
+
+export const kycService = new KYCService();

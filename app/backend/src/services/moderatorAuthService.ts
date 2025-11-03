@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { databaseService } from './databaseService';
-import { RedisService } from './redisService';
-import { auditLoggingService } from './auditLoggingService';
+import { redisService } from './redisService';
+import AuditLoggingService from './auditLoggingService';
 
-const redisService = new RedisService();
+const auditLoggingService = new AuditLoggingService();
+import { sql } from 'drizzle-orm';
 
 export interface ModeratorPermissions {
   canReviewContent: boolean;
@@ -55,7 +56,8 @@ export class ModeratorAuthService {
       }
 
       // Query database for moderator profile
-      const moderator = await databaseService.query(`
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`
         SELECT 
           m.*,
           u.wallet_address,
@@ -65,14 +67,14 @@ export class ModeratorAuthService {
         FROM moderators m
         JOIN users u ON m.user_id = u.id
         LEFT JOIN moderator_stats stats ON m.id = stats.moderator_id
-        WHERE m.user_id = $1 AND m.is_active = true
-      `, [userId]);
+        WHERE m.user_id = ${userId} AND m.is_active = true
+      `);
 
-      if (!moderator.rows.length) {
+      if (!result.length) {
         return null;
       }
 
-      const row = moderator.rows[0];
+      const row = result[0];
       const profile: ModeratorProfile = {
         id: row.id,
         userId: row.user_id,
@@ -200,8 +202,11 @@ export class ModeratorAuthService {
       const today = new Date().toISOString().split('T')[0];
       const cacheKey = `moderator:daily:${moderatorId}:${today}`;
       
-      await redisService.incr(cacheKey);
-      await redisService.expire(cacheKey, 24 * 60 * 60); // Expire at end of day
+      const currentCount = await redisService.get(cacheKey);
+      const newCount = (currentCount ? parseInt(currentCount) : 0) + 1;
+      
+      // Set with 24 hour expiration
+      await redisService.setex(cacheKey, 24 * 60 * 60, newCount.toString());
     } catch (error) {
       safeLogger.error('Error incrementing daily count:', error);
     }
@@ -212,11 +217,12 @@ export class ModeratorAuthService {
    */
   private async updateLastActive(moderatorId: string): Promise<void> {
     try {
-      await databaseService.query(`
+      const db = databaseService.getDatabase();
+      await db.execute(sql`
         UPDATE moderators 
         SET last_active_at = NOW() 
-        WHERE id = $1
-      `, [moderatorId]);
+        WHERE id = ${moderatorId}
+      `);
     } catch (error) {
       safeLogger.error('Error updating last active:', error);
     }
@@ -237,8 +243,7 @@ export class ModeratorAuthService {
         actorId: moderatorId,
         actorType: 'moderator',
         newState: details,
-        ipAddress,
-        createdAt: new Date()
+        reasoning: ipAddress
       });
     } catch (error) {
       safeLogger.error('Error logging moderator activity:', error);
@@ -248,7 +253,10 @@ export class ModeratorAuthService {
   /**
    * Get moderator performance metrics
    */
-  async getPerformanceMetrics(moderatorId: string, days: number = 30): Promise<{
+  async getPerformanceMetrics(
+    moderatorId: string,
+    days: number = 30
+  ): Promise<{
     casesReviewed: number;
     avgDecisionTime: number;
     accuracyScore: number;
@@ -256,7 +264,9 @@ export class ModeratorAuthService {
     overturnRate: number;
   }> {
     try {
-      const result = await databaseService.query(`
+      // Use the database instance directly since query method doesn't exist
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`
         SELECT 
           COUNT(DISTINCT ma.id) as cases_reviewed,
           AVG(EXTRACT(EPOCH FROM (ma.created_at - mc.created_at))) as avg_decision_time,
@@ -268,11 +278,11 @@ export class ModeratorAuthService {
         FROM moderation_actions ma
         JOIN moderation_cases mc ON ma.content_id = mc.content_id
         LEFT JOIN moderation_appeals appeal ON appeal.case_id = mc.id
-        WHERE ma.applied_by = $1 
-          AND ma.created_at >= NOW() - INTERVAL '$2 days'
-      `, [moderatorId, days]);
+        WHERE ma.applied_by = ${moderatorId} 
+          AND ma.created_at >= NOW() - INTERVAL '${days} days'
+      `);
 
-      const row = result.rows[0];
+      const row = result[0];
       return {
         casesReviewed: parseInt(row.cases_reviewed) || 0,
         avgDecisionTime: parseFloat(row.avg_decision_time) || 0,

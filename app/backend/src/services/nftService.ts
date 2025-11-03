@@ -168,7 +168,7 @@ class NFTService {
         .from(nftListings)
         .where(and(
           eq(nftListings.nftId, params.nftId),
-          eq(nftListings.isActive, true)
+          eq(nftListings.status, 'active')
         ))
         .limit(1);
 
@@ -367,8 +367,8 @@ class NFTService {
       .leftJoin(users, eq(nftListings.sellerId, users.id))
       .leftJoin(nftCollections, eq(nfts.collectionId, nftCollections.id))
       .where(and(
-        eq(nftListings.isActive, true),
-        sql`${nftListings.expiresAt} > NOW()`
+        eq(nftListings.status, 'active'),
+        sql`${nftListings.endTime} > NOW()`
       ))
       .orderBy(desc(nftListings.createdAt))
       .limit(limit)
@@ -412,7 +412,7 @@ class NFTService {
       .leftJoin(users, eq(nftAuctions.sellerId, users.id))
       .leftJoin(nftCollections, eq(nfts.collectionId, nftCollections.id))
       .where(and(
-        eq(nftAuctions.isActive, true),
+        eq(nftAuctions.status, 'active'),
         sql`${nftAuctions.endTime} > NOW()`
       ))
       .orderBy(desc(nftAuctions.createdAt))
@@ -454,10 +454,10 @@ class NFTService {
       .leftJoin(users, eq(nftOffers.buyerId, users.id))
       .where(and(
         eq(nftOffers.nftId, nftId),
-        eq(nftOffers.isActive, true),
+        eq(nftOffers.status, 'pending'),
         sql`${nftOffers.expiresAt} > NOW()`
       ))
-      .orderBy(desc(nftOffers.amount));
+      .orderBy(desc(nftOffers.price));
 
       return result.map(({ offer, buyer }) => ({
         ...offer,

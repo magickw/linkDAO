@@ -100,6 +100,9 @@ export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app' | 'webhook';
 
+// Template channels must match the NotificationTemplate interface from workflow.ts
+export type TemplateChannel = 'email' | 'sms' | 'push' | 'in_app';
+
 export interface DataSourceConfig {
   type: 'workflow_metrics' | 'task_data' | 'user_data' | 'custom_query';
   query?: string;
@@ -586,7 +589,7 @@ export class AutomatedReportingService extends EventEmitter {
         template: {
           subject: 'New Task Assigned: {{taskType}}',
           body: 'You have been assigned a new {{taskType}} task. Priority: {{priority}}. Due: {{dueDate}}.',
-          channels: ['email', 'in_app'] as NotificationChannel[],
+          channels: ['email', 'in_app'] as TemplateChannel[],
           priority: 'medium' as const
         },
         recipients: [
@@ -601,11 +604,11 @@ export class AutomatedReportingService extends EventEmitter {
         triggerType: 'sla_breach' as NotificationTriggerType,
         conditions: [
           { field: 'severity', operator: 'greater_than', value: 'medium' }
-        ],
+        ] as NotificationCondition[],
         template: {
           subject: 'SLA Breach Alert - {{taskType}}',
           body: 'SLA breach detected for {{taskType}} task. Breach time: {{breachTime}} minutes.',
-          channels: ['email', 'sms', 'push'] as NotificationChannel[],
+          channels: ['email', 'sms', 'push'] as TemplateChannel[],
           priority: 'urgent' as const
         },
         recipients: [
@@ -622,7 +625,7 @@ export class AutomatedReportingService extends EventEmitter {
         template: {
           subject: 'Task Escalated - {{taskType}}',
           body: 'Task {{taskId}} has been escalated to level {{escalationLevel}}. Reason: {{reason}}.',
-          channels: ['email', 'in_app'] as NotificationChannel[],
+          channels: ['email', 'in_app'] as TemplateChannel[],
           priority: 'high' as const
         },
         recipients: [

@@ -1,7 +1,7 @@
 import { moderationLoggingService, PerformanceMetrics, AccuracyMetrics } from './moderationLoggingService';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connectionPool';
-import { moderation_cases, moderation_actions, content_reports, moderation_appeals } from '../db/schema';
+import { databaseService } from './databaseService';
+import { moderationCases, moderationActions, contentReports, moderationAppeals } from '../db/schema';
 import { eq, gte, count, avg, sql } from 'drizzle-orm';
 
 export interface SystemHealthMetrics {
@@ -110,23 +110,25 @@ class ModerationMetricsService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
+      
       // Total content processed
       const totalContentResult = await db
         .select({ count: count() })
-        .from(moderation_cases)
-        .where(gte(moderation_cases.createdAt, cutoff));
+        .from(moderationCases)
+        .where(gte(moderationCases.createdAt, cutoff));
 
       const totalContentProcessed = totalContentResult[0]?.count || 0;
 
       // Content by type
       const contentByTypeResult = await db
         .select({
-          type: moderation_cases.contentType,
+          type: moderationCases.contentType,
           count: count()
         })
-        .from(moderation_cases)
-        .where(gte(moderation_cases.createdAt, cutoff))
-        .groupBy(moderation_cases.contentType);
+        .from(moderationCases)
+        .where(gte(moderationCases.createdAt, cutoff))
+        .groupBy(moderationCases.contentType);
 
       const contentByType = contentByTypeResult.reduce((acc, row) => {
         acc[row.type] = row.count;
@@ -136,12 +138,12 @@ class ModerationMetricsService {
       // Actions by type
       const actionsByTypeResult = await db
         .select({
-          action: moderation_actions.action,
+          action: moderationActions.action,
           count: count()
         })
-        .from(moderation_actions)
-        .where(gte(moderation_actions.createdAt, cutoff))
-        .groupBy(moderation_actions.action);
+        .from(moderationActions)
+        .where(gte(moderationActions.createdAt, cutoff))
+        .groupBy(moderationActions.action);
 
       const actionsByType = actionsByTypeResult.reduce((acc, row) => {
         acc[row.action] = row.count;
@@ -151,12 +153,12 @@ class ModerationMetricsService {
       // Reports by reason
       const reportsByReasonResult = await db
         .select({
-          reason: content_reports.reason,
+          reason: contentReports.reason,
           count: count()
         })
-        .from(content_reports)
-        .where(gte(content_reports.createdAt, cutoff))
-        .groupBy(content_reports.reason);
+        .from(contentReports)
+        .where(gte(contentReports.createdAt, cutoff))
+        .groupBy(contentReports.reason);
 
       const reportsByReason = reportsByReasonResult.reduce((acc, row) => {
         acc[row.reason] = row.count;
@@ -166,12 +168,12 @@ class ModerationMetricsService {
       // Appeals by outcome
       const appealsByOutcomeResult = await db
         .select({
-          decision: moderation_appeals.juryDecision,
+          decision: moderationAppeals.juryDecision,
           count: count()
         })
-        .from(moderation_appeals)
-        .where(gte(moderation_appeals.createdAt, cutoff))
-        .groupBy(moderation_appeals.juryDecision);
+        .from(moderationAppeals)
+        .where(gte(moderationAppeals.createdAt, cutoff))
+        .groupBy(moderationAppeals.juryDecision);
 
       const appealsByOutcome = appealsByOutcomeResult.reduce((acc, row) => {
         if (row.decision) {
@@ -182,19 +184,19 @@ class ModerationMetricsService {
 
       // User engagement metrics
       const activeReportersResult = await db
-        .select({ count: sql<number>`COUNT(DISTINCT ${content_reports.reporterId})` })
-        .from(content_reports)
-        .where(gte(content_reports.createdAt, cutoff));
+        .select({ count: sql<number>`COUNT(DISTINCT ${contentReports.reporterId})` })
+        .from(contentReports)
+        .where(gte(contentReports.createdAt, cutoff));
 
       const totalReportsResult = await db
         .select({ count: count() })
-        .from(content_reports)
-        .where(gte(content_reports.createdAt, cutoff));
+        .from(contentReports)
+        .where(gte(contentReports.createdAt, cutoff));
 
       const moderatorActivityResult = await db
-        .select({ count: sql<number>`COUNT(DISTINCT ${moderation_actions.appliedBy})` })
-        .from(moderation_actions)
-        .where(gte(moderation_actions.createdAt, cutoff));
+        .select({ count: sql<number>`COUNT(DISTINCT ${moderationActions.appliedBy})` })
+        .from(moderationActions)
+        .where(gte(moderationActions.createdAt, cutoff));
 
       const activeReporters = activeReportersResult[0]?.count || 0;
       const totalReports = totalReportsResult[0]?.count || 0;
@@ -366,7 +368,10 @@ class ModerationMetricsService {
       trends: {
         decisionsOverTime: this.generateDecisionTrends(24), // 24 hours
         latencyOverTime: this.generateLatencyTrends(24),
-        costOverTime: metrics.costs.costTrends
+        costOverTime: metrics.costs.costTrends.map(trend => ({
+          time: trend.date,
+          cost: trend.cost
+        }))
       },
       alerts: alerts.map(alert => ({
         metric: alert.metric,
@@ -392,10 +397,11 @@ class ModerationMetricsService {
 
   private async getQueueDepth(): Promise<number> {
     try {
+      const db = databaseService.getDatabase();
       const result = await db
         .select({ count: count() })
-        .from(moderation_cases)
-        .where(eq(moderation_cases.status, 'pending'));
+        .from(moderationCases)
+        .where(eq(moderationCases.status, 'pending'));
       
       return result[0]?.count || 0;
     } catch {

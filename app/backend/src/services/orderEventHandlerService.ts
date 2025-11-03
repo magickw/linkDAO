@@ -5,7 +5,7 @@ import {
   orders, 
   orderEvents, 
   trackingRecords,
-  payments
+  paymentTransactions
 } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 
@@ -65,9 +65,9 @@ export class OrderEventHandlerService {
       if (!payment) {
         const paymentsList = await db
           .select()
-          .from(payments)
-          .where(eq(payments.orderId, orderId))
-          .orderBy(desc(payments.createdAt))
+          .from(paymentTransactions)
+          .where(eq(paymentTransactions.orderId, orderId))
+          .orderBy(desc(paymentTransactions.createdAt))
           .limit(1);
         
         payment = paymentsList[0];

@@ -133,8 +133,7 @@ export class ContentSanitizationService {
         try {
           processedContent = await marked(content, {
             breaks: true,
-            gfm: true,
-            sanitize: false // We'll sanitize with DOMPurify
+            gfm: true
           });
         } catch (error) {
           warnings.push('Markdown processing failed, using plain text');
@@ -158,9 +157,13 @@ export class ContentSanitizationService {
       }
 
       // Sanitize with DOMPurify
+      const allowedAttributes = options.allowedAttributes ? 
+        options.allowedAttributes : 
+        Object.values(this.ALLOWED_ATTRIBUTES).flat();
+      
       const sanitized = DOMPurify.sanitize(processedContent, {
         ALLOWED_TAGS: allowedTags,
-        ALLOWED_ATTR: options.allowedAttributes || this.ALLOWED_ATTRIBUTES,
+        ALLOWED_ATTR: allowedAttributes as string[],
         ALLOW_DATA_ATTR: false,
         ALLOW_UNKNOWN_PROTOCOLS: false,
         SANITIZE_DOM: true,

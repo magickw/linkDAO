@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { moderationPolicies, moderationVendors } from '../db/schema';
+import { policy_configurations, vendor_configurations } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 export interface PolicyRule {
@@ -48,8 +48,8 @@ export class PolicyConfigurationService {
     try {
       const policies = await db
         .select()
-        .from(moderationPolicies)
-        .orderBy(desc(moderationPolicies.confidenceThreshold));
+        .from(policy_configurations)
+        .orderBy(desc(policy_configurations.confidenceThreshold));
 
       return policies.map(policy => ({
         id: policy.id,
@@ -74,12 +74,12 @@ export class PolicyConfigurationService {
     try {
       const policies = await db
         .select()
-        .from(moderationPolicies)
+        .from(policy_configurations)
         .where(and(
-          eq(moderationPolicies.category, category),
-          eq(moderationPolicies.isActive, true)
+          eq(policy_configurations.category, category),
+          eq(policy_configurations.isActive, true)
         ))
-        .orderBy(desc(moderationPolicies.confidenceThreshold));
+        .orderBy(desc(policy_configurations.confidenceThreshold));
 
       return policies.map(policy => ({
         id: policy.id,
@@ -103,7 +103,7 @@ export class PolicyConfigurationService {
   async createPolicy(policy: Omit<PolicyRule, 'id'>): Promise<PolicyRule | null> {
     try {
       const result = await db
-        .insert(moderationPolicies)
+        .insert(policy_configurations)
         .values({
           category: policy.category,
           severity: policy.severity,
@@ -154,9 +154,9 @@ export class PolicyConfigurationService {
       updateData.updatedAt = new Date();
 
       await db
-        .update(moderationPolicies)
+        .update(policy_configurations)
         .set(updateData)
-        .where(eq(moderationPolicies.id, id));
+        .where(eq(policy_configurations.id, id));
 
       // Invalidate cache
       this.lastPolicyCacheUpdate = 0;
@@ -174,9 +174,9 @@ export class PolicyConfigurationService {
   async deletePolicy(id: number): Promise<boolean> {
     try {
       await db
-        .update(moderationPolicies)
+        .update(policy_configurations)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(moderationPolicies.id, id));
+        .where(eq(policy_configurations.id, id));
 
       // Invalidate cache
       this.lastPolicyCacheUpdate = 0;
@@ -195,7 +195,7 @@ export class PolicyConfigurationService {
     try {
       const vendors = await db
         .select()
-        .from(moderationVendors);
+        .from(vendor_configurations);
 
       return vendors.map(vendor => ({
         id: vendor.id,
@@ -239,9 +239,9 @@ export class PolicyConfigurationService {
       updateData.updatedAt = new Date();
 
       await db
-        .update(moderationVendors)
+        .update(vendor_configurations)
         .set(updateData)
-        .where(eq(moderationVendors.id, id));
+        .where(eq(vendor_configurations.id, id));
 
       // Invalidate cache
       this.lastVendorCacheUpdate = 0;

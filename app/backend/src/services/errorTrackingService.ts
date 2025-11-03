@@ -75,7 +75,6 @@ export class ErrorTrackingService extends EventEmitter {
     super();
     
     this.redis = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
       enableReadyCheck: false,
       maxRetriesPerRequest: 3,
       keyPrefix: 'errors:'

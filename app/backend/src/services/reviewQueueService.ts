@@ -1,4 +1,6 @@
 import { databaseService } from './databaseService';
+import { sql, eq } from 'drizzle-orm';
+import * as schema from '../db/schema';
 import { safeLogger } from '../utils/safeLogger';
 import { RedisService } from './redisService';
 import { ModerationCase, ContentReport } from '../models/ModerationModels';
@@ -98,8 +100,10 @@ export class ReviewQueueService {
         ${whereClause}
       `;
       
-      const countResult = await databaseService.query(countQuery);
-      const total = parseInt(countResult.rows[0].total);
+      // Use the database instance directly instead of query method
+      const db = databaseService.getDatabase();
+      const countResult = await db.execute(sql`${countQuery}`);
+      const total = parseInt(countResult[0].total);
       
       // Get queue items
       const itemsQuery = `
@@ -133,7 +137,7 @@ export class ReviewQueueService {
         LIMIT $1 OFFSET $2
       `;
       
-      const itemsResult = await databaseService.query(itemsQuery, [limit, offset]);
+      const itemsResult = await db.execute(sql`${itemsQuery}`, [limit, offset]);
       
       // Process items and get additional data
       const items: QueueItem[] = await Promise.all(
@@ -197,23 +201,24 @@ export class ReviewQueueService {
   async assignCase(caseId: number, moderatorId: string): Promise<boolean> {
     try {
       // Check if case is already assigned
-      const existing = await databaseService.query(`
+      const db = databaseService.getDatabase();
+      const existing = await db.execute(sql`
         SELECT id FROM queue_assignments 
         WHERE case_id = $1 AND is_active = true
       `, [caseId]);
       
-      if (existing.rows.length > 0) {
+      if (existing.length > 0) {
         return false; // Already assigned
       }
       
       // Create assignment
-      await databaseService.query(`
+      await db.execute(sql`
         INSERT INTO queue_assignments (case_id, assigned_to, assigned_at, is_active)
         VALUES ($1, $2, NOW(), true)
       `, [caseId, moderatorId]);
       
       // Update case status
-      await databaseService.query(`
+      await db.execute(sql`
         UPDATE moderation_cases 
         SET status = 'under_review', updated_at = NOW()
         WHERE id = $1
@@ -231,15 +236,16 @@ export class ReviewQueueService {
    */
   async releaseCase(caseId: number, moderatorId: string): Promise<boolean> {
     try {
+      const db = databaseService.getDatabase();
       // Deactivate assignment
-      await databaseService.query(`
+      await db.execute(sql`
         UPDATE queue_assignments 
         SET is_active = false, released_at = NOW()
         WHERE case_id = $1 AND assigned_to = $2 AND is_active = true
       `, [caseId, moderatorId]);
       
       // Update case status back to pending
-      await databaseService.query(`
+      await db.execute(sql`
         UPDATE moderation_cases 
         SET status = 'pending', updated_at = NOW()
         WHERE id = $1
@@ -284,16 +290,17 @@ export class ReviewQueueService {
         ? ['*'] 
         : moderator.permissions.allowedContentTypes;
       
-      const result = await databaseService.query(query, [
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`${query}`, [
         contentTypes[0],
         contentTypes
       ]);
       
-      if (!result.rows.length) {
+      if (!result.length) {
         return null;
       }
       
-      const row = result.rows[0];
+      const row = result[0];
       
       // Auto-assign the case
       const assigned = await this.assignCase(row.id, moderator.id);
@@ -355,7 +362,8 @@ export class ReviewQueueService {
         ${whereClause}
       `;
       
-      const result = await databaseService.query(query);
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`${query}`);
       const row = result.rows[0];
       
       return {
@@ -454,44 +462,28 @@ export class ReviewQueueService {
     return `ORDER BY ${field} ${sort.direction.toUpperCase()}`;
   }
 
-  /**
-   * Get reports for a specific case
-   */
-  private async getReportsForCase(contentId: string): Promise<ContentReport[]> {
+  async getReportsForCase(contentId: string): Promise<any[]> {
     try {
-      const result = await databaseService.query(`
-        SELECT * FROM content_reports 
-        WHERE content_id = $1 AND status = 'open'
-        ORDER BY created_at DESC
-      `, [contentId]);
+      const db = databaseService.getDatabase();
+      const result = await db
+        .select()
+        .from(schema.contentReports)
+        .where(eq(schema.contentReports.contentId, contentId));
       
-      return result.rows.map(row => ({
-        id: row.id,
-        contentId: row.content_id,
-        reporterId: row.reporter_id,
-        reason: row.reason,
-        details: row.details,
-        weight: parseFloat(row.weight),
-        status: row.status,
-        createdAt: row.created_at
-      }));
+      return result;
     } catch (error) {
       safeLogger.error('Error getting reports for case:', error);
       return [];
     }
   }
 
-  /**
-   * Get content preview for display in queue
-   */
-  private async getContentPreview(contentId: string, contentType: string): Promise<any> {
+  async getContentPreview(contentId: string, contentType: string): Promise<any> {
     try {
-      // This would integrate with content staging service
-      // For now, return a placeholder
+      // This is a simplified implementation - in reality, you'd fetch the actual content
       return {
-        text: `Preview for ${contentType} content ${contentId}`,
-        mediaUrls: [],
-        metadata: {}
+        id: contentId,
+        type: contentType,
+        preview: 'Content preview not available'
       };
     } catch (error) {
       safeLogger.error('Error getting content preview:', error);
@@ -499,12 +491,50 @@ export class ReviewQueueService {
     }
   }
 
-  /**
-   * Check daily limit for moderator
-   */
-  private async checkDailyLimit(moderatorId: string): Promise<{ allowed: boolean; remaining: number }> {
-    // This would integrate with moderatorAuthService
-    return { allowed: true, remaining: -1 };
+
+
+  async checkDailyLimit(moderatorId: string): Promise<{ allowed: boolean; remaining: number }> {
+    try {
+      const db = databaseService.getDatabase();
+      // Check how many cases this moderator has completed today
+      const result = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM moderation_cases 
+        WHERE moderator_id = $1 
+          AND status IN ('approved', 'rejected')
+          AND updated_at > NOW() - INTERVAL '1 day'
+      `, [moderatorId]);
+      
+      const completedToday = parseInt(result[0].count);
+      const dailyLimit = 100; // Example limit
+      
+      return {
+        allowed: completedToday < dailyLimit,
+        remaining: Math.max(0, dailyLimit - completedToday)
+      };
+    } catch (error) {
+      safeLogger.error('Error checking daily limit:', error);
+      return { allowed: true, remaining: 100 };
+    }
+  }
+
+  async updateCase(caseId: number, updates: any): Promise<boolean> {
+    try {
+      const db = databaseService.getDatabase();
+      const result = await db
+        .update(schema.moderationCases)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(schema.moderationCases.id, caseId))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      safeLogger.error('Error updating case:', error);
+      return false;
+    }
   }
 }
 

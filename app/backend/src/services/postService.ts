@@ -76,23 +76,25 @@ export class PostService {
       moderationWarning = 'This post has limited visibility due to potentially sensitive content.';
     }
 
-    // Create post in database with moderation metadata
+    // Create post in database
     const dbPost = await databaseService.createPost(
       user.id,
       contentCid,
-      input.parentId ? parseInt(input.parentId) : undefined,
-      {
-        moderationStatus: postStatus,
-        moderationRiskScore: moderationReport.overallRiskScore,
-        moderationCategories: [
-          moderationReport.spamDetection.isSpam ? 'spam' : null,
-          moderationReport.toxicityDetection.isToxic ? moderationReport.toxicityDetection.toxicityType : null,
-          moderationReport.contentPolicy.violatesPolicy ? moderationReport.contentPolicy.policyType : null,
-          moderationReport.copyrightDetection.potentialInfringement ? 'copyright' : null
-        ].filter(Boolean),
-        moderationExplanation: moderationReport.explanation
-      }
+      input.parentId ? parseInt(input.parentId) : undefined
     );
+    
+    // Update post with moderation metadata
+    await databaseService.updatePost(dbPost.id, {
+      moderationStatus: postStatus,
+      moderationRiskScore: moderationReport.overallRiskScore,
+      moderationCategories: JSON.stringify([
+        moderationReport.spamDetection.isSpam ? 'spam' : null,
+        moderationReport.toxicityDetection.isToxic ? moderationReport.toxicityDetection.toxicityType : null,
+        moderationReport.contentPolicy.violatesPolicy ? moderationReport.contentPolicy.policyType : null,
+        moderationReport.copyrightDetection.potentialInfringement ? 'copyright' : null
+      ].filter(Boolean)),
+      moderationExplanation: moderationReport.explanation
+    });
 
     // Handle potential null dates by providing default values
     const createdAt = dbPost.createdAt || new Date();

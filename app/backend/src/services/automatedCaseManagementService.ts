@@ -1,7 +1,7 @@
 import { eq, and, desc, sql, gte, lte } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { disputes, disputeEvidence, users, escrows, orders } from '../db/schema';
+import { disputes, users, escrows, orders } from '../db/schema';
 import { aiEvidenceAnalysisService } from './aiEvidenceAnalysisService';
 
 export interface CaseCategorizationResult {
@@ -95,10 +95,8 @@ export class AutomatedCaseManagementService {
         throw new Error('Dispute not found');
       }
 
-      // Get evidence for analysis
-      const evidence = await db.select()
-        .from(disputeEvidence)
-        .where(eq(disputeEvidence.disputeId, disputeId));
+      // Get evidence for analysis from dispute.evidence column
+      const evidence = dispute.evidence ? JSON.parse(dispute.evidence) : [];
 
       // Analyze dispute content
       const contentAnalysis = await this.analyzeDisputeContent(dispute, evidence);
@@ -766,7 +764,7 @@ export class AutomatedCaseManagementService {
 
   private async getDisputeData(disputeId: number): Promise<any> {
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
-    const evidence = await db.select().from(disputeEvidence).where(eq(disputeEvidence.disputeId, disputeId));
+    const evidence = dispute.evidence ? JSON.parse(dispute.evidence) : [];
     
     return { dispute, evidence };
   }

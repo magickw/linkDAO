@@ -605,7 +605,7 @@ export class AdminWebSocketService {
         const metrics = await this.generateDashboardUpdate(admin);
         this.sendToAdminSocket(admin.socketId, 'metrics_update', metrics);
       } catch (error) {
-        safeLogger.error('Error broadcasting metrics to admin:', admin.adminId, error);
+        safeLogger.error(`Error broadcasting metrics to admin: ${admin.adminId}`, error);
       }
     });
   }

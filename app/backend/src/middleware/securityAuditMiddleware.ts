@@ -104,7 +104,7 @@ export function createSecurityAuditMiddleware(options: SecurityAuditOptions = {}
           calculateDefaultRiskScore(req, res, outcome);
 
         // Prepare event details
-        const details = {
+        const details: any = {
           method: req.method,
           url: req.originalUrl || req.url,
           statusCode: res.statusCode,
@@ -165,7 +165,7 @@ export function createSecurityAuditMiddleware(options: SecurityAuditOptions = {}
 /**
  * Specific middleware for authentication events
  */
-export function authenticationAuditMiddleware() {
+function authenticationAuditMiddleware() {
   return createSecurityAuditMiddleware({
     category: 'authentication',
     eventType: 'authentication_attempt',
@@ -177,7 +177,7 @@ export function authenticationAuditMiddleware() {
 /**
  * Specific middleware for data access events
  */
-export function dataAccessAuditMiddleware(resource?: string) {
+function dataAccessAuditMiddleware(resource?: string) {
   return createSecurityAuditMiddleware({
     category: 'data_access',
     eventType: 'data_access',
@@ -189,7 +189,7 @@ export function dataAccessAuditMiddleware(resource?: string) {
 /**
  * Specific middleware for admin actions
  */
-export function adminActionAuditMiddleware() {
+function adminActionAuditMiddleware() {
   return createSecurityAuditMiddleware({
     category: 'admin_action',
     eventType: 'administrative_action',
@@ -215,7 +215,7 @@ export function adminActionAuditMiddleware() {
 /**
  * Middleware for API endpoints that handle sensitive data
  */
-export function sensitiveDataAuditMiddleware(dataType: string) {
+function sensitiveDataAuditMiddleware(dataType: string) {
   return createSecurityAuditMiddleware({
     category: 'data_access',
     eventType: 'sensitive_data_access',
@@ -400,7 +400,7 @@ function getClientIpAddress(req: Request): string {
 function extractSessionId(req: Request): string | undefined {
   // Try to extract session ID from various sources
   return (
-    req.sessionID ||
+    (req as any).sessionID ||
     req.get('X-Session-ID') ||
     req.cookies?.sessionId ||
     req.cookies?.['connect.sid']

@@ -1,9 +1,10 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { pushNotificationService } from './pushNotificationService';
+import { PushNotificationService } from './pushNotificationService';
 import { getAdminWebSocketService } from './adminWebSocketService';
 
 const databaseService = new DatabaseService();
+const pushNotificationService = PushNotificationService.getInstance();
 
 export interface AdminNotificationTemplate {
   type: string;

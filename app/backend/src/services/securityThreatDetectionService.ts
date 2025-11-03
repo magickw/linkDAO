@@ -286,7 +286,7 @@ class SecurityThreatDetectionService extends EventEmitter {
       newState: detection,
       metadata: {
         source: 'threat_detection',
-        severity: detection.severity,
+        severity: detection.severity.toLowerCase() as 'low' | 'medium' | 'high' | 'critical',
         category: 'security',
         tags: ['threat_detection', detection.patternName],
       },
@@ -352,7 +352,7 @@ class SecurityThreatDetectionService extends EventEmitter {
     const entities = [
       { id: event.userId || 'unknown', type: 'user' as const },
       { id: event.ipAddress || 'unknown', type: 'ip' as const },
-      { id: event.sessionId || 'unknown', type: 'session' as const },
+      { id: (event as any).sessionId || 'unknown', type: 'session' as const },
     ];
 
     for (const entity of entities) {
@@ -460,7 +460,7 @@ class SecurityThreatDetectionService extends EventEmitter {
           type: 'frequency',
           field: 'type',
           operator: 'equals',
-          value: SecurityEventType.AUTHENTICATION_FAILURE,
+          value: 'AUTHENTICATION_FAILURE',
           weight: 10,
         },
         {
@@ -488,7 +488,7 @@ class SecurityThreatDetectionService extends EventEmitter {
           type: 'frequency',
           field: 'type',
           operator: 'equals',
-          value: SecurityEventType.AUTHENTICATION_FAILURE,
+          value: 'AUTHENTICATION_FAILURE',
           weight: 8,
         },
         {
@@ -516,7 +516,7 @@ class SecurityThreatDetectionService extends EventEmitter {
           type: 'sequence',
           field: 'type',
           operator: 'equals',
-          value: SecurityEventType.AUTHORIZATION_VIOLATION,
+          value: 'AUTHORIZATION_VIOLATION',
           weight: 20,
         },
         {
@@ -660,7 +660,7 @@ class SecurityThreatDetectionService extends EventEmitter {
     [event, ...recentEvents].forEach(e => {
       if (e.userId) entities.add(`user:${e.userId}`);
       if (e.ipAddress) entities.add(`ip:${e.ipAddress}`);
-      if (e.sessionId) entities.add(`session:${e.sessionId}`);
+      if ((e as any).sessionId) entities.add(`session:${(e as any).sessionId}`);
     });
     
     return Array.from(entities);
@@ -683,8 +683,8 @@ class SecurityThreatDetectionService extends EventEmitter {
     }
 
     // Adjust based on event context
-    if (event.type === SecurityEventType.PRIVILEGE_ESCALATION) riskScore += 15;
-    if (event.type === SecurityEventType.DATA_BREACH_ATTEMPT) riskScore += 20;
+    if (event.type === 'PRIVILEGE_ESCALATION') riskScore += 15;
+    if (event.type === 'DATA_BREACH_ATTEMPT') riskScore += 20;
 
     return Math.min(100, riskScore);
   }

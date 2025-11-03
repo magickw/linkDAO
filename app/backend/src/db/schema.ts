@@ -65,6 +65,10 @@ export const posts = pgTable("posts", {
   pollId: uuid("poll_id"), // Reference to poll if this is a poll post
   isTokenGated: boolean("is_token_gated").default(false), // Whether this post is token gated
   gatedContentPreview: text("gated_content_preview"), // Preview content for gated posts
+  // Moderation fields
+  moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
+  moderationWarning: text("moderation_warning"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   authorFk: foreignKey({
@@ -645,6 +649,18 @@ export const disputes = pgTable("disputes", {
   resolution: text("resolution"), // Description of resolution
   // Evidence tracking
   evidence: text("evidence"), // JSON array of evidence items
+});
+
+// Dispute Evidence
+export const disputeEvidence = pgTable("dispute_evidence", {
+  id: serial("id").primaryKey(),
+  disputeId: integer("dispute_id").references(() => disputes.id),
+  submitterId: uuid("submitter_id").references(() => users.id),
+  evidenceType: varchar("evidence_type", { length: 32 }).notNull(),
+  ipfsHash: varchar("ipfs_hash", { length: 128 }).notNull(),
+  description: text("description"),
+  timestamp: timestamp("timestamp").defaultNow(),
+  verified: boolean("verified").default(false),
 });
 
 // Orders
@@ -2139,6 +2155,7 @@ export const moderationCases = pgTable("moderation_cases", {
   contentId: varchar("content_id", { length: 64 }).notNull(),
   contentType: varchar("content_type", { length: 24 }).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
+  assignedModeratorId: uuid("assigned_moderator_id").references(() => users.id),
   status: varchar("status", { length: 24 }).default("pending"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default("0"),
   decision: varchar("decision", { length: 24 }),
@@ -3740,6 +3757,7 @@ export const referralActivities = pgTable("referral_activities", {
 // Bridge transactions tracking
 export const bridgeTransactions = pgTable("bridge_transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
+  nonce: integer("nonce"),
   userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
   fromChain: varchar("from_chain", { length: 50 }).notNull(),
   toChain: varchar("to_chain", { length: 50 }).notNull(),
@@ -3758,8 +3776,64 @@ export const bridgeTransactions = pgTable("bridge_transactions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
   userIdx: index("idx_bridge_transactions_user_id").on(t.userId),
+  nonceIdx: index("idx_bridge_transactions_nonce").on(t.nonce),
   statusIdx: index("idx_bridge_transactions_status").on(t.status),
   createdAtIdx: index("idx_bridge_transactions_created_at").on(t.createdAt),
+}));
+
+// Bridge events tracking
+export const bridgeEvents = pgTable("bridge_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  transactionId: varchar("transaction_id", { length: 255 }).notNull(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  blockNumber: integer("block_number"),
+  txHash: varchar("tx_hash", { length: 66 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  data: text("data"), // JSON string
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  transactionIdIdx: index("idx_bridge_events_transaction_id").on(t.transactionId),
+  eventTypeIdx: index("idx_bridge_events_event_type").on(t.eventType),
+  timestampIdx: index("idx_bridge_events_timestamp").on(t.timestamp),
+}));
+
+// Bridge metrics tracking
+export const bridgeMetrics = pgTable("bridge_metrics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  totalTransactions: integer("total_transactions").notNull().default(0),
+  totalVolume: numeric("total_volume", { precision: 30, scale: 8 }).notNull().default("0"),
+  totalFees: numeric("total_fees", { precision: 30, scale: 8 }).notNull().default("0"),
+  successRate: numeric("success_rate", { precision: 5, scale: 4 }).notNull().default("0"),
+  averageCompletionTime: integer("average_completion_time").notNull().default(0),
+  activeValidators: integer("active_validators").notNull().default(0),
+  chainMetrics: text("chain_metrics"), // JSON string
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  timestampIdx: index("idx_bridge_metrics_timestamp").on(t.timestamp),
+}));
+
+// Bridge alerts
+export const bridgeAlerts = pgTable("bridge_alerts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  alertType: varchar("alert_type", { length: 50 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  chainId: integer("chain_id"),
+  transactionId: varchar("transaction_id", { length: 255 }),
+  validatorAddress: varchar("validator_address", { length: 66 }),
+  isResolved: boolean("is_resolved").default(false).notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by", { length: 66 }),
+  metadata: text("metadata"), // JSON string
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  alertTypeIdx: index("idx_bridge_alerts_alert_type").on(t.alertType),
+  severityIdx: index("idx_bridge_alerts_severity").on(t.severity),
+  chainIdIdx: index("idx_bridge_alerts_chain_id").on(t.chainId),
+  isResolvedIdx: index("idx_bridge_alerts_is_resolved").on(t.isResolved),
+  createdAtIdx: index("idx_bridge_alerts_created_at").on(t.createdAt),
 }));
 
 // DEX swap transactions

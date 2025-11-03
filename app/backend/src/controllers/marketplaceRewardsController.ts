@@ -146,9 +146,15 @@ export class MarketplaceRewardsController {
       const validatedData = createChallengeSchema.parse(req.body);
 
       const challengeData: MarketplaceChallengeData = {
-        ...validatedData,
+        name: validatedData.name || 'Untitled Challenge',
+        description: validatedData.description || 'No description provided',
+        challengeType: validatedData.challengeType || 'daily',
+        targetValue: validatedData.targetValue || 0,
+        rewardAmount: validatedData.rewardAmount || 0,
+        bonusMultiplier: validatedData.bonusMultiplier,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
-        endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined
+        endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,
+        maxParticipants: validatedData.maxParticipants
       };
 
       const result = await marketplaceRewardsService.createMarketplaceChallenge(challengeData);

@@ -25,7 +25,7 @@ export class AIContentModerationController {
     try {
       const validatedInput = ContentModerationSchema.parse(req.body);
       
-      const moderationReport = await aiContentModerationService.moderateContent(validatedInput);
+      const moderationReport = await aiContentModerationService.moderateContent(validatedInput as any);
       
       res.json({
         success: true,
@@ -61,7 +61,7 @@ export class AIContentModerationController {
       
       // Process all moderations in parallel
       const moderationPromises = validatedInput.contents.map(content =>
-        aiContentModerationService.moderateContent(content)
+        aiContentModerationService.moderateContent(content as any)
       );
       
       const moderationReports = await Promise.allSettled(moderationPromises);

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { safeLogger } from '../utils/safeLogger';
 import { Redis, Cluster } from 'ioredis';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
@@ -36,13 +36,12 @@ interface GeographicRegion {
   latency: number;
 }
 
-@Injectable()
 export class IntelligentCachingService extends EventEmitter {
-  private readonly logger = new Logger(IntelligentCachingService.name);
-  private readonly redisCluster: Cluster;
+  private readonly logger = safeLogger;
+  private redisCluster: Cluster;
   private readonly localCache: Map<string, CacheEntry> = new Map();
   private readonly strategies: Map<string, CacheStrategy> = new Map();
-  private readonly predictiveModel: PredictiveModel;
+  private predictiveModel: PredictiveModel;
   private readonly regions: Map<string, GeographicRegion> = new Map();
   private readonly metrics: Map<string, number> = new Map();
 
@@ -66,7 +65,7 @@ export class IntelligentCachingService extends EventEmitter {
         password: process.env.REDIS_PASSWORD,
       },
       enableOfflineQueue: false,
-      maxRetriesPerRequest: 3,
+      // maxRetriesPerRequest: 3, // Not supported in current ioredis version
     });
 
     this.redisCluster.on('error', (error) => {
@@ -74,7 +73,7 @@ export class IntelligentCachingService extends EventEmitter {
     });
 
     this.redisCluster.on('ready', () => {
-      this.logger.log('Redis cluster connected and ready');
+      this.logger.info('Redis cluster connected and ready');
     });
   }
 
@@ -293,7 +292,7 @@ export class IntelligentCachingService extends EventEmitter {
       this.updateMetrics('cache_invalidations', totalInvalidated);
       this.emit('cache:invalidate', { pattern, count: totalInvalidated });
 
-      this.logger.log(`Cache invalidated: ${totalInvalidated} entries for pattern ${pattern}`);
+      this.logger.info(`Cache invalidated: ${totalInvalidated} entries for pattern ${pattern}`);
       return totalInvalidated;
     } catch (error) {
       this.logger.error(`Cache invalidation failed for pattern ${pattern}: ${error.message}`, error.stack);
@@ -324,7 +323,7 @@ export class IntelligentCachingService extends EventEmitter {
         invalidated = await this.invalidate(`{${keysToInvalidate.join(',')}}`);
       }
 
-      this.logger.log(`Cache invalidated by tags: ${invalidated} entries for tags [${tags.join(', ')}]`);
+      this.logger.info(`Cache invalidated by tags: ${invalidated} entries for tags [${tags.join(', ')}]`);
       return invalidated;
     } catch (error) {
       this.logger.error(`Cache invalidation by tags failed: ${error.message}`, error.stack);
@@ -484,7 +483,7 @@ export class IntelligentCachingService extends EventEmitter {
         this.localCache.delete(key);
       });
 
-      this.logger.log(`Local cache optimized: removed ${toRemove.length} entries`);
+      this.logger.info(`Local cache optimized: removed ${toRemove.length} entries`);
     }
   }
 
@@ -524,7 +523,7 @@ export class IntelligentCachingService extends EventEmitter {
     
     if (recentMetrics.accuracy < this.predictiveModel.accuracy * 0.9) {
       // Retrain model if accuracy drops significantly
-      this.logger.log('Predictive model accuracy dropped, scheduling retraining');
+      this.logger.info('Predictive model accuracy dropped, scheduling retraining');
       this.emit('model:retrain', { currentAccuracy: recentMetrics.accuracy });
     }
   }

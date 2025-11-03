@@ -1,4 +1,4 @@
-import { Redis } from 'redis';
+import * as Redis from 'redis';
 import { safeLogger } from '../utils/safeLogger';
 import { redisService } from './redisService';
 
@@ -29,7 +29,7 @@ export interface FeatureFlagEvaluation {
 }
 
 class FeatureFlagService {
-  private redis: Redis;
+  private redis: Redis.RedisClientType;
   private defaultFlags: Map<string, FeatureFlag> = new Map();
 
   constructor() {
@@ -289,7 +289,7 @@ class FeatureFlagService {
     try {
       // Try to get from Redis first
       const cached = await this.redis.get(`feature_flag:${flagName}`);
-      if (cached) {
+      if (cached && typeof cached === 'string') {
         return JSON.parse(cached);
       }
 
@@ -308,7 +308,7 @@ class FeatureFlagService {
         updatedAt: new Date()
       };
 
-      await this.redis.setex(
+      await this.redis.setEx(
         `feature_flag:${flag.name}`,
         3600, // 1 hour TTL
         JSON.stringify(flag)
@@ -329,7 +329,7 @@ class FeatureFlagService {
 
       for (const key of keys) {
         const cached = await this.redis.get(key);
-        if (cached) {
+        if (cached && typeof cached === 'string') {
           flags.push(JSON.parse(cached));
         }
       }

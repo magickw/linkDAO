@@ -141,7 +141,7 @@ class LDAOPostLaunchSetup {
     logger.info(`Identified ${strategies.length} optimization opportunities`);
 
     // Create initial A/B tests for high-priority optimizations
-    const highPriorityStrategies = strategies.filter(s => s.priority === 'high').slice(0, 2);
+    const highPriorityStrategies = strategies.filter(s => s.implementationComplexity === 'high').slice(0, 2);
     
     for (const strategy of highPriorityStrategies) {
       await this.createInitialABTest(strategy);

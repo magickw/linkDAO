@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { RecommendationService } from '../services/recommendationService';
-import { authenticateUser } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const recommendationService = new RecommendationService();
 

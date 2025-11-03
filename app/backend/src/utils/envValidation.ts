@@ -2,6 +2,8 @@
  * Environment variable validation utility
  */
 
+import { safeLogger } from './safeLogger';
+
 export interface EnvConfig {
   NODE_ENV: string;
   PORT: number;

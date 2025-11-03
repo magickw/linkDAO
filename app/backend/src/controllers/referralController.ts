@@ -49,7 +49,9 @@ export class ReferralController {
 
       const result = await referralService.createReferral({
         referrerId: userId,
-        ...validatedData,
+        refereeId: validatedData.refereeId,
+        tier: validatedData.tier,
+        bonusPercentage: validatedData.bonusPercentage,
         expiresAt: validatedData.expiresAt ? new Date(validatedData.expiresAt) : undefined
       });
 

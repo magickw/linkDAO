@@ -65,7 +65,7 @@ export class ContentOptimizationService {
   private readonly redis: Redis;
   private readonly s3Client: S3Client;
   private readonly cloudFrontClient: CloudFrontClient;
-  private readonly config: OptimizationConfig;
+  private config: OptimizationConfig; // Removed readonly to allow assignment
 
   constructor() {
     this.redis = new Redis(process.env.REDIS_URL);

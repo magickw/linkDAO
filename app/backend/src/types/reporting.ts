@@ -215,24 +215,18 @@ export interface ValidationError {
 export interface DataSourceConnection {
   id: string;
   name: string;
-  type: 'postgresql' | 'mysql' | 'mongodb' | 'redis' | 'api' | 'file';
-  config: ConnectionConfig;
-  status: 'active' | 'inactive' | 'error';
-  lastTested: Date;
-  createdBy: string;
-}
-
-export interface ConnectionConfig {
+  type: 'database' | 'api' | 'file';
   host?: string;
   port?: number;
   database?: string;
   username?: string;
   password?: string;
-  url?: string;
   apiKey?: string;
-  headers?: Record<string, string>;
-  timeout?: number;
-  ssl?: boolean;
+  connectionString?: string;
+  status: 'active' | 'error' | 'disabled';
+  lastTested: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface QueryResult {

@@ -126,6 +126,31 @@ export interface MarketplaceOrder {
   trackingInfo?: TrackingInfo;
   events?: OrderEvent[];
   notes?: string;
+  
+  // Additional properties for order tracking
+  trackingNumber?: string;
+  trackingCarrier?: string;
+  estimatedDelivery?: string;
+  actualDelivery?: string;
+  deliveryConfirmation?: string;
+  paymentMethod?: string;
+  paymentConfirmationHash?: string;
+  escrowContractAddress?: string;
+  totalAmount?: number;
+  currency?: string;
+  orderNotes?: string;
+  orderMetadata?: any;
+  product?: {
+    id: string;
+    title: string;
+    description: string;
+    image: string;
+    category: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  };
+  disputeId?: string;
 }
 
 // Blockchain Event Models

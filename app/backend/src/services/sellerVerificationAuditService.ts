@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { adminAuditLog } from '../db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 export interface AuditLogEntry {
   adminId: string;
@@ -116,8 +117,8 @@ export class SellerVerificationAuditService {
 
     try {
       const logs = await db.select().from(adminAuditLog)
-        .where(adminAuditLog.resourceId.eq(resourceId))
-        .orderBy(adminAuditLog.createdAt.desc());
+        .where(eq(adminAuditLog.resourceId, resourceId))
+        .orderBy(desc(adminAuditLog.createdAt));
       
       return logs;
     } catch (error) {
@@ -136,8 +137,8 @@ export class SellerVerificationAuditService {
 
     try {
       const logs = await db.select().from(adminAuditLog)
-        .where(adminAuditLog.adminId.eq(adminId))
-        .orderBy(adminAuditLog.createdAt.desc());
+        .where(eq(adminAuditLog.adminId, adminId))
+        .orderBy(desc(adminAuditLog.createdAt));
       
       return logs;
     } catch (error) {

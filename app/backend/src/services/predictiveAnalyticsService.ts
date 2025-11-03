@@ -3,6 +3,14 @@
  * Analyzes patterns to predict future content needs and user behavior
  */
 
+export interface ContentVolumePrediction {
+  period: string;
+  predictedVolume: number;
+  confidence: number;
+  contentTypes: Record<string, number>;
+  trendingTopics: string[];
+}
+
 export interface ContentDemandPrediction {
   topic: string;
   category: string;
@@ -44,6 +52,32 @@ export interface ContentPerformancePrediction {
     confidence: number;
   }>;
   recommendations: string[];
+}
+
+export interface UserGrowthPrediction {
+  period: string;
+  growthRate: number;
+  confidence: number;
+  predictedUsers: number;
+  factors: string[];
+}
+
+export interface SystemLoadPrediction {
+  period: string;
+  predictedCpuUsage: number;
+  predictedMemoryUsage: number;
+  predictedDiskUsage: number;
+  confidence: number;
+  recommendedActions: string[];
+}
+
+export interface BusinessMetricPrediction {
+  metric: string;
+  currentValue: number;
+  predictedValue: number;
+  trend: 'increasing' | 'decreasing' | 'stable';
+  confidence: number;
+  period: string;
 }
 
 export interface SeasonalityPattern {
@@ -181,6 +215,187 @@ export class PredictiveAnalyticsService {
       predictions,
       recommendations
     };
+  }
+
+  /**
+   * Predict user growth
+   */
+  predictUserGrowth(days: number = 7): UserGrowthPrediction[] {
+    const userData = this.historicalData.get('user_registrations') || [];
+    if (userData.length < 2) {
+      return [{
+        period: `next_${days}_days`,
+        growthRate: 0,
+        confidence: 0,
+        predictedUsers: 0,
+        factors: []
+      }];
+    }
+
+    // Calculate growth trend from historical data
+    const recentData = userData.slice(-30); // Last 30 data points
+    const trend = this.calculateTrend(recentData.map(d => d.value));
+    
+    const predictions: UserGrowthPrediction[] = [];
+    for (let i = 1; i <= Math.min(days, 30); i++) {
+      const growthRate = trend * i * 100; // Convert to percentage
+      const predictedUsers = Math.max(0, Math.round((userData[userData.length - 1]?.value || 0) * (1 + growthRate / 100)));
+      
+      predictions.push({
+        period: `day_${i}`,
+        growthRate: parseFloat(growthRate.toFixed(2)),
+        confidence: Math.min(0.9, recentData.length / 30),
+        predictedUsers,
+        factors: ['historical_growth_trend', 'market_conditions', 'seasonality']
+      });
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Predict system load
+   */
+  predictSystemLoad(days: number = 3): SystemLoadPrediction[] {
+    const cpuData = this.historicalData.get('system_cpu_usage') || [];
+    const memoryData = this.historicalData.get('system_memory_usage') || [];
+    const diskData = this.historicalData.get('system_disk_usage') || [];
+
+    const predictions: SystemLoadPrediction[] = [];
+    
+    for (let i = 1; i <= days; i++) {
+      // Get recent averages or use defaults
+      const recentCpu = cpuData.slice(-7).map(d => d.value);
+      const avgCpu = recentCpu.length > 0 
+        ? recentCpu.reduce((sum, val) => sum + val, 0) / recentCpu.length 
+        : 50;
+        
+      const recentMemory = memoryData.slice(-7).map(d => d.value);
+      const avgMemory = recentMemory.length > 0 
+        ? recentMemory.reduce((sum, val) => sum + val, 0) / recentMemory.length 
+        : 60;
+        
+      const recentDisk = diskData.slice(-7).map(d => d.value);
+      const avgDisk = recentDisk.length > 0 
+        ? recentDisk.reduce((sum, val) => sum + val, 0) / recentDisk.length 
+        : 40;
+
+      // Apply some trend analysis or seasonal patterns
+      const trendMultiplier = 1 + (0.05 * i); // 5% increase per day for demonstration
+      
+      const predictedCpuUsage = Math.min(100, avgCpu * trendMultiplier);
+      const predictedMemoryUsage = Math.min(100, avgMemory * trendMultiplier);
+      const predictedDiskUsage = Math.min(100, avgDisk * trendMultiplier);
+
+      // Generate recommendations based on predicted load
+      const recommendedActions: string[] = [];
+      if (predictedCpuUsage > 80) {
+        recommendedActions.push('Scale up CPU resources');
+      }
+      if (predictedMemoryUsage > 85) {
+        recommendedActions.push('Increase memory allocation');
+      }
+      if (predictedDiskUsage > 90) {
+        recommendedActions.push('Free up disk space or add storage');
+      }
+
+      predictions.push({
+        period: `day_${i}`,
+        predictedCpuUsage: parseFloat(predictedCpuUsage.toFixed(1)),
+        predictedMemoryUsage: parseFloat(predictedMemoryUsage.toFixed(1)),
+        predictedDiskUsage: parseFloat(predictedDiskUsage.toFixed(1)),
+        confidence: 0.7,
+        recommendedActions
+      });
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Predict business metrics
+   */
+  predictBusinessMetrics(metrics: string[], days: number = 7): BusinessMetricPrediction[] {
+    const predictions: BusinessMetricPrediction[] = [];
+    
+    for (const metric of metrics) {
+      const metricData = this.historicalData.get(`business_${metric}`) || [];
+      if (metricData.length < 2) {
+        predictions.push({
+          metric,
+          currentValue: 0,
+          predictedValue: 0,
+          trend: 'stable',
+          confidence: 0,
+          period: `next_${days}_days`
+        });
+        continue;
+      }
+
+      const recentData = metricData.slice(-30);
+      const currentValue = recentData[recentData.length - 1]?.value || 0;
+      const trend = this.calculateTrend(recentData.map(d => d.value));
+      const predictedValue = currentValue * (1 + trend);
+      
+      predictions.push({
+        metric,
+        currentValue: parseFloat(currentValue.toFixed(2)),
+        predictedValue: parseFloat(predictedValue.toFixed(2)),
+        trend: trend > 0.05 ? 'increasing' : trend < -0.05 ? 'decreasing' : 'stable',
+        confidence: Math.min(0.9, recentData.length / 30),
+        period: `next_${days}_days`
+      });
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Predict content volume
+   */
+  predictContentVolume(days: number = 7): ContentVolumePrediction[] {
+    const contentData = this.historicalData.get('content_creation') || [];
+    const topicData = this.historicalData.get('content_topics') || [];
+    
+    const predictions: ContentVolumePrediction[] = [];
+    
+    for (let i = 1; i <= days; i++) {
+      // Get recent averages or use defaults
+      const recentContent = contentData.slice(-30).map(d => d.value);
+      const avgContent = recentContent.length > 0 
+        ? recentContent.reduce((sum, val) => sum + val, 0) / recentContent.length 
+        : 100;
+        
+      // Apply some trend analysis
+      const trendMultiplier = 1 + (0.02 * i); // 2% increase per day for demonstration
+      
+      const predictedVolume = Math.round(avgContent * trendMultiplier);
+      
+      // Analyze content types
+      const contentTypes: Record<string, number> = {
+        'text': 0.6,
+        'image': 0.25,
+        'video': 0.1,
+        'audio': 0.05
+      };
+      
+      // Extract trending topics
+      const trendingTopics = topicData
+        .slice(-10)
+        .map(d => d.metadata?.topic)
+        .filter(Boolean)
+        .slice(0, 5);
+
+      predictions.push({
+        period: `day_${i}`,
+        predictedVolume,
+        confidence: 0.75,
+        contentTypes,
+        trendingTopics
+      });
+    }
+
+    return predictions;
   }
 
   /**

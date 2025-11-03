@@ -20,6 +20,8 @@ export interface DocumentMetadata {
   tags: string[];
   dependencies?: string[];
   criticalityLevel: 'low' | 'medium' | 'high' | 'critical';
+  // Adding missing properties to match the expected structure
+  [key: string]: any;
 }
 
 export interface FreshnessAlert {
@@ -106,25 +108,28 @@ export class DocumentFreshnessService {
       const content = await fs.readFile(filePath, 'utf-8');
       const { data: metadata } = matter(content);
       
-      if (!metadata.lastUpdated) {
-        return this.createAlert(filePath, metadata, new Date(0), 999, 'critical', [
+      // Cast metadata to DocumentMetadata type
+      const docMetadata = metadata as DocumentMetadata;
+      
+      if (!docMetadata.lastUpdated) {
+        return this.createAlert(filePath, docMetadata, new Date(0), 999, 'critical', [
           'Document missing lastUpdated metadata',
           'Cannot determine document age'
         ]);
       }
 
-      const lastUpdated = parseISO(metadata.lastUpdated);
+      const lastUpdated = parseISO(docMetadata.lastUpdated);
       const daysSinceUpdate = differenceInDays(new Date(), lastUpdated);
-      const reviewCycle = this.calculateReviewCycle(metadata);
+      const reviewCycle = this.calculateReviewCycle(docMetadata);
       
       if (daysSinceUpdate <= reviewCycle) {
         return null; // Document is fresh
       }
 
-      const alertLevel = this.determineAlertLevel(daysSinceUpdate, metadata);
-      const reasons = this.generateReasons(daysSinceUpdate, reviewCycle, metadata);
+      const alertLevel = this.determineAlertLevel(daysSinceUpdate, docMetadata);
+      const reasons = this.generateReasons(daysSinceUpdate, reviewCycle, docMetadata);
       
-      return this.createAlert(filePath, metadata, lastUpdated, daysSinceUpdate, alertLevel, reasons);
+      return this.createAlert(filePath, docMetadata, lastUpdated, daysSinceUpdate, alertLevel, reasons);
     } catch (error) {
       safeLogger.error(`Error checking document ${filePath}:`, error);
       return null;

@@ -2,16 +2,27 @@ import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
 import { ReviewService } from '../services/reviewService';
-import { ReputationService } from '../services/reputationService';
-import { validateReview } from '../models/validation';
+import { reputationService } from '../services/reputationService';
+import { reviewSchema } from '../models/validation';
+import { z } from 'zod';
+
+// Import the ReviewData type from the service
+interface ReviewData {
+  reviewerId: string;
+  revieweeId: string;
+  orderId: number;
+  rating: number;
+  title?: string;
+  comment?: string;
+}
 
 export class ReviewController {
   private reviewService: ReviewService;
-  private reputationService: ReputationService;
+  private reputationService: any; // Changed from ReputationService to any
 
   constructor() {
     this.reviewService = new ReviewService();
-    this.reputationService = new ReputationService();
+    this.reputationService = reputationService; // Use the imported instance
   }
 
   /**
@@ -21,18 +32,26 @@ export class ReviewController {
     try {
       const { reviewerId, revieweeId, orderId, rating, title, comment } = req.body;
 
-      // Validate input
-      const validatedData = validateReview({
+      // Validate input using parse directly
+      const validatedData = reviewSchema.parse({
         reviewerId,
         revieweeId,
         orderId,
         rating,
-        title,
         comment
       });
 
+      // Explicitly type the data to match ReviewData interface
+      const reviewData: ReviewData = {
+        reviewerId: validatedData.reviewerId,
+        revieweeId: validatedData.revieweeId,
+        orderId: validatedData.orderId,
+        rating: validatedData.rating,
+        comment: validatedData.comment
+      };
+
       // Submit review
-      const review = await this.reviewService.submitReview(validatedData);
+      const review = await this.reviewService.submitReview(reviewData);
 
       res.status(201).json({
         success: true,
@@ -40,10 +59,18 @@ export class ReviewController {
       });
     } catch (error: any) {
       safeLogger.error('Error submitting review:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message || 'Failed to submit review'
-      });
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid request data',
+          details: error.errors
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: error.message || 'Failed to submit review'
+        });
+      }
     }
   }
 

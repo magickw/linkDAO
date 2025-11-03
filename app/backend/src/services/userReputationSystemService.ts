@@ -283,43 +283,43 @@ export class UserReputationSystemService {
       switch (eventType) {
         case 'violation':
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`,
-            moderationScore: sql`moderation_score + ${scoreChange}`,
-            violationCount: sql`violation_count + 1`,
+            overallScore: sql`overall_score + ${scoreChange}` as any,
+            moderationScore: sql`moderation_score + ${scoreChange}` as any,
+            violationCount: sql`violation_count + 1` as any,
             lastViolationAt: new Date()
           };
           break;
         case 'helpful_report':
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`,
-            reportingScore: sql`reporting_score + ${scoreChange}`,
-            helpfulReportsCount: sql`helpful_reports_count + 1`
+            overallScore: sql`overall_score + ${scoreChange}` as any,
+            reportingScore: sql`reporting_score + ${scoreChange}` as any,
+            helpfulReportsCount: sql`helpful_reports_count + 1` as any
           };
           break;
         case 'false_report':
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`,
-            reportingScore: sql`reporting_score + ${scoreChange}`,
-            falseReportsCount: sql`false_reports_count + 1`
+            overallScore: sql`overall_score + ${scoreChange}` as any,
+            reportingScore: sql`reporting_score + ${scoreChange}` as any,
+            falseReportsCount: sql`false_reports_count + 1` as any
           };
           break;
         case 'successful_appeal':
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`,
-            moderationScore: sql`moderation_score + ${scoreChange}`,
-            successfulAppealsCount: sql`successful_appeals_count + 1`
+            overallScore: sql`overall_score + ${scoreChange}` as any,
+            moderationScore: sql`moderation_score + ${scoreChange}` as any,
+            successfulAppealsCount: sql`successful_appeals_count + 1` as any
           };
           break;
         case 'jury_accuracy':
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`,
-            juryScore: sql`jury_score + ${scoreChange}`,
-            juryDecisionsCount: sql`jury_decisions_count + 1`
+            overallScore: sql`overall_score + ${scoreChange}` as any,
+            juryScore: sql`jury_score + ${scoreChange}` as any,
+            juryDecisionsCount: sql`jury_decisions_count + 1` as any
           };
           break;
         default:
           updateFields = {
-            overallScore: sql`overall_score + ${scoreChange}`
+            overallScore: sql`overall_score + ${scoreChange}` as any
           };
       }
 

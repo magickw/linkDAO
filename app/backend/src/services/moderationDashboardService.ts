@@ -1,8 +1,8 @@
 import { moderationMetricsService } from './moderationMetricsService';
 import { safeLogger } from '../utils/safeLogger';
 import { moderationLoggingService } from './moderationLoggingService';
-import { db } from '../db/connectionPool';
-import { moderation_cases, moderation_appeals, content_reports, moderation_actions } from '../db/schema';
+import { databaseService } from './databaseService';
+import { moderationCases, moderationAppeals, contentReports, moderationActions } from '../db/schema';
 import { eq, gte, count, avg, sql, desc } from 'drizzle-orm';
 
 export interface DashboardData {
@@ -168,14 +168,15 @@ class ModerationDashboardService {
     const cutoff = new Date(Date.now() - timeWindow);
     
     try {
+      const db = databaseService.getDatabase();
       // Get appeal overturn rate
       const appealsResult = await db
         .select({
           total: count(),
-          overturned: sql<number>`COUNT(CASE WHEN ${moderation_appeals.juryDecision} != 'uphold' THEN 1 END)`
+          overturned: sql<number>`COUNT(CASE WHEN ${moderationAppeals.juryDecision} != 'uphold' THEN 1 END)`
         })
-        .from(moderation_appeals)
-        .where(gte(moderation_appeals.createdAt, cutoff));
+        .from(moderationAppeals)
+        .where(gte(moderationAppeals.createdAt, cutoff));
 
       const appeals = appealsResult[0];
       const overturnRate = appeals?.total > 0 ? appeals.overturned / appeals.total : 0;
@@ -210,27 +211,28 @@ class ModerationDashboardService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
       // Total appeals
       const totalAppealsResult = await db
         .select({ count: count() })
-        .from(moderation_appeals)
-        .where(gte(moderation_appeals.createdAt, cutoff));
+        .from(moderationAppeals)
+        .where(gte(moderationAppeals.createdAt, cutoff));
 
       // Pending appeals
       const pendingAppealsResult = await db
         .select({ count: count() })
-        .from(moderation_appeals)
-        .where(eq(moderation_appeals.status, 'open'));
+        .from(moderationAppeals)
+        .where(eq(moderationAppeals.status, 'open'));
 
       // Appeals by outcome
       const appealsByOutcomeResult = await db
         .select({
-          outcome: moderation_appeals.juryDecision,
+          outcome: moderationAppeals.juryDecision,
           count: count()
         })
-        .from(moderation_appeals)
-        .where(gte(moderation_appeals.createdAt, cutoff))
-        .groupBy(moderation_appeals.juryDecision);
+        .from(moderationAppeals)
+        .where(gte(moderationAppeals.createdAt, cutoff))
+        .groupBy(moderationAppeals.juryDecision);
 
       const appealsByOutcome = appealsByOutcomeResult.reduce((acc, row) => {
         if (row.outcome) {
@@ -358,11 +360,12 @@ class ModerationDashboardService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
       // Average stake amount
       const avgStakeResult = await db
-        .select({ avg: avg(moderation_appeals.stakeAmount) })
-        .from(moderation_appeals)
-        .where(gte(moderation_appeals.createdAt, cutoff));
+        .select({ avg: avg(moderationAppeals.stakeAmount) })
+        .from(moderationAppeals)
+        .where(gte(moderationAppeals.createdAt, cutoff));
 
       const averageStakeAmount = Number(avgStakeResult[0]?.avg || 0);
 
@@ -424,16 +427,17 @@ class ModerationDashboardService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
       // Top reporters
       const topReportersResult = await db
         .select({
-          userId: content_reports.reporterId,
+          userId: contentReports.reporterId,
           reports: count(),
-          avgWeight: avg(content_reports.weight)
+          avgWeight: avg(contentReports.weight)
         })
-        .from(content_reports)
-        .where(gte(content_reports.createdAt, cutoff))
-        .groupBy(content_reports.reporterId)
+        .from(contentReports)
+        .where(gte(contentReports.createdAt, cutoff))
+        .groupBy(contentReports.reporterId)
         .orderBy(desc(count()))
         .limit(10);
 
@@ -555,14 +559,15 @@ class ModerationDashboardService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
       const result = await db
         .select({
-          category: moderation_cases.reasonCode,
+          category: moderationCases.reasonCode,
           count: count()
         })
-        .from(moderation_cases)
-        .where(gte(moderation_cases.createdAt, cutoff))
-        .groupBy(moderation_cases.reasonCode)
+        .from(moderationCases)
+        .where(gte(moderationCases.createdAt, cutoff))
+        .groupBy(moderationCases.reasonCode)
         .orderBy(desc(count()))
         .limit(10);
 

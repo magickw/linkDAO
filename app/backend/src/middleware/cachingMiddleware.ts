@@ -15,6 +15,13 @@ interface CacheMiddlewareConfig {
   listings: CacheOptions;
   reputation: CacheOptions;
   searchResults: CacheOptions;
+  sellerDashboard: CacheOptions;
+  sellerNotifications: CacheOptions;
+  sellerAnalytics: CacheOptions;
+  sellerListings: CacheOptions;
+  sellerOrders: CacheOptions;
+  listingDetail: CacheOptions;
+  orderDetail: CacheOptions;
   default: CacheOptions;
 }
 
@@ -57,6 +64,55 @@ class CachingMiddleware {
         condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
         invalidateOn: ['POST', 'PUT', 'PATCH', 'DELETE'],
         varyBy: ['query', 'filters']
+      },
+      sellerDashboard: {
+        ttl: 60, // 1 minute
+        keyGenerator: (req) => `seller:dashboard:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
+        varyBy: ['walletAddress']
+      },
+      sellerNotifications: {
+        ttl: 30, // 30 seconds
+        keyGenerator: (req) => `seller:notifications:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
+        varyBy: ['walletAddress']
+      },
+      sellerAnalytics: {
+        ttl: 300, // 5 minutes
+        keyGenerator: (req) => `seller:analytics:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
+        varyBy: ['walletAddress']
+      },
+      sellerListings: {
+        ttl: 60, // 1 minute
+        keyGenerator: (req) => `seller:listings:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH', 'DELETE'],
+        varyBy: ['walletAddress']
+      },
+      sellerOrders: {
+        ttl: 30, // 30 seconds
+        keyGenerator: (req) => `seller:orders:${req.params.walletAddress?.toLowerCase()}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH', 'DELETE'],
+        varyBy: ['walletAddress']
+      },
+      listingDetail: {
+        ttl: 60, // 1 minute
+        keyGenerator: (req) => `listing:detail:${req.params.listingId}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
+        varyBy: ['listingId']
+      },
+      orderDetail: {
+        ttl: 60, // 1 minute
+        keyGenerator: (req) => `order:detail:${req.params.orderId}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200,
+        invalidateOn: ['POST', 'PUT', 'PATCH'],
+        varyBy: ['orderId']
       },
       default: {
         ttl: 300, // 5 minutes

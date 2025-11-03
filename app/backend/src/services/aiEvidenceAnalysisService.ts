@@ -4,7 +4,7 @@ import * as tf from '@tensorflow/tfjs-node';
 import sharp from 'sharp';
 import crypto from 'crypto';
 import { db } from '../db';
-import { disputeEvidence, disputes } from '../db/schema';
+import { marketplaceDisputes as disputeEvidence, disputes } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
 export interface EvidenceAnalysisResult {
@@ -466,7 +466,7 @@ export class AIEvidenceAnalysisService {
       // Get dispute context to determine relevance
       const evidence = await db.select()
         .from(disputeEvidence)
-        .where(eq(disputeEvidence.id, parseInt(evidenceId)))
+        .where(eq(disputeEvidence.id, evidenceId))
         .limit(1);
 
       if (evidence.length === 0) {
@@ -677,7 +677,7 @@ export class AIEvidenceAnalysisService {
       // Get dispute context
       const evidence = await db.select()
         .from(disputeEvidence)
-        .where(eq(disputeEvidence.id, parseInt(evidenceId)))
+        .where(eq(disputeEvidence.id, evidenceId))
         .limit(1);
 
       if (evidence.length === 0) {

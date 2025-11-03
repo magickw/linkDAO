@@ -3,7 +3,7 @@ import { PerceptualHashingService, DuplicateDetectionResult } from './perceptual
 import { TextHashingService, TextDuplicateResult } from './textHashingService';
 import { VendorApiOptimizer } from './vendorApiOptimizer';
 import { ModerationCacheService, CachedModerationResult } from './moderationCacheService';
-import { CircuitBreakerManager } from './circuitBreakerService';
+import { circuitBreakerService } from './circuitBreakerService';
 
 export interface ContentInput {
   id: string;
@@ -36,7 +36,7 @@ export interface PerformanceMetrics {
   averageProcessingTime: number;
   totalCost: number;
   vendorApiCalls: number;
-  circuitBreakerStats: Map<string, any>;
+  circuitBreakerStats: Record<string, any>;
 }
 
 /**
@@ -48,7 +48,7 @@ export class PerformanceOptimizationService extends EventEmitter {
   private readonly textHashing: TextHashingService;
   private readonly vendorOptimizer: VendorApiOptimizer;
   private readonly cache: ModerationCacheService;
-  private readonly circuitBreakers: CircuitBreakerManager;
+  private readonly circuitBreakers: typeof circuitBreakerService;
 
   // In-memory stores for duplicate detection (in production, use Redis)
   private textHashes = new Map<string, { hash: any; text: string }>();
@@ -71,7 +71,7 @@ export class PerformanceOptimizationService extends EventEmitter {
     this.textHashing = new TextHashingService();
     this.vendorOptimizer = new VendorApiOptimizer();
     this.cache = new ModerationCacheService();
-    this.circuitBreakers = new CircuitBreakerManager();
+    this.circuitBreakers = circuitBreakerService;
 
     this.setupEventListeners();
   }
@@ -86,13 +86,8 @@ export class PerformanceOptimizationService extends EventEmitter {
       this.emit('vendorBatchProcessed', event);
     });
 
-    this.circuitBreakers.on('circuitOpened', (event) => {
-      this.emit('circuitBreakerOpened', event);
-    });
-
-    this.circuitBreakers.on('circuitClosed', (event) => {
-      this.emit('circuitBreakerClosed', event);
-    });
+    // Note: circuitBreakerService doesn't emit events, so we can't listen to them
+    // We'll need to check circuit breaker status manually when needed
   }
 
   /**
@@ -226,23 +221,14 @@ export class PerformanceOptimizationService extends EventEmitter {
    */
   private async processWithVendors(input: ContentInput): Promise<CachedModerationResult> {
     const circuitBreaker = this.circuitBreakers.getCircuitBreaker(
-      'moderation-ensemble',
-      {
-        failureThreshold: 5,
-        recoveryTimeout: 60000,
-        monitoringPeriod: 300000,
-        expectedErrors: ['TimeoutError', 'RateLimitError'],
-        slowCallThreshold: 0.3,
-        slowCallDurationThreshold: 10000
-      },
-      () => this.fallbackModeration(input)
+      'moderation-ensemble'
     );
 
     return await circuitBreaker.execute(async () => {
       // Use vendor optimizer for batching
       const results = await Promise.all([
-        this.vendorOptimizer.batchRequest('openai', input.content, input.type, 'medium'),
-        this.vendorOptimizer.batchRequest('perspective', input.content, input.type, 'medium')
+        this.vendorOptimizer.batchRequest('openai', input.content, this.mapContentType(input.type), 'medium'),
+        this.vendorOptimizer.batchRequest('perspective', input.content, this.mapContentType(input.type), 'medium')
       ]);
 
       // Aggregate results
@@ -257,7 +243,7 @@ export class PerformanceOptimizationService extends EventEmitter {
         timestamp: Date.now(),
         ttl: 3600
       };
-    });
+    }, () => this.fallbackModeration(input));
   }
 
   /**
@@ -396,8 +382,25 @@ export class PerformanceOptimizationService extends EventEmitter {
       averageProcessingTime,
       totalCost: this.metrics.totalCost,
       vendorApiCalls: this.metrics.vendorApiCalls,
-      circuitBreakerStats: this.circuitBreakers.getAllStats()
+      circuitBreakerStats: this.circuitBreakers.getAllStates()
     };
+  }
+
+  /**
+   * Map content type to supported vendor types
+   */
+  private mapContentType(type: string): 'text' | 'image' | 'url' {
+    if (type === 'video') {
+      // Treat video as image for vendor processing
+      return 'image';
+    }
+    
+    if (type === 'text' || type === 'image' || type === 'url') {
+      return type as 'text' | 'image' | 'url';
+    }
+    
+    // Default to text for unknown types
+    return 'text';
   }
 
   /**

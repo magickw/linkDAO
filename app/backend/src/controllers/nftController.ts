@@ -99,7 +99,14 @@ export class NFTController {
         image: imageFile.buffer,
         animationFile: animationFile?.buffer,
         externalUrl: validatedData.externalUrl,
-        attributes: validatedData.attributes,
+        // Map attributes to ensure required fields are present
+        attributes: validatedData.attributes
+          .filter(attr => attr.trait_type !== undefined && attr.value !== undefined)
+          .map(attr => ({
+            trait_type: attr.trait_type,
+            value: attr.value,
+            display_type: attr.display_type
+          })),
         royalty: validatedData.royalty,
       });
 

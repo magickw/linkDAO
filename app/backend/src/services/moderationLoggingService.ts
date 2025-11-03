@@ -1,7 +1,5 @@
-import { Logger } from 'winston';
-import winston from 'winston';
-import { moderation_cases, moderation_actions, content_reports } from '../db/schema';
-import { db } from '../db/connectionPool';
+import { moderationCases, moderationActions, contentReports } from '../db/schema';
+import { databaseService } from './databaseService';
 import { eq } from 'drizzle-orm';
 
 export interface ModerationLogEntry {
@@ -39,33 +37,45 @@ export interface AccuracyMetrics {
 }
 
 class ModerationLoggingService {
-  private logger: Logger;
+  private logger: any;
   private metricsBuffer: ModerationLogEntry[] = [];
   private readonly BUFFER_SIZE = 1000;
   private readonly FLUSH_INTERVAL = 30000; // 30 seconds
 
   constructor() {
-    this.logger = winston.createLogger({
-      level: 'info',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.errors({ stack: true }),
-        winston.format.json()
-      ),
-      defaultMeta: { service: 'moderation' },
-      transports: [
-        new winston.transports.File({ 
-          filename: 'logs/moderation-error.log', 
-          level: 'error' 
-        }),
-        new winston.transports.File({ 
-          filename: 'logs/moderation-combined.log' 
-        }),
-        new winston.transports.Console({
-          format: winston.format.simple()
-        })
-      ]
-    });
+    // Use dynamic import to avoid compilation issues
+    try {
+      const winston = require('winston');
+      this.logger = winston.createLogger({
+        level: 'info',
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        ),
+        defaultMeta: { service: 'moderation' },
+        transports: [
+          new winston.transports.File({ 
+            filename: 'logs/moderation-error.log', 
+            level: 'error' 
+          }),
+          new winston.transports.File({ 
+            filename: 'logs/moderation-combined.log' 
+          }),
+          new winston.transports.Console({
+            format: winston.format.simple()
+          })
+        ]
+      });
+    } catch (error) {
+      // Use console as fallback if winston is not available
+      this.logger = {
+        info: console.info,
+        warn: console.warn,
+        error: console.error,
+        debug: console.debug
+      };
+    }
 
     // Start periodic metrics flush
     setInterval(() => this.flushMetrics(), this.FLUSH_INTERVAL);
@@ -277,11 +287,12 @@ class ModerationLoggingService {
     const cutoff = new Date(Date.now() - timeWindow);
 
     try {
+      const db = databaseService.getDatabase();
       // Get cases with appeals
       const appealedCases = await db
         .select()
-        .from(moderation_cases)
-        .where(eq(moderation_cases.status, 'appealed'))
+        .from(moderationCases)
+        .where(eq(moderationCases.status, 'appealed'))
         .limit(1000);
 
       // Calculate overturn rate
@@ -293,7 +304,7 @@ class ModerationLoggingService {
       // Get human review cases for agreement rate
       const humanReviewCases = await db
         .select()
-        .from(moderation_cases)
+        .from(moderationCases)
         .limit(1000);
 
       // Calculate category-specific accuracy
@@ -382,15 +393,16 @@ class ModerationLoggingService {
 
     try {
       // Update the case with latest decision info
+      const db = databaseService.getDatabase();
       await db
-        .update(moderation_cases)
+        .update(moderationCases)
         .set({
           updatedAt: entry.timestamp,
           decision: entry.decision,
           confidence: entry.confidence,
-          vendorScores: entry.vendorScores
+          vendorScores: entry.vendorScores ? JSON.stringify(entry.vendorScores) : null
         })
-        .where(eq(moderation_cases.id, entry.caseId));
+        .where(eq(moderationCases.id, entry.caseId));
 
     } catch (error) {
       this.logger.error('Failed to update case audit log', {

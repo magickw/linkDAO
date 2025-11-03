@@ -1,4 +1,5 @@
-import { WebSocket, WebSocketServer } from 'ws';
+import WebSocket from 'ws';
+const WebSocketServer = require('ws').WebSocketServer;
 import { safeLogger } from '../utils/safeLogger';
 import { IncomingMessage } from 'http';
 import { URL } from 'url';
@@ -26,7 +27,7 @@ interface LiveUpdate {
 }
 
 class RealTimeNotificationService {
-  private wss: WebSocketServer;
+  private wss: typeof WebSocketServer;
   private clients: Map<string, NotificationClient> = new Map();
   private userConnections: Map<string, Set<string>> = new Map();
   private postSubscriptions: Map<string, Set<string>> = new Map();
@@ -34,7 +35,7 @@ class RealTimeNotificationService {
 
   constructor(port: number = 3001) {
     this.wss = new WebSocketServer({ 
-      port,
+      port: port,
       verifyClient: this.verifyClient.bind(this)
     });
 
@@ -109,12 +110,22 @@ class RealTimeNotificationService {
     }
   }
 
-  private handleMessage(clientId: string, data: Buffer): void {
+  private handleMessage(clientId: string, data: WebSocket.Data): void {
     try {
       const client = this.clients.get(clientId);
       if (!client) return;
 
-      const message = JSON.parse(data.toString()) as NotificationMessage;
+      // Convert data to string properly
+      let dataStr: string;
+      if (data instanceof Buffer) {
+        dataStr = data.toString();
+      } else if (typeof data === 'string') {
+        dataStr = data;
+      } else {
+        dataStr = data.toString();
+      }
+
+      const message = JSON.parse(dataStr) as NotificationMessage;
 
       switch (message.type) {
         case 'ping':
@@ -122,28 +133,28 @@ class RealTimeNotificationService {
           this.sendToClient(clientId, { type: 'pong' });
           break;
 
-        case 'subscribe_post':
-          this.subscribeToPost(clientId, message.payload.postId);
-          break;
-
-        case 'unsubscribe_post':
-          this.unsubscribeFromPost(clientId, message.payload.postId);
-          break;
-
-        case 'mark_read':
-          this.handleMarkRead(clientId, message.payload.notificationId);
-          break;
-
-        case 'mark_all_read':
-          this.handleMarkAllRead(clientId, message.payload.category);
-          break;
-
-        case 'dismiss':
-          this.handleDismiss(clientId, message.payload.notificationId);
+        case 'notification':
+        case 'live_update':
+        case 'batch_notifications':
+        case 'pong':
+          // These are valid message types, but we don't need to handle them in this switch
           break;
 
         default:
-          safeLogger.warn(`Unknown message type: ${message.type}`);
+          // Handle custom message types that aren't in the interface
+          if (message.type === 'subscribe_post') {
+            this.subscribeToPost(clientId, message.payload.postId);
+          } else if (message.type === 'unsubscribe_post') {
+            this.unsubscribeFromPost(clientId, message.payload.postId);
+          } else if (message.type === 'mark_read') {
+            this.handleMarkRead(clientId, message.payload.notificationId);
+          } else if (message.type === 'mark_all_read') {
+            this.handleMarkAllRead(clientId, message.payload.category);
+          } else if (message.type === 'dismiss') {
+            this.handleDismiss(clientId, message.payload.notificationId);
+          } else {
+            safeLogger.warn(`Unknown message type: ${message.type}`);
+          }
       }
     } catch (error) {
       safeLogger.error('Error handling WebSocket message:', error);

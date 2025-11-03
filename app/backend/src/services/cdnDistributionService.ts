@@ -306,7 +306,7 @@ class CDNDistributionService {
     ipfsGateways: Array<{ url: string; status: 'healthy' | 'degraded' | 'down'; responseTime: number }>;
   }> {
     const result = {
-      primary: { status: 'down' as const, responseTime: 0 },
+      primary: { status: 'down' as 'healthy' | 'degraded' | 'down', responseTime: 0 },
       fallbacks: [] as Array<{ index: number; status: 'healthy' | 'degraded' | 'down'; responseTime: number }>,
       ipfsGateways: [] as Array<{ url: string; status: 'healthy' | 'degraded' | 'down'; responseTime: number }>
     };
@@ -383,7 +383,20 @@ class CDNDistributionService {
   }> {
     try {
       if (this.primaryCDN) {
-        return await this.primaryCDN.getCDNAnalytics(startDate, endDate);
+        const analytics = await this.primaryCDN.getCDNAnalytics(startDate, endDate);
+        // Map CDNAnalytics to expected return type
+        return {
+          requests: analytics.requests,
+          bandwidth: analytics.bandwidth,
+          cacheHitRate: analytics.cacheHitRate,
+          topImages: analytics.topAssets?.map(asset => ({
+            ipfsHash: asset.key || '',
+            requests: asset.requests,
+            bandwidth: 0 // Not available in CDNAnalytics
+          })) || [],
+          errorRate: analytics.errorRate,
+          averageResponseTime: 0 // Not available in CDNAnalytics
+        };
       }
 
       // Return mock data if no CDN is configured

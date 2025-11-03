@@ -92,14 +92,68 @@ export class OrderTrackingService {
 
       // Get orders with pagination
       const offset = (page - 1) * limit;
-      const dbOrders = await this.databaseService.getOrdersWithFilters(
-        conditions,
-        limit,
-        offset,
-        'created_at DESC'
+      
+      // Since we don't have getOrdersWithFilters, we'll get all user orders and filter manually
+      const allUserOrders = await this.databaseService.getOrdersByUser(
+        conditions.buyerId || conditions.sellerId || ''
       );
-
-      const total = await this.databaseService.countOrdersWithFilters(conditions);
+      
+      // Apply manual filtering
+      let filteredOrders = allUserOrders;
+      
+      // Filter by status if provided
+      if (conditions.status) {
+        filteredOrders = filteredOrders.filter(order => 
+          order.status && order.status.toLowerCase() === conditions.status.toLowerCase()
+        );
+      }
+      
+      // Filter by date range if provided
+      if (conditions.createdAt) {
+        filteredOrders = filteredOrders.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          let matches = true;
+          
+          if (conditions.createdAt.gte) {
+            matches = matches && orderDate >= conditions.createdAt.gte;
+          }
+          
+          if (conditions.createdAt.lte) {
+            matches = matches && orderDate <= conditions.createdAt.lte;
+          }
+          
+          return matches;
+        });
+      }
+      
+      // Filter by payment method if provided
+      if (conditions.paymentMethod) {
+        filteredOrders = filteredOrders.filter(order => 
+          order.paymentMethod === conditions.paymentMethod
+        );
+      }
+      
+      // Filter by amount range if provided
+      if (conditions.amount) {
+        filteredOrders = filteredOrders.filter(order => {
+          const orderAmount = parseFloat(order.amount || '0');
+          let matches = true;
+          
+          if (conditions.amount.gte) {
+            matches = matches && orderAmount >= parseFloat(conditions.amount.gte);
+          }
+          
+          if (conditions.amount.lte) {
+            matches = matches && orderAmount <= parseFloat(conditions.amount.lte);
+          }
+          
+          return matches;
+        });
+      }
+      
+      // Apply pagination
+      const dbOrders = filteredOrders.slice(offset, offset + limit);
+      const total = filteredOrders.length;
 
       // Format orders
       const orders: MarketplaceOrder[] = [];
@@ -338,7 +392,7 @@ export class OrderTrackingService {
 
       // Create tracking record
       await this.databaseService.createTrackingRecord(
-        parseInt(orderId),
+        orderId,
         trackingNumber,
         carrier
       );
@@ -429,13 +483,9 @@ export class OrderTrackingService {
     timeframe: 'week' | 'month' | 'year'
   ): Promise<{
     totalOrders: number;
-    completedOrders: number;
-    pendingOrders: number;
-    disputedOrders: number;
     totalValue: number;
     averageOrderValue: number;
     completionRate: number;
-    statusBreakdown: Record<string, number>;
   }> {
     try {
       const user = await this.userProfileService.getProfileByAddress(userAddress);
@@ -447,13 +497,9 @@ export class OrderTrackingService {
       
       return {
         totalOrders: analytics.totalOrders || 0,
-        completedOrders: analytics.completedOrders || 0,
-        pendingOrders: analytics.pendingOrders || 0,
-        disputedOrders: analytics.disputedOrders || 0,
         totalValue: parseFloat(analytics.totalVolume || '0'),
         averageOrderValue: parseFloat(analytics.averageOrderValue || '0'),
-        completionRate: analytics.completionRate || 0,
-        statusBreakdown: analytics.statusBreakdown || {}
+        completionRate: analytics.completionRate || 0
       };
     } catch (error) {
       safeLogger.error('Error getting order statistics:', error);

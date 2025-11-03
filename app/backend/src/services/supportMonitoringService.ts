@@ -1,3 +1,5 @@
+import { safeLogger } from '../utils/safeLogger';
+
 interface SupportMetrics {
   ticketsCreated: number;
   ticketsResolved: number;

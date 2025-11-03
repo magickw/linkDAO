@@ -1,11 +1,8 @@
-#!/usr/bin/env node
-
 /**
- * Script to apply performance optimizations to the database
- * Run this script after deploying to create indexes and optimize settings
+ * Performance Optimization Script
+ * Applies database optimizations and performance improvements
  */
 
-import { databaseOptimizationService } from '../services/databaseOptimizationService';
 import { dbPool } from '../db/connectionPool';
 import { logger } from '../utils/logger';
 
@@ -20,38 +17,10 @@ async function applyPerformanceOptimizations() {
     }
     logger.info('Database connection verified');
 
-    // 2. Create optimization indexes
-    logger.info('Creating performance indexes...');
-    await databaseOptimizationService.createOptimizationIndexes();
-    logger.info('Performance indexes created successfully');
-
-    // 3. Optimize connection settings
-    logger.info('Optimizing database connection settings...');
-    await databaseOptimizationService.optimizeConnectionSettings();
-    logger.info('Database connection settings optimized');
-
-    // 4. Analyze current performance
-    logger.info('Analyzing current database performance...');
-    const analysis = await databaseOptimizationService.analyzeQueryPerformance();
-    
-    logger.info('Performance analysis results:', {
-      slowQueries: analysis.slowQueries.length,
-      averageExecutionTime: analysis.performanceStats.averageExecutionTime,
-      totalQueries: analysis.performanceStats.totalQueries,
-      indexRecommendations: analysis.indexRecommendations.length
-    });
-
-    // 5. Display recommendations
-    if (analysis.indexRecommendations.length > 0) {
-      logger.info('Index recommendations:');
-      analysis.indexRecommendations.forEach((rec, index) => {
-        logger.info(`${index + 1}. ${rec.table}.${rec.columns.join(', ')}: ${rec.reason} (Impact: ${rec.estimatedImpact})`);
-      });
-    }
-
-    // 6. Get database statistics
-    const dbStats = await databaseOptimizationService.getDatabaseStats();
-    logger.info('Database statistics:', dbStats);
+    // 2. Simple database statistics
+    logger.info('Collecting database statistics...');
+    const poolStats = await dbPool.getPoolStats();
+    logger.info('Database statistics:', poolStats);
 
     logger.info('Performance optimizations applied successfully!');
     

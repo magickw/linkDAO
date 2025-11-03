@@ -136,7 +136,7 @@ export class CommunityAIModerationService {
           and(
             eq(communityModerationActions.communityId, communityId),
             eq(communityModerationActions.targetId, authorId),
-            eq(communityModerationActions.actionType, 'remove')
+            eq(communityModerationActions.action, 'remove')
           )
         );
 
@@ -244,7 +244,7 @@ export class CommunityAIModerationService {
       await db.insert(communityModerationActions).values({
         communityId,
         moderatorAddress: 'AI_SYSTEM',
-        actionType: action === 'remove' ? 'remove' : 'flag',
+        action: action === 'remove' ? 'remove' : 'flag',
         targetType: 'post',
         targetId: postId.toString(),
         reason: result.reasoning.join('; '),
@@ -293,7 +293,7 @@ export class CommunityAIModerationService {
     config: Partial<CommunityModerationConfig>
   ): Promise<void> {
     // In production, save to database
-    safeLogger.info('Updating moderation config for', communityId, config);
+    safeLogger.info(`Updating moderation config for ${communityId}`, config);
   }
 
   /**
@@ -322,8 +322,8 @@ export class CommunityAIModerationService {
           )
         );
 
-      const autoFlagged = actions.filter(a => a.actionType === 'flag').length;
-      const autoRemoved = actions.filter(a => a.actionType === 'remove').length;
+      const autoFlagged = actions.filter(a => a.action === 'flag').length;
+      const autoRemoved = actions.filter(a => a.action === 'remove').length;
       const totalAnalyzed = actions.length;
 
       return {

@@ -38,10 +38,10 @@ interface CacheStats {
 }
 
 export class CachingStrategiesService {
-  private redis: Redis | Cluster;
-  private memoryCache: LRUCache<string, CacheEntry<any>>;
+  protected redis: Redis | Cluster;
+  protected memoryCache: LRUCache<string, CacheEntry<any>>;
   private stats: CacheStats;
-  private config: CacheConfig;
+  protected config: CacheConfig;
 
   constructor(config: CacheConfig) {
     this.config = config;
@@ -60,7 +60,6 @@ export class CachingStrategiesService {
     } else {
       this.redis = new Redis({
         ...config.redis,
-        retryDelayOnFailover: 100,
         enableReadyCheck: false,
         maxRetriesPerRequest: 3,
       });

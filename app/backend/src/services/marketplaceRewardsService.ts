@@ -2,13 +2,15 @@ import { db } from '../db/index';
 import { safeLogger } from '../utils/safeLogger';
 import { eq, and, desc, sum, count, gte, lte, sql } from 'drizzle-orm';
 import { 
-  marketplaceRewards, 
-  earningChallenges,
-  userChallengeProgress,
   orders,
   users,
   earningActivities
 } from '../db/schema';
+import { 
+  marketplaceRewards,
+  earningChallenges,
+  userChallengeProgress
+} from '../db/marketplaceSchema';
 import { earningActivityService } from './earningActivityService';
 import { earningNotificationService } from './earningNotificationService';
 

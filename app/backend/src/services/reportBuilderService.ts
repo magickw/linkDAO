@@ -1,4 +1,4 @@
-import { ReportTemplate, ReportSection, ReportParameter, ValidationError, ComponentDefinition, QueryResult } from '../types/reporting';
+import { ReportTemplate, ReportSection, ReportParameter, ValidationError, ComponentDefinition, QueryResult, DataSourceConnection } from '../types/reporting';
 import { safeLogger } from '../utils/safeLogger';
 
 export class ReportBuilderService {
@@ -472,45 +472,38 @@ export class ReportBuilderService {
       {
         id: 'ds_analytics',
         name: 'Analytics Database',
-        type: 'postgresql',
-        config: {
-          host: 'localhost',
-          port: 5432,
-          database: 'analytics',
-          username: 'admin',
-          ssl: true
-        },
+        type: 'database',
+        host: 'localhost',
+        port: 5432,
+        database: 'analytics',
+        username: 'admin',
         status: 'active',
         lastTested: new Date(),
-        createdBy: 'system'
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'ds_users',
         name: 'User Database',
-        type: 'postgresql',
-        config: {
-          host: 'localhost',
-          port: 5432,
-          database: 'users',
-          username: 'admin',
-          ssl: true
-        },
+        type: 'database',
+        host: 'localhost',
+        port: 5432,
+        database: 'users',
+        username: 'admin',
         status: 'active',
         lastTested: new Date(),
-        createdBy: 'system'
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'ds_marketplace',
         name: 'Marketplace API',
         type: 'api',
-        config: {
-          url: 'https://api.marketplace.com',
-          apiKey: 'mock_api_key',
-          timeout: 30000
-        },
+        apiKey: 'mock_api_key',
         status: 'active',
         lastTested: new Date(),
-        createdBy: 'system'
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     ];
 

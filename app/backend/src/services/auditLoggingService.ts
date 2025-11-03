@@ -322,6 +322,28 @@ class AuditLoggingService {
   }
 
   /**
+   * Create audit log for moderation actions
+   */
+  async logModerationAction(params: {
+    actionType: string;
+    actorId?: string;
+    actorType: 'user' | 'moderator' | 'system' | 'ai';
+    oldState?: any;
+    newState?: any;
+    reasoning?: string;
+    createdAt?: Date;
+  }): Promise<ModerationAuditLog> {
+    return this.createAuditLog({
+      actionType: params.actionType,
+      actorId: params.actorId,
+      actorType: params.actorType,
+      oldState: params.oldState ? JSON.stringify(params.oldState) : undefined,
+      newState: params.newState ? JSON.stringify(params.newState) : undefined,
+      reasoning: params.reasoning,
+    });
+  }
+
+  /**
    * Batch create audit logs for bulk operations
    */
   async batchCreateAuditLogs(entries: AuditLogEntry[]): Promise<ModerationAuditLog[]> {

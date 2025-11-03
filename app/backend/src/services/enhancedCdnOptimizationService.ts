@@ -92,7 +92,6 @@ export class EnhancedCDNOptimizationService {
     this.cloudFront = new AWS.CloudFront();
     
     this.redis = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
       enableReadyCheck: false,
       maxRetriesPerRequest: 3,
       lazyConnect: true

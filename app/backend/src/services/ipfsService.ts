@@ -109,7 +109,10 @@ class IPFSService {
       if (this.projectId && this.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
         // Use Pinata's dedicated API
         const formData = new FormData();
-        formData.append('file', new Blob([file]), filename || 'file');
+        // Convert Buffer to Uint8Array for Blob compatibility
+        const uint8Array = new Uint8Array(file);
+        const fileBlob = new Blob([uint8Array], { type: 'application/octet-stream' });
+        formData.append('file', fileBlob, filename || 'file');
         
         const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
           method: 'POST',

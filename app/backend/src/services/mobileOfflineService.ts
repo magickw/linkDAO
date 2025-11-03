@@ -5,14 +5,9 @@ import {
   offlineActionQueue,
   communities,
   posts,
-  communityMembers,
-  eq,
-  and,
-  inArray,
-  desc,
-  sql,
-  count
+  communityMembers
 } from '../db/schema';
+import { eq, and, inArray, desc, sql, count } from 'drizzle-orm';
 import offlineService from './offlineService';
 
 export class MobileOfflineService {

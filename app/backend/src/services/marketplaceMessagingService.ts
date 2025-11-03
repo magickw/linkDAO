@@ -22,10 +22,13 @@ import {
 } from '../utils/sanitization';
 
 export class MarketplaceMessagingService {
-  private webSocketService: WebSocketService;
+  private webSocketService: any; // Mock implementation
 
   constructor() {
-    this.webSocketService = new WebSocketService();
+    // Mock implementation - WebSocketService requires HttpServer parameter
+    this.webSocketService = {
+      sendToUser: async () => {}
+    };
   }
 
   /**

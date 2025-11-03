@@ -204,12 +204,14 @@ export class DataEncryptionService {
     try {
       const iv = crypto.randomBytes(this.config.ivLength);
       const cipher = crypto.createCipheriv(this.config.algorithm, this.masterKey, iv);
-      cipher.setAAD(Buffer.from(dataType || 'general'));
+      if ('setAAD' in cipher) {
+        (cipher as any).setAAD(Buffer.from(dataType || 'general'));
+      }
 
       let encrypted = cipher.update(data, 'utf8', 'hex');
       encrypted += cipher.final('hex');
 
-      const tag = cipher.getAuthTag();
+      const tag = 'getAuthTag' in cipher ? (cipher as any).getAuthTag() : Buffer.alloc(0);
 
       const result: EncryptedData = {
         encrypted,
@@ -241,8 +243,8 @@ export class DataEncryptionService {
       const iv = Buffer.from(encryptedData.iv, 'hex');
       const decipher = crypto.createDecipheriv(encryptedData.algorithm, this.masterKey, iv);
       
-      if (encryptedData.tag) {
-        decipher.setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
+      if (encryptedData.tag && 'setAuthTag' in decipher) {
+        (decipher as any).setAuthTag(Buffer.from(encryptedData.tag, 'hex'));
       }
 
       let decrypted = decipher.update(encryptedData.encrypted, 'hex', 'utf8');

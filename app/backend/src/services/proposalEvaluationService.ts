@@ -52,7 +52,7 @@ export class ProposalEvaluationService {
   constructor() {
     this.aiService = new AIService();
     // In a real implementation, we would pass RPC URL and contract address
-    this.governanceService = new GovernanceService('http://localhost:8545', '0x0000000000000000000000000000000000000000');
+    this.governanceService = new GovernanceService();
   }
 
   /**

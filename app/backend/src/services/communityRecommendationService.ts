@@ -55,17 +55,22 @@ export class CommunityRecommendationService {
       // If user has no interests or activity, return popular communities
       if ((!context.interests || context.interests.length === 0) && 
           (!context.activityHistory || context.activityHistory.length === 0)) {
-        const recommendations = this.getPopularCommunities(unjoinedCommunities);
+        const popularRecommendations = await this.getPopularCommunities(unjoinedCommunities);
         
         // Track analytics
-        await analyticsService.trackEvent('ai_recommendations_generated', {
-          userId: context.userId,
-          recommendationCount: recommendations.length,
-          algorithm: 'popular_communities',
-          processingTime: Date.now() - startTime
-        });
+        await analyticsService.trackUserEvent(
+          context.userId,
+          'ai_recommendations_session',
+          'ai_recommendations_generated',
+          {
+            userId: context.userId,
+            recommendationCount: popularRecommendations.length,
+            algorithm: 'popular_communities',
+            processingTime: Date.now() - startTime
+          }
+        );
         
-        return recommendations;
+        return popularRecommendations;
       }
       
       // Get AI-powered recommendations
@@ -83,26 +88,34 @@ export class CommunityRecommendationService {
       // Sort by confidence score
       const sortedRecommendations = mergedRecommendations.sort((a, b) => b.confidence - a.confidence);
       
-      // Track analytics
-      await analyticsService.trackEvent('ai_recommendations_generated', {
-        userId: context.userId,
-        recommendationCount: sortedRecommendations.length,
-        algorithm: 'ai_enhanced',
-        processingTime: Date.now() - startTime,
-        aiRecommendationCount: aiRecommendations.length,
-        trendingRecommendationCount: trendingCommunities.length
-      });
+      await analyticsService.trackUserEvent(
+        context.userId,
+        'ai_recommendations_session',
+        'ai_recommendations_generated',
+        {
+          userId: context.userId,
+          recommendationCount: sortedRecommendations.length,
+          algorithm: 'ai_enhanced',
+          processingTime: Date.now() - startTime,
+          aiRecommendationCount: aiRecommendations.length,
+          trendingRecommendationCount: trendingCommunities.length
+        }
+      );
       
       return sortedRecommendations;
     } catch (error) {
       safeLogger.error('Error generating community recommendations:', error);
       
-      // Track error analytics
-      await analyticsService.trackEvent('ai_recommendations_error', {
-        userId: context.userId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        processingTime: Date.now() - startTime
-      });
+      await analyticsService.trackUserEvent(
+        context.userId,
+        'ai_recommendations_session',
+        'ai_recommendations_error',
+        {
+          userId: context.userId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          processingTime: Date.now() - startTime
+        }
+      );
       
       // Fallback to popular communities
       const allCommunities = await communitySvc.getAllCommunities();

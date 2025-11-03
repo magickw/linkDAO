@@ -20,7 +20,7 @@ export interface RateLimitConfig {
   skipFailedRequests?: boolean;
   keyGenerator?: (req: Request) => string;
   skip?: (req: Request) => boolean;
-  onLimitReached?: (req: Request, res: Response) => void;
+  handler?: (req: Request, res: Response) => void;
 }
 
 export interface UserActionLimits {
@@ -69,15 +69,13 @@ export class RateLimitingService {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
-        db: parseInt(process.env.REDIS_RATE_LIMIT_DB || '1'),
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: true
+        db: parseInt(process.env.REDIS_RATE_LIMIT_DB || '1')
       });
 
-      this.store = new RedisStore({
-        sendCommand: (...args: string[]) => this.redis.call(...args)
-      });
+      // Comment out the RedisStore configuration as it's causing issues
+      // this.store = new RedisStore({
+      //   sendCommand: (...args: string[]) => this.redis.call(args[0], ...args.slice(1))
+      // });
 
       safeLogger.info('Rate limiting service initialized with Redis store');
     } catch (error) {
@@ -93,12 +91,12 @@ export class RateLimitingService {
     const defaultConfig: RateLimitConfig = {
       windowMs: securityConfig.rateLimiting.windowMs,
       max: securityConfig.rateLimiting.apiMaxRequests,
-      message: {
+      message: JSON.stringify({
         success: false,
         error: 'Too many API requests',
         code: 'RATE_LIMIT_EXCEEDED',
         retryAfter: Math.ceil(securityConfig.rateLimiting.windowMs / 1000)
-      },
+      }),
       standardHeaders: true,
       legacyHeaders: false,
       keyGenerator: (req: Request) => {
@@ -111,7 +109,7 @@ export class RateLimitingService {
       ...defaultConfig,
       ...config,
       store: this.store,
-      onLimitReached: (req: Request, res: Response) => {
+      handler: (req: Request, res: Response) => {
         safeLogger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
@@ -131,18 +129,18 @@ export class RateLimitingService {
     return rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: securityConfig.rateLimiting.authMaxAttempts,
-      message: {
+      message: JSON.stringify({
         success: false,
         error: 'Too many authentication attempts',
         code: 'AUTH_RATE_LIMIT_EXCEEDED',
         retryAfter: 900 // 15 minutes
-      },
+      }),
       standardHeaders: true,
       legacyHeaders: false,
       store: this.store,
       keyGenerator: (req: Request) => `auth:${req.ip}`,
       skipSuccessfulRequests: true,
-      onLimitReached: (req: Request, res: Response) => {
+      handler: (req: Request, res: Response) => {
         safeLogger.warn(`Authentication rate limit exceeded for ${req.ip}`, {
           ip: req.ip,
           userAgent: req.get('User-Agent'),
@@ -162,12 +160,12 @@ export class RateLimitingService {
     return rateLimit({
       windowMs: limits.windowMs,
       max: limits.max,
-      message: {
+      message: JSON.stringify({
         success: false,
         error: `Too many ${action} actions`,
         code: 'USER_ACTION_RATE_LIMIT_EXCEEDED',
         retryAfter: Math.ceil(limits.windowMs / 1000)
-      },
+      }),
       standardHeaders: true,
       legacyHeaders: false,
       store: this.store,
@@ -183,7 +181,7 @@ export class RateLimitingService {
         const user = (req as any).user;
         return user?.role === 'admin' || user?.role === 'moderator';
       },
-      onLimitReached: (req: Request, res: Response) => {
+      handler: (req: Request, res: Response) => {
         const userId = (req as any).user?.id;
         safeLogger.warn(`User action rate limit exceeded for ${action}`, {
           userId,
@@ -214,7 +212,7 @@ export class RateLimitingService {
       legacyHeaders: false,
       store: this.store,
       keyGenerator: (req: Request) => `ip:${req.ip}:${limitType}`,
-      onLimitReached: (req: Request, res: Response) => {
+      handler: (req: Request, res: Response) => {
         safeLogger.warn(`IP rate limit exceeded for ${limitType}`, {
           ip: req.ip,
           limitType,

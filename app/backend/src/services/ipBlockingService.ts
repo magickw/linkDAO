@@ -74,8 +74,6 @@ export class IPBlockingService {
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
         db: parseInt(process.env.REDIS_BLOCKING_DB || '3'),
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
         lazyConnect: true
       });
 

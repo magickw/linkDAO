@@ -605,7 +605,7 @@ class DataMinimizationService extends EventEmitter {
   }
 
   private checkReversibility(rules: DataMinimizationRule[]): boolean {
-    return rules.some(r => r.minimizationStrategy === 'pseudonymize' || r.minimizationStrategy === 'encrypt');
+    return rules.some(r => r.minimizationStrategy === 'pseudonymize' || r.minimizationStrategy === 'hash');
   }
 
   private calculatePrivacyLevel(rules: DataMinimizationRule[]): 'low' | 'medium' | 'high' | 'maximum' {

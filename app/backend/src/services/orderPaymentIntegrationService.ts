@@ -5,6 +5,7 @@ import { PaymentValidationService } from './paymentValidationService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
 import { ReceiptService } from './receiptService';
+import { ReceiptStatus } from '../types/receipt';
 import { ethers } from 'ethers';
 
 export interface PaymentTransaction {
@@ -455,8 +456,14 @@ export class OrderPaymentIntegrationService {
         throw new Error('Order not found');
       }
 
-      // Get order items for receipt
-      const orderItems = await this.databaseService.getOrderItems(parseInt(transaction.orderId));
+      // Get order items for receipt (mock data since we don't have getOrderItems method)
+      const orderItems = [{
+        id: 1,
+        title: `Order #${transaction.orderId}`,
+        quantity: 1,
+        unitPrice: transaction.amount,
+        totalPrice: transaction.amount
+      }];
       
       // Format items for receipt
       const receiptItems = orderItems.map(item => ({
@@ -476,7 +483,7 @@ export class OrderPaymentIntegrationService {
         currency: transaction.currency,
         paymentMethod: transaction.paymentMethod,
         transactionHash: transaction.transactionHash,
-        status: 'completed',
+        status: ReceiptStatus.COMPLETED,
         items: receiptItems,
         fees: {
           processing: transaction.processingFee,

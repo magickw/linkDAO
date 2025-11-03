@@ -1,18 +1,99 @@
 import { databaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { evidenceStorageService } from './evidenceStorageService';
-import { auditLoggingService } from './auditLoggingService';
+import evidenceStorageService from './evidenceStorageService';
+import AuditLoggingService from './auditLoggingService';
 import { reputationService } from './reputationService';
-import { notificationService } from './notificationService';
-import { ModerationCase, ModerationAction, ModerationDecision } from '../models/ModerationModels';
-import { ModeratorProfile } from './moderatorAuthService';
+import { NotificationService } from './notificationService';
+
+const notificationService = new NotificationService();
+const auditLoggingService = new AuditLoggingService();
+import { 
+  ModerationCase, 
+  ModerationAction, 
+  ModerationDecision,
+  ModerationPolicy,
+  ModerationVendor,
+  ModerationCaseSchema,
+  ModerationActionSchema,
+  ContentReportSchema,
+  ModerationAppealSchema,
+  AppealJurorSchema,
+  ModerationPolicySchema,
+  ModerationVendorSchema,
+  ModerationStatus,
+  ReportStatus,
+  AppealStatus,
+  JuryDecision,
+  PolicySeverity,
+  VendorType,
+  ActorType,
+  HashType,
+  ReputationImpactType,
+  JuryVote,
+  EvidenceBundle,
+  AIModelResult
+} from '../models/ModerationModels';
+import { z } from 'zod';
+import { sql } from 'drizzle-orm';
+
+// Define EvidenceBundleInput interface
+interface EvidenceBundleInput {
+  caseId: number;
+  contentId: string;
+  contentType: string;
+  contentHash: string;
+  screenshots?: Buffer[];
+  modelOutputs: Record<string, AIModelResult>;
+  decisionRationale: string;
+  policyVersion: string;
+  moderatorId?: string;
+  originalContent?: {
+    text?: string;
+    mediaUrls?: string[];
+    metadata?: Record<string, any>;
+  };
+  redactedContent?: {
+    text?: string;
+    mediaUrls?: string[];
+    metadata?: Record<string, any>;
+  };
+}
+
+// Define StoredEvidenceBundle interface
+interface StoredEvidenceBundle extends EvidenceBundle {
+  ipfsHash: string;
+  bundleSize: number;
+  verificationHash: string;
+}
+
+type ModerationDecisionType = z.infer<typeof ModerationDecision>;
+
+// Define ModeratorProfile interface
+interface ModeratorProfile {
+  id: string;
+  handle: string;
+  reputation: number;
+  role: string;
+  permissions: {
+    canMakeDecisions: boolean;
+    allowedContentTypes: string[];
+    allowedSeverityLevels: string[];
+    canAccessBulkActions: boolean;
+    canEscalate: boolean;
+    canOverride: boolean;
+    canModifyPolicies: boolean;
+  };
+  specialization: string[];
+  isActive: boolean;
+  lastActive: Date;
+}
 
 export interface PolicyTemplate {
   id: string;
   name: string;
   category: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  action: ModerationDecision;
+  action: ModerationDecisionType;
   reasonCode: string;
   description: string;
   rationale: string;
@@ -23,7 +104,7 @@ export interface PolicyTemplate {
 
 export interface DecisionRequest {
   caseId: number;
-  decision: ModerationDecision;
+  decision: ModerationDecisionType;
   reasonCode: string;
   rationale: string;
   templateId?: string;
@@ -47,7 +128,7 @@ export interface DecisionResult {
 
 export interface BulkDecisionRequest {
   caseIds: number[];
-  decision: ModerationDecision;
+  decision: ModerationDecisionType;
   reasonCode: string;
   rationale: string;
   templateId?: string;
@@ -93,7 +174,7 @@ export class ModeratorDecisionService {
       }
 
       // Create evidence bundle
-      const evidenceCid = await this.createEvidenceBundle(
+      const evidenceBundleResult = await this.createEvidenceBundle(
         moderationCase,
         moderator,
         request,
@@ -106,7 +187,7 @@ export class ModeratorDecisionService {
         moderator,
         request,
         template,
-        evidenceCid
+        evidenceBundleResult.ipfsHash // Use the IPFS hash as the evidence CID
       );
 
       // Update reputation if applicable
@@ -133,7 +214,7 @@ export class ModeratorDecisionService {
       return {
         success: true,
         actionId,
-        evidenceCid,
+        evidenceCid: evidenceBundleResult.ipfsHash,
         reputationChange
       };
     } catch (error) {
@@ -228,13 +309,13 @@ export class ModeratorDecisionService {
         whereClause += ` AND severity = $${params.length}`;
       }
 
-      const result = await databaseService.query(`
+      const result = await databaseService.getDatabase().execute(sql`
         SELECT * FROM policy_templates 
         ${whereClause}
         ORDER BY category, severity, name
-      `, params);
+      `);
 
-      return result.rows.map(row => ({
+      return result.map(row => ({
         id: row.id,
         name: row.name,
         category: row.category,
@@ -262,7 +343,7 @@ export class ModeratorDecisionService {
     limit: number = 20
   ): Promise<{
     decisions: Array<{
-      action: ModerationAction;
+      action: typeof ModerationAction;
       case: ModerationCase;
       createdAt: Date;
       rationale: string;
@@ -279,16 +360,17 @@ export class ModeratorDecisionService {
       const offset = (page - 1) * limit;
       
       // Get total count
-      const countResult = await databaseService.query(`
+      const db = databaseService.getDatabase();
+      const countResult = await db.execute(sql`
         SELECT COUNT(*) as total
         FROM moderation_actions ma
-        WHERE ma.applied_by = $1
-      `, [moderatorId]);
+        WHERE ma.applied_by = ${moderatorId}
+      `);
       
-      const total = parseInt(countResult.rows[0].total);
+      const total = parseInt(countResult[0].total);
       
       // Get decisions with case details
-      const result = await databaseService.query(`
+      const result = await db.execute(sql`
         SELECT 
           ma.*,
           mc.*,
@@ -296,12 +378,12 @@ export class ModeratorDecisionService {
         FROM moderation_actions ma
         JOIN moderation_cases mc ON ma.content_id = mc.content_id
         LEFT JOIN moderation_appeals appeal ON appeal.case_id = mc.id
-        WHERE ma.applied_by = $1
+        WHERE ma.applied_by = ${moderatorId}
         ORDER BY ma.created_at DESC
-        LIMIT $2 OFFSET $3
-      `, [moderatorId, limit, offset]);
+        LIMIT ${limit} OFFSET ${offset}
+      `);
 
-      const decisions = result.rows.map(row => ({
+      const decisions = result.map(row => ({
         action: {
           id: row.id,
           userId: row.user_id,
@@ -355,18 +437,19 @@ export class ModeratorDecisionService {
    */
   private async validateCaseAccess(caseId: number, moderatorId: string): Promise<ModerationCase | null> {
     try {
-      const result = await databaseService.query(`
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`
         SELECT mc.*, qa.assigned_to
         FROM moderation_cases mc
         LEFT JOIN queue_assignments qa ON qa.case_id = mc.id AND qa.is_active = true
-        WHERE mc.id = $1
-      `, [caseId]);
+        WHERE mc.id = ${caseId}
+      `);
 
-      if (!result.rows.length) {
+      if (!result.length) {
         return null;
       }
 
-      const row = result.rows[0];
+      const row = result[0];
       
       // Check if assigned to this moderator or unassigned
       if (row.assigned_to && row.assigned_to !== moderatorId) {
@@ -398,7 +481,14 @@ export class ModeratorDecisionService {
    * Validate moderator permissions for decision
    */
   private async validateDecisionPermissions(
-    moderator: ModeratorProfile,
+    moderator: { 
+      id: string;
+      permissions: {
+        canMakeDecisions: boolean;
+        allowedContentTypes: string[];
+        allowedSeverityLevels: string[];
+      }
+    },
     moderationCase: ModerationCase,
     request: DecisionRequest
   ): Promise<{ allowed: boolean; reason?: string }> {
@@ -428,15 +518,16 @@ export class ModeratorDecisionService {
    */
   private async getPolicyTemplate(templateId: string): Promise<PolicyTemplate | null> {
     try {
-      const result = await databaseService.query(`
-        SELECT * FROM policy_templates WHERE id = $1 AND is_active = true
-      `, [templateId]);
+      const db = databaseService.getDatabase();
+      const result = await db.execute(sql`
+        SELECT * FROM policy_templates WHERE id = ${templateId} AND is_active = true
+      `);
 
-      if (!result.rows.length) {
+      if (!result.length) {
         return null;
       }
 
-      const row = result.rows[0];
+      const row = result[0];
       return {
         id: row.id,
         name: row.name,
@@ -461,34 +552,38 @@ export class ModeratorDecisionService {
    */
   private async createEvidenceBundle(
     moderationCase: ModerationCase,
-    moderator: ModeratorProfile,
+    moderator: { id: string; role: string },
     request: DecisionRequest,
     template: PolicyTemplate | null
-  ): Promise<string | undefined> {
+  ): Promise<StoredEvidenceBundle> {
     try {
-      const evidenceBundle = {
+      // Create proper evidence bundle input
+      const evidenceBundleInput: EvidenceBundleInput = {
         caseId: moderationCase.id,
+        contentId: moderationCase.contentId,
+        contentType: moderationCase.contentType,
         contentHash: moderationCase.contentId,
+        modelOutputs: moderationCase.vendorScores ? Object.keys(moderationCase.vendorScores).reduce((acc, key) => {
+          acc[key] = {
+            vendor: key,
+            confidence: moderationCase.vendorScores[key],
+            categories: [],
+            cost: 0,
+            latency: 0
+          };
+          return acc;
+        }, {} as Record<string, AIModelResult>) : {},
         decisionRationale: request.rationale,
-        policyTemplate: template ? {
-          id: template.id,
-          name: template.name,
-          category: template.category
-        } : null,
-        moderatorInfo: {
-          id: moderator.id,
-          role: moderator.role
-        },
-        vendorScores: moderationCase.vendorScores,
-        additionalEvidence: request.additionalEvidence,
-        timestamp: new Date(),
-        policyVersion: '1.0'
+        policyVersion: '1.0',
+        moderatorId: moderator.id,
+        originalContent: undefined,
+        redactedContent: undefined
       };
 
-      return await evidenceStorageService.storeEvidenceBundle(evidenceBundle);
+      return await evidenceStorageService.storeEvidenceBundle(evidenceBundleInput);
     } catch (error) {
       safeLogger.error('Error creating evidence bundle:', error);
-      return undefined;
+      throw new Error(`Failed to create evidence bundle: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -497,46 +592,43 @@ export class ModeratorDecisionService {
    */
   private async applyDecision(
     moderationCase: ModerationCase,
-    moderator: ModeratorProfile,
+    moderator: { id: string; role: string },
     request: DecisionRequest,
     template: PolicyTemplate | null,
     evidenceCid?: string
   ): Promise<number> {
     try {
       // Insert moderation action
-      const actionResult = await databaseService.query(`
+      const db = databaseService.getDatabase();
+      const actionResult = await db.execute(sql`
         INSERT INTO moderation_actions (
           user_id, content_id, action, duration_sec, applied_by, rationale, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        ) VALUES (
+          ${moderationCase.userId}, 
+          ${moderationCase.contentId}, 
+          ${this.mapDecisionToAction(request.decision)}, 
+          ${request.customDuration || template?.durationSec || 0}, 
+          ${moderator.id}, 
+          ${request.rationale}, 
+          NOW()
+        )
         RETURNING id
-      `, [
-        moderationCase.userId,
-        moderationCase.contentId,
-        this.mapDecisionToAction(request.decision),
-        request.customDuration || template?.durationSec || 0,
-        moderator.id,
-        request.rationale
-      ]);
+      `);
 
-      const actionId = actionResult.rows[0].id;
+      // Extract the action ID from the result
+      const actionId = actionResult[0].id;
 
       // Update moderation case
-      await databaseService.query(`
+      await db.execute(sql`
         UPDATE moderation_cases 
         SET 
-          status = $1,
-          decision = $2,
-          reason_code = $3,
-          evidence_cid = $4,
+          status = ${this.mapDecisionToStatus(request.decision)},
+          decision = ${request.decision},
+          reason_code = ${request.reasonCode},
+          evidence_cid = ${evidenceCid},
           updated_at = NOW()
-        WHERE id = $5
-      `, [
-        this.mapDecisionToStatus(request.decision),
-        request.decision,
-        request.reasonCode,
-        evidenceCid,
-        moderationCase.id
-      ]);
+        WHERE id = ${moderationCase.id}
+      `);
 
       return actionId;
     } catch (error) {
@@ -550,16 +642,19 @@ export class ModeratorDecisionService {
    */
   private async applyReputationImpact(
     userId: string,
-    decision: ModerationDecision,
+    decision: ModerationDecisionType,
     impact: number
   ): Promise<number> {
     try {
-      return await reputationService.updateReputation(userId, {
-        type: 'violation',
-        value: impact,
-        reason: `Moderation decision: ${decision}`,
-        source: 'moderation'
+      await reputationService.updateReputation(userId, {
+        eventType: 'violation',
+        metadata: {
+          reason: `Moderation decision: ${decision}`,
+          source: 'moderation'
+        }
       });
+      // Since updateReputation returns void, we'll return 0 for now
+      return 0;
     } catch (error) {
       safeLogger.error('Error applying reputation impact:', error);
       return 0;
@@ -579,18 +674,17 @@ export class ModeratorDecisionService {
         ? `Your content has been ${request.decision} for: ${template.description}`
         : `Your content has been ${request.decision}. Reason: ${request.rationale}`;
 
-      await notificationService.sendNotification({
-        userId: moderationCase.userId,
-        type: 'moderation_decision',
-        title: 'Content Moderation Decision',
-        message,
-        metadata: {
+      await notificationService.sendOrderNotification(
+        moderationCase.userId,
+        'moderation_decision',
+        moderationCase.id.toString(),
+        {
           contentId: moderationCase.contentId,
           decision: request.decision,
           reasonCode: request.reasonCode,
           canAppeal: request.decision === 'block'
         }
-      });
+      );
     } catch (error) {
       safeLogger.error('Error notifying user:', error);
     }
@@ -600,25 +694,19 @@ export class ModeratorDecisionService {
    * Log moderation decision
    */
   private async logDecision(
-    moderator: ModeratorProfile,
+    moderator: { id: string },
     moderationCase: ModerationCase,
     request: DecisionRequest,
     actionId: number
   ): Promise<void> {
     try {
-      await auditLoggingService.logModerationAction({
+      await auditLoggingService.logModerationDecision({
         caseId: moderationCase.id,
-        actionType: 'decision',
-        actorId: moderator.id,
-        actorType: 'moderator',
-        oldState: { status: moderationCase.status },
-        newState: { 
-          decision: request.decision,
-          reasonCode: request.reasonCode,
-          actionId 
-        },
+        decision: request.decision,
+        moderatorId: moderator.id,
         reasoning: request.rationale,
-        createdAt: new Date()
+        oldStatus: moderationCase.status,
+        newStatus: this.mapDecisionToStatus(request.decision)
       });
     } catch (error) {
       safeLogger.error('Error logging decision:', error);
@@ -630,11 +718,13 @@ export class ModeratorDecisionService {
    */
   private async releaseCaseAssignment(caseId: number, moderatorId: string): Promise<void> {
     try {
-      await databaseService.query(`
+      // Use the database instance directly
+      const db = databaseService.getDatabase();
+      await db.execute(sql`
         UPDATE queue_assignments 
         SET is_active = false, completed_at = NOW()
-        WHERE case_id = $1 AND assigned_to = $2 AND is_active = true
-      `, [caseId, moderatorId]);
+        WHERE case_id = ${caseId} AND assigned_to = ${moderatorId} AND is_active = true
+      `);
     } catch (error) {
       safeLogger.error('Error releasing case assignment:', error);
     }
@@ -644,7 +734,7 @@ export class ModeratorDecisionService {
    * Send bulk notification summary
    */
   private async sendBulkNotificationSummary(
-    moderator: ModeratorProfile,
+    moderator: { id: string },
     successfulCases: number[],
     request: BulkDecisionRequest
   ): Promise<void> {
@@ -653,29 +743,31 @@ export class ModeratorDecisionService {
   }
 
   /**
-   * Map decision to action type
+   * Map moderation decision to action type
    */
-  private mapDecisionToAction(decision: ModerationDecision): string {
-    const mapping: Record<ModerationDecision, string> = {
-      'allow': 'approve',
-      'limit': 'limit',
-      'block': 'block',
-      'review': 'escalate'
+  private mapDecisionToAction(decision: ModerationDecisionType): string {
+    const mapping: Record<ModerationDecisionType, string> = {
+      allow: 'allow',
+      limit: 'limit',
+      block: 'block',
+      review: 'review'
     };
+    
     return mapping[decision] || 'review';
   }
 
   /**
-   * Map decision to case status
+   * Map moderation decision to case status
    */
-  private mapDecisionToStatus(decision: ModerationDecision): string {
-    const mapping: Record<ModerationDecision, string> = {
-      'allow': 'allowed',
-      'limit': 'quarantined',
-      'block': 'blocked',
-      'review': 'under_review'
+  private mapDecisionToStatus(decision: ModerationDecisionType): string {
+    const mapping: Record<ModerationDecisionType, string> = {
+      allow: 'allowed',
+      limit: 'quarantined',
+      block: 'blocked',
+      review: 'under_review'
     };
-    return mapping[decision] || 'under_review';
+    
+    return mapping[decision] || 'pending';
   }
 
   /**
@@ -686,6 +778,46 @@ export class ModeratorDecisionService {
     if (riskScore >= 0.6) return 'high';
     if (riskScore >= 0.3) return 'medium';
     return 'low';
+  }
+
+  async makeDecision(
+    moderator: { 
+      id: string;
+      permissions: {
+        canMakeDecisions: boolean;
+        allowedContentTypes: string[];
+        allowedSeverityLevels: string[];
+      }
+    },
+    caseId: number,
+    request: DecisionRequest
+  ): Promise<number> {
+    // Create a proper ModeratorProfile object
+    const moderatorProfile: ModeratorProfile = {
+      id: moderator.id,
+      handle: `moderator_${moderator.id}`,
+      reputation: 100,
+      role: 'moderator',
+      permissions: {
+        canMakeDecisions: moderator.permissions.canMakeDecisions,
+        allowedContentTypes: moderator.permissions.allowedContentTypes || [],
+        allowedSeverityLevels: moderator.permissions.allowedSeverityLevels || [],
+        canAccessBulkActions: false,
+        canEscalate: false,
+        canOverride: false,
+        canModifyPolicies: false
+      },
+      specialization: [],
+      isActive: true,
+      lastActive: new Date()
+    };
+    
+    const decisionResult = await this.processDecision(moderatorProfile, request);
+    if (!decisionResult.success) {
+      throw new Error(`Error processing decision: ${decisionResult.error}`);
+    }
+
+    return decisionResult.actionId as number;
   }
 }
 

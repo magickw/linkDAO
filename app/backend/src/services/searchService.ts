@@ -1237,16 +1237,6 @@ export class SearchService {
     return { content: [], total: 0 };
   }
 
-  async getRecommendedCommunities(params: any): Promise<any> {
-    return { communities: [], total: 0 };
-  }
-
-  async getRecommendedUsers(params: any): Promise<any> {
-    return { users: [], total: 0 };
-  }
-
-
-
   // Helper methods that are called but missing
   private generateSearchCacheKey(filters: any, sort: any, pagination: any): string {
     return `search:${JSON.stringify({ filters, sort, pagination })}`;
