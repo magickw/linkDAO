@@ -9,10 +9,16 @@ echo "🚀 Starting LinkDAO Enhanced Backend Deployment..."
 echo "Environment: ${NODE_ENV:-production}"
 echo "Node version: $(node --version)"
 echo "NPM version: $(npm --version)"
+echo "TypeScript version: $(npx tsc --version)"
 
 # Set memory limits
 export NODE_OPTIONS="--max-old-space-size=2048"
 echo "Memory limit: $NODE_OPTIONS"
+
+# Show current directory
+echo "📂 Current directory: $(pwd)"
+echo "📂 Directory contents:"
+ls -la | head -20
 
 # Clean previous builds
 echo "🧹 Cleaning previous builds..."
@@ -21,19 +27,28 @@ mkdir -p dist
 
 # Strategy 1: Try full TypeScript compilation (BEST APPROACH)
 echo "🔨 Strategy 1: Attempting full TypeScript compilation..."
-if npx tsc --project tsconfig.json --noEmitOnError false 2>&1; then
-    echo "✅ Full TypeScript compilation successful"
-    if [ -f "dist/index.js" ]; then
-        echo "🎉 Primary deployment strategy succeeded!"
-        exit 0
-    fi
+echo "Running: npx tsc --project tsconfig.json --noEmitOnError false"
+
+# Temporarily disable strict error mode to allow compilation to complete
+set +e
+npx tsc --project tsconfig.json --noEmitOnError false
+TSC_EXIT_CODE=$?
+set -e
+
+echo "📊 TypeScript compilation exit code: $TSC_EXIT_CODE"
+
+# Check if build succeeded
+echo "🔍 Checking if dist/index.js was created..."
+if [ -f "dist/index.js" ]; then
+    echo "✅ dist/index.js created successfully"
+    echo "📊 File size: $(ls -lh dist/index.js | awk '{print $5}')"
+    echo "📊 Files in dist/: $(find dist -name '*.js' | wc -l) JavaScript files"
+    echo "🎉 Primary deployment strategy succeeded!"
+    exit 0
 else
-    echo "⚠️  Full TypeScript compilation had errors, checking if build succeeded anyway..."
-    if [ -f "dist/index.js" ]; then
-        echo "✅ Build succeeded despite warnings"
-        echo "🎉 Primary deployment strategy succeeded!"
-        exit 0
-    fi
+    echo "❌ dist/index.js was NOT created by TypeScript compilation"
+    echo "📂 Contents of dist directory:"
+    ls -la dist/ || echo "dist/ directory is empty or doesn't exist"
 fi
 
 # Strategy 2: Try with tsconfig.prod.json if it exists
