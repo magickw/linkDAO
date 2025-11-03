@@ -3,7 +3,7 @@ services:
     name: linkdao-backend
     env: node
     plan: starter # Can upgrade to standard if needed
-    buildCommand: bash scripts/prebuild.sh && npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
+    buildCommand: npm install --no-audit --prefer-offline && bash scripts/build-production.sh
     startCommand: npm start
     envVars:
       - key: NODE_ENV

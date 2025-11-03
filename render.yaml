@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter
     rootDir: app/backend
-    buildCommand: bash scripts/prebuild.sh && npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
+    buildCommand: npm install --no-audit --prefer-offline && bash scripts/build-production.sh
     startCommand: npm start
     healthCheckPath: /health
     envVars:
