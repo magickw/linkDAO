@@ -46,7 +46,7 @@ cache.on('error', (error) => {
   console.error('❌ Redis cache connection error:', error.message);
 });
 
-// Memory monitoring
+// Memory monitoring and management
 function logMemoryUsage() {
   const used = process.memoryUsage();
   console.log('Memory Usage:');
@@ -55,9 +55,58 @@ function logMemoryUsage() {
   }
 }
 
+// Add memory monitoring
+function setupMemoryMonitoring() {
+  // Log memory usage every 5 minutes
+  setInterval(() => {
+    const used = process.memoryUsage();
+    const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024 * 100) / 100;
+    const heapTotalMB = Math.round(used.heapTotal / 1024 / 1024 * 100) / 100;
+    const memoryUsagePercent = Math.round((heapUsedMB / heapTotalMB) * 100);
+    
+    console.log(`📊 Memory Usage: ${heapUsedMB} MB / ${heapTotalMB} MB (${memoryUsagePercent}%)`);
+    
+    // Warn if memory usage is high
+    if (memoryUsagePercent > 80) {
+      console.warn(`⚠️ High memory usage: ${memoryUsagePercent}%`);
+      
+      // Force garbage collection if available and memory is critical
+      if (memoryUsagePercent > 90 && global.gc) {
+        console.log('🗑️ Forcing garbage collection due to high memory usage');
+        global.gc();
+      }
+      
+      // If memory usage is extremely high, log a critical alert
+      if (memoryUsagePercent > 95) {
+        console.error(`🚨 CRITICAL: Memory usage at ${memoryUsagePercent}% - System performance may be degraded`);
+      }
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+  
+  // More frequent check for critical memory usage (every 30 seconds)
+  setInterval(() => {
+    const used = process.memoryUsage();
+    const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024 * 100) / 100;
+    const heapTotalMB = Math.round(used.heapTotal / 1024 / 1024 * 100) / 100;
+    const memoryUsagePercent = Math.round((heapUsedMB / heapTotalMB) * 100);
+    
+    // Force garbage collection if memory usage is critical
+    if (memoryUsagePercent > 95 && global.gc) {
+      console.log('🗑️ Emergency garbage collection due to critical memory usage');
+      global.gc();
+    }
+    
+    // If memory usage is extremely high, consider restarting the process
+    if (memoryUsagePercent > 98) {
+      console.error(`💥 EMERGENCY: Memory usage at ${memoryUsagePercent}% - Process may terminate`);
+    }
+  }, 30 * 1000); // 30 seconds
+}
+
 // Log initial memory usage
 console.log('🚀 Starting optimized production server...');
 logMemoryUsage();
+setupMemoryMonitoring();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -2629,6 +2678,31 @@ ivileges`);
     default:
       throw error;
   }
+});
+
+// Add error handling
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  console.error('Stack trace:', error.stack);
+  // Don't exit immediately, try to continue running
+  console.log('🛑 Continuing execution despite uncaught exception...');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit immediately, try to continue running
+  console.log('🛑 Continuing execution despite unhandled rejection...');
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('📡 Received SIGTERM, shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('📡 Received SIGINT, shutting down gracefully...');
+  process.exit(0);
 });
 
 module.exports = app;

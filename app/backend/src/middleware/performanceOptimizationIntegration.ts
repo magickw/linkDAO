@@ -50,22 +50,57 @@ export class PerformanceOptimizationIntegration {
   private monitoringInterval?: NodeJS.Timeout;
   private optimizationInterval?: NodeJS.Timeout;
 
-  constructor(pool: Pool, config: Partial<OptimizationConfig> = {}) {
-    this.pool = pool;
-    this.config = {
-      enableCaching: true,
-      enableCompression: true,
-      enableDatabaseOptimization: true,
-      enableConnectionPooling: true,
-      enableIndexOptimization: true,
-      enableMetrics: true,
-      enableAutoOptimization: true,
-      ...config
-    };
+  private defaultConfig: OptimizationConfig = {
+    enableCaching: true,
+    enableCompression: true,
+    enableDatabaseOptimization: true,
+    enableConnectionPooling: true,
+    enableIndexOptimization: true,
+    enableMetrics: true,
+    enableAutoOptimization: true,
+  };
 
+  constructor(pool: Pool, config: PerformanceOptimizationConfig) {
+    this.pool = pool;
+    this.config = { ...this.defaultConfig, ...config };
     this.metrics = this.initializeMetrics();
+    this.requestTimes = [];
+    
+    // Initialize components based on config
     this.initializeComponents();
-    this.startMonitoring();
+    
+    // Start monitoring if enabled
+    if (this.config.enableMetrics) {
+      this.startMonitoring();
+    }
+    
+    // Setup memory cleanup
+    this.setupMemoryCleanup();
+  }
+
+  /**
+   * Setup periodic memory cleanup to prevent memory leaks
+   */
+  private setupMemoryCleanup(): void {
+    // Clean up old metrics data every hour
+    setInterval(() => {
+      try {
+        // Limit request times to last 1000 requests to prevent unbounded growth
+        if (this.requestTimes.length > 1000) {
+          this.requestTimes = this.requestTimes.slice(-1000);
+        }
+        
+        // Reset metrics if they get too large (prevent memory leaks)
+        if (this.metrics.totalRequests > 1000000) {
+          this.resetMetrics();
+          safeLogger.info('Performance metrics reset to prevent memory leaks');
+        }
+        
+        safeLogger.debug(`Performance metrics cleanup: ${this.requestTimes.length} request times, ${this.metrics.totalRequests} total requests`);
+      } catch (error) {
+        safeLogger.warn('Error during performance metrics cleanup:', error);
+      }
+    }, 60 * 60 * 1000); // 1 hour
   }
 
   /**

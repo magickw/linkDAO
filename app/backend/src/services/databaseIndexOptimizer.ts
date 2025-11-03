@@ -72,6 +72,43 @@ export class DatabaseIndexOptimizer {
   constructor(pool: Pool) {
     this.pool = pool;
     this.startMonitoring();
+    this.setupMemoryCleanup();
+  }
+
+  /**
+   * Setup periodic memory cleanup to prevent memory leaks
+   */
+  private setupMemoryCleanup(): void {
+    // Clean up old query patterns every 30 minutes
+    setInterval(() => {
+      try {
+        const now = new Date();
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        
+        // Remove old query patterns
+        for (const [key, pattern] of this.queryPatterns.entries()) {
+          if (now.getTime() - pattern.lastSeen.getTime() > maxAge) {
+            this.queryPatterns.delete(key);
+          }
+        }
+        
+        // Limit total patterns to prevent unbounded growth
+        if (this.queryPatterns.size > 1000) {
+          // Remove oldest patterns
+          const patterns = Array.from(this.queryPatterns.entries())
+            .sort((a, b) => a[1].lastSeen.getTime() - b[1].lastSeen.getTime());
+          
+          // Remove oldest 200 patterns
+          for (let i = 0; i < 200; i++) {
+            this.queryPatterns.delete(patterns[i][0]);
+          }
+        }
+        
+        safeLogger.debug(`Query patterns cleanup: ${this.queryPatterns.size} patterns remaining`);
+      } catch (error) {
+        safeLogger.warn('Error during query patterns cleanup:', error);
+      }
+    }, 30 * 60 * 1000); // 30 minutes
   }
 
   /**
@@ -878,6 +915,8 @@ export class DatabaseIndexOptimizer {
 }
 
 export default DatabaseIndexOptimizer;
+
+
 
 
 

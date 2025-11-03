@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter # Can upgrade to standard if needed
     buildCommand: npm install
-    startCommand: npm run start:production
+    startCommand: node --max-old-space-size=1536 --expose-gc src/index.production.optimized.js
     envVars:
       - key: NODE_ENV
         value: production
