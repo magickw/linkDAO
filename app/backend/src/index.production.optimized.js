@@ -679,6 +679,111 @@ app.get('/api/marketplace/reputation/:address', (req, res) => {
 });
 
 // ============================================================================
+// USER PROFILE ROUTES
+// ============================================================================
+
+// Get user profile by wallet address
+app.get('/api/profiles/address/:address', (req, res) => {
+  const { address } = req.params;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      id: 'user-' + address,
+      walletAddress: address,
+      handle: 'user_' + address.substring(0, 8),
+      ens: '',
+      avatarCid: '',
+      bioCid: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get user profile by ID
+app.get('/api/profiles/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      id: id,
+      walletAddress: '0x' + id.substring(0, 40),
+      handle: 'user_' + id.substring(0, 8),
+      ens: '',
+      avatarCid: '',
+      bioCid: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Create user profile
+app.post('/api/profiles', (req, res) => {
+  const { walletAddress, handle } = req.body;
+  
+  // Mock response for now - in a real implementation, this would create in database
+  res.status(201).json({
+    success: true,
+    data: {
+      id: 'user-' + walletAddress,
+      walletAddress: walletAddress,
+      handle: handle || 'user_' + walletAddress.substring(0, 8),
+      ens: '',
+      avatarCid: '',
+      bioCid: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Update user profile
+app.put('/api/profiles/:id', (req, res) => {
+  const { id } = req.params;
+  const { handle, bioCid } = req.body;
+  
+  // Mock response for now - in a real implementation, this would update in database
+  res.json({
+    success: true,
+    data: {
+      id: id,
+      walletAddress: '0x' + id.substring(0, 40),
+      handle: handle || 'user_' + id.substring(0, 8),
+      ens: '',
+      avatarCid: '',
+      bioCid: bioCid || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Delete user profile
+app.delete('/api/profiles/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // Mock response for now - in a real implementation, this would delete from database
+  res.status(204).send();
+});
+
+// ============================================================================
 // FEED ROUTES
 // ============================================================================
 
@@ -737,6 +842,56 @@ app.get('/api/feed/trending', feedLimiter, (req, res) => {
       },
       filters: {
         timeRange
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
+// USER MEMBERSHIP ROUTES
+// ============================================================================
+
+// Get user memberships
+app.get('/api/users/:address/memberships', userLimiter, (req, res) => {
+  const { address } = req.params;
+  const { isActive, limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      memberships: [],
+      pagination: {
+        page: 1,
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get active user memberships
+app.get('/api/users/:address/memberships/active', userLimiter, (req, res) => {
+  const { address } = req.params;
+  const { limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      memberships: [],
+      pagination: {
+        page: 1,
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
       }
     },
     metadata: {
@@ -854,33 +1009,6 @@ app.get('/api/follows/count/:address', followLimiter, (req, res) => {
     data: {
       followers: 0,
       following: 0
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// USER MEMBERSHIP ROUTES
-// ============================================================================
-
-// Get user memberships
-app.get('/api/users/:address/memberships', userLimiter, (req, res) => {
-  const { address } = req.params;
-  const { isActive, limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      memberships: [],
-      pagination: {
-        page: 1,
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
     },
     metadata: {
       timestamp: new Date().toISOString()
