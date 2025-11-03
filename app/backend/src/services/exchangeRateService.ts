@@ -280,8 +280,8 @@ export class ExchangeRateService {
         if (!response.ok) {
           throw new Error(`Failed to fetch fiat exchange rate from Frankfurter API: ${response.statusText}`);
         }
-        const data = await response.json();
-        rate = data.rates[toCurrency];
+        const data: any = await response.json();
+        rate = (data.rates as any)[toCurrency];
         source = 'frankfurter.app';
       }
       // Case 2: Crypto to Fiat or Crypto to Crypto

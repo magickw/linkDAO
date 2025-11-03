@@ -845,12 +845,12 @@ export class AnalyticsService {
    */
   private async getLocationFromIPAPI(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
     const response = await fetch(`http://ip-api.com/json/${ipAddress}`);
-    const data = await response.json();
+    const data: any = await response.json();
 
-    if (data.status === 'success') {
+    if (data && data.status === 'success') {
       return {
-        country: data.country || null,
-        city: data.city || null
+        country: (data.country as string) || null,
+        city: (data.city as string) || null
       };
     }
 
@@ -867,12 +867,12 @@ export class AnalyticsService {
       : `https://ipinfo.io/${ipAddress}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
-    if (data.country) {
+    if (data && data.country) {
       return {
-        country: data.country || null,
-        city: data.city || null
+        country: (data.country as string) || null,
+        city: (data.city as string) || null
       };
     }
 
@@ -884,12 +884,12 @@ export class AnalyticsService {
    */
   private async getLocationFromFreeGeoIP(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
     const response = await fetch(`https://freegeoip.app/json/${ipAddress}`);
-    const data = await response.json();
+    const data: any = await response.json();
 
-    if (data.country_name) {
+    if (data && data.country_name) {
       return {
-        country: data.country_name || null,
-        city: data.city || null
+        country: (data.country_name as string) || null,
+        city: (data.city as string) || null
       };
     }
 

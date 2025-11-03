@@ -126,11 +126,11 @@ class IPFSService {
           throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
         }
         
-        const result = await response.json();
+        const result: any = await response.json();
         return {
-          hash: result.IpfsHash,
-          url: `${this.gatewayUrl}${result.IpfsHash}`,
-          size: result.PinSize
+          hash: (result.IpfsHash as string),
+          url: `${this.gatewayUrl}${result.IpfsHash as string}`,
+          size: (result.PinSize as number)
         };
       } else {
         // Standard IPFS client

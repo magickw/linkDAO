@@ -407,8 +407,8 @@ export class HealthCheckService extends EventEmitter {
         success: true,
         details: {
           responseTime: Math.round(responseTime),
-          version: versionData.Version,
-          peerCount: peersData.Peers?.length || 0,
+          version: (versionData as any).Version,
+          peerCount: (peersData as any).Peers?.length || 0,
           endpoint
         }
       };
@@ -453,9 +453,9 @@ export class HealthCheckService extends EventEmitter {
         throw new Error(`Blockchain RPC returned ${response.status}`);
       }
       
-      const data = await response.json();
+      const data: any = await response.json();
       
-      if (data.error) {
+      if (data && data.error) {
         throw new Error(data.error.message);
       }
       

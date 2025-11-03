@@ -175,8 +175,8 @@ export class ContentModerationMLService {
         throw new Error(`Perspective API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.attributeScores;
+      const data: any = await response.json();
+      return (data.attributeScores as any);
     } catch (error) {
       safeLogger.error('Perspective API error:', error);
       throw error;

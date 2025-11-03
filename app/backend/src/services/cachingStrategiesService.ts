@@ -77,15 +77,18 @@ export class CachingStrategiesService {
   }
 
   private setupEventHandlers(): void {
-    this.redis.on('error', (error) => {
+    // Type assertion to handle the union type issue
+    const redisClient: any = this.redis;
+    
+    redisClient.on('error', (error: any) => {
       safeLogger.error('Redis error:', error);
     });
 
-    this.redis.on('connect', () => {
+    redisClient.on('connect', () => {
       safeLogger.info('Redis connected');
     });
 
-    this.redis.on('ready', () => {
+    redisClient.on('ready', () => {
       safeLogger.info('Redis ready');
     });
   }
