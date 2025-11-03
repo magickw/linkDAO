@@ -26,9 +26,6 @@ console.log('🚀 Starting optimized production server...');
 logMemoryUsage();
 setupMemoryMonitoring();
 
-// Enable trust proxy for proper IP address detection behind load balancers/proxies
-app.set('trust proxy', 1);
-
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -132,6 +129,9 @@ setupMemoryMonitoring();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
+// Enable trust proxy for proper IP address detection behind load balancers/proxies
+app.set('trust proxy', 1);
 
 // Basic middleware (memory efficient)
 app.use(helmet({

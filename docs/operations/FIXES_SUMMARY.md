@@ -72,7 +72,7 @@ This document summarizes all the fixes made to resolve deployment issues with th
 - Added global error handlers for `uncaughtException` and `unhandledRejection`
 - Implemented graceful shutdown handling
 - Added proper signal handling for SIGTERM and SIGINT
-- Enabled Express trust proxy setting to fix rate limiting warnings
+- Enabled Express trust proxy setting at correct location to fix rate limiting warnings
 
 ## Configuration Changes
 
