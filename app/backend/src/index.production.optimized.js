@@ -26,6 +26,9 @@ console.log('🚀 Starting optimized production server...');
 logMemoryUsage();
 setupMemoryMonitoring();
 
+// Enable trust proxy for proper IP address detection behind load balancers/proxies
+app.set('trust proxy', 1);
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

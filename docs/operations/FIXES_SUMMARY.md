@@ -66,12 +66,13 @@ This document summarizes all the fixes made to resolve deployment issues with th
 - Configured proper CORS settings for WebSocket connections
 
 ### 8. Error Handling Issues
-**Problem:** Uncaught exceptions causing server crashes.
+**Problem:** Uncaught exceptions causing server crashes and rate limiting warnings.
 
 **Fixes:**
 - Added global error handlers for `uncaughtException` and `unhandledRejection`
 - Implemented graceful shutdown handling
 - Added proper signal handling for SIGTERM and SIGINT
+- Enabled Express trust proxy setting to fix rate limiting warnings
 
 ## Configuration Changes
 
@@ -92,6 +93,7 @@ This document summarizes all the fixes made to resolve deployment issues with th
 - Added proper error handling
 - Added memory monitoring and management
 - Integrated WebSocket support
+- Enabled trust proxy setting for proper rate limiting
 
 ## Testing Performed
 
