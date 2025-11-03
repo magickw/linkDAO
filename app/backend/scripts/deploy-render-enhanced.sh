@@ -19,28 +19,25 @@ echo "🧹 Cleaning previous builds..."
 rm -rf dist
 mkdir -p dist
 
-# Function to copy the production JavaScript file directly
-copy_production_file() {
-    echo "📋 Copying production entry point..."
-    if [ -f "src/index.production.js" ]; then
-        cp src/index.production.js dist/index.js
-        echo "✅ Production entry point copied successfully"
-        return 0
-    else
-        echo "❌ Production entry point not found"
-        return 1
+# Strategy 1: Try full TypeScript compilation (BEST APPROACH)
+echo "🔨 Strategy 1: Attempting full TypeScript compilation..."
+if npx tsc --project tsconfig.json --noEmitOnError false 2>&1; then
+    echo "✅ Full TypeScript compilation successful"
+    if [ -f "dist/index.js" ]; then
+        echo "🎉 Primary deployment strategy succeeded!"
+        exit 0
     fi
-}
-
-# Strategy 1: Try to copy the production file directly
-echo "🔨 Strategy 1: Copying production entry point..."
-if copy_production_file; then
-    echo "🎉 Primary deployment strategy succeeded!"
-    exit 0
+else
+    echo "⚠️  Full TypeScript compilation had errors, checking if build succeeded anyway..."
+    if [ -f "dist/index.js" ]; then
+        echo "✅ Build succeeded despite warnings"
+        echo "🎉 Primary deployment strategy succeeded!"
+        exit 0
+    fi
 fi
 
-# Strategy 2: Try full TypeScript compilation
-echo "🔨 Strategy 2: Attempting full TypeScript compilation..."
+# Strategy 2: Try with tsconfig.prod.json if it exists
+echo "🔨 Strategy 2: Attempting TypeScript compilation with tsconfig.prod.json..."
 if [ -f "tsconfig.prod.json" ]; then
     if npx tsc --project tsconfig.prod.json --noEmitOnError false 2>&1; then
         echo "✅ Full TypeScript compilation successful"
