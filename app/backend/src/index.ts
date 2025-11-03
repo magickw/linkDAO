@@ -41,7 +41,6 @@ process.on('unhandledRejection', (reason, promise) => {
 import express from 'express';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
-import './types';
 
 // Load environment variables
 dotenv.config();

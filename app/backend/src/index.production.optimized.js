@@ -72,7 +72,6 @@ process.on('unhandledRejection', (reason, promise) => {
 const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const dotenv_1 = __importDefault(require("dotenv"));
-require("./types");
 dotenv_1.default.config();
 const securityConfig_1 = require("./config/securityConfig");
 const securityMiddleware_1 = require("./middleware/securityMiddleware");
