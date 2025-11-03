@@ -135,8 +135,7 @@ router.get('/services/:serviceName/health', asyncHandler(async (req, res) => {
       status: serviceHealth.status,
       lastCheck: serviceHealth.lastChecked,
       responseTime: serviceHealth.responseTime,
-      details: serviceHealth.details,
-      metrics: serviceHealth.metrics
+      details: serviceHealth.details
     },
     metadata: {
       timestamp: new Date().toISOString(),

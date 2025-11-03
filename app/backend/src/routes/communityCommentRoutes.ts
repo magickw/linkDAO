@@ -68,7 +68,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
         .where(eq(reactions.id, existingVote[0].id));
 
       // Get updated vote counts
-      const voteCounts = await this.getVoteCounts(parseInt(commentId));
+      const voteCounts = await getVoteCounts(parseInt(commentId));
 
       return res.json({
         success: true,
@@ -102,7 +102,7 @@ router.post('/:communityId/comments/:commentId/vote', csrfProtection,  authMiddl
     });
 
     // Get updated vote counts
-    const voteCounts = await this.getVoteCounts(parseInt(commentId));
+    const voteCounts = await getVoteCounts(parseInt(commentId));
 
     res.json({
       success: true,
@@ -128,7 +128,7 @@ router.get('/:communityId/comments/:commentId/votes', async (req, res) => {
     const { commentId } = req.params;
     const { userAddress } = req.query;
 
-    const voteCounts = await this.getVoteCounts(parseInt(commentId));
+    const voteCounts = await getVoteCounts(parseInt(commentId));
     
     // If user address provided, get their vote
     let userVote = null;

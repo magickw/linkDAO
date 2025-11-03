@@ -14,7 +14,7 @@
  */
 
 import dotenv from 'dotenv';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from './utils/safeLogger';
 import { startProductionServer } from './config/production-server';
 
 // Load environment variables first

@@ -68,7 +68,10 @@ export class ComprehensiveAuditController {
       }
 
       // Add visualizations if requested
-      if (includeVisualizations === true || includeVisualizations === 'true') {
+      const includeVisualizationsStr = String(includeVisualizations);
+      const includeVisualizationsValue = includeVisualizationsStr === 'true';
+      
+      if (includeVisualizationsValue) {
         const [timeline, heatmap] = await Promise.all([
           comprehensiveAuditService.generateAuditVisualization('timeline', criteria),
           comprehensiveAuditService.generateAuditVisualization('heatmap', criteria),
@@ -334,8 +337,8 @@ export class ComprehensiveAuditController {
         ...eventData.metadata,
         ipAddress: req.ip,
         userAgent: req.get('User-Agent'),
-        sessionId: req.session?.id,
-        requestId: req.id,
+        sessionId: (req as any).session?.id,
+        requestId: (req as any).id,
         source: eventData.metadata?.source || 'api',
         severity: eventData.metadata?.severity || 'medium',
         category: eventData.metadata?.category || 'general',

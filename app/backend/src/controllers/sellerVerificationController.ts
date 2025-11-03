@@ -5,6 +5,7 @@ import { authMiddleware } from '../middleware/authMiddleware';
 import { db } from '../db';
 import { sellerVerifications } from '../database/schemas/sellerVerification';
 import { eq } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 
 const verificationService = new UnifiedSellerVerificationService();
 

@@ -46,7 +46,11 @@ export class EarningActivityController {
 
       const earningData: EarningActivityData = {
         userId,
-        ...validatedData
+        activityType: validatedData.activityType,
+        activityId: validatedData.activityId,
+        metadata: validatedData.metadata,
+        qualityScore: validatedData.qualityScore,
+        isPremiumUser: validatedData.isPremiumUser
       };
 
       const result = await earningActivityService.processEarningActivity(earningData);

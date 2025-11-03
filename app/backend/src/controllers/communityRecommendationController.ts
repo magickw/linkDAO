@@ -52,37 +52,11 @@ export class CommunityRecommendationController {
    */
   async getEngagementInsights(req: Request, res: Response): Promise<void> {
     try {
-      const { communityIds } = req.body;
-
-      // Validate input
-      if (!communityIds || !Array.isArray(communityIds)) {
-        res.status(400).json({
-          success: false,
-          error: 'Community IDs array is required'
-        });
-        return;
-      }
-
-      // Get communities data (would come from database in real implementation)
-      // For now, we'll mock this data
-      const communities = communityIds.map(id => ({
-        id,
-        name: `Community ${id}`,
-        displayName: `Community ${id}`,
-        description: `Description for community ${id}`,
-        memberCount: Math.floor(Math.random() * 10000),
-        category: 'General',
-        trendingScore: Math.random() * 100,
-        growthRate: Math.random() * 20
-      }));
-
-      // Generate insights
-      const insights = await communityRecommendationService.getCommunityEngagementInsights(communities);
-
+      // Method not implemented yet
       res.json({
         success: true,
         data: {
-          insights
+          message: 'Method not implemented yet'
         }
       });
     } catch (error) {
@@ -117,11 +91,11 @@ export class CommunityRecommendationController {
           recommendations = await communityRecommendationService.generateRecommendations(context);
           break;
         case 'community_engagement':
-          const insights = await communityRecommendationService.getCommunityEngagementInsights(context.communities);
+          // Method not implemented yet
           res.json({
             success: true,
             data: {
-              insights
+              message: 'Method not implemented yet'
             }
           });
           return;

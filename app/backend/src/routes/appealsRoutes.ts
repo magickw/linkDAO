@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { appealsController } from '../controllers/appealsController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authMiddleware as authenticateToken } from '../middleware/authMiddleware';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();

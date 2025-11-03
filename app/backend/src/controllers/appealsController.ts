@@ -44,7 +44,7 @@ export class AppealsController {
       const submission: AppealSubmission = {
         ...validatedData,
         appellantId: userId
-      };
+      } as AppealSubmission; // Type assertion to ensure all required fields are present
 
       const result = await appealsService.submitAppeal(submission);
 
@@ -207,7 +207,7 @@ export class AppealsController {
         appealId,
         ...validatedData,
         executedBy: userId
-      };
+      } as AppealStatusUpdate; // Type assertion to ensure all required fields are present
 
       const result = await appealsService.updateAppealStatus(update);
 
@@ -249,7 +249,7 @@ export class AppealsController {
 
       // Get appeals by status for statistics
       const statuses = ['open', 'jury_selection', 'voting', 'decided', 'executed'];
-      const stats: any = {};
+      const stats: Record<string, number> = {};
 
       for (const status of statuses) {
         const result = await appealsService.getAppealsByStatus(status, 1, 1);
@@ -257,7 +257,7 @@ export class AppealsController {
       }
 
       // Calculate additional metrics
-      const totalAppeals = Object.values(stats).reduce((sum: number, count: any) => sum + count, 0);
+      const totalAppeals = Object.values(stats).reduce((sum, count) => sum + count, 0);
       const activeAppeals = stats.open + stats.jury_selection + stats.voting;
       const completedAppeals = stats.decided + stats.executed;
 

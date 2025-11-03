@@ -1,6 +1,6 @@
 import express from 'express';
 import { safeLogger } from '../../utils/safeLogger';
-import { csrfProtection } from '../middleware/csrfProtection';
+import { csrfProtection } from '../../middleware/csrfProtection';
 import { openaiService } from '../../services/ai/openaiService';
 import { contentModerationAI } from '../../services/ai/contentModerationAI';
 import { predictiveAnalyticsService } from '../../services/ai/predictiveAnalyticsService';

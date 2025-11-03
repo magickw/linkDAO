@@ -963,24 +963,6 @@ export class HealthMonitoringService {
     return actions;
   }
 
-  // Get active alerts
-  getActiveAlerts(): Array<{
-    key: string;
-    level: 'warning' | 'critical';
-    message: string;
-    timestamp: string;
-    age: number;
-  }> {
-    const now = Date.now();
-    return Array.from(this.activeAlerts.entries()).map(([key, alert]) => ({
-      key,
-      level: alert.level,
-      message: alert.message,
-      timestamp: new Date(alert.timestamp).toISOString(),
-      age: now - alert.timestamp
-    }));
-  }
-
   // Get service start time
   getStartTime(): number {
     return this.startTime;

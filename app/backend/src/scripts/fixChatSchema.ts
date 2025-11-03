@@ -46,7 +46,7 @@ async function main() {
           safeLogger.info('Dropping constraint', row.constraint_name);
           await sql.unsafe(`ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS ${row.constraint_name}`);
         } catch (e) {
-          safeLogger.warn('Failed to drop constraint', row.constraint_name, e.message || e);
+          safeLogger.warn('Failed to drop constraint', [row.constraint_name, e.message || e]);
         }
       }
 

@@ -2,7 +2,7 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { Router } from 'express';
 import { AIController } from '../controllers/aiController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authMiddleware as authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 const aiController = new AIController();

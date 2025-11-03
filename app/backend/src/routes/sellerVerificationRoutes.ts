@@ -4,6 +4,7 @@ import { SellerVerificationController } from '../controllers/sellerVerificationC
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 import { SellerVerificationAuditService } from '../services/sellerVerificationAuditService';
+import { safeLogger } from '../utils/safeLogger';
 
 const router = Router();
 const controller = new SellerVerificationController();

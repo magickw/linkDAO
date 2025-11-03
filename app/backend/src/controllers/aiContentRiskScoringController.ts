@@ -43,7 +43,8 @@ export class AIContentRiskScoringController {
     try {
       const validatedInput = ContentInputSchema.parse(req.body);
       
-      const assessment = await aiContentRiskScoringService.assessContentRisk(validatedInput);
+      // Type assertion to ensure TypeScript recognizes all required fields are present
+      const assessment = await aiContentRiskScoringService.assessContentRisk(validatedInput as ContentInput);
       
       res.json({
         success: true,
@@ -79,7 +80,8 @@ export class AIContentRiskScoringController {
       
       // Process all assessments in parallel
       const assessmentPromises = validatedInput.contents.map(content =>
-        aiContentRiskScoringService.assessContentRisk(content)
+        // Type assertion to ensure TypeScript recognizes all required fields are present
+        aiContentRiskScoringService.assessContentRisk(content as ContentInput)
       );
       
       const assessments = await Promise.allSettled(assessmentPromises);

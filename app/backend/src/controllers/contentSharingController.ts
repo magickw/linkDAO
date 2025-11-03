@@ -117,7 +117,15 @@ class ContentSharingController {
       const inviterAddress = req.user!.address;
 
       // Validate that user is a member of the community
-      const isMember = await communityService.checkMembership(communityId, inviterAddress);
+      // Using getCommunityMembers to check membership
+      const membersResult = await communityService.getCommunityMembers({
+        communityId,
+        page: 1,
+        limit: 1000 // Get all members to check if user is in the list
+      });
+      
+      const isMember = membersResult.members.some((member: any) => member.userAddress === inviterAddress);
+      
       if (!isMember) {
         res.status(403).json({
           success: false,
@@ -156,9 +164,16 @@ class ContentSharingController {
 
       // Validate that user can cross-post to target communities
       const membershipChecks = await Promise.all(
-        targetCommunityIds.map((communityId: string) =>
-          communityService.checkMembership(communityId, userAddress)
-        )
+        targetCommunityIds.map(async (communityId: string) => {
+          // Using getCommunityMembers to check membership
+          const membersResult = await communityService.getCommunityMembers({
+            communityId,
+            page: 1,
+            limit: 1000 // Get all members to check if user is in the list
+          });
+          
+          return membersResult.members.some((member: any) => member.userAddress === userAddress);
+        })
       );
 
       const validCommunities = targetCommunityIds.filter(

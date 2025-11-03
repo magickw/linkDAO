@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { socialMediaIntegrationService } from '../services/socialMediaIntegrationService';
+import { socialMediaIntegrationService, CrossPostConfig } from '../services/socialMediaIntegrationService';
 import { z } from 'zod';
 
 // Validation schemas
@@ -45,7 +45,17 @@ export class SocialMediaIntegrationController {
     try {
       const validatedInput = CrossPostSchema.parse(req.body);
       
-      const results = await socialMediaIntegrationService.crossPostContent(validatedInput);
+      // Transform validated input to match CrossPostConfig interface
+      const crossPostConfig: CrossPostConfig = {
+        postId: validatedInput.postId,
+        platforms: validatedInput.platforms,
+        contentTemplate: validatedInput.contentTemplate,
+        includeMedia: validatedInput.includeMedia,
+        autoPost: validatedInput.autoPost,
+        scheduleTime: validatedInput.scheduleTime ? new Date(validatedInput.scheduleTime) : undefined
+      };
+      
+      const results = await socialMediaIntegrationService.crossPostContent(crossPostConfig);
       
       res.status(201).json({
         success: true,
@@ -160,7 +170,17 @@ export class SocialMediaIntegrationController {
     try {
       const validatedInput = ScheduleContentSchema.parse(req.body);
       
-      const scheduledPosts = await socialMediaIntegrationService.scheduleContent(validatedInput);
+      // Transform validated input to match CrossPostConfig interface
+      const crossPostConfig: CrossPostConfig = {
+        postId: validatedInput.postId,
+        platforms: validatedInput.platforms,
+        contentTemplate: validatedInput.contentTemplate,
+        includeMedia: validatedInput.includeMedia,
+        autoPost: true, // Default value for scheduleContent
+        scheduleTime: validatedInput.scheduleTime ? new Date(validatedInput.scheduleTime) : undefined
+      };
+      
+      const scheduledPosts = await socialMediaIntegrationService.scheduleContent(crossPostConfig);
       
       res.status(201).json({
         success: true,

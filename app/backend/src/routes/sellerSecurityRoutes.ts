@@ -148,7 +148,7 @@ router.post('/permissions/:walletAddress', csrfProtection,
       const { targetAddress, role, permissions } = req.body;
 
       if (!targetAddress || !role) {
-        return validationErrorResponse(res, 'Target address and role are required');
+        return validationErrorResponse(res, ['Target address and role are required']);
       }
 
       // In a real implementation, this would update permissions in the database
@@ -219,7 +219,7 @@ router.post('/alert/:walletAddress', csrfProtection,
       const { alertType, severity, message, metadata } = req.body;
 
       if (!alertType || !severity || !message) {
-        return validationErrorResponse(res, 'Alert type, severity, and message are required');
+        return validationErrorResponse(res, ['Alert type, severity, and message are required']);
       }
 
       // In a real implementation, this would create a security alert

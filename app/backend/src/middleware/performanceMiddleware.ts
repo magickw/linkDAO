@@ -62,7 +62,7 @@ export class PerformanceMiddleware {
           safeLogger.warn(`Slow request detected: ${req.method} ${req.path} took ${responseTime.toFixed(2)}ms`);
         }
 
-        originalEnd.call(this, chunk, encoding);
+        return originalEnd.call(this, chunk, encoding);
       };
 
       next();
@@ -81,14 +81,16 @@ export class PerformanceMiddleware {
         if (server) {
           // Add server info to request headers for downstream services
           req.headers['x-assigned-server'] = server.id;
-          req.headers['x-server-region'] = server.region || 'unknown';
+          req.headers['x-server-region'] = server.metadata?.region || 'unknown';
           
-          // Track connection
-          this.performanceManager.getLoadBalancer()?.incrementConnections(server.id);
+          // Track connection start time for cleanup
+          const connectionStartTime = Date.now();
           
           // Cleanup on response end
           res.on('finish', () => {
-            this.performanceManager.getLoadBalancer()?.decrementConnections(server.id);
+            const responseTime = Date.now() - connectionStartTime;
+            // Release server connection when response is finished
+            this.performanceManager.getLoadBalancer()?.releaseServer(server.id, responseTime, res.statusCode < 400);
           });
         }
       } catch (error) {
@@ -152,36 +154,8 @@ export class PerformanceMiddleware {
   // Middleware for database query optimization
   optimizeDatabase() {
     return (req: PerformanceRequest, res: Response, next: NextFunction) => {
-      // Add database service to request for easy access
-      req.db = {
-        query: async (sql: string, params: any[] = [], cacheKey?: string, cacheTTL?: number) => {
-          const startTime = performance.now();
-          
-          try {
-            const result = await req.performanceManager!.optimizeQuery(sql, params, cacheKey, cacheTTL);
-            const endTime = performance.now();
-            
-            req.performanceManager!.recordMetric('database.query.duration', endTime - startTime, 'ms', {
-              operation: sql.split(' ')[0].toUpperCase(), // SELECT, INSERT, UPDATE, DELETE
-            });
-            
-            return result;
-          } catch (error) {
-            const endTime = performance.now();
-            
-            req.performanceManager!.recordMetric('database.query.error', 1, 'count', {
-              operation: sql.split(' ')[0].toUpperCase(),
-            });
-            
-            req.performanceManager!.recordMetric('database.query.duration', endTime - startTime, 'ms', {
-              operation: sql.split(' ')[0].toUpperCase(),
-              error: 'true',
-            });
-            
-            throw error;
-          }
-        }
-      };
+      // Add performance manager to request for database optimization
+      req.performanceManager = this.performanceManager;
 
       next();
     };
@@ -289,9 +263,6 @@ declare global {
     interface Request {
       startTime?: number;
       performanceManager?: PerformanceOptimizationManager;
-      db?: {
-        query: (sql: string, params?: any[], cacheKey?: string, cacheTTL?: number) => Promise<any[]>;
-      };
       cdn?: {
         uploadAsset: (key: string, buffer: Buffer, contentType: string) => Promise<string>;
       };

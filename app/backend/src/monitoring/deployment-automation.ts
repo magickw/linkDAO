@@ -392,10 +392,15 @@ class DeploymentAutomationService {
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+              
         const response = await fetch(this.config.deployment.healthCheckUrl, {
           method: 'GET',
-          timeout: 10000
+          signal: controller.signal
         });
+              
+        clearTimeout(timeoutId);
         
         if (response.ok) {
           deployment.healthChecks.passed++;

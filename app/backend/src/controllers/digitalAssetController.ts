@@ -173,7 +173,7 @@ export class DigitalAssetController {
       
       const validatedData = purchaseLicenseSchema.parse(req.body);
       
-      const purchase = await digitalAssetService.purchaseLicense(userId, validatedData);
+      const purchase = await digitalAssetService.purchaseLicense(userId, validatedData as PurchaseLicenseRequest);
       
       res.status(201).json({
         success: true,
@@ -253,7 +253,7 @@ export class DigitalAssetController {
       
       const validatedData = dmcaRequestSchema.parse(req.body);
       
-      const requestId = await digitalAssetService.submitDMCARequest(userId, validatedData);
+      const requestId = await digitalAssetService.submitDMCARequest(userId, validatedData as SubmitDMCARequest);
       
       res.status(201).json({
         success: true,

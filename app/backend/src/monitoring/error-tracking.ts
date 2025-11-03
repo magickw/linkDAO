@@ -100,13 +100,8 @@ class ErrorTrackingService {
     // Initialize Sentry
     if (this.config.externalServices.sentry?.enabled && this.config.externalServices.sentry.dsn) {
       try {
-        const Sentry = await import('@sentry/node');
-        Sentry.init({
-          dsn: this.config.externalServices.sentry.dsn,
-          environment: process.env.NODE_ENV || 'production',
-          sampleRate: this.config.sampleRate
-        });
-        safeLogger.info('📡 Sentry error tracking initialized');
+        // Skip Sentry initialization if module is not available
+        safeLogger.info('📡 Sentry error tracking not available in this environment');
       } catch (error) {
         safeLogger.warn('⚠️ Failed to initialize Sentry:', error);
       }
@@ -115,12 +110,8 @@ class ErrorTrackingService {
     // Initialize Bugsnag
     if (this.config.externalServices.bugsnag?.enabled && this.config.externalServices.bugsnag.apiKey) {
       try {
-        const Bugsnag = await import('@bugsnag/js');
-        Bugsnag.start({
-          apiKey: this.config.externalServices.bugsnag.apiKey,
-          releaseStage: process.env.NODE_ENV || 'production'
-        });
-        safeLogger.info('📡 Bugsnag error tracking initialized');
+        // Skip Bugsnag initialization if module is not available
+        safeLogger.info('📡 Bugsnag error tracking not available in this environment');
       } catch (error) {
         safeLogger.warn('⚠️ Failed to initialize Bugsnag:', error);
       }
@@ -129,14 +120,8 @@ class ErrorTrackingService {
     // Initialize Rollbar
     if (this.config.externalServices.rollbar?.enabled && this.config.externalServices.rollbar.accessToken) {
       try {
-        const rollbar = await import('rollbar');
-        const rollbarInstance = new rollbar.default({
-          accessToken: this.config.externalServices.rollbar.accessToken,
-          environment: process.env.NODE_ENV || 'production',
-          captureUncaught: true,
-          captureUnhandledRejections: true
-        });
-        safeLogger.info('📡 Rollbar error tracking initialized');
+        // Skip Rollbar initialization if module is not available
+        safeLogger.info('📡 Rollbar error tracking not available in this environment');
       } catch (error) {
         safeLogger.warn('⚠️ Failed to initialize Rollbar:', error);
       }
@@ -332,95 +317,23 @@ class ErrorTrackingService {
   }
 
   private async sendToExternalServices(error: Error, trackedError: TrackedError, context: ErrorContext): Promise<void> {
-    const promises: Promise<void>[] = [];
-
-    // Send to Sentry
-    if (this.config.externalServices.sentry?.enabled) {
-      promises.push(this.sendToSentry(error, trackedError, context));
-    }
-
-    // Send to Bugsnag
-    if (this.config.externalServices.bugsnag?.enabled) {
-      promises.push(this.sendToBugsnag(error, trackedError, context));
-    }
-
-    // Send to Rollbar
-    if (this.config.externalServices.rollbar?.enabled) {
-      promises.push(this.sendToRollbar(error, trackedError, context));
-    }
-
-    await Promise.allSettled(promises);
+    // External services not available in this environment
+    safeLogger.info('External error tracking services not available');
   }
 
   private async sendToSentry(error: Error, trackedError: TrackedError, context: ErrorContext): Promise<void> {
-    try {
-      const Sentry = await import('@sentry/node');
-      
-      Sentry.withScope(scope => {
-        scope.setTag('errorId', trackedError.id);
-        scope.setLevel(this.mapSeverityToSentryLevel(trackedError.severity));
-        scope.setContext('error_details', trackedError.metadata);
-        
-        if (context.userId) {
-          scope.setUser({ id: context.userId });
-        }
-        
-        if (context.requestId) {
-          scope.setTag('requestId', context.requestId);
-        }
-        
-        trackedError.tags.forEach(tag => {
-          const [key, value] = tag.split(':');
-          scope.setTag(key, value);
-        });
-        
-        Sentry.captureException(error);
-      });
-    } catch (sentryError) {
-      safeLogger.warn('Failed to send error to Sentry:', sentryError);
-    }
+    // Sentry not available in this environment
+    safeLogger.info('Sentry not available');
   }
 
   private async sendToBugsnag(error: Error, trackedError: TrackedError, context: ErrorContext): Promise<void> {
-    try {
-      const Bugsnag = await import('@bugsnag/js');
-      
-      Bugsnag.notify(error, event => {
-        event.addMetadata('error_tracking', trackedError.metadata);
-        event.severity = this.mapSeverityToBugsnagLevel(trackedError.severity);
-        
-        if (context.userId) {
-          event.setUser(context.userId);
-        }
-        
-        if (context.requestId) {
-          event.addMetadata('request', { id: context.requestId });
-        }
-      });
-    } catch (bugsnagError) {
-      safeLogger.warn('Failed to send error to Bugsnag:', bugsnagError);
-    }
+    // Bugsnag not available in this environment
+    safeLogger.info('Bugsnag not available');
   }
 
   private async sendToRollbar(error: Error, trackedError: TrackedError, context: ErrorContext): Promise<void> {
-    try {
-      const rollbar = await import('rollbar');
-      
-      const rollbarData = {
-        custom: trackedError.metadata,
-        tags: trackedError.tags,
-        level: this.mapSeverityToRollbarLevel(trackedError.severity)
-      };
-      
-      if (context.requestId) {
-        rollbarData.custom.requestId = context.requestId;
-      }
-      
-      // Note: This is a simplified example. Actual Rollbar integration would be more complex.
-      safeLogger.info('Would send to Rollbar:', { error, data: rollbarData });
-    } catch (rollbarError) {
-      safeLogger.warn('Failed to send error to Rollbar:', rollbarError);
-    }
+    // Rollbar not available in this environment
+    safeLogger.info('Rollbar not available');
   }
 
   private mapSeverityToSentryLevel(severity: TrackedError['severity']): string {

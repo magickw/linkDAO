@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { moderationQualityAssuranceService } from '../services/moderationQualityAssuranceService';
+import { moderationQualityAssuranceService, FeedbackLoop } from '../services/moderationQualityAssuranceService';
 import { z } from 'zod';
 
 // Validation schemas
@@ -203,7 +203,7 @@ export class ModerationQualityAssuranceController {
     try {
       const validatedInput = FeedbackSchema.parse(req.body);
       
-      const feedback = await moderationQualityAssuranceService.processFeedback(validatedInput);
+      const feedback = await moderationQualityAssuranceService.processFeedback(validatedInput as Omit<FeedbackLoop, "createdAt" | "feedbackId">);
 
       res.json({
         success: true,
@@ -298,7 +298,7 @@ export class ModerationQualityAssuranceController {
       const result = await moderationQualityAssuranceService.processCalibrationResults(
         validatedInput.sessionId,
         validatedInput.moderatorId,
-        validatedInput.decisions
+        validatedInput.decisions as { caseId: string; decision: string; confidence: number; timeSpent: number; }[]
       );
 
       res.json({

@@ -228,8 +228,8 @@ router.post('/events', csrfProtection,  adminAuthMiddleware, async (req: Authent
       ...eventData.metadata,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
-      sessionId: req.session?.id,
-      requestId: req.id,
+      // sessionId: req.session?.id, // Not available in AuthenticatedRequest
+      // requestId: req.id, // Not available in AuthenticatedRequest
     };
 
     const auditEvent = await comprehensiveAuditService.recordAuditEvent(eventData);

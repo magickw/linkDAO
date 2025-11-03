@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 
 // Import all security components
 import { validateRequest, securityValidation, rateLimitValidation } from './enhancedInputValidation';
-import { enhancedCorsMiddleware } from './enhancedCorsMiddleware';
+import { corsSecurityMiddleware } from './enhancedCorsMiddleware';
 import { defaultFileUploadSecurity } from './enhancedFileUploadSecurity';
 import { authSecurityManager } from './authenticationSecurityMiddleware';
 
@@ -85,7 +85,7 @@ export class SecurityIntegrationManager {
 
     // 3. CORS handling
     if (this.config.enableCors) {
-      middlewares.push(enhancedCorsMiddleware);
+      middlewares.push(corsSecurityMiddleware);
     }
 
     // 4. Rate limiting

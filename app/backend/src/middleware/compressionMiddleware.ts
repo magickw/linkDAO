@@ -53,7 +53,7 @@ export class CompressionService {
       },
 
       // Custom compression strategy
-      strategy: compression.constants.Z_DEFAULT_STRATEGY
+      strategy: 0 // Z_DEFAULT_STRATEGY
     });
   }
 

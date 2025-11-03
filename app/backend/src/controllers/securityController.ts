@@ -47,7 +47,7 @@ export class SecurityController {
         overview: {
           totalEvents: securityMetrics.totalEvents,
           activeAlerts: activeAlerts.length,
-          criticalVulnerabilities: latestScan?.summary.criticalCount || 0,
+          criticalVulnerabilities: latestScan?.summary.critical || 0,
           complianceScore: complianceStatus.score,
           lastScanDate: latestScan?.timestamp,
           threatLevel: this.calculateOverallThreatLevel(securityMetrics, activeAlerts),
@@ -209,7 +209,7 @@ export class SecurityController {
       // Start scan asynchronously
       vulnerabilityScanner.performComprehensiveScan()
         .then(report => {
-          safeLogger.info(`Vulnerability scan completed: ${report.id}`);
+          safeLogger.info(`Vulnerability scan completed: ${report.scan_id}`);
         })
         .catch(error => {
           safeLogger.error('Vulnerability scan failed:', error);

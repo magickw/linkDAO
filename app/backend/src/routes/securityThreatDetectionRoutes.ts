@@ -11,6 +11,7 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { securityThreatDetectionService } from '../services/securityThreatDetectionService';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { SecuritySeverity } from '../services/securityMonitoringService';
 
 const router = Router();
 
@@ -53,8 +54,8 @@ router.get('/dashboard', adminAuthMiddleware, async (req: AuthenticatedRequest, 
     const dashboard = {
       overview: {
         totalThreats: recentThreats.length,
-        criticalThreats: recentThreats.filter(d => d.severity === 'critical').length,
-        highThreats: recentThreats.filter(d => d.severity === 'high').length,
+        criticalThreats: recentThreats.filter(d => d.severity === SecuritySeverity.CRITICAL).length,
+        highThreats: recentThreats.filter(d => d.severity === SecuritySeverity.HIGH).length,
         averageRiskScore: recentThreats.length > 0 
           ? recentThreats.reduce((sum, d) => sum + d.riskScore, 0) / recentThreats.length
           : 0,

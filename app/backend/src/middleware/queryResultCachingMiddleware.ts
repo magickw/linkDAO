@@ -6,18 +6,6 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { safeLogger } from '../utils/safeLogger';
-
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        [key: string]: any;
-      };
-    }
-  }
-}
 import { performance } from 'perf_hooks';
 import { cacheService } from '../services/cacheService';
 

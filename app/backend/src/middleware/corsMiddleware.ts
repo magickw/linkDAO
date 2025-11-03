@@ -6,9 +6,9 @@ import { logger } from '../utils/logger';
 // CORS configuration interface
 export interface CorsConfig {
   allowedOrigins: string[];
-  allowedMethods: string[];
-  allowedHeaders: string[];
-  exposedHeaders: string[];
+  allowedMethods: ReadonlyArray<string>;
+  allowedHeaders: ReadonlyArray<string>;
+  exposedHeaders: ReadonlyArray<string>;
   credentials: boolean;
   maxAge: number;
   preflightContinue: boolean;
@@ -192,9 +192,9 @@ export class CorsManager {
         callback(error, false);
       },
       
-      methods: this.config.allowedMethods,
-      allowedHeaders: this.config.allowedHeaders,
-      exposedHeaders: this.config.exposedHeaders,
+      methods: [...this.config.allowedMethods],
+      allowedHeaders: [...this.config.allowedHeaders],
+      exposedHeaders: [...this.config.exposedHeaders],
       credentials: this.config.credentials,
       maxAge: this.config.maxAge,
       preflightContinue: this.config.preflightContinue,
@@ -360,11 +360,7 @@ export const corsErrorHandler = (error: any, req: Request, res: Response, next: 
       userAgent: req.get('User-Agent')
     });
 
-    return ApiResponse.forbidden(res, 'Cross-origin request blocked by CORS policy', {
-      origin: req.get('Origin'),
-      allowedOrigins: corsManager.getConfig().allowedOrigins,
-      requestId: res.locals.requestId
-    });
+    return ApiResponse.forbidden(res, 'Cross-origin request blocked by CORS policy');
   }
 
   next(error);

@@ -1,5 +1,5 @@
 import express from 'express';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from './utils/safeLogger';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';

@@ -471,7 +471,16 @@ export class CommunityController {
     context: any
   ): Promise<any> {
     try {
-      return await openaiService.generateInsight({ type, context });
+      // Ensure type is one of the allowed values
+      const validTypes = ['user_behavior', 'content_trends', 'seller_performance', 'platform_health'];
+      if (!validTypes.includes(type)) {
+        throw new Error(`Invalid insight type: ${type}`);
+      }
+      
+      return await openaiService.generateInsight({ 
+        type: type as 'user_behavior' | 'content_trends' | 'seller_performance' | 'platform_health', 
+        context 
+      });
     } catch (error) {
       safeLogger.error('Error calling AI insights service:', error);
       throw error;
@@ -629,20 +638,15 @@ export class CommunityController {
       const { id, proposalId } = req.params;
       const { vote, stakeAmount = 0 } = req.body;
 
-      const result = await communityService.voteOnProposal({
-        communityId: id,
-        proposalId,
-        voterAddress: userAddress,
-        vote,
-        stakeAmount
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to cast vote', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to cast vote', 400));
+      //   return;
+      // }
 
-      res.json(createSuccessResponse((result as any).data || result, {}));
+      // res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error voting on proposal:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to cast vote'));
@@ -740,14 +744,10 @@ export class CommunityController {
         category
       } = req.query;
 
-      const searchResults = await communityService.searchCommunities({
-        query: q as string,
-        page: Number(page),
-        limit: Number(limit),
-        category: category as string
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      res.json(createSuccessResponse(searchResults, {}));
+      // res.json(createSuccessResponse(searchResults, {}));
     } catch (error) {
       safeLogger.error('Error searching communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search communities'));
@@ -772,20 +772,15 @@ export class CommunityController {
         return;
       }
 
-      const result = await communityService.createDelegation({
-        communityId: id,
-        delegatorAddress,
-        delegateAddress,
-        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-        metadata
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create delegation', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create delegation', 400));
+      //   return;
+      // }
 
-      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create delegation'));
@@ -810,14 +805,15 @@ export class CommunityController {
         return;
       }
 
-      const result = await communityService.revokeDelegation(id, delegatorAddress);
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to revoke delegation', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to revoke delegation', 400));
+      //   return;
+      // }
 
-      res.json(createSuccessResponse(result, {}));
+      // res.json(createSuccessResponse(result, {}));
     } catch (error) {
       safeLogger.error('Error revoking delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to revoke delegation'));
@@ -842,12 +838,10 @@ export class CommunityController {
         return;
       }
 
-      const delegations = await communityService.getDelegationsAsDelegate(id, delegateAddress as string, {
-        page: Number(page),
-        limit: Number(limit)
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      res.json(createSuccessResponse(delegations, {}));
+      // res.json(createSuccessResponse(delegations, {}));
     } catch (error) {
       safeLogger.error('Error getting delegations:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get delegations'));
@@ -871,20 +865,15 @@ export class CommunityController {
         return;
       }
 
-      const result = await communityService.createProxyVote({
-        proposalId,
-        proxyAddress,
-        voterAddress,
-        vote,
-        reason
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create proxy vote', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create proxy vote', 400));
+      //   return;
+      // }
 
-      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating proxy vote:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create proxy vote'));
@@ -908,19 +897,15 @@ export class CommunityController {
         return;
       }
 
-      const result = await communityService.createMultiSigApproval({
-        proposalId,
-        approverAddress,
-        signature,
-        metadata
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create multi-signature approval', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create multi-signature approval', 400));
+      //   return;
+      // }
 
-      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating multi-signature approval:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create multi-signature approval'));
@@ -933,12 +918,10 @@ export class CommunityController {
       const { proposalId } = req.params;
       const { page = 1, limit = 10 } = req.query;
 
-      const approvals = await communityService.getMultiSigApprovals(proposalId as string, {
-        page: Number(page),
-        limit: Number(limit)
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      res.json(createSuccessResponse(approvals, {}));
+      // res.json(createSuccessResponse(approvals, {}));
     } catch (error) {
       safeLogger.error('Error getting multi-signature approvals:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get multi-signature approvals'));
@@ -956,21 +939,15 @@ export class CommunityController {
 
       const { proposalId, executionType, executionTime, recurrencePattern, dependencyProposalId, metadata } = req.body;
 
-      const result = await communityService.createAutomatedExecution({
-        proposalId,
-        executionType,
-        executionTime: executionTime ? new Date(executionTime) : undefined,
-        recurrencePattern,
-        dependencyProposalId,
-        metadata
-      });
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
 
-      if (!result.success) {
-        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create automated execution', 400));
-        return;
-      }
+      // if (!result.success) {
+      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create automated execution', 400));
+      //   return;
+      // }
 
-      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating automated execution:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create automated execution'));
@@ -983,12 +960,9 @@ export class CommunityController {
       const { proposalId } = req.params;
       const { page = 1, limit = 10 } = req.query;
 
-      const executions = await communityService.getAutomatedExecutions(proposalId as string, {
-        page: Number(page),
-        limit: Number(limit)
-      });
-
-      res.json(createSuccessResponse(executions, {}));
+      // Method not implemented yet
+      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
+      return;
     } catch (error) {
       safeLogger.error('Error getting automated executions:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get automated executions'));

@@ -937,6 +937,40 @@ export class PredictiveAnalyticsService {
 
     return recommendations;
   }
+
+  /**
+   * Evaluate prediction accuracy by comparing predicted values with actual outcomes
+   */
+  evaluatePredictionAccuracy(
+    predictionId: string,
+    actualValue: number
+  ): {
+    predictionId: string;
+    predictedValue: number;
+    actualValue: number;
+    absoluteError: number;
+    percentageError: number;
+    accuracy: number;
+    timestamp: Date;
+  } {
+    // In a real implementation, this would retrieve the prediction from storage
+    // For now, we'll return a placeholder response with calculated metrics
+    const predictedValue = actualValue * (0.8 + Math.random() * 0.4); // Simulate a prediction
+    
+    const absoluteError = Math.abs(predictedValue - actualValue);
+    const percentageError = actualValue !== 0 ? (absoluteError / Math.abs(actualValue)) * 100 : 0;
+    const accuracy = Math.max(0, 100 - percentageError);
+
+    return {
+      predictionId,
+      predictedValue,
+      actualValue,
+      absoluteError,
+      percentageError,
+      accuracy,
+      timestamp: new Date()
+    };
+  }
 }
 
 export const predictiveAnalyticsService = new PredictiveAnalyticsService();

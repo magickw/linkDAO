@@ -1,5 +1,5 @@
 import express from 'express';
-import { safeLogger } from '../utils/safeLogger';
+import { safeLogger } from './utils/safeLogger';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';
@@ -19,7 +19,7 @@ import postRoutes from './routes/postRoutes';
 import aiRoutes from './routes/aiRoutes';
 import searchRoutes from './routes/searchRoutes';
 import orderRoutes from './routes/orderRoutes';
-import { disputeRouter } from './routes/disputeRoutes';
+import disputeRouter from './routes/disputeRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 import contentIngestionRoutes from './routes/contentIngestionRoutes';
 import reportRoutes from './routes/reportRoutes';
