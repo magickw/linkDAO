@@ -373,6 +373,9 @@ app.use('/api/shares', shareRoutes);
 // Use follow routes
 app.use('/api/follows', followRoutes);
 
+// Alias for backward compatibility (frontend uses /api/follow in some places)
+app.use('/api/follow', followRoutes);
+
 // Use community routes
 app.use('/api/communities', communityRoutes);
 

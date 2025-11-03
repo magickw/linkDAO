@@ -9,7 +9,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: "--max-old-space-size=1024 --optimize-for-size"
+        value: "--max-old-space-size=1536 --optimize-for-size"
+      - key: RENDER
+        value: "true"
     healthCheckPath: /health
     autoDeploy: true
     branch: main
