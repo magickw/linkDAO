@@ -660,8 +660,8 @@ app.get('/api/profiles/address/:address', async (req, res) => {
       shippingZipCode: profileData.shippingZipCode || '',
       shippingCountry: profileData.shippingCountry || '',
       shippingPhone: profileData.shippingPhone || '',
-      createdAt: new Date(user.createdAt),
-      updatedAt: new Date(user.updatedAt)
+      createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
+      updatedAt: user.updatedAt ? new Date(user.updatedAt) : (user.createdAt ? new Date(user.createdAt) : new Date())
     };
     
     res.json({
