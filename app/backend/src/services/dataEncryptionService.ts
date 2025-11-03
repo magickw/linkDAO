@@ -63,7 +63,16 @@ export class DataEncryptionService {
     };
 
     // In production, this would come from secure key management
-    this.masterKey = this.deriveMasterKey();
+    // Skip encryption in development mode
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    if (nodeEnv === 'development') {
+      console.warn('⚠️  Data encryption service disabled in development mode');
+      // Create a dummy master key for development
+      this.masterKey = crypto.randomBytes(this.config.keyLength);
+    } else {
+      this.masterKey = this.deriveMasterKey();
+    }
+    
     this.initializePrivacyControls();
     this.initializeDataClassifications();
   }

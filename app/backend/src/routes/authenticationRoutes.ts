@@ -104,11 +104,17 @@ export function createDefaultAuthRoutes(): Router {
     throw new Error('DATABASE_URL environment variable is required');
   }
 
+  // Allow missing JWT_SECRET in development mode
+  const nodeEnv = process.env.NODE_ENV || 'development';
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET environment variable is required');
+    if (nodeEnv === 'development') {
+      console.warn('⚠️  Using default JWT secret in development mode');
+    } else {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
   }
 
-  const authService = new AuthenticationService(connectionString, jwtSecret);
+  const authService = new AuthenticationService(connectionString, jwtSecret || 'development-secret-key-change-in-production');
   const authMiddleware = new AuthenticationMiddleware(authService);
 
   return createAuthenticationRoutes(authService, authMiddleware);

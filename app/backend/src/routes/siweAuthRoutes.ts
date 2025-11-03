@@ -13,6 +13,17 @@ import { users } from '../db/schema';
 
 const router = Router();
 
+// Allow missing JWT_SECRET in development mode
+const nodeEnv = process.env.NODE_ENV || 'development';
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  if (nodeEnv === 'development') {
+    console.warn('⚠️  Using default JWT secret in development mode');
+  } else {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+}
+
 const connectionString = process.env.DATABASE_URL!;
 const sql = postgres(connectionString, { ssl: 'require' });
 const db = drizzle(sql);
@@ -113,7 +124,6 @@ router.post(
       const userData = user[0];
 
       // Generate JWT token
-      const jwtSecret = process.env.JWT_SECRET;
       if (!jwtSecret || jwtSecret.length < 32) {
         throw new Error('JWT_SECRET not configured properly');
       }

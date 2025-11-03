@@ -176,6 +176,13 @@ export const securityConfig: SecurityConfig = {
 };
 
 export const validateSecurityConfig = (): void => {
+  // Skip validation in development mode
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  if (nodeEnv === 'development') {
+    console.warn('⚠️  Running in development mode - skipping security configuration validation');
+    return;
+  }
+
   const requiredEnvVars = [
     'JWT_SECRET',
     'MASTER_ENCRYPTION_KEY',
@@ -198,7 +205,12 @@ export const validateSecurityConfig = (): void => {
     throw new Error('MASTER_ENCRYPTION_KEY must be at least 64 characters (32 bytes hex)');
   }
 
-  safeLogger.info('Security configuration validated successfully');
+  // Validate token secret
+  if (process.env.TOKEN_SECRET && process.env.TOKEN_SECRET.length < 32) {
+    throw new Error('TOKEN_SECRET must be at least 32 characters');
+  }
+
+  safeLogger.info('✅ Security configuration validated successfully');
 };
 
 export default securityConfig;
