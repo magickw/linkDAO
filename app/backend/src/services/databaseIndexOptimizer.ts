@@ -148,8 +148,8 @@ export class DatabaseIndexOptimizer {
       const result = await client.query(`
         SELECT 
           schemaname,
-          tablename,
-          indexname,
+          relname as tablename,
+          indexrelname as indexname,
           pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
           idx_scan as index_scans,
           idx_tup_read as tuples_read,
@@ -196,11 +196,11 @@ export class DatabaseIndexOptimizer {
       const result = await client.query(`
         SELECT 
           schemaname,
-          tablename,
+          relname as tablename,
           n_live_tup as row_count,
-          pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
-          pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
-          pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size,
+          pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) as total_size,
+          pg_size_pretty(pg_relation_size(schemaname||'.'||relname)) as table_size,
+          pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname) - pg_relation_size(schemaname||'.'||relname)) as index_size,
           seq_scan as sequential_scans,
           idx_scan as index_scans,
           n_tup_ins as tuples_inserted,
@@ -878,3 +878,7 @@ export class DatabaseIndexOptimizer {
 }
 
 export default DatabaseIndexOptimizer;
+
+
+
+
