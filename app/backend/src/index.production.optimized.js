@@ -1885,14 +1885,6 @@ app.post('/api/admin/moderation/:id/close', async (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-    }
-  });
-});
-
 // Moderation queue endpoint with caching
 app.get('/api/admin/moderation', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
@@ -3592,68 +3584,6 @@ app.put('/api/admin/users/:userId/role', [
       timestamp: new Date().toISOString()
     }
   });
-});
-
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
-  
-  // Log memory usage after startup
-  setTimeout(() => {
-    console.log('📊 Post-startup memory usage:');
-    logMemoryUsage();
-  }, 5000);
-});
-
-// Handle server errors
-server.on('error', (error) => {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
-
-  const bind = typeof PORT === 'string' ? 'Pipe ' + 
-PORT : 'Port ' + PORT;
-  switch (error.code) {
-    case 'EACCES':
-      console.error(`❌ ${bind} requires elevated pr
-ivileges`);
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(`❌ ${bind} is already in use`);
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-});
-
-// Add error handling
-process.on('uncaughtException', (error) => {
-  console.error('💥 Uncaught Exception:', error);
-  console.error('Stack trace:', error.stack);
-  // Don't exit immediately, try to continue running
-  console.log('🛑 Continuing execution despite uncaught exception...');
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit immediately, try to continue running
-  console.log('🛑 Continuing execution despite unhandled rejection...');
-});
-
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
-  console.log('📡 Received SIGTERM, shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('📡 Received SIGINT, shutting down gracefully...');
-  process.exit(0);
 });
 
 // Start server

@@ -32,6 +32,7 @@ Welcome to the Web3 Marketplace documentation. This comprehensive guide covers e
 - [Backup & Recovery](./operations/backup-recovery.md) - Data protection procedures
 
 ### Architecture & Design
+- [Platform Validation](./architecture/PLATFORM_VALIDATION.md) - Implementation validation against architecture diagram
 - [System Architecture](./architecture/README.md) - High-level system design
 - [Database Schema](./architecture/database.md) - Complete database documentation
 - [Security Model](./architecture/security.md) - Security architecture and best practices
