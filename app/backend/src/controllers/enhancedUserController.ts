@@ -297,4 +297,36 @@ export class EnhancedUserController {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  /**
+   * Get user community memberships
+   */
+  async getUserMemberships(req: Request, res: Response): Promise<void> {
+    try {
+      const { address } = req.params;
+      const { isActive, limit } = req.query;
+
+      if (!address) {
+        res.status(400).json({ error: 'User address is required' });
+        return;
+      }
+
+      const options: { isActive?: boolean; limit?: number } = {};
+      
+      if (isActive !== undefined) {
+        options.isActive = isActive === 'true';
+      }
+      
+      if (limit !== undefined) {
+        options.limit = parseInt(limit as string);
+      }
+
+      const memberships = await this.userService.getUserMemberships(address, options);
+
+      res.json({ success: true, data: memberships });
+    } catch (error) {
+      safeLogger.error('Error in getUserMemberships:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
 }

@@ -709,14 +709,14 @@ export const enhancedAuthRateLimit = enhancedRateLimitingService.createRateLimit
 
 export const enhancedApiRateLimit = enhancedRateLimitingService.createRateLimit({
   windowMs: 60 * 1000,
-  maxRequests: 200,
-  burstLimit: 50,
+  maxRequests: 500,
+  burstLimit: 100,
   burstWindowMs: 1000,
   alertThreshold: 85,
   dynamicLimit: (req: Request) => {
     // Higher limits for authenticated users
     const isAuthenticated = (req as any).user || (req as any).walletAddress;
-    return isAuthenticated ? 300 : 200;
+    return isAuthenticated ? 1000 : 500;
   },
   skipIf: (req: Request) => {
     // Skip rate limiting for health checks

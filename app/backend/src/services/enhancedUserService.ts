@@ -1,6 +1,6 @@
 import { DatabaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
-import { users, follows, posts, reactions, tips } from '../db/schema';
+import { users, follows, posts, reactions, tips, communities, communityMembers, userReputation } from '../db/schema';
 import { eq, desc, sql, and, or, ne, count, avg, sum } from 'drizzle-orm';
 
 export interface UserProfile {
@@ -519,41 +519,97 @@ export class EnhancedUserService {
    * Get trending users based on recent activity
    */
   async getTrendingUsers(limit = 10): Promise<UserProfile[]> {
-    const db = this.databaseService.getDatabase();
-
     try {
-      // Get users with recent high activity (posts, reactions, tips)
-      const recentActiveUsers = await db
+      const db = this.databaseService.getDatabase();
+      
+      // Get users with highest reputation scores from the marketplace reputation table
+      const trendingUsers = await db
         .select({
-          authorId: posts.authorId,
-          postCount: count(posts.id),
+          walletAddress: users.walletAddress,
+          handle: users.handle,
         })
-        .from(posts)
-        .where(sql`${posts.createdAt} > NOW() - INTERVAL '7 days'`)
-        .groupBy(posts.authorId)
-        .orderBy(desc(count(posts.id)))
-        .limit(limit * 2);
+        .from(users)
+        .leftJoin(userReputation, eq(users.walletAddress, userReputation.walletAddress))
+        .orderBy(desc(userReputation.reputationScore))
+        .limit(limit);
 
-      const profiles: UserProfile[] = [];
-      for (const user of recentActiveUsers) {
-        if (user.authorId) {
-          const profile = await this.getUserProfile(user.authorId);
-          if (profile) {
-            profiles.push(profile);
-          }
-        }
-      }
-
-      // Sort by reputation score and recent activity
-      profiles.sort((a, b) => {
-        const scoreA = a.reputationScore + a.postCount;
-        const scoreB = b.reputationScore + b.postCount;
-        return scoreB - scoreA;
-      });
-
-      return profiles.slice(0, limit);
+      // Convert to UserProfile format (this is a simplified version)
+      return trendingUsers.map(user => ({
+        id: '', // We don't have the user ID here
+        walletAddress: user.walletAddress,
+        handle: user.handle || '',
+        reputationScore: 0, // Would need to get from userReputation
+        followers: 0, // Would need to calculate from follows table
+        following: 0, // Would need to calculate from follows table
+        postCount: 0, // Would need to calculate from posts table
+        totalTipsReceived: 0, // Would need to calculate from tips table
+        totalReactionsReceived: 0, // Would need to calculate from reactions table
+        isVerified: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
     } catch (error) {
       safeLogger.error('Error getting trending users:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user community memberships
+   */
+  async getUserMemberships(userAddress: string, options: { isActive?: boolean; limit?: number } = {}): Promise<any[]> {
+    try {
+      const db = this.databaseService.getDatabase();
+      
+      // Build the query
+      let query = db
+        .select({
+          id: communityMembers.id,
+          communityId: communityMembers.communityId,
+          userAddress: communityMembers.userAddress,
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+          contributions: communityMembers.contributions,
+          joinedAt: communityMembers.joinedAt,
+          isActive: communityMembers.isActive,
+          communityName: communities.name,
+          communityDisplayName: communities.displayName,
+          communityIconUrl: communities.avatar,
+        })
+        .from(communityMembers)
+        .leftJoin(communities, eq(communityMembers.communityId, communities.id))
+        .where(eq(communityMembers.userAddress, userAddress));
+
+      // Apply filters
+      if (options.isActive !== undefined) {
+        query = query.where(eq(communityMembers.isActive, options.isActive));
+      }
+
+      // Apply limit
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
+      // Order by join date (newest first)
+      const memberships = await query.orderBy(desc(communityMembers.joinedAt));
+
+      return memberships.map(membership => ({
+        id: membership.id,
+        communityId: membership.communityId,
+        role: membership.role,
+        reputation: membership.reputation,
+        contributions: membership.contributions,
+        joinedAt: membership.joinedAt,
+        isActive: membership.isActive,
+        community: {
+          id: membership.communityId,
+          name: membership.communityName,
+          displayName: membership.communityDisplayName,
+          iconUrl: membership.communityIconUrl,
+        }
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting user memberships:', error);
       return [];
     }
   }

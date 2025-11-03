@@ -469,6 +469,9 @@ import pollRoutes from './routes/pollRoutes';
 // Import cache routes
 import cacheRoutes from './routes/cacheRoutes';
 
+// Import tip routes
+import tipRoutes from './routes/tipRoutes';
+
 // Import marketplace search routes
 import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
 // Import price oracle routes
@@ -613,6 +616,9 @@ app.use('/api/analytics', engagementAnalyticsRoutes);
 // Poll routes
 app.use('/api/polls', pollRoutes);
 
+// Tip routes
+app.use('/api/tips', tipRoutes);
+
 // Support ticketing routes
 import { supportTicketingRoutes } from './routes/supportTicketingRoutes';
 app.use('/api/support', supportTicketingRoutes);
@@ -656,6 +662,9 @@ app.use('/api/price-oracle', priceOracleRoutes);
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
+
+// Add API reputation routes for frontend compatibility
+app.use('/api/reputation', reputationRoutes);
 
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
