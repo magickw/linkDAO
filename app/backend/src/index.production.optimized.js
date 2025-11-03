@@ -1,3804 +1,529 @@
-#!/usr/bin/env node
-
-/**
- * Optimized Production Server Entry Point
- *
- * Memory-optimized production server with inline route implementations
- * Avoids ts-node overhead and minimizes memory footprint for Render free tier
- */
-
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const rateLimit = require('express-rate-limit');
-const { body, query, param, validationResult, sanitize } = require('express-validator');
-const { Pool } = require('pg');
-const Redis = require('ioredis'); // Add Redis for caching
-const jwt = require('jsonwebtoken');
-const xss = require('xss');
-const http = require('http'); // Add http module for WebSocket support
-const socketIo = require('socket.io'); // Add socket.io for WebSocket support
-require('dotenv').config();
-
-// Log initial memory usage
-console.log('🚀 Starting optimized production server...');
-logMemoryUsage();
-setupMemoryMonitoring();
-
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-});
-
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
-  if (err) {
-    console.error('❌ Database connection error:', err);
-  } else {
-    console.log('✅ Database connected successfully');
-  }
-});
-
-// Redis cache connection
-const cache = new Redis(process.env.REDIS_URL || {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || '0'),
-  keyPrefix: process.env.REDIS_KEY_PREFIX || 'admin:',
-  maxRetriesPerRequest: 3,
-  connectTimeout: 10000,
-  commandTimeout: 5000
-});
-
-// Add cache connection event handlers
-cache.on('connect', () => {
-  console.log('✅ Redis cache connected for admin endpoints');
-});
-
-cache.on('error', (error) => {
-  console.error('❌ Redis cache connection error:', error.message);
-});
-
-// Memory monitoring and management
-function logMemoryUsage() {
-  const used = process.memoryUsage();
-  console.log('Memory Usage:');
-  for (let key in used) {
-    console.log(`${key}: ${Math.round(used[key] / 1024 / 1024 * 100) / 100} MB`);
-  }
-}
-
-// Add memory monitoring
-function setupMemoryMonitoring() {
-  // Log memory usage every 5 minutes
-  setInterval(() => {
-    const used = process.memoryUsage();
-    const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024 * 100) / 100;
-    const heapTotalMB = Math.round(used.heapTotal / 1024 / 1024 * 100) / 100;
-    const memoryUsagePercent = Math.round((heapUsedMB / heapTotalMB) * 100);
-    
-    console.log(`📊 Memory Usage: ${heapUsedMB} MB / ${heapTotalMB} MB (${memoryUsagePercent}%)`);
-    
-    // Warn if memory usage is high
-    if (memoryUsagePercent > 80) {
-      console.warn(`⚠️ High memory usage: ${memoryUsagePercent}%`);
-      
-      // Force garbage collection if available and memory is critical
-      if (memoryUsagePercent > 90 && global.gc) {
-        console.log('🗑️ Forcing garbage collection due to high memory usage');
-        global.gc();
-      }
-      
-      // If memory usage is extremely high, log a critical alert
-      if (memoryUsagePercent > 95) {
-        console.error(`🚨 CRITICAL: Memory usage at ${memoryUsagePercent}% - System performance may be degraded`);
-      }
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-  }, 5 * 60 * 1000); // 5 minutes
-  
-  // More frequent check for critical memory usage (every 30 seconds)
-  setInterval(() => {
-    const used = process.memoryUsage();
-    const heapUsedMB = Math.round(used.heapUsed / 1024 / 1024 * 100) / 100;
-    const heapTotalMB = Math.round(used.heapTotal / 1024 / 1024 * 100) / 100;
-    const memoryUsagePercent = Math.round((heapUsedMB / heapTotalMB) * 100);
-    
-    // Force garbage collection if memory usage is critical
-    if (memoryUsagePercent > 95 && global.gc) {
-      console.log('🗑️ Emergency garbage collection due to critical memory usage');
-      global.gc();
-    }
-    
-    // If memory usage is extremely high, consider restarting the process
-    if (memoryUsagePercent > 98) {
-      console.error(`💥 EMERGENCY: Memory usage at ${memoryUsagePercent}% - Process may terminate`);
-    }
-  }, 30 * 1000); // 30 seconds
-}
-
-// Log initial memory usage
-console.log('🚀 Starting optimized production server...');
-logMemoryUsage();
-setupMemoryMonitoring();
-
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-// Enable trust proxy for proper IP address detection behind load balancers/proxies
-app.set('trust proxy', 1);
-
-// Basic middleware (memory efficient)
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      childSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-      formAction: ["'self'"],
-      baseUri: ["'self'"],
-      upgradeInsecureRequests: [],
-    },
-  },
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "same-site" },
-  dnsPrefetchControl: { allow: false },
-  frameguard: { action: "deny" },
-  hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000, // 1 year
-    includeSubDomains: true,
-    preload: true
-  },
-  ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: "no-referrer" },
-  xssFilter: true
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
 }));
-
-app.use(compression({
-  level: 6, // Balanced compression
-  threshold: 1024 // Only compress files > 1KB
-}));
-
-// CORS configuration - handle multiple origins properly
-const allowedOrigins = [
-  'https://www.linkdao.io',
-  'https://linkdao.io',
-  'https://app.linkdao.io',
-  'https://marketplace.linkdao.io',
-  'https://linkdao-backend.onrender.com',
-  // Add localhost for development
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001'
-];
-
-// Add any additional origins from environment variable
-const envOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [];
-const allAllowedOrigins = [...allowedOrigins, ...envOrigins];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    // Check if origin is in allowed list
-    if (allAllowedOrigins.includes(origin) || allAllowedOrigins.includes('*')) {
-      callback(null, true);
-    } else {
-      // Also allow localhost with any port for development
-      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin', 
-    'X-Requested-With', 
-    'Content-Type', 
-    'Accept', 
-    'Authorization',
-    'X-Request-ID',
-    'X-Correlation-ID',
-    'X-Session-ID',
-    'X-Wallet-Address',
-    'X-Chain-ID',
-    'X-API-Key',
-    'X-Client-Version',
-    'Cache-Control'
-  ],
-  exposedHeaders: [
-    'X-Request-ID',
-    'X-RateLimit-Limit',
-    'X-RateLimit-Remaining',
-    'X-RateLimit-Reset',
-    'X-Total-Count'
-  ]
-}));
-
-// Rate limiting (memory efficient)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // Limit each IP to 5000 requests per windowMs
-  message: 'Too many requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
 });
-
-// Admin rate limiting (stricter)
-const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many admin requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for sensitive admin operations
-const sensitiveAdminOperationLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 sensitive operations per windowMs
-  message: 'Too many sensitive admin operations from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Rate limiting for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 auth requests per windowMs
-  message: 'Too many authentication requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for feed endpoints
-const feedLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
-  message: 'Too many feed requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for follow endpoints
-const followLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
-  message: 'Too many follow requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for community endpoints
-const communityLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
-  message: 'Too many community requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for user endpoints
-const userLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
-  message: 'Too many user requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Specific rate limiting for governance endpoints
-const governanceLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
-  message: 'Too many governance requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use(limiter);
-
-// Body parsing (with limits)
-app.use(express.json({
-  limit: '10mb',
-  strict: true
-}));
-
-app.use(express.urlencoded({
-  extended: true,
-  limit: '10mb'
-}));
-
-// Validation middleware
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input parameters',
-        details: errors.array()
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-  next();
-};
-
-// ============================================================================
-// AUTHENTICATION MIDDLEWARE
-// ============================================================================
-
-// Enhanced authentication middleware with JWT validation
-const authenticateAdmin = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Missing or invalid authorization header'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-  
-  const token = authHeader.split(' ')[1];
-  
-  // Check for demo admin token
-  if (token === 'admin-token') {
-    // Mock admin user for demo purposes
-    req.adminId = 'admin-user';
-    next();
-    return;
-  }
-  
-  // Verify JWT token
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret-key');
-    
-    // Check if user has admin role
-    if (decoded.role === 'admin') {
-      req.adminId = decoded.userId || decoded.sub;
-      next();
-    } else {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Insufficient permissions'
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    }
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Invalid or expired token'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-};
-
-// ============================================================================
-// HEALTH & MONITORING ROUTES
-// ============================================================================
-
-app.get('/health', (req, res) => {
-  const memUsage = process.memoryUsage();
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: {
-      rss: Math.round(memUsage.rss / 1024 / 1024),
-      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
-      external: Math.round(memUsage.external / 1024 / 1024)
-    },
-    env: process.env.NODE_ENV || 'production'
-  });
-});
-
-app.get('/ping', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-app.get('/status', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      message: 'LinkDAO Marketplace API',
-      version: '1.0.0',
-      environment: process.env.NODE_ENV || 'production',
-      timestamp: new Date().toISOString(),
-      status: 'healthy'
-    }
-  });
-});
-
-// ============================================================================
-// AUTHENTICATION ROUTES
-// ============================================================================
-
-app.get('/api/auth/nonce/:address', (req, res) => {
-  const { address } = req.params;
-
-  // Generate a simple nonce
-  const nonce = `Sign this message to authenticate with LinkDAO: ${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-  res.json({
-    success: true,
-    data: {
-      nonce,
-      address,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-app.post('/api/auth/verify', (req, res) => {
-  const { address, signature, message } = req.body;
-
-  // For now, accept all signatures (add proper verification later)
-  res.json({
-    success: true,
-    data: {
-      token: `mock-jwt-token-${address}`,
-      address,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// MARKETPLACE LISTING ROUTES
-// ============================================================================
-
-app.get('/marketplace/listings', (req, res) => {
-  const { limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-
-  res.json({
-    success: true,
-    data: {
-      listings: [],
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: parseInt(limit),
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-app.get('/api/marketplace/listings', (req, res) => {
-  const { limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-
-  res.json({
-    success: true,
-    data: {
-      listings: [],
-      pagination: {
-        total: 0,
-        page: 1,
-        limit: parseInt(limit),
-      }
-    }
-  });
-});
-
-// Seller listings endpoint
-app.get('/marketplace/seller/listings/:address', (req, res) => {
-  const { address } = req.params;
-  const { status, limit = 20, offset = 0 } = req.query;
-  
-  res.json({
-    success: true,
-    data: {
-      listings: [],
-      total: 0,
-      hasMore: false
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Marketplace listing by ID endpoint
-app.get('/api/marketplace/listings/:id', (req, res) => {
-  const { id } = req.params;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      id: id,
-      sellerId: '0x1234567890123456789012345678901234567890',
-      title: 'Sample Product',
-      description: 'This is a sample product description',
-      price: {
-        amount: 0.1,
-        currency: 'ETH'
-      },
-      cryptoPrice: 0.1,
-      cryptoCurrency: 'ETH',
-      category: 'Electronics',
-      images: [
-        'https://placehold.co/600x400',
-        'https://placehold.co/600x400/cccccc',
-        'https://placehold.co/600x400/999999'
-      ],
-      inventory: 10,
-      status: 'active',
-      tags: ['electronics', 'gadget'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      views: 0,
-      favorites: 0,
-      seller: {
-        id: '0x1234567890123456789012345678901234567890',
-        walletAddress: '0x1234567890123456789012345678901234567890',
-        displayName: 'Sample Seller',
-        storeName: 'Sample Store',
-        rating: 4.5,
-        reputation: 95,
-        verified: true,
-        daoApproved: true,
-        profileImageUrl: 'https://placehold.co/100x100',
-        isOnline: true
-      },
-      trust: {
-        verified: true,
-        escrowProtected: true,
-        onChainCertified: true,
-        safetyScore: 98
-      },
-      specifications: {
-        'Brand': 'Sample Brand',
-        'Model': 'XYZ-123',
-        'Color': 'Black',
-        'Weight': '1.5kg'
-      },
-      shipping: {
-        free: true,
-        cost: '0',
-        estimatedDays: '3-5 business days',
-        regions: ['US', 'CA', 'UK', 'DE'],
-        expedited: true
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Seller notifications endpoint
-app.get('/marketplace/seller/notifications/:address', (req, res) => {
-  const { address } = req.params;
-  const { unreadOnly = false, limit = 20 } = req.query;
-  
-  res.json({
-    success: true,
-    data: {
-      notifications: [],
-      unreadCount: 0,
-      total: 0
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// REPUTATION ROUTES
-// ============================================================================
-
-app.get('/marketplace/reputation/:address', (req, res) => {
-  const { address } = req.params;
-
-  res.json({
-    success: true,
-    data: {
-      address,
-      score: 0,
-      level: 'New',
-      totalTransactions: 0,
-      successfulTransactions: 0,
-      disputes: 0,
-      rating: 0,
-      reviews: []
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-app.get('/api/marketplace/reputation/:address', (req, res) => {
-  const { address } = req.params;
-
-  res.json({
-    success: true,
-    data: {
-      address,
-      score: 0,
-      level: 'New',
-      totalTransactions: 0,
-      successfulTransactions: 0,
-      disputes: 0,
-      rating: 0,
-      reviews: []
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// USER PROFILE ROUTES
-// ============================================================================
-
-// Get user profile by wallet address
-app.get('/api/profiles/address/:address', (req, res) => {
-  const { address } = req.params;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      id: 'user-' + address,
-      walletAddress: address,
-      handle: 'user_' + address.substring(0, 8),
-      ens: '',
-      avatarCid: '',
-      bioCid: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get user profile by ID
-app.get('/api/profiles/:id', (req, res) => {
-  const { id } = req.params;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      id: id,
-      walletAddress: '0x' + id.substring(0, 40),
-      handle: 'user_' + id.substring(0, 8),
-      ens: '',
-      avatarCid: '',
-      bioCid: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Create user profile
-app.post('/api/profiles', (req, res) => {
-  const { walletAddress, handle } = req.body;
-  
-  // Mock response for now - in a real implementation, this would create in database
-  res.status(201).json({
-    success: true,
-    data: {
-      id: 'user-' + walletAddress,
-      walletAddress: walletAddress,
-      handle: handle || 'user_' + walletAddress.substring(0, 8),
-      ens: '',
-      avatarCid: '',
-      bioCid: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Update user profile
-app.put('/api/profiles/:id', (req, res) => {
-  const { id } = req.params;
-  const { handle, bioCid } = req.body;
-  
-  // Mock response for now - in a real implementation, this would update in database
-  res.json({
-    success: true,
-    data: {
-      id: id,
-      walletAddress: '0x' + id.substring(0, 40),
-      handle: handle || 'user_' + id.substring(0, 8),
-      ens: '',
-      avatarCid: '',
-      bioCid: bioCid || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Delete user profile
-app.delete('/api/profiles/:id', (req, res) => {
-  const { id } = req.params;
-  
-  // Mock response for now - in a real implementation, this would delete from database
-  res.status(204).send();
-});
-
-// ============================================================================
-// FEED ROUTES
-// ============================================================================
-
-// Get enhanced personalized feed
-app.get('/api/feed/enhanced', feedLimiter, (req, res) => {
-  const {
-    page = 1,
-    limit = 20,
-    sort = 'hot',
-    communities = [],
-    timeRange = 'day',
-    feedSource = 'all'
-  } = req.query;
-
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      posts: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      },
-      filters: {
-        sort,
-        timeRange,
-        feedSource
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get trending posts
-app.get('/api/feed/trending', feedLimiter, (req, res) => {
-  const {
-    page = 1,
-    limit = 20,
-    timeRange = 'day'
-  } = req.query;
-
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      posts: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      },
-      filters: {
-        timeRange
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// USER MEMBERSHIP ROUTES
-// ============================================================================
-
-// Get user memberships
-app.get('/api/users/:address/memberships', userLimiter, (req, res) => {
-  const { address } = req.params;
-  const { isActive, limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      memberships: [],
-      pagination: {
-        page: 1,
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get active user memberships
-app.get('/api/users/:address/memberships/active', userLimiter, (req, res) => {
-  const { address } = req.params;
-  const { limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      memberships: [],
-      pagination: {
-        page: 1,
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// FOLLOW ROUTES
-// ============================================================================
-
-// Follow a user
-app.post('/api/follows/follow', followLimiter, (req, res) => {
-  const { targetUserId } = req.body;
-  
-  // Mock response for now - in a real implementation, this would update the database
-  res.json({
-    success: true,
-    data: {
-      message: 'User followed successfully',
-      followId: 'follow-' + Date.now()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Unfollow a user
-app.post('/api/follows/unfollow', followLimiter, (req, res) => {
-  const { targetUserId } = req.body;
-  
-  // Mock response for now - in a real implementation, this would update the database
-  res.json({
-    success: true,
-    data: {
-      message: 'User unfollowed successfully'
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get followers for a user
-app.get('/api/follows/followers/:address', followLimiter, (req, res) => {
-  const { address } = req.params;
-  const { page = 1, limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      followers: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get following for a user
-app.get('/api/follows/following/:address', followLimiter, (req, res) => {
-  const { address } = req.params;
-  const { page = 1, limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      following: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Check if user is following another user
-app.get('/api/follows/is-following/:follower/:following', followLimiter, (req, res) => {
-  const { follower, following } = req.params;
-  
-  // Mock response for now - in a real implementation, this would check the database
-  res.json({
-    success: true,
-    data: {
-      isFollowing: false
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get follow count for a user
-app.get('/api/follows/count/:address', followLimiter, (req, res) => {
-  const { address } = req.params;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      followers: 0,
-      following: 0
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// COMMUNITY ROUTES
-// ============================================================================
-
-// Get trending communities
-app.get('/api/communities/trending', communityLimiter, (req, res) => {
-  const { limit = 10 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      communities: [],
-      pagination: {
-        page: 1,
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get all public communities
-app.get('/api/communities', communityLimiter, (req, res) => {
-  const { isPublic = true, limit = 50 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      communities: [],
-      pagination: {
-        page: 1,
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// GOVERNANCE ROUTES
-// ============================================================================
-
-// Get active proposals
-app.get('/api/governance/proposals/active', governanceLimiter, (req, res) => {
-  const { page = 1, limit = 20 } = req.query;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      proposals: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        hasMore: false
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Get proposal by ID
-app.get('/api/governance/proposals/:id', governanceLimiter, (req, res) => {
-  const { id } = req.params;
-  
-  // Mock response for now - in a real implementation, this would fetch from database
-  res.json({
-    success: true,
-    data: {
-      proposal: {
-        id,
-        title: 'Sample Proposal',
-        description: 'This is a sample proposal',
-        status: 'active',
-        votes: {
-          yes: 0,
-          no: 0,
-          abstain: 0
-        },
-        createdAt: new Date().toISOString(),
-        endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Vote on proposal
-app.post('/api/governance/proposals/:id/vote', governanceLimiter, (req, res) => {
-  const { id } = req.params;
-  const { vote, reason } = req.body;
-  
-  // Mock response for now - in a real implementation, this would update the database
-  res.json({
-    success: true,
-    data: {
-      message: 'Vote recorded successfully',
-      voteId: 'vote-' + Date.now()
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// POSTS/FEED ROUTES
-// ============================================================================
-
-app.get('/api/posts/feed', (req, res) => {
-  const { limit = 20, cursor } = req.query;
-
-  res.json({
-    success: true,
-    data: {
-      posts: [],
-      cursor: null
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// ============================================================================
-// ADMIN ROUTES (WITH AUTHENTICATION, VALIDATION, AND REAL DATABASE QUERIES)
-// ============================================================================
-
-// Apply admin middleware and rate limiting to all admin routes
-app.use('/api/admin', authenticateAdmin, adminLimiter);
-
-// Comprehensive error logging function
-function logError(error, context, req = null) {
-  const errorLog = {
-    timestamp: new Date().toISOString(),
-    error: {
-      message: error.message,
-      stack: error.stack,
-      code: error.code || 'UNKNOWN_ERROR'
-    },
-    context,
-    request: req ? {
-      method: req.method,
-      url: req.url,
-      headers: req.headers,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    } : null
-  };
-  
-  console.error('APPLICATION_ERROR:', JSON.stringify(errorLog, null, 2));
-  
-  // In a production environment, you might want to send this to a logging service
-  // like Winston, Bunyan, or a cloud logging service
-}
-
-// Simple audit logging function
-async function logAdminAction(action, actorId, details = {}) {
-  try {
-    // In a production environment, this would connect to the actual audit logging service
-    // For now, we'll log to console and optionally store in database
-    const auditEntry = {
-      timestamp: new Date().toISOString(),
-      action,
-      actorId,
-      details,
-      ipAddress: details.ipAddress || 'unknown',
-      userAgent: details.userAgent || 'unknown'
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
     };
-    
-    console.log('ADMIN_AUDIT_LOG:', JSON.stringify(auditEntry));
-    
-    // If we want to store in database, we could do something like:
-    /*
-    const client = await pool.connect();
-    try {
-      await client.query(
-        'INSERT INTO moderation_audit_log (action_type, actor_id, actor_type, old_state, new_state, reasoning, ip_address, user_agent, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-        [
-          action,
-          actorId,
-          'admin',
-          details.oldState ? JSON.stringify(details.oldState) : null,
-          details.newState ? JSON.stringify(details.newState) : null,
-          details.reasoning || null,
-          details.ipAddress || null,
-          details.userAgent || null,
-          new Date().toISOString()
-        ]
-      );
-    } finally {
-      client.release();
-    }
-    */
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
-  }
-}
-
-// Utility function to get cached data or fetch from database
-async function getCachedOrFetch(cacheKey, ttl, fetchFunction) {
-  try {
-    // Try to get from cache first
-    const cachedData = await cache.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
-    
-    // If not in cache, fetch from database
-    const data = await fetchFunction();
-    
-    // Store in cache
-    await cache.setex(cacheKey, ttl, JSON.stringify(data));
-    
-    return data;
-  } catch (error) {
-    console.error(`Error in getCachedOrFetch for ${cacheKey}:`, error);
-    // If cache fails, fetch directly from database
-    return await fetchFunction();
-  }
-}
-
-// Admin stats endpoint with caching
-app.get('/api/admin/stats', async (req, res) => {
-  try {
-    const stats = await getCachedOrFetch('admin:stats', 60, async () => {
-      const client = await pool.connect();
-      
-      try {
-        // Get moderation statistics
-        const pendingModerationsResult = await client.query(
-          'SELECT COUNT(*) as count FROM moderation_cases WHERE status = $1',
-          ['pending']
-        );
-        const pendingModerations = parseInt(pendingModerationsResult.rows[0].count);
-        
-        // Get seller application statistics
-        const pendingSellersResult = await client.query(
-          'SELECT COUNT(*) as count FROM seller_verifications WHERE current_tier = $1',
-          ['unverified']
-        );
-        const pendingSellerApplications = parseInt(pendingSellersResult.rows[0].count);
-        
-        // Get dispute statistics
-        const openDisputesResult = await client.query(
-          'SELECT COUNT(*) as count FROM disputes WHERE status = $1',
-          ['open']
-        );
-        const openDisputes = parseInt(openDisputesResult.rows[0].count);
-        
-        // Get user statistics
-        const totalUsersResult = await client.query('SELECT COUNT(*) as count FROM users');
-        const totalUsers = parseInt(totalUsersResult.rows[0].count);
-        
-        const totalSellersResult = await client.query(
-          'SELECT COUNT(*) as count FROM marketplace_users WHERE role = $1',
-          ['seller']
-        );
-        const totalSellers = parseInt(totalSellersResult.rows[0].count);
-        
-        // Get suspended users (placeholder - would need actual suspension table)
-        const suspendedUsers = 0;
-        
-        // Get recent actions (placeholder - would need actual audit log)
-        const recentActions = [];
-        
-        return {
-          pendingModerations,
-          pendingSellerApplications,
-          openDisputes,
-          suspendedUsers,
-          totalUsers,
-          totalSellers,
-          recentActions
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_admin_stats', 'system', {
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: stats,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_admin_stats', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch admin stats'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+process.on('uncaughtException', (error) => {
+    const errorDetails = {
+        timestamp: new Date().toISOString(),
+        type: 'UNCAUGHT_EXCEPTION',
+        message: error.message,
+        name: error.name,
+        code: error.code,
+        stack: error.stack,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+    };
+    process.stdout.write('\n=== UNCAUGHT EXCEPTION (RAW OUTPUT) ===\n');
+    process.stdout.write(JSON.stringify(errorDetails, null, 2));
+    process.stdout.write('\n=====================================\n\n');
+    process.exit(1);
 });
-
-// Admin dashboard metrics endpoint with caching
-app.get('/api/admin/dashboard/metrics', async (req, res) => {
-  try {
-    const metrics = await getCachedOrFetch('admin:dashboard:metrics', 120, async () => {
-      const client = await pool.connect();
-      
-      try {
-        // Get real analytics data (simplified for demo)
-        const totalAlertsResult = await client.query('SELECT COUNT(*) as count FROM moderation_cases');
-        const totalAlerts = parseInt(totalAlertsResult.rows[0].count);
-        
-        const activeAlertsResult = await client.query(
-          'SELECT COUNT(*) as count FROM moderation_cases WHERE status = $1',
-          ['pending']
-        );
-        const activeAlerts = parseInt(activeAlertsResult.rows[0].count);
-        
-        const resolvedAlertsResult = await client.query(
-          'SELECT COUNT(*) as count FROM disputes WHERE status = $1',
-          ['resolved']
-        );
-        const resolvedAlerts = parseInt(resolvedAlertsResult.rows[0].count);
-        
-        // Mock data for average response time and system health
-        const averageResponseTime = 120; // seconds
-        const systemHealth = 95; // percentage
-        
-        return {
-          totalAlerts,
-          activeAlerts,
-          resolvedAlerts,
-          averageResponseTime,
-          systemHealth
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_dashboard_metrics', 'system', {
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: metrics,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_dashboard_metrics', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch dashboard metrics'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
+process.on('unhandledRejection', (reason, promise) => {
+    const rejectionDetails = {
+        timestamp: new Date().toISOString(),
+        type: 'UNHANDLED_REJECTION',
+        reason: reason instanceof Error ? {
+            message: reason.message,
+            name: reason.name,
+            stack: reason.stack,
+            code: reason.code
+        } : String(reason)
+    };
+    process.stdout.write('\n=== UNHANDLED REJECTION (RAW OUTPUT) ===\n');
+    process.stdout.write(JSON.stringify(rejectionDetails, null, 2));
+    process.stdout.write('\n======================================\n\n');
 });
-
-// Admin dashboard status endpoint
-app.get('/api/admin/dashboard/status', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_dashboard_status', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      status: "operational",
-      lastChecked: new Date().toISOString(),
-      components: []
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin dashboard historical metrics endpoint
-app.get('/api/admin/dashboard/historical', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_historical_metrics', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Mock data - in a real implementation, this would fetch from analytics service
-  const now = new Date();
-  const timeSeries = [];
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    timeSeries.push({
-      date: date.toISOString().split('T')[0],
-      sales: Math.floor(Math.random() * 10000),
-      orders: Math.floor(Math.random() * 100),
-      gmv: Math.floor(Math.random() * 15000)
-    });
-  }
-  
-  res.json({
-    success: true,
-    data: {
-      timeSeries: timeSeries,
-      metrics: {
-        totalRevenue: timeSeries.reduce((sum, day) => sum + day.sales, 0),
-        totalOrders: timeSeries.reduce((sum, day) => sum + day.orders, 0)
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin user management endpoint
-app.get('/api/admin/users', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_users', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Mock data - in a real implementation, this would fetch from user database
-  const users = [];
-  
-  res.json({
-    success: true,
-    data: users,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin user management endpoint (with search)
-app.get('/api/admin/users/search', async (req, res) => {
-  const { query } = req.query;
-  
-  // Log the action
-  await logAdminAction('search_users', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    searchQuery: query
-  });
-  
-  // Mock data - in a real implementation, this would search the user database
-  const users = [];
-  
-  res.json({
-    success: true,
-    data: users,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin user management endpoint (get user by ID)
-app.get('/api/admin/users/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('view_user', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: id
-  });
-  
-  // Mock data - in a real implementation, this would fetch from user database
-  const user = null;
-  
-  if (user) {
-    res.json({
-      success: true,
-      data: user,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      error: {
-        code: 'USER_NOT_FOUND',
-        message: 'User not found'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Admin user management endpoint (update user)
-app.put('/api/admin/users/:id', async (req, res) => {
-  const { id } = req.params;
-  const { action, reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('update_user', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: id,
-    action,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the user in the database
-  const user = {
-    id,
-    action,
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: user,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin user management endpoint (ban user)
-app.post('/api/admin/users/:id/ban', async (req, res) => {
-  const { id } = req.params;
-  const { reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('ban_user', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: id,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the user's status in the database
-  const user = {
-    id,
-    status: 'banned',
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: user,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin user management endpoint (unban user)
-app.post('/api/admin/users/:id/unban', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('unban_user', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: id
-  });
-  
-  // Mock data - in a real implementation, this would update the user's status in the database
-  const user = {
-    id,
-    status: 'active'
-  };
-  
-  res.json({
-    success: true,
-    data: user,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin content management endpoint
-app.get('/api/admin/content', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_content', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Mock data - in a real implementation, this would fetch from content database
-  const content = [];
-  
-  res.json({
-    success: true,
-    data: content,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin content management endpoint (with search)
-app.get('/api/admin/content/search', async (req, res) => {
-  const { query } = req.query;
-  
-  // Log the action
-  await logAdminAction('search_content', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    searchQuery: query
-  });
-  
-  // Mock data - in a real implementation, this would search the content database
-  const content = [];
-  
-  res.json({
-    success: true,
-    data: content,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin content management endpoint (get content by ID)
-app.get('/api/admin/content/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('view_content_item', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    contentId: id
-  });
-  
-  // Mock data - in a real implementation, this would fetch from content database
-  const item = null;
-  
-  if (item) {
-    res.json({
-      success: true,
-      data: item,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      error: {
-        code: 'CONTENT_NOT_FOUND',
-        message: 'Content not found'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Admin content management endpoint (update content)
-app.put('/api/admin/content/:id', async (req, res) => {
-  const { id } = req.params;
-  const { action, reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('update_content', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    contentId: id,
-    action,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the content in the database
-  const item = {
-    id,
-    action,
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: item,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin content management endpoint (delete content)
-app.delete('/api/admin/content/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('delete_content', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    contentId: id
-  });
-  
-  // Mock data - in a real implementation, this would delete the content from the database
-  res.json({
-    success: true,
-    data: {
-      message: 'Content deleted successfully'
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin community management endpoint
-app.get('/api/admin/communities', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_communities', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Mock data - in a real implementation, this would fetch from community database
-  const communities = [];
-  
-  res.json({
-    success: true,
-    data: communities,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin community management endpoint (with search)
-app.get('/api/admin/communities/search', async (req, res) => {
-  const { query } = req.query;
-  
-  // Log the action
-  await logAdminAction('search_communities', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    searchQuery: query
-  });
-  
-  // Mock data - in a real implementation, this would search the community database
-  const communities = [];
-  
-  res.json({
-    success: true,
-    data: communities,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin community management endpoint (get community by ID)
-app.get('/api/admin/communities/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('view_community', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    communityId: id
-  });
-  
-  // Mock data - in a real implementation, this would fetch from community database
-  const community = null;
-  
-  if (community) {
-    res.json({
-      success: true,
-      data: community,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      error: {
-        code: 'COMMUNITY_NOT_FOUND',
-        message: 'Community not found'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Admin community management endpoint (update community)
-app.put('/api/admin/communities/:id', async (req, res) => {
-  const { id } = req.params;
-  const { action, reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('update_community', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    communityId: id,
-    action,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the community in the database
-  const community = {
-    id,
-    action,
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: community,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin community management endpoint (delete community)
-app.delete('/api/admin/communities/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('delete_community', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    communityId: id
-  });
-  
-  // Mock data - in a real implementation, this would delete the community from the database
-  res.json({
-    success: true,
-    data: {
-      message: 'Community deleted successfully'
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin moderation endpoint
-app.get('/api/admin/moderation', async (req, res) => {
-  // Log the action
-  await logAdminAction('view_moderation_cases', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  // Mock data - in a real implementation, this would fetch from moderation database
-  const cases = [];
-  
-  res.json({
-    success: true,
-    data: cases,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin moderation endpoint (with search)
-app.get('/api/admin/moderation/search', async (req, res) => {
-  const { query } = req.query;
-  
-  // Log the action
-  await logAdminAction('search_moderation_cases', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    searchQuery: query
-  });
-  
-  // Mock data - in a real implementation, this would search the moderation database
-  const cases = [];
-  
-  res.json({
-    success: true,
-    data: cases,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin moderation endpoint (get case by ID)
-app.get('/api/admin/moderation/:id', async (req, res) => {
-  const { id } = req.params;
-  
-  // Log the action
-  await logAdminAction('view_moderation_case', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    caseId: id
-  });
-  
-  // Mock data - in a real implementation, this would fetch from moderation database
-  const caseData = null;
-  
-  if (caseData) {
-    res.json({
-      success: true,
-      data: caseData,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } else {
-    res.status(404).json({
-      success: false,
-      error: {
-        code: 'CASE_NOT_FOUND',
-        message: 'Moderation case not found'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Admin moderation endpoint (update case)
-app.put('/api/admin/moderation/:id', async (req, res) => {
-  const { id } = req.params;
-  const { action, reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('update_moderation_case', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    caseId: id,
-    action,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the case in the database
-  const caseData = {
-    id,
-    action,
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: caseData,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Admin moderation endpoint (close case)
-app.post('/api/admin/moderation/:id/close', async (req, res) => {
-  const { id } = req.params;
-  const { reason } = req.body;
-  
-  // Log the action
-  await logAdminAction('close_moderation_case', req.adminId || 'unknown', {
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-    caseId: id,
-    reason
-  });
-  
-  // Mock data - in a real implementation, this would update the case status in the database
-  const caseData = {
-    id,
-    status: 'closed',
-    reason
-  };
-  
-  res.json({
-    success: true,
-    data: caseData,
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Moderation queue endpoint with caching
-app.get('/api/admin/moderation', [
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
-], validate, async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const cacheKey = `admin:moderation:page:${page}:limit:${limit}`;
-    
-    const result = await getCachedOrFetch(cacheKey, 30, async () => {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-      
-      const client = await pool.connect();
-      
-      try {
-        // Get moderation cases
-        const casesResult = await client.query(
-          'SELECT * FROM moderation_cases ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-          [parseInt(limit), offset]
-        );
-        
-        // Get total count
-        const totalCountResult = await client.query('SELECT COUNT(*) as count FROM moderation_cases');
-        const total = parseInt(totalCountResult.rows[0].count);
-        
-        return {
-          items: casesResult.rows,
-          total,
-          page: parseInt(page),
-          totalPages: Math.ceil(total / parseInt(limit))
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_moderation_queue', req.adminId || 'unknown', {
-      page,
-      limit,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: result,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_moderation_queue', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch moderation queue'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Assign moderation item endpoint with real database queries and validation
-app.post('/api/admin/moderation/:itemId/assign', sensitiveAdminOperationLimiter, [
-  param('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer'),
-  body('assigneeId').notEmpty().withMessage('Assignee ID is required').trim().escape()
-], validate, async (req, res) => {
-  try {
-    const { itemId } = req.params;
-    const { assigneeId } = req.body;
-    
-    // Sanitize inputs to prevent XSS
-    const sanitizedAssigneeId = xss(assigneeId);
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get the current state before updating
-      const currentResult = await client.query(
-        'SELECT * FROM moderation_cases WHERE id = $1',
-        [parseInt(itemId)]
-      );
-      
-      const oldState = currentResult.rows[0] || null;
-      
-      // Update moderation case
-      const result = await client.query(
-        'UPDATE moderation_cases SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-        ['in_review', new Date().toISOString(), parseInt(itemId)]
-      );
-      
-      if (result.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('assign_moderation_item', req.adminId || 'unknown', {
-          itemId,
-          assigneeId: sanitizedAssigneeId,
-          success: false,
-          reason: 'Item not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Moderation item not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Log the action
-      await logAdminAction('assign_moderation_item', req.adminId || 'unknown', {
-        itemId,
-        assigneeId: sanitizedAssigneeId,
-        success: true,
-        oldState,
-        newState: result.rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
-        success: true,
-        data: {
-          message: `Item ${itemId} assigned to ${sanitizedAssigneeId}`
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    logError(error, 'assign_moderation_item', req);
-    
-    // Log the action even if it failed
-    await logAdminAction('assign_moderation_item', req.adminId || 'unknown', {
-      itemId: req.params.itemId,
-      assigneeId: req.body.assigneeId,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to assign moderation item'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Resolve moderation item endpoint with real database queries and validation
-app.post('/api/admin/moderation/:itemId/resolve', sensitiveAdminOperationLimiter, [
-  param('itemId').isInt({ min: 1 }).withMessage('Item ID must be a positive integer'),
-  body('action').notEmpty().withMessage('Action is required').trim().escape(),
-  body('reason').notEmpty().withMessage('Reason is required').trim().escape(),
-  body('details').optional().isObject()
-], validate, async (req, res) => {
-  try {
-    const { itemId } = req.params;
-    const { action, reason, details } = req.body;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get the current state before updating
-      const currentResult = await client.query(
-        'SELECT * FROM moderation_cases WHERE id = $1',
-        [parseInt(itemId)]
-      );
-      
-      const oldState = currentResult.rows[0] || null;
-      
-      // Update moderation case
-      const result = await client.query(
-        'UPDATE moderation_cases SET status = $1, decision = $2, reason_code = $3, updated_at = $4 WHERE id = $5 RETURNING *',
-        ['resolved', action, reason, new Date().toISOString(), parseInt(itemId)]
-      );
-      
-      if (result.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('resolve_moderation_item', req.adminId || 'unknown', {
-          itemId,
-          action,
-          reason,
-          success: false,
-          reason: 'Item not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Moderation item not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Log the action
-      await logAdminAction('resolve_moderation_item', req.adminId || 'unknown', {
-        itemId,
-        action,
-        reason,
-        details,
-        success: true,
-        oldState,
-        newState: result.rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
-        success: true,
-        data: {
-          message: `Item ${itemId} resolved with action: ${action}`
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error resolving moderation item:', error);
-    
-    // Log the action even if it failed
-    await logAdminAction('resolve_moderation_item', req.adminId || 'unknown', {
-      itemId: req.params.itemId,
-      action: req.body.action,
-      reason: req.body.reason,
-      details: req.body.details,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to resolve moderation item'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Seller applications endpoint with caching
-app.get('/api/admin/sellers/applications', [
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
-], validate, async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const cacheKey = `admin:sellers:applications:page:${page}:limit:${limit}`;
-    
-    const result = await getCachedOrFetch(cacheKey, 30, async () => {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-      
-      const client = await pool.connect();
-      
-      try {
-        // Get seller applications
-        const applicationsResult = await client.query(
-          `SELECT 
-            mu.user_id as id,
-            mu.legal_name,
-            mu.email,
-            mu.country,
-            mu.kyc_verified,
-            mu.created_at,
-            sv.current_tier,
-            sv.reputation_score,
-            sv.total_volume
-          FROM marketplace_users mu
-          LEFT JOIN seller_verifications sv ON mu.user_id = sv.user_id
-          WHERE mu.role = $1
-          ORDER BY mu.created_at DESC
-          LIMIT $2 OFFSET $3`,
-          ['seller', parseInt(limit), offset]
-        );
-        
-        // Get total count
-        const totalCountResult = await client.query(
-          'SELECT COUNT(*) as count FROM marketplace_users WHERE role = $1',
-          ['seller']
-        );
-        const total = parseInt(totalCountResult.rows[0].count);
-        
-        return {
-          applications: applicationsResult.rows,
-          total,
-          page: parseInt(page),
-          totalPages: Math.ceil(total / parseInt(limit))
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_seller_applications', req.adminId || 'unknown', {
-      page,
-      limit,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: result,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_seller_applications', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch seller applications'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Get specific seller application endpoint with real database queries and validation
-app.get('/api/admin/sellers/applications/:applicationId', [
-  param('applicationId').notEmpty().withMessage('Application ID is required')
-], validate, async (req, res) => {
-  try {
-    const { applicationId } = req.params;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get seller application details
-      const applicationResult = await client.query(
-        `SELECT 
-          mu.user_id as id,
-          mu.legal_name,
-          mu.email,
-          mu.country,
-          mu.shipping_address,
-          mu.billing_address,
-          mu.kyc_verified,
-          mu.kyc_verification_date,
-          mu.kyc_provider,
-          mu.created_at,
-          sv.current_tier,
-          sv.reputation_score,
-          sv.total_volume,
-          sv.successful_transactions,
-          sv.dispute_rate
-        FROM marketplace_users mu
-        LEFT JOIN seller_verifications sv ON mu.user_id = sv.user_id
-        WHERE mu.user_id = $1`,
-        [applicationId]
-      );
-      
-      if (applicationResult.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('view_seller_application', req.adminId || 'unknown', {
-          applicationId,
-          success: false,
-          reason: 'Application not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Seller application not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Log the action
-      await logAdminAction('view_seller_application', req.adminId || 'unknown', {
-        applicationId,
-        success: true,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
-        success: true,
-        data: applicationResult.rows[0],
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error fetching seller application:', error);
-    
-    // Log the action even if it failed
-    await logAdminAction('view_seller_application', req.adminId || 'unknown', {
-      applicationId: req.params.applicationId,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch seller application'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Review seller application endpoint with real database queries and validation
-app.post('/api/admin/sellers/applications/:applicationId/review', sensitiveAdminOperationLimiter, [
-  param('applicationId').notEmpty().withMessage('Application ID is required').trim().escape(),
-  body('status').isIn(['approved', 'rejected', 'requires_info']).withMessage('Status must be approved, rejected, or requires_info'),
-  body('notes').optional().trim().escape(),
-  body('rejectionReason').optional().trim().escape(),
-  body('requiredInfo').optional().trim().escape()
-], validate, async (req, res) => {
-  try {
-    const { applicationId } = req.params;
-    const { status, notes, rejectionReason, requiredInfo } = req.body;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get the current state before updating
-      const currentResult = await client.query(
-        `SELECT 
-          mu.user_id as id,
-          mu.legal_name,
-          mu.email,
-          mu.country,
-          mu.shipping_address,
-          mu.billing_address,
-          mu.kyc_verified,
-          mu.kyc_verification_date,
-          mu.kyc_provider,
-          mu.created_at,
-          sv.current_tier,
-          sv.reputation_score,
-          sv.total_volume,
-          sv.successful_transactions,
-          sv.dispute_rate
-        FROM marketplace_users mu
-        LEFT JOIN seller_verifications sv ON mu.user_id = sv.user_id
-        WHERE mu.user_id = $1`,
-        [applicationId]
-      );
-      
-      const oldState = currentResult.rows[0] || null;
-      
-      // Determine new tier based on review status
-      let newTier = 'standard';
-      if (status === 'approved') {
-        newTier = 'verified';
-      } else if (status === 'rejected') {
-        newTier = 'unverified';
-      }
-      
-      // Update seller verification
-      const result = await client.query(
-        `INSERT INTO seller_verifications 
-          (user_id, current_tier, updated_at, created_at)
-          VALUES ($1, $2, $3, $3)
-          ON CONFLICT (user_id) 
-          DO UPDATE SET current_tier = $2, updated_at = $3
-          RETURNING *`,
-        [applicationId, newTier, new Date().toISOString()]
-      );
-      
-      // Log the action
-      await logAdminAction('review_seller_application', req.adminId || 'unknown', {
-        applicationId,
-        status,
-        notes,
-        rejectionReason,
-        requiredInfo,
-        success: true,
-        oldState,
-        newState: result.rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
-        success: true,
-        data: {
-          message: `Application ${applicationId} reviewed with status: ${status}`
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    logError(error, 'review_seller_application', req);
-    
-    // Log the action even if it failed
-    await logAdminAction('review_seller_application', req.adminId || 'unknown', {
-      applicationId: req.params.applicationId,
-      status: req.body.status,
-      notes: req.body.notes,
-      rejectionReason: req.body.rejectionReason,
-      requiredInfo: req.body.requiredInfo,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to review seller application'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Get seller risk assessment endpoint
-app.get('/api/admin/sellers/applications/:applicationId/risk-assessment', [
-  param('applicationId').notEmpty().withMessage('Application ID is required')
-], validate, async (req, res) => {
-  try {
-    const { applicationId } = req.params;
-
-    const client = await pool.connect();
-
-    try {
-      // Get seller verification data
-      const [seller] = await client.query(
-        `SELECT
-          sv.reputation_score,
-          sv.total_volume,
-          sv.successful_transactions,
-          sv.dispute_rate,
-          mu.kyc_verified,
-          mu.created_at
-        FROM seller_verifications sv
-        LEFT JOIN marketplace_users mu ON sv.user_id = mu.user_id
-        WHERE sv.user_id = $1`,
-        [applicationId]
-      ).then(result => result.rows);
-
-      if (!seller) {
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Seller not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-
-      // Calculate risk assessment scores
-      const accountAge = Math.floor((Date.now() - new Date(seller.created_at).getTime()) / (1000 * 60 * 60 * 24));
-      const volumeFloat = parseFloat(seller.total_volume || '0');
-      const disputeRateFloat = parseFloat(seller.dispute_rate || '0');
-
-      const factors = {
-        account_age: Math.min(100, (accountAge / 365) * 100),
-        kyc_verification: seller.kyc_verified ? 100 : 0,
-        transaction_history: Math.min(100, (seller.successful_transactions / 10) * 100),
-        dispute_rate: Math.max(0, 100 - (disputeRateFloat * 20)),
-        volume_score: Math.min(100, (volumeFloat / 10000) * 100)
-      };
-
-      const overallScore = Math.round(
-        (factors.account_age * 0.2 +
-         factors.kyc_verification * 0.3 +
-         factors.transaction_history * 0.2 +
-         factors.dispute_rate * 0.2 +
-         factors.volume_score * 0.1)
-      );
-
-      const notes = [];
-      if (!seller.kyc_verified) notes.push("KYC verification not completed");
-      if (disputeRateFloat > 5) notes.push("High dispute rate detected");
-      if (seller.successful_transactions < 5) notes.push("Limited transaction history");
-      if (accountAge < 30) notes.push("New account - less than 30 days old");
-
-      // Log the action
-      await logAdminAction('view_seller_risk_assessment', req.adminId || 'unknown', {
-        applicationId,
-        overallScore,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-
-      res.json({
-        success: true,
-        data: {
-          assessment: {
-            overallScore,
-            factors,
-            notes
-          }
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    logError(error, 'fetch_seller_risk_assessment', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch risk assessment'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Get seller performance endpoint
-app.get('/api/admin/sellers/performance', [
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
-], validate, async (req, res) => {
-  try {
-    const { page = 1, limit = 20 } = req.query;
-
-    const client = await pool.connect();
-
-    try {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-
-      // Get verified sellers with performance metrics
-      const sellers = await client.query(
-        `SELECT
-          mu.user_id as id,
-          mu.legal_name as seller_handle,
-          mu.legal_name as business_name,
-          sv.current_tier,
-          sv.reputation_score,
-          sv.total_volume,
-          sv.successful_transactions,
-          sv.dispute_rate,
-          mu.created_at,
-          sv.updated_at
-        FROM marketplace_users mu
-        LEFT JOIN seller_verifications sv ON mu.user_id = sv.user_id
-        WHERE mu.role = $1
-        ORDER BY sv.total_volume DESC
-        LIMIT $2 OFFSET $3`,
-        ['seller', parseInt(limit), offset]
-      ).then(result => result.rows);
-
-      // Calculate performance status for each seller
-      const sellersWithPerformance = sellers.map(seller => {
-        const volumeFloat = parseFloat(seller.total_volume || '0');
-        const disputeRateFloat = parseFloat(seller.dispute_rate || '0');
-        const reputationScore = seller.reputation_score || 0;
-
-        // Determine performance status
-        let performanceStatus = 'good';
-        if (reputationScore >= 90 && disputeRateFloat < 2) {
-          performanceStatus = 'excellent';
-        } else if (reputationScore < 50 || disputeRateFloat > 10) {
-          performanceStatus = 'critical';
-        } else if (reputationScore < 70 || disputeRateFloat > 5) {
-          performanceStatus = 'warning';
-        }
-
-        // Calculate mock trends (in production, compare with previous period)
-        const salesGrowth = Math.random() * 40 - 10; // -10% to +30%
-        const revenueGrowth = Math.random() * 40 - 10;
-        const ratingTrend = Math.random() * 2 - 0.5; // -0.5 to +1.5
-
-        return {
-          id: seller.id,
-          sellerId: seller.id,
-          sellerHandle: seller.seller_handle || 'Unknown',
-          businessName: seller.business_name || 'Unknown Business',
-          metrics: {
-            totalSales: seller.successful_transactions || 0,
-            totalRevenue: volumeFloat,
-            averageOrderValue: volumeFloat / Math.max(seller.successful_transactions || 1, 1),
-            totalOrders: seller.successful_transactions || 0,
-            completedOrders: seller.successful_transactions || 0,
-            cancelledOrders: 0,
-            averageRating: reputationScore / 20, // Convert 0-100 to 0-5
-            totalReviews: Math.floor(seller.successful_transactions * 0.7) || 0,
-            disputeRate: disputeRateFloat,
-            responseTime: 2 + Math.random() * 6, // 2-8 hours
-            fulfillmentRate: Math.min(100, 85 + Math.random() * 15)
-          },
-          trends: {
-            salesGrowth,
-            revenueGrowth,
-            ratingTrend
-          },
-          status: performanceStatus,
-          lastUpdated: seller.updated_at || seller.created_at
-        };
-      });
-
-      // Get total count
-      const totalCountResult = await client.query(
-        'SELECT COUNT(*) as count FROM marketplace_users WHERE role = $1',
-        ['seller']
-      );
-      const totalCount = parseInt(totalCountResult.rows[0].count);
-
-      // Log the action
-      await logAdminAction('view_seller_performance', req.adminId || 'unknown', {
-        page,
-        limit,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-
-      res.json({
-        success: true,
-        data: {
-          sellers: sellersWithPerformance,
-          total: totalCount,
-          page: parseInt(page),
-          totalPages: Math.ceil(totalCount / parseInt(limit))
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    logError(error, 'fetch_seller_performance', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch seller performance'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Export seller performance endpoint
-app.get('/api/admin/sellers/performance/export', async (req, res) => {
-  try {
-    // Log the action
-    await logAdminAction('export_seller_performance', req.adminId || 'unknown', {
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    // In production, this would generate a CSV/Excel file
-    // For now, return success with a mock download URL
-    res.json({
-      success: true,
-      data: {
-        downloadUrl: `/downloads/seller-performance-${Date.now()}.csv`
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'export_seller_performance', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to export seller performance'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Disputes endpoint with caching
-app.get('/api/admin/disputes', [
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
-], validate, async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const cacheKey = `admin:disputes:page:${page}:limit:${limit}`;
-    
-    const result = await getCachedOrFetch(cacheKey, 30, async () => {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-      
-      const client = await pool.connect();
-      
-      try {
-        // Get disputes
-        const disputesResult = await client.query(
-          'SELECT * FROM disputes ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-          [parseInt(limit), offset]
-        );
-        
-        // Get total count
-        const totalCountResult = await client.query('SELECT COUNT(*) as count FROM disputes');
-        const total = parseInt(totalCountResult.rows[0].count);
-        
-        return {
-          disputes: disputesResult.rows,
-          total,
-          page: parseInt(page),
-          totalPages: Math.ceil(total / parseInt(limit))
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_disputes', req.adminId || 'unknown', {
-      page,
-      limit,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: result,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_disputes', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch disputes'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Get specific dispute endpoint with real database queries and validation
-app.get('/api/admin/disputes/:disputeId', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer')
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get dispute details
-      const disputeResult = await client.query(
-        'SELECT * FROM disputes WHERE id = $1',
-        [parseInt(disputeId)]
-      );
-      
-      if (disputeResult.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('view_dispute', req.adminId || 'unknown', {
-          disputeId,
-          success: false,
-          reason: 'Dispute not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Dispute not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Parse evidence if it exists
-      const dispute = disputeResult.rows[0];
-      if (dispute.evidence) {
+const express_1 = __importDefault(require("express"));
+const http_1 = require("http");
+const dotenv_1 = __importDefault(require("dotenv"));
+require("./types");
+dotenv_1.default.config();
+const securityConfig_1 = require("./config/securityConfig");
+const securityMiddleware_1 = require("./middleware/securityMiddleware");
+const corsMiddleware_1 = require("./middleware/corsMiddleware");
+const requestLogging_1 = require("./middleware/requestLogging");
+const globalErrorHandler_1 = require("./middleware/globalErrorHandler");
+const enhancedErrorHandler_1 = require("./middleware/enhancedErrorHandler");
+const enhancedRequestLogging_1 = require("./middleware/enhancedRequestLogging");
+const enhancedRateLimiting_1 = require("./middleware/enhancedRateLimiting");
+const comprehensiveMonitoringService_1 = require("./services/comprehensiveMonitoringService");
+const metricsMiddleware_1 = require("./middleware/metricsMiddleware");
+const performanceOptimizationIntegration_1 = __importDefault(require("./middleware/performanceOptimizationIntegration"));
+const pg_1 = require("pg");
+const webSocketService_1 = require("./services/webSocketService");
+const adminWebSocketService_1 = require("./services/adminWebSocketService");
+const sellerWebSocketService_1 = require("./services/sellerWebSocketService");
+let cacheService = null;
+let cacheWarmingService = null;
+async function initializeServices() {
+    if (!cacheService) {
         try {
-          dispute.evidence = JSON.parse(dispute.evidence);
-        } catch (e) {
-          dispute.evidence = [];
+            const cacheModule = await Promise.resolve().then(() => __importStar(require('./services/cacheService.js')));
+            if (cacheModule.default) {
+                if (typeof cacheModule.default === 'function') {
+                    cacheService = new cacheModule.default();
+                }
+                else {
+                    cacheService = cacheModule.default;
+                }
+            }
         }
-      } else {
-        dispute.evidence = [];
-      }
-      
-      // Mock votes data
-      dispute.votes = [];
-      
-      // Log the action
-      await logAdminAction('view_dispute', req.adminId || 'unknown', {
-        disputeId,
-        success: true,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
-        success: true,
-        data: dispute,
-        metadata: {
-          timestamp: new Date().toISOString()
+        catch (error) {
+            console.error('Failed to import cacheService:', error);
         }
-      });
-    } finally {
-      client.release();
     }
-  } catch (error) {
-    console.error('Error fetching dispute:', error);
-    
-    // Log the action even if it failed
-    await logAdminAction('view_dispute', req.adminId || 'unknown', {
-      disputeId: req.params.disputeId,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch dispute'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
+    if (!cacheWarmingService) {
+        try {
+            const warmingModule = await Promise.resolve().then(() => __importStar(require('./services/cacheWarmingService')));
+            if (warmingModule.cacheWarmingService) {
+                cacheWarmingService = warmingModule.cacheWarmingService;
+            }
+            else if (warmingModule.default) {
+                if (typeof warmingModule.default === 'function') {
+                    cacheWarmingService = new warmingModule.default();
+                }
+                else {
+                    cacheWarmingService = warmingModule.default;
+                }
+            }
+        }
+        catch (error) {
+            console.error('Failed to import cacheWarmingService:', error);
+        }
+    }
+    return { cacheService, cacheWarmingService };
+}
+try {
+    (0, securityConfig_1.validateSecurityConfig)();
+}
+catch (error) {
+    console.error('Security configuration validation failed:', error);
+    process.exit(1);
+}
+const app = (0, express_1.default)();
+const httpServer = (0, http_1.createServer)(app);
+const PORT = parseInt(process.env.PORT || '10000', 10);
+const maxConnections = process.env.RENDER ? 3 : 20;
+const minConnections = process.env.RENDER ? 1 : 5;
+const dbPool = new pg_1.Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: maxConnections,
+    min: minConnections,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
 });
-
-// Assign dispute endpoint with real database queries and validation
-app.post('/api/admin/disputes/:disputeId/assign', sensitiveAdminOperationLimiter, [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  body('assigneeId').notEmpty().withMessage('Assignee ID is required').trim().escape()
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-    const { assigneeId } = req.body;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get the current state before updating
-      const currentResult = await client.query(
-        'SELECT * FROM disputes WHERE id = $1',
-        [parseInt(disputeId)]
-      );
-      
-      const oldState = currentResult.rows[0] || null;
-      
-      // Update dispute
-      const result = await client.query(
-        'UPDATE disputes SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-        ['in_review', new Date().toISOString(), parseInt(disputeId)]
-      );
-      
-      if (result.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('assign_dispute', req.adminId || 'unknown', {
-          disputeId,
-          assigneeId,
-          success: false,
-          reason: 'Dispute not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Dispute not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Log the action
-      await logAdminAction('assign_dispute', req.adminId || 'unknown', {
-        disputeId,
-        assigneeId,
-        success: true,
-        oldState,
-        newState: result.rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
+const performanceOptimizer = new performanceOptimizationIntegration_1.default(dbPool, {
+    enableCaching: true,
+    enableCompression: true,
+    enableDatabaseOptimization: true,
+    enableConnectionPooling: true,
+    enableIndexOptimization: true,
+    enableMetrics: true,
+    enableAutoOptimization: process.env.NODE_ENV === 'production'
+});
+const securityEnhancementsMiddleware_1 = require("./middleware/securityEnhancementsMiddleware");
+app.use(securityEnhancementsMiddleware_1.securityHeaders);
+app.use(securityMiddleware_1.helmetMiddleware);
+app.use(corsMiddleware_1.corsMiddleware);
+app.use(securityMiddleware_1.ddosProtection);
+app.use(securityMiddleware_1.requestFingerprinting);
+app.use(securityEnhancementsMiddleware_1.hideServerInfo);
+app.use(securityEnhancementsMiddleware_1.requestSizeLimits);
+app.use(securityEnhancementsMiddleware_1.csrfProtection);
+app.use(securityEnhancementsMiddleware_1.validateContentType);
+app.use(securityEnhancementsMiddleware_1.securityLogger);
+app.use(metricsMiddleware_1.metricsTrackingMiddleware);
+app.use(requestLogging_1.healthCheckExclusionMiddleware);
+app.use(enhancedRequestLogging_1.enhancedRequestLoggingMiddleware);
+app.use(enhancedRequestLogging_1.databaseQueryTrackingMiddleware);
+app.use(enhancedRequestLogging_1.cacheOperationTrackingMiddleware);
+app.use(requestLogging_1.performanceMonitoringMiddleware);
+app.use(requestLogging_1.requestSizeMonitoringMiddleware);
+app.use(enhancedRateLimiting_1.enhancedApiRateLimit);
+app.use(performanceOptimizer.optimize());
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+app.use('/static', express_1.default.static('src/public'));
+app.use(securityMiddleware_1.inputValidation);
+app.use(securityMiddleware_1.threatDetection);
+app.use(securityMiddleware_1.securityAuditLogging);
+app.use(securityMiddleware_1.fileUploadSecurity);
+const healthRoutes_1 = __importDefault(require("./routes/healthRoutes"));
+app.use('/', healthRoutes_1.default);
+const apiDocsRoutes_1 = __importDefault(require("./routes/apiDocsRoutes"));
+app.use('/api/docs', apiDocsRoutes_1.default);
+const systemMonitoringRoutes_1 = __importDefault(require("./routes/systemMonitoringRoutes"));
+app.use('/api/monitoring', systemMonitoringRoutes_1.default);
+const marketplaceRoutes_1 = __importDefault(require("./routes/marketplaceRoutes"));
+const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const cartRoutes_1 = __importDefault(require("./routes/cartRoutes"));
+const sellerRoutes_1 = __importDefault(require("./routes/sellerRoutes"));
+const automatedTierUpgradeRoutes_1 = __importDefault(require("./routes/automatedTierUpgradeRoutes"));
+const sellerSecurityRoutes_1 = __importDefault(require("./routes/sellerSecurityRoutes"));
+const sellerPerformanceRoutes_1 = __importDefault(require("./routes/sellerPerformanceRoutes"));
+app.get('/api/marketplace/health', (req, res) => {
+    res.json({
         success: true,
         data: {
-          message: `Dispute ${disputeId} assigned to ${assigneeId}`
+            service: 'Marketplace API',
+            status: 'healthy',
+            version: '1.0.0',
+            timestamp: new Date().toISOString(),
+            endpoints: {
+                listings: '/api/marketplace/listings',
+                sellers: '/api/marketplace/sellers',
+                search: '/api/marketplace/search'
+            }
         },
         metadata: {
-          timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            requestId: res.locals.requestId
         }
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error assigning dispute:', error);
-    
-    // Log the action even if it failed
-    await logAdminAction('assign_dispute', req.adminId || 'unknown', {
-      disputeId: req.params.disputeId,
-      assigneeId: req.body.assigneeId,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
     });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to assign dispute'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
 });
-
-// Resolve dispute endpoint with real database queries and validation
-app.post('/api/admin/disputes/:disputeId/resolve', sensitiveAdminOperationLimiter, [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  body('outcome').isIn(['buyer_favor', 'seller_favor', 'partial_refund', 'no_action']).withMessage('Invalid outcome value'),
-  body('reasoning').optional().trim().escape(),
-  body('adminNotes').optional().trim().escape()
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-    const { outcome, refundAmount, reasoning, adminNotes } = req.body;
-    
-    const client = await pool.connect();
-    
-    try {
-      // Get the current state before updating
-      const currentResult = await client.query(
-        'SELECT * FROM disputes WHERE id = $1',
-        [parseInt(disputeId)]
-      );
-      
-      const oldState = currentResult.rows[0] || null;
-      
-      // Update dispute
-      const result = await client.query(
-        'UPDATE disputes SET status = $1, updated_at = $2, resolved_at = $2 WHERE id = $3 RETURNING *',
-        ['resolved', new Date().toISOString(), parseInt(disputeId)]
-      );
-      
-      if (result.rows.length === 0) {
-        // Log the action even if it failed
-        await logAdminAction('resolve_dispute', req.adminId || 'unknown', {
-          disputeId,
-          outcome,
-          refundAmount,
-          reasoning,
-          adminNotes,
-          success: false,
-          reason: 'Dispute not found',
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        
-        return res.status(404).json({
-          success: false,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Dispute not found'
-          },
-          metadata: {
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      // Log the action
-      await logAdminAction('resolve_dispute', req.adminId || 'unknown', {
-        disputeId,
-        outcome,
-        refundAmount,
-        reasoning,
-        adminNotes,
-        success: true,
-        oldState,
-        newState: result.rows[0],
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({
+app.use('/api/v1/marketplace', marketplaceRoutes_1.default);
+app.use('/api/v1/auth', authRoutes_1.default);
+app.use('/api/v1/cart', cartRoutes_1.default);
+app.use('/api/v1/sellers', sellerRoutes_1.default);
+app.use('/api/v1/marketplace/seller/tier', automatedTierUpgradeRoutes_1.default);
+app.use('/api/v1/seller/security', sellerSecurityRoutes_1.default);
+app.use('/api/marketplace', marketplaceRoutes_1.default);
+app.use('/api/auth', authRoutes_1.default);
+app.use('/api/cart', cartRoutes_1.default);
+app.use('/api/sellers', sellerRoutes_1.default);
+app.use('/api/marketplace/seller/tier', automatedTierUpgradeRoutes_1.default);
+app.use('/api/seller/security', sellerSecurityRoutes_1.default);
+app.get('/', (req, res) => {
+    res.json({
         success: true,
         data: {
-          message: `Dispute ${disputeId} resolved with outcome: ${outcome}`
+            message: 'LinkDAO Marketplace API',
+            version: '1.0.0',
+            environment: process.env.NODE_ENV || 'development',
+            timestamp: new Date().toISOString(),
+            status: 'healthy',
+            endpoints: {
+                health: '/health',
+                ping: '/ping',
+                status: '/status',
+                api: '/api/*'
+            }
         },
         metadata: {
-          timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            requestId: res.locals.requestId
         }
-      });
-    } finally {
-      client.release();
+    });
+});
+const postRoutes_1 = __importDefault(require("./routes/postRoutes"));
+const feedRoutes_1 = __importDefault(require("./routes/feedRoutes"));
+const viewRoutes_1 = __importDefault(require("./routes/viewRoutes"));
+const bookmarkRoutes_1 = __importDefault(require("./routes/bookmarkRoutes"));
+const shareRoutes_1 = __importDefault(require("./routes/shareRoutes"));
+const followRoutes_1 = __importDefault(require("./routes/followRoutes"));
+const communityRoutes_1 = __importDefault(require("./routes/communityRoutes"));
+const messagingRoutes_1 = __importDefault(require("./routes/messagingRoutes"));
+const securityRoutes_1 = __importDefault(require("./routes/securityRoutes"));
+app.use('/api/posts', postRoutes_1.default);
+app.use('/api/feed', feedRoutes_1.default);
+app.use('/api/views', viewRoutes_1.default);
+app.use('/api/bookmarks', bookmarkRoutes_1.default);
+app.use('/api/shares', shareRoutes_1.default);
+app.use('/api/follows', followRoutes_1.default);
+app.use('/api/follow', followRoutes_1.default);
+app.use('/api/communities', communityRoutes_1.default);
+const communityTreasuryRoutes_1 = __importDefault(require("./routes/communityTreasuryRoutes"));
+app.use('/api/communities', communityTreasuryRoutes_1.default);
+const communityCommentRoutes_1 = __importDefault(require("./routes/communityCommentRoutes"));
+app.use('/api/communities', communityCommentRoutes_1.default);
+app.use('/api/messaging', messagingRoutes_1.default);
+const proxyRoutes_1 = __importDefault(require("./routes/proxyRoutes"));
+app.use('/', proxyRoutes_1.default);
+const marketplaceVerificationRoutes_1 = __importDefault(require("./routes/marketplaceVerificationRoutes"));
+const linkSafetyRoutes_1 = __importDefault(require("./routes/linkSafetyRoutes"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const adminDashboardRoutes_1 = __importDefault(require("./routes/adminDashboardRoutes"));
+const ai_1 = __importDefault(require("./routes/admin/ai"));
+const systemHealthMonitoringRoutes_1 = require("./routes/systemHealthMonitoringRoutes");
+const workflowAutomationRoutes_1 = __importDefault(require("./routes/workflowAutomationRoutes"));
+const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
+const marketplaceRegistrationRoutes_1 = __importDefault(require("./routes/marketplaceRegistrationRoutes"));
+const disputeRoutes_1 = __importDefault(require("./routes/disputeRoutes"));
+const gasFeeSponsorshipRoutes_1 = require("./routes/gasFeeSponsorshipRoutes");
+const daoShippingPartnersRoutes_1 = require("./routes/daoShippingPartnersRoutes");
+const advancedAnalyticsRoutes_1 = require("./routes/advancedAnalyticsRoutes");
+const marketplaceSellerRoutes_1 = __importDefault(require("./routes/marketplaceSellerRoutes"));
+const sellerProfileRoutes_1 = __importDefault(require("./routes/sellerProfileRoutes"));
+const sellerDashboardRoutes_1 = __importDefault(require("./routes/sellerDashboardRoutes"));
+const sellerOrderRoutes_1 = __importDefault(require("./routes/sellerOrderRoutes"));
+const sellerListingRoutes_1 = __importDefault(require("./routes/sellerListingRoutes"));
+const sellerImageUploadRoutes_1 = __importDefault(require("./routes/sellerImageUploadRoutes"));
+const sellerImageRoutes_1 = require("./routes/sellerImageRoutes");
+const sellerVerificationRoutes_1 = __importDefault(require("./routes/sellerVerificationRoutes"));
+const ensValidationRoutes_1 = __importDefault(require("./routes/ensValidationRoutes"));
+const userProfileRoutes_1 = __importDefault(require("./routes/userProfileRoutes"));
+const marketplaceListingsRoutes_1 = __importDefault(require("./routes/marketplaceListingsRoutes"));
+const listingRoutes_1 = __importDefault(require("./routes/listingRoutes"));
+const orderCreationRoutes_1 = __importDefault(require("./routes/orderCreationRoutes"));
+const tokenReactionRoutes_1 = __importDefault(require("./routes/tokenReactionRoutes"));
+const enhancedSearchRoutes_1 = __importDefault(require("./routes/enhancedSearchRoutes"));
+const contentPreviewRoutes_1 = __importDefault(require("./routes/contentPreviewRoutes"));
+const enhancedUserRoutes_1 = __importDefault(require("./routes/enhancedUserRoutes"));
+const governanceRoutes_1 = __importDefault(require("./routes/governanceRoutes"));
+const engagementAnalyticsRoutes_1 = __importDefault(require("./routes/engagementAnalyticsRoutes"));
+const authenticationRoutes_1 = require("./routes/authenticationRoutes");
+const pollRoutes_1 = __importDefault(require("./routes/pollRoutes"));
+const cacheRoutes_1 = __importDefault(require("./routes/cacheRoutes"));
+const marketplaceSearchRoutes_1 = __importDefault(require("./routes/marketplaceSearchRoutes"));
+const priceOracleRoutes_1 = __importDefault(require("./routes/priceOracleRoutes"));
+const reputationRoutes_1 = require("./routes/reputationRoutes");
+const monitoringRoutes_1 = __importDefault(require("./routes/monitoringRoutes"));
+const performanceRoutes_1 = __importStar(require("./routes/performanceRoutes"));
+const transactionRoutes_1 = __importDefault(require("./routes/transactionRoutes"));
+const orderManagementRoutes_1 = __importDefault(require("./routes/orderManagementRoutes"));
+const sellerAnalyticsRoutes_1 = __importDefault(require("./routes/sellerAnalyticsRoutes"));
+const memberBehaviorRoutes_1 = __importDefault(require("./routes/memberBehaviorRoutes"));
+const contentPerformanceRoutes_1 = __importDefault(require("./routes/contentPerformanceRoutes"));
+process.stdout.write('⚠️  DEX, Staking, and LDAO monitoring routes temporarily disabled\n');
+app.use('/api/auth', (0, authenticationRoutes_1.createDefaultAuthRoutes)());
+app.use('/api/security', securityRoutes_1.default);
+app.use('/api/marketplace/verification', marketplaceVerificationRoutes_1.default);
+app.use('/api/link-safety', linkSafetyRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
+app.use('/api/admin/dashboard', adminDashboardRoutes_1.default);
+app.use('/api/admin/ai', ai_1.default);
+app.use('/api/admin/system-health', systemHealthMonitoringRoutes_1.systemHealthMonitoringRoutes);
+app.use('/api/admin/workflows', workflowAutomationRoutes_1.default);
+app.use('/api/analytics', analyticsRoutes_1.default);
+app.use('/api/marketplace/registration', marketplaceRegistrationRoutes_1.default);
+app.use('/api/marketplace/disputes', disputeRoutes_1.default);
+app.use('/api/gas-sponsorship', gasFeeSponsorshipRoutes_1.gasFeeSponsorshipRouter);
+app.use('/api/shipping', daoShippingPartnersRoutes_1.daoShippingPartnersRouter);
+app.use('/api/analytics', advancedAnalyticsRoutes_1.advancedAnalyticsRouter);
+app.use('/api/listings', listingRoutes_1.default);
+app.use('/api/orders', orderCreationRoutes_1.default);
+app.use('/api/marketplace', marketplaceSellerRoutes_1.default);
+app.use('/api/marketplace', sellerProfileRoutes_1.default);
+app.use('/api/marketplace', sellerDashboardRoutes_1.default);
+app.use('/api/marketplace', sellerOrderRoutes_1.default);
+app.use('/api/marketplace', sellerListingRoutes_1.default);
+app.use('/api/marketplace', sellerImageUploadRoutes_1.default);
+app.use('/api/marketplace/seller/images', sellerImageRoutes_1.sellerImageRoutes);
+app.use('/api/marketplace', sellerVerificationRoutes_1.default);
+app.use('/api/marketplace', ensValidationRoutes_1.default);
+app.use('/api/profiles', userProfileRoutes_1.default);
+app.use('/api/marketplace', marketplaceListingsRoutes_1.default);
+app.use('/api/reactions', tokenReactionRoutes_1.default);
+app.use('/api/search', enhancedSearchRoutes_1.default);
+app.use('/api/preview', contentPreviewRoutes_1.default);
+app.use('/api/users', enhancedUserRoutes_1.default);
+app.use('/api/governance', governanceRoutes_1.default);
+app.use('/api/analytics', engagementAnalyticsRoutes_1.default);
+app.use('/api/polls', pollRoutes_1.default);
+const supportTicketingRoutes_1 = require("./routes/supportTicketingRoutes");
+app.use('/api/support', supportTicketingRoutes_1.supportTicketingRoutes);
+app.use('/api/cache', cacheRoutes_1.default);
+const orderEventListenerService_1 = require("./services/orderEventListenerService");
+const orderEventHandlerRoutes_1 = __importDefault(require("./routes/orderEventHandlerRoutes"));
+const x402PaymentRoutes_1 = __importDefault(require("./routes/x402PaymentRoutes"));
+const receiptRoutes_1 = __importDefault(require("./routes/receiptRoutes"));
+app.use('/api/order-events', orderEventHandlerRoutes_1.default);
+app.use('/api/x402', x402PaymentRoutes_1.default);
+app.use('/api', receiptRoutes_1.default);
+app.use('/api/marketplace/search', marketplaceSearchRoutes_1.default);
+app.use('/api/price-oracle', priceOracleRoutes_1.default);
+app.use('/marketplace/reputation', reputationRoutes_1.reputationRoutes);
+app.use('/api/monitoring', monitoringRoutes_1.default);
+(0, performanceRoutes_1.setPerformanceOptimizer)(performanceOptimizer);
+app.use('/api/performance', performanceRoutes_1.default);
+app.use('/api/transactions', transactionRoutes_1.default);
+app.use('/api/order-management', orderManagementRoutes_1.default);
+app.use('/api/seller-performance', sellerPerformanceRoutes_1.default);
+app.use('/api/seller-analytics', sellerAnalyticsRoutes_1.default);
+app.use('/api/member-behavior', memberBehaviorRoutes_1.default);
+app.use('/api/content-performance', contentPerformanceRoutes_1.default);
+const marketplaceMessagingRoutes_1 = __importDefault(require("./routes/marketplaceMessagingRoutes"));
+app.use('/api/marketplace/messaging', marketplaceMessagingRoutes_1.default);
+const reportBuilderRoutes_1 = __importDefault(require("./routes/reportBuilderRoutes"));
+app.use('/api/admin/report-builder', reportBuilderRoutes_1.default);
+const reportSchedulerRoutes_1 = __importDefault(require("./routes/reportSchedulerRoutes"));
+app.use('/api/admin/report-scheduler', reportSchedulerRoutes_1.default);
+const reportExportRoutes_1 = __importDefault(require("./routes/reportExportRoutes"));
+app.use('/api/admin/report-export', reportExportRoutes_1.default);
+const reportTemplateLibraryRoutes_1 = __importDefault(require("./routes/reportTemplateLibraryRoutes"));
+app.use('/api/admin/report-library', reportTemplateLibraryRoutes_1.default);
+app.use(requestLogging_1.errorCorrelationMiddleware);
+app.use(enhancedErrorHandler_1.enhancedErrorHandler);
+app.use(globalErrorHandler_1.globalErrorHandler);
+app.use(globalErrorHandler_1.notFoundHandler);
+app.use('/api/*', (req, res) => {
+    res.json({
+        success: true,
+        message: `API endpoint ${req.method} ${req.originalUrl} - fixed version`,
+        data: null
+    });
+});
+process.stdout.write('📝 All routes and middleware registered successfully\n');
+process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+    console.log(`📡 API ready: http://localhost:${PORT}/`);
+    setImmediate(() => {
+        initializeServices().then(({ cacheService, cacheWarmingService }) => {
+            try {
+                const webSocketService = (0, webSocketService_1.initializeWebSocket)(httpServer);
+                console.log('✅ WebSocket service initialized');
+                console.log(`🔌 WebSocket ready for real-time updates`);
+            }
+            catch (error) {
+                console.warn('⚠️ WebSocket service initialization failed:', error);
+            }
+            try {
+                const adminWebSocketService = (0, adminWebSocketService_1.initializeAdminWebSocket)(httpServer);
+                console.log('✅ Admin WebSocket service initialized');
+                console.log(`🔧 Admin real-time dashboard ready`);
+            }
+            catch (error) {
+                console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+            }
+            try {
+                const sellerWebSocketService = (0, sellerWebSocketService_1.initializeSellerWebSocket)();
+                console.log('✅ Seller WebSocket service initialized');
+                console.log(`🛒 Seller real-time updates ready`);
+            }
+            catch (error) {
+                console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+            }
+            try {
+                if (cacheService) {
+                    if (typeof cacheService.connect === 'function') {
+                        cacheService.connect().then(() => {
+                            console.log('✅ Cache service initialized via connect method');
+                        }).catch((error) => {
+                            console.warn('⚠️ Cache service connection failed:', error);
+                        });
+                    }
+                    else if (cacheService.isConnected) {
+                        console.log('✅ Cache service already connected');
+                    }
+                    else {
+                        console.log('⚠️ Cache service available but not connected');
+                    }
+                }
+                else {
+                    console.log('⚠️ Cache service not available');
+                }
+                setTimeout(() => {
+                    try {
+                        if (cacheWarmingService && typeof cacheWarmingService.performQuickWarmup === 'function') {
+                            cacheWarmingService.performQuickWarmup().then(() => {
+                                console.log('✅ Initial cache warming completed');
+                            }).catch((error) => {
+                                console.warn('⚠️ Initial cache warming failed:', error);
+                            });
+                        }
+                    }
+                    catch (error) {
+                        console.warn('⚠️ Initial cache warming failed:', error);
+                    }
+                }, 5000);
+            }
+            catch (error) {
+                console.warn('⚠️ Cache service initialization failed:', error);
+                console.log('📝 Server will continue without caching');
+            }
+            try {
+                comprehensiveMonitoringService_1.comprehensiveMonitoringService.startMonitoring(60000);
+                console.log('✅ Comprehensive monitoring service started');
+                console.log('📊 System health monitoring active');
+            }
+            catch (error) {
+                console.warn('⚠️ Monitoring service initialization failed:', error);
+            }
+            try {
+                orderEventListenerService_1.orderEventListenerService.startListening();
+                console.log('✅ Order event listener started');
+                console.log('🔄 Listening for order events to trigger messaging automation');
+            }
+            catch (error) {
+                console.warn('⚠️ Order event listener failed to start:', error);
+            }
+        }).catch((error) => {
+            console.error('Failed to initialize services:', error);
+            console.log('📝 Server will continue without some services');
+        });
+    });
+});
+httpServer.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
     }
-  } catch (error) {
-    console.error('Error resolving dispute:', error);
-    
-    // Log the action even if it failed
-    await logAdminAction('resolve_dispute', req.adminId || 'unknown', {
-      disputeId: req.params.disputeId,
-      outcome: req.body.outcome,
-      refundAmount: req.body.refundAmount,
-      reasoning: req.body.reasoning,
-      adminNotes: req.body.adminNotes,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to resolve dispute'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Add dispute note endpoint with validation
-app.post('/api/admin/disputes/:disputeId/notes', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  body('note').notEmpty().withMessage('Note is required').trim().escape()
-], validate, async (req, res) => {
-  const { disputeId } = req.params;
-  const { note } = req.body;
-  
-  // Log the action
-  await logAdminAction('add_dispute_note', req.adminId || 'unknown', {
-    disputeId,
-    note,
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      message: `Note added to dispute ${disputeId}`
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
+    else {
+        console.error('❌ Server error:', error);
     }
-  });
+    process.exit(1);
 });
-
-// Upload dispute evidence endpoint
-app.post('/api/admin/disputes/:disputeId/evidence', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer')
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-    const files = req.files;
-    const party = req.body.party; // 'buyer', 'seller', or 'admin'
-
-    if (!files || (Array.isArray(files) && files.length === 0)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'No files uploaded'
-        },
-        metadata: {
-          timestamp: new Date().toISOString()
-        }
-      });
+const gracefulShutdown = async (signal) => {
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
+    try {
+        (0, webSocketService_1.shutdownWebSocket)();
+        (0, adminWebSocketService_1.shutdownAdminWebSocket)();
+        (0, sellerWebSocketService_1.shutdownSellerWebSocket)();
+        comprehensiveMonitoringService_1.comprehensiveMonitoringService.stopMonitoring();
+        performanceOptimizer.stop();
+        await dbPool.end();
+        httpServer.close(() => {
+            console.log('HTTP server closed');
+            process.exit(0);
+        });
     }
-
-    // In production, upload files to cloud storage (S3, etc.)
-    // For now, create mock evidence records
-    const fileArray = Array.isArray(files) ? files : [files];
-    const evidence = fileArray.map((file, index) => ({
-      id: `evidence_${Date.now()}_${index}`,
-      disputeId,
-      filename: file.originalname || file.name || 'unknown',
-      type: file.mimetype || file.type || 'application/octet-stream',
-      size: file.size || 0,
-      url: `/uploads/${file.filename || file.name || 'unknown'}`,
-      uploadedBy: party || 'admin',
-      uploadedAt: new Date().toISOString(),
-      status: 'pending',
-      description: ''
-    }));
-
-    // Log the action
-    await logAdminAction('upload_dispute_evidence', req.adminId || 'unknown', {
-      disputeId,
-      party,
-      fileCount: evidence.length,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        evidence
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'upload_dispute_evidence', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to upload evidence'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Delete dispute evidence endpoint
-app.delete('/api/admin/disputes/:disputeId/evidence/:evidenceId', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  param('evidenceId').notEmpty().withMessage('Evidence ID is required')
-], validate, async (req, res) => {
-  try {
-    const { disputeId, evidenceId } = req.params;
-
-    // In production, delete from cloud storage and database
-    // For now, just log the action
-    await logAdminAction('delete_dispute_evidence', req.adminId || 'unknown', {
-      disputeId,
-      evidenceId,
-      success: true,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        message: `Evidence ${evidenceId} deleted from dispute ${disputeId}`
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'delete_dispute_evidence', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to delete evidence'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Update evidence status endpoint
-app.patch('/api/admin/disputes/:disputeId/evidence/:evidenceId/status', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  param('evidenceId').notEmpty().withMessage('Evidence ID is required'),
-  body('status').isIn(['pending', 'verified', 'rejected']).withMessage('Status must be pending, verified, or rejected')
-], validate, async (req, res) => {
-  try {
-    const { disputeId, evidenceId } = req.params;
-    const { status } = req.body;
-
-    // In production, update evidence status in database
-    // For now, just log the action
-    await logAdminAction('update_evidence_status', req.adminId || 'unknown', {
-      disputeId,
-      evidenceId,
-      status,
-      success: true,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        message: `Evidence ${evidenceId} status updated to ${status}`
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'update_evidence_status', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to update evidence status'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Get dispute messages endpoint
-app.get('/api/admin/disputes/:disputeId/messages', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer')
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-
-    // In production, fetch from messages table
-    // For now, return mock messages
-    const messages = [
-      {
-        id: 'msg_1',
-        disputeId,
-        sender: 'buyer',
-        message: 'I never received the product as described.',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        isInternal: false,
-        attachments: []
-      },
-      {
-        id: 'msg_2',
-        disputeId,
-        sender: 'seller',
-        message: 'The product was shipped on time with tracking number.',
-        timestamp: new Date(Date.now() - 43200000).toISOString(),
-        isInternal: false,
-        attachments: []
-      },
-      {
-        id: 'msg_3',
-        disputeId,
-        sender: 'admin',
-        message: 'I am reviewing the case and will provide a resolution soon.',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        isInternal: false,
-        attachments: []
-      }
-    ];
-
-    // Log the action
-    await logAdminAction('view_dispute_messages', req.adminId || 'unknown', {
-      disputeId,
-      messageCount: messages.length,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        messages
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_dispute_messages', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch dispute messages'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Send dispute message endpoint
-app.post('/api/admin/disputes/:disputeId/messages', [
-  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
-  body('message').notEmpty().withMessage('Message is required').trim(),
-  body('sender').optional().trim(),
-  body('isInternal').optional().isBoolean()
-], validate, async (req, res) => {
-  try {
-    const { disputeId } = req.params;
-    const { message, sender, isInternal } = req.body;
-
-    // In production, save to messages table
-    const newMessage = {
-      id: `msg_${Date.now()}`,
-      disputeId,
-      sender: sender || 'admin',
-      message,
-      timestamp: new Date().toISOString(),
-      isInternal: isInternal || false,
-      attachments: []
-    };
-
-    // Log the action
-    await logAdminAction('send_dispute_message', req.adminId || 'unknown', {
-      disputeId,
-      sender: newMessage.sender,
-      isInternal: newMessage.isInternal,
-      messageLength: message.length,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-
-    res.json({
-      success: true,
-      data: {
-        message: newMessage
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'send_dispute_message', req);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to send message'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Users endpoint with caching
-app.get('/api/admin/users', [
-  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
-], validate, async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const cacheKey = `admin:users:page:${page}:limit:${limit}`;
-    
-    const result = await getCachedOrFetch(cacheKey, 30, async () => {
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-      
-      const client = await pool.connect();
-      
-      try {
-        // Get users
-        const usersResult = await client.query(
-          'SELECT id, wallet_address, handle, created_at FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-          [parseInt(limit), offset]
-        );
-        
-        // Get total count
-        const totalCountResult = await client.query('SELECT COUNT(*) as count FROM users');
-        const total = parseInt(totalCountResult.rows[0].count);
-        
-        return {
-          users: usersResult.rows,
-          total,
-          page: parseInt(page),
-          totalPages: Math.ceil(total / parseInt(limit))
-        };
-      } finally {
-        client.release();
-      }
-    });
-    
-    // Log the action
-    await logAdminAction('view_users', req.adminId || 'unknown', {
-      page,
-      limit,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: result,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'fetch_users', req);
-    
-    // Log the action even if it failed
-    await logAdminAction('view_users', req.adminId || 'unknown', {
-      page: req.query.page,
-      limit: req.query.limit,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch users'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Suspend user endpoint with validation
-app.post('/api/admin/users/:userId/suspend', sensitiveAdminOperationLimiter, [
-  param('userId').notEmpty().withMessage('User ID is required').trim().escape(),
-  body('reason').notEmpty().withMessage('Reason is required').trim().escape()
-], validate, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { reason, duration, permanent } = req.body;
-    
-    // Log the action
-    await logAdminAction('suspend_user', req.adminId || 'unknown', {
-      userId,
-      reason,
-      duration,
-      permanent,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        message: `User ${userId} suspended for reason: ${reason}`
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    logError(error, 'suspend_user', req);
-    
-    // Log the action even if it failed
-    await logAdminAction('suspend_user', req.adminId || 'unknown', {
-      userId: req.params.userId,
-      reason: req.body.reason,
-      duration: req.body.duration,
-      permanent: req.body.permanent,
-      success: false,
-      error: error.message,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent')
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to suspend user'
-      },
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
-    });
-  }
-});
-
-// Unsuspend user endpoint with validation
-app.post('/api/admin/users/:userId/unsuspend', [
-  param('userId').notEmpty().withMessage('User ID is required')
-], validate, async (req, res) => {
-  const { userId } = req.params;
-  
-  // Log the action
-  await logAdminAction('unsuspend_user', req.adminId || 'unknown', {
-    userId,
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      message: `User ${userId} unsuspended`
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
+    catch (error) {
+        console.error('Error during graceful shutdown:', error);
+        process.exit(1);
     }
-  });
-});
-
-// Update user role endpoint with validation
-app.put('/api/admin/users/:userId/role', [
-  param('userId').notEmpty().withMessage('User ID is required').trim().escape(),
-  body('role').notEmpty().withMessage('Role is required').trim().escape()
-], validate, async (req, res) => {
-  const { userId } = req.params;
-  const { role } = req.body;
-  
-  // Log the action
-  await logAdminAction('update_user_role', req.adminId || 'unknown', {
-    userId,
-    role,
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      message: `User ${userId} role updated to: ${role}`
-    },
-    metadata: {
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Optimized production server listening on port ${PORT}`);
-  console.log(`📅 Started at: ${new Date().toISOString()}`);
-  console.log(`🏠 Host: 0.0.0.0`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
-  
-  // Log memory usage after startup
-  setTimeout(() => {
-    console.log('📊 Post-startup memory usage:');
-    logMemoryUsage();
-  }, 5000);
-});
-
-// Initialize Socket.IO
-const io = socketIo(server, {
-  cors: {
-    origin: allowedOrigins,
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
-
-// WebSocket connection handling
-io.on('connection', (socket) => {
-  console.log('🔌 WebSocket client connected:', socket.id);
-  
-  // Handle chat messages
-  socket.on('chat_message', (data) => {
-    // Broadcast message to all clients
-    io.emit('chat_message', data);
-  });
-  
-  // Handle notifications
-  socket.on('subscribe_notifications', (userId) => {
-    // Join user-specific room
-    socket.join(`user_${userId}`);
-  });
-  
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('🔌 WebSocket client disconnected:', socket.id);
-  });
-});
-
-// Handle server errors
-server.on('error', (error) => {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
-
-  const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
-  switch (error.code) {
-    case 'EACCES':
-      console.error(`❌ ${bind} requires elevated privileges`);
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(`❌ ${bind} is already in use`);
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-});
-
-module.exports = { app, server, io };
+    setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+exports.default = app;
