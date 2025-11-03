@@ -17,6 +17,8 @@ const { Pool } = require('pg');
 const Redis = require('ioredis'); // Add Redis for caching
 const jwt = require('jsonwebtoken');
 const xss = require('xss');
+const http = require('http'); // Add http module for WebSocket support
+const socketIo = require('socket.io'); // Add socket.io for WebSocket support
 require('dotenv').config();
 
 // Database connection
@@ -216,7 +218,7 @@ app.use(cors({
 // Rate limiting (memory efficient)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  max: 5000, // Limit each IP to 5000 requests per windowMs
   message: 'Too many requests from this IP',
   standardHeaders: true,
   legacyHeaders: false,
@@ -245,6 +247,51 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // Limit each IP to 50 auth requests per windowMs
   message: 'Too many authentication requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Specific rate limiting for feed endpoints
+const feedLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: 'Too many feed requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Specific rate limiting for follow endpoints
+const followLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  message: 'Too many follow requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Specific rate limiting for community endpoints
+const communityLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  message: 'Too many community requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Specific rate limiting for user endpoints
+const userLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  message: 'Too many user requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Specific rate limiting for governance endpoints
+const governanceLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  message: 'Too many governance requests from this IP',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -615,6 +662,336 @@ app.get('/api/marketplace/reputation/:address', (req, res) => {
 });
 
 // ============================================================================
+// FEED ROUTES
+// ============================================================================
+
+// Get enhanced personalized feed
+app.get('/api/feed/enhanced', feedLimiter, (req, res) => {
+  const {
+    page = 1,
+    limit = 20,
+    sort = 'hot',
+    communities = [],
+    timeRange = 'day',
+    feedSource = 'all'
+  } = req.query;
+
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      posts: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      },
+      filters: {
+        sort,
+        timeRange,
+        feedSource
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get trending posts
+app.get('/api/feed/trending', feedLimiter, (req, res) => {
+  const {
+    page = 1,
+    limit = 20,
+    timeRange = 'day'
+  } = req.query;
+
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      posts: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      },
+      filters: {
+        timeRange
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
+// FOLLOW ROUTES
+// ============================================================================
+
+// Follow a user
+app.post('/api/follows/follow', followLimiter, (req, res) => {
+  const { targetUserId } = req.body;
+  
+  // Mock response for now - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: 'User followed successfully',
+      followId: 'follow-' + Date.now()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Unfollow a user
+app.post('/api/follows/unfollow', followLimiter, (req, res) => {
+  const { targetUserId } = req.body;
+  
+  // Mock response for now - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: 'User unfollowed successfully'
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get followers for a user
+app.get('/api/follows/followers/:address', followLimiter, (req, res) => {
+  const { address } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      followers: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get following for a user
+app.get('/api/follows/following/:address', followLimiter, (req, res) => {
+  const { address } = req.params;
+  const { page = 1, limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      following: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Check if user is following another user
+app.get('/api/follows/is-following/:follower/:following', followLimiter, (req, res) => {
+  const { follower, following } = req.params;
+  
+  // Mock response for now - in a real implementation, this would check the database
+  res.json({
+    success: true,
+    data: {
+      isFollowing: false
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get follow count for a user
+app.get('/api/follows/count/:address', followLimiter, (req, res) => {
+  const { address } = req.params;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      followers: 0,
+      following: 0
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
+// USER MEMBERSHIP ROUTES
+// ============================================================================
+
+// Get user memberships
+app.get('/api/users/:address/memberships', userLimiter, (req, res) => {
+  const { address } = req.params;
+  const { isActive, limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      memberships: [],
+      pagination: {
+        page: 1,
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
+// COMMUNITY ROUTES
+// ============================================================================
+
+// Get trending communities
+app.get('/api/communities/trending', communityLimiter, (req, res) => {
+  const { limit = 10 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      communities: [],
+      pagination: {
+        page: 1,
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get all public communities
+app.get('/api/communities', communityLimiter, (req, res) => {
+  const { isPublic = true, limit = 50 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      communities: [],
+      pagination: {
+        page: 1,
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
+// GOVERNANCE ROUTES
+// ============================================================================
+
+// Get active proposals
+app.get('/api/governance/proposals/active', governanceLimiter, (req, res) => {
+  const { page = 1, limit = 20 } = req.query;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      proposals: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        hasMore: false
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get proposal by ID
+app.get('/api/governance/proposals/:id', governanceLimiter, (req, res) => {
+  const { id } = req.params;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      proposal: {
+        id,
+        title: 'Sample Proposal',
+        description: 'This is a sample proposal',
+        status: 'active',
+        votes: {
+          yes: 0,
+          no: 0,
+          abstain: 0
+        },
+        createdAt: new Date().toISOString(),
+        endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Vote on proposal
+app.post('/api/governance/proposals/:id/vote', governanceLimiter, (req, res) => {
+  const { id } = req.params;
+  const { vote, reason } = req.body;
+  
+  // Mock response for now - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: 'Vote recorded successfully',
+      voteId: 'vote-' + Date.now()
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
 // POSTS/FEED ROUTES
 // ============================================================================
 
@@ -938,6 +1315,580 @@ app.get('/api/admin/dashboard/historical', async (req, res) => {
     },
     metadata: {
       timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin user management endpoint
+app.get('/api/admin/users', async (req, res) => {
+  // Log the action
+  await logAdminAction('view_users', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Mock data - in a real implementation, this would fetch from user database
+  const users = [];
+  
+  res.json({
+    success: true,
+    data: users,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin user management endpoint (with search)
+app.get('/api/admin/users/search', async (req, res) => {
+  const { query } = req.query;
+  
+  // Log the action
+  await logAdminAction('search_users', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    searchQuery: query
+  });
+  
+  // Mock data - in a real implementation, this would search the user database
+  const users = [];
+  
+  res.json({
+    success: true,
+    data: users,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin user management endpoint (get user by ID)
+app.get('/api/admin/users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('view_user', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: id
+  });
+  
+  // Mock data - in a real implementation, this would fetch from user database
+  const user = null;
+  
+  if (user) {
+    res.json({
+      success: true,
+      data: user,
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'USER_NOT_FOUND',
+        message: 'User not found'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Admin user management endpoint (update user)
+app.put('/api/admin/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { action, reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('update_user', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: id,
+    action,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the user in the database
+  const user = {
+    id,
+    action,
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: user,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin user management endpoint (ban user)
+app.post('/api/admin/users/:id/ban', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('ban_user', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: id,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the user's status in the database
+  const user = {
+    id,
+    status: 'banned',
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: user,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin user management endpoint (unban user)
+app.post('/api/admin/users/:id/unban', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('unban_user', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    userId: id
+  });
+  
+  // Mock data - in a real implementation, this would update the user's status in the database
+  const user = {
+    id,
+    status: 'active'
+  };
+  
+  res.json({
+    success: true,
+    data: user,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin content management endpoint
+app.get('/api/admin/content', async (req, res) => {
+  // Log the action
+  await logAdminAction('view_content', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Mock data - in a real implementation, this would fetch from content database
+  const content = [];
+  
+  res.json({
+    success: true,
+    data: content,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin content management endpoint (with search)
+app.get('/api/admin/content/search', async (req, res) => {
+  const { query } = req.query;
+  
+  // Log the action
+  await logAdminAction('search_content', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    searchQuery: query
+  });
+  
+  // Mock data - in a real implementation, this would search the content database
+  const content = [];
+  
+  res.json({
+    success: true,
+    data: content,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin content management endpoint (get content by ID)
+app.get('/api/admin/content/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('view_content_item', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    contentId: id
+  });
+  
+  // Mock data - in a real implementation, this would fetch from content database
+  const item = null;
+  
+  if (item) {
+    res.json({
+      success: true,
+      data: item,
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'CONTENT_NOT_FOUND',
+        message: 'Content not found'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Admin content management endpoint (update content)
+app.put('/api/admin/content/:id', async (req, res) => {
+  const { id } = req.params;
+  const { action, reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('update_content', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    contentId: id,
+    action,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the content in the database
+  const item = {
+    id,
+    action,
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: item,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin content management endpoint (delete content)
+app.delete('/api/admin/content/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('delete_content', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    contentId: id
+  });
+  
+  // Mock data - in a real implementation, this would delete the content from the database
+  res.json({
+    success: true,
+    data: {
+      message: 'Content deleted successfully'
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin community management endpoint
+app.get('/api/admin/communities', async (req, res) => {
+  // Log the action
+  await logAdminAction('view_communities', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Mock data - in a real implementation, this would fetch from community database
+  const communities = [];
+  
+  res.json({
+    success: true,
+    data: communities,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin community management endpoint (with search)
+app.get('/api/admin/communities/search', async (req, res) => {
+  const { query } = req.query;
+  
+  // Log the action
+  await logAdminAction('search_communities', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    searchQuery: query
+  });
+  
+  // Mock data - in a real implementation, this would search the community database
+  const communities = [];
+  
+  res.json({
+    success: true,
+    data: communities,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin community management endpoint (get community by ID)
+app.get('/api/admin/communities/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('view_community', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    communityId: id
+  });
+  
+  // Mock data - in a real implementation, this would fetch from community database
+  const community = null;
+  
+  if (community) {
+    res.json({
+      success: true,
+      data: community,
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'COMMUNITY_NOT_FOUND',
+        message: 'Community not found'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Admin community management endpoint (update community)
+app.put('/api/admin/communities/:id', async (req, res) => {
+  const { id } = req.params;
+  const { action, reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('update_community', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    communityId: id,
+    action,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the community in the database
+  const community = {
+    id,
+    action,
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: community,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin community management endpoint (delete community)
+app.delete('/api/admin/communities/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('delete_community', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    communityId: id
+  });
+  
+  // Mock data - in a real implementation, this would delete the community from the database
+  res.json({
+    success: true,
+    data: {
+      message: 'Community deleted successfully'
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin moderation endpoint
+app.get('/api/admin/moderation', async (req, res) => {
+  // Log the action
+  await logAdminAction('view_moderation_cases', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+  
+  // Mock data - in a real implementation, this would fetch from moderation database
+  const cases = [];
+  
+  res.json({
+    success: true,
+    data: cases,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin moderation endpoint (with search)
+app.get('/api/admin/moderation/search', async (req, res) => {
+  const { query } = req.query;
+  
+  // Log the action
+  await logAdminAction('search_moderation_cases', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    searchQuery: query
+  });
+  
+  // Mock data - in a real implementation, this would search the moderation database
+  const cases = [];
+  
+  res.json({
+    success: true,
+    data: cases,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin moderation endpoint (get case by ID)
+app.get('/api/admin/moderation/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Log the action
+  await logAdminAction('view_moderation_case', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    caseId: id
+  });
+  
+  // Mock data - in a real implementation, this would fetch from moderation database
+  const caseData = null;
+  
+  if (caseData) {
+    res.json({
+      success: true,
+      data: caseData,
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } else {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'CASE_NOT_FOUND',
+        message: 'Moderation case not found'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Admin moderation endpoint (update case)
+app.put('/api/admin/moderation/:id', async (req, res) => {
+  const { id } = req.params;
+  const { action, reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('update_moderation_case', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    caseId: id,
+    action,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the case in the database
+  const caseData = {
+    id,
+    action,
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: caseData,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin moderation endpoint (close case)
+app.post('/api/admin/moderation/:id/close', async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+  
+  // Log the action
+  await logAdminAction('close_moderation_case', req.adminId || 'unknown', {
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+    caseId: id,
+    reason
+  });
+  
+  // Mock data - in a real implementation, this would update the case status in the database
+  const caseData = {
+    id,
+    status: 'closed',
+    reason
+  };
+  
+  res.json({
+    success: true,
+    data: caseData,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
     }
   });
 });
@@ -2705,4 +3656,71 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-module.exports = app;
+// Start server
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Optimized production server listening on port ${PORT}`);
+  console.log(`📅 Started at: ${new Date().toISOString()}`);
+  console.log(`🏠 Host: 0.0.0.0`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
+  
+  // Log memory usage after startup
+  setTimeout(() => {
+    console.log('📊 Post-startup memory usage:');
+    logMemoryUsage();
+  }, 5000);
+});
+
+// Initialize Socket.IO
+const io = socketIo(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 WebSocket client connected:', socket.id);
+  
+  // Handle chat messages
+  socket.on('chat_message', (data) => {
+    // Broadcast message to all clients
+    io.emit('chat_message', data);
+  });
+  
+  // Handle notifications
+  socket.on('subscribe_notifications', (userId) => {
+    // Join user-specific room
+    socket.join(`user_${userId}`);
+  });
+  
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('🔌 WebSocket client disconnected:', socket.id);
+  });
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
+  switch (error.code) {
+    case 'EACCES':
+      console.error(`❌ ${bind} requires elevated privileges`);
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(`❌ ${bind} is already in use`);
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+});
+
+module.exports = { app, server, io };
