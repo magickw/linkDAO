@@ -451,33 +451,37 @@ export class CompressionOptimizationMiddleware {
     compressedSize: number,
     wasCompressed: boolean
   ): void {
-    // Ensure compressionTimes array exists (defensive programming)
-    if (!this.compressionTimes) {
-      this.compressionTimes = [];
-    }
+    try {
+      // Ensure compressionTimes array exists (defensive programming)
+      if (!this.compressionTimes) {
+        this.compressionTimes = [];
+      }
 
-    this.compressionTimes.push(compressionTime);
+      this.compressionTimes.push(compressionTime);
 
-    // Keep only recent compression times
-    if (this.compressionTimes.length > 1000) {
-      this.compressionTimes = this.compressionTimes.slice(-1000);
-    }
+      // Keep only recent compression times
+      if (this.compressionTimes.length > 1000) {
+        this.compressionTimes = this.compressionTimes.slice(-1000);
+      }
 
-    if (wasCompressed) {
-      this.metrics.compressedRequests++;
-      this.metrics.totalBytesSaved += (originalSize - compressedSize);
-    }
+      if (wasCompressed) {
+        this.metrics.compressedRequests++;
+        this.metrics.totalBytesSaved += (originalSize - compressedSize);
+      }
 
-    // Calculate average compression time
-    if (this.compressionTimes.length > 0) {
-      const sum = this.compressionTimes.reduce((a, b) => a + b, 0);
-      this.metrics.averageCompressionTime = sum / this.compressionTimes.length;
-    }
+      // Calculate average compression time
+      if (this.compressionTimes.length > 0) {
+        const sum = this.compressionTimes.reduce((a, b) => a + b, 0);
+        this.metrics.averageCompressionTime = sum / this.compressionTimes.length;
+      }
 
-    // Calculate compression ratio
-    if (this.metrics.compressedRequests > 0) {
-      this.metrics.compressionRatio = this.metrics.totalBytesSaved / 
-        (this.metrics.totalBytesSaved + compressedSize * this.metrics.compressedRequests);
+      // Calculate compression ratio
+      if (this.metrics.compressedRequests > 0) {
+        this.metrics.compressionRatio = this.metrics.totalBytesSaved / 
+          (this.metrics.totalBytesSaved + compressedSize * this.metrics.compressedRequests);
+      }
+    } catch (error) {
+      safeLogger.error('Error updating compression metrics:', error);
     }
   }
 

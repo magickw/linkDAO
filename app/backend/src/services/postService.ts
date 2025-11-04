@@ -17,107 +17,124 @@ export class PostService {
   }
 
   async createPost(input: CreatePostInput): Promise<Post> {
-    // Get user ID and profile from address
-    let user = await userProfileService.getProfileByAddress(input.author);
-    if (!user) {
-      // Create user if they don't exist
-      // Generate a unique handle using wallet address (truncated) and timestamp
-      const uniqueHandle = `user_${input.author.substring(0, 8)}_${Date.now()}`;
-      user = await userProfileService.createProfile({
-        walletAddress: input.author,
-        handle: uniqueHandle,
-        ens: '',
-        avatarCid: '',
-        bioCid: ''
-      });
-    }
-
-    // Generate temporary content ID for moderation
-    const tempContentId = `post_${Date.now()}_${user.id}`;
-
-    // Run AI moderation check
-    const moderationReport = await aiContentModerationService.moderateContent({
-      id: tempContentId,
-      text: input.content,
-      userId: user.id,
-      type: 'post'
-    });
-
-    // Check if content should be blocked immediately
-    if (moderationReport.recommendedAction === 'block') {
-      throw new Error(
-        `Content violates community guidelines: ${moderationReport.explanation}. ` +
-        `Risk score: ${moderationReport.overallRiskScore.toFixed(2)}. ` +
-        `Please review our content policy and try again.`
-      );
-    }
-
-    // Upload content to IPFS (allowed or limited content)
-    const contentCid = await this.metadataService.uploadToIPFS(input.content);
-
-    // Upload media to IPFS (if any)
-    const mediaCids: string[] = [];
-    if (input.media) {
-      for (const media of input.media) {
-        const mediaCid = await this.metadataService.uploadToIPFS(media);
-        mediaCids.push(mediaCid);
+    try {
+      // Check if database is connected
+      if (!databaseService.isDatabaseConnected() || !databaseService.db) {
+        throw new Error('Database service temporarily unavailable. Please try again later.');
       }
+
+      // Get user ID and profile from address
+      let user = await userProfileService.getProfileByAddress(input.author);
+      if (!user) {
+        // Create user if they don't exist
+        // Generate a unique handle using wallet address (truncated) and timestamp
+        const uniqueHandle = `user_${input.author.substring(0, 8)}_${Date.now()}`;
+        user = await userProfileService.createProfile({
+          walletAddress: input.author,
+          handle: uniqueHandle,
+          ens: '',
+          avatarCid: '',
+          bioCid: ''
+        });
+      }
+
+      // Generate temporary content ID for moderation
+      const tempContentId = `post_${Date.now()}_${user.id}`;
+
+      // Run AI moderation check
+      const moderationReport = await aiContentModerationService.moderateContent({
+        id: tempContentId,
+        text: input.content,
+        userId: user.id,
+        type: 'post'
+      });
+
+      // Check if content should be blocked immediately
+      if (moderationReport.recommendedAction === 'block') {
+        throw new Error(
+          `Content violates community guidelines: ${moderationReport.explanation}. ` +
+          `Risk score: ${moderationReport.overallRiskScore.toFixed(2)}. ` +
+          `Please review our content policy and try again.`
+        );
+      }
+
+      // Upload content to IPFS (allowed or limited content)
+      const contentCid = await this.metadataService.uploadToIPFS(input.content);
+
+      // Upload media to IPFS (if any)
+      const mediaCids: string[] = [];
+      if (input.media) {
+        for (const media of input.media) {
+          const mediaCid = await this.metadataService.uploadToIPFS(media);
+          mediaCids.push(mediaCid);
+        }
+      }
+
+      // Determine post status based on moderation result
+      let postStatus: 'active' | 'limited' | 'pending_review' = 'active';
+      let moderationWarning: string | null = null;
+
+      if (moderationReport.recommendedAction === 'review') {
+        postStatus = 'pending_review';
+        moderationWarning = 'This post is under review by moderators.';
+      } else if (moderationReport.recommendedAction === 'limit') {
+        postStatus = 'limited';
+        moderationWarning = 'This post has limited visibility due to potentially sensitive content.';
+      }
+
+      // Create post in database
+      const dbPost = await databaseService.createPost(
+        user.id,
+        contentCid,
+        input.parentId ? parseInt(input.parentId) : undefined
+      );
+      
+      // Update post with moderation metadata
+      await databaseService.updatePost(dbPost.id, {
+        moderationStatus: postStatus,
+        moderationRiskScore: moderationReport.overallRiskScore,
+        moderationCategories: JSON.stringify([
+          moderationReport.spamDetection.isSpam ? 'spam' : null,
+          moderationReport.toxicityDetection.isToxic ? moderationReport.toxicityDetection.toxicityType : null,
+          moderationReport.contentPolicy.violatesPolicy ? moderationReport.contentPolicy.policyType : null,
+          moderationReport.copyrightDetection.potentialInfringement ? 'copyright' : null
+        ].filter(Boolean)),
+        moderationExplanation: moderationReport.explanation
+      });
+
+      // Handle potential null dates by providing default values
+      const createdAt = dbPost.createdAt || new Date();
+
+      const post: Post = {
+        id: dbPost.id.toString(),
+        author: input.author,
+        parentId: input.parentId || null,
+        contentCid,
+        mediaCids,
+        tags: input.tags || [],
+        createdAt,
+        onchainRef: input.onchainRef || '',
+        // Add moderation metadata
+        moderationStatus: postStatus,
+        moderationWarning: moderationWarning,
+        riskScore: moderationReport.overallRiskScore
+      };
+
+      // Log moderation result for analytics
+      safeLogger.info(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);
+
+      return post;
+    } catch (error) {
+      safeLogger.error('Error creating post:', error);
+      
+      // If it's a database connectivity issue, throw a specific error
+      if (error.message && error.message.includes('Database service temporarily unavailable')) {
+        throw new Error('Service temporarily unavailable. Please try again later.');
+      }
+      
+      // Re-throw other errors
+      throw error;
     }
-
-    // Determine post status based on moderation result
-    let postStatus: 'active' | 'limited' | 'pending_review' = 'active';
-    let moderationWarning: string | null = null;
-
-    if (moderationReport.recommendedAction === 'review') {
-      postStatus = 'pending_review';
-      moderationWarning = 'This post is under review by moderators.';
-    } else if (moderationReport.recommendedAction === 'limit') {
-      postStatus = 'limited';
-      moderationWarning = 'This post has limited visibility due to potentially sensitive content.';
-    }
-
-    // Create post in database
-    const dbPost = await databaseService.createPost(
-      user.id,
-      contentCid,
-      input.parentId ? parseInt(input.parentId) : undefined
-    );
-    
-    // Update post with moderation metadata
-    await databaseService.updatePost(dbPost.id, {
-      moderationStatus: postStatus,
-      moderationRiskScore: moderationReport.overallRiskScore,
-      moderationCategories: JSON.stringify([
-        moderationReport.spamDetection.isSpam ? 'spam' : null,
-        moderationReport.toxicityDetection.isToxic ? moderationReport.toxicityDetection.toxicityType : null,
-        moderationReport.contentPolicy.violatesPolicy ? moderationReport.contentPolicy.policyType : null,
-        moderationReport.copyrightDetection.potentialInfringement ? 'copyright' : null
-      ].filter(Boolean)),
-      moderationExplanation: moderationReport.explanation
-    });
-
-    // Handle potential null dates by providing default values
-    const createdAt = dbPost.createdAt || new Date();
-
-    const post: Post = {
-      id: dbPost.id.toString(),
-      author: input.author,
-      parentId: input.parentId || null,
-      contentCid,
-      mediaCids,
-      tags: input.tags || [],
-      createdAt,
-      onchainRef: input.onchainRef || '',
-      // Add moderation metadata
-      moderationStatus: postStatus,
-      moderationWarning: moderationWarning,
-      riskScore: moderationReport.overallRiskScore
-    };
-
-    // Log moderation result for analytics
-    safeLogger.info(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);
-
-    return post;
   }
 
   async getPostById(id: string): Promise<Post | undefined> {

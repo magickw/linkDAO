@@ -66,7 +66,7 @@ export class PostService {
         if (response.status === 503) {
           // Service unavailable - throw appropriate error to prevent data loss
           console.warn('Post service unavailable (503), cannot create post');
-          throw new Error('Post service temporarily unavailable. Please try again later.');
+          throw new Error('Service temporarily unavailable. Please try again later.');
         }
         if (response.status === 429) {
           // Rate limited - throw appropriate error

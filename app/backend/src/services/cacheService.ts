@@ -186,7 +186,7 @@ export class CacheService {
     this.stats.totalRequests++;
 
     try {
-      // Check if redis client exists
+      // Check if redis client exists and is properly initialized
       if (!this.redis) {
         safeLogger.warn('Redis client not initialized, cache miss');
         this.stats.misses++;
@@ -209,14 +209,22 @@ export class CacheService {
 
       if (value !== null) {
         this.stats.hits++;
-        return JSON.parse(value);
+        try {
+          return JSON.parse(value) as T;
+        } catch (parseError) {
+          safeLogger.warn('Failed to parse cached value, returning raw value');
+          return value as unknown as T;
+        }
       } else {
         this.stats.misses++;
         return null;
       }
     } catch (error) {
-      safeLogger.error(`Cache get error for key ${key}:`, error);
+      const endTime = performance.now();
+      this.stats.responseTimeSum += (endTime - startTime);
       this.stats.misses++;
+      
+      safeLogger.error(`Cache get error for key "${key}":`, error);
       return null;
     }
   }

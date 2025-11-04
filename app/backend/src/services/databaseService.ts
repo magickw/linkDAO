@@ -27,11 +27,31 @@ export class DatabaseService {
       } else {
         safeLogger.warn('⚠️ Database service running in offline mode - no database connection available');
         this.isConnected = false;
+        // Initialize with a mock database object to prevent undefined access
+        this.db = {
+          execute: () => Promise.resolve({ rows: [] }),
+          select: () => ({ from: () => Promise.resolve([]) }),
+          insert: () => ({ values: () => ({ returning: () => Promise.resolve([]) }) }),
+          update: () => ({ set: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) }) }),
+          delete: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) })
+        };
       }
     } catch (error) {
       safeLogger.error('❌ Failed to initialize database service:', error);
       this.isConnected = false;
+      // Initialize with a mock database object to prevent undefined access
+      this.db = {
+        execute: () => Promise.resolve({ rows: [] }),
+        select: () => ({ from: () => Promise.resolve([]) }),
+        insert: () => ({ values: () => ({ returning: () => Promise.resolve([]) }) }),
+        update: () => ({ set: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) }) }),
+        delete: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) })
+      };
     }
+  }
+
+  public isDatabaseConnected(): boolean {
+    return this.isConnected;
   }
 
   private checkConnection() {

@@ -20,6 +20,14 @@ export class PostController {
       return res.status(201).json(post);
     } catch (error: any) {
       safeLogger.error('Error in createPost controller:', error);
+      
+      // Handle specific service unavailable errors
+      if (error.message && error.message.includes('Service temporarily unavailable')) {
+        return res.status(503).json({ 
+          error: 'Service temporarily unavailable. Please try again later.' 
+        });
+      }
+      
       return res.status(500).json({ error: 'Internal server error' });
     }
   }

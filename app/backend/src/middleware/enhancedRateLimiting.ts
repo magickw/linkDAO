@@ -506,27 +506,47 @@ export class EnhancedRateLimitingService {
   /**
    * Increment request counters
    */
-  private async incrementCounters(
-    key: string,
-    config: EnhancedRateLimitConfig,
-    req: Request,
-    res: Response
-  ): Promise<void> {
+  private async incrementCounters(key: string, config: EnhancedRateLimitConfig, req: Request, res: Response): Promise<void> {
     try {
+      // Ensure cacheService is properly initialized
+      if (!cacheService) {
+        logger.warn('Cache service not available for rate limiting');
+        return;
+      }
+
       const now = Date.now();
       
       // Increment main counter
       const cacheKey = `rate_limit:${key}`;
       const ttl = Math.ceil(config.windowMs / 1000);
-      const currentCount = await cacheService.get<number>(cacheKey) || 0;
-      await cacheService.set(cacheKey, currentCount + 1, ttl);
+      
+      // Ensure cacheService.get returns a valid value
+      let currentCount: number | null = null;
+      try {
+        currentCount = await cacheService.get<number>(cacheKey);
+      } catch (error) {
+        logger.warn('Failed to get current rate limit count, defaulting to 0:', error);
+        currentCount = null;
+      }
+      
+      const count = currentCount !== null ? currentCount : 0;
+      await cacheService.set(cacheKey, count + 1, ttl);
 
       // Increment burst counter if configured
       if (config.burstLimit && config.burstWindowMs) {
         const burstKey = `burst_limit:${key}`;
         const burstTtl = Math.ceil(config.burstWindowMs / 1000);
-        const burstCount = await cacheService.get<number>(burstKey) || 0;
-        await cacheService.set(burstKey, burstCount + 1, burstTtl);
+        
+        let burstCount: number | null = null;
+        try {
+          burstCount = await cacheService.get<number>(burstKey);
+        } catch (error) {
+          logger.warn('Failed to get current burst count, defaulting to 0:', error);
+          burstCount = null;
+        }
+        
+        const bCount = burstCount !== null ? burstCount : 0;
+        await cacheService.set(burstKey, bCount + 1, burstTtl);
       }
 
       // Track statistics
