@@ -2,6 +2,20 @@ import express from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { verificationService } from '../services/verificationService';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for verification endpoints
+const verificationRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'VERIFICATION_RATE_LIMIT_EXCEEDED',
+      message: 'Too many verification requests, please try again later',
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -9,7 +23,7 @@ const router = express.Router();
  * Send email verification code
  * POST /api/verification/email
  */
-router.post('/email', csrfProtection,  async (req, res) => {
+router.post('/email', verificationRateLimit, csrfProtection,  async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -47,7 +61,7 @@ router.post('/email', csrfProtection,  async (req, res) => {
  * Verify email with code
  * POST /api/verification/email/verify
  */
-router.post('/email/verify', csrfProtection,  async (req, res) => {
+router.post('/email/verify', verificationRateLimit, csrfProtection,  async (req, res) => {
   try {
     const { email, code } = req.body;
 
@@ -85,7 +99,7 @@ router.post('/email/verify', csrfProtection,  async (req, res) => {
  * Send phone verification code
  * POST /api/verification/phone
  */
-router.post('/phone', csrfProtection,  async (req, res) => {
+router.post('/phone', verificationRateLimit, csrfProtection,  async (req, res) => {
   try {
     const { phone } = req.body;
 
@@ -123,7 +137,7 @@ router.post('/phone', csrfProtection,  async (req, res) => {
  * Verify phone with code
  * POST /api/verification/phone/verify
  */
-router.post('/phone/verify', csrfProtection,  async (req, res) => {
+router.post('/phone/verify', verificationRateLimit, csrfProtection,  async (req, res) => {
   try {
     const { phone, code } = req.body;
 
@@ -161,7 +175,7 @@ router.post('/phone/verify', csrfProtection,  async (req, res) => {
  * Get verification service status
  * GET /api/verification/status
  */
-router.get('/status', (req, res) => {
+router.get('/status', verificationRateLimit, (req, res) => {
   try {
     const status = verificationService.getServiceStatus();
     res.json({
@@ -181,7 +195,7 @@ router.get('/status', (req, res) => {
  * Test email service (development only)
  * GET /api/verification/test-email
  */
-router.get('/test-email', async (req, res) => {
+router.get('/test-email', verificationRateLimit, async (req, res) => {
   if (process.env.NODE_ENV === 'production') {
     return res.status(403).json({
       success: false,

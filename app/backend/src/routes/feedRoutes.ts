@@ -10,7 +10,7 @@ const router = express.Router();
 // Apply rate limiting to all routes
 router.use(rateLimitingMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 500, // Increased limit each IP to 500 requests per windowMs
   message: 'Too many feed requests from this IP'
 }));
 

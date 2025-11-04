@@ -1,8 +1,8 @@
-const CACHE_NAME = 'web3-social-v2';
-const STATIC_CACHE = 'static-v2';
-const DYNAMIC_CACHE = 'dynamic-v2';
-const IMAGE_CACHE = 'images-v2';
-const PERFORMANCE_CACHE = 'performance-v1';
+const CACHE_NAME = 'web3-social-v3';
+const STATIC_CACHE = 'static-v3';
+const DYNAMIC_CACHE = 'dynamic-v3';
+const IMAGE_CACHE = 'images-v3';
+const PERFORMANCE_CACHE = 'performance-v2';
 
 // Enhanced request deduplication and rate limiting
 const pendingRequests = new Map();
@@ -12,9 +12,9 @@ const requestCounts = new Map();
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 100 : 10; // Reduced to prevent rate limiting
-const BACKOFF_MULTIPLIER = 3; // Increased backoff
-const MAX_BACKOFF_TIME = 600000; // 10 minutes max backoff
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 200 : 50; // Reduced to prevent rate limiting
+const BACKOFF_MULTIPLIER = 2; // Increased backoff
+const MAX_BACKOFF_TIME = 300000; // 10 minutes max backoff
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -23,13 +23,18 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/offline.html',
   '/test-performance-optimization',
+  '/favicon.ico',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
   // Add other critical static assets
 ];
 
 // Performance optimization assets
 const PERFORMANCE_ASSETS = [
   '/api/performance/metrics',
-  '/api/performance/optimize'
+  '/api/performance/optimize',
+  '/api/analytics/track/event',
+  '/api/content-performance'
 ];
 
 // API endpoints to cache
@@ -37,7 +42,12 @@ const CACHEABLE_APIS = [
   '/api/posts',
   '/api/communities',
   '/api/users',
-  '/api/feed'
+  '/api/feed',
+  '/api/profiles',
+  '/api/reputation',
+  '/api/tips',
+  '/api/follow',
+  '/api/search'
 ];
 
 // Install event - cache static assets with graceful failure handling

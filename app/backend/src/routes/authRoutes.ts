@@ -4,6 +4,20 @@ import { authController } from '../controllers/authController';
 import { adminAuthController } from '../controllers/adminAuthController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { body } from 'express-validator';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for auth endpoints
+const authRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: 'Too many authentication requests, please try again later',
+    }
+  }
+});
 
 const router = Router();
 
@@ -50,7 +64,7 @@ const profileUpdateValidation = [
  * @desc Generate nonce for wallet authentication
  * @access Public
  */
-router.get('/nonce', (req, res) => {
+router.get('/nonce', authRateLimit, (req, res) => {
   // Generate a simple random nonce
   const crypto = require('crypto');
   const nonce = crypto.randomBytes(32).toString('hex');
@@ -69,7 +83,7 @@ router.get('/nonce', (req, res) => {
  * @desc Authenticate with wallet signature
  * @access Public
  */
-router.post('/wallet-connect', csrfProtection,  walletConnectValidation, authController.walletConnect);
+router.post('/wallet-connect', authRateLimit, csrfProtection,  walletConnectValidation, authController.walletConnect);
 
 /**
  * @route GET /api/auth/profile

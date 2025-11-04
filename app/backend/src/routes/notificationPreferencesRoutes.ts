@@ -8,11 +8,26 @@ import {
   testNotification,
 } from '../controllers/notificationPreferencesController';
 import { authenticateToken } from '../middleware/auth';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for notification preferences endpoints
+const notificationRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'NOTIFICATION_RATE_LIMIT_EXCEEDED',
+      message: 'Too many notification requests, please try again later',
+    }
+  }
+});
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+router.use(notificationRateLimit);
 
 /**
  * @route   GET /api/notification-preferences

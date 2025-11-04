@@ -2,11 +2,26 @@ import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { marketplaceController } from '../controllers/marketplaceController';
 import { validateRequest } from '../middleware/validation';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for marketplace endpoints
+const marketplaceRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 200, // 200 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'MARKETPLACE_RATE_LIMIT_EXCEEDED',
+      message: 'Too many marketplace requests, please try again later',
+    }
+  }
+});
 
 const router = express.Router();
 
 // GET /api/marketplace/listings/:id - Get individual product details
 router.get('/listings/:id', 
+  marketplaceRateLimit,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -17,6 +32,7 @@ router.get('/listings/:id',
 
 // GET /api/marketplace/listings - Get product listings with filtering and pagination
 router.get('/listings',
+  marketplaceRateLimit,
   validateRequest({
     query: {
       page: { type: 'number', optional: true, min: 1 },
@@ -33,6 +49,7 @@ router.get('/listings',
 
 // GET /api/marketplace/sellers/:id - Get seller profile information
 router.get('/sellers/:id',
+  marketplaceRateLimit,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -43,6 +60,7 @@ router.get('/sellers/:id',
 
 // GET /api/marketplace/sellers/:id/listings - Get seller's products
 router.get('/sellers/:id/listings',
+  marketplaceRateLimit,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -57,6 +75,7 @@ router.get('/sellers/:id/listings',
 
 // GET /api/marketplace/search - Search products and sellers
 router.get('/search',
+  marketplaceRateLimit,
   validateRequest({
     query: {
       q: { type: 'string', required: true, minLength: 1 },

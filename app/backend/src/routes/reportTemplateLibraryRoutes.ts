@@ -2,11 +2,26 @@ import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { reportTemplateLibraryController } from '../controllers/reportTemplateLibraryController';
 import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for report template library endpoints
+const reportTemplateRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'REPORT_TEMPLATE_RATE_LIMIT_EXCEEDED',
+      message: 'Too many report template requests, please try again later',
+    }
+  }
+});
 
 const router = Router();
 
 // Apply admin authentication to all routes
 router.use(adminAuthMiddleware);
+router.use(reportTemplateRateLimit);
 
 // Category Management
 router.post('/categories', csrfProtection,  reportTemplateLibraryController.createCategory.bind(reportTemplateLibraryController));

@@ -3,6 +3,20 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { contentSharingController } from '../controllers/contentSharingController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validation';
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting for content sharing endpoints
+const contentSharingRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: {
+    success: false,
+    error: {
+      code: 'CONTENT_SHARING_RATE_LIMIT_EXCEEDED',
+      message: 'Too many content sharing requests, please try again later',
+    }
+  }
+});
 
 const router = Router();
 
@@ -95,6 +109,7 @@ const getTrendingSharedContentSchema = {
 // Generate shareable content object
 router.get(
   '/shareable/:contentType/:contentId',
+  contentSharingRateLimit,
   validateRequest(generateShareableContentSchema),
   contentSharingController.generateShareableContent
 );
@@ -102,6 +117,7 @@ router.get(
 // Generate content preview
 router.post(
   '/preview',
+  contentSharingRateLimit,
   validateRequest(generateContentPreviewSchema),
   contentSharingController.generateContentPreview
 );
@@ -109,6 +125,7 @@ router.post(
 // Share content to direct message
 router.post(
   '/share-to-message',
+  contentSharingRateLimit,
   authMiddleware,
   validateRequest(shareToDirectMessageSchema),
   contentSharingController.shareToDirectMessage
@@ -117,6 +134,7 @@ router.post(
 // Create community invitation
 router.post(
   '/community-invitation',
+  contentSharingRateLimit,
   authMiddleware,
   validateRequest(createCommunityInvitationSchema),
   contentSharingController.createCommunityInvitation
@@ -125,6 +143,7 @@ router.post(
 // Cross-post content to communities
 router.post(
   '/cross-post',
+  contentSharingRateLimit,
   authMiddleware,
   validateRequest(crossPostSchema),
   contentSharingController.crossPostToCommunities
@@ -133,6 +152,7 @@ router.post(
 // Get sharing analytics
 router.get(
   '/:contentType/:contentId/analytics',
+  contentSharingRateLimit,
   validateRequest(getSharingAnalyticsSchema),
   contentSharingController.getSharingAnalytics
 );
@@ -140,6 +160,7 @@ router.get(
 // Track sharing event
 router.post(
   '/track-event',
+  contentSharingRateLimit,
   authMiddleware,
   validateRequest(trackSharingEventSchema),
   contentSharingController.trackSharingEvent
@@ -148,6 +169,7 @@ router.post(
 // Get user's sharing history
 router.get(
   '/history',
+  contentSharingRateLimit,
   authMiddleware,
   validateRequest(getUserSharingHistorySchema),
   contentSharingController.getUserSharingHistory
@@ -156,6 +178,7 @@ router.get(
 // Get trending shared content
 router.get(
   '/trending',
+  contentSharingRateLimit,
   validateRequest(getTrendingSharedContentSchema),
   contentSharingController.getTrendingSharedContent
 );
