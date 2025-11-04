@@ -53,7 +53,7 @@ const CreatePostPage: React.FC = () => {
         author: address,
         title: title.trim(),
         content: content.trim(),
-        communityId: selectedCommunity,
+        dao: selectedCommunity,
         tags
       });
 
