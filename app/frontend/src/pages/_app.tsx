@@ -76,7 +76,7 @@ function AppContent({ Component, pageProps, router }: AppProps) {
     }
 
     // Initialize performance monitoring
-    performanceMonitor.start();
+    performanceMonitor.mark('app_init_start');
     memoryMonitor.start();
 
     // IMMEDIATE: Set up chrome.runtime error suppression before anything else
@@ -223,12 +223,9 @@ function AppContent({ Component, pageProps, router }: AppProps) {
             }
           });
 
-          await swUtilRef.current.init();
+          await swUtilRef.current.register();
 
-          // Monitor network status
-          const networkStatus = swUtilRef.current.getNetworkStatus();
-          networkStatus.addListener(setIsOnline);
-          setIsOnline(networkStatus.getNetworkStatus());
+          // Removed network status monitoring as it's not available in ServiceWorkerUtil
         } else {
           console.log('Service Worker disabled in development');
         }
@@ -248,17 +245,16 @@ function AppContent({ Component, pageProps, router }: AppProps) {
       window.removeEventListener('error', chromeRuntimeErrorHandler, true);
       window.removeEventListener('unhandledrejection', chromeRuntimeRejectionHandler, true);
       console.error = originalConsoleError; // Restore original console.error
-      if (swUtilRef.current) {
-        swUtilRef.current.destroy();
-      }
       memoryMonitor.stop();
+      clearInterval(healthCheckInterval);
     };
   }, []);
 
   const handleUpdateApp = async () => {
+    // Simplified update handling since getServiceWorkerManager doesn't exist
     if (swUtilRef.current) {
-      const swManager = swUtilRef.current.getServiceWorkerManager();
-      await swManager.skipWaiting();
+      // Force service worker update check
+      await swUtilRef.current.checkForUpdates();
       setUpdateAvailable(false);
     }
   };
@@ -266,6 +262,7 @@ function AppContent({ Component, pageProps, router }: AppProps) {
   return (
     <>
       <Component {...pageProps} />
+      <OfflineIndicator isOnline={isOnline} isBackendAvailable={isBackendAvailable} />
       
       {/* Offline Indicator */}
       {!isOnline && (
@@ -332,7 +329,6 @@ export default function App({ Component, pageProps, router }: AppProps) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#000000" />
       </Head>
-      <OfflineIndicator isOnline={isOnline} isBackendAvailable={isBackendAvailable} />
       <ErrorBoundary>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
@@ -345,11 +341,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
                     <WalletLoginBridgeWithToast />
                     <NavigationProvider>
                       <EnhancedThemeProvider defaultTheme="system">
-                        <AppContent
-                          Component={Component}
-                          pageProps={pageProps}
-                          router={router}
-                        />
+                        <AppContent Component={Component} pageProps={pageProps} router={router} />
                       </EnhancedThemeProvider>
                     </NavigationProvider>
                   </ToastProvider>
