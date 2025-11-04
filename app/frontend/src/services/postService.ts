@@ -18,11 +18,37 @@ export class PostService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
+    // Get or create session ID
+    let sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem('sessionId', sessionId);
+    }
+    
+    // Fetch CSRF token
+    let csrfToken = sessionStorage.getItem('csrfToken');
+    if (!csrfToken) {
+      try {
+        const tokenResponse = await fetch(`${BACKEND_API_BASE_URL}/api/csrf-token`, {
+          headers: { 'x-session-id': sessionId }
+        });
+        if (tokenResponse.ok) {
+          const { data } = await tokenResponse.json();
+          csrfToken = data.csrfToken;
+          sessionStorage.setItem('csrfToken', csrfToken);
+        }
+      } catch (e) {
+        console.error('Failed to fetch CSRF token:', e);
+      }
+    }
+    
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-session-id': sessionId,
+          ...(csrfToken && { 'x-csrf-token': csrfToken }),
         },
         body: JSON.stringify(data),
         signal: controller.signal,

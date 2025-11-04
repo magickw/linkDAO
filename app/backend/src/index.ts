@@ -474,6 +474,9 @@ import pollRoutes from './routes/pollRoutes';
 // Import cache routes
 import cacheRoutes from './routes/cacheRoutes';
 
+// Import CSRF routes
+import csrfRoutes from './routes/csrfRoutes';
+
 // Import tip routes
 import tipRoutes from './routes/tipRoutes';
 
@@ -753,6 +756,9 @@ app.use('/api/support', supportTicketingRoutes);
 
 // Cache management routes
 app.use('/api/cache', cacheRoutes);
+
+// CSRF token routes
+app.use('/api', csrfRoutes);
 
 // Import order event listener service
 import { orderEventListenerService } from './services/orderEventListenerService';

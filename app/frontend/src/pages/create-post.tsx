@@ -6,6 +6,8 @@ import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import { ArrowLeft, Hash } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 import { useCommunities } from '@/hooks/useCommunities';
+import { PostService } from '@/services/postService';
+import { useAccount } from 'wagmi';
 
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
@@ -29,6 +31,8 @@ const CreatePostPage: React.FC = () => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const { address } = useAccount();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -37,25 +41,26 @@ const CreatePostPage: React.FC = () => {
       return;
     }
 
+    if (!address) {
+      alert('Please connect your wallet to create a post');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement actual post creation API call
-      console.log('Creating post:', {
-        title,
-        content,
-        community: selectedCommunity,
+      await PostService.createPost({
+        author: address,
+        title: title.trim(),
+        content: content.trim(),
+        communityId: selectedCommunity,
         tags
       });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Redirect to community page or post
       router.push(`/dao/${selectedCommunity}`);
     } catch (error) {
       console.error('Error creating post:', error);
-      alert('Failed to create post. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to create post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
