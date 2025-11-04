@@ -608,6 +608,9 @@ app.get('/api/profiles/address/:address', async (req, res) => {
         error: 'Invalid Ethereum address'
       });
     }
+    
+    // Convert address to lowercase for consistent querying
+    const normalizedAddress = address.toLowerCase();
 
     // Check if database connection is available
     if (!db) {
@@ -627,9 +630,9 @@ app.get('/api/profiles/address/:address', async (req, res) => {
       });
     }
 
-    console.log('Querying database for address:', address);
-    // Query the database
-    const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
+    console.log('Querying database for address:', normalizedAddress);
+    // Query the database (case-insensitive)
+    const result = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress)).limit(1);
     console.log('Database query result:', result);
     
     if (result.length === 0) {
