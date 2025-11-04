@@ -12,7 +12,7 @@ import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
 // Cart provider not needed - using service-based cart
-import { ServiceWorkerUtil } from '@/utils/serviceWorker';
+import { ServiceWorkerUtil } from '@/utils/serviceWorkerUtil';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';

@@ -1,34 +1,14 @@
-// Service Worker registration and management utilities with Workbox compatibility
-
-import { serviceWorkerCacheService } from '../services/serviceWorkerCacheService';
-
-interface ServiceWorkerConfig {
-  onUpdate?: (registration: ServiceWorkerRegistration) => void;
-  onSuccess?: (registration: ServiceWorkerRegistration) => void;
-  onError?: (error: Error) => void;
-  useEnhanced?: boolean;
-  enableWorkbox?: boolean;
-}
-
-class ServiceWorkerManager {
+export class ServiceWorkerUtil {
   private registration: ServiceWorkerRegistration | null = null;
-  private config: ServiceWorkerConfig;
 
-  constructor(config: ServiceWorkerConfig = {}) {
-    this.config = config;
-  }
-
-  // Register the enhanced service worker with Workbox support
-  async register(useEnhanced: boolean = true): Promise<ServiceWorkerRegistration | null> {
+  async register(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
-      console.log('Service Worker not supported');
-      return null;
+      console.warn('Service Worker is not supported');
+      return;
     }
 
     try {
-      // Use enhanced service worker with Workbox by default
-      const swPath = useEnhanced && this.config.enableWorkbox !== false ? '/sw-enhanced.js' : '/sw.js';
-      const registration = await navigator.serviceWorker.register(swPath, {
+      this.registration = await navigator.serviceWorker.register('/sw.js', {
         scope: '/'
       });
 
