@@ -1,8 +1,34 @@
 /**
  * Unified Marketplace Service
- * Consolidates all marketplace functionality into a single, comprehensive service
- * Replaces: marketplaceService.ts, enhancedMarketplaceService.ts, realMarketplaceService.ts
+ * Consolidates all marketplace functionality with enhanced error handling and offline support
  */
+
+import { ApiCacheManager } from '../utils/apiCacheManager';
+import { fetchWithRetry } from '../utils/apiUtils';
+import { API_BASE_URL } from '../config/api';
+
+// Fallback data for offline/error scenarios
+const MOCK_PRODUCTS: Product[] = [
+  {
+    id: 'prod_001',
+    sellerId: 'seller_001',
+    title: 'Premium Digital Art Collection',
+    description: 'A curated collection of digital artworks',
+    priceAmount: 0.1,
+    priceCurrency: 'ETH',
+    categoryId: 'cat_001',
+    images: ['https://placeholder.com/art1.jpg'],
+    metadata: {},
+    inventory: 1,
+    status: 'active',
+    tags: ['art', 'digital', 'premium'],
+    views: 100,
+    favorites: 50,
+    listingStatus: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
 // Core interfaces
 export interface Product {

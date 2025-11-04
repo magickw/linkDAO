@@ -17,6 +17,8 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
+import Head from 'next/head';
 import '../styles/globals.css';
 import '../styles/enhanced-glassmorphism.css';
 import '../styles/mobile-optimizations.css';
@@ -28,10 +30,55 @@ const queryClient = new QueryClient();
 function AppContent({ Component, pageProps, router }: AppProps) {
   const [isOnline, setIsOnline] = React.useState(true);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
-  const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
+      const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
+      const [isBackendAvailable, setIsBackendAvailable] = React.useState(true);
+      const [retryAttempt, setRetryAttempt] = React.useState(0);
 
-  // Initialize service worker and performance monitoring
+  // Initialize service worker, performance monitoring, and network status
   React.useEffect(() => {
+    // Check backend availability
+    const checkBackendAvailability = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`);
+        setIsBackendAvailable(response.ok);
+        if (response.ok) setRetryAttempt(0);
+      } catch (error) {
+        setIsBackendAvailable(false);
+        if (retryAttempt < 3) {
+          setTimeout(() => {
+            setRetryAttempt(prev => prev + 1);
+          }, Math.min(1000 * Math.pow(2, retryAttempt), 30000));
+        }
+      }
+    };
+
+    checkBackendAvailability();
+    const healthCheckInterval = setInterval(checkBackendAvailability, 60000);
+    // Network status monitoring
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Service worker registration with enhanced error handling
+    if ('serviceWorker' in navigator) {
+      swUtilRef.current = new ServiceWorkerUtil();
+      swUtilRef.current.register()
+        .then(() => console.log('Service Worker registered successfully'))
+        .catch(error => console.warn('Service Worker registration failed:', error));
+      
+      // Check for updates
+      setInterval(() => {
+        swUtilRef.current?.checkForUpdates()
+          .then(hasUpdate => setUpdateAvailable(hasUpdate));
+      }, 60 * 60 * 1000); // Check every hour
+    }
+
+    // Initialize performance monitoring
+    performanceMonitor.start();
+    memoryMonitor.start();
+
     // IMMEDIATE: Set up chrome.runtime error suppression before anything else
     const immediateErrorSuppressor = (event: any) => {
       if (event && (event.message || event.reason || event.error)) {
@@ -274,10 +321,22 @@ export default function App({ Component, pageProps, router }: AppProps) {
   }
 
   return (
-    <ErrorBoundary>
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-          <SellerQueryProvider queryClient={queryClient}>
+    <>
+      <Head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#000000" />
+      </Head>
+      <OfflineIndicator isOnline={isOnline} isBackendAvailable={isBackendAvailable} />
+      <ErrorBoundary>
+        <WagmiProvider config={config}>
+          <QueryClientProvider client={queryClient}>
+            <SellerQueryProvider queryClient={queryClient}>
             <RainbowKitProvider>
               <Web3Provider>
                 <AuthProvider>
@@ -301,5 +360,6 @@ export default function App({ Component, pageProps, router }: AppProps) {
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>
+    </>
   );
 }
