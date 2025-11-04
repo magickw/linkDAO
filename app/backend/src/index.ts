@@ -623,8 +623,8 @@ app.get('/api/profiles/address/:address', async (req, res) => {
     
     // Transform the user data to match the frontend UserProfile interface
     const user = result[0];
-    let profileData = {};
-    
+    let profileData: any = {};
+
     try {
       if (user.profileCid) {
         profileData = JSON.parse(user.profileCid);

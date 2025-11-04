@@ -26,7 +26,9 @@ const reportSchema = z.object({
 });
 
 const eventTrackingSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().refine((val) => val === 'anonymous' || z.string().uuid().safeParse(val).success, {
+    message: 'userId must be a UUID or "anonymous"'
+  }),
   sessionId: z.string(),
   eventType: z.string(),
   eventData: z.any(),
