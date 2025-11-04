@@ -92,7 +92,7 @@ class AnalyticsService {
 
   constructor() {
     // Use port 10000 based on the start-services.sh script
-    this.baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/analytics`;
+    this.baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/analytics`;
   }
 
   /**

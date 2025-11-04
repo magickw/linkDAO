@@ -145,7 +145,7 @@ export class GovernanceService {
       }
       
       // Try backend API
-      const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
+      const response = await fetch(`${this.baseUrl}/governance/dao/${communityId}/proposals`);
       if (response.ok) {
         const data = await safeJson(response);
         if (data) {
@@ -172,7 +172,7 @@ export class GovernanceService {
    */
   async getAllActiveProposals(): Promise<Proposal[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/active`);
+      const response = await fetch(`${this.baseUrl}/governance/proposals/active`);
       if (!response.ok) {
         return this.getMockProposals('all');
       }
@@ -196,7 +196,7 @@ export class GovernanceService {
    */
   async getProposal(proposalId: string): Promise<Proposal | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}`);
+      const response = await fetch(`${this.baseUrl}/governance/proposals/${proposalId}`);
       if (!response.ok) return null;
       const data = await safeJson(response);
       if (!data) return null;
@@ -222,7 +222,7 @@ export class GovernanceService {
     requiredMajority?: number;
   }): Promise<Proposal | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals`, {
+      const response = await fetch(`${this.baseUrl}/governance/proposals`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +262,7 @@ export class GovernanceService {
     lastUpdated: Date;
   } | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
+      const response = await fetch(`${this.baseUrl}/governance/dao/${daoId}/treasury`);
       
       if (response.ok) {
         const json = await safeJson(response);
@@ -293,7 +293,7 @@ export class GovernanceService {
     stakingMultiplier?: number;
   } | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/users/${userId}/voting-power`);
+      const response = await fetch(`${this.baseUrl}/governance/dao/${daoId}/users/${userId}/voting-power`);
       
       if (response.ok) {
         const data = await response.json();
@@ -317,7 +317,7 @@ export class GovernanceService {
     votingPower: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/delegate`, {
+      const response = await fetch(`${this.baseUrl}/governance/delegate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +354,7 @@ export class GovernanceService {
     daoId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/revoke-delegation`, {
+      const response = await fetch(`${this.baseUrl}/governance/revoke-delegation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -392,7 +392,7 @@ export class GovernanceService {
     createdAt: Date;
   }>> {
     try {
-      const url = `${this.baseUrl}/api/governance/users/${userId}/voting-history${daoId ? `?daoId=${daoId}` : ''}`;
+      const url = `${this.baseUrl}/governance/users/${userId}/voting-history${daoId ? `?daoId=${daoId}` : ''}`;
       const response = await fetch(url);
       
       if (response.ok) {
@@ -522,7 +522,7 @@ export class GovernanceService {
    */
   async getUserVotingPower(communityId: string, userAddress: string): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/voting-power/${communityId}/${userAddress}`);
+      const response = await fetch(`${this.baseUrl}/governance/voting-power/${communityId}/${userAddress}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -544,7 +544,7 @@ export class GovernanceService {
    */
   async getCommunityParticipationRate(communityId: string): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/participation/${communityId}`);
+      const response = await fetch(`${this.baseUrl}/governance/participation/${communityId}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -564,7 +564,7 @@ export class GovernanceService {
    */
   async getProposalVotingMetrics(proposalId: string): Promise<VotingMetrics> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/metrics/${proposalId}`);
+      const response = await fetch(`${this.baseUrl}/governance/metrics/${proposalId}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -584,7 +584,7 @@ export class GovernanceService {
    */
   async canUserVote(proposalId: string, userAddress: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/can-vote/${proposalId}/${userAddress}`);
+      const response = await fetch(`${this.baseUrl}/governance/can-vote/${proposalId}/${userAddress}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -604,7 +604,7 @@ export class GovernanceService {
    */
   async getParticipationMetrics(communityId: string, userAddress?: string): Promise<ParticipationMetrics> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/participation-metrics/${communityId}${userAddress ? `?userAddress=${userAddress}` : ''}`);
+      const response = await fetch(`${this.baseUrl}/governance/participation-metrics/${communityId}${userAddress ? `?userAddress=${userAddress}` : ''}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -632,7 +632,7 @@ export class GovernanceService {
     trend: 'increasing' | 'decreasing' | 'stable';
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/historical-participation/${communityId}?timeframe=${timeframe}`);
+      const response = await fetch(`${this.baseUrl}/governance/historical-participation/${communityId}?timeframe=${timeframe}`);
       
       if (response.ok) {
         const data = await response.json();
@@ -657,7 +657,7 @@ export class GovernanceService {
     totalVoters: number;
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/voting-weight/${communityId}/${userAddress}`);
+      const response = await fetch(`${this.baseUrl}/governance/voting-weight/${communityId}/${userAddress}`);
       
       if (response.ok) {
         const data = await response.json();

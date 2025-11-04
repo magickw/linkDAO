@@ -62,7 +62,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities`,
+        `${BACKEND_API_BASE_URL}/communities`,
         {
           method: 'POST',
           headers: {
@@ -116,7 +116,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        `${BACKEND_API_BASE_URL}/communities/${id}`,
         {
           method: 'GET',
           headers: {
@@ -218,7 +218,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/name/${name}`,
+        `${BACKEND_API_BASE_URL}/communities/name/${name}`,
         {
           method: 'GET',
           headers: {
@@ -287,7 +287,7 @@ export class CommunityService {
       () => globalRequestCoalescer.request(
         cacheKey,
         async () => {
-          let url = `${BACKEND_API_BASE_URL}/api/communities`;
+          let url = `${BACKEND_API_BASE_URL}/communities`;
           const searchParams = new URLSearchParams();
           
           if (params) {
@@ -359,7 +359,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        `${BACKEND_API_BASE_URL}/communities/${id}`,
         {
           method: 'PUT',
           headers: {
@@ -421,7 +421,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        `${BACKEND_API_BASE_URL}/communities/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -481,7 +481,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}/communities/search?q=${encodeURIComponent(query)}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -545,7 +545,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/trending?limit=${limit}`,
+        `${BACKEND_API_BASE_URL}/communities/trending?limit=${limit}`,
         {
           method: 'GET',
           headers: {

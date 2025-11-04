@@ -42,7 +42,7 @@ class AuthService {
    */
   async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/nonce`, {
+      const response = await fetch(`${this.baseUrl}/auth/nonce`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ class AuthService {
       
       // Send authentication request
       try {
-        const response = await fetch(`${this.baseUrl}/api/auth/wallet`, {
+        const response = await fetch(`${this.baseUrl}/auth/wallet`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ class AuthService {
     privacySettings?: any;
   }): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/register`, {
+      const response = await fetch(`${this.baseUrl}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/me`, {
+      const response = await fetch(`${this.baseUrl}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${this.token}`,
         },
@@ -306,7 +306,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/preferences`, {
+      const response = await fetch(`${this.baseUrl}/auth/preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/privacy`, {
+      const response = await fetch(`${this.baseUrl}/auth/privacy`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -358,7 +358,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/kyc/initiate`, {
+      const response = await fetch(`${this.baseUrl}/auth/kyc/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -384,7 +384,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/kyc/status`, {
+      const response = await fetch(`${this.baseUrl}/auth/kyc/status`, {
         headers: {
           'Authorization': `Bearer ${this.token}`,
         },
@@ -422,7 +422,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.token}`,
@@ -453,7 +453,7 @@ class AuthService {
     if (token) {
       try {
         // Fire-and-forget; do not surface network errors to the UI
-        await fetch(`${this.baseUrl}/api/auth/logout`, {
+        await fetch(`${this.baseUrl}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -552,7 +552,7 @@ class AuthService {
    */
   async adminLogin(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/admin/login`, {
+      const response = await fetch(`${this.baseUrl}/auth/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -596,7 +596,7 @@ class AuthService {
   async adminLogout(): Promise<void> {
     try {
       if (this.token) {
-        await fetch(`${this.baseUrl}/api/auth/admin/logout`, {
+        await fetch(`${this.baseUrl}/auth/admin/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.token}`,

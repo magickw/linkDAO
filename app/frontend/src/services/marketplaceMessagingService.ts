@@ -12,7 +12,7 @@ export class MarketplaceMessagingService {
    */
   async createOrderConversation(orderId: number) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/order/${orderId}`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/conversations/order/${orderId}`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000),
         headers: {
@@ -36,7 +36,7 @@ export class MarketplaceMessagingService {
    */
   async getOrderTimeline(conversationId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/${conversationId}/order-timeline`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/conversations/${conversationId}/order-timeline`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -56,7 +56,7 @@ export class MarketplaceMessagingService {
    */
   async sendMessage(conversationId: string, content: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/messaging/conversations/${conversationId}/messages`, {
+      const response = await fetch(`${this.baseUrl}/messaging/conversations/${conversationId}/messages`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000),
         headers: {
@@ -81,7 +81,7 @@ export class MarketplaceMessagingService {
    */
   async getMessages(conversationId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/messaging/conversations/${conversationId}/messages`, {
+      const response = await fetch(`${this.baseUrl}/messaging/conversations/${conversationId}/messages`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -102,7 +102,7 @@ export class MarketplaceMessagingService {
   async suggestQuickReplies(message: string) {
     try {
       const params = new URLSearchParams({ message });
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/quick-replies/suggest?${params.toString()}`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/quick-replies/suggest?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -122,7 +122,7 @@ export class MarketplaceMessagingService {
    */
   async getConversationAnalytics(conversationId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/${conversationId}/analytics`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/conversations/${conversationId}/analytics`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -142,7 +142,7 @@ export class MarketplaceMessagingService {
    */
   async getSellerMessagingAnalytics() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/seller/analytics/messaging`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/seller/analytics/messaging`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -162,7 +162,7 @@ export class MarketplaceMessagingService {
    */
   async sendAutomatedNotification(conversationId: string, eventType: string, data: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/${conversationId}/auto-notify`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/conversations/${conversationId}/auto-notify`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000),
         headers: {
@@ -187,7 +187,7 @@ export class MarketplaceMessagingService {
    */
   async escalateToDispute(conversationId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/conversations/${conversationId}/escalate`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/conversations/${conversationId}/escalate`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000)
       });
@@ -208,7 +208,7 @@ export class MarketplaceMessagingService {
    */
   async getTemplates() {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/templates`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/templates`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -228,7 +228,7 @@ export class MarketplaceMessagingService {
    */
   async createTemplate(templateData: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/templates`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/templates`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000),
         headers: {
@@ -253,7 +253,7 @@ export class MarketplaceMessagingService {
    */
   async updateTemplate(templateId: string, templateData: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/templates/${templateId}`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/templates/${templateId}`, {
         method: 'PUT',
         signal: this.createTimeoutSignal(10000),
         headers: {
@@ -278,7 +278,7 @@ export class MarketplaceMessagingService {
    */
   async deleteTemplate(templateId: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/templates/${templateId}`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/templates/${templateId}`, {
         method: 'DELETE',
         signal: this.createTimeoutSignal(10000)
       });
@@ -299,7 +299,7 @@ export class MarketplaceMessagingService {
    */
   async createQuickReply(quickReplyData: any) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/messaging/quick-replies`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/messaging/quick-replies`, {
         method: 'POST',
         signal: this.createTimeoutSignal(10000),
         headers: {

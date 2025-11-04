@@ -58,7 +58,7 @@ class EnhancedUserService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/api/users`;
+    this.baseUrl = `${API_BASE_URL}/users`;
   }
 
   /**

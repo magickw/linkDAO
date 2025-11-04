@@ -13,7 +13,12 @@ class ReputationService {
 
   async getUserReputation(userId: string): Promise<UserReputation> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}`);
+      const response = await fetch(`${this.baseUrl}/reputation/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch user reputation');
       }
@@ -27,7 +32,7 @@ class ReputationService {
 
   async getMiniProfileData(userId: string): Promise<MiniProfileData> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/users/${userId}/mini-profile`);
+      const response = await fetch(`${this.baseUrl}/users/${userId}/mini-profile`);
       if (!response.ok) {
         throw new Error('Failed to fetch mini profile data');
       }
@@ -41,7 +46,7 @@ class ReputationService {
 
   async getReputationEvents(userId: string, limit = 50): Promise<ReputationEvent[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/events?limit=${limit}`);
+      const response = await fetch(`${this.baseUrl}/reputation/${userId}/events?limit=${limit}`);
       if (!response.ok) {
         throw new Error('Failed to fetch reputation events');
       }
@@ -55,7 +60,7 @@ class ReputationService {
 
   async awardPoints(userId: string, category: string, points: number, description: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/award`, {
+      const response = await fetch(`${this.baseUrl}/reputation/${userId}/award`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +83,7 @@ class ReputationService {
 
   async checkForNewAchievements(userId: string): Promise<Achievement[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/achievements/check`);
+      const response = await fetch(`${this.baseUrl}/reputation/${userId}/achievements/check`);
       if (!response.ok) {
         throw new Error('Failed to check for new achievements');
       }

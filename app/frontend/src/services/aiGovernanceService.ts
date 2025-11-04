@@ -29,7 +29,7 @@ export class AIGovernanceService {
    */
   async analyzeProposal(proposal: Proposal): Promise<AIProposalAnalysis | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposal.id}/ai-analysis`, {
+      const response = await fetch(`${this.baseUrl}/governance/proposals/${proposal.id}/ai-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export class AIGovernanceService {
    */
   async getVotingGuidance(proposal: Proposal, userAddress: string): Promise<VotingGuidance | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposal.id}/voting-guidance`, {
+      const response = await fetch(`${this.baseUrl}/governance/proposals/${proposal.id}/voting-guidance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

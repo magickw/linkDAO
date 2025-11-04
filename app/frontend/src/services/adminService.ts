@@ -154,7 +154,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -172,7 +172,7 @@ class AdminService {
 
   async assignModerationItem(itemId: string, assigneeId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/assign`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/${itemId}/assign`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ assigneeId }),
@@ -196,7 +196,7 @@ class AdminService {
     details?: any;
   }): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/resolve`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/${itemId}/resolve`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(resolution),
@@ -230,7 +230,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/applications?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -250,7 +250,7 @@ class AdminService {
 
   async getSellerApplication(applicationId: string): Promise<SellerApplication> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/applications/${applicationId}`, {
         headers: this.getHeaders(),
       });
 
@@ -273,7 +273,7 @@ class AdminService {
     requiredInfo?: string[];
   }): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/review`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/applications/${applicationId}/review`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(review),
@@ -293,7 +293,7 @@ class AdminService {
 
   async getSellerRiskAssessment(applicationId: string): Promise<{ assessment: any }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/risk-assessment`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/applications/${applicationId}/risk-assessment`, {
         headers: this.getHeaders(),
       });
 
@@ -327,7 +327,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/performance?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -360,7 +360,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance/export?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/sellers/performance/export?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -393,7 +393,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -413,7 +413,7 @@ class AdminService {
 
   async getDispute(disputeId: string): Promise<DisputeCase> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}`, {
         headers: this.getHeaders(),
       });
 
@@ -431,7 +431,7 @@ class AdminService {
 
   async assignDispute(disputeId: string, assigneeId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/assign`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/assign`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ assigneeId }),
@@ -456,7 +456,7 @@ class AdminService {
     adminNotes?: string;
   }): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/resolve`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/resolve`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(resolution),
@@ -476,7 +476,7 @@ class AdminService {
 
   async addDisputeNote(disputeId: string, note: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/notes`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/notes`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ note }),
@@ -497,7 +497,7 @@ class AdminService {
   // Evidence Management
   async uploadDisputeEvidence(disputeId: string, formData: FormData): Promise<{ success: boolean; evidence: any[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/evidence`, {
         method: 'POST',
         headers: {
           ...this.getHeaders(),
@@ -521,7 +521,7 @@ class AdminService {
 
   async deleteDisputeEvidence(disputeId: string, evidenceId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
@@ -540,7 +540,7 @@ class AdminService {
 
   async updateEvidenceStatus(disputeId: string, evidenceId: string, status: 'verified' | 'rejected' | 'pending'): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
         method: 'PATCH',
         headers: this.getHeaders(),
         body: JSON.stringify({ status }),
@@ -561,7 +561,7 @@ class AdminService {
   // Communication Thread
   async getDisputeMessages(disputeId: string): Promise<{ messages: any[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/messages`, {
         headers: this.getHeaders(),
       });
 
@@ -584,7 +584,7 @@ class AdminService {
     isInternal?: boolean;
   }): Promise<{ success: boolean; message: any }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+      const response = await fetch(`${this.baseUrl}/admin/disputes/${disputeId}/messages`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(messageData),
@@ -626,7 +626,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/users?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/users?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -649,7 +649,7 @@ class AdminService {
     permanent?: boolean;
   }): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/suspend`, {
+      const response = await fetch(`${this.baseUrl}/admin/users/${userId}/suspend`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(suspension),
@@ -669,7 +669,7 @@ class AdminService {
 
   async unsuspendUser(userId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/unsuspend`, {
+      const response = await fetch(`${this.baseUrl}/admin/users/${userId}/unsuspend`, {
         method: 'POST',
         headers: this.getHeaders(),
       });
@@ -688,7 +688,7 @@ class AdminService {
 
   async updateUserRole(userId: string, role: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/role`, {
+      const response = await fetch(`${this.baseUrl}/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: this.getHeaders(),
         body: JSON.stringify({ role }),
@@ -708,7 +708,7 @@ class AdminService {
 
   async getUserActivity(userId: string): Promise<{ activities: any[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/activity`, {
+      const response = await fetch(`${this.baseUrl}/admin/users/${userId}/activity`, {
         headers: this.getHeaders(),
       });
 
@@ -739,7 +739,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/users/export?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/users/export?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -773,7 +773,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/history?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -792,7 +792,7 @@ class AdminService {
 
   async undoModerationAction(actionId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/${actionId}/undo`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/history/${actionId}/undo`, {
         method: 'POST',
         headers: this.getHeaders(),
       });
@@ -823,7 +823,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/export?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/history/export?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -841,7 +841,7 @@ class AdminService {
 
   async deleteModerationItem(itemId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}`, {
+      const response = await fetch(`${this.baseUrl}/admin/moderation/${itemId}`, {
         method: 'DELETE',
         headers: this.getHeaders(),
       });
@@ -865,7 +865,7 @@ class AdminService {
     notes?: string;
   }): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/content/${contentId}/moderate`, {
+      const response = await fetch(`${this.baseUrl}/admin/content/${contentId}/moderate`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(action),
@@ -894,7 +894,7 @@ class AdminService {
     recentActions: AdminAction[];
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
+      const response = await fetch(`${this.baseUrl}/admin/stats`, {
         headers: this.getHeaders(),
       });
 
@@ -936,7 +936,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/audit?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/audit?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -956,7 +956,7 @@ class AdminService {
   // AI Insights and Predictive Analytics
   async getAIInsightsReport(timeframe: string = 'daily'): Promise<ComprehensiveInsightReport> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/report?timeframe=${timeframe}`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/report?timeframe=${timeframe}`, {
         headers: this.getHeaders(),
       });
 
@@ -974,7 +974,7 @@ class AdminService {
 
   async getAIEngineStatus(): Promise<EngineStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/status`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/status`, {
         headers: this.getHeaders(),
       });
 
@@ -992,7 +992,7 @@ class AdminService {
 
   async getPredictiveAnalytics(type: string, horizon: number = 7): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
         headers: this.getHeaders(),
       });
 
@@ -1010,7 +1010,7 @@ class AdminService {
 
   async getContentDemandPredictions(timeframe: 'week' | 'month' | 'quarter' = 'month'): Promise<ContentDemandPrediction[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
         headers: this.getHeaders(),
       });
 
@@ -1028,7 +1028,7 @@ class AdminService {
 
   async getUserBehaviorPredictions(horizon: number = 7): Promise<UserBehaviorPrediction[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
         headers: this.getHeaders(),
       });
 
@@ -1046,7 +1046,7 @@ class AdminService {
 
   async getContentPerformancePredictions(): Promise<ContentPerformancePrediction[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_performance`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/predictions?type=content_performance`, {
         headers: this.getHeaders(),
       });
 
@@ -1064,7 +1064,7 @@ class AdminService {
 
   async getAnomalies(): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/anomalies`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/anomalies`, {
         headers: this.getHeaders(),
       });
 
@@ -1082,7 +1082,7 @@ class AdminService {
 
   async getTrendAnalysis(): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/trends`, {
+      const response = await fetch(`${this.baseUrl}/admin/ai-insights/trends`, {
         headers: this.getHeaders(),
       });
 
@@ -1111,7 +1111,7 @@ class AdminService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/admin/notifications?${params}`, {
+      const response = await fetch(`${this.baseUrl}/admin/notifications?${params}`, {
         headers: this.getHeaders(),
       });
 
@@ -1130,7 +1130,7 @@ class AdminService {
 
   async markNotificationAsRead(notificationId: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/notifications/${notificationId}/read`, {
+      const response = await fetch(`${this.baseUrl}/admin/notifications/${notificationId}/read`, {
         method: 'PATCH',
         headers: this.getHeaders(),
       });
@@ -1149,7 +1149,7 @@ class AdminService {
 
   async markAllNotificationsAsRead(): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/notifications/read-all`, {
+      const response = await fetch(`${this.baseUrl}/admin/notifications/read-all`, {
         method: 'PATCH',
         headers: this.getHeaders(),
       });
@@ -1168,7 +1168,7 @@ class AdminService {
 
   async getUnreadNotificationCount(): Promise<{ count: number }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/notifications/unread-count`, {
+      const response = await fetch(`${this.baseUrl}/admin/notifications/unread-count`, {
         headers: this.getHeaders(),
       });
 
@@ -1187,7 +1187,7 @@ class AdminService {
 
   async getNotificationStats(): Promise<NotificationStats> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/notifications/stats`, {
+      const response = await fetch(`${this.baseUrl}/admin/notifications/stats`, {
         headers: this.getHeaders(),
       });
 
@@ -1211,7 +1211,7 @@ class AdminService {
 
   async registerMobilePushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/register`, {
+      const response = await fetch(`${this.baseUrl}/admin/mobile/push/register`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({ token, platform }),
@@ -1231,7 +1231,7 @@ class AdminService {
 
   async unregisterMobilePushToken(token: string): Promise<{ success: boolean }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/unregister`, {
+      const response = await fetch(`${this.baseUrl}/admin/mobile/push/unregister`, {
         method: 'DELETE',
         headers: this.getHeaders(),
         body: JSON.stringify({ token }),

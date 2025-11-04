@@ -24,7 +24,7 @@ class ChatHistoryService {
       ...(request.after && { after: request.after })
     });
 
-    const url = `${this.baseUrl}/api/chat/history/${request.conversationId}?${params}`;
+    const url = `${this.baseUrl}/chat/history/${request.conversationId}?${params}`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -50,7 +50,7 @@ class ChatHistoryService {
   // Send a new message with offline support
   async sendMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>): Promise<ChatMessage> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/messages`, {
+      const response = await fetch(`${this.baseUrl}/chat/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -238,7 +238,7 @@ class ChatHistoryService {
 
   // Create or get DM conversation
   async getOrCreateDMConversation(participantAddress: string): Promise<Conversation> {
-    const response = await fetch(`${this.baseUrl}/api/chat/conversations/dm`, {
+    const response = await fetch(`${this.baseUrl}/chat/conversations/dm`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -258,7 +258,7 @@ class ChatHistoryService {
   // Mark messages as read with offline support
   async markMessagesAsRead(conversationId: string, messageIds: string[]): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/messages/read`, {
+      const response = await fetch(`${this.baseUrl}/chat/messages/read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -291,7 +291,7 @@ class ChatHistoryService {
   // Add reaction to message with offline support
   async addReaction(messageId: string, emoji: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
+      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}/reactions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -324,7 +324,7 @@ class ChatHistoryService {
   // Remove reaction from message with offline support
   async removeReaction(messageId: string, emoji: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
+      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}/reactions`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,
@@ -357,7 +357,7 @@ class ChatHistoryService {
   // Delete message with offline support
   async deleteMessage(messageId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}`, {
+      const response = await fetch(`${this.baseUrl}/chat/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${this.getAuthToken()}`,

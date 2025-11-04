@@ -25,7 +25,7 @@ class AvatarService {
   private defaultOptions: AvatarUploadOptions;
 
   constructor() {
-    this.baseUrl = `${API_BASE_URL}/api/avatars`;
+    this.baseUrl = `${API_BASE_URL}/avatars`;
     this.defaultOptions = {
       maxSize: 5 * 1024 * 1024, // 5MB
       quality: 85,

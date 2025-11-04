@@ -91,7 +91,7 @@ export class CommunityInteractionService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = `${BACKEND_API_BASE_URL}/api/communities`;
+    this.baseUrl = `${BACKEND_API_BASE_URL}/communities`;
   }
 
   /**
@@ -352,7 +352,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/join`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -409,7 +409,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/leave`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/leave`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -466,7 +466,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for post creation
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -532,7 +532,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for AI operations
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts/ai-assisted`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -596,7 +596,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${action.communityId}/moderate`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${action.communityId}/moderate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -657,7 +657,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${settingsUpdate.communityId}/settings`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -716,8 +716,12 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
+      const response = await requestManager.request<{ 
+          success: boolean; 
+          queue: ModerationQueueItem[]; 
+          pagination: { page: number; limit: number; total: number; totalPages: number } 
+        }>(
+          `${this.baseUrl}/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
         {
           method: 'GET',
           headers: {
@@ -740,7 +744,7 @@ export class CommunityInteractionService {
       
       return {
         success: true,
-        data: result.data || [],
+        data: result.queue || [],
         message: 'Moderation queue fetched successfully'
       };
     } catch (error) {
@@ -840,8 +844,8 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/analytics?moderator=${moderatorAddress}`,
+      const response = await requestManager.request<CommunityAnalyticsResponse>(
+          `${this.baseUrl}/${communityId}/analytics?moderator=${moderatorAddress}`,
         {
           method: 'GET',
           headers: {

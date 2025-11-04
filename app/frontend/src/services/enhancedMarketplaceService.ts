@@ -208,7 +208,7 @@ export class EnhancedMarketplaceService {
     try {
       const product = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/api/marketplace/listings/${id}`, {
+          const response = await fetch(`${this.baseURL}/marketplace/listings/${id}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -276,7 +276,7 @@ export class EnhancedMarketplaceService {
             });
           }
 
-          const response = await fetch(`${this.baseURL}/api/marketplace/listings?${queryParams}`, {
+          const response = await fetch(`${this.baseURL}/marketplace/listings?${queryParams}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -319,7 +319,7 @@ export class EnhancedMarketplaceService {
     try {
       const seller = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/api/marketplace/sellers/${sellerId}`, {
+          const response = await fetch(`${this.baseURL}/marketplace/sellers/${sellerId}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -389,7 +389,7 @@ export class EnhancedMarketplaceService {
             });
           }
 
-          const response = await fetch(`${this.baseURL}/api/marketplace/search?${queryParams}`, {
+          const response = await fetch(`${this.baseURL}/marketplace/search?${queryParams}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -429,7 +429,7 @@ export class EnhancedMarketplaceService {
     try {
       const products = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/api/marketplace/listings?featured=true&limit=10`, {
+          const response = await fetch(`${this.baseURL}/marketplace/listings?featured=true&limit=10`, {
             headers: {
               'Content-Type': 'application/json',
             },

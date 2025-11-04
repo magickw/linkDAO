@@ -35,7 +35,7 @@ export class EngagementAnalyticsService {
         params.append('userId', userId);
       }
 
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/engagement?${params.toString()}`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/engagement?${params.toString()}`;
       
       const response = await requestManager.request<EngagementAnalyticsResponse>(url, {
         method: 'GET',
@@ -71,7 +71,7 @@ export class EngagementAnalyticsService {
         params.append('userId', userId);
       }
 
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/engagement/trends?${params.toString()}`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/engagement/trends?${params.toString()}`;
       
       const response = await requestManager.request<EngagementTrendsResponse>(url, {
         method: 'GET',
@@ -103,7 +103,7 @@ export class EngagementAnalyticsService {
         params.append('userId', userId);
       }
 
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/posts/top-performing?${params.toString()}`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/posts/top-performing?${params.toString()}`;
       
       const response = await requestManager.request<TopPostsResponse>(url, {
         method: 'GET',
@@ -122,7 +122,7 @@ export class EngagementAnalyticsService {
    */
   static async getUserEngagementProfile(userId: string): Promise<UserEngagementProfile> {
     try {
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/users/${userId}/engagement-profile`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/users/${userId}/engagement-profile`;
       
       return await requestManager.request<UserEngagementProfile>(url, {
         method: 'GET',
@@ -139,7 +139,7 @@ export class EngagementAnalyticsService {
    */
   static async trackEngagementInteraction(interaction: Omit<EngagementInteraction, 'id' | 'timestamp'>): Promise<void> {
     try {
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/engagement/track`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/engagement/track`;
       
       await requestManager.request(url, {
         method: 'POST',
@@ -161,7 +161,7 @@ export class EngagementAnalyticsService {
    */
   static async getSocialProofIndicators(postId: string): Promise<SocialProofIndicators> {
     try {
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/posts/${postId}/social-proof`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/posts/${postId}/social-proof`;
       
       return await requestManager.request<SocialProofIndicators>(url, {
         method: 'GET',
@@ -181,7 +181,7 @@ export class EngagementAnalyticsService {
     timeWindow: string = '1d'
   ): Promise<EngagementAggregate> {
     try {
-      const url = `${BACKEND_API_BASE_URL}/api/analytics/posts/${postId}/aggregate?timeWindow=${timeWindow}`;
+      const url = `${BACKEND_API_BASE_URL}/analytics/posts/${postId}/aggregate?timeWindow=${timeWindow}`;
       
       return await requestManager.request<EngagementAggregate>(url, {
         method: 'GET',

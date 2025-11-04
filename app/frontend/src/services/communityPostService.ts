@@ -72,7 +72,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`,
+        `${BACKEND_API_BASE_URL}/communities/${data.communityId}/posts`,
         {
           method: 'POST',
           headers: {
@@ -142,7 +142,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}`,
         {
           method: 'GET',
           headers: {
@@ -220,7 +220,7 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      let url = `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts`;
+      let url = `${BACKEND_API_BASE_URL}/communities/${communityId}/posts`;
       const searchParams = new URLSearchParams();
       
       if (params) {
@@ -331,7 +331,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}`,
         {
           method: 'PUT',
           headers: {
@@ -385,7 +385,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}`,
         {
           method: 'DELETE',
           headers: {
@@ -441,7 +441,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/vote`,
+        `${BACKEND_API_BASE_URL}/community-posts/${data.postId}/vote`,
         {
           method: 'POST',
           headers: {
@@ -517,7 +517,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/comments`,
+        `${BACKEND_API_BASE_URL}/community-posts/${data.postId}/comments`,
         {
           method: 'POST',
           headers: {
@@ -615,7 +615,7 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      let url = `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/comments`;
+      let url = `${BACKEND_API_BASE_URL}/community-posts/${postId}/comments`;
       const searchParams = new URLSearchParams();
       
       if (params) {
@@ -671,7 +671,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/comments/${commentId}`,
+        `${BACKEND_API_BASE_URL}/comments/${commentId}`,
         {
           method: 'PUT',
           headers: {
@@ -713,7 +713,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/comments/${commentId}`,
+        `${BACKEND_API_BASE_URL}/comments/${commentId}`,
         {
           method: 'DELETE',
           headers: {
@@ -758,7 +758,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/pin`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}/pin`,
         {
           method: 'POST',
           headers: {
@@ -800,7 +800,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/unpin`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}/unpin`,
         {
           method: 'POST',
           headers: {
@@ -842,7 +842,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder-pinned`,
+        `${BACKEND_API_BASE_URL}/communities/${communityId}/posts/reorder-pinned`,
         {
           method: 'POST',
           headers: {
@@ -884,7 +884,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/pinned`,
+        `${BACKEND_API_BASE_URL}/communities/${communityId}/posts/pinned`,
         {
           method: 'GET',
           headers: {
@@ -925,7 +925,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/stats`,
+        `${BACKEND_API_BASE_URL}/communities/${communityId}/posts/stats`,
         {
           method: 'GET',
           headers: {
@@ -966,7 +966,7 @@ export class CommunityPostService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`,
+        `${BACKEND_API_BASE_URL}/community-posts/${postId}/stats`,
         {
           method: 'GET',
           headers: {
@@ -998,3 +998,7 @@ export class CommunityPostService {
     }
   }
 }
+
+
+
+

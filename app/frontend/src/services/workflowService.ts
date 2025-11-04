@@ -21,7 +21,7 @@ class WorkflowService {
 
   // Template Management
   async createTemplate(templateData: CreateWorkflowTemplateRequest): Promise<WorkflowTemplate> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/templates`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/templates`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -39,7 +39,7 @@ class WorkflowService {
   }
 
   async getTemplate(templateId: string): Promise<WorkflowTemplate> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
       headers: this.getHeaders()
     });
 
@@ -56,7 +56,7 @@ class WorkflowService {
     if (category) params.append('category', category);
     if (isActive !== undefined) params.append('isActive', isActive.toString());
 
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/templates?${params}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/templates?${params}`, {
       headers: this.getHeaders()
     });
 
@@ -69,7 +69,7 @@ class WorkflowService {
   }
 
   async updateTemplate(templateId: string, updates: Partial<WorkflowTemplate>): Promise<WorkflowTemplate> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
       method: 'PUT',
       headers: {
         ...this.getHeaders(),
@@ -87,7 +87,7 @@ class WorkflowService {
   }
 
   async deleteTemplate(templateId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/templates/${templateId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/templates/${templateId}`, {
       method: 'DELETE',
       headers: this.getHeaders()
     });
@@ -99,7 +99,7 @@ class WorkflowService {
 
   // Workflow Execution
   async executeWorkflow(templateId: string, contextData?: Record<string, any>): Promise<WorkflowInstance> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/execute`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/execute`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -117,7 +117,7 @@ class WorkflowService {
   }
 
   async getWorkflowInstance(instanceId: string): Promise<WorkflowInstance> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/instances/${instanceId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/instances/${instanceId}`, {
       headers: this.getHeaders()
     });
 
@@ -134,7 +134,7 @@ class WorkflowService {
     if (templateId) params.append('templateId', templateId);
     if (status) params.append('status', status);
 
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/instances?${params}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/instances?${params}`, {
       headers: this.getHeaders()
     });
 
@@ -147,7 +147,7 @@ class WorkflowService {
   }
 
   async cancelWorkflow(instanceId: string, reason: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/instances/${instanceId}/cancel`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/instances/${instanceId}/cancel`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -168,7 +168,7 @@ class WorkflowService {
       params.append('status', status.join(','));
     }
 
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/tasks/my-tasks?${params}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/my-tasks?${params}`, {
       headers: this.getHeaders()
     });
 
@@ -181,7 +181,7 @@ class WorkflowService {
   }
 
   async completeTask(taskId: string, completionData: Record<string, any>, status: 'completed' | 'escalated'): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/tasks/${taskId}/complete`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/complete`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -196,7 +196,7 @@ class WorkflowService {
   }
 
   async assignTask(taskId: string, assignedTo: string, reason?: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/tasks/${taskId}/assign`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/assign`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -211,7 +211,7 @@ class WorkflowService {
   }
 
   async escalateTask(taskId: string, escalatedTo: string, reason?: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/tasks/${taskId}/escalate`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/tasks/${taskId}/escalate`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -227,7 +227,7 @@ class WorkflowService {
 
   // Rule Management
   async createRule(ruleData: Omit<WorkflowRule, 'id' | 'createdAt' | 'updatedAt'>): Promise<WorkflowRule> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/rules`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/rules`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -249,7 +249,7 @@ class WorkflowService {
     if (ruleType) params.append('ruleType', ruleType);
     if (isActive !== undefined) params.append('isActive', isActive.toString());
 
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/rules?${params}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/rules?${params}`, {
       headers: this.getHeaders()
     });
 
@@ -262,7 +262,7 @@ class WorkflowService {
   }
 
   async updateRule(ruleId: string, updates: Partial<WorkflowRule>): Promise<WorkflowRule> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/rules/${ruleId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/rules/${ruleId}`, {
       method: 'PUT',
       headers: {
         ...this.getHeaders(),
@@ -280,7 +280,7 @@ class WorkflowService {
   }
 
   async deleteRule(ruleId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/rules/${ruleId}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/rules/${ruleId}`, {
       method: 'DELETE',
       headers: this.getHeaders()
     });
@@ -297,7 +297,7 @@ class WorkflowService {
     if (startDate) params.append('startDate', startDate.toISOString());
     if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/analytics?${params}`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/analytics?${params}`, {
       headers: this.getHeaders()
     });
 
@@ -311,7 +311,7 @@ class WorkflowService {
 
   // Workflow Designer Support
   async validateWorkflowDesign(designData: any): Promise<{ valid: boolean; errors?: string[] }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/validate-design`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/validate-design`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
@@ -329,7 +329,7 @@ class WorkflowService {
   }
 
   async testWorkflow(templateId: string, testData: Record<string, any>): Promise<{ success: boolean; result?: any }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/workflows/test`, {
+    const response = await fetch(`${this.baseUrl}/admin/workflows/test`, {
       method: 'POST',
       headers: {
         ...this.getHeaders(),
