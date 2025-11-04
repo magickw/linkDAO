@@ -670,9 +670,24 @@ app.get('/api/profiles/address/:address', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching profile by address:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: error.message,
+        details: {
+          userFriendlyMessage: 'An unexpected error occurred. Please try again.',
+          suggestions: [],
+          requestId: req.headers['x-request-id'] || 'unknown',
+          timestamp: new Date().toISOString(),
+          technicalDetails: {
+            originalMessage: error.message,
+            errorType: error.constructor.name,
+            stack: error.stack
+          }
+        }
+      }
     });
   }
 });
