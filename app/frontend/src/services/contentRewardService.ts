@@ -1,7 +1,7 @@
 import { BigNumber } from 'ethers';
 import { calculateContentReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
-import { RewardPool } from '../types/contracts';
+import { RewardPool } from '../types/contracts/RewardPool';
 
 export interface ContentQualityMetrics {
   grammarScore: number;       // 0-100
@@ -68,7 +68,7 @@ export class ContentRewardService {
 
   /**
    * Award LDAO tokens for content creation
-   * @param contentId - ID of the content being rewarded
+   * @param contentId - ID of the content being rewarded (used as commentId in the contract)
    * @param authorAddress - Wallet address of the content author
    * @param metrics - Quality metrics for the content
    */
@@ -96,7 +96,8 @@ export class ContentRewardService {
       }
 
       // Call smart contract to distribute reward
-      const tx = await this.rewardPool?.rewardContent(
+      // Using rewardEngagement method with contentId as commentId
+      const tx = await this.rewardPool?.rewardEngagement(
         authorAddress,
         rewardAmount,
         contentId,
@@ -128,13 +129,14 @@ export class ContentRewardService {
 
   /**
    * Check if content is eligible for rewards
-   * @param contentId - ID of the content to check
+   * @param contentId - ID of the content to check (used as commentId in the contract)
    * @returns Boolean indicating if the content is eligible for rewards
    */
   async isContentEligible(contentId: string): Promise<boolean> {
     try {
       // Check if content has already been rewarded
-      const isRewarded = await this.rewardPool?.contentRewarded(contentId);
+      // Using commentRewarded method with contentId as commentId
+      const isRewarded = await this.rewardPool?.commentRewarded(contentId);
       if (isRewarded) {
         return false;
       }
