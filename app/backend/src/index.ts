@@ -449,6 +449,8 @@ import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import database schema
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
+// Import database service
+import { db } from './db/index';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -606,9 +608,6 @@ app.get('/api/profiles/address/:address', async (req, res) => {
         error: 'Invalid Ethereum address'
       });
     }
-    
-    // Import the database service
-    const { db } = await import('./db/index');
     
     // Query the database
     const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
