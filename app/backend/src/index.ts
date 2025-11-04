@@ -448,7 +448,7 @@ import userProfileRoutes from './routes/userProfileRoutes';
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import database schema
 import { users } from './db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 // Import database service
 import { db } from './db/index';
 // Import listing routes
@@ -632,7 +632,7 @@ app.get('/api/profiles/address/:address', async (req, res) => {
 
     console.log('Querying database for address:', normalizedAddress);
     // Query the database (case-insensitive)
-    const result = await db.select().from(users).where(eq(users.walletAddress, normalizedAddress)).limit(1);
+    const result = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
     console.log('Database query result:', result);
     
     if (result.length === 0) {
