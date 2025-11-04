@@ -31,8 +31,10 @@ export const securityHeaders = helmet({
 export const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
   // Skip CSRF for API routes - they use JWT authentication
   if (req.path.startsWith('/api/')) {
+    console.log(`[CSRF] Skipping CSRF for API route: ${req.method} ${req.path}`);
     return next();
   }
+  console.log(`[CSRF] Checking CSRF for non-API route: ${req.method} ${req.path}`);
   
   // For state-changing operations, verify origin/referer
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
