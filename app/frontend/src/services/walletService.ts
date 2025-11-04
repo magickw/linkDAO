@@ -4,7 +4,7 @@
  */
 
 import { PublicClient, createPublicClient, http, formatEther, Address } from 'viem';
-import { mainnet, sepolia, base, baseSepolia } from 'viem/chains';
+import { mainnet, sepolia, base, baseSepolia, polygon, arbitrum } from 'viem/chains';
 
 export interface TokenBalance {
   symbol: string;
@@ -54,6 +54,53 @@ export interface WalletData {
   isLoading: boolean;
   error: string | null;
 }
+
+// Rate limiting queue for RPC calls
+class RPCCallQueue {
+  private queue: Array<() => Promise<any>> = [];
+  private pendingPromises = 0;
+  private readonly maxConcurrent = 3; // Limit concurrent RPC calls
+  private readonly minDelay = 200; // Minimum delay between calls (ms)
+
+  async add<T>(call: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await call();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+      this.process();
+    });
+  }
+
+  private async process(): Promise<void> {
+    if (this.pendingPromises >= this.maxConcurrent || this.queue.length === 0) {
+      return;
+    }
+
+    const call = this.queue.shift();
+    if (!call) return;
+
+    this.pendingPromises++;
+    
+    // Add delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, this.minDelay));
+
+    try {
+      await call();
+    } catch (error) {
+      console.error('RPC call failed:', error);
+    } finally {
+      this.pendingPromises--;
+      this.process(); // Process next call
+    }
+  }
+}
+
+const rpcCallQueue = new RPCCallQueue();
 
 // Common ERC20 tokens to check (addresses for different chains)
 const getTokensForChain = (chainId: number) => {
@@ -291,24 +338,41 @@ export class WalletService {
   constructor(chainId: number = 1) {
     this.chainId = chainId;
     let chain;
+    let rpcUrl: string | undefined;
+
+    // Get RPC URL from environment variables based on chain
     switch (chainId) {
-      case 8453:
+      case 8453: // Base Mainnet
         chain = base;
+        rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL || process.env.BASE_RPC_URL;
         break;
-      case 84532:
+      case 84532: // Base Sepolia
         chain = baseSepolia;
+        rpcUrl = process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL;
         break;
-      case 11155111:
+      case 11155111: // Sepolia Testnet
         chain = sepolia;
+        rpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
         break;
+      case 137: // Polygon
+        chain = polygon;
+        rpcUrl = process.env.NEXT_PUBLIC_POLYGON_RPC_URL;
+        break;
+      case 42161: // Arbitrum
+        chain = arbitrum;
+        rpcUrl = process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL;
+        break;
+      case 1: // Ethereum Mainnet
       default:
         chain = mainnet;
+        rpcUrl = process.env.NEXT_PUBLIC_MAINNET_RPC_URL;
+        break;
     }
-    
-    // Simplified client creation to avoid deep type instantiation
+
+    // Create public client with configured RPC URL or fallback to default
     this.publicClient = createPublicClient({
       chain,
-      transport: http()
+      transport: http(rpcUrl || undefined)
     }) as any;
   }
 
@@ -352,7 +416,7 @@ export class WalletService {
   }
 
   /**
-   * Get token balances for a wallet address
+   * Get token balances for a wallet address with rate limiting
    */
   async getTokenBalances(address: Address): Promise<TokenBalance[]> {
     const balances: TokenBalance[] = [];
@@ -360,8 +424,10 @@ export class WalletService {
     const tokens = getTokensForChain(chainId);
 
     try {
-      // Get ETH balance
-      const ethBalance = await this.publicClient.getBalance({ address });
+      // Get ETH balance with rate limiting
+      const ethBalance = await rpcCallQueue.add(() => 
+        this.publicClient.getBalance({ address })
+      );
       const ethPrice = await this.getTokenPrice('ethereum');
       const ethBalanceFormatted = formatEther(ethBalance);
       const ethValueUSD = parseFloat(ethBalanceFormatted) * ethPrice;
@@ -381,15 +447,18 @@ export class WalletService {
         isNative: true
       });
 
-      // Get ERC20 token balances
-      for (const token of tokens) {
+      // Get ERC20 token balances with rate limiting and retry logic
+      const tokenBalancePromises = tokens.map(async (token) => {
         try {
-          const balanceResult = await this.publicClient.readContract({
-            address: token.address,
-            abi: ERC20_ABI,
-            functionName: 'balanceOf',
-            args: [address]
-          } as any); // Type assertion to work around viem v2.38.3 type definition bug
+          // Use rate limiting queue for RPC calls
+          const balanceResult = await rpcCallQueue.add(() => 
+            this.publicClient.readContract({
+              address: token.address,
+              abi: ERC20_ABI,
+              functionName: 'balanceOf',
+              args: [address]
+            } as any)
+          );
 
           const balance = balanceResult as bigint;
 
@@ -398,7 +467,7 @@ export class WalletService {
             const price = await this.getTokenPrice(token.symbol.toLowerCase());
             const valueUSD = parseFloat(balanceFormatted) * price;
 
-            balances.push({
+            return {
               symbol: token.symbol,
               name: token.name,
               address: token.address,
@@ -409,12 +478,22 @@ export class WalletService {
               change24h: await this.getTokenChange24h(token.symbol.toLowerCase()),
               priceUSD: price,
               isNative: false
-            });
+            } as TokenBalance;
           }
         } catch (tokenError) {
           console.warn(`Failed to fetch balance for ${token.symbol}:`, tokenError);
+          // Don't throw error, just return null to filter out later
+          return null;
         }
-      }
+        return null;
+      });
+
+      // Wait for all token balance requests with concurrency control
+      const tokenResults = await Promise.all(tokenBalancePromises);
+      const validTokenBalances = tokenResults.filter((result): result is TokenBalance => result !== null);
+      
+      // Add valid token balances to the result
+      balances.push(...validTokenBalances);
 
       return balances.sort((a, b) => b.valueUSD - a.valueUSD);
     } catch (error) {

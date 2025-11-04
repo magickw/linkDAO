@@ -190,7 +190,7 @@ cat > RENDER_DEPLOYMENT_CHECKLIST.md << EOF
 - [ ] FRONTEND_URL=your-frontend-url
 
 ## Post-deployment
-- [ ] Verify health endpoint: https://linkdao-backend.onrender.com/health
+- [ ] Verify health endpoint: https://api.linkdao.io/health
 - [ ] Test API endpoints
 - [ ] Monitor memory usage in Render logs
 - [ ] Check response times
