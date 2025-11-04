@@ -3,8 +3,9 @@
   "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com",
-    "NEXT_PUBLIC_BACKEND_URL": "https://linkdao-backend.onrender.com",
+    "NEXT_PUBLIC_API_URL": "https://api.linkdao.io",
+    "NEXT_PUBLIC_BACKEND_URL": "https://api.linkdao.io",
+    "NEXT_PUBLIC_WS_URL": "wss://api.linkdao.io",
     "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
     "NEXT_PUBLIC_BASE_GOERLI_RPC_URL": "https://goerli.base.org",
     "NODE_OPTIONS": "--max-old-space-size=4096"
