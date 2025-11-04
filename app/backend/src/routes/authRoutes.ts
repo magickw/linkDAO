@@ -46,6 +46,25 @@ const profileUpdateValidation = [
 ];
 
 /**
+ * @route GET /api/auth/nonce
+ * @desc Generate nonce for wallet authentication
+ * @access Public
+ */
+router.get('/nonce', (req, res) => {
+  // Generate a simple random nonce
+  const crypto = require('crypto');
+  const nonce = crypto.randomBytes(32).toString('hex');
+
+  res.json({
+    success: true,
+    data: {
+      nonce,
+      expiresIn: 600 // 10 minutes
+    }
+  });
+});
+
+/**
  * @route POST /api/auth/wallet-connect
  * @desc Authenticate with wallet signature
  * @access Public

@@ -3,11 +3,34 @@
  * Provides modern caching strategies and offline capabilities
  */
 
-// Import Workbox modules
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js');
+// Wrap the entire service worker in a try-catch to prevent evaluation failures
+try {
+  // Import Workbox modules with error handling
+  try {
+    importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js');
+  } catch (error) {
+    console.error('Failed to load Workbox from CDN, using fallback service worker:', error);
+    // Register a simple service worker without Workbox
+    self.addEventListener('install', () => {
+      console.log('Fallback service worker installed');
+      self.skipWaiting();
+    });
 
-if (workbox) {
-  console.log('Workbox loaded successfully');
+    self.addEventListener('activate', () => {
+      console.log('Fallback service worker activated');
+      return self.clients.claim();
+    });
+
+    self.addEventListener('fetch', (event) => {
+      // Let the browser handle all requests normally
+      event.respondWith(fetch(event.request));
+    });
+
+    throw new Error('Using fallback service worker');
+  }
+
+  if (workbox) {
+    console.log('Workbox loaded successfully');
   
   // Configure Workbox
   workbox.setConfig({
@@ -855,6 +878,26 @@ async function processPendingCommunityActions() {
 async function processAllPendingActions() {
   console.log('Processing all pending actions');
   // Implementation will be handled by main thread
+}
+
+} catch (globalError) {
+  console.error('Service worker encountered an error:', globalError);
+  // Register basic service worker event handlers to prevent complete failure
+  if (!self.listeners || self.listeners.length === 0) {
+    self.addEventListener('install', () => {
+      console.log('Error recovery service worker installed');
+      self.skipWaiting();
+    });
+
+    self.addEventListener('activate', () => {
+      console.log('Error recovery service worker activated');
+      return self.clients.claim();
+    });
+
+    self.addEventListener('fetch', (event) => {
+      event.respondWith(fetch(event.request));
+    });
+  }
 }
 
 console.log('Enhanced Service Worker with Workbox loaded');

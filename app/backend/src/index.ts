@@ -601,14 +601,32 @@ app.use('/api/profiles', userProfileRoutes);
 app.get('/api/profiles/address/:address', async (req, res) => {
   try {
     const { address } = req.params;
-    
+
     if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid Ethereum address'
       });
     }
-    
+
+    // Check if database connection is available
+    if (!db) {
+      console.error('Database connection not available');
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: 'DATABASE_UNAVAILABLE',
+          message: 'Database service temporarily unavailable',
+          details: {
+            userFriendlyMessage: 'We are experiencing technical difficulties. Please try again later.',
+            suggestions: ['Try again in a few moments', 'Contact support if the issue persists'],
+            requestId: req.headers['x-request-id'] || 'unknown',
+            timestamp: new Date().toISOString()
+          }
+        }
+      });
+    }
+
     console.log('Querying database for address:', address);
     // Query the database
     const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
