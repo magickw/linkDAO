@@ -20,6 +20,7 @@
     "migrate:production": "ts-node src/scripts/production-migrate.ts",
     "seed:production": "ts-node src/scripts/seed-production-data.ts",
     "check:schema": "ts-node src/scripts/check-users-schema.ts",
+    "debug:profile": "ts-node src/scripts/debug-user-profile.ts",
     "validate:communities": "ts-node scripts/validate-community-data.ts",
     "cleanup:communities": "ts-node scripts/validate-community-data.ts --cleanup",
     "backup": "ts-node src/scripts/database-backup.ts",
