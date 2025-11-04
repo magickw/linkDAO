@@ -1,7 +1,7 @@
 import { BigNumber } from 'ethers';
 import { calculateEngagementReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
-import { RewardPool } from '../types/contracts';
+import { RewardPool } from '../types/contracts/RewardPool';
 
 export interface EngagementMetrics {
   likes: number;
@@ -25,6 +25,21 @@ export class CommunityEngagementService {
 
   private constructor() {
     this.ldaoTokenService = LDAOTokenService.getInstance();
+  }
+
+  /**
+   * Initialize the reward pool contract
+   * @param contractAddress - Address of the deployed RewardPool contract
+   * @param signer - Ethers signer to interact with the contract
+   */
+  async initializeRewardPool(contractAddress: string, signer: any): Promise<void> {
+    const { Contract } = await import('ethers');
+    const abi = [
+      'function rewardEngagement(address recipient, uint256 amount, string commentId) external returns (bool)',
+      'function commentRewarded(string commentId) external view returns (bool)',
+      'function userEngagementRewards(address user) external view returns (uint256)'
+    ];
+    this.rewardPool = new Contract(contractAddress, abi, signer) as any as RewardPool;
   }
 
   static getInstance(): CommunityEngagementService {
@@ -117,7 +132,11 @@ export class CommunityEngagementService {
       }
 
       // Call smart contract to distribute reward
-      const tx = await this.rewardPool?.rewardEngagement(
+      if (!this.rewardPool) {
+        throw new Error('Reward pool not initialized');
+      }
+
+      const tx = await this.rewardPool.rewardEngagement(
         authorAddress,
         rewardAmount,
         commentId,
@@ -125,10 +144,6 @@ export class CommunityEngagementService {
           gasLimit: 200000 // Estimated gas limit
         }
       );
-
-      if (!tx) {
-        throw new Error('Failed to submit reward transaction');
-      }
 
       const receipt = await tx.wait();
 
