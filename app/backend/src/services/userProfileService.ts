@@ -1,7 +1,7 @@
 import { databaseService } from './databaseService';
 import { safeLogger } from '../utils/safeLogger';
 import { users } from '../db/schema';
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { DataEncryptionService } from './dataEncryptionService';
 import { 
   UserProfile, 
@@ -135,7 +135,8 @@ export class UserProfileService {
 
   async getProfileByAddress(address: string): Promise<UserProfile | undefined> {
     const db = databaseService.getDatabase();
-    const [dbUser] = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
+    const normalizedAddress = address.toLowerCase();
+    const [dbUser] = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
     
     if (!dbUser) {
       return undefined;
