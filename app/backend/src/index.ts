@@ -632,8 +632,14 @@ app.get('/api/profiles/address/:address', async (req, res) => {
 
     console.log('Querying database for address:', normalizedAddress);
     // Query the database (case-insensitive)
-    const result = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-    console.log('Database query result:', result);
+    let result;
+    try {
+      result = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      console.log('Database query result:', result);
+    } catch (queryError) {
+      console.error('Database query error:', queryError);
+      throw queryError;
+    }
     
     if (result.length === 0) {
       return res.status(404).json({
