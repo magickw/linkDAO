@@ -8,11 +8,26 @@ import {
   CommunityMembership, 
   CreateCommunityMembershipInput 
 } from '../models/CommunityMembership';
+import { ModerationQueue as ModerationQueueItem } from '../types/auth';
 import { requestManager } from './requestManager';
 import { analyticsService } from './analyticsService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+
+export interface CommunityAnalyticsResponse {
+  success: boolean;
+  analytics: {
+    totalPosts: number;
+    totalComments: number;
+    activeUsers: number;
+    moderationStats: {
+      pending: number;
+      approved: number;
+      rejected: number;
+    };
+  };
+}
 
 export interface CreatePostInput {
   communityId: string;
@@ -716,12 +731,8 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await requestManager.request<{ 
-          success: boolean; 
-          queue: ModerationQueueItem[]; 
-          pagination: { page: number; limit: number; total: number; totalPages: number } 
-        }>(
-          `${this.baseUrl}/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
+      const response = await fetch(
+          `${BACKEND_API_BASE_URL}/api/communities/${communityId}/moderation-queue?moderator=${moderatorAddress}`,
         {
           method: 'GET',
           headers: {
@@ -844,8 +855,8 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await requestManager.request<CommunityAnalyticsResponse>(
-          `${this.baseUrl}/${communityId}/analytics?moderator=${moderatorAddress}`,
+      const response = await fetch(
+          `${BACKEND_API_BASE_URL}/api/communities/${communityId}/analytics?moderator=${moderatorAddress}`,
         {
           method: 'GET',
           headers: {
