@@ -609,8 +609,10 @@ app.get('/api/profiles/address/:address', async (req, res) => {
       });
     }
     
+    console.log('Querying database for address:', address);
     // Query the database
     const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
+    console.log('Database query result:', result);
     
     if (result.length === 0) {
       return res.status(404).json({
