@@ -47,6 +47,7 @@ export const users = pgTable("users", {
   shippingSameAsBilling: boolean("shipping_same_as_billing").default(true),
   
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
 });
 
 // Posts
