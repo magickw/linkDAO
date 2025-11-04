@@ -22,6 +22,7 @@
     "check:schema": "ts-node src/scripts/check-users-schema.ts",
     "debug:profile": "ts-node src/scripts/debug-user-profile.ts",
     "debug:profile2": "ts-node src/scripts/debug-user-profile2.ts",
+    "test:profile": "ts-node src/scripts/test-profile-endpoint.ts",
     "validate:communities": "ts-node scripts/validate-community-data.ts",
     "cleanup:communities": "ts-node scripts/validate-community-data.ts --cleanup",
     "backup": "ts-node src/scripts/database-backup.ts",
