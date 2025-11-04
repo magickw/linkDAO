@@ -1,9 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { ServiceWorkerUtil } from '../utils/serviceWorker';
-import { performanceMonitor } from '../utils/performanceMonitor';
-import { lighthouseOptimizer } from '../utils/lighthouseOptimization';
-import { cdnService } from '../services/cdnService';
-import { serviceWorkerCacheService } from '../services/serviceWorkerCacheService';
+import { ServiceWorkerUtil } from '../utils/serviceWorkerUtil';
 import PWAInstallPrompt from './PWAInstallPrompt';
 
 interface PWAContextType {
@@ -53,9 +49,6 @@ export function PWAProvider({
     try {
       setIsLoading(true);
 
-      // Initialize enhanced service worker cache service
-      await serviceWorkerCacheService.initialize();
-
       // Initialize service worker
       const serviceWorkerUtil = new ServiceWorkerUtil({
         onUpdate: (registration) => {
@@ -70,7 +63,7 @@ export function PWAProvider({
         }
       });
 
-      await serviceWorkerUtil.init();
+      await serviceWorkerUtil.register();
       setSwUtil(serviceWorkerUtil);
 
       // Set up BroadcastChannel for cache update notifications
@@ -117,11 +110,9 @@ export function PWAProvider({
       setIsOnline(true);
       console.log('App is online');
       
-      // Sync offline data when back online
+      // Check for updates when back online
       if (swUtil) {
-        const backgroundSync = swUtil.getBackgroundSync();
-        backgroundSync?.registerPostSync();
-        backgroundSync?.registerReactionSync();
+        swUtil.checkForUpdates();
       }
     };
 
@@ -272,9 +263,10 @@ export function PWAProvider({
     }
   };
 
-  const updateApp = () => {
+  const updateApp = async () => {
     if (swUtil) {
-      swUtil.getServiceWorkerManager().skipWaiting();
+      // Request new service worker to take over
+      window.location.reload();
     }
   };
 

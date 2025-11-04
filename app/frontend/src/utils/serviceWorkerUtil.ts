@@ -1,5 +1,16 @@
+interface ServiceWorkerConfig {
+  onUpdate?: (registration: ServiceWorkerRegistration) => void;
+  onSuccess?: (registration: ServiceWorkerRegistration) => void;
+  onError?: (error: Error) => void;
+}
+
 export class ServiceWorkerUtil {
   private registration: ServiceWorkerRegistration | null = null;
+  private config: ServiceWorkerConfig;
+
+  constructor(config: ServiceWorkerConfig = {}) {
+    this.config = config;
+  }
 
   async register(): Promise<void> {
     if (!('serviceWorker' in navigator)) {
@@ -12,9 +23,23 @@ export class ServiceWorkerUtil {
         scope: '/'
       });
 
+      // Set up update handler
+      this.registration.addEventListener('updatefound', () => {
+        const newWorker = this.registration?.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            this.config.onUpdate?.(this.registration!);
+          }
+        });
+      });
+
+      this.config.onSuccess?.(this.registration);
       console.log('Service Worker registered successfully');
     } catch (error) {
       console.error('Service Worker registration failed:', error);
+      this.config.onError?.(error as Error);
       throw error;
     }
   }
