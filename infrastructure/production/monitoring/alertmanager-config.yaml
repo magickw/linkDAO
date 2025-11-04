@@ -7,8 +7,8 @@ data:
   alertmanager.yml: |
     global:
       smtp_smarthost: 'smtp.gmail.com:587'
-      smtp_from: 'alerts@web3marketplace.com'
-      smtp_auth_username: 'alerts@web3marketplace.com'
+      smtp_from: 'alerts@linkdao.io'
+      smtp_auth_username: 'alerts@linkdao.io'
       smtp_auth_password: '${SMTP_PASSWORD}'
       slack_api_url: '${SLACK_WEBHOOK_URL}'
       pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
@@ -64,7 +64,7 @@ data:
     
     - name: 'critical-alerts'
       email_configs:
-      - to: 'oncall@web3marketplace.com'
+      - to: 'oncall@linkdao.io'
         subject: '[CRITICAL] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
         body: |
           {{ range .Alerts }}
@@ -97,7 +97,7 @@ data:
     
     - name: 'warning-alerts'
       email_configs:
-      - to: 'alerts@web3marketplace.com'
+      - to: 'alerts@linkdao.io'
         subject: '[WARNING] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
         body: |
           {{ range .Alerts }}
@@ -121,7 +121,7 @@ data:
     
     - name: 'security-alerts'
       email_configs:
-      - to: 'security@web3marketplace.com'
+      - to: 'security@linkdao.io'
         subject: '[SECURITY] {{ .GroupLabels.alertname }}'
         body: |
           {{ range .Alerts }}
@@ -146,7 +146,7 @@ data:
     
     - name: 'blockchain-alerts'
       email_configs:
-      - to: 'blockchain-team@web3marketplace.com'
+      - to: 'blockchain-team@linkdao.io'
         subject: '[BLOCKCHAIN] {{ .GroupLabels.alertname }}'
         body: |
           {{ range .Alerts }}
@@ -169,7 +169,7 @@ data:
     
     - name: 'business-alerts'
       email_configs:
-      - to: 'business-ops@web3marketplace.com'
+      - to: 'business-ops@linkdao.io'
         subject: '[BUSINESS] {{ .GroupLabels.alertname }}'
         body: |
           {{ range .Alerts }}

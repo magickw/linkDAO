@@ -284,7 +284,7 @@ const LDAOCompleteGuidePage: NextPage = () => {
               <p>If you need assistance with LDAO tokens:</p>
               <ul>
                 <li><strong>Live Chat:</strong> Available 24/7 in the platform</li>
-                <li><strong>Email Support:</strong> ldao-support@web3marketplace.com</li>
+                <li><strong>Email Support:</strong> ldao-support@linkdao.io</li>
                 <li><strong>Community Discord:</strong> Real-time community help</li>
                 <li><strong>Knowledge Base:</strong> Comprehensive FAQ section</li>
               </ul>

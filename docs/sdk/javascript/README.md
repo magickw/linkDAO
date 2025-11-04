@@ -17,7 +17,7 @@ import { Web3MarketplaceSDK } from '@web3marketplace/sdk';
 
 // Initialize SDK
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   network: 'mainnet', // 'mainnet', 'polygon', 'arbitrum', 'testnet'
   apiKey: 'your-api-key' // Optional for public endpoints
 });
@@ -46,7 +46,7 @@ interface SDKConfig {
 }
 
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   network: 'mainnet',
   apiKey: process.env.WEB3_MARKETPLACE_API_KEY,
   
@@ -82,7 +82,7 @@ const sdk = new Web3MarketplaceSDK({
 
 ```bash
 # .env file
-WEB3_MARKETPLACE_API_URL=https://api.web3marketplace.com
+WEB3_MARKETPLACE_API_URL=https://api.linkdao.io
 WEB3_MARKETPLACE_API_KEY=your-api-key
 WEB3_MARKETPLACE_NETWORK=mainnet
 WEB3_MARKETPLACE_RPC_URL=https://mainnet.infura.io/v3/your-project-id
@@ -745,7 +745,7 @@ try {
 ```typescript
 // Built-in retry for transient failures
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   retryConfig: {
     maxRetries: 3,
     retryDelay: 1000, // 1 second
@@ -781,7 +781,7 @@ async function createProductWithRetry(productData, maxRetries = 3) {
 ```typescript
 // Enable mock mode for testing
 const testSDK = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   mockMode: true // Returns mock data instead of real API calls
 });
 
@@ -972,7 +972,7 @@ const product: CustomProduct = await customSDK.products.get('prod_123');
 ```typescript
 // Configure caching
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   cache: {
     enabled: true,
     ttl: 300000, // 5 minutes
@@ -1018,13 +1018,13 @@ while (true) {
 
 ```typescript
 // v0.x (deprecated)
-const sdk = new Web3MarketplaceSDK('https://api.web3marketplace.com');
+const sdk = new Web3MarketplaceSDK('https://api.linkdao.io');
 await sdk.authenticate(privateKey);
 const products = await sdk.getProducts();
 
 // v1.x (current)
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com'
+  apiUrl: 'https://api.linkdao.io'
 });
 await sdk.connect({ privateKey });
 const products = await sdk.products.list();
@@ -1032,10 +1032,10 @@ const products = await sdk.products.list();
 
 ## Support and Resources
 
-- **Documentation**: [Full SDK Documentation](https://docs.web3marketplace.com/sdk/javascript)
-- **API Reference**: [API Documentation](https://docs.web3marketplace.com/api)
+- **Documentation**: [Full SDK Documentation](https://docs.linkdao.io/sdk/javascript)
+- **API Reference**: [API Documentation](https://docs.linkdao.io/api)
 - **Examples**: [GitHub Examples Repository](https://github.com/web3marketplace/sdk-examples)
 - **TypeScript Types**: [Type Definitions](https://github.com/web3marketplace/sdk/tree/main/types)
 - **Issues**: [GitHub Issues](https://github.com/web3marketplace/sdk/issues)
 - **Discord**: [Developer Community](https://discord.gg/web3marketplace-dev)
-- **Email**: sdk-support@web3marketplace.com
+- **Email**: sdk-support@linkdao.io

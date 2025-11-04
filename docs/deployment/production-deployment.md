@@ -196,10 +196,10 @@ metadata:
   namespace: web3-marketplace
 data:
   NODE_ENV: "production"
-  API_URL: "https://api.web3marketplace.com"
-  FRONTEND_URL: "https://web3marketplace.com"
+  API_URL: "https://api.linkdao.io"
+  FRONTEND_URL: "https://linkdao.io"
   REDIS_URL: "redis://redis-cluster:6379"
-  IPFS_GATEWAY: "https://ipfs.web3marketplace.com"
+  IPFS_GATEWAY: "https://ipfs.linkdao.io"
 
 ---
 # k8s/secrets.yaml
@@ -657,11 +657,11 @@ metadata:
 spec:
   tls:
   - hosts:
-    - web3marketplace.com
-    - api.web3marketplace.com
+    - linkdao.io
+    - api.linkdao.io
     secretName: web3marketplace-tls
   rules:
-  - host: web3marketplace.com
+  - host: linkdao.io
     http:
       paths:
       - path: /
@@ -671,7 +671,7 @@ spec:
             name: frontend-service
             port:
               number: 80
-  - host: api.web3marketplace.com
+  - host: api.linkdao.io
     http:
       paths:
       - path: /
@@ -698,9 +698,9 @@ spec:
     name: letsencrypt-prod
     kind: ClusterIssuer
   dnsNames:
-  - web3marketplace.com
-  - www.web3marketplace.com
-  - api.web3marketplace.com
+  - linkdao.io
+  - www.linkdao.io
+  - api.linkdao.io
 ```
 
 ## Monitoring and Logging
@@ -1031,8 +1031,8 @@ echo "Rollback completed successfully!"
 
 set -e
 
-API_URL="https://api.web3marketplace.com"
-FRONTEND_URL="https://web3marketplace.com"
+API_URL="https://api.linkdao.io"
+FRONTEND_URL="https://linkdao.io"
 
 echo "Running post-deployment health checks..."
 
@@ -1185,8 +1185,8 @@ kubectl scale deployment backend --replicas=5 -n web3-marketplace
 
 ### Emergency Contacts
 
-- **DevOps Team**: devops@web3marketplace.com
-- **Security Team**: security@web3marketplace.com
+- **DevOps Team**: devops@linkdao.io
+- **Security Team**: security@linkdao.io
 - **On-call Engineer**: +1-555-0123
 - **Slack Channel**: #production-alerts
 

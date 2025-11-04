@@ -271,7 +271,7 @@ Your email account is often the weakest link:
 ### Reporting Security Incidents
 
 **Platform Support**:
-- Email: security@web3marketplace.com
+- Email: security@linkdao.io
 - Live chat: Mark as "Security Emergency"
 - Phone: +1-800-WEB3-HELP (urgent only)
 
@@ -366,7 +366,7 @@ Security isn't a one-time setup - it's an ongoing practice. Stay vigilant, keep 
 
 **When in doubt, don't proceed.** It's better to miss an opportunity than to lose your tokens to a scam.
 
-**Need security help?** Contact our security team immediately at security@web3marketplace.com or through live chat marked as "Security Emergency."
+**Need security help?** Contact our security team immediately at security@linkdao.io or through live chat marked as "Security Emergency."
 
 ---
 

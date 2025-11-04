@@ -32,7 +32,7 @@ spec:
               name: elasticsearch-secrets
               key: ELASTIC_PASSWORD
         - name: SERVER_NAME
-          value: "logs.web3marketplace.com"
+          value: "logs.linkdao.io"
         - name: SERVER_BASEPATH
           value: ""
         - name: SERVER_REWRITEBASEPATH
@@ -98,7 +98,7 @@ data:
     server.name: kibana
     server.host: "0.0.0.0"
     server.port: 5601
-    server.publicBaseUrl: "https://logs.web3marketplace.com"
+    server.publicBaseUrl: "https://logs.linkdao.io"
     
     elasticsearch.hosts: ["http://elasticsearch-service:9200"]
     elasticsearch.username: "elastic"

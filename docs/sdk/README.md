@@ -23,7 +23,7 @@ npm install @web3marketplace/sdk
 import { Web3MarketplaceSDK } from '@web3marketplace/sdk';
 
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   network: 'mainnet', // or 'polygon', 'arbitrum'
   apiKey: 'your-api-key'
 });
@@ -55,7 +55,7 @@ pip install web3marketplace-sdk
 from web3marketplace import Web3MarketplaceSDK
 
 sdk = Web3MarketplaceSDK(
-    api_url='https://api.web3marketplace.com',
+    api_url='https://api.linkdao.io',
     network='mainnet',
     api_key='your-api-key'
 )
@@ -245,7 +245,7 @@ await sdk.connect({
 
 ```javascript
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   apiKey: 'your-api-key',
   authMethod: 'api-key' // For server-to-server communication
 });
@@ -279,7 +279,7 @@ sdk.products.subscribeToPriceUpdates('prod_123', (priceUpdate) => {
 ```javascript
 // Enable mock mode for testing
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   mockMode: true // Returns mock data instead of real API calls
 });
 
@@ -336,7 +336,7 @@ try {
 ```javascript
 // Built-in retry for transient failures
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   retryConfig: {
     maxRetries: 3,
     retryDelay: 1000, // 1 second
@@ -430,7 +430,7 @@ const analyticsPlugin = {
 
 ## 📞 Support
 
-- **Documentation**: [Full SDK Documentation](https://docs.web3marketplace.com/sdk)
+- **Documentation**: [Full SDK Documentation](https://docs.linkdao.io/sdk)
 - **Examples**: [GitHub Examples Repository](https://github.com/web3marketplace/sdk-examples)
 - **Issues**: [GitHub Issues](https://github.com/web3marketplace/sdk/issues)
 - **Discord**: [Developer Community](https://discord.gg/web3marketplace-dev)

@@ -89,7 +89,7 @@ Gas fees are transaction costs on the blockchain:
 
 ### Desktop Connection
 
-1. Visit [marketplace.web3marketplace.com](https://marketplace.web3marketplace.com)
+1. Visit [marketplace.linkdao.io](https://marketplace.linkdao.io)
 2. Click "Connect Wallet" in the top right
 3. Select your wallet (MetaMask, Coinbase, etc.)
 4. Approve the connection in your wallet
@@ -427,7 +427,7 @@ Every purchase is protected by smart contract escrow:
 
 ### Contact Support
 - **Live Chat**: Available 24/7
-- **Email Support**: help@web3marketplace.com
+- **Email Support**: help@linkdao.io
 - **Discord Community**: Real-time help from users
 - **Twitter**: @Web3Marketplace for updates
 

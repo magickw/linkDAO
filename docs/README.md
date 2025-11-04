@@ -120,10 +120,10 @@ We welcome contributions to improve our documentation:
 
 Help us improve by providing feedback:
 
-- **Documentation Survey**: [Share your experience](https://forms.web3marketplace.com/docs-feedback)
+- **Documentation Survey**: [Share your experience](https://forms.linkdao.io/docs-feedback)
 - **Usage Analytics**: We track page views to improve popular sections
 - **GitHub Issues**: [Report problems or suggest improvements](https://github.com/web3marketplace/docs/issues)
-- **Community Forum**: [Discuss documentation](https://forum.web3marketplace.com/c/documentation)
+- **Community Forum**: [Discuss documentation](https://forum.linkdao.io/c/documentation)
 
 ## 📞 Support & Community
 
@@ -134,14 +134,14 @@ Help us improve by providing feedback:
 - **Office Hours**: Weekly developer office hours (Fridays 2PM UTC)
 
 ### Contact Support
-- **Technical Support**: developers@web3marketplace.com
-- **Documentation Issues**: docs@web3marketplace.com
-- **Business Inquiries**: partnerships@web3marketplace.com
-- **Security Issues**: security@web3marketplace.com
+- **Technical Support**: developers@linkdao.io
+- **Documentation Issues**: docs@linkdao.io
+- **Business Inquiries**: partnerships@linkdao.io
+- **Security Issues**: security@linkdao.io
 
 ### Emergency Support
 - **Critical Issues**: +1-555-URGENT (24/7)
-- **Status Page**: [System Status](https://status.web3marketplace.com)
+- **Status Page**: [System Status](https://status.linkdao.io)
 - **Incident Updates**: [@Web3MarketplaceStatus](https://twitter.com/Web3MarketplaceStatus)
 
 ## 🎯 Learning Paths
@@ -171,7 +171,7 @@ Stay informed about documentation updates:
 - **Changelog**: [Documentation Updates](./CHANGELOG.md)
 - **Roadmap**: [Upcoming Features](./ROADMAP.md)
 - **Release Notes**: [Platform Releases](./releases/README.md)
-- **Newsletter**: [Monthly Developer Updates](https://newsletter.web3marketplace.com)
+- **Newsletter**: [Monthly Developer Updates](https://newsletter.linkdao.io)
 
 ---
 

@@ -32,9 +32,9 @@ spec:
         - name: PORT
           value: "3001"
         - name: NEXT_PUBLIC_API_URL
-          value: "https://api.web3marketplace.com"
+          value: "https://api.linkdao.io"
         - name: NEXT_PUBLIC_WS_URL
-          value: "wss://api.web3marketplace.com"
+          value: "wss://api.linkdao.io"
         - name: NEXT_PUBLIC_CDN_URL
           valueFrom:
             configMapKeyRef:

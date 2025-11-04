@@ -32,21 +32,21 @@ MAJOR.MINOR.PATCH
 ### Version in URL Path
 
 ```
-https://api.web3marketplace.com/v{MAJOR}/endpoint
+https://api.linkdao.io/v{MAJOR}/endpoint
 ```
 
 Examples:
 ```
-GET https://api.web3marketplace.com/v2/products
-POST https://api.web3marketplace.com/v2/orders
-GET https://api.web3marketplace.com/v1/users/profile
+GET https://api.linkdao.io/v2/products
+POST https://api.linkdao.io/v2/orders
+GET https://api.linkdao.io/v1/users/profile
 ```
 
 ### Version in Headers (Alternative)
 
 ```http
 GET /products HTTP/1.1
-Host: api.web3marketplace.com
+Host: api.linkdao.io
 Accept: application/vnd.web3marketplace.v2+json
 Authorization: Bearer your-jwt-token
 ```
@@ -115,7 +115,7 @@ Authorization: Bearer your-jwt-token
 ```javascript
 // Old method - API key in URL
 const response = await fetch(
-  'https://api.web3marketplace.com/v1/products?api_key=your-api-key'
+  'https://api.linkdao.io/v1/products?api_key=your-api-key'
 );
 ```
 
@@ -123,7 +123,7 @@ const response = await fetch(
 ```javascript
 // New method - JWT token in header
 const response = await fetch(
-  'https://api.web3marketplace.com/v2/products',
+  'https://api.linkdao.io/v2/products',
   {
     headers: {
       'Authorization': 'Bearer your-jwt-token',
@@ -262,7 +262,7 @@ import { Web3MarketplaceSDK } from '@web3marketplace/sdk';
 
 // SDK automatically handles version differences
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   version: 'v2', // Specify version
   autoMigrate: true // Enable automatic migration
 });
@@ -314,7 +314,7 @@ const products = await sdk.products.list();
 ```javascript
 // SDK automatically detects and uses appropriate version
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   autoDetectVersion: true
 });
 ```
@@ -324,7 +324,7 @@ const sdk = new Web3MarketplaceSDK({
 ```javascript
 // Explicitly specify version
 const sdk = new Web3MarketplaceSDK({
-  apiUrl: 'https://api.web3marketplace.com',
+  apiUrl: 'https://api.linkdao.io',
   version: 'v2'
 });
 ```
@@ -333,7 +333,7 @@ const sdk = new Web3MarketplaceSDK({
 
 ```http
 GET /products HTTP/1.1
-Host: api.web3marketplace.com
+Host: api.linkdao.io
 Accept: application/vnd.web3marketplace.v2+json, application/vnd.web3marketplace.v1+json;q=0.8
 ```
 
@@ -558,14 +558,14 @@ sdk.on('version-deprecated', (info) => {
 - **Priority Support**: Dedicated support during migration
 
 ### Contact Information
-- **Migration Help**: migration@web3marketplace.com
-- **Technical Support**: api-support@web3marketplace.com
+- **Migration Help**: migration@linkdao.io
+- **Technical Support**: api-support@linkdao.io
 - **Discord**: #api-migration channel
 - **Documentation**: [Migration Guides](./migration/)
 
 ### Emergency Migration
 If you need urgent migration assistance:
-1. Contact emergency-migration@web3marketplace.com
+1. Contact emergency-migration@linkdao.io
 2. Include your API usage patterns and timeline
 3. We'll provide dedicated engineering support
 4. Expedited migration tools and testing

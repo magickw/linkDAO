@@ -35,7 +35,7 @@ import { Web3MarketplaceSDK } from '@web3marketplace/sdk';
 const marketplace = new Web3MarketplaceSDK({
   apiKey: 'your-api-key',
   network: 'mainnet',
-  apiUrl: 'https://api.web3marketplace.com'
+  apiUrl: 'https://api.linkdao.io'
 });
 ```
 
@@ -410,15 +410,15 @@ export default {
 // Environment-based configuration
 const config = {
   development: {
-    apiUrl: 'https://api-dev.web3marketplace.com',
+    apiUrl: 'https://api-dev.linkdao.io',
     apiKey: process.env.DEV_API_KEY
   },
   staging: {
-    apiUrl: 'https://api-staging.web3marketplace.com',
+    apiUrl: 'https://api-staging.linkdao.io',
     apiKey: process.env.STAGING_API_KEY
   },
   production: {
-    apiUrl: 'https://api.web3marketplace.com',
+    apiUrl: 'https://api.linkdao.io',
     apiKey: process.env.PROD_API_KEY
   }
 };

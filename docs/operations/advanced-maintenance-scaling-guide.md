@@ -471,9 +471,9 @@ kubectl exec -n web3-marketplace-prod deployment/disaster-recovery-controller --
 
 ### Support Contacts
 
-- **DevOps Team**: devops@web3marketplace.com
+- **DevOps Team**: devops@linkdao.io
 - **On-call Engineer**: +1-555-0123
-- **Emergency Escalation**: emergency@web3marketplace.com
+- **Emergency Escalation**: emergency@linkdao.io
 
 ## Best Practices
 

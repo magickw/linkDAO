@@ -310,5 +310,5 @@ const newImplementation = await upgrades.upgradeProxy(
 ## 📞 Support
 
 - **Contract Verification**: All contracts are verified on Etherscan
-- **Bug Bounty**: Report vulnerabilities to security@web3marketplace.com
+- **Bug Bounty**: Report vulnerabilities to security@linkdao.io
 - **Developer Chat**: Join our Discord for technical support

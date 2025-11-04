@@ -239,7 +239,7 @@ A: Polygon for beginners (low fees), Ethereum for maximum security.
 - **Blog**: Latest updates and tutorials
 
 ### Emergency Support
-- **Email**: ldao-support@web3marketplace.com
+- **Email**: ldao-support@linkdao.io
 - **Phone**: +1-800-WEB3-HELP (emergencies only)
 
 ---

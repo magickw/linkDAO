@@ -468,7 +468,7 @@ describe('MarketplaceEscrow', function () {
 
 For technical support with the MarketplaceEscrow contract:
 
-- **Documentation**: [Full Contract Docs](https://docs.web3marketplace.com/contracts/escrow)
+- **Documentation**: [Full Contract Docs](https://docs.linkdao.io/contracts/escrow)
 - **GitHub Issues**: [Report Issues](https://github.com/web3marketplace/contracts/issues)
 - **Discord**: [Developer Support](https://discord.gg/web3marketplace-dev)
-- **Email**: contracts@web3marketplace.com
+- **Email**: contracts@linkdao.io

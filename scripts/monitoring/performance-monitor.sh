@@ -474,7 +474,7 @@ generate_performance_report() {
     
     echo "=========================================="
     echo "Detailed metrics available in Grafana:"
-    echo "https://grafana.web3marketplace.com"
+    echo "https://grafana.linkdao.io"
     echo ""
     echo "Performance log: $LOG_FILE"
     echo "=========================================="

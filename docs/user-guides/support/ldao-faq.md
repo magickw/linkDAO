@@ -330,7 +330,7 @@ Check our [Terms of Service] for the complete list.
 
 ### How do I contact support?
 - **Live Chat**: Available 24/7 in the platform
-- **Email**: ldao-support@web3marketplace.com
+- **Email**: ldao-support@linkdao.io
 - **Discord**: [Join our community](https://discord.gg/web3marketplace)
 - **Telegram**: @Web3MarketplaceSupport
 - **Twitter**: @Web3Marketplace

@@ -405,9 +405,9 @@ main() {
     
     log "Next steps:"
     log "1. Verify application functionality through the web interface"
-    log "2. Check monitoring dashboards at https://grafana.web3marketplace.com"
-    log "3. Review logs at https://logs.web3marketplace.com"
-    log "4. Monitor alerts at https://alerts.web3marketplace.com"
+    log "2. Check monitoring dashboards at https://grafana.linkdao.io"
+    log "3. Review logs at https://logs.linkdao.io"
+    log "4. Monitor alerts at https://alerts.linkdao.io"
     log "5. Update DNS records if this is a new deployment"
 }
 
@@ -425,7 +425,7 @@ usage() {
     echo "  IMAGE_TAG           Docker image tag (optional, default: latest)"
     echo ""
     echo "Example:"
-    echo "  DOCKER_REGISTRY=registry.web3marketplace.com $0 --tag v1.2.3"
+    echo "  DOCKER_REGISTRY=registry.linkdao.io $0 --tag v1.2.3"
 }
 
 # Parse command line arguments

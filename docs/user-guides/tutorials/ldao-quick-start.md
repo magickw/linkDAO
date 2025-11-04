@@ -245,7 +245,7 @@ After completing these tutorials:
 **Need help?** We're here for you:
 
 - **Live Chat**: Available 24/7 in the platform
-- **Email**: ldao-support@web3marketplace.com
+- **Email**: ldao-support@linkdao.io
 - **Discord**: [Join our community](https://discord.gg/web3marketplace)
 - **FAQ**: [Comprehensive FAQ section](../support/faq.md)
 - **Video Library**: [Complete tutorial playlist](https://youtube.com/playlist?list=ldao-tutorials)

@@ -180,12 +180,12 @@ curl -X POST "https://api.statuspage.io/v1/pages/$PAGE_ID/incidents" \
 kubectl get pods -n web3-marketplace-prod
 
 # Run health checks
-curl -f https://api.web3marketplace.com/health
-curl -f https://web3marketplace.com/api/health
+curl -f https://api.linkdao.io/health
+curl -f https://linkdao.io/api/health
 
 # Check monitoring dashboards
-# - Grafana: https://grafana.web3marketplace.com
-# - Prometheus: https://monitoring.web3marketplace.com
+# - Grafana: https://grafana.linkdao.io
+# - Prometheus: https://monitoring.linkdao.io
 ```
 
 ### 2. Performance Validation
@@ -194,7 +194,7 @@ curl -f https://web3marketplace.com/api/health
 kubectl apply -f infrastructure/production/testing/load-test.yaml
 
 # Check response times
-curl -w "@curl-format.txt" -o /dev/null -s https://api.web3marketplace.com/health
+curl -w "@curl-format.txt" -o /dev/null -s https://api.linkdao.io/health
 
 # Verify database performance
 kubectl exec -it -n web3-marketplace-prod statefulset/postgres-primary -- \
@@ -241,9 +241,9 @@ kubectl exec -it -n web3-marketplace-prod statefulset/postgres-primary -- \
 ## Contact Information
 
 - **On-call Engineer:** Check PagerDuty rotation
-- **Engineering Manager:** [manager@web3marketplace.com]
-- **Infrastructure Team:** [infra@web3marketplace.com]
-- **Security Team:** [security@web3marketplace.com]
+- **Engineering Manager:** [manager@linkdao.io]
+- **Infrastructure Team:** [infra@linkdao.io]
+- **Security Team:** [security@linkdao.io]
 
 ## Related Runbooks
 

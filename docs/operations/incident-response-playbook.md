@@ -112,7 +112,7 @@ kubectl logs -n web3-marketplace-prod deployment/backend-deployment --tail=100
 kubectl logs -n web3-marketplace-prod deployment/frontend-deployment --tail=100
 
 # Check system logs in Kibana
-# Navigate to: https://logs.web3marketplace.com
+# Navigate to: https://logs.linkdao.io
 # Search for: level:error OR level:fatal
 # Time range: Last 1 hour
 ```
@@ -120,10 +120,10 @@ kubectl logs -n web3-marketplace-prod deployment/frontend-deployment --tail=100
 #### 2.3 Monitoring Dashboard Review
 ```bash
 # Check Grafana dashboards
-- System Overview: https://grafana.web3marketplace.com/d/overview
-- Application Metrics: https://grafana.web3marketplace.com/d/app-metrics
-- Infrastructure: https://grafana.web3marketplace.com/d/infrastructure
-- Business Metrics: https://grafana.web3marketplace.com/d/business
+- System Overview: https://grafana.linkdao.io/d/overview
+- Application Metrics: https://grafana.linkdao.io/d/app-metrics
+- Infrastructure: https://grafana.linkdao.io/d/infrastructure
+- Business Metrics: https://grafana.linkdao.io/d/business
 ```
 
 #### 2.4 Database Investigation
@@ -216,7 +216,7 @@ Severity: [Level]
 Status: Investigating
 ETA: TBD
 War room: #incident-response" | \
-mail -s "INCIDENT: Web3 Marketplace" engineering@web3marketplace.com
+mail -s "INCIDENT: Web3 Marketplace" engineering@linkdao.io
 ```
 
 ##### External Communication
@@ -241,19 +241,19 @@ curl -X POST "https://api.statuspage.io/v1/pages/$PAGE_ID/incidents" \
 ./scripts/monitoring/health-check.sh
 
 # Test critical user journeys
-curl -f https://web3marketplace.com/api/health
-curl -f https://api.web3marketplace.com/products?limit=1
-curl -f https://api.web3marketplace.com/orders/health-check
+curl -f https://linkdao.io/api/health
+curl -f https://api.linkdao.io/products?limit=1
+curl -f https://api.linkdao.io/orders/health-check
 
 # Verify monitoring systems
-curl -f https://grafana.web3marketplace.com/api/health
-curl -f https://monitoring.web3marketplace.com/-/healthy
+curl -f https://grafana.linkdao.io/api/health
+curl -f https://monitoring.linkdao.io/-/healthy
 ```
 
 #### 4.2 Performance Validation
 ```bash
 # Check response times
-curl -w "@curl-format.txt" -o /dev/null -s https://api.web3marketplace.com/health
+curl -w "@curl-format.txt" -o /dev/null -s https://api.linkdao.io/health
 
 # Monitor error rates
 watch -n 30 'curl -s "http://prometheus-service:9090/api/v1/query?query=rate(http_requests_total{status=~\"5..\"}[5m])/rate(http_requests_total[5m])"'
@@ -300,7 +300,7 @@ kubectl exec -n web3-marketplace-prod statefulset/postgres-primary -- \
 #### Communication Channels
 - **Primary**: Slack #incident-response
 - **Voice**: Incident bridge (Zoom/Teams)
-- **Email**: engineering@web3marketplace.com
+- **Email**: engineering@linkdao.io
 - **SMS**: Critical escalations only
 
 #### Status Updates
@@ -343,7 +343,7 @@ ETA: Under investigation
 
 We will provide updates every 30 minutes until resolved.
 
-Status page: https://status.web3marketplace.com
+Status page: https://status.linkdao.io
 ```
 
 #### Resolution Notification
@@ -379,7 +379,7 @@ echo "RESOLVED: [Brief description]
 Resolution time: [Duration]
 Root cause: [Brief explanation]
 Post-mortem: Will be published within 48 hours" | \
-mail -s "RESOLVED: Web3 Marketplace Incident" engineering@web3marketplace.com
+mail -s "RESOLVED: Web3 Marketplace Incident" engineering@linkdao.io
 ```
 
 #### 2. Data Collection

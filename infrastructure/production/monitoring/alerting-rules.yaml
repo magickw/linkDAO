@@ -19,7 +19,7 @@ data:
         annotations:
           summary: "Service {{ $labels.job }} is down"
           description: "Service {{ $labels.job }} has been down for more than 1 minute"
-          runbook_url: "https://runbooks.web3marketplace.com/service-down"
+          runbook_url: "https://runbooks.linkdao.io/service-down"
       
       # Backend API alerts
       - alert: HighErrorRate
@@ -31,7 +31,7 @@ data:
         annotations:
           summary: "High error rate detected"
           description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
-          runbook_url: "https://runbooks.web3marketplace.com/high-error-rate"
+          runbook_url: "https://runbooks.linkdao.io/high-error-rate"
       
       - alert: CriticalErrorRate
         expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.10
@@ -42,7 +42,7 @@ data:
         annotations:
           summary: "Critical error rate detected"
           description: "Error rate is {{ $value | humanizePercentage }} for the last 2 minutes"
-          runbook_url: "https://runbooks.web3marketplace.com/critical-error-rate"
+          runbook_url: "https://runbooks.linkdao.io/critical-error-rate"
       
       - alert: HighResponseTime
         expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
@@ -53,7 +53,7 @@ data:
         annotations:
           summary: "High response time detected"
           description: "95th percentile response time is {{ $value }}s for the last 5 minutes"
-          runbook_url: "https://runbooks.web3marketplace.com/high-response-time"
+          runbook_url: "https://runbooks.linkdao.io/high-response-time"
       
       # Database alerts
       - alert: DatabaseConnectionsHigh
@@ -65,7 +65,7 @@ data:
         annotations:
           summary: "Database connections are high"
           description: "Database connections are at {{ $value | humanizePercentage }} of maximum"
-          runbook_url: "https://runbooks.web3marketplace.com/database-connections-high"
+          runbook_url: "https://runbooks.linkdao.io/database-connections-high"
       
       - alert: DatabaseReplicationLag
         expr: pg_replication_lag_seconds > 30
@@ -76,7 +76,7 @@ data:
         annotations:
           summary: "Database replication lag is high"
           description: "Replication lag is {{ $value }}s"
-          runbook_url: "https://runbooks.web3marketplace.com/database-replication-lag"
+          runbook_url: "https://runbooks.linkdao.io/database-replication-lag"
       
       - alert: DatabaseDiskSpaceHigh
         expr: (node_filesystem_size_bytes{mountpoint="/var/lib/postgresql/data"} - node_filesystem_free_bytes{mountpoint="/var/lib/postgresql/data"}) / node_filesystem_size_bytes{mountpoint="/var/lib/postgresql/data"} > 0.85
@@ -87,7 +87,7 @@ data:
         annotations:
           summary: "Database disk space is high"
           description: "Database disk usage is at {{ $value | humanizePercentage }}"
-          runbook_url: "https://runbooks.web3marketplace.com/database-disk-space-high"
+          runbook_url: "https://runbooks.linkdao.io/database-disk-space-high"
       
       # Redis alerts
       - alert: RedisMemoryHigh
@@ -99,7 +99,7 @@ data:
         annotations:
           summary: "Redis memory usage is high"
           description: "Redis memory usage is at {{ $value | humanizePercentage }}"
-          runbook_url: "https://runbooks.web3marketplace.com/redis-memory-high"
+          runbook_url: "https://runbooks.linkdao.io/redis-memory-high"
       
       - alert: RedisConnectionsHigh
         expr: redis_connected_clients > 1000
@@ -110,7 +110,7 @@ data:
         annotations:
           summary: "Redis connections are high"
           description: "Redis has {{ $value }} connected clients"
-          runbook_url: "https://runbooks.web3marketplace.com/redis-connections-high"
+          runbook_url: "https://runbooks.linkdao.io/redis-connections-high"
       
       # Blockchain monitoring alerts
       - alert: BlockchainNodeDown
@@ -122,7 +122,7 @@ data:
         annotations:
           summary: "Blockchain node is down"
           description: "Ethereum node {{ $labels.instance }} is not responding"
-          runbook_url: "https://runbooks.web3marketplace.com/blockchain-node-down"
+          runbook_url: "https://runbooks.linkdao.io/blockchain-node-down"
       
       - alert: HighGasPrices
         expr: ethereum_gas_price_gwei > 100
@@ -133,7 +133,7 @@ data:
         annotations:
           summary: "Gas prices are high"
           description: "Current gas price is {{ $value }} gwei"
-          runbook_url: "https://runbooks.web3marketplace.com/high-gas-prices"
+          runbook_url: "https://runbooks.linkdao.io/high-gas-prices"
       
       - alert: TransactionFailureRate
         expr: rate(blockchain_transactions_failed_total[5m]) / rate(blockchain_transactions_total[5m]) > 0.1
@@ -144,7 +144,7 @@ data:
         annotations:
           summary: "High transaction failure rate"
           description: "Transaction failure rate is {{ $value | humanizePercentage }}"
-          runbook_url: "https://runbooks.web3marketplace.com/transaction-failure-rate"
+          runbook_url: "https://runbooks.linkdao.io/transaction-failure-rate"
       
       # Infrastructure alerts
       - alert: HighCPUUsage
@@ -156,7 +156,7 @@ data:
         annotations:
           summary: "High CPU usage detected"
           description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
-          runbook_url: "https://runbooks.web3marketplace.com/high-cpu-usage"
+          runbook_url: "https://runbooks.linkdao.io/high-cpu-usage"
       
       - alert: HighMemoryUsage
         expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
@@ -167,7 +167,7 @@ data:
         annotations:
           summary: "High memory usage detected"
           description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
-          runbook_url: "https://runbooks.web3marketplace.com/high-memory-usage"
+          runbook_url: "https://runbooks.linkdao.io/high-memory-usage"
       
       - alert: DiskSpaceLow
         expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes > 0.85
@@ -178,7 +178,7 @@ data:
         annotations:
           summary: "Disk space is low"
           description: "Disk usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}:{{ $labels.mountpoint }}"
-          runbook_url: "https://runbooks.web3marketplace.com/disk-space-low"
+          runbook_url: "https://runbooks.linkdao.io/disk-space-low"
       
       # Business metrics alerts
       - alert: LowTransactionVolume
@@ -190,7 +190,7 @@ data:
         annotations:
           summary: "Low transaction volume"
           description: "Transaction rate is {{ $value }} per hour"
-          runbook_url: "https://runbooks.web3marketplace.com/low-transaction-volume"
+          runbook_url: "https://runbooks.linkdao.io/low-transaction-volume"
       
       - alert: HighOrderCancellationRate
         expr: rate(marketplace_orders_cancelled_total[1h]) / rate(marketplace_orders_total[1h]) > 0.2
@@ -201,7 +201,7 @@ data:
         annotations:
           summary: "High order cancellation rate"
           description: "Order cancellation rate is {{ $value | humanizePercentage }}"
-          runbook_url: "https://runbooks.web3marketplace.com/high-cancellation-rate"
+          runbook_url: "https://runbooks.linkdao.io/high-cancellation-rate"
       
       # Security alerts
       - alert: SuspiciousActivity
@@ -213,7 +213,7 @@ data:
         annotations:
           summary: "Suspicious activity detected"
           description: "{{ $value }} suspicious requests per second detected"
-          runbook_url: "https://runbooks.web3marketplace.com/suspicious-activity"
+          runbook_url: "https://runbooks.linkdao.io/suspicious-activity"
       
       - alert: FailedLoginAttempts
         expr: rate(auth_failed_login_attempts_total[5m]) > 5
@@ -224,4 +224,4 @@ data:
         annotations:
           summary: "High number of failed login attempts"
           description: "{{ $value }} failed login attempts per second"
-          runbook_url: "https://runbooks.web3marketplace.com/failed-login-attempts"
+          runbook_url: "https://runbooks.linkdao.io/failed-login-attempts"

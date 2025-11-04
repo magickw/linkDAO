@@ -248,7 +248,7 @@ Quick solutions to common issues with LDAO token acquisition and management.
 - **Best For**: Urgent issues, account problems
 
 ### Email Support
-- **Address**: ldao-support@web3marketplace.com
+- **Address**: ldao-support@linkdao.io
 - **Response Time**: Within 4 hours
 - **Best For**: Complex technical issues, documentation requests
 

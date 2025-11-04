@@ -244,18 +244,18 @@ kubectl get pods -n web3-marketplace-prod
 kubectl get pods -n web3-marketplace-monitoring
 
 # Test application endpoints
-curl -f https://web3marketplace.com/api/health
-curl -f https://api.web3marketplace.com/health
+curl -f https://linkdao.io/api/health
+curl -f https://api.linkdao.io/health
 ```
 
 ### 2. Monitoring Verification
 
 Access monitoring dashboards:
 
-- **Grafana**: https://grafana.web3marketplace.com
-- **Prometheus**: https://monitoring.web3marketplace.com
-- **AlertManager**: https://alerts.web3marketplace.com
-- **Kibana**: https://logs.web3marketplace.com
+- **Grafana**: https://grafana.linkdao.io
+- **Prometheus**: https://monitoring.linkdao.io
+- **AlertManager**: https://alerts.linkdao.io
+- **Kibana**: https://logs.linkdao.io
 
 ### 3. Performance Testing
 
@@ -332,7 +332,7 @@ ALCHEMY_API_KEY=your_alchemy_key
 # Security Configuration
 JWT_SECRET=your_secure_jwt_secret
 ENCRYPTION_KEY=your_32_character_key
-CORS_ORIGIN=https://web3marketplace.com
+CORS_ORIGIN=https://linkdao.io
 
 # External Services
 STRIPE_SECRET_KEY=sk_live_your_stripe_key
@@ -604,9 +604,9 @@ Refer to the operational runbooks:
 ### Contact Information
 
 - **On-call Engineer**: Check PagerDuty rotation
-- **Engineering Team**: engineering@web3marketplace.com
-- **Infrastructure Team**: infra@web3marketplace.com
-- **Security Team**: security@web3marketplace.com
+- **Engineering Team**: engineering@linkdao.io
+- **Infrastructure Team**: infra@linkdao.io
+- **Security Team**: security@linkdao.io
 
 ### Escalation Matrix
 

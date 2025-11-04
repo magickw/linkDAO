@@ -166,7 +166,7 @@ A: Yes, enable notifications in your account settings to get price movement aler
 ## 🆘 Support & Help
 
 **Q: How do I contact support?**
-A: Live chat (24/7), email (ldao-support@web3marketplace.com), or emergency hotline (+1-800-WEB3-HELP).
+A: Live chat (24/7), email (ldao-support@linkdao.io), or emergency hotline (+1-800-WEB3-HELP).
 
 **Q: What's the fastest way to get help?**
 A: Live chat for urgent issues, email for complex problems, community Discord for general questions.
@@ -178,7 +178,7 @@ A: Wallet address, transaction hash, error messages, steps you've tried, and scr
 A: Yes! Check our YouTube channel and tutorial section for step-by-step video guides.
 
 **Q: How do I report a bug or suggest a feature?**
-A: Use the feedback form in your dashboard or email suggestions@web3marketplace.com.
+A: Use the feedback form in your dashboard or email suggestions@linkdao.io.
 
 ## 💡 Tips & Best Practices
 
@@ -203,7 +203,7 @@ A: Follow our blog, join Discord/Telegram, enable email notifications, and check
 
 **Can't find your answer?**
 - 💬 **Live Chat**: Instant help available 24/7
-- 📧 **Email Support**: ldao-support@web3marketplace.com  
+- 📧 **Email Support**: ldao-support@linkdao.io  
 - 📚 **Full Documentation**: [Complete User Guide](./ldao-token-acquisition.md)
 - 🎥 **Video Tutorials**: Step-by-step visual guides
 - 👥 **Community**: Join our Discord for peer support
@@ -212,4 +212,4 @@ A: Follow our blog, join Discord/Telegram, enable email notifications, and check
 
 ---
 
-*This FAQ is updated weekly based on common user questions. Suggest additions at feedback@web3marketplace.com*
+*This FAQ is updated weekly based on common user questions. Suggest additions at feedback@linkdao.io*

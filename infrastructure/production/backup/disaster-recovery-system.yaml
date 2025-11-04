@@ -206,7 +206,7 @@ spec:
               echo "Starting continuous backup..."
               
               # Database backup
-              pg_dump $DATABASE_URL | gzip | gpg --encrypt --recipient backup@web3marketplace.com > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg
+              pg_dump $DATABASE_URL | gzip | gpg --encrypt --recipient backup@linkdao.io > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg
               
               # Upload to multiple destinations
               aws s3 cp /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg s3://$S3_BACKUP_BUCKET/database/

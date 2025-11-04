@@ -243,7 +243,7 @@ LDAO tokens are the native utility tokens of the LinkDAO platform with a total s
 
 ### Getting Help
 - **Live Chat**: 24/7 support available
-- **Email Support**: ldao-support@web3marketplace.com
+- **Email Support**: ldao-support@linkdao.io
 - **Community Discord**: Real-time community help
 - **Knowledge Base**: Comprehensive FAQ section
 
@@ -313,4 +313,4 @@ LDAO tokens are the native utility tokens of the LinkDAO platform with a total s
 
 **Ready to start acquiring LDAO tokens?** Visit the [LDAO Acquisition Dashboard](../dashboard/ldao-acquisition) to begin your journey!
 
-For additional support, contact our team at ldao-support@web3marketplace.com or join our [Discord community](https://discord.gg/web3marketplace).
+For additional support, contact our team at ldao-support@linkdao.io or join our [Discord community](https://discord.gg/web3marketplace).

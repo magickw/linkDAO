@@ -184,9 +184,9 @@ watch -n 5 'curl -s "http://prometheus-service:9090/api/v1/query?query=histogram
 ### 2. Application Health Checks
 ```bash
 # Test critical endpoints
-curl -f https://api.web3marketplace.com/health
-curl -f https://api.web3marketplace.com/products?limit=1
-curl -f https://api.web3marketplace.com/orders/health-check
+curl -f https://api.linkdao.io/health
+curl -f https://api.linkdao.io/products?limit=1
+curl -f https://api.linkdao.io/orders/health-check
 
 # Test database connectivity
 kubectl exec -it -n web3-marketplace-prod deployment/backend-deployment -- \
@@ -223,7 +223,7 @@ spec:
             echo "Test $i:"
             curl -w "Response: %{http_code}, Time: %{time_total}s\n" \
                  -s -o /dev/null \
-                 https://api.web3marketplace.com/products?limit=5
+                 https://api.linkdao.io/products?limit=5
             sleep 2
           done
       restartPolicy: Never

@@ -17,8 +17,8 @@ data:
   JWT_EXPIRY: "86400"
   BLOCKCHAIN_NETWORK: "mainnet"
   IPFS_GATEWAY: "https://gateway.pinata.cloud"
-  CDN_URL: "https://cdn.web3marketplace.com"
-  MONITORING_ENDPOINT: "https://monitoring.web3marketplace.com"
+  CDN_URL: "https://cdn.linkdao.io"
+  MONITORING_ENDPOINT: "https://monitoring.linkdao.io"
 ---
 apiVersion: v1
 kind: ConfigMap

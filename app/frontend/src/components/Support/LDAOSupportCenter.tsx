@@ -126,7 +126,7 @@ const LDAOSupportCenter: React.FC = () => {
         </a>
 
         <a
-          href="mailto:ldao-support@web3marketplace.com"
+          href="mailto:ldao-support@linkdao.io"
           className="flex items-center p-4 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
         >
           <Mail className="w-6 h-6 text-orange-600 mr-3" />
@@ -406,7 +406,7 @@ const LDAOSupportCenter: React.FC = () => {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Email Support</h3>
                   <p className="text-gray-600 mb-2">
-                    ldao-support@web3marketplace.com
+                    ldao-support@linkdao.io
                   </p>
                   <p className="text-sm text-gray-500">Response within 4 hours</p>
                 </div>

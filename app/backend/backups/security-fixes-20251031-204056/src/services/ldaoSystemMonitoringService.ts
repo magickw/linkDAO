@@ -489,7 +489,7 @@ class LDAOSystemMonitoringService {
 
   private async notifyAdministrators(alert: SystemAlert): Promise<void> {
     try {
-      const adminEmails = ['admin@web3marketplace.com', 'devops@web3marketplace.com'];
+      const adminEmails = ['admin@linkdao.io', 'devops@linkdao.io'];
       
       for (const email of adminEmails) {
         await sendEmail({
@@ -512,7 +512,7 @@ class LDAOSystemMonitoringService {
 
   private async notifyLDAOTeam(alert: SystemAlert): Promise<void> {
     try {
-      const ldaoTeamEmails = ['ldao-team@web3marketplace.com'];
+      const ldaoTeamEmails = ['ldao-team@linkdao.io'];
       
       for (const email of ldaoTeamEmails) {
         await sendEmail({

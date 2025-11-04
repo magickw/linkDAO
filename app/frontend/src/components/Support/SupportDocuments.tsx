@@ -371,7 +371,7 @@ const SupportDocuments: React.FC = () => {
         </a>
 
         <a
-          href="mailto:ldao-support@web3marketplace.com"
+          href="mailto:ldao-support@linkdao.io"
           className="flex items-center p-4 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
         >
           <HelpCircle className="w-6 h-6 text-orange-600 mr-3" />
@@ -701,7 +701,7 @@ const SupportDocuments: React.FC = () => {
           </a>
           
           <a
-            href="mailto:ldao-support@web3marketplace.com"
+            href="mailto:ldao-support@linkdao.io"
             className="flex items-center p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
           >
             <HelpCircle className="w-6 h-6 text-green-600 mr-3" />

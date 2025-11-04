@@ -182,8 +182,8 @@ Comprehensive guides for using the Web3 Marketplace platform.
 
 ## 📞 Support Resources
 
-- **Help Center**: [help.web3marketplace.com](https://help.web3marketplace.com)
+- **Help Center**: [help.linkdao.io](https://help.linkdao.io)
 - **Community Discord**: [Join our community](https://discord.gg/web3marketplace)
 - **Video Tutorials**: [YouTube Channel](https://youtube.com/web3marketplace)
-- **Email Support**: support@web3marketplace.com
+- **Email Support**: support@linkdao.io
 - **Live Chat**: Available 24/7 in the platform

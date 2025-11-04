@@ -4,8 +4,8 @@ The Web3 Marketplace provides both REST and GraphQL APIs for comprehensive platf
 
 ## 🌐 Base URLs
 
-- **Production**: `https://api.web3marketplace.com`
-- **Staging**: `https://api-staging.web3marketplace.com`
+- **Production**: `https://api.linkdao.io`
+- **Staging**: `https://api-staging.linkdao.io`
 - **Local Development**: `http://localhost:3001`
 
 ## 🔐 Authentication

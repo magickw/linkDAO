@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile.prod
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://api.web3marketplace.com
+      - NEXT_PUBLIC_API_URL=https://api.linkdao.io
       - NEXT_PUBLIC_BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
     volumes:
       - frontend-logs:/app/logs
@@ -46,7 +46,7 @@ services:
       dockerfile: Dockerfile.prod
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://api.web3marketplace.com
+      - NEXT_PUBLIC_API_URL=https://api.linkdao.io
       - NEXT_PUBLIC_BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
     volumes:
       - frontend-logs:/app/logs

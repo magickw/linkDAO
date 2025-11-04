@@ -35,7 +35,7 @@ This runbook provides step-by-step procedures for responding to incidents in the
 #### Automated Monitoring
 ```bash
 # Check system health dashboard
-curl -s https://status.web3marketplace.com/api/health | jq '.'
+curl -s https://status.linkdao.io/api/health | jq '.'
 
 # Verify monitoring systems
 kubectl get pods -n monitoring
@@ -102,10 +102,10 @@ kubectl rollout history deployment/frontend -n web3-marketplace
 
 ```bash
 # API health endpoints
-curl -s https://api.web3marketplace.com/health | jq '.'
-curl -s https://api.web3marketplace.com/health/database | jq '.'
-curl -s https://api.web3marketplace.com/health/redis | jq '.'
-curl -s https://api.web3marketplace.com/health/blockchain | jq '.'
+curl -s https://api.linkdao.io/health | jq '.'
+curl -s https://api.linkdao.io/health/database | jq '.'
+curl -s https://api.linkdao.io/health/redis | jq '.'
+curl -s https://api.linkdao.io/health/blockchain | jq '.'
 
 # Check application logs
 kubectl logs -f deployment/backend -n web3-marketplace --tail=100
@@ -192,8 +192,8 @@ kubectl logs -f deployment/nginx-ingress-controller -n ingress-nginx
 kubectl rollout restart deployment/nginx-ingress-controller -n ingress-nginx
 
 # Check DNS resolution
-nslookup web3marketplace.com
-nslookup api.web3marketplace.com
+nslookup linkdao.io
+nslookup api.linkdao.io
 ```
 
 ##### Cache Issues
@@ -240,7 +240,7 @@ Next update in 15 minutes.
 
 ```bash
 # Verify system health
-curl -s https://api.web3marketplace.com/health | jq '.status'
+curl -s https://api.linkdao.io/health | jq '.status'
 
 # Check error rates
 kubectl exec deployment/backend -n web3-marketplace -- curl -s http://localhost:3001/metrics | grep error_rate
@@ -398,8 +398,8 @@ SELECT * FROM pg_locks WHERE NOT granted;"
 kubectl logs deployment/backend -n web3-marketplace | grep ERROR | tail -50
 
 # Check specific endpoints
-curl -s https://api.web3marketplace.com/v2/products | jq '.'
-curl -s https://api.web3marketplace.com/v2/orders | jq '.'
+curl -s https://api.linkdao.io/v2/products | jq '.'
+curl -s https://api.linkdao.io/v2/orders | jq '.'
 
 # Check dependencies
 kubectl exec deployment/backend -n web3-marketplace -- npm run health:dependencies
@@ -451,10 +451,10 @@ aws support create-case \
 ## Tools and Resources
 
 ### Monitoring Dashboards
-- **System Overview**: https://monitoring.web3marketplace.com/d/system-overview
-- **Application Metrics**: https://monitoring.web3marketplace.com/d/app-metrics
-- **Business Metrics**: https://monitoring.web3marketplace.com/d/business-metrics
-- **Blockchain Metrics**: https://monitoring.web3marketplace.com/d/blockchain-metrics
+- **System Overview**: https://monitoring.linkdao.io/d/system-overview
+- **Application Metrics**: https://monitoring.linkdao.io/d/app-metrics
+- **Business Metrics**: https://monitoring.linkdao.io/d/business-metrics
+- **Blockchain Metrics**: https://monitoring.linkdao.io/d/blockchain-metrics
 
 ### Useful Commands
 
@@ -477,10 +477,10 @@ echo -e "\nIngress:"
 kubectl get ingress -n web3-marketplace
 
 echo -e "\nAPI Health:"
-curl -s https://api.web3marketplace.com/health | jq '.'
+curl -s https://api.linkdao.io/health | jq '.'
 
 echo -e "\nFrontend Health:"
-curl -s https://web3marketplace.com/api/health | jq '.'
+curl -s https://linkdao.io/api/health | jq '.'
 ```
 
 #### Log Analysis
@@ -510,14 +510,14 @@ kubectl logs --since=$TIME_RANGE -n $NAMESPACE deployment/backend | grep "respon
 
 #### Communication Channels
 - **Slack**: #incidents (public), #incident-response (private)
-- **Email**: incidents@web3marketplace.com
-- **Status Page**: https://status.web3marketplace.com
+- **Email**: incidents@linkdao.io
+- **Status Page**: https://status.linkdao.io
 
 #### Key Personnel
-- **CTO**: cto@web3marketplace.com, +1-555-0100
-- **DevOps Lead**: devops-lead@web3marketplace.com, +1-555-0101
-- **Security Lead**: security-lead@web3marketplace.com, +1-555-0102
-- **Customer Success**: support@web3marketplace.com, +1-555-0103
+- **CTO**: cto@linkdao.io, +1-555-0100
+- **DevOps Lead**: devops-lead@linkdao.io, +1-555-0101
+- **Security Lead**: security-lead@linkdao.io, +1-555-0102
+- **Customer Success**: support@linkdao.io, +1-555-0103
 
 ## Post-Incident Review Process
 
