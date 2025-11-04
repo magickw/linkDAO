@@ -82,24 +82,37 @@ class AuthService {
         return { success: false, error: 'Wallet not connected' };
       }
 
-      // Add small delay to ensure connector is fully ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Add delay to ensure connector is fully ready and config is hydrated
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Get nonce and message
       const { nonce, message } = await this.getNonce(address);
-      
+
+      // Validate message
+      if (!message || typeof message !== 'string') {
+        console.error('Invalid message received from getNonce:', message);
+        return { success: false, error: 'Failed to generate authentication message' };
+      }
+
       // Check if we're running in a browser environment
       if (typeof window === 'undefined') {
         throw new Error('Wallet authentication requires browser environment');
       }
-      
+
+      // Validate config is available
+      if (!config) {
+        console.error('Wagmi config is not initialized');
+        return { success: false, error: 'Wallet configuration not ready. Please refresh and try again.' };
+      }
+
       let signature: string | null = null;
       try {
         // Sign message with wallet - this will prompt the user
         // Using wagmi/core signMessage requires account parameter in newer versions
+        // Ensure message is a plain string (wagmi v2 will handle conversion internally)
         signature = await signMessage(config, {
           account: address as `0x${string}`,
-          message
+          message: message as string
         });
 
         if (!signature) {
