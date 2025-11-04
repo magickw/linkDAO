@@ -54,9 +54,32 @@ export class WebSocketService {
   private reconnectionTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(httpServer: HttpServer) {
+    // Parse allowed origins from environment variables
+    const frontendUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+    const allowedOrigins = [
+      ...frontendUrls,
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://www.linkdao.io",
+      "https://linkdao.io",
+      "https://app.linkdao.io",
+      "https://marketplace.linkdao.io",
+      "https://linkdao-backend.onrender.com",
+      "https://api.linkdao.io"
+    ];
+
     this.io = new Server(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+          // Allow requests with no origin (like mobile apps or curl requests)
+          if (!origin) return callback(null, true);
+          
+          if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        },
         methods: ["GET", "POST"]
       },
       pingTimeout: 60000,
@@ -199,10 +222,8 @@ export class WebSocketService {
         // Remove subscription
         this.subscriptions.delete(data.subscriptionId);
         user.subscriptions.delete(data.subscriptionId);
-
-        const userSubs = this.userSubscriptions.get(user.walletAddress);
-        if (userSubs) {
-          userSubs.delete(data.subscriptionId);
+        if (this.userSubscriptions.has(user.walletAddress)) {
+          this.userSubscriptions.get(user.walletAddress)!.delete(data.subscriptionId);
         }
 
         // Leave room
@@ -213,187 +234,133 @@ export class WebSocketService {
         safeLogger.info(`User ${user.walletAddress} unsubscribed from ${subscription.type}:${subscription.target}`);
       });
 
-      // Handle joining community rooms (legacy support)
-      socket.on('join_community', (data: { communityId: string }) => {
-        const { communityId } = data;
-        socket.join(`community:${communityId}`);
-        socket.emit('joined_community', { communityId });
-        safeLogger.info(`Socket ${socket.id} joined community: ${communityId}`);
-      });
+      // Handle user registration
+      socket.on('register', (data: { address: string }) => {
+        const user = this.connectedUsers.get(socket.id);
+        if (!user) {
+          socket.emit('registration_error', { message: 'User not authenticated' });
+          return;
+        }
 
-      // Handle leaving community rooms (legacy support)
-      socket.on('leave_community', (data: { communityId: string }) => {
-        const { communityId } = data;
-        socket.leave(`community:${communityId}`);
-        socket.emit('left_community', { communityId });
-        safeLogger.info(`Socket ${socket.id} left community: ${communityId}`);
-      });
-
-      // Handle joining conversation rooms (legacy support)
-      socket.on('join_conversation', (data: { conversationId: string }) => {
-        const { conversationId } = data;
-        socket.join(`conversation:${conversationId}`);
-        socket.emit('joined_conversation', { conversationId });
-        safeLogger.info(`Socket ${socket.id} joined conversation: ${conversationId}`);
-      });
-
-      // Handle leaving conversation rooms (legacy support)
-      socket.on('leave_conversation', (data: { conversationId: string }) => {
-        const { conversationId } = data;
-        socket.leave(`conversation:${conversationId}`);
-        socket.emit('left_conversation', { conversationId });
-        safeLogger.info(`Socket ${socket.id} left conversation: ${conversationId}`);
+        // Update user registration
+        user.userId = data.address;
+        safeLogger.info(`User registered: ${data.address}`);
       });
 
       // Handle typing indicators
-      socket.on('typing_start', (data: { conversationId: string }) => {
-        const user = this.connectedUsers.get(socket.id);
-        if (user) {
-          socket.to(`conversation:${data.conversationId}`).emit('user_typing', {
-            userAddress: user.walletAddress,
-            conversationId: data.conversationId
-          });
-        }
+      socket.on('typing:start', (data: { conversationId: string; userAddress: string }) => {
+        socket.to(`conversation:${data.conversationId}`).emit('typing:start', data);
       });
 
-      socket.on('typing_stop', (data: { conversationId: string }) => {
-        const user = this.connectedUsers.get(socket.id);
-        if (user) {
-          socket.to(`conversation:${data.conversationId}`).emit('user_stopped_typing', {
-            userAddress: user.walletAddress,
-            conversationId: data.conversationId
-          });
-        }
-      });
-
-      // Handle connection state updates
-      socket.on('connection_state', (data: { state: 'stable' | 'unstable' | 'reconnecting' }) => {
-        const user = this.connectedUsers.get(socket.id);
-        if (user) {
-          user.connectionState = data.state === 'stable' ? 'connected' : 'reconnecting';
-          user.lastSeen = new Date();
-          
-          // Broadcast connection state to relevant users
-          this.broadcastUserStatus(user.walletAddress, data.state);
-        }
-      });
-
-      // Handle heartbeat
-      socket.on('heartbeat', () => {
-        const user = this.connectedUsers.get(socket.id);
-        if (user) {
-          user.lastSeen = new Date();
-          user.connectionState = 'connected';
-        }
-        socket.emit('heartbeat_ack', { timestamp: new Date().toISOString() });
+      socket.on('typing:stop', (data: { conversationId: string; userAddress: string }) => {
+        socket.to(`conversation:${data.conversationId}`).emit('typing:stop', data);
       });
 
       // Handle disconnection
       socket.on('disconnect', (reason) => {
         const user = this.connectedUsers.get(socket.id);
-        
         if (user) {
-          // Update connection state
+          // Update user status
           user.connectionState = 'disconnected';
-          
-          // Remove from user sockets tracking
-          const userSocketSet = this.userSockets.get(user.walletAddress);
-          if (userSocketSet) {
-            userSocketSet.delete(socket.id);
-            
-            // If no more sockets for this user, set up reconnection timeout
-            if (userSocketSet.size === 0) {
-              this.userSockets.delete(user.walletAddress);
-              this.setupReconnectionTimeout(user.walletAddress);
-              this.broadcastUserStatus(user.walletAddress, 'offline');
+          user.lastSeen = new Date();
+
+          // Remove socket from user tracking
+          if (this.userSockets.has(user.walletAddress)) {
+            this.userSockets.get(user.walletAddress)!.delete(socket.id);
+            // If no more sockets for this user, schedule cleanup
+            if (this.userSockets.get(user.walletAddress)!.size === 0) {
+              this.scheduleUserCleanup(user.walletAddress);
             }
           }
 
-          // Remove from connected users
-          this.connectedUsers.delete(socket.id);
-          
-          safeLogger.info(`User disconnected: ${user.walletAddress} (${socket.id}) - Reason: ${reason}`);
-        } else {
-          safeLogger.info(`Client disconnected: ${socket.id} - Reason: ${reason}`);
-        }
-      });
+          // Broadcast user offline status
+          this.broadcastUserStatus(user.walletAddress, 'offline');
 
-      // Handle ping/pong for connection health
-      socket.on('ping', () => {
-        const user = this.connectedUsers.get(socket.id);
-        if (user) {
-          user.lastSeen = new Date();
+          safeLogger.info(`User disconnected: ${user.walletAddress} (${socket.id}) - Reason: ${reason}`);
         }
-        socket.emit('pong', { timestamp: new Date().toISOString() });
+
+        // Clean up user data
+        this.connectedUsers.delete(socket.id);
       });
     });
   }
 
-  // Helper methods for subscription management
   private joinSubscriptionRoom(socket: any, subscription: Subscription) {
-    const roomName = this.getSubscriptionRoomName(subscription);
-    socket.join(roomName);
+    switch (subscription.type) {
+      case 'feed':
+        socket.join('feed');
+        break;
+      case 'community':
+        socket.join(`community:${subscription.target}`);
+        break;
+      case 'conversation':
+        socket.join(`conversation:${subscription.target}`);
+        break;
+      case 'user':
+        socket.join(`user:${subscription.target}`);
+        break;
+      case 'global':
+        socket.join('global');
+        break;
+    }
   }
 
   private leaveSubscriptionRoom(socket: any, subscription: Subscription) {
-    const roomName = this.getSubscriptionRoomName(subscription);
-    socket.leave(roomName);
-  }
-
-  private getSubscriptionRoomName(subscription: Subscription): string {
     switch (subscription.type) {
       case 'feed':
-        return `feed:${subscription.target}`;
+        socket.leave('feed');
+        break;
       case 'community':
-        return `community:${subscription.target}`;
+        socket.leave(`community:${subscription.target}`);
+        break;
       case 'conversation':
-        return `conversation:${subscription.target}`;
+        socket.leave(`conversation:${subscription.target}`);
+        break;
       case 'user':
-        return `user:${subscription.target}`;
+        socket.leave(`user:${subscription.target}`);
+        break;
       case 'global':
-        return 'global';
-      default:
-        return `unknown:${subscription.target}`;
+        socket.leave('global');
+        break;
     }
   }
 
-  // Connection state management
-  private setupReconnectionTimeout(walletAddress: string) {
-    // Clear existing timeout if any
-    if (this.reconnectionTimeouts.has(walletAddress)) {
-      clearTimeout(this.reconnectionTimeouts.get(walletAddress)!);
-    }
+  private broadcastUserStatus(walletAddress: string, status: 'online' | 'offline') {
+    // Broadcast to user's followers or relevant communities
+    this.io.to(`user:${walletAddress}`).emit('user:status', {
+      walletAddress,
+      status,
+      timestamp: new Date()
+    });
+  }
 
-    // Set up new timeout (5 minutes)
+  private scheduleUserCleanup(walletAddress: string) {
+    // Schedule cleanup of user data after a delay if no active connections
     const timeout = setTimeout(() => {
-      // Clean up user subscriptions if still not reconnected
-      const userSubs = this.userSubscriptions.get(walletAddress);
-      if (userSubs && !this.userSockets.has(walletAddress)) {
-        userSubs.forEach(subId => {
-          this.subscriptions.delete(subId);
+      // Check if user still has active connections
+      if (this.userSockets.has(walletAddress) && this.userSockets.get(walletAddress)!.size === 0) {
+        // Remove user subscriptions
+        if (this.userSubscriptions.has(walletAddress)) {
+          const subscriptions = this.userSubscriptions.get(walletAddress)!;
+          subscriptions.forEach(subId => {
+            this.subscriptions.delete(subId);
+          });
+          this.userSubscriptions.delete(walletAddress);
+        }
+
+        // Remove user from connected users map
+        const userEntries = Array.from(this.connectedUsers.entries());
+        userEntries.forEach(([socketId, user]) => {
+          if (user.walletAddress === walletAddress) {
+            this.connectedUsers.delete(socketId);
+          }
         });
-        this.userSubscriptions.delete(walletAddress);
-        
-        // Clear message queue
-        this.messageQueue.delete(walletAddress);
-        
-        safeLogger.info(`Cleaned up subscriptions for disconnected user: ${walletAddress}`);
+
+        safeLogger.info(`Cleaned up user data for: ${walletAddress}`);
       }
-      
-      this.reconnectionTimeouts.delete(walletAddress);
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 30000); // 30 seconds
 
     this.reconnectionTimeouts.set(walletAddress, timeout);
-  }
-
-  private broadcastUserStatus(walletAddress: string, status: 'online' | 'offline' | 'stable' | 'unstable' | 'reconnecting') {
-    // Broadcast to users who might be interested in this user's status
-    // This could be optimized based on actual relationships/followers
-    this.io.emit('user_status_update', {
-      userAddress: walletAddress,
-      status,
-      timestamp: new Date().toISOString()
-    });
   }
 
   // Message queuing for offline users
@@ -460,7 +427,7 @@ export class WebSocketService {
       timestamp: new Date()
     };
 
-    if (this.isUserOnline(walletAddress)) {
+    if (this.isUserSockets.has(walletAddress) && this.userSockets.get(walletAddress)!.size > 0) {
       this.io.to(`user:${walletAddress}`).emit(event, {
         ...data,
         priority,
