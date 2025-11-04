@@ -29,11 +29,19 @@ export const securityHeaders = helmet({
 
 // CSRF Protection (using custom implementation)
 export const csrfProtection = (req: Request, res: Response, next: NextFunction) => {
+  // Skip CSRF for API routes - they use JWT authentication
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
   // For state-changing operations, verify origin/referer
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const origin = req.headers.origin || req.headers.referer;
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      'https://www.linkdao.io',
+      'https://linkdao.io',
+      'https://linkdao.vercel.app',
       'http://localhost:3000',
       'http://localhost:10000'
     ].filter(Boolean);
@@ -67,10 +75,12 @@ export const requestSizeLimits = (req: Request, res: Response, next: NextFunctio
 export const validateContentType = (req: Request, res: Response, next: NextFunction) => {
   if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
     const contentType = req.headers['content-type'];
-    if (!contentType || !contentType.includes('application/json')) {
+    // Allow JSON, form-data, and urlencoded
+    const validTypes = ['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded'];
+    if (contentType && !validTypes.some(type => contentType.includes(type))) {
       return res.status(415).json({ 
         success: false, 
-        message: 'Content-Type must be application/json' 
+        message: 'Invalid Content-Type' 
       });
     }
   }
