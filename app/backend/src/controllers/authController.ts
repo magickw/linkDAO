@@ -224,6 +224,37 @@ class AuthController {
   }
 
   /**
+   * Get KYC status for authenticated user
+   * GET /api/auth/kyc/status
+   */
+  async getKYCStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
+      }
+
+      // For now, return a default KYC status since the full KYC system is not implemented
+      // In a real implementation, this would check the user's actual KYC status
+      const kycStatus = {
+        status: 'none',
+        tier: 'none',
+        submittedAt: null,
+        reviewedAt: null,
+        expiresAt: null,
+        rejectionReason: null,
+        requiredDocuments: [],
+        completedDocuments: []
+      };
+
+      successResponse(res, kycStatus);
+
+    } catch (error) {
+      safeLogger.error('Get KYC status error:', error);
+      errorResponse(res, 'KYC_STATUS_ERROR', 'Failed to get KYC status', 500);
+    }
+  }
+
+  /**
    * Logout user
    * POST /api/auth/logout
    */

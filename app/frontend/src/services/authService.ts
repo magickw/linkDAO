@@ -386,7 +386,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/kyc/status`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/kyc/status`, {
         headers: {
           'Authorization': `Bearer ${this.token}`,
         },
@@ -397,6 +397,20 @@ class AuthService {
         if (response.status >= 500) {
           console.warn('Backend unavailable for KYC status, returning null');
           return null;
+        }
+        
+        if (response.status === 401) {
+          console.warn('Authentication failed for KYC status, clearing token');
+          this.clearToken();
+          return null;
+        }
+        
+        if (response.status === 404) {
+          console.warn('KYC status endpoint not found, returning default status');
+          return {
+            status: 'none',
+            tier: 'none'
+          };
         }
         // For other errors, still try to parse the response
       }

@@ -93,6 +93,13 @@ router.post('/wallet-connect', authRateLimit, csrfProtection,  walletConnectVali
 router.get('/profile', authMiddleware, authController.getProfile);
 
 /**
+ * @route GET /api/auth/kyc/status
+ * @desc Get KYC status for authenticated user
+ * @access Private
+ */
+router.get('/kyc/status', authMiddleware, authController.getKYCStatus);
+
+/**
  * @route PUT /api/auth/profile
  * @desc Update authenticated user profile
  * @access Private
