@@ -262,6 +262,55 @@ export class AuthenticationController {
   };
 
   /**
+   * Get current user profile
+   * GET /api/auth/me
+   */
+  getCurrentUser = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'NOT_AUTHENTICATED',
+            message: 'Authentication required',
+          },
+        });
+      }
+
+      // Return user profile information
+      const userProfile = {
+        id: req.user.sessionId,
+        address: req.user.walletAddress,
+        handle: `user_${req.user.walletAddress.slice(0, 6)}`,
+        ens: undefined,
+        email: undefined,
+        kycStatus: 'none',
+        role: 'user',
+        permissions: [],
+        isActive: true,
+        isSuspended: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      res.json({
+        success: true,
+        user: userProfile,
+      });
+    } catch (error) {
+      safeLogger.error('Error getting current user:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'USER_FETCH_ERROR',
+          message: 'Failed to get current user',
+          details: error.message,
+        },
+      });
+    }
+  };
+
+  /**
    * Logout and invalidate session
    * POST /api/auth/logout
    */
@@ -315,6 +364,51 @@ export class AuthenticationController {
         error: {
           code: 'STATS_ERROR',
           message: 'Failed to get authentication statistics',
+          details: error.message,
+        },
+      });
+    }
+  };
+
+  /**
+   * Get KYC status for authenticated user
+   * GET /api/auth/kyc/status
+   */
+  getKYCStatus = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: {
+            code: 'NOT_AUTHENTICATED',
+            message: 'Authentication required',
+          },
+        });
+      }
+
+      // Return default KYC status (can be enhanced later)
+      const kycStatus = {
+        status: 'none',
+        tier: 'none',
+        submittedAt: null,
+        reviewedAt: null,
+        expiresAt: null,
+        rejectionReason: null,
+        requiredDocuments: [],
+        completedDocuments: [],
+      };
+
+      res.json({
+        success: true,
+        data: kycStatus,
+      });
+    } catch (error) {
+      safeLogger.error('Error getting KYC status:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'KYC_STATUS_ERROR',
+          message: 'Failed to get KYC status',
           details: error.message,
         },
       });

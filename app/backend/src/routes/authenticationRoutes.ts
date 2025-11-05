@@ -62,6 +62,17 @@ export function createAuthenticationRoutes(
   );
 
   /**
+   * @route GET /api/auth/me
+   * @desc Get current user profile
+   * @access Private
+   */
+  router.get(
+    '/me',
+    authMiddleware.requireAuth,
+    controller.getCurrentUser
+  );
+
+  /**
    * @route POST /api/auth/logout
    * @desc Logout and invalidate session
    * @access Private
@@ -81,6 +92,17 @@ export function createAuthenticationRoutes(
     '/stats',
     authMiddleware.requireAuth,
     controller.getAuthStats
+  );
+
+  /**
+   * @route GET /api/auth/kyc/status
+   * @desc Get KYC status for authenticated user
+   * @access Private
+   */
+  router.get(
+    '/kyc/status',
+    authMiddleware.requireAuth,
+    controller.getKYCStatus
   );
 
   /**

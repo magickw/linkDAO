@@ -4,6 +4,9 @@ export const ENV_CONFIG = {
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   
+  // WebSocket URL - derived from backend URL
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000').replace(/^http/, 'ws'),
+  
   // WalletConnect
   WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b',
   

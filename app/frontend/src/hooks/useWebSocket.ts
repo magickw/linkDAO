@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { WebSocketClientService, initializeWebSocketClient, getWebSocketClient } from '../services/webSocketClientService';
+import { ENV_CONFIG } from '../config/environment';
 
 interface UseWebSocketConfig {
   url?: string;
@@ -61,8 +62,12 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
 
   // Initialize WebSocket service
   useEffect(() => {
+    // Use environment config for consistent URL handling
+    const backendUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
+    const wsUrl = backendUrl.replace(/^http/, 'ws');
+    
     const wsConfig = {
-      url: config.url || process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:10000',
+      url: config.url || ENV_CONFIG.WS_URL,
       walletAddress: config.walletAddress,
       autoReconnect: config.autoReconnect ?? true,
       reconnectAttempts: config.reconnectAttempts ?? 5,

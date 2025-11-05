@@ -37,7 +37,9 @@ const CORS_CONFIGS = {
       'X-Correlation-ID',
       'X-Session-ID',
       'X-Wallet-Address',
-      'X-Chain-ID'
+      'X-Chain-ID',
+      'X-CSRF-Token',
+      'x-csrf-token'
     ],
     exposedHeaders: [
       'X-Request-ID',

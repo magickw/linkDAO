@@ -321,6 +321,20 @@ app.get('/', (req, res) => {
   });
 });
 
+// CSRF token route
+app.get('/api/csrf-token', (req, res) => {
+  const crypto = require('crypto');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  
+  res.json({
+    success: true,
+    data: {
+      csrfToken,
+      expiresIn: 3600 // 1 hour
+    }
+  });
+});
+
 // Import post routes
 import postRoutes from './routes/postRoutes';
 

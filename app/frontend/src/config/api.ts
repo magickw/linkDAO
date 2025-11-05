@@ -1,5 +1,5 @@
 // API Configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 export const FALLBACK_API_URL = process.env.NEXT_PUBLIC_FALLBACK_API_URL || 'http://localhost:3001';
 
 export const API_ENDPOINTS = {

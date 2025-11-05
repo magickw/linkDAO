@@ -100,6 +100,44 @@ router.get('/profile', authMiddleware, authController.getProfile);
 router.get('/kyc/status', authMiddleware, authController.getKYCStatus);
 
 /**
+ * @route GET /api/csrf-token
+ * @desc Get CSRF token for secure requests
+ * @access Public
+ */
+router.get('/csrf-token', (req, res) => {
+  // Generate a simple CSRF token
+  const crypto = require('crypto');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  
+  res.json({
+    success: true,
+    data: {
+      csrfToken,
+      expiresIn: 3600 // 1 hour
+    }
+  });
+});
+
+/**
+ * @route GET /api/auth/csrf-token
+ * @desc Get CSRF token for secure requests (alternative path)
+ * @access Public
+ */
+router.get('/csrf-token', (req, res) => {
+  // Generate a simple CSRF token
+  const crypto = require('crypto');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  
+  res.json({
+    success: true,
+    data: {
+      csrfToken,
+      expiresIn: 3600 // 1 hour
+    }
+  });
+});
+
+/**
  * @route PUT /api/auth/profile
  * @desc Update authenticated user profile
  * @access Private

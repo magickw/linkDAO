@@ -140,9 +140,8 @@ class AuthService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            address,
+            walletAddress: address,
             signature,
-            message,
             nonce,
           }),
         });
@@ -159,14 +158,32 @@ class AuthService {
         
         const data = await response.json();
         
-        if (data.success && data.token) {
-          this.setToken(data.token);
+        if (data.success && data.sessionToken) {
+          this.setToken(data.sessionToken);
           console.log('Authentication successful for address:', address);
+          
+          // Return in expected format
+          return {
+            success: true,
+            token: data.sessionToken,
+            user: {
+              id: `user_${address}`,
+              address: address,
+              handle: `user_${address.slice(0, 6)}`,
+              ens: undefined,
+              email: undefined,
+              kycStatus: 'none',
+              role: 'user',
+              permissions: [],
+              isActive: true,
+              isSuspended: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          };
         } else {
-          throw new Error(data.error || 'Authentication failed - no token received');
+          throw new Error(data.error?.message || 'Authentication failed - no token received');
         }
-        
-        return data;
       } catch (fetchError: any) {
         // If fetch fails (network error, backend down), use mock authentication
         if (fetchError.name === 'TypeError' || fetchError.message.includes('fetch')) {
@@ -256,7 +273,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/me`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/status`, {
         headers: {
           'Authorization': `Bearer ${this.token}`,
         },
@@ -264,8 +281,22 @@ class AuthService {
       
       const data = await response.json();
       
-      if (data.success) {
-        return data.user;
+      if (data.success && data.data.authenticated) {
+        // Convert session data to AuthUser format
+        return {
+          id: data.data.sessionId || `user_${data.data.walletAddress}`,
+          address: data.data.walletAddress,
+          handle: `user_${data.data.walletAddress.slice(0, 6)}`,
+          ens: undefined,
+          email: undefined,
+          kycStatus: 'none',
+          role: 'user',
+          permissions: [],
+          isActive: true,
+          isSuspended: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
       }
       
       // Token might be invalid, clear it

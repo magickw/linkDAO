@@ -1,106 +1,108 @@
-/**
- * useWalletAuth - Custom hook for wallet authentication with Base wallet support
- * Provides manual authentication controls and status checking
- */
-
-import { useState, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useSignMessage } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/services/authService';
 
-export interface UseWalletAuthReturn {
-  // Authentication state
+interface WalletInfo {
+  isBaseWallet: boolean;
+  chainId?: number;
+  connector?: string;
+}
+
+interface UseWalletAuthReturn {
   isAuthenticating: boolean;
-  authError: string | null;
-  canAuthenticate: boolean;
-  
-  // Authentication actions
-  authenticateWallet: () => Promise<{ success: boolean; error?: string }>;
-  clearAuthError: () => void;
-  
-  // Wallet info
-  walletInfo: {
-    address: string | undefined;
-    isConnected: boolean;
-    connectorName: string | undefined;
-    isBaseWallet: boolean;
-  };
+  walletInfo: WalletInfo;
+  authenticate: () => Promise<{ success: boolean; error?: string }>;
+  error: string | null;
 }
 
 export const useWalletAuth = (): UseWalletAuthReturn => {
   const { address, isConnected, connector } = useAccount();
+  const { signMessageAsync } = useSignMessage();
   const { login, isAuthenticated } = useAuth();
   
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [walletInfo, setWalletInfo] = useState<WalletInfo>({
+    isBaseWallet: false,
+  });
 
-  // Check if current wallet is Base wallet (Coinbase Wallet)
-  const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
-                      connector?.id === 'coinbaseWallet' ||
-                      connector?.name?.toLowerCase().includes('base');
+  // Update wallet info when connection changes
+  useEffect(() => {
+    if (isConnected && connector) {
+      setWalletInfo({
+        isBaseWallet: connector.name?.toLowerCase().includes('base') || false,
+        chainId: connector.chains?.[0]?.id,
+        connector: connector.name,
+      });
+    } else {
+      setWalletInfo({
+        isBaseWallet: false,
+      });
+    }
+  }, [isConnected, connector]);
 
-  // Can authenticate if wallet is connected, not already authenticated, and not currently authenticating
-  const canAuthenticate = isConnected && !!address && !isAuthenticated && !isAuthenticating;
+  // Auto-authenticate when wallet connects (if not already authenticated)
+  useEffect(() => {
+    if (isConnected && address && !isAuthenticated && !isAuthenticating) {
+      authenticate();
+    }
+  }, [isConnected, address, isAuthenticated, isAuthenticating]);
 
-  const authenticateWallet = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  const authenticate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!address || !isConnected) {
-      const error = 'Please connect your wallet first';
-      setAuthError(error);
-      return { success: false, error };
+      const errorMsg = 'Wallet not connected';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     }
 
     if (isAuthenticating) {
-      const error = 'Authentication already in progress';
-      setAuthError(error);
-      return { success: false, error };
+      return { success: false, error: 'Authentication already in progress' };
     }
 
-    if (isAuthenticated) {
-      return { success: true };
-    }
+    setIsAuthenticating(true);
+    setError(null);
 
     try {
-      setIsAuthenticating(true);
-      setAuthError(null);
+      // Use the auth service to handle the full authentication flow
+      const result = await authService.authenticateWallet(
+        address,
+        connector,
+        isConnected ? 'connected' : 'disconnected'
+      );
 
-      console.log(`Starting authentication for ${isBaseWallet ? 'Base' : 'other'} wallet:`, address);
-
-      const result = await login(address, connector, 'connected');
-
-      if (!result.success) {
-        setAuthError(result.error || 'Authentication failed');
+      if (result.success && result.user) {
+        // Update auth context
+        const loginResult = await login(address, connector, 'connected');
+        
+        if (loginResult.success) {
+          console.log('Wallet authentication successful');
+          return { success: true };
+        } else {
+          const errorMsg = loginResult.error || 'Login failed after authentication';
+          setError(errorMsg);
+          return { success: false, error: errorMsg };
+        }
+      } else {
+        const errorMsg = result.error || 'Authentication failed';
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
       }
-
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      setAuthError(errorMessage);
-      return { success: false, error: errorMessage };
+    } catch (error: any) {
+      const errorMsg = error.message || 'Authentication error';
+      console.error('Wallet authentication error:', error);
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setIsAuthenticating(false);
     }
-  }, [address, isConnected, isAuthenticating, isAuthenticated, isBaseWallet, login]);
-
-  const clearAuthError = useCallback(() => {
-    setAuthError(null);
-  }, []);
+  };
 
   return {
-    // Authentication state
     isAuthenticating,
-    authError,
-    canAuthenticate,
-    
-    // Authentication actions
-    authenticateWallet,
-    clearAuthError,
-    
-    // Wallet info
-    walletInfo: {
-      address,
-      isConnected,
-      connectorName: connector?.name,
-      isBaseWallet: isBaseWallet || false
-    }
+    walletInfo,
+    authenticate,
+    error,
   };
 };
 
