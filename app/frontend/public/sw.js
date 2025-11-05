@@ -12,9 +12,9 @@ const requestCounts = new Map();
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 200 : 50; // Reduced to prevent rate limiting
-const BACKOFF_MULTIPLIER = 2; // Increased backoff
-const MAX_BACKOFF_TIME = 300000; // 10 minutes max backoff
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 50; // Much higher for development
+const BACKOFF_MULTIPLIER = isDevelopment ? 1.2 : 2; // Lower backoff in development
+const MAX_BACKOFF_TIME = isDevelopment ? 5000 : 300000; // 5 seconds max backoff in development
 
 // Assets to cache immediately
 const STATIC_ASSETS = [

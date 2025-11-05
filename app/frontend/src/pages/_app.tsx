@@ -26,6 +26,11 @@ import '../styles/mobile-optimizations.css';
 import '../styles/design-polish.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
+// Development authentication helper
+if (process.env.NODE_ENV === 'development') {
+  import('@/utils/devAuth');
+}
+
 const queryClient = new QueryClient();
 
 function AppContent({ Component, pageProps, router }: AppProps) {

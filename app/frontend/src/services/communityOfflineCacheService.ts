@@ -455,7 +455,7 @@ export class CommunityOfflineCacheService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         }
       });
 
@@ -474,7 +474,7 @@ export class CommunityOfflineCacheService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         }
       });
 
@@ -493,7 +493,7 @@ export class CommunityOfflineCacheService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify(action.data.postData)
       });
@@ -513,7 +513,7 @@ export class CommunityOfflineCacheService {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify(action.data.updateData)
       });
@@ -532,7 +532,7 @@ export class CommunityOfflineCacheService {
       const response = await fetch(`/api/community-posts/${action.data.postId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         }
       });
 
@@ -551,7 +551,7 @@ export class CommunityOfflineCacheService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify(action.data.voteData)
       });
