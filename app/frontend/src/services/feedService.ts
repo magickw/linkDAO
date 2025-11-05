@@ -154,7 +154,7 @@ export class FeedService {
         params.append('author', filter.author);
       }
 
-      const url = `${BACKEND_API_BASE_URL}/feed/enhanced?${params}`;
+      const url = `${BACKEND_API_BASE_URL}/api/feed/enhanced?${params}`;
       
       // Track analytics event
       feedAnalytics.trackEvent({
@@ -267,7 +267,7 @@ export class FeedService {
         timeRange
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/community/${communityId}/metrics?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/community/${communityId}/metrics?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/community/${communityId}/leaderboard?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/community/${communityId}/leaderboard?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -398,7 +398,7 @@ export class FeedService {
 
   static async getLikedByData(postId: string): Promise<LikedByData> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/posts/${postId}/engagement`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/engagement`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -457,7 +457,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/trending?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/trending?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -516,7 +516,7 @@ export class FeedService {
         limit: limit.toString()
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/hashtags/trending?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/hashtags/trending?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -566,7 +566,7 @@ export class FeedService {
   // Get content popularity metrics
   static async getContentPopularityMetrics(postId: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/posts/${postId}/popularity`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/popularity`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -613,7 +613,7 @@ export class FeedService {
   // Add comment to post
   static async addComment(postId: string, content: string, parentCommentId?: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/${postId}/comments`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -679,7 +679,7 @@ export class FeedService {
         sort
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/${postId}/comments?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -743,7 +743,7 @@ export class FeedService {
         sort
       });
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/comments/${commentId}/replies?${params}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/comments/${commentId}/replies?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -795,7 +795,7 @@ export class FeedService {
   // Add reaction to post
   static async addReaction(postId: string, type: string, tokenAmount: number = 0): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/${postId}/react`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/react`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -851,7 +851,7 @@ export class FeedService {
   // Get post reactions
   static async getPostReactions(postId: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/posts/${postId}/reactions`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/reactions`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -898,7 +898,7 @@ export class FeedService {
   // Send tip to post author
   static async sendTip(postId: string, amount: number, tokenType: string, message?: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/${postId}/tip`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/tip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -956,7 +956,7 @@ export class FeedService {
   // Share post
   static async sharePost(postId: string, platform: string, message?: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/posts/${postId}/share`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1012,7 +1012,7 @@ export class FeedService {
   // Toggle bookmark
   static async toggleBookmark(postId: string): Promise<any> {
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/feed/posts/${postId}/bookmark`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${postId}/bookmark`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

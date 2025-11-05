@@ -8,6 +8,7 @@ import {
 } from '../types/governance';
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
 import { ethers } from 'ethers';
+import { ENV_CONFIG } from '@/config/environment';
 
 // Safe JSON helper to avoid crashing on non-JSON API responses
 async function safeJson(response: Response): Promise<any | null> {
@@ -70,7 +71,7 @@ const GOVERNANCE_ABI = [
 ];
 
 export class GovernanceService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  private baseUrl = ENV_CONFIG.BACKEND_URL;
   private governanceAddress = process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
   private contract: ethers.Contract | null = null;
   private provider: ethers.providers.Provider | null = null;
@@ -145,7 +146,7 @@ export class GovernanceService {
       }
       
       // Try backend API
-      const response = await fetch(`${this.baseUrl}/governance/dao/${communityId}/proposals`);
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
       if (response.ok) {
         const data = await safeJson(response);
         if (data) {
@@ -172,7 +173,7 @@ export class GovernanceService {
    */
   async getAllActiveProposals(): Promise<Proposal[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/governance/proposals/active`);
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/active`);
       if (!response.ok) {
         return this.getMockProposals('all');
       }
@@ -196,7 +197,7 @@ export class GovernanceService {
    */
   async getProposal(proposalId: string): Promise<Proposal | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/governance/proposals/${proposalId}`);
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}`);
       if (!response.ok) return null;
       const data = await safeJson(response);
       if (!data) return null;
@@ -262,7 +263,7 @@ export class GovernanceService {
     lastUpdated: Date;
   } | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/governance/dao/${daoId}/treasury`);
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
       
       if (response.ok) {
         const json = await safeJson(response);
@@ -293,7 +294,7 @@ export class GovernanceService {
     stakingMultiplier?: number;
   } | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/governance/dao/${daoId}/users/${userId}/voting-power`);
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/users/${userId}/voting-power`);
       
       if (response.ok) {
         const data = await response.json();

@@ -35,7 +35,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${data.communityId}/members`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${communityId}/members/${userId}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${communityId}/members/${userId}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -164,7 +164,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      let url = `${BACKEND_API_BASE_URL}/communities/${communityId}/members`;
+      let url = `${BACKEND_API_BASE_URL}/api/communities/${communityId}/members`;
       const searchParams = new URLSearchParams();
       
       if (params) {
@@ -224,7 +224,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      let url = `${BACKEND_API_BASE_URL}/users/${userId}/memberships`;
+      let url = `${BACKEND_API_BASE_URL}/api/users/${userId}/memberships`;
       const searchParams = new URLSearchParams();
       
       if (params) {
@@ -341,7 +341,7 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${communityId}/members/stats`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/stats`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

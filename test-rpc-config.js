@@ -13,7 +13,7 @@ function testRpcConfig() {
   const rpcUrls = {
     'Mainnet': process.env.NEXT_PUBLIC_MAINNET_RPC_URL,
     'Base': process.env.NEXT_PUBLIC_BASE_RPC_URL || process.env.BASE_RPC_URL,
-    'Base Goerli': process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL,
+    'Base Sepolia': process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL,
     'Polygon': process.env.NEXT_PUBLIC_POLYGON_RPC_URL,
     'Arbitrum': process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
     'Sepolia': process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_RPC_URL

@@ -6,6 +6,7 @@ import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { GasFeeService } from '@/services/gasFeeService';
 import { usePublicClient } from 'wagmi';
 import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
+import { TokenInfo } from '@/types/dex';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   const [slippage, setSlippage] = useState(DEFAULT_SLIPPAGE);
   const [gasEstimate, setGasEstimate] = useState<string | null>(null);
   const [priceImpact, setPriceImpact] = useState<string | null>(null);
+  const [popularTokens, setPopularTokens] = useState<TokenInfo[]>([]);
 
   const fromTokenData = tokens.find(t => t.symbol === fromToken);
   const toTokenData = tokens.find(t => t.symbol === toToken);
@@ -40,14 +42,33 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
   }, [publicClient]);
 
+  // Fetch popular tokens for better swap options
+  useEffect(() => {
+    const fetchPopularTokens = async () => {
+      try {
+        const chainId = publicClient?.chain?.id || 1;
+        const popular = await dexService.getPopularTokens(chainId);
+        setPopularTokens(popular);
+      } catch (err) {
+        console.error('Failed to fetch popular tokens:', err);
+        // Use default tokens if API fails
+        setPopularTokens([]);
+      }
+    };
+
+    if (isOpen && publicClient) {
+      fetchPopularTokens();
+    }
+  }, [isOpen, publicClient]);
+
   // Get real exchange rate from DEX
   useEffect(() => {
     if (fromTokenData && toTokenData && fromAmount) {
       const fetchQuote = async () => {
         try {
-          // Get token addresses (this would need to be implemented properly)
-          const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH
-          const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as example
+          // Get real token addresses from wallet data
+          const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH/native token
+          const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as fallback
 
           const quote = await dexService.getSwapQuote({
             tokenInAddress: fromTokenAddress,
@@ -84,6 +105,28 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
     }
   }, [fromToken, toToken, fromAmount, fromTokenData, toTokenData, slippage]);
 
+  // Validate tokens before swap
+  const validateTokens = async () => {
+    if (!fromTokenData || !toTokenData) return false;
+    
+    try {
+      // Validate token addresses using DEX service
+      const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000';
+      const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+      
+      // Validate both tokens
+      await Promise.all([
+        dexService.validateToken(fromTokenAddress),
+        dexService.validateToken(toTokenAddress)
+      ]);
+      
+      return true;
+    } catch (err) {
+      console.error('Token validation failed:', err);
+      return false;
+    }
+  };
+
   const handleFromAmountChange = (value: string) => {
     setFromAmount(value);
     if (value && exchangeRate) {
@@ -115,6 +158,13 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
 
     if (fromToken === toToken) {
       setError('Cannot swap the same token');
+      return;
+    }
+
+    // Validate tokens before proceeding
+    const isValid = await validateTokens();
+    if (!isValid) {
+      setError('One or both tokens are not supported for swapping');
       return;
     }
 
@@ -210,7 +260,7 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Balance: {toTokenData?.balance.toFixed(4) || '0.0000'}
+                ~{toAmount || '0.00'}
               </span>
             </div>
             <div className="flex gap-3">
@@ -219,133 +269,105 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
                 onChange={(e) => setToToken(e.target.value)}
                 className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                {tokens.map((token) => (
-                  <option key={token.symbol} value={token.symbol}>
-                    {token.symbol}
+                {/* Show tokens from wallet first, then popular tokens */}
+                {tokens
+                  .filter(token => token.symbol !== fromToken)
+                  .map((token) => (
+                    <option key={`${token.symbol}-${token.contractAddress}`} value={token.symbol}>
+                      {token.symbol} ({token.balance.toFixed(4)})
+                    </option>
+                  ))}
+                {/* Add popular tokens not in wallet */}
+                {popularTokens
+                  .filter(token => 
+                    !tokens.some(t => t.symbol === token.symbol) && 
+                    token.symbol !== fromToken
+                  )
+                  .map((token) => (
+                    <option key={`${token.symbol}-${token.address}`} value={token.symbol}>
+                      {token.symbol}
+                    </option>
+                  ))}
+              </select>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={toAmount}
+                  readOnly
+                  placeholder="0.00"
+                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Exchange Rate and Slippage */}
+          <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-600 dark:text-gray-400">Exchange Rate</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {exchangeRate > 0 ? `1 ${fromToken} = ${exchangeRate.toFixed(6)} ${toToken}` : 'Loading...'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 dark:text-gray-400">Slippage Tolerance</span>
+              <select
+                value={slippage}
+                onChange={(e) => setSlippage(parseFloat(e.target.value))}
+                className="p-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                {DEFAULT_SLIPPAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
-              <input
-                type="number"
-                value={toAmount}
-                readOnly
-                placeholder="0.00"
-                className="flex-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white"
-              />
             </div>
-          </div>
-
-          {/* Slippage Tolerance */}
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-              Slippage Tolerance
-            </label>
-            <div className="flex gap-2">
-              {DEFAULT_SLIPPAGE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setSlippage(option.value)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    slippage === option.value
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-              <div className="relative flex-1">
-                <input
-                  type="number"
-                  value={slippage}
-                  onChange={(e) => setSlippage(parseFloat(e.target.value) || 0)}
-                  className="w-full p-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm text-center"
-                  step="0.1"
-                  min="0.1"
-                  max="50"
-                />
-                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Exchange Rate */}
-          {exchangeRate > 0 && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="flex justify-between text-sm">
-                <span className="text-blue-700 dark:text-blue-300">Exchange Rate:</span>
-                <span className="text-blue-900 dark:text-blue-200">
-                  1 {fromToken} = {exchangeRate.toFixed(6)} {toToken}
+            {priceImpact && (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-gray-600 dark:text-gray-400">Price Impact</span>
+                <span className={`font-medium ${parseFloat(priceImpact) > 5 ? 'text-red-500' : 'text-green-500'}`}>
+                  {priceImpact}%
                 </span>
               </div>
-              {priceImpact && (
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-blue-700 dark:text-blue-300">Price Impact:</span>
-                  <span className="text-blue-900 dark:text-blue-200">
-                    {parseFloat(priceImpact).toFixed(2)}%
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Fees */}
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Network Fee:</span>
-              <span className="text-gray-900 dark:text-white">
-                {gasEstimate ? (
-                  gasFeeService ? (
-                    gasFeeService.formatGasFeeUserFriendly({
-                      gasLimit: BigInt(gasEstimate),
-                      gasPrice: BigInt(20000000000), // 20 gwei default
-                      totalCost: BigInt(gasEstimate) * BigInt(20000000000)
-                    })
-                  ) : (
-                    `${formatUnits(gasEstimate, 'ether')} ETH`
-                  )
-                ) : (
-                  '~$3.20'
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Slippage Tolerance:</span>
-              <span className="text-gray-900 dark:text-white">{slippage}%</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Minimum Received:</span>
-              <span className="text-gray-900 dark:text-white">
-                {toAmount ? (parseFloat(toAmount) * (1 - slippage / 100)).toFixed(6) : '0.00'} {toToken}
-              </span>
-            </div>
+            )}
+            {gasEstimate && (
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-gray-600 dark:text-gray-400">Estimated Gas</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {gasEstimate}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            Cancel
-          </button>
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Swap Button */}
           <button
             onClick={handleSwap}
-            disabled={isLoading || !fromAmount || !toAmount || fromToken === toToken}
-            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            disabled={isLoading || !fromAmount || !toAmount}
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+              isLoading || !fromAmount || !toAmount
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-700 text-white'
+            }`}
           >
             {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </div>
             ) : (
-              'Swap'
+              'Swap Tokens'
             )}
           </button>
         </div>

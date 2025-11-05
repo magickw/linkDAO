@@ -348,7 +348,7 @@ export class WalletService {
         break;
       case 84532: // Base Sepolia
         chain = baseSepolia;
-        rpcUrl = process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL;
+        rpcUrl = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL;
         break;
       case 11155111: // Sepolia Testnet
         chain = sepolia;
