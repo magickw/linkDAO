@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { authService, KYCStatus } from '@/services/authService';
 import { AuthUser } from '@/types/auth';
@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   kycStatus: KYCStatus | null;
+  accessToken: string | null;
   login: (address: string, connector: any, status: string) => Promise<{ success: boolean; error?: string }>;
   register: (userData: {
     address: string;
@@ -19,11 +20,13 @@ interface AuthContextType {
     privacySettings?: any;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  connectWallet: () => Promise<void>;
   updatePreferences: (preferences: any) => Promise<{ success: boolean; error?: string }>;
   updatePrivacySettings: (privacySettings: any) => Promise<{ success: boolean; error?: string }>;
   initiateKYC: (tier: 'basic' | 'intermediate' | 'advanced') => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
   refreshKYCStatus: () => Promise<void>;
+  refreshToken: () => Promise<void>;
   // Role-based access control
   hasRole: (role: UserRole) => boolean;
   hasPermission: (permission: Permission) => boolean;
@@ -32,29 +35,95 @@ interface AuthContextType {
   isSuperAdmin: boolean;
 }
 
+// Storage keys for session persistence
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'linkdao_access_token',
+  REFRESH_TOKEN: 'linkdao_refresh_token',
+  WALLET_ADDRESS: 'linkdao_wallet_address',
+  SIGNATURE_TIMESTAMP: 'linkdao_signature_timestamp',
+  USER_DATA: 'linkdao_user_data'
+};
+
+// Token expiration time (24 hours)
+const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000;
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
+
+  // Check if we have a valid stored session
+  const checkStoredSession = useCallback(async () => {
+    try {
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+      if (storedToken && storedAddress && storedTimestamp && storedUserData) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        
+        // Check if token is still valid (within 24 hours)
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          const userData = JSON.parse(storedUserData);
+          setUser(userData);
+          setAccessToken(storedToken);
+          console.log('✅ Restored wallet session from storage');
+          return true;
+        } else {
+          console.log('⏰ Stored session expired, clearing...');
+          clearStoredSession();
+        }
+      }
+    } catch (error) {
+      console.error('Error checking stored session:', error);
+      clearStoredSession();
+    }
+    return false;
+  }, []);
+
+  // Clear stored session
+  const clearStoredSession = useCallback(() => {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }, []);
+
+  // Store session data
+  const storeSession = useCallback((token: string, userData: AuthUser) => {
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+    localStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, userData.address);
+    localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
+    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+  }, []);
 
   // Initialize authentication state
   useEffect(() => {
     const initAuth = async () => {
       setIsLoading(true);
       
-      if (authService.isAuthenticated()) {
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-          await loadKYCStatus();
-        } else {
-          // Token is invalid, clear it
-          await authService.logout();
+      const hasValidSession = await checkStoredSession();
+      if (!hasValidSession) {
+        // Check if wallet is already connected
+        if (typeof window !== 'undefined' && window.ethereum) {
+          try {
+            const accounts = await window.ethereum.request({
+              method: 'eth_accounts',
+            });
+            if (accounts.length > 0) {
+              console.log('👛 Wallet already connected, checking session...');
+              // Wallet is connected but no valid session, user needs to sign again
+            }
+          } catch (error) {
+            console.error('Error checking wallet connection:', error);
+          }
         }
       }
       
@@ -62,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initAuth();
-  }, []);
+  }, [checkStoredSession]);
 
   // Handle wallet connection changes
   useEffect(() => {
@@ -80,7 +149,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Login with wallet authentication
+  // Connect wallet without requiring signature if already connected
+  const connectWallet = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      if (!window.ethereum) {
+        throw new Error('Please install MetaMask or another Web3 wallet');
+      }
+
+      // Request account access
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts',
+      });
+
+      if (accounts.length === 0) {
+        throw new Error('No accounts found');
+      }
+
+      const walletAddress = accounts[0];
+
+      // Check if we already have a valid session for this address
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+
+      if (storedAddress === walletAddress && storedToken && storedTimestamp) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          console.log('✅ Using existing valid session');
+          const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+          if (storedUserData) {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(storedToken);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Only request signature if we don't have a valid session
+      console.log('🔐 Requesting new signature for authentication...');
+      const result = await authService.authenticateWallet(walletAddress, null, 'connected');
+      
+      if (result.success && result.user && result.token) {
+        setUser(result.user);
+        setAccessToken(result.token);
+        // Store session for persistence
+        storeSession(result.token, result.user);
+        console.log('✅ Authentication successful');
+      } else {
+        throw new Error(result.error || 'Authentication failed');
+      }
+    } catch (error: any) {
+      console.error('Wallet connection error:', error);
+      if (error.code === 4001) {
+        throw new Error('Please approve the connection request in your wallet');
+      } else if (error.code === -32002) {
+        throw new Error('Please check your wallet - there may be a pending request');
+      } else {
+        throw new Error(error.message || 'Failed to connect wallet');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [storeSession]);
+
+  // Login with wallet authentication (legacy method for compatibility)
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check if already authenticated for this address
@@ -89,18 +225,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: true };
       }
 
-      // Check if we have a valid session token for this address
-      if (authService.isAuthenticated()) {
-        try {
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address === walletAddress) {
-            console.log('Reusing existing session for address:', walletAddress);
-            setUser(currentUser);
+      // Check if we have a valid session for this address
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+
+      if (storedAddress === walletAddress && storedToken && storedTimestamp) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          console.log('✅ Using existing valid session');
+          const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+          if (storedUserData) {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(storedToken);
             await loadKYCStatus();
             return { success: true };
           }
-        } catch (error) {
-          console.log('Existing session invalid, proceeding with new authentication');
         }
       }
       
@@ -108,8 +250,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       const result = await authService.authenticateWallet(walletAddress, connector, status);
       
-      if (result.success && result.user) {
+      if (result.success && result.user && result.token) {
         setUser(result.user);
+        setAccessToken(result.token);
+        // Store session for persistence
+        storeSession(result.token, result.user);
         await loadKYCStatus();
         return { success: true };
       } else {
@@ -157,12 +302,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
       setUser(null);
+      setAccessToken(null);
       setKycStatus(null);
+      clearStoredSession();
       
       // Disconnect wallet if connected
       if (isConnected) {
         disconnect();
       }
+      console.log('👋 Logged out successfully');
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -238,6 +386,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await loadKYCStatus();
   };
 
+  // Refresh token
+  const refreshTokenMethod = useCallback(async () => {
+    try {
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+
+      const result = await authService.refreshToken();
+      if (result.success && result.token) {
+        setAccessToken(result.token);
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, result.token);
+        localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
+      }
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      handleLogout();
+    }
+  }, [handleLogout]);
+
   // Role hierarchy: super_admin > admin > moderator > user
   const roleHierarchy: Record<UserRole, number> = {
     user: 0,
@@ -260,17 +428,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isModerator = hasRole('moderator');
   const isSuperAdmin = hasRole('super_admin');
 
+  // Listen for account changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          handleLogout();
+        } else if (user && accounts[0] !== user.address) {
+          // Account changed, need to re-authenticate
+          handleLogout();
+        }
+      };
+
+      const handleChainChanged = (chainId: string) => {
+        const newChainId = parseInt(chainId, 16);
+        if (user) {
+          setUser({ ...user, chainId: newChainId });
+        }
+      };
+
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
+  }, [user, handleLogout]);
+
   // Auto-refresh token periodically (less aggressive)
   useEffect(() => {
-    if (!authService.isAuthenticated() || !user) return;
+    if (!accessToken || !user) return;
 
     const refreshInterval = setInterval(async () => {
       try {
-        const result = await authService.refreshToken();
-        if (!result.success) {
-          console.warn('Token refresh failed, but not logging out immediately:', result.error);
-          // Don't logout immediately on refresh failure - give it a few tries
-        }
+        await refreshTokenMethod();
       } catch (error) {
         console.error('Token refresh error:', error);
         // Only logout if it's a critical auth error, not network issues
@@ -283,21 +476,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, 30 * 60 * 1000); // Refresh every 30 minutes (less aggressive)
 
     return () => clearInterval(refreshInterval);
-  }, [user]);
+  }, [user, accessToken, refreshTokenMethod, handleLogout]);
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!accessToken,
     isLoading,
     kycStatus,
+    accessToken,
     login,
     register,
     logout: handleLogout,
+    connectWallet,
     updatePreferences,
     updatePrivacySettings,
     initiateKYC,
     refreshUser,
     refreshKYCStatus,
+    refreshToken: refreshTokenMethod,
     // Role-based access control
     hasRole,
     hasPermission,

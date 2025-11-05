@@ -80,7 +80,7 @@ class AuthService {
         try {
           const currentUser = await this.getCurrentUser();
           if (currentUser && currentUser.address === address) {
-            console.log('Reusing existing valid session for address:', address);
+            console.log('✅ Reusing existing valid session for address:', address);
             return {
               success: true,
               token: this.token,
@@ -89,6 +89,42 @@ class AuthService {
           }
         } catch (error) {
           console.log('Existing session check failed, proceeding with new authentication');
+        }
+      }
+
+      // Check localStorage for existing session
+      if (typeof window !== 'undefined') {
+        const storedToken = localStorage.getItem('linkdao_access_token');
+        const storedAddress = localStorage.getItem('linkdao_wallet_address');
+        const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+        const storedUserData = localStorage.getItem('linkdao_user_data');
+
+        if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
+          const timestamp = parseInt(storedTimestamp);
+          const now = Date.now();
+          const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+          if (now - timestamp < TOKEN_EXPIRY_TIME) {
+            try {
+              const userData = JSON.parse(storedUserData);
+              this.setToken(storedToken);
+              console.log('✅ Restored session from localStorage for address:', address);
+              return {
+                success: true,
+                token: storedToken,
+                user: userData
+              };
+            } catch (parseError) {
+              console.warn('Failed to parse stored user data, proceeding with new authentication');
+            }
+          } else {
+            console.log('⏰ Stored session expired, clearing and requesting new signature');
+            // Clear expired session
+            localStorage.removeItem('linkdao_access_token');
+            localStorage.removeItem('linkdao_wallet_address');
+            localStorage.removeItem('linkdao_signature_timestamp');
+            localStorage.removeItem('linkdao_user_data');
+          }
         }
       }
 
@@ -190,26 +226,36 @@ class AuthService {
         
         if (data.success && data.sessionToken) {
           this.setToken(data.sessionToken);
-          console.log('Authentication successful for address:', address);
+          console.log('✅ Authentication successful for address:', address);
+          
+          const userData = {
+            id: `user_${address}`,
+            address: address,
+            handle: `user_${address.slice(0, 6)}`,
+            ens: undefined,
+            email: undefined,
+            kycStatus: 'none',
+            role: 'user',
+            permissions: [],
+            isActive: true,
+            isSuspended: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          // Store session data for persistence
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('linkdao_access_token', data.sessionToken);
+            localStorage.setItem('linkdao_wallet_address', address);
+            localStorage.setItem('linkdao_signature_timestamp', Date.now().toString());
+            localStorage.setItem('linkdao_user_data', JSON.stringify(userData));
+          }
           
           // Return in expected format
           return {
             success: true,
             token: data.sessionToken,
-            user: {
-              id: `user_${address}`,
-              address: address,
-              handle: `user_${address.slice(0, 6)}`,
-              ens: undefined,
-              email: undefined,
-              kycStatus: 'none',
-              role: 'user',
-              permissions: [],
-              isActive: true,
-              isSuspended: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
+            user: userData
           };
         } else {
           throw new Error(data.error?.message || 'Authentication failed - no token received');
@@ -558,6 +604,15 @@ class AuthService {
     // Capture token and clear immediately to avoid UI blocking on network errors
     const token = this.token;
     this.clearToken();
+
+    // Clear all stored session data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('linkdao_access_token');
+      localStorage.removeItem('linkdao_wallet_address');
+      localStorage.removeItem('linkdao_signature_timestamp');
+      localStorage.removeItem('linkdao_user_data');
+      localStorage.removeItem('linkdao_refresh_token');
+    }
 
     if (token) {
       try {
