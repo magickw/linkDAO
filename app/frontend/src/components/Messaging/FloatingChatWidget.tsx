@@ -15,6 +15,7 @@ import { ChatBubbleLeftIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useAccount } from 'wagmi';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import useENSIntegration from '@/hooks/useENSIntegration';
 import { Conversation, Message } from '@/types/messaging';
@@ -38,8 +39,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 }) => {
   // ✅ PHASE 1 FIX: Consolidate to useWalletAuth only
   const { walletInfo } = useWalletAuth();
-  const address = walletInfo?.address;
-  const isConnected = walletInfo?.isConnected || false;
+  const { address, isConnected } = useAccount();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);

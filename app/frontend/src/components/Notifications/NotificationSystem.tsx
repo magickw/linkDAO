@@ -10,6 +10,7 @@ import { NotificationToast } from './NotificationToast';
 import { NotificationPreferences } from './NotificationPreferences';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
+import { useAccount } from 'wagmi';
 import { notificationService } from '../../services/notificationService';
 import { AppNotification, NotificationPreferences as NotificationPrefs } from '../../types/notifications';
 
@@ -21,7 +22,8 @@ interface NotificationSystemProps {
 }
 
 export const NotificationSystem: React.FC<NotificationSystemProps> = ({ className = '' }) => {
-  const { walletInfo: { address } } = useWalletAuth();
+  const { walletInfo } = useWalletAuth();
+  const { address } = useAccount();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);

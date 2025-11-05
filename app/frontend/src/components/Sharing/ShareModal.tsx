@@ -10,6 +10,7 @@ import { contentSharingService } from '../../services/contentSharingService';
 import { Conversation } from '../../types/messaging';
 import { Community } from '../../models/Community';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
+import { useAccount } from 'wagmi';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
 interface ShareModalProps {
@@ -27,7 +28,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   content,
   onShareComplete
 }) => {
-  const { walletInfo: { address } } = useWalletAuth();
+  const { walletInfo } = useWalletAuth();
+  const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<ShareTab>('direct_message');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

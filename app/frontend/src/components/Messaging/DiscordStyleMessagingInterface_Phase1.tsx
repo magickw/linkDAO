@@ -14,6 +14,7 @@ import {
   Phone, Video, Shield, ArrowLeft, Wifi, WifiOff, Loader2, AlertCircle
 } from 'lucide-react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
 import useENSIntegration from '../../hooks/useENSIntegration';
 import { useChatHistory } from '@/hooks/useChatHistory';
@@ -75,7 +76,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 }) => {
   // ✅ PHASE 1 FIX: Consolidated auth
   const { walletInfo } = useWalletAuth();
-  const address = walletInfo?.address;
+  const { address } = useAccount();
 
   const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
   const { resolveName, resolvedNames, isLoading } = useENSIntegration();
