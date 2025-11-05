@@ -1,9 +1,7 @@
 import { signMessage } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
-import { AuthUser } from '@/types/auth';
-
-// Remove the local AuthUser interface since we're importing it from types/auth
+import { AuthUser, UserRole } from '@/types/auth';
 
 export interface AuthResponse {
   success: boolean;
@@ -228,14 +226,14 @@ class AuthService {
           this.setToken(data.sessionToken);
           console.log('✅ Authentication successful for address:', address);
           
-          const userData = {
+          const userData: AuthUser = {
             id: `user_${address}`,
             address: address,
             handle: `user_${address.slice(0, 6)}`,
             ens: undefined,
             email: undefined,
             kycStatus: 'none',
-            role: 'user',
+            role: 'user' as UserRole,
             permissions: [],
             isActive: true,
             isSuspended: false,
@@ -367,10 +365,8 @@ class AuthService {
           id: `mock_${address}`,
           address: address,
           handle: `user_${address.slice(0, 6)}`,
-          ens: undefined,
-          email: undefined,
           kycStatus: 'none',
-          role: 'user',
+          role: 'user' as UserRole,
           permissions: [],
           isActive: true,
           isSuspended: false,
@@ -398,7 +394,7 @@ class AuthService {
           ens: undefined,
           email: undefined,
           kycStatus: 'none',
-          role: 'user',
+          role: 'user' as UserRole,
           permissions: [],
           isActive: true,
           isSuspended: false,
@@ -425,7 +421,7 @@ class AuthService {
             address: address,
             handle: `user_${address.slice(0, 6)}`,
             kycStatus: 'none',
-            role: 'user',
+            role: 'user' as UserRole,
             permissions: [],
             isActive: true,
             isSuspended: false,
@@ -678,7 +674,7 @@ class AuthService {
       ens: undefined,
       email: undefined,
       kycStatus: 'none',
-      role: 'user',
+      role: 'user' as UserRole,
       permissions: [],
       isActive: true,
       isSuspended: false,
