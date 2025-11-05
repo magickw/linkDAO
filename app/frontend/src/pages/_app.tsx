@@ -1,3 +1,6 @@
+// Import Web3 polyfills first to ensure compatibility
+import '@/utils/web3Polyfills';
+
 import React from 'react';
 import type { AppProps } from 'next/app';
 import { config } from '@/lib/rainbowkit';

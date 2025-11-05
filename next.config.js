@@ -44,8 +44,46 @@ const nextConfig = {
         );
       }
       
-      // Web3 and crypto fallbacks
+      // Handle React Native dependencies for Web3 packages (same as main config)
+      config.resolve = config.resolve || {};
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        // Core React Native polyfills
+        '@react-native-async-storage/async-storage': require.resolve('./app/frontend/src/utils/asyncStorageFallback.js'),
+        'react-native': false,
+        
+        // React Native crypto and security
+        'react-native-get-random-values': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        'react-native-keychain': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        'react-native-biometrics': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        
+        // React Native file system and device
+        'react-native-fs': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        'react-native-device-info': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        
+        // React Native UI and interaction
+        'react-native-haptic-feedback': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        '@react-native-clipboard/clipboard': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        'react-native-clipboard': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+        
+        // React Native networking and permissions
+        'react-native-permissions': false,
+        'react-native-network-info': false,
+        '@react-native-community/netinfo': false,
+        
+        // React Native navigation and linking
+        'react-native-url-polyfill': false,
+        '@react-native-community/async-storage': require.resolve('./app/frontend/src/utils/asyncStorageFallback.js'),
+        
+        // Additional Web3-specific React Native dependencies
+        'react-native-randombytes': false,
+        'react-native-tcp': false,
+        'react-native-udp': false,
+      };
+      
+      // Web3 and Node.js fallbacks (same as main config)
       config.resolve.fallback = { 
+        // Core Node.js modules
         fs: false, 
         net: false, 
         tls: false,
@@ -57,7 +95,36 @@ const nextConfig = {
         https: false,
         assert: false,
         os: false,
-        path: false
+        path: false,
+        buffer: false,
+        util: false,
+        
+        // Additional Node.js modules used by Web3 packages
+        child_process: false,
+        cluster: false,
+        dgram: false,
+        dns: false,
+        events: false,
+        module: false,
+        perf_hooks: false,
+        querystring: false,
+        readline: false,
+        repl: false,
+        string_decoder: false,
+        sys: false,
+        timers: false,
+        tty: false,
+        v8: false,
+        vm: false,
+        worker_threads: false,
+        
+        // React Native specific fallbacks
+        'react-native-fs': false,
+        'react-native-keychain': false,
+        'react-native-get-random-values': false,
+        'react-native-randombytes': false,
+        'react-native-tcp': false,
+        'react-native-udp': false,
       };
       
       return config;
@@ -66,14 +133,46 @@ const nextConfig = {
   
   // Standard webpack config
   webpack: (config, { isServer }) => {
-    // Silence RN async-storage resolution for MetaMask SDK browser build
+    // Handle React Native dependencies for Web3 packages
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
-      '@react-native-async-storage/async-storage': false,
+      // Core React Native polyfills
+      '@react-native-async-storage/async-storage': require.resolve('./app/frontend/src/utils/asyncStorageFallback.js'),
+      'react-native': false,
+      
+      // React Native crypto and security
+      'react-native-get-random-values': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      'react-native-keychain': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      'react-native-biometrics': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      
+      // React Native file system and device
+      'react-native-fs': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      'react-native-device-info': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      
+      // React Native UI and interaction
+      'react-native-haptic-feedback': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      '@react-native-clipboard/clipboard': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      'react-native-clipboard': require.resolve('./app/frontend/src/utils/reactNativePolyfills.js'),
+      
+      // React Native networking and permissions
+      'react-native-permissions': false,
+      'react-native-network-info': false,
+      '@react-native-community/netinfo': false,
+      
+      // React Native navigation and linking
+      'react-native-url-polyfill': false,
+      '@react-native-community/async-storage': require.resolve('./app/frontend/src/utils/asyncStorageFallback.js'),
+      
+      // Additional Web3-specific React Native dependencies
+      'react-native-randombytes': false,
+      'react-native-tcp': false,
+      'react-native-udp': false,
     };
-    // Web3 and crypto fallbacks
+    
+    // Web3 and Node.js fallbacks
     config.resolve.fallback = { 
+      // Core Node.js modules
       fs: false, 
       net: false, 
       tls: false,
@@ -85,7 +184,36 @@ const nextConfig = {
       https: false,
       assert: false,
       os: false,
-      path: false
+      path: false,
+      buffer: false,
+      util: false,
+      
+      // Additional Node.js modules used by Web3 packages
+      child_process: false,
+      cluster: false,
+      dgram: false,
+      dns: false,
+      events: false,
+      module: false,
+      perf_hooks: false,
+      querystring: false,
+      readline: false,
+      repl: false,
+      string_decoder: false,
+      sys: false,
+      timers: false,
+      tty: false,
+      v8: false,
+      vm: false,
+      worker_threads: false,
+      
+      // React Native specific fallbacks
+      'react-native-fs': false,
+      'react-native-keychain': false,
+      'react-native-get-random-values': false,
+      'react-native-randombytes': false,
+      'react-native-tcp': false,
+      'react-native-udp': false,
     };
     
     // Optimize bundle splitting
