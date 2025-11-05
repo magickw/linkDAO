@@ -62,10 +62,10 @@ export default function WalletTransactions() {
     // Apply search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(tx =>
-        tx.hash.toLowerCase().includes(query) ||
-        (typeof tx.token === 'string' ? tx.token.toLowerCase().includes(query) : tx.token.symbol.toLowerCase().includes(query))
-      );
+      result = result.filter(tx => {
+        const tokenStr = typeof tx.token === 'string' ? tx.token : (tx.token as any).symbol || '';
+        return tx.hash.toLowerCase().includes(query) || tokenStr.toLowerCase().includes(query);
+      });
     }
 
     // Apply date filters
@@ -121,15 +121,19 @@ export default function WalletTransactions() {
   const handleExport = () => {
     // Create CSV content
     const headers = ['Date', 'Type', 'Token', 'Amount', 'Value (USD)', 'Status', 'Hash'];
-    const rows = filteredAndSortedTransactions.map(tx => [
-      new Date(tx.timestamp).toLocaleString(),
-      tx.type,
-      typeof tx.token === 'string' ? tx.token : tx.token.symbol,
-      tx.amount,
-      typeof tx.valueUSD === 'number' ? tx.valueUSD.toFixed(2) : 'N/A',
-      tx.status,
-      tx.hash
-    ]);
+    const rows = filteredAndSortedTransactions.map(tx => {
+      const tokenStr = typeof tx.token === 'string' ? tx.token : (tx.token as any).symbol || 'Unknown';
+      const valueUSDNum = typeof tx.valueUSD === 'number' ? tx.valueUSD : 0;
+      return [
+        new Date(tx.timestamp).toLocaleString(),
+        tx.type,
+        tokenStr,
+        tx.amount,
+        valueUSDNum.toFixed(2),
+        tx.status,
+        tx.hash
+      ];
+    });
 
     const csvContent = [
       headers.join(','),

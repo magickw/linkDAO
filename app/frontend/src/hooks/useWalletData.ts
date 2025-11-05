@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAccount, useChainId } from 'wagmi';
-import { walletService, WalletService } from '../services/walletService';
-import { EnhancedWalletData, TokenBalance } from '../types/wallet';
+import { walletService, WalletService, TokenBalance as ServiceTokenBalance } from '../services/walletService';
+import { EnhancedWalletData } from '../types/wallet';
 import { dexService } from '../services/dexService';
 import { cryptoPriceService } from '../services/cryptoPriceService';
 
@@ -103,7 +103,7 @@ export function useWalletData({
       }
 
       // Merge discovered tokens with existing balances
-      const allTokens = [...walletData.tokens];
+      const allTokens: ServiceTokenBalance[] = [...walletData.tokens];
       for (const discoveredToken of discoveredTokens) {
         // Only add if not already in the list
         if (!allTokens.some(t => t.symbol === discoveredToken.symbol)) {
@@ -111,11 +111,14 @@ export function useWalletData({
           allTokens.push({
             symbol: discoveredToken.symbol,
             name: discoveredToken.name,
-            balance: 0, // We don't know the balance, will be updated if user has it
+            address: discoveredToken.address,
+            balance: '0', // We don't know the balance, will be updated if user has it
+            balanceFormatted: '0',
+            decimals: 18,
             valueUSD: 0,
             change24h: 0,
-            contractAddress: discoveredToken.address,
-            chains: [chainId]
+            priceUSD: 0,
+            isNative: false
           });
         }
       }
@@ -341,8 +344,16 @@ export function useWalletData({
 
       const data: EnhancedWalletData = {
         address,
-        balances: sortedTokens,
-        recentTransactions,
+        balances: sortedTokens.map(t => ({
+          symbol: t.symbol,
+          name: t.name,
+          balance: parseFloat(t.balance || '0'),
+          valueUSD: t.valueUSD,
+          change24h: t.change24h,
+          contractAddress: t.address,
+          chains: [chainId]
+        })),
+        recentTransactions: recentTransactions as any, // Type cast to handle different Transaction types
         portfolioValue,
         portfolioChange,
         quickActions: [
