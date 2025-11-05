@@ -274,7 +274,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error('Token refresh error:', error);
         // Only logout if it's a critical auth error, not network issues
-        if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('401') || errorMessage.includes('403')) {
           console.log('Authentication expired, logging out');
           await handleLogout();
         }

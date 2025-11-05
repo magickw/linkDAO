@@ -1,83 +1,65 @@
-import cors from 'cors';
 import { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 
 /**
- * Emergency CORS middleware to fix immediate 403 errors
- * This is a temporary fix to allow all origins while we debug the main CORS issue
+ * Emergency CORS middleware for debugging connection issues
+ * This is ultra-permissive and should only be used temporarily
  */
 
-const emergencyCorsConfig = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Log the origin for debugging
-    console.log('CORS Request from origin:', origin || 'no-origin');
+export const emergencyCorsHeaders = (req: Request, res: Response, next: NextFunction): void => {
+  // Set ultra-permissive CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Expose-Headers', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Add additional headers for debugging
+  res.header('X-Debug-CORS', 'emergency-mode');
+  res.header('X-Backend-Status', 'available');
+  
+  next();
+};
+
+export const emergencyPreflightHandler = (req: Request, res: Response, next: NextFunction): void => {
+  if (req.method === 'OPTIONS') {
+    console.log(`[EMERGENCY CORS] Preflight request from ${req.get('Origin')} for ${req.get('Access-Control-Request-Method')}`);
     
-    // Allow all origins temporarily to fix immediate issues
-    callback(null, true);
-  },
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', '*');
+    res.header('Access-Control-Max-Age', '86400');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+};
+
+export const emergencyCorsMiddleware = cors({
+  origin: true, // Allow all origins
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With',
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'X-Request-ID',
-    'X-Correlation-ID',
-    'X-Session-ID',
-    'X-Wallet-Address',
-    'X-Chain-ID',
-    'X-API-Key',
-    'X-Client-Version',
-    'X-CSRF-Token',
-    'x-csrf-token',
-    'csrf-token',
-    'Cache-Control'
-  ],
-  exposedHeaders: [
-    'X-Request-ID',
-    'X-RateLimit-Limit',
-    'X-RateLimit-Remaining',
-    'X-RateLimit-Reset',
-    'RateLimit-Limit',
-    'RateLimit-Remaining',
-    'RateLimit-Reset',
-    'RateLimit-Policy',
-    'X-Total-Count'
-  ],
-  maxAge: 86400, // 24 hours
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['*'],
+  exposedHeaders: ['*'],
   preflightContinue: false,
   optionsSuccessStatus: 200
-};
-
-export const emergencyCorsMiddleware = cors(emergencyCorsConfig);
+});
 
 /**
- * Additional middleware to handle preflight requests
+ * Log CORS requests for debugging
  */
-export const emergencyPreflightHandler = (req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, X-CSRF-Token, x-csrf-token');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-};
-
-/**
- * Emergency CORS headers middleware
- */
-export const emergencyCorsHeaders = (req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin;
+export const corsDebugLogger = (req: Request, res: Response, next: NextFunction): void => {
+  const origin = req.get('Origin');
+  const method = req.method;
+  const path = req.path;
   
-  // Set CORS headers
-  res.header('Access-Control-Allow-Origin', origin || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With, X-CSRF-Token, x-csrf-token');
+  if (origin) {
+    console.log(`[CORS DEBUG] ${method} ${path} from ${origin}`);
+  }
   
   next();
 };

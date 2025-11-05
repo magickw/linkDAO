@@ -24,9 +24,11 @@ const CORS_CONFIGS = {
       'http://localhost:8080',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
-      'http://127.0.0.1:8080'
+      'http://127.0.0.1:8080',
+      // Add more permissive origins for development
+      '*'
     ],
-    allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Origin',
       'X-Requested-With',
@@ -41,7 +43,14 @@ const CORS_CONFIGS = {
       'X-CSRF-Token',
       'x-csrf-token',
       'X-Session-Token',
-      'X-Refresh-Token'
+      'X-Refresh-Token',
+      // Add more headers for development
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods',
+      'Cache-Control',
+      'Pragma',
+      'Expires'
     ],
     exposedHeaders: [
       'X-Request-ID',
@@ -433,10 +442,33 @@ export const corsSecurityHeaders = (req: Request, res: Response, next: NextFunct
 export const developmentCorsMiddleware = cors({
   origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['*'],
-  exposedHeaders: ['*']
+  exposedHeaders: ['*'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 });
+
+/**
+ * Ultra-permissive CORS for debugging connection issues
+ */
+export const debugCorsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Set permissive CORS headers
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Expose-Headers', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+};
 
 /**
  * Production CORS middleware (strict)

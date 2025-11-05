@@ -68,14 +68,51 @@ router.get('/nonce', authRateLimit, (req, res) => {
   // Generate a simple random nonce
   const crypto = require('crypto');
   const nonce = crypto.randomBytes(32).toString('hex');
+  const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
 
   res.json({
     success: true,
     data: {
       nonce,
+      message,
       expiresIn: 600 // 10 minutes
     }
   });
+});
+
+/**
+ * @route POST /api/auth/wallet
+ * @desc Simple wallet authentication (development-friendly)
+ * @access Public
+ */
+router.post('/wallet', authRateLimit, (req, res) => {
+  const { walletAddress, signature, nonce } = req.body;
+  
+  if (!walletAddress) {
+    return res.status(400).json({
+      success: false,
+      error: 'Wallet address is required'
+    });
+  }
+
+  // In development, create a simple session token
+  if (process.env.NODE_ENV === 'development') {
+    const sessionToken = `dev_session_${walletAddress}_${Date.now()}`;
+    
+    return res.json({
+      success: true,
+      sessionToken,
+      user: {
+        id: `user_${walletAddress}`,
+        address: walletAddress,
+        handle: `user_${walletAddress.slice(0, 6)}`,
+      }
+    });
+  }
+
+  // In production, use proper signature verification
+  // (This would call the full wallet-connect logic)
+  return authController.walletConnect(req, res);
 });
 
 /**
@@ -83,7 +120,12 @@ router.get('/nonce', authRateLimit, (req, res) => {
  * @desc Authenticate with wallet signature
  * @access Public
  */
-router.post('/wallet-connect', authRateLimit, csrfProtection,  walletConnectValidation, authController.walletConnect);
+const isDevelopment = process.env.NODE_ENV === 'development';
+const authCsrfMiddleware = isDevelopment ? 
+  (req: any, res: any, next: any) => next() : // Skip CSRF in development
+  csrfProtection;
+
+router.post('/wallet-connect', authRateLimit, authCsrfMiddleware, walletConnectValidation, authController.walletConnect);
 
 /**
  * @route GET /api/auth/profile
@@ -91,6 +133,49 @@ router.post('/wallet-connect', authRateLimit, csrfProtection,  walletConnectVali
  * @access Private
  */
 router.get('/profile', authMiddleware, authController.getProfile);
+
+/**
+ * @route GET /api/auth/status
+ * @desc Check authentication status
+ * @access Public
+ */
+router.get('/status', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.json({
+      success: true,
+      data: {
+        authenticated: false,
+        message: 'No token provided'
+      }
+    });
+  }
+
+  try {
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    
+    return res.json({
+      success: true,
+      data: {
+        authenticated: true,
+        walletAddress: decoded.walletAddress || decoded.address,
+        sessionId: decoded.userId || decoded.id,
+        expiresAt: new Date(decoded.exp * 1000)
+      }
+    });
+  } catch (error) {
+    return res.json({
+      success: true,
+      data: {
+        authenticated: false,
+        message: 'Invalid token'
+      }
+    });
+  }
+});
 
 /**
  * @route GET /api/auth/kyc/status
