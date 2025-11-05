@@ -23,6 +23,7 @@ export interface AuthUser {
   permissions: string[];
   kycStatus: 'none' | 'pending' | 'basic' | 'intermediate' | 'advanced';
   kycTier?: string;
+  chainId?: number;
   isActive: boolean;
   isSuspended: boolean;
   suspensionReason?: string;
