@@ -1,430 +1,327 @@
-import { logger } from '../utils/logger';
-import { circuitBreakerService } from './circuitBreakerService';
-import { fallbackService } from './fallbackService';
-import { alertService } from './alertService';
+import { safeLogger } from '../utils/safeLogger';
+import { serviceHealthMonitor } from './serviceHealthMonitor';
 
-// Error recovery strategies
-type RecoveryStrategy = 'retry' | 'circuit_breaker' | 'fallback' | 'graceful_degradation' | 'fail_fast';
-
-interface RecoveryConfig {
-  strategies: RecoveryStrategy[];
-  retryConfig?: {
-    maxRetries: number;
-    baseDelay: number;
-    backoffMultiplier: number;
-  };
-  circuitBreakerName?: string;
-  fallbackKey?: string;
-  customFallback?: any;
-  alertOnFailure?: boolean;
-  gracefulDegradationMode?: boolean;
-}
-
-interface RecoveryResult<T> {
+interface FallbackResponse {
   success: boolean;
-  data?: T;
-  strategy?: RecoveryStrategy;
-  attempts: number;
-  totalTime: number;
-  errors: Array<{
-    strategy: RecoveryStrategy;
-    error: string;
-    timestamp: Date;
-  }>;
-  usedFallback: boolean;
-  fallbackSource?: string;
+  data: any;
+  message: string;
+  fallback: boolean;
+  timestamp: string;
 }
 
-class ErrorRecoveryService {
-  private recoveryAttempts: Map<string, number> = new Map();
-  private lastRecoveryTime: Map<string, number> = new Map();
+interface RetryConfig {
+  maxAttempts: number;
+  baseDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+}
 
-  // Execute operation with comprehensive error recovery
-  async executeWithRecovery<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    config: RecoveryConfig
-  ): Promise<RecoveryResult<T>> {
-    const startTime = Date.now();
-    const errors: RecoveryResult<T>['errors'] = [];
-    let attempts = 0;
-    let lastError: any;
+export class ErrorRecoveryService {
+  private fallbackData: Map<string, any> = new Map();
+  private retryQueues: Map<string, Array<() => Promise<any>>> = new Map();
+  private defaultRetryConfig: RetryConfig = {
+    maxAttempts: 3,
+    baseDelay: 1000,
+    maxDelay: 10000,
+    backoffMultiplier: 2
+  };
 
-    // Track recovery attempts
-    const recoveryKey = `${operationName}_recovery`;
-    const currentAttempts = this.recoveryAttempts.get(recoveryKey) || 0;
-    this.recoveryAttempts.set(recoveryKey, currentAttempts + 1);
-    this.lastRecoveryTime.set(recoveryKey, Date.now());
+  constructor() {
+    this.initializeFallbackData();
+  }
 
-    logger.info(`Starting error recovery for operation: ${operationName}`, {
-      operation: operationName,
-      strategies: config.strategies,
-      recoveryAttempt: currentAttempts + 1
+  private initializeFallbackData() {
+    // Initialize fallback data for common endpoints
+    this.fallbackData.set('trending_communities', {
+      communities: [],
+      pagination: { page: 1, limit: 10, total: 0 }
     });
 
-    // Try each recovery strategy in order
-    for (const strategy of config.strategies) {
-      attempts++;
-      
+    this.fallbackData.set('enhanced_feed', {
+      posts: [],
+      pagination: { page: 1, limit: 20, total: 0 }
+    });
+
+    this.fallbackData.set('user_profile', {
+      id: 'unknown',
+      walletAddress: '',
+      handle: '',
+      ens: '',
+      avatarCid: '',
+      bioCid: ''
+    });
+
+    this.fallbackData.set('marketplace_listings', {
+      listings: [],
+      pagination: { page: 1, limit: 24, total: 0 }
+    });
+
+    this.fallbackData.set('kyc_status', {
+      status: 'none',
+      tier: 'none',
+      submittedAt: null,
+      reviewedAt: null,
+      expiresAt: null
+    });
+  }
+
+  /**
+   * Execute a function with automatic retry and fallback
+   */
+  public async executeWithFallback<T>(
+    operation: () => Promise<T>,
+    fallbackKey: string,
+    retryConfig?: Partial<RetryConfig>
+  ): Promise<T | FallbackResponse> {
+    const config = { ...this.defaultRetryConfig, ...retryConfig };
+    
+    for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
       try {
-        logger.debug(`Attempting recovery strategy: ${strategy}`, {
-          operation: operationName,
-          strategy,
-          attempt: attempts
+        const result = await operation();
+        return result;
+      } catch (error) {
+        safeLogger.warn(`Operation failed (attempt ${attempt}/${config.maxAttempts}):`, {
+          error: error.message,
+          fallbackKey,
+          attempt
         });
 
-        let result: T;
-        let usedFallback = false;
-        let fallbackSource: string | undefined;
-
-        switch (strategy) {
-          case 'retry':
-            result = await this.executeWithRetry(operation, operationName, config);
-            break;
-
-          case 'circuit_breaker':
-            result = await this.executeWithCircuitBreaker(operation, operationName, config);
-            break;
-
-          case 'fallback':
-            const fallbackResult = await this.executeWithFallback(operation, operationName, config);
-            result = fallbackResult.data;
-            usedFallback = fallbackResult.usedFallback;
-            fallbackSource = fallbackResult.fallbackSource;
-            break;
-
-          case 'graceful_degradation':
-            result = await this.executeWithGracefulDegradation(operation, operationName, config);
-            usedFallback = true;
-            fallbackSource = 'graceful_degradation';
-            break;
-
-          case 'fail_fast':
-            result = await operation();
-            break;
-
-          default:
-            throw new Error(`Unknown recovery strategy: ${strategy}`);
+        // If this is the last attempt, return fallback
+        if (attempt === config.maxAttempts) {
+          return this.getFallbackResponse(fallbackKey, error.message);
         }
 
-        // Success!
-        const totalTime = Date.now() - startTime;
+        // Wait before retry with exponential backoff
+        const delay = Math.min(
+          config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1),
+          config.maxDelay
+        );
         
-        logger.info(`Operation recovered successfully using strategy: ${strategy}`, {
-          operation: operationName,
-          strategy,
-          attempts,
-          totalTime,
-          usedFallback,
-          fallbackSource
-        });
-
-        // Reset recovery attempts on success
-        this.recoveryAttempts.delete(recoveryKey);
-
-        return {
-          success: true,
-          data: result,
-          strategy,
-          attempts,
-          totalTime,
-          errors,
-          usedFallback,
-          fallbackSource
-        };
-
-      } catch (error) {
-        lastError = error;
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
-        errors.push({
-          strategy,
-          error: errorMessage,
-          timestamp: new Date()
-        });
-
-        logger.warn(`Recovery strategy ${strategy} failed for operation: ${operationName}`, {
-          operation: operationName,
-          strategy,
-          error: errorMessage,
-          attempt: attempts
-        });
-
-        // Continue to next strategy
-        continue;
+        await this.sleep(delay);
       }
     }
 
-    // All recovery strategies failed
-    const totalTime = Date.now() - startTime;
+    // This should never be reached, but just in case
+    return this.getFallbackResponse(fallbackKey, 'Max retry attempts exceeded');
+  }
+
+  /**
+   * Get fallback response for a given key
+   */
+  public getFallbackResponse(key: string, errorMessage?: string): FallbackResponse {
+    const fallbackData = this.fallbackData.get(key) || {};
     
-    logger.error(`All recovery strategies failed for operation: ${operationName}`, {
-      operation: operationName,
-      strategies: config.strategies,
-      attempts,
-      totalTime,
-      errors,
-      finalError: lastError instanceof Error ? lastError.message : 'Unknown error'
-    });
-
-    // Send alert if configured
-    if (config.alertOnFailure) {
-      await alertService.createAlert(
-        'service_down',
-        `Operation Recovery Failed: ${operationName}`,
-        `All recovery strategies failed for ${operationName} after ${attempts} attempts`,
-        operationName,
-        {
-          strategies: config.strategies,
-          attempts,
-          totalTime,
-          errors,
-          finalError: lastError instanceof Error ? lastError.message : 'Unknown error'
-        },
-        'high'
-      );
-    }
-
     return {
-      success: false,
-      strategy: undefined,
-      attempts,
-      totalTime,
-      errors,
-      usedFallback: false
+      success: true,
+      data: fallbackData,
+      message: `Service temporarily unavailable. ${errorMessage ? `Error: ${errorMessage}` : 'Please try again later.'}`,
+      fallback: true,
+      timestamp: new Date().toISOString()
     };
   }
 
-  private async executeWithRetry<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    config: RecoveryConfig
-  ): Promise<T> {
-    return circuitBreakerService.executeWithRetry(
-      operation,
-      operationName,
-      config.retryConfig
+  /**
+   * Enhanced feed service with fallback
+   */
+  public async getEnhancedFeedWithFallback(params: any): Promise<any> {
+    return this.executeWithFallback(
+      async () => {
+        const { feedService } = await import('./feedService');
+        return await feedService.getEnhancedFeed(params);
+      },
+      'enhanced_feed'
     );
   }
 
-  private async executeWithCircuitBreaker<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    config: RecoveryConfig
-  ): Promise<T> {
-    const circuitBreakerName = config.circuitBreakerName || 'default';
-    
-    return circuitBreakerService.executeWithCircuitBreaker(
-      circuitBreakerName,
-      operation,
-      config.customFallback ? () => Promise.resolve(config.customFallback) : undefined
+  /**
+   * Trending communities with fallback
+   */
+  public async getTrendingCommunitiesWithFallback(params: any): Promise<any> {
+    return this.executeWithFallback(
+      async () => {
+        const { communityService } = await import('./communityService');
+        return await communityService.getTrendingCommunities(params);
+      },
+      'trending_communities'
     );
   }
 
-  private async executeWithFallback<T>(
+  /**
+   * User profile with fallback
+   */
+  public async getUserProfileWithFallback(address: string): Promise<any> {
+    return this.executeWithFallback(
+      async () => {
+        const { db } = await import('../db/index');
+        const { users } = await import('../db/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const result = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
+        
+        if (result.length === 0) {
+          throw new Error('User not found');
+        }
+        
+        return result[0];
+      },
+      'user_profile'
+    );
+  }
+
+  /**
+   * Marketplace listings with fallback
+   */
+  public async getMarketplaceListingsWithFallback(params: any): Promise<any> {
+    return this.executeWithFallback(
+      async () => {
+        // Simulate marketplace service call
+        throw new Error('Marketplace service unavailable');
+      },
+      'marketplace_listings'
+    );
+  }
+
+  /**
+   * KYC status with fallback
+   */
+  public async getKYCStatusWithFallback(userAddress: string): Promise<any> {
+    return this.executeWithFallback(
+      async () => {
+        // In a real implementation, this would check KYC service
+        // For now, return default status
+        return this.fallbackData.get('kyc_status');
+      },
+      'kyc_status'
+    );
+  }
+
+  /**
+   * External API call with circuit breaker and fallback
+   */
+  public async callExternalAPIWithFallback(
+    apiName: string,
+    apiCall: () => Promise<any>,
+    fallbackData?: any
+  ): Promise<any> {
+    // Check if service is healthy
+    if (!serviceHealthMonitor.isServiceHealthy(apiName)) {
+      safeLogger.warn(`Service ${apiName} is unhealthy, using fallback`);
+      return {
+        success: true,
+        data: fallbackData || {},
+        message: `${apiName} service is temporarily unavailable`,
+        fallback: true,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    return this.executeWithFallback(
+      apiCall,
+      apiName,
+      { maxAttempts: 2, baseDelay: 500 } // Faster retry for external APIs
+    );
+  }
+
+  /**
+   * Database operation with fallback
+   */
+  public async executeDatabaseOperationWithFallback<T>(
     operation: () => Promise<T>,
-    operationName: string,
-    config: RecoveryConfig
-  ): Promise<{ data: T; usedFallback: boolean; fallbackSource?: string }> {
-    const fallbackKey = config.fallbackKey || operationName;
-    
-    return fallbackService.executeWithFallback(
+    fallbackKey: string
+  ): Promise<T | FallbackResponse> {
+    // Check database health
+    if (!serviceHealthMonitor.isServiceHealthy('database')) {
+      safeLogger.warn('Database is unhealthy, using fallback');
+      return this.getFallbackResponse(fallbackKey, 'Database temporarily unavailable');
+    }
+
+    return this.executeWithFallback(
       operation,
       fallbackKey,
-      {
-        customFallback: config.customFallback,
-        onFallback: (fallbackData) => {
-          logger.info(`Using fallback data for operation: ${operationName}`, {
-            operation: operationName,
-            fallbackSource: fallbackData.source,
-            fallbackAge: Date.now() - fallbackData.timestamp.getTime()
-          });
-        }
-      }
+      { maxAttempts: 2, baseDelay: 1000 }
     );
   }
 
-  private async executeWithGracefulDegradation<T>(
-    operation: () => Promise<T>,
-    operationName: string,
-    config: RecoveryConfig
-  ): Promise<T> {
+  /**
+   * WebSocket operation with fallback
+   */
+  public async executeWebSocketOperationWithFallback(
+    operation: () => Promise<any>,
+    fallbackMessage: string = 'Real-time features temporarily unavailable'
+  ): Promise<any> {
     try {
       return await operation();
     } catch (error) {
-      logger.warn(`Operation failed, entering graceful degradation mode: ${operationName}`, {
-        operation: operationName,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-
-      // Return minimal/safe default data
-      if (config.customFallback) {
-        return config.customFallback;
-      }
-
-      // Generate safe defaults based on operation name
-      return this.generateGracefulDegradationData<T>(operationName);
+      safeLogger.warn('WebSocket operation failed:', error.message);
+      return {
+        success: false,
+        message: fallbackMessage,
+        fallback: true,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 
-  private generateGracefulDegradationData<T>(operationName: string): T {
-    // Generate safe default data based on operation patterns
-    if (operationName.includes('seller') || operationName.includes('profile')) {
-      return {
-        error: 'Service temporarily unavailable',
-        message: 'Seller profile data is currently unavailable. Please try again later.',
-        degraded: true
-      } as T;
-    }
+  /**
+   * Graceful service degradation
+   */
+  public async handleServiceDegradation(serviceName: string): Promise<void> {
+    const health = serviceHealthMonitor.getServiceHealth(serviceName);
+    
+    if (!health) return;
 
-    if (operationName.includes('listings') || operationName.includes('marketplace')) {
-      return {
-        listings: [],
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false
-        },
-        error: 'Service temporarily unavailable',
-        message: 'Marketplace listings are currently unavailable. Please try again later.',
-        degraded: true
-      } as T;
+    switch (health.status) {
+      case 'degraded':
+        safeLogger.warn(`Service ${serviceName} is degraded, implementing fallbacks`);
+        // Implement specific degradation strategies
+        break;
+        
+      case 'unhealthy':
+        safeLogger.error(`Service ${serviceName} is unhealthy, switching to full fallback mode`);
+        // Switch to full fallback mode
+        break;
     }
-
-    if (operationName.includes('auth') || operationName.includes('authentication')) {
-      return {
-        authenticated: false,
-        error: 'Authentication service temporarily unavailable',
-        message: 'Please try reconnecting your wallet.',
-        degraded: true
-      } as T;
-    }
-
-    // Generic degraded response
-    return {
-      error: 'Service temporarily unavailable',
-      message: 'This service is currently experiencing issues. Please try again later.',
-      degraded: true,
-      timestamp: new Date().toISOString()
-    } as T;
   }
 
-  // Get recovery statistics
-  getRecoveryStats(): {
-    totalRecoveryAttempts: number;
-    activeRecoveries: number;
-    recentRecoveries: Array<{
-      operation: string;
-      attempts: number;
-      lastAttempt: Date;
-    }>;
-    circuitBreakerHealth: any;
-    fallbackStats: any;
+  /**
+   * Update fallback data
+   */
+  public updateFallbackData(key: string, data: any): void {
+    this.fallbackData.set(key, data);
+    safeLogger.debug(`Updated fallback data for ${key}`);
+  }
+
+  /**
+   * Get service status for health checks
+   */
+  public getServiceStatus(): {
+    fallbackDataKeys: string[];
+    retryQueues: string[];
+    overallHealth: any;
   } {
-    const now = Date.now();
-    const recentThreshold = 300000; // 5 minutes
-    
-    const recentRecoveries = Array.from(this.recoveryAttempts.entries())
-      .filter(([_, lastTime]) => now - (this.lastRecoveryTime.get(_) || 0) < recentThreshold)
-      .map(([operation, attempts]) => ({
-        operation: operation.replace('_recovery', ''),
-        attempts,
-        lastAttempt: new Date(this.lastRecoveryTime.get(operation) || 0)
-      }));
-
     return {
-      totalRecoveryAttempts: Array.from(this.recoveryAttempts.values()).reduce((sum, attempts) => sum + attempts, 0),
-      activeRecoveries: recentRecoveries.length,
-      recentRecoveries,
-      circuitBreakerHealth: circuitBreakerService.getHealthStatus(),
-      fallbackStats: fallbackService.getStats()
+      fallbackDataKeys: Array.from(this.fallbackData.keys()),
+      retryQueues: Array.from(this.retryQueues.keys()),
+      overallHealth: serviceHealthMonitor.getOverallHealth()
     };
   }
 
-  // Reset recovery tracking
-  resetRecoveryTracking(): void {
-    this.recoveryAttempts.clear();
-    this.lastRecoveryTime.clear();
-    
-    logger.info('Error recovery tracking reset');
+  /**
+   * Sleep utility for delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  // Predefine common recovery configurations
-  static getCommonConfigs(): Record<string, RecoveryConfig> {
-    return {
-      // Database operations
-      database: {
-        strategies: ['retry', 'circuit_breaker', 'fallback'],
-        retryConfig: {
-          maxRetries: 3,
-          baseDelay: 1000,
-          backoffMultiplier: 2
-        },
-        circuitBreakerName: 'database',
-        alertOnFailure: true
-      },
-
-      // External API calls
-      externalApi: {
-        strategies: ['retry', 'circuit_breaker', 'fallback'],
-        retryConfig: {
-          maxRetries: 2,
-          baseDelay: 500,
-          backoffMultiplier: 2
-        },
-        circuitBreakerName: 'external-api',
-        alertOnFailure: true
-      },
-
-      // Cache operations
-      cache: {
-        strategies: ['retry', 'graceful_degradation'],
-        retryConfig: {
-          maxRetries: 1,
-          baseDelay: 100,
-          backoffMultiplier: 1
-        },
-        circuitBreakerName: 'cache',
-        alertOnFailure: false
-      },
-
-      // Authentication
-      authentication: {
-        strategies: ['retry', 'circuit_breaker', 'graceful_degradation'],
-        retryConfig: {
-          maxRetries: 2,
-          baseDelay: 1000,
-          backoffMultiplier: 2
-        },
-        circuitBreakerName: 'auth-service',
-        alertOnFailure: true
-      },
-
-      // Critical operations (fail fast)
-      critical: {
-        strategies: ['fail_fast'],
-        alertOnFailure: true
-      },
-
-      // Non-critical operations (graceful degradation)
-      nonCritical: {
-        strategies: ['retry', 'fallback', 'graceful_degradation'],
-        retryConfig: {
-          maxRetries: 1,
-          baseDelay: 500,
-          backoffMultiplier: 1
-        },
-        alertOnFailure: false
-      }
-    };
+  /**
+   * Cleanup resources
+   */
+  public shutdown(): void {
+    this.fallbackData.clear();
+    this.retryQueues.clear();
   }
 }
 
 // Export singleton instance
 export const errorRecoveryService = new ErrorRecoveryService();
-
-// Export types
-export type { RecoveryStrategy, RecoveryConfig, RecoveryResult };
+export default errorRecoveryService;

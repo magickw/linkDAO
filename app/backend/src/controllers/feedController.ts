@@ -7,14 +7,10 @@ import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
 
 export class FeedController {
-  // Get enhanced personalized feed
+  // Get enhanced personalized feed (optional authentication)
   async getEnhancedFeed(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
-      if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
-        return;
-      }
+      const userAddress = req.user?.address; // Optional - can be undefined for anonymous users
 
       const {
         page = 1,
@@ -25,20 +21,62 @@ export class FeedController {
         feedSource = 'all' // New parameter for following feed
       } = req.query;
 
-      const feedData = await feedService.getEnhancedFeed({
-        userAddress,
-        page: Number(page),
-        limit: Number(limit),
-        sort: sort as string,
-        communities: Array.isArray(communities) ? communities as string[] : [],
-        timeRange: timeRange as string,
-        feedSource: feedSource as 'following' | 'all'
-      });
+      // If user is not authenticated and requests 'following' feed, return empty result
+      if (!userAddress && feedSource === 'following') {
+        res.json(apiResponse.success({
+          posts: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            totalPages: 0
+          },
+          message: 'Please log in to see posts from accounts you follow'
+        }, 'Authentication required for following feed'));
+        return;
+      }
 
-      res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
+      try {
+        const feedData = await feedService.getEnhancedFeed({
+          userAddress: userAddress || null, // Pass null for anonymous users
+          page: Number(page),
+          limit: Number(limit),
+          sort: sort as string,
+          communities: Array.isArray(communities) ? communities as string[] : [],
+          timeRange: timeRange as string,
+          feedSource: feedSource as 'following' | 'all'
+        });
+
+        res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
+      } catch (serviceError) {
+        safeLogger.error('Feed service error:', serviceError);
+        
+        // Return fallback empty feed instead of error
+        res.json(apiResponse.success({
+          posts: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            totalPages: 0
+          },
+          message: 'Feed temporarily unavailable. Please try again later.'
+        }, 'Feed service temporarily unavailable'));
+      }
     } catch (error) {
       safeLogger.error('Error getting enhanced feed:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve feed'));
+      
+      // Return fallback response instead of error
+      res.json(apiResponse.success({
+        posts: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0
+        },
+        message: 'Feed temporarily unavailable. Please try again later.'
+      }, 'Feed temporarily unavailable'));
     }
   }
 

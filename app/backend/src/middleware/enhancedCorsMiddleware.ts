@@ -56,7 +56,9 @@ export class EnhancedCorsMiddleware {
         'X-Wallet-Address',
         'X-Chain-ID',
         'X-API-Key',
-        'X-Client-Version'
+        'X-Client-Version',
+        'X-CSRF-Token',
+        'x-csrf-token'
       ],
       exposedHeaders: [
         'X-Request-ID',

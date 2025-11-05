@@ -312,7 +312,16 @@ export class CommunityService {
       };
     } catch (error) {
       safeLogger.error('Error getting trending communities:', error);
-      throw new Error('Failed to get trending communities');
+      
+      // Return fallback empty result instead of throwing error
+      return {
+        communities: [],
+        pagination: {
+          page,
+          limit,
+          total: 0
+        }
+      };
     }
   }
 

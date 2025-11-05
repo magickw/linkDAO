@@ -44,6 +44,18 @@ router.get('/trending',
   communityController.getTrendingCommunities
 );
 
+// Fallback route for frontend compatibility - handle both /communities/trending and /trending
+router.get('*/trending',
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 20 },
+      timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month'] }
+    }
+  }),
+  communityController.getTrendingCommunities
+);
+
 // Get community details (public)
 router.get('/:id',
   validateRequest({
