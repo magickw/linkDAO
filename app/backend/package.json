@@ -1,6 +1,6 @@
 {
   "name": "linkdao-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "LinkDao Web3 Marketplace Backend",
   "main": "src/index.production.js",
   "scripts": {
