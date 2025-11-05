@@ -1,5 +1,6 @@
 import { EnhancedWalletData, TokenBalance, Transaction, QuickAction, TransactionType, TransactionStatus } from '../types/wallet';
 import { cryptoPriceService } from './cryptoPriceService';
+import { normalizeTransactions } from '../utils/transactionUtils';
 
 interface WalletProvider {
   getAddress(): Promise<string>;
@@ -33,7 +34,7 @@ class WalletDataService {
       return {
         address: walletAddress,
         balances: portfolioData.updatedBalances,
-        recentTransactions: transactions,
+        recentTransactions: normalizeTransactions(transactions),
         portfolioValue: portfolioData.totalValue,
         portfolioChange: portfolioData.totalChange24h,
         quickActions: this.getQuickActions()
@@ -165,7 +166,7 @@ class WalletDataService {
     return {
       address: mockAddress,
       balances: mockBalances,
-      recentTransactions: mockTransactions,
+      recentTransactions: normalizeTransactions(mockTransactions),
       portfolioValue: 0, // Will be calculated by price service
       portfolioChange: 0, // Will be calculated by price service
       quickActions: this.getQuickActions()

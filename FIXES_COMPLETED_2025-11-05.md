@@ -398,3 +398,92 @@ I've successfully resolved the LinkDAO homepage loading issues by:
 5. **Verifying environment configuration** - Ensured frontend connects to local backend
 
 The homepage should now load properly at `http://localhost:3000` with all core functionality working.
+## Addi
+tional Runtime Error Fix
+
+### TypeError: amount.toFixed is not a function
+- **Issue**: Runtime error in `TransactionMiniFeed.tsx` where `amount.toFixed()` was called on a non-number value
+- **Fix**: Updated `formatTokenAmount` function to handle string/number conversion and null/undefined values safely
+- **Status**: ✅ Complete
+- **File**: `app/frontend/src/components/SmartRightSidebar/TransactionMiniFeed.tsx`
+- **Details**: Added type safety by converting string amounts to numbers and providing fallback for invalid values
+
+The function now safely handles:
+- String amounts (converts to number)
+- Null/undefined values (returns "0 [symbol]")
+- Invalid numbers (returns "0 [symbol]")
+- Proper number formatting for large amounts (K, M suffixes)
+## 
+Critical Timestamp Error Fix - November 5, 2025
+
+### TypeError: timestamp.getTime is not a function
+
+**Issue**: Application crashed when viewing transaction history with error:
+```
+TypeError: timestamp.getTime is not a function
+    at formatTimeAgo (TransactionMiniFeed.tsx:70:44)
+```
+
+**Root Cause**: 
+- API endpoints (like `/api/ldao/transactions`) return timestamps as ISO strings
+- React components expected Date objects
+- When JSON data is parsed, timestamps remain as strings instead of being converted to Date objects
+
+**Impact**: 
+- Transaction history components crashed
+- Users couldn't view wallet transaction feeds
+- Application became unusable when accessing transaction data
+
+**Solution**: Created comprehensive timestamp normalization system
+
+### Files Modified
+1. **New Utility File**: `app/frontend/src/utils/transactionUtils.ts`
+   - `normalizeTimestamp()` - Handles Date, string, and number timestamps
+   - `normalizeTransactions()` - Normalizes arrays of transaction data
+   - `formatTimeAgo()` - Safe time formatting with fallbacks
+
+2. **Updated Components**:
+   - `app/frontend/src/components/SmartRightSidebar/TransactionMiniFeed.tsx`
+   - `app/frontend/src/components/Marketplace/TokenAcquisition/TransactionHistory.tsx`
+   - `app/frontend/src/services/walletDataService.ts`
+
+### Technical Implementation
+
+**Utility Function**:
+```typescript
+export function normalizeTimestamp(timestamp: any): Date {
+  if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  if (typeof timestamp === 'number') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date(); // Fallback for invalid timestamps
+}
+```
+
+**Component Integration**:
+```typescript
+// Before (crashed)
+formatTimeAgo(transaction.timestamp)
+
+// After (safe)
+const normalizedTransactions = useMemo(() => 
+  normalizeTransactions(transactions), [transactions]);
+```
+
+### Testing Results
+- ✅ Transaction feeds now display correctly
+- ✅ No more timestamp-related crashes
+- ✅ Handles all timestamp formats (Date, ISO string, Unix timestamp)
+- ✅ Graceful fallbacks for invalid data
+- ✅ Consistent time formatting across all components
+
+### Status: ✅ Complete
+
+**Date**: November 5, 2025  
+**Priority**: Critical  
+**Verification**: All transaction-related components working correctly

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, TransactionType, TransactionStatus } from '../../types/wallet';
 import { useContacts } from '../../contexts/ContactContext';
+import { normalizeTransactions, formatTimeAgo } from '../../utils/transactionUtils';
 
 interface TransactionMiniFeedProps {
   transactions: Transaction[];
@@ -17,11 +18,14 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
   const [visibleTransactions, setVisibleTransactions] = useState(5);
   const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(new Set());
 
+  // Normalize transactions to ensure timestamps are proper Date objects
+  const normalizedTransactions = useMemo(() => normalizeTransactions(transactions), [transactions]);
+
   // Detect new transactions for animation - use stable reference
   const [previousTransactionIds, setPreviousTransactionIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const currentIds = new Set(transactions.map(tx => tx.id));
+    const currentIds = new Set(normalizedTransactions.map(tx => tx.id));
     const newIds = new Set([...currentIds].filter(id => !previousTransactionIds.has(id)));
 
     if (newIds.size > 0 && previousTransactionIds.size > 0) { // Don't animate on initial load
@@ -33,7 +37,7 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
     }
 
     setPreviousTransactionIds(currentIds);
-  }, [transactions]); // Only depend on transactions array reference
+  }, [normalizedTransactions]); // Only depend on normalized transactions array reference
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -44,28 +48,25 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
     }).format(value);
   };
 
-  const formatTokenAmount = (amount: number, symbol: string) => {
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(2)}M ${symbol}`;
+  const formatTokenAmount = (amount: number | string, symbol: string) => {
+    // Convert to number if it's a string, handle null/undefined
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    // Return fallback if amount is not a valid number
+    if (isNaN(numAmount) || numAmount === null || numAmount === undefined) {
+      return `0 ${symbol}`;
     }
-    if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(2)}K ${symbol}`;
+    
+    if (numAmount >= 1000000) {
+      return `${(numAmount / 1000000).toFixed(2)}M ${symbol}`;
     }
-    return `${amount.toFixed(4)} ${symbol}`;
+    if (numAmount >= 1000) {
+      return `${(numAmount / 1000).toFixed(2)}K ${symbol}`;
+    }
+    return `${numAmount.toFixed(4)} ${symbol}`;
   };
 
-  const formatTimeAgo = (timestamp: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - timestamp.getTime();
-    const minutes = Math.floor(diff / (1000 * 60));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
-  };
 
   const getTransactionIcon = (type: TransactionType, status: TransactionStatus) => {
     const baseClasses = "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold";
@@ -203,7 +204,7 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
     }
   };
 
-  const displayedTransactions = transactions.slice(0, visibleTransactions);
+  const displayedTransactions = normalizedTransactions.slice(0, visibleTransactions);
 
   const chainLabel = (cid?: number) => {
     switch (cid) {
@@ -239,7 +240,7 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
           Recent Transactions
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {transactions.length} transactions
+          {normalizedTransactions.length} transactions
         </p>
       </div>
 
@@ -339,19 +340,19 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
         )}
 
         {/* Load More Button */}
-        {transactions.length > visibleTransactions && (
+        {normalizedTransactions.length > visibleTransactions && (
           <button
             onClick={() => setVisibleTransactions(prev => prev + 5)}
             className="w-full mt-4 py-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors duration-200"
           >
-            Load More ({transactions.length - visibleTransactions} remaining)
+            Load More ({normalizedTransactions.length - visibleTransactions} remaining)
           </button>
         )}
 
         {/* View All Button */}
-        {transactions.length > 0 && (
+        {normalizedTransactions.length > 0 && (
           <button
-            onClick={() => onTransactionClick?.(transactions[0])} // Navigate to full transaction history
+            onClick={() => onTransactionClick?.(normalizedTransactions[0])} // Navigate to full transaction history
             className="w-full mt-2 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
           >
             View All Transactions →
