@@ -9,8 +9,8 @@ const deployConfig = {
   // Environment configurations
   environments: {
     development: {
-      apiUrl: 'http://localhost:8000',
-      wsUrl: 'ws://localhost:8000',
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000',
+      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:10000',
       chainId: 31337, // Local hardhat network
       enableAnalytics: false,
       enableServiceWorker: false,
@@ -61,15 +61,42 @@ const deployConfig = {
     }
   },
   
-  // Security configurations
+    // Security configurations
   security: {
-    contentSecurityPolicy: {
+    contentSecurityPolicy: process.env.NODE_ENV === 'development' ? {
+      'default-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:", "http:", "blob:", "data:"],
+      'style-src': ["'self'", "'unsafe-inline'", "https:", "http:", "data:"],
+      'img-src': ["'self'", "data:", "https:", "http:", "blob:", "*"],
+      'font-src': ["'self'", "https:", "http:", "data:", "*"],
+      'connect-src': ["'self'", "https:", "http:", "wss:", "ws:", "*"],
+      'frame-src': ["'self'", "https:", "http:"],
+      'object-src': ["'none'"],
+      'base-uri': ["'self'"],
+      'form-action': ["'self'", "https:", "http:"],
+      'worker-src': ["'self'", "blob:", "data:"],
+      'child-src': ["'self'", "blob:", "data:"]
+    } : {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://vercel.live", "https://js.stripe.com", "https://storage.googleapis.com"],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://vercel.live", "https://js.stripe.com", "https://storage.googleapis.com", "https://va.vercel-scripts.com"],
       'style-src': ["'self'", "'unsafe-inline'"],
-      'img-src': ["'self'", "data:", "https:", "blob:"],
+      'img-src': ["'self'", "data:", "https:", "blob:", "http://localhost:*"],
       'font-src': ["'self'", "https:"],
-      'connect-src': ["'self'", "https:", "wss:", "ws:", "http://localhost:*", "ws://localhost:*"],
+      'connect-src': [
+        "'self'", 
+        "https:", 
+        "wss:", 
+        "ws:", 
+        "http://localhost:*", 
+        "ws://localhost:*",
+        "http://localhost:10000",
+        "ws://localhost:10000",
+        "http://127.0.0.1:*",
+        "ws://127.0.0.1:*",
+        "https://api.web3modal.org",
+        "https://api.coingecko.com",
+        "https://va.vercel-scripts.com"
+      ],
       'frame-src': ["'none'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],

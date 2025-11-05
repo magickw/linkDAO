@@ -198,13 +198,23 @@ export class FeedService {
 
       const data: BackendFeedResponse = await response.json();
       
+      // Validate response data structure
+      if (!data || !Array.isArray(data.posts)) {
+        console.warn('Invalid feed response structure:', data);
+        return {
+          posts: [],
+          hasMore: false,
+          totalPages: 0
+        };
+      }
+      
       // Transform backend posts to frontend posts
       const posts = data.posts.map(convertBackendPostToPost);
       
       const result: FeedResponse = {
         posts,
-        hasMore: data.pagination.page < data.pagination.totalPages,
-        totalPages: data.pagination.totalPages
+        hasMore: data.pagination?.page < data.pagination?.totalPages || false,
+        totalPages: data.pagination?.totalPages || 0
       };
       
       // Cache the result

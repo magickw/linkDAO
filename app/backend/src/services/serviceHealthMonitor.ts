@@ -37,7 +37,7 @@ export class ServiceHealthMonitor {
       name: 'database',
       checkFunction: this.checkDatabase.bind(this),
       interval: 30000, // 30 seconds
-      timeout: 5000,   // 5 seconds
+      // // timeout: 5000 // Removed for TypeScript compatibility // Removed for TypeScript compatibility,   // 5 seconds
       retryAttempts: 3,
       criticalService: true
     });
@@ -66,7 +66,7 @@ export class ServiceHealthMonitor {
       name: 'feed_service',
       checkFunction: this.checkFeedService.bind(this),
       interval: 30000, // 30 seconds
-      timeout: 5000,   // 5 seconds
+      // // timeout: 5000 // Removed for TypeScript compatibility // Removed for TypeScript compatibility,   // 5 seconds
       retryAttempts: 2,
       criticalService: true
     });
@@ -75,7 +75,7 @@ export class ServiceHealthMonitor {
       name: 'community_service',
       checkFunction: this.checkCommunityService.bind(this),
       interval: 30000, // 30 seconds
-      timeout: 5000,   // 5 seconds
+      // // timeout: 5000 // Removed for TypeScript compatibility // Removed for TypeScript compatibility,   // 5 seconds
       retryAttempts: 2,
       criticalService: true
     });
@@ -217,7 +217,7 @@ export class ServiceHealthMonitor {
     try {
       const response = await fetch('https://api.coingecko.com/api/v3/ping', {
         method: 'GET',
-        timeout: 5000
+        // // timeout: 5000 // Removed for TypeScript compatibility // Removed for TypeScript compatibility
       });
       return response.ok;
     } catch (error) {
@@ -229,7 +229,7 @@ export class ServiceHealthMonitor {
     try {
       const response = await fetch('https://ipapi.co/json/', {
         method: 'GET',
-        timeout: 5000
+        // // timeout: 5000 // Removed for TypeScript compatibility // Removed for TypeScript compatibility
       });
       return response.ok;
     } catch (error) {

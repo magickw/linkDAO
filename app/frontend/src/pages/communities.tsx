@@ -313,6 +313,14 @@ const CommunitiesPage: React.FC = () => {
 
       const response = await FeedService.getEnhancedFeed(feedFilter, pageNum, 20);
 
+      // Validate response
+      if (!response || !Array.isArray(response.posts)) {
+        console.warn('Invalid feed response:', response);
+        if (!append) setPosts([]);
+        setHasMore(false);
+        return;
+      }
+
       if (append) {
         setPosts(prev => [...prev, ...response.posts]);
       } else {

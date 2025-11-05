@@ -427,7 +427,7 @@ export class WebSocketService {
       timestamp: new Date()
     };
 
-    if (this.isUserSockets.has(walletAddress) && this.userSockets.get(walletAddress)!.size > 0) {
+    if (this.userSockets.has(walletAddress) && this.userSockets.get(walletAddress)!.size > 0) {
       this.io.to(`user:${walletAddress}`).emit(event, {
         ...data,
         priority,

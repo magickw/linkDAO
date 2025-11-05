@@ -1,7 +1,7 @@
 // Import Web3 polyfills first to ensure compatibility
 import '@/utils/web3Polyfills';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { AppProps } from 'next/app';
 import { config } from '@/lib/rainbowkit';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
@@ -313,6 +313,16 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 }
 
 export default function App({ Component, pageProps, router }: AppProps) {
+  // Disable Service Worker in development to avoid CSP issues
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          registration.unregister();
+        });
+      });
+    }
+  }, []);
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => setMounted(true), []);

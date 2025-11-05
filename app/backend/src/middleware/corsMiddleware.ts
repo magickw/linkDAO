@@ -39,7 +39,9 @@ const CORS_CONFIGS = {
       'X-Wallet-Address',
       'X-Chain-ID',
       'X-CSRF-Token',
-      'x-csrf-token'
+      'x-csrf-token',
+      'X-Session-Token',
+      'X-Refresh-Token'
     ],
     exposedHeaders: [
       'X-Request-ID',
@@ -64,7 +66,17 @@ const CORS_CONFIGS = {
       'https://linkdao.vercel.app',
       'https://linkdao-*.vercel.app', // Vercel preview deployments
       'https://*.vercel.app',
-      'https://api.linkdao.io' // Add Render backend origin
+      'https://api.linkdao.io', // Add Render backend origin
+      'https://linkdao-backend.onrender.com', // Render backend
+      'https://app.linkdao.io',
+      'https://marketplace.linkdao.io',
+      // Allow all localhost for development
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8080',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:8080'
     ],
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [

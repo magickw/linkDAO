@@ -75,6 +75,23 @@ class AuthService {
    */
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
     try {
+      // Check if we already have a valid session for this address
+      if (this.token && !this.token.startsWith('mock_token_')) {
+        try {
+          const currentUser = await this.getCurrentUser();
+          if (currentUser && currentUser.address === address) {
+            console.log('Reusing existing valid session for address:', address);
+            return {
+              success: true,
+              token: this.token,
+              user: currentUser
+            };
+          }
+        } catch (error) {
+          console.log('Existing session check failed, proceeding with new authentication');
+        }
+      }
+
       // Ensure wallet is connected and ready
       if (!connector) {
         return { success: false, error: 'Connector not available' };
@@ -121,13 +138,27 @@ class AuthService {
         }
       } catch (signError: any) {
         // Handle specific signing errors without throwing (avoid runtime overlays)
-        if (signError?.message?.toLowerCase().includes('rejected') || signError?.message?.toLowerCase().includes('denied')) {
+        let signErrorMessage = 'Failed to sign authentication message';
+        
+        if (signError && typeof signError === 'object') {
+          if (signError.message) {
+            signErrorMessage = signError.message;
+          } else if (signError.toString && typeof signError.toString === 'function') {
+            signErrorMessage = signError.toString();
+          }
+        } else if (typeof signError === 'string') {
+          signErrorMessage = signError;
+        }
+        
+        const lowerMessage = signErrorMessage.toLowerCase();
+        
+        if (lowerMessage.includes('rejected') || lowerMessage.includes('denied')) {
           return { success: false, error: 'Signature request was rejected by user' };
-        } else if (signError?.message?.toLowerCase().includes('not supported')) {
+        } else if (lowerMessage.includes('not supported')) {
           return { success: false, error: 'Your wallet does not support message signing' };
         } else {
           console.error('Signing error:', signError);
-          return { success: false, error: 'Failed to sign authentication message' };
+          return { success: false, error: signErrorMessage };
         }
       }
       
@@ -185,22 +216,54 @@ class AuthService {
         }
       } catch (fetchError: any) {
         // If fetch fails (network error, backend down), use mock authentication
-        if (fetchError.name === 'TypeError' || fetchError.message.includes('fetch')) {
+        let fetchErrorMessage = 'Network error';
+        
+        if (fetchError && typeof fetchError === 'object') {
+          if (fetchError.message) {
+            fetchErrorMessage = fetchError.message;
+          } else if (fetchError.name) {
+            fetchErrorMessage = fetchError.name;
+          }
+        } else if (typeof fetchError === 'string') {
+          fetchErrorMessage = fetchError;
+        }
+        
+        if (fetchError.name === 'TypeError' || fetchErrorMessage.includes('fetch')) {
           console.warn('Backend unavailable, proceeding with mock authentication');
           return this.createMockAuthResponse(address);
         }
-        throw fetchError;
+        
+        // Re-throw with proper error message
+        const error = new Error(fetchErrorMessage);
+        error.name = fetchError.name || 'FetchError';
+        throw error;
       }
     } catch (error: any) {
       console.error('Wallet authentication failed:', error);
+      
+      // Ensure error message is properly serialized
+      let errorMessage = 'Authentication failed';
+      if (error && typeof error === 'object') {
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.toString && typeof error.toString === 'function') {
+          errorMessage = error.toString();
+        } else {
+          errorMessage = JSON.stringify(error);
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
       // If it's a network error, proceed without authentication
-      if (error.message?.includes('fetch') || error.message?.includes('Network')) {
+      if (errorMessage.includes('fetch') || errorMessage.includes('Network')) {
         console.warn('Network error, proceeding without authentication');
         return { success: true };
       }
+      
       return {
         success: false,
-        error: error.message || 'Authentication failed'
+        error: errorMessage
       };
     }
   }

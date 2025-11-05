@@ -87,6 +87,18 @@ export class AuthenticationService {
     ipAddress?: string
   ): Promise<AuthResult> {
     try {
+      // Check for existing valid session first to avoid unnecessary re-authentication
+      const existingSession = await this.getValidSession(walletAddress);
+      if (existingSession) {
+        safeLogger.info('Reusing existing valid session for wallet:', walletAddress);
+        return {
+          success: true,
+          sessionToken: existingSession.sessionToken,
+          refreshToken: existingSession.refreshToken,
+          expiresAt: existingSession.expiresAt,
+        };
+      }
+
       // Validate and consume nonce
       const nonceRecord = await this.validateAndConsumeNonce(walletAddress, nonce);
       if (!nonceRecord) {
@@ -119,8 +131,8 @@ export class AuthenticationService {
       const expiresAt = new Date(Date.now() + this.sessionExpiryHours * 60 * 60 * 1000);
       const refreshExpiresAt = new Date(Date.now() + this.refreshExpiryDays * 24 * 60 * 60 * 1000);
 
-      // Invalidate existing sessions for this wallet
-      await this.invalidateExistingSessions(walletAddress);
+      // Only invalidate sessions older than 1 hour to allow multiple tabs/devices
+      await this.invalidateOldSessions(walletAddress);
 
       // Create new session
       await this.db.insert(authSessions).values({
@@ -399,6 +411,47 @@ export class AuthenticationService {
   }
 
   /**
+   * Get valid session for wallet if exists
+   */
+  private async getValidSession(walletAddress: string): Promise<{ sessionToken: string; refreshToken: string; expiresAt: Date } | null> {
+    try {
+      const sessions = await this.db
+        .select()
+        .from(authSessions)
+        .where(
+          and(
+            eq(authSessions.walletAddress, walletAddress.toLowerCase()),
+            eq(authSessions.isActive, true),
+            gt(authSessions.expiresAt, new Date()),
+            gt(authSessions.refreshExpiresAt, new Date())
+          )
+        )
+        .orderBy(authSessions.lastUsedAt)
+        .limit(1);
+
+      if (sessions.length > 0) {
+        const session = sessions[0];
+        // Update last used timestamp
+        await this.db
+          .update(authSessions)
+          .set({ lastUsedAt: new Date() })
+          .where(eq(authSessions.id, session.id));
+
+        return {
+          sessionToken: session.sessionToken,
+          refreshToken: session.refreshToken,
+          expiresAt: session.expiresAt,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      safeLogger.error('Error getting valid session:', error);
+      return null;
+    }
+  }
+
+  /**
    * Invalidate existing sessions for wallet
    */
   private async invalidateExistingSessions(walletAddress: string): Promise<void> {
@@ -409,6 +462,26 @@ export class AuthenticationService {
         .where(eq(authSessions.walletAddress, walletAddress.toLowerCase()));
     } catch (error) {
       safeLogger.error('Error invalidating existing sessions:', error);
+    }
+  }
+
+  /**
+   * Invalidate only old sessions (older than 1 hour) to allow multiple tabs/devices
+   */
+  private async invalidateOldSessions(walletAddress: string): Promise<void> {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      await this.db
+        .update(authSessions)
+        .set({ isActive: false })
+        .where(
+          and(
+            eq(authSessions.walletAddress, walletAddress.toLowerCase()),
+            lt(authSessions.lastUsedAt, oneHourAgo)
+          )
+        );
+    } catch (error) {
+      safeLogger.error('Error invalidating old sessions:', error);
     }
   }
 

@@ -1,3 +1,21 @@
+
+// CSP bypass for development
+if (typeof self !== 'undefined' && self.location && self.location.hostname === 'localhost') {
+  // Allow all connections in development
+  self.addEventListener('fetch', (event) => {
+    if (event.request.url.includes('localhost:10000')) {
+      event.respondWith(
+        fetch(event.request, {
+          mode: 'cors',
+          credentials: 'include'
+        }).catch(() => {
+          return new Response('Backend unavailable', { status: 503 });
+        })
+      );
+    }
+  });
+}
+
 const CACHE_NAME = 'web3-social-v3';
 const STATIC_CACHE = 'static-v3';
 const DYNAMIC_CACHE = 'dynamic-v3';

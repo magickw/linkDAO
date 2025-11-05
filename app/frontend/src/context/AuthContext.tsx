@@ -83,6 +83,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Login with wallet authentication
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Check if already authenticated for this address
+      if (user && user.address === walletAddress) {
+        console.log('Already authenticated for address:', walletAddress);
+        return { success: true };
+      }
+
+      // Check if we have a valid session token for this address
+      if (authService.isAuthenticated()) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address === walletAddress) {
+            console.log('Reusing existing session for address:', walletAddress);
+            setUser(currentUser);
+            await loadKYCStatus();
+            return { success: true };
+          }
+        } catch (error) {
+          console.log('Existing session invalid, proceeding with new authentication');
+        }
+      }
+      
       setIsLoading(true);
       
       const result = await authService.authenticateWallet(walletAddress, connector, status);
@@ -239,19 +260,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isModerator = hasRole('moderator');
   const isSuperAdmin = hasRole('super_admin');
 
-  // Auto-refresh token periodically
+  // Auto-refresh token periodically (less aggressive)
   useEffect(() => {
-    if (!authService.isAuthenticated()) return;
+    if (!authService.isAuthenticated() || !user) return;
 
     const refreshInterval = setInterval(async () => {
       try {
-        await authService.refreshToken();
+        const result = await authService.refreshToken();
+        if (!result.success) {
+          console.warn('Token refresh failed, but not logging out immediately:', result.error);
+          // Don't logout immediately on refresh failure - give it a few tries
+        }
       } catch (error) {
-        console.error('Token refresh failed:', error);
-        // If refresh fails, logout user
-        await handleLogout();
+        console.error('Token refresh error:', error);
+        // Only logout if it's a critical auth error, not network issues
+        if (error?.message?.includes('401') || error?.message?.includes('403')) {
+          console.log('Authentication expired, logging out');
+          await handleLogout();
+        }
       }
-    }, 15 * 60 * 1000); // Refresh every 15 minutes
+    }, 30 * 60 * 1000); // Refresh every 30 minutes (less aggressive)
 
     return () => clearInterval(refreshInterval);
   }, [user]);

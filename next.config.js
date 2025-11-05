@@ -246,8 +246,13 @@ const nextConfig = {
     return config;
   },
   
-  // Security headers
+    // Security headers
   async headers() {
+    // Disable CSP in development for easier debugging
+    if (process.env.NODE_ENV === 'development') {
+      return [];
+    }
+    
     const csp = deployConfig.security.contentSecurityPolicy;
     const cspString = Object.entries(csp)
       .map(([key, values]) => `${key} ${Array.isArray(values) ? values.join(' ') : values}`)
@@ -261,6 +266,14 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: cspString,
           },
+          ...Object.entries(deployConfig.security.headers).map(([key, value]) => ({
+            key,
+            value,
+          })),
+        ],
+      },
+    ];
+  },
           ...Object.entries(deployConfig.security.headers).map(([key, value]) => ({
             key,
             value,
@@ -288,7 +301,7 @@ const nextConfig = {
   
   // API rewrites
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
     
     return [
       {

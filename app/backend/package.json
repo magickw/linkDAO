@@ -65,7 +65,10 @@
     "seed:marketplace": "ts-node scripts/seedDatabase.ts",
     "seed:marketplace:large": "ts-node scripts/seedDatabase.ts --users=50 --sellers=20 --products=150 --orders=100",
     "test:seller-e2e": "./scripts/run-seller-e2e-tests.sh",
-    "test:seller-e2e:ci": "./scripts/run-seller-e2e-tests.sh --workers 1 --timeout 1200"
+    "test:seller-e2e:ci": "./scripts/run-seller-e2e-tests.sh --workers 1 --timeout 1200",
+    "start:emergency": "NODE_ENV=production node dist/index.js",
+    "health-check": "curl -f http://localhost:10000/health || exit 1",
+    "monitor": "node scripts/monitor-service.js"
   },
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.922.0",

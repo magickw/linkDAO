@@ -5,7 +5,11 @@
   "scripts": {
     "build": "cd app/frontend && npm install --legacy-peer-deps && npm run build",
     "dev": "cd app/frontend && npm run dev",
-    "start": "cd app/frontend && npm start"
+    "start": "cd app/frontend && npm start",
+    "dev:clean": "rm -rf .next && npm run dev",
+    "dev:no-csp": "NODE_ENV=development NEXT_PUBLIC_DISABLE_CSP=true npm run dev",
+    "backend:restart": "node restart-backend.js",
+    "fix:csp": "node emergency-disable-csp.js && npm run dev:clean"
   },
   "engines": {
     "node": ">=18.0.0",
