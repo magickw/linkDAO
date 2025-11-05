@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAccount, useChainId } from 'wagmi';
-import { walletService } from '../services/walletService';
+import { walletService, WalletService } from '../services/walletService';
 import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { dexService } from '../services/dexService';
 import { cryptoPriceService } from '../services/cryptoPriceService';
@@ -91,7 +91,7 @@ export function useWalletData({
       setError(null);
 
       // Get wallet data from wallet service
-      const walletServiceInstance = new walletService.WalletService(chainId);
+      const walletServiceInstance = new WalletService(chainId);
       const walletData = await walletServiceInstance.getWalletData(address as `0x${string}`);
 
       // Discover additional tokens the user might hold
@@ -322,6 +322,7 @@ export function useWalletData({
             }
             // Cache normalized result (serialize timestamp)
             txCache.set(cacheKey, { data: recentTransactions.map((t) => ({ ...t, timestamp: (t.timestamp as Date).toISOString() })), timestamp: Date.now() });
+            }
           } catch (e) {
             // Soft-fail on tx history
             recentTransactions = [];
@@ -397,7 +398,7 @@ export function useWalletData({
     } finally {
       setIsLoadingBalance(false);
     }
-  }, [address, chainId, providedChainId, connectedChainId]);
+  }, [address, chainId, providedChainId, connectedChainId, enableTransactionHistory, maxTransactions]);
 
   // Refresh wallet data manually
   const refreshWalletData = useCallback(async () => {

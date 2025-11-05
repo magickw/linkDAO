@@ -413,7 +413,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                             indicator.type === 'community' ? 'bg-purple-500' :
                             'bg-orange-500'
                           }`}></div>
-                          <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                          <span className="text-sm text-gray-900 dark:text-gray-100 font-medium capitalize">
                             {indicator.type === 'notification' ? 'Notifications' :
                              indicator.type === 'transaction' ? 'Transactions' :
                              indicator.type === 'community' ? 'Community' :
@@ -421,7 +421,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                              indicator.type}
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
                           {indicator.count}
                         </span>
                       </button>
@@ -434,7 +434,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                       </svg>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">No recent activity</p>
                   </div>
                 )}
               </div>
