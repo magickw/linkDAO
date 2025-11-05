@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { walletService } from '../services/walletService';
 import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { dexService } from '../services/dexService';
@@ -23,6 +23,7 @@ export function invalidateTxCache(address?: string) {
 
 interface UseWalletDataOptions {
   address?: string;
+  chainId?: number;
   refreshInterval?: number;
   autoRefresh?: boolean;
   enableTransactionHistory?: boolean;
@@ -61,13 +62,16 @@ interface UseWalletDataReturn {
 
 export function useWalletData({
   address: providedAddress,
+  chainId: providedChainId,
   refreshInterval = 300000, // 5 minutes
   autoRefresh = true,
   enableTransactionHistory = false,
   maxTransactions = 10
 }: UseWalletDataOptions = {}): UseWalletDataReturn {
   const { address: connectedAddress } = useAccount();
+  const connectedChainId = useChainId();
   const address = providedAddress || connectedAddress;
+  const chainId = providedChainId || connectedChainId;
 
   // No direct on-chain subscription here; we'll poll via our service to support multi-chain balances
   const isLoadingBalance = false;
@@ -385,7 +389,7 @@ export function useWalletData({
     } finally {
       setIsLoading(false);
     }
-  }, [address]);
+  }, [address, chainId, providedChainId, connectedChainId]);
 
   // Refresh wallet data manually
   const refreshWalletData = useCallback(async () => {
@@ -400,14 +404,14 @@ export function useWalletData({
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetchBalance, fetchWalletData]);
+  }, [refetchBalance, fetchWalletData, chainId, providedChainId, connectedChainId]);
 
   // Initial fetch when address is available
   useEffect(() => {
     if (address) {
       fetchWalletData();
     }
-  }, [address, fetchWalletData]);
+  }, [address, fetchWalletData, chainId, providedChainId, connectedChainId]);
 
   // Transform data for the wallet page
   const portfolio = walletData ? {
