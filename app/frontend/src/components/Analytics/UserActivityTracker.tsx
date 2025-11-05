@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useAccount } from 'wagmi';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
 import { userActivityService, UserEngagementMetrics, UserRecommendations } from '../../services/userActivityService';
 import { ActivityTimeline } from './ActivityTimeline';
@@ -26,7 +27,8 @@ export const UserActivityTracker: React.FC<UserActivityTrackerProps> = ({
   showInsights = true,
   compact = false
 }) => {
-  const { walletInfo: { address } } = useWalletAuth();
+  const { walletInfo } = useWalletAuth();
+  const { address } = useAccount();
   const [engagementMetrics, setEngagementMetrics] = useState<UserEngagementMetrics | null>(null);
   const [recommendations, setRecommendations] = useState<UserRecommendations | null>(null);
   const [crossFeatureInsights, setCrossFeatureInsights] = useState<any>(null);
