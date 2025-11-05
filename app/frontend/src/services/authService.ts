@@ -57,7 +57,9 @@ class AuthService {
         throw new Error(data.error || 'Failed to get nonce');
       }
 
-      return { nonce: data.nonce, message: data.message };
+      // Backend returns data in a nested 'data' property
+      const nonceData = data.data || data;
+      return { nonce: nonceData.nonce, message: nonceData.message };
     } catch (error) {
       // If backend is unavailable, return mock nonce
       console.warn('Backend unavailable for nonce, using fallback');

@@ -92,7 +92,11 @@ export class ComprehensiveMonitoringService {
   private alerts: AlertSummary[] = [];
   private monitoringInterval: NodeJS.Timeout | null = null;
   private healthCheckInterval: NodeJS.Timeout | null = null;
-  
+
+  // Memory optimization: Limit array sizes to prevent memory leaks
+  private readonly MAX_METRICS_HISTORY = 100; // Keep last 100 metric snapshots (~100 minutes)
+  private readonly MAX_ALERTS_HISTORY = 500; // Keep last 500 alerts
+
   private thresholds: MonitoringThresholds = {
     errorRate: 10, // 10 errors per minute
     responseTime: 2000, // 2 seconds
@@ -231,10 +235,15 @@ export class ComprehensiveMonitoringService {
       security: securityMetrics
     };
 
-    // Store metrics (keep last 24 hours)
+    // Store metrics (keep last MAX_METRICS_HISTORY entries)
     this.metrics.push(metrics);
-    if (this.metrics.length > 1440) { // 24 hours * 60 minutes
-      this.metrics = this.metrics.slice(-1440);
+    if (this.metrics.length > this.MAX_METRICS_HISTORY) {
+      this.metrics = this.metrics.slice(-this.MAX_METRICS_HISTORY);
+
+      // Trigger garbage collection if available (production mode with --expose-gc)
+      if (global.gc) {
+        global.gc();
+      }
     }
 
     // Log metrics
@@ -521,10 +530,15 @@ export class ComprehensiveMonitoringService {
     };
 
     this.alerts.push(alert);
-    
-    // Keep only last 100 alerts
-    if (this.alerts.length > 100) {
-      this.alerts = this.alerts.slice(-100);
+
+    // Keep only last MAX_ALERTS_HISTORY alerts
+    if (this.alerts.length > this.MAX_ALERTS_HISTORY) {
+      this.alerts = this.alerts.slice(-this.MAX_ALERTS_HISTORY);
+
+      // Trigger garbage collection if available
+      if (global.gc) {
+        global.gc();
+      }
     }
 
     // Map to valid alert types

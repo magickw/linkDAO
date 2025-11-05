@@ -159,6 +159,15 @@ export class EnhancedRateLimitingService {
     const resetTime = now + config.windowMs;
 
     try {
+      // Safety check for cache service availability
+      if (!cacheService) {
+        return {
+          count: 0,
+          resetTime,
+          remaining: config.maxRequests
+        };
+      }
+
       const cacheKey = `rate_limit:${key}`;
       const currentCount = await cacheService.get<number>(cacheKey) || 0;
       const remaining = Math.max(0, config.maxRequests - currentCount);
@@ -190,6 +199,17 @@ export class EnhancedRateLimitingService {
     const resetTime = now + config.burstWindowMs;
 
     try {
+      // Safety check for cache service availability
+      if (!cacheService) {
+        return {
+          count: 0,
+          resetTime,
+          remaining: config.burstLimit,
+          burstCount: 0,
+          burstResetTime: resetTime
+        };
+      }
+
       const cacheKey = `burst_limit:${key}`;
       const currentCount = await cacheService.get<number>(cacheKey) || 0;
       const remaining = Math.max(0, config.burstLimit - currentCount);
@@ -216,9 +236,19 @@ export class EnhancedRateLimitingService {
    */
   private async checkBlockStatus(key: string): Promise<RateLimitInfo> {
     try {
+      // Safety check for cache service availability
+      if (!cacheService) {
+        return {
+          count: 0,
+          resetTime: 0,
+          remaining: 0,
+          blocked: false
+        };
+      }
+
       const blockKey = `rate_limit_block:${key}`;
       const blockExpiry = await cacheService.get<number>(blockKey);
-      
+
       if (blockExpiry && Date.now() < blockExpiry) {
         return {
           count: 0,
@@ -284,7 +314,7 @@ export class EnhancedRateLimitingService {
     const blockExpiry = now + blockDuration;
 
     // Set block if configured
-    if (config.blockDuration) {
+    if (config.blockDuration && cacheService) {
       const blockKey = `rate_limit_block:${key}`;
       await cacheService.set(blockKey, blockExpiry, Math.ceil(blockDuration / 1000));
     }
@@ -629,6 +659,17 @@ export class EnhancedRateLimitingService {
    */
   public async getStatistics(): Promise<RateLimitStats> {
     try {
+      // Safety check for cache service availability
+      if (!cacheService) {
+        return {
+          totalRequests: 0,
+          blockedRequests: 0,
+          averageUsage: 0,
+          peakUsage: 0,
+          topConsumers: []
+        };
+      }
+
       const statsKey = 'rate_limit_stats';
       return await cacheService.get<RateLimitStats>(statsKey) || {
         totalRequests: 0,

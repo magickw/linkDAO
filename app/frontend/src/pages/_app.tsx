@@ -9,6 +9,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
+import { ContactProvider } from '@/contexts/ContactContext';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
 // Cart provider not needed - using service-based cart
@@ -340,9 +341,11 @@ export default function App({ Component, pageProps, router }: AppProps) {
                     {/* Automatic wallet login bridge with toast notifications */}
                     <WalletLoginBridgeWithToast />
                     <NavigationProvider>
-                      <EnhancedThemeProvider defaultTheme="system">
-                        <AppContent Component={Component} pageProps={pageProps} router={router} />
-                      </EnhancedThemeProvider>
+                      <ContactProvider>
+                        <EnhancedThemeProvider defaultTheme="system">
+                          <AppContent Component={Component} pageProps={pageProps} router={router} />
+                        </EnhancedThemeProvider>
+                      </ContactProvider>
                     </NavigationProvider>
                   </ToastProvider>
                 </AuthProvider>
