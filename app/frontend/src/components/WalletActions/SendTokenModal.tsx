@@ -235,7 +235,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           {txHash && (
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <p className="text-sm text-green-700 dark:text-green-200">
-                Transaction submitted! Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                Transaction submitted to {recipient}! Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}
               </p>
             </div>
           )}

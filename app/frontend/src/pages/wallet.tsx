@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Layout from '@/components/Layout';
 import { useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
@@ -631,8 +632,17 @@ export default function Wallet() {
           
           {activeTab === 'history' && (
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Recent Transactions</h2>
-              
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Recent Transactions</h2>
+                <Link
+                  href="/wallet/transactions"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white transition-colors text-sm font-medium"
+                >
+                  <span>View All Transactions</span>
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">

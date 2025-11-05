@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Transaction, TransactionType, TransactionStatus } from '../../types/wallet';
+import { useContacts } from '../../contexts/ContactContext';
 
 interface TransactionMiniFeedProps {
   transactions: Transaction[];
@@ -12,6 +13,7 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
   onTransactionClick,
   className = '' 
 }: TransactionMiniFeedProps) {
+  const { contacts } = useContacts();
   const [visibleTransactions, setVisibleTransactions] = useState(5);
   const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(new Set());
 
@@ -143,9 +145,25 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
   const getTransactionDescription = (transaction: Transaction) => {
     switch (transaction.type) {
       case TransactionType.SEND:
-        return `Sent ${formatTokenAmount(transaction.amount, transaction.token)} to ${transaction.to?.substring(0, 6)}...`;
+        // Show full address if available, otherwise show truncated version
+        const recipient = transaction.to || 'Unknown address';
+        // Check if we have a contact with a nickname for this address
+        const contact = contacts.find(c => c.walletAddress.toLowerCase() === recipient.toLowerCase());
+        const displayName = contact?.nickname || 
+          (recipient.length > 12 ? 
+            `${recipient.substring(0, 6)}...${recipient.substring(recipient.length - 6)}` : 
+            recipient);
+        return `Sent ${formatTokenAmount(transaction.amount, transaction.token)} to ${displayName}`;
       case TransactionType.RECEIVE:
-        return `Received ${formatTokenAmount(transaction.amount, transaction.token)} from ${transaction.from?.substring(0, 6)}...`;
+        // Show full address if available, otherwise show truncated version
+        const sender = transaction.from || 'Unknown address';
+        // Check if we have a contact with a nickname for this address
+        const senderContact = contacts.find(c => c.walletAddress.toLowerCase() === sender.toLowerCase());
+        const senderName = senderContact?.nickname || 
+          (sender.length > 12 ? 
+            `${sender.substring(0, 6)}...${sender.substring(sender.length - 6)}` : 
+            sender);
+        return `Received ${formatTokenAmount(transaction.amount, transaction.token)} from ${senderName}`;
       case TransactionType.SWAP:
         return `Swapped ${formatTokenAmount(transaction.amount, transaction.token)} for ${transaction.toToken}`;
       case TransactionType.CONTRACT:
