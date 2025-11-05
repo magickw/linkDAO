@@ -1,3 +1,87 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useAccount, useChainId } from 'wagmi';
+import { walletService } from '../services/walletService';
+import { EnhancedWalletData, TokenBalance } from '../types/wallet';
+import { dexService } from '../services/dexService';
+import { cryptoPriceService } from '../services/cryptoPriceService';
+
+// Simple in-memory cache for recent transactions to reduce API calls
+const txCache = new Map<string, { data: any[]; timestamp: number }>();
+const TX_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+// Allow external invalidation of the transaction cache
+export function invalidateTxCache(address?: string) {
+  if (!address) {
+    txCache.clear();
+    return;
+  }
+  const prefix = `${address}:`;
+  for (const key of Array.from(txCache.keys())) {
+    if (key.startsWith(prefix)) txCache.delete(key);
+  }
+}
+
+interface UseWalletDataOptions {
+  address?: string;
+  chainId?: number;
+  refreshInterval?: number;
+  autoRefresh?: boolean;
+  enableTransactionHistory?: boolean;
+  maxTransactions?: number;
+}
+
+interface UseWalletDataReturn {
+  walletData: EnhancedWalletData | null;
+  portfolio: {
+    totalValueUSD: number;
+    change24hPercent: number;
+  } | null;
+  tokens: Array<{
+    symbol: string;
+    balanceFormatted: string;
+    valueUSD: number;
+    change24h: number;
+  }>;
+  transactions: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    token: { symbol: string };
+    valueUSD: string;
+    timestamp: string;
+    status: string;
+    hash: string;
+  }>;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  refresh: () => Promise<void>;
+  clearError: () => void;
+}
+
+export function useWalletData({
+  address: providedAddress,
+  chainId: providedChainId,
+  refreshInterval = 300000, // 5 minutes
+  autoRefresh = true,
+  enableTransactionHistory = false,
+  maxTransactions = 10
+}: UseWalletDataOptions = {}): UseWalletDataReturn {
+  const { address: connectedAddress } = useAccount();
+  const connectedChainId = useChainId();
+  const address = providedAddress || connectedAddress;
+  const chainId = providedChainId || connectedChainId;
+
+  // No direct on-chain subscription here; we'll poll via our service to support multi-chain balances
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const refetchBalance = async () => {};
+
+  const [walletData, setWalletData] = useState<EnhancedWalletData | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
     if (!address) return;
@@ -90,6 +174,8 @@
                         status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
                         hash: tx.hash,
                         chainId,
+                        from: tx.from,
+                        to: tx.to || (isSend ? tx.to : address),
                       };
                     });
                   }
@@ -312,3 +398,88 @@
       setIsLoadingBalance(false);
     }
   }, [address, chainId, providedChainId, connectedChainId]);
+
+  // Refresh wallet data manually
+  const refreshWalletData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchBalance();
+      await fetchWalletData();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh wallet data';
+      setError(errorMessage);
+      console.error('Wallet data refresh error:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchBalance, fetchWalletData, chainId, providedChainId, connectedChainId]);
+
+  // Initial fetch when address is available
+  useEffect(() => {
+    if (address) {
+      fetchWalletData();
+    }
+  }, [address, fetchWalletData, chainId, providedChainId, connectedChainId]);
+
+  // Transform data for the wallet page
+  const portfolio = walletData ? {
+    totalValueUSD: walletData.portfolioValue,
+    change24hPercent: walletData.portfolioChange
+  } : null;
+
+  const tokens = walletData?.balances.map(balance => ({
+    symbol: balance.symbol,
+    balanceFormatted: `${balance.balance.toFixed(4)} ${balance.symbol}`,
+    valueUSD: balance.valueUSD,
+    change24h: balance.change24h
+  })) || [];
+
+  const transactions = walletData?.recentTransactions.map((tx: any) => ({
+    id: tx.id,
+    type: tx.type,
+    amount: Number(tx.amount || 0),
+    token: { symbol: typeof tx.token === 'string' ? tx.token : tx.token?.symbol || '' },
+    valueUSD: String(tx.valueUSD ?? '0'),
+    timestamp: (tx.timestamp instanceof Date ? tx.timestamp : new Date(tx.timestamp)).toISOString(),
+    status: tx.status,
+    hash: tx.hash
+  })) || [];
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return {
+    walletData,
+    portfolio,
+    tokens,
+    transactions,
+    isLoading: isLoadingBalance,
+    isRefreshing,
+    error,
+    lastUpdated,
+    refresh: refreshWalletData,
+    clearError
+  };
+}
+
+// Portfolio performance hook
+export function usePortfolioPerformance(timeframe: '1d' | '1w' | '1m' | '1y') {
+  const [data, setData] = useState<{
+    values: number[];
+    timestamps: string[];
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Portfolio performance tracking requires historical data from a price API or indexer
+    // For now, we return null to indicate this feature is not yet implemented
+    // TODO: Integrate with a price API like CoinGecko or a blockchain indexer
+    setIsLoading(false);
+    setData(null);
+  }, [timeframe]);
+
+  return { data, isLoading };
+}
+
+export default useWalletData;
