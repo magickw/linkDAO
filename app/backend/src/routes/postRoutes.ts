@@ -6,11 +6,49 @@ import { feedLimiter, createPostLimiter } from '../middleware/rateLimiter';
 const router = express.Router();
 const postController = new PostController();
 
+// Add a simple test endpoint for connection verification FIRST
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Post API is working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Add a diagnostic endpoint to test fallback service directly
+router.get('/diagnostic', async (req, res) => {
+  try {
+    const { FallbackPostService } = require('../services/fallbackPostService');
+    const fallbackService = new FallbackPostService();
+    
+    // Test creating a post with fallback service
+    const testPost = await fallbackService.createPost({
+      author: '0xtest',
+      content: 'Diagnostic test post'
+    });
+    
+    const allPosts = await fallbackService.getAllPosts();
+    
+    res.json({
+      success: true,
+      message: 'Fallback service works',
+      testPost: testPost,
+      totalPosts: allPosts.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Specific routes first (more specific routes before general ones)
-router.get('/feed', feedLimiter, postController.getFeed);
-router.get('/author/:author', postController.getPostsByAuthor);
-router.get('/tag/:tag', postController.getPostsByTag);
-router.get('/:id', postController.getPostById);
+router.get('/feed', feedLimiter, postController.getFeed.bind(postController));
+router.get('/author/:author', postController.getPostsByAuthor.bind(postController));
+router.get('/tag/:tag', postController.getPostsByTag.bind(postController));
+router.get('/:id', postController.getPostById.bind(postController));
 
 // General routes - conditionally apply CSRF protection and rate limiting
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -23,19 +61,9 @@ const rateLimitMiddleware = isDevelopment ?
   (req: any, res: any, next: any) => next() : // Skip rate limiting in development
   createPostLimiter; // Use rate limiting in production
 
-router.post('/', csrfMiddleware, rateLimitMiddleware, postController.createPost);
-router.put('/:id', csrfMiddleware, postController.updatePost);
-router.delete('/:id', csrfMiddleware, postController.deletePost);
-router.get('/', postController.getAllPosts);
-
-// Add a simple test endpoint for connection verification
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Post API is working',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
+router.post('/', csrfMiddleware, rateLimitMiddleware, postController.createPost.bind(postController));
+router.put('/:id', csrfMiddleware, postController.updatePost.bind(postController));
+router.delete('/:id', csrfMiddleware, postController.deletePost.bind(postController));
+router.get('/', postController.getAllPosts.bind(postController));
 
 export default router;

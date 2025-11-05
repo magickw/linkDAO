@@ -5,43 +5,66 @@ import { PostService } from '../services/postService';
 import { FallbackPostService } from '../services/fallbackPostService';
 import { CreatePostInput, UpdatePostInput } from '../models/Post';
 import { AppError, NotFoundError } from '../middleware/errorHandler';
+import { databaseService } from '../services/databaseService';
 
 const postService = new PostService();
 const fallbackPostService = new FallbackPostService();
 
 export class PostController {
   private async getActivePostService() {
-    // Try to use the main post service, fall back to in-memory service if database is unavailable
+    // TEMPORARY: Force fallback service for testing
+    safeLogger.info('Using fallback service for testing');
+    return fallbackPostService;
+    
+    // Original logic (commented out for testing)
+    /*
     try {
-      // Quick health check - try to get all posts
-      await postService.getAllPosts();
+      // Quick health check - check if database is connected
+      if (!databaseService.isDatabaseConnected()) {
+        throw new Error('Database not connected');
+      }
+      
+      // Try a simple database operation instead of getAllPosts which might fail for other reasons
+      await databaseService.query('SELECT 1 as test');
       return postService;
     } catch (error) {
-      safeLogger.warn('Main post service unavailable, using fallback service');
+      safeLogger.warn('Main post service unavailable, using fallback service:', error.message);
       return fallbackPostService;
     }
+    */
   }
 
   async createPost(req: Request, res: Response): Promise<Response> {
     try {
+      safeLogger.info('POST /api/posts - Request received:', { body: req.body });
+      
       const input: CreatePostInput = req.body;
       
       if (!input.author || !input.content) {
+        safeLogger.warn('POST /api/posts - Missing required fields:', { author: !!input.author, content: !!input.content });
         return res.status(400).json({ 
           success: false,
           error: 'Author and content are required' 
         });
       }
       
+      safeLogger.info('POST /api/posts - Getting active service...');
       const activeService = await this.getActivePostService();
+      
+      safeLogger.info('POST /api/posts - Creating post with service:', activeService.constructor.name);
       const post = await activeService.createPost(input);
       
+      safeLogger.info('POST /api/posts - Post created successfully:', { id: post.id });
       return res.status(201).json({
         success: true,
         data: post
       });
     } catch (error: any) {
-      safeLogger.error('Error in createPost controller:', error);
+      safeLogger.error('Error in createPost controller:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       
       return res.status(500).json({ 
         success: false,
@@ -206,15 +229,24 @@ export class PostController {
 
   async getAllPosts(req: Request, res: Response): Promise<Response> {
     try {
+      safeLogger.info('GET /api/posts - Request received');
+      
       const activeService = await this.getActivePostService();
+      safeLogger.info('GET /api/posts - Using service:', activeService.constructor.name);
+      
       const posts = await activeService.getAllPosts();
+      safeLogger.info('GET /api/posts - Retrieved posts:', posts.length);
       
       return res.json({
         success: true,
         data: posts
       });
     } catch (error: any) {
-      safeLogger.error('Error in getAllPosts controller:', error);
+      safeLogger.error('Error in getAllPosts controller:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       return res.status(500).json({ 
         success: false,
         error: 'Failed to retrieve posts' 

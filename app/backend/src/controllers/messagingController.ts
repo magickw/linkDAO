@@ -64,7 +64,7 @@ export class MessagingController {
         return;
       }
 
-      res.status(201).json(apiResponse.success(conversation.data, 'Conversation started successfully'));
+      res.status(201).json(apiResponse.success(conversation.data || conversation, 'Conversation started successfully'));
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
       res.status(500).json(apiResponse.error('Failed to start conversation'));
@@ -130,7 +130,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(messages.data, 'Messages retrieved successfully'));
+      res.json(apiResponse.success(messages.data || messages, 'Messages retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversation messages:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve messages'));
@@ -182,7 +182,7 @@ export class MessagingController {
         return;
       }
 
-      res.status(201).json(apiResponse.success(message.data, 'Message sent successfully'));
+      res.status(201).json(apiResponse.success(message.data || message, 'Message sent successfully'));
     } catch (error) {
       safeLogger.error('Error sending message:', error);
       res.status(500).json(apiResponse.error('Failed to send message'));
@@ -386,7 +386,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(result.data, 'Message status updated successfully'));
+      res.json(apiResponse.success(result.data || result, 'Message status updated successfully'));
     } catch (error) {
       safeLogger.error('Error updating message status:', error);
       res.status(500).json(apiResponse.error('Failed to update message status'));
@@ -473,7 +473,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(thread.data, 'Message thread retrieved successfully'));
+      res.json(apiResponse.success(thread.data || thread, 'Message thread retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting message thread:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve message thread'));
@@ -607,7 +607,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(participants.data, 'Participants retrieved successfully'));
+      res.json(apiResponse.success(participants.data || participants, 'Participants retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversation participants:', error);
       res.status(500).json(apiResponse.error('Failed to retrieve participants'));
@@ -637,7 +637,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success((result as any).data, 'Participant added successfully'));
+      res.json(apiResponse.success((result as any).data || result, 'Participant added successfully'));
     } catch (error) {
       safeLogger.error('Error adding participant:', error);
       res.status(500).json(apiResponse.error('Failed to add participant'));
