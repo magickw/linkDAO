@@ -168,6 +168,10 @@ export class FeedService {
         headers: {
           'Content-Type': 'application/json',
         },
+      }).catch((fetchError) => {
+        // Handle network errors (backend unavailable)
+        console.warn('Backend unavailable for feed, returning empty feed');
+        throw new Error('Backend service is temporarily unavailable. Please try again later.');
       });
 
       if (!response.ok) {

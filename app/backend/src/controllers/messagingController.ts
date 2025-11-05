@@ -321,11 +321,11 @@ export class MessagingController {
       });
 
       if (!encryptedMessage.success) {
-        res.status(400).json(apiResponse.error((encryptedMessage as any).message, 400));
+        res.status(400).json(apiResponse.error(encryptedMessage.message, 400));
         return;
       }
 
-      res.json(apiResponse.success((encryptedMessage as any).data, 'Message encrypted successfully'));
+      res.json(apiResponse.success(encryptedMessage, 'Message encrypted successfully'));
     } catch (error) {
       safeLogger.error('Error encrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to encrypt message'));
@@ -352,11 +352,11 @@ export class MessagingController {
       });
 
       if (!decryptedMessage.success) {
-        res.status(400).json(apiResponse.error((decryptedMessage as any).message, 400));
+        res.status(400).json(apiResponse.error(decryptedMessage.message, 400));
         return;
       }
 
-      res.json(apiResponse.success((decryptedMessage as any).data, 'Message decrypted successfully'));
+      res.json(apiResponse.success(decryptedMessage, 'Message decrypted successfully'));
     } catch (error) {
       safeLogger.error('Error decrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to decrypt message'));

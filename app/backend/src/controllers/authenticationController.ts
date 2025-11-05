@@ -1,6 +1,6 @@
 /// <reference path="../types/express.d.ts" />
 import { Request, Response } from 'express';
-import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
+// Removed unused sanitization imports - validation is handled by express-validator
 import { safeLogger } from '../utils/safeLogger';
 import { AuthenticationService } from '../services/authenticationService';
 import { AuthenticatedRequest } from '../middleware/authenticationMiddleware';
@@ -97,7 +97,7 @@ export class AuthenticationController {
 
       const { walletAddress, signature, nonce }: AuthenticationRequest = req.body;
       const userAgent = req.get('User-Agent');
-      const ipAddress = req.ip || req.connection.remoteAddress;
+      const ipAddress = req.ip || req.socket.remoteAddress;
 
       // Validate required fields
       if (!walletAddress || !signature || !nonce) {
@@ -179,7 +179,7 @@ export class AuthenticationController {
 
       const { refreshToken }: RefreshTokenRequest = req.body;
       const userAgent = req.get('User-Agent');
-      const ipAddress = req.ip || req.connection.remoteAddress;
+      const ipAddress = req.ip || req.socket.remoteAddress;
 
       if (!refreshToken) {
         return res.status(400).json({
@@ -318,7 +318,7 @@ export class AuthenticationController {
     try {
       const authHeader = req.headers.authorization;
       const userAgent = req.get('User-Agent');
-      const ipAddress = req.ip || req.connection.remoteAddress;
+      const ipAddress = req.ip || req.socket.remoteAddress;
 
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.substring(7);
@@ -419,7 +419,7 @@ export class AuthenticationController {
    * Health check for authentication service
    * GET /api/auth/health
    */
-  healthCheck = async (req: Request, res: Response) => {
+  healthCheck = async (_req: Request, res: Response) => {
     try {
       // Perform basic health checks
       const isHealthy = true; // Add actual health checks here

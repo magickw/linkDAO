@@ -40,6 +40,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 import express from 'express';
 import { createServer } from 'http';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -226,6 +227,9 @@ app.use(performanceOptimizer.optimize());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Cookie parsing
+app.use(cookieParser());
+
 // Static files
 app.use('/static', express.static('src/public'));
 
@@ -335,6 +339,9 @@ app.get('/api/csrf-token', (req, res) => {
   });
 });
 
+// Import session routes
+import sessionRoutes from './routes/sessionRoutes';
+
 // Import post routes
 import postRoutes from './routes/postRoutes';
 
@@ -367,6 +374,9 @@ import mobileRoutes from './routes/mobileRoutes';
 
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
+
+// Use session routes
+app.use('/api', sessionRoutes);
 
 // Use post routes
 app.use('/api/posts', postRoutes);

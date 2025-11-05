@@ -65,11 +65,11 @@ const deployConfig = {
   security: {
     contentSecurityPolicy: {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://vercel.live"],
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://vercel.live", "https://js.stripe.com", "https://storage.googleapis.com"],
       'style-src': ["'self'", "'unsafe-inline'"],
       'img-src': ["'self'", "data:", "https:", "blob:"],
       'font-src': ["'self'", "https:"],
-      'connect-src': ["'self'", "https:", "wss:", "ws:"],
+      'connect-src': ["'self'", "https:", "wss:", "ws:", "http://localhost:*", "ws://localhost:*"],
       'frame-src': ["'none'"],
       'object-src': ["'none'"],
       'base-uri': ["'self'"],

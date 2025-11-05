@@ -70,7 +70,7 @@ const nextConfig = {
           //   key: 'Strict-Transport-Security',
           //   value: 'max-age=31536000; includeSubDomains'
           // },
-          // Content Security Policy
+          // Content Security Policy - allow localhost in development
           {
             key: 'Content-Security-Policy',
             value: [
@@ -79,7 +79,9 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https: wss: ws: https://api.stripe.com",
+              process.env.NODE_ENV === 'development' 
+                ? "connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:* https://api.stripe.com"
+                : "connect-src 'self' https: wss: ws: https://api.stripe.com",
               "frame-src 'self' https: https://js.stripe.com https://hooks.stripe.com",
               "worker-src 'self' blob:",
               "object-src 'none'",

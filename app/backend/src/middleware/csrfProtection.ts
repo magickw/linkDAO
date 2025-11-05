@@ -68,6 +68,24 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // In development mode, be more lenient with CSRF protection
+  if (process.env.NODE_ENV === 'development') {
+    // Allow requests without session/token for development
+    const token = req.headers['x-csrf-token'] as string || req.body?._csrf;
+    
+    if (!token) {
+      // Generate a temporary session and allow the request
+      const tempSessionId = 'dev_session_' + Date.now();
+      const tempToken = generateCSRFToken(tempSessionId);
+      
+      // Add the token to response headers for future use
+      res.setHeader('X-CSRF-Token', tempToken);
+      res.setHeader('X-Session-ID', tempSessionId);
+      
+      return next();
+    }
+  }
+  
   // Get session ID (from cookie or header)
   const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] as string;
   

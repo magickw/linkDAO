@@ -12,10 +12,14 @@ router.get('/author/:author', postController.getPostsByAuthor);
 router.get('/tag/:tag', postController.getPostsByTag);
 router.get('/:id', postController.getPostById);
 
-// General routes
-router.post('/', csrfProtection,  createPostLimiter, postController.createPost);
-router.put('/:id', csrfProtection,  postController.updatePost);
-router.delete('/:id', csrfProtection,  postController.deletePost);
+// General routes - conditionally apply CSRF protection
+const csrfMiddleware = process.env.NODE_ENV === 'development' ? 
+  (req: any, res: any, next: any) => next() : // Skip CSRF in development
+  csrfProtection; // Use CSRF in production
+
+router.post('/', csrfMiddleware, createPostLimiter, postController.createPost);
+router.put('/:id', csrfMiddleware, postController.updatePost);
+router.delete('/:id', csrfMiddleware, postController.deletePost);
 router.get('/', postController.getAllPosts);
 
 export default router;

@@ -110,8 +110,7 @@ class AuthService {
       let signature: string | null = null;
       try {
         // Sign message with wallet - this will prompt the user
-        // Using wagmi/core signMessage requires account parameter in newer versions
-        // Ensure message is a plain string (wagmi v2 will handle conversion internally)
+        // Using wagmi/core signMessage with proper error handling
         signature = await signMessage(config, {
           account: address as `0x${string}`,
           message: message as string
