@@ -12,12 +12,6 @@ const fallbackPostService = new FallbackPostService();
 
 export class PostController {
   private async getActivePostService() {
-    // TEMPORARY: Force fallback service for testing
-    safeLogger.info('Using fallback service for testing');
-    return fallbackPostService;
-    
-    // Original logic (commented out for testing)
-    /*
     try {
       // Quick health check - check if database is connected
       if (!databaseService.isDatabaseConnected()) {
@@ -31,7 +25,6 @@ export class PostController {
       safeLogger.warn('Main post service unavailable, using fallback service:', error.message);
       return fallbackPostService;
     }
-    */
   }
 
   async createPost(req: Request, res: Response): Promise<Response> {

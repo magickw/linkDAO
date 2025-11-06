@@ -112,7 +112,8 @@ export class DatabaseService {
       const result = await this.db.insert(schema.posts).values({
         authorId,
         contentCid,
-        parentId: parentId || null
+        parentId: parentId || null,
+        isTokenGated: false
       }).returning();
       
       return result[0];
@@ -133,7 +134,10 @@ export class DatabaseService {
 
   async getAllPosts() {
     try {
-      return await this.db.select().from(schema.posts);
+      safeLogger.info("Getting all posts from database");
+      const result = await this.db.select().from(schema.posts);
+      safeLogger.info(`Retrieved ${result.length} posts from database`);
+      return result;
     } catch (error) {
       safeLogger.error("Error getting all posts:", error);
       throw error;
