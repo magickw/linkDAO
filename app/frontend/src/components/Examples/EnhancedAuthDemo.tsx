@@ -11,14 +11,13 @@ import { AuthenticationRecovery } from '@/components/Auth/AuthenticationRecovery
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 export const EnhancedAuthDemo: React.FC = () => {
-  const { 
-    user, 
-    isAuthenticated, 
-    isLoading, 
-    isRecovering, 
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    isRecovering,
     error,
     sessionStatus,
-    enhancedAuthenticate,
     recoverSession,
     logout,
     clearError
