@@ -56,7 +56,7 @@ const PerformanceDashboard: React.FC = () => {
   // Update performance data
   const updatePerformanceData = useCallback(async () => {
     try {
-      const vitals = performanceMonitoringService.getCoreWebVitals();
+      const vitals = performanceMonitoringService.getWebVitals();
       setCoreWebVitals(vitals);
 
       const activeAlerts = performanceMonitoringService.getActiveAlerts();
