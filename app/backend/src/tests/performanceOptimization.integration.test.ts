@@ -4,9 +4,9 @@ import { EnhancedCDNOptimizationService } from '../services/enhancedCdnOptimizat
 import { MarketplaceCachingService } from '../services/marketplaceCachingService';
 import { EnhancedMonitoringService } from '../services/enhancedMonitoringService';
 import { ErrorTrackingService } from '../services/errorTrackingService';
-import { HealthCheckService } from '../services/healthCheckService';
 import { PerformanceMonitoringService } from '../services/performanceMonitoringService';
 import { AnalyticsService } from '../services/analyticsService';
+import { healthMonitoringService } from '../services/healthMonitoringService';
 
 describe('Performance Optimization Integration Tests', () => {
   let dbService: EnhancedDatabaseOptimizationService;
@@ -14,7 +14,6 @@ describe('Performance Optimization Integration Tests', () => {
   let cacheService: MarketplaceCachingService;
   let monitoringService: EnhancedMonitoringService;
   let errorTrackingService: ErrorTrackingService;
-  let healthCheckService: HealthCheckService;
   let performanceService: PerformanceMonitoringService;
   let analyticsService: AnalyticsService;
 
@@ -112,8 +111,6 @@ describe('Performance Optimization Integration Tests', () => {
       process.env.TEST_REDIS_URL || 'redis://localhost:6379/3'
     );
     
-    healthCheckService = new HealthCheckService(healthCheckConfig);
-    
     monitoringService = new EnhancedMonitoringService(
       monitoringConfig,
       performanceService,
@@ -132,7 +129,6 @@ describe('Performance Optimization Integration Tests', () => {
       cacheService?.close(),
       monitoringService?.close(),
       errorTrackingService?.close(),
-      healthCheckService?.close(),
       performanceService?.destroy()
     ]);
   });
@@ -277,34 +273,35 @@ describe('Performance Optimization Integration Tests', () => {
 
   describe('Health Check Service', () => {
     it('should check system health', async () => {
-      const health = await healthCheckService.getSystemHealth();
+      const health = await healthMonitoringService.performHealthCheck();
       
-      expect(health).toHaveProperty('overall');
+      expect(health).toHaveProperty('status');
       expect(health).toHaveProperty('services');
-      expect(health).toHaveProperty('lastUpdate');
+      expect(health).toHaveProperty('timestamp');
       expect(Array.isArray(health.services)).toBe(true);
-      expect(['healthy', 'degraded', 'unhealthy']).toContain(health.overall);
+      expect(['healthy', 'degraded', 'unhealthy']).toContain(health.status);
     });
 
     it('should check individual service health', async () => {
-      const dbHealth = await healthCheckService.getServiceHealth('database');
+      const health = await healthMonitoringService.performHealthCheck();
+      const dbService = health.services.find(s => s.name === 'database');
       
-      if (dbHealth) {
-        expect(dbHealth).toHaveProperty('service');
-        expect(dbHealth).toHaveProperty('status');
-        expect(dbHealth).toHaveProperty('responseTime');
-        expect(dbHealth.service).toBe('database');
+      if (dbService) {
+        expect(dbService).toHaveProperty('name');
+        expect(dbService).toHaveProperty('status');
+        expect(dbService.name).toBe('database');
       }
     });
 
     it('should force health check', async () => {
-      await expect(healthCheckService.forceHealthCheck()).resolves.not.toThrow();
-      await expect(healthCheckService.forceHealthCheck('database')).resolves.not.toThrow();
+      await expect(healthMonitoringService.performHealthCheck()).resolves.not.toThrow();
     });
 
     it('should provide health metrics', async () => {
-      const metrics = await healthCheckService.getHealthMetrics('database', 50);
-      expect(Array.isArray(metrics)).toBe(true);
+      const metrics = healthMonitoringService.getMetrics();
+      expect(metrics).toHaveProperty('uptime');
+      expect(metrics).toHaveProperty('totalRequests');
+      expect(metrics).toHaveProperty('errorRate');
     });
   });
 
@@ -387,7 +384,7 @@ describe('Performance Optimization Integration Tests', () => {
         cacheMetrics
       ] = await Promise.all([
         monitoringService.getSystemStatus(),
-        healthCheckService.getSystemHealth(),
+        healthMonitoringService.performHealthCheck(), // Replaced healthCheckService.getSystemHealth()
         errorTrackingService.getErrorAnalytics(),
         cacheService.getCachePerformanceMetrics()
       ]);

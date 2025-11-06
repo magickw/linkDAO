@@ -1,140 +1,163 @@
+import express from 'express';
+import { optimizedDb } from '../services/optimizedDatabaseManager';
+import { memoryManager } from '../services/memoryManager';
+import { Redis } from 'ioredis';
 
-import { Router, Request, Response } from 'express';
+const router = express.Router();
 
-const router = Router();
-
-/**
- * Emergency health check endpoints
- * These endpoints always return success to prevent service unavailability
- */
-
-// Basic health check
-router.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'LinkDAO Backend',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Ping endpoint
-router.get('/ping', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'pong',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Status endpoint
-router.get('/status', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    status: 'operational',
-    services: {
-      api: 'healthy',
-      database: 'connected',
-      cache: 'available'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Emergency API endpoints that always work
-router.get('/api/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      status: 'healthy',
-      api: 'operational',
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// KYC status endpoint (mock response to prevent 403 errors)
-router.get('/api/auth/kyc/status', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      status: 'pending',
-      verified: false,
-      message: 'KYC verification in progress'
-    }
-  });
-});
-
-// Profile endpoint (mock response to prevent 500 errors)
-router.get('/api/profiles/address/:address', (req: Request, res: Response) => {
-  const { address } = req.params;
+// Emergency health check - minimal dependencies
+router.get('/emergency-health', async (req, res) => {
+  const startTime = Date.now();
   
-  res.status(200).json({
-    success: true,
-    data: {
-      id: 'mock-id',
-      walletAddress: address,
-      handle: '',
-      ens: '',
-      avatarCid: '',
-      bioCid: '',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  });
-});
-
-// Feed endpoint (mock response to prevent errors)
-router.get('/api/feed/enhanced', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      posts: [],
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: 0,
-        hasMore: false
+  try {
+    // Basic health indicators
+    const health = {
+      status: 'unknown',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      responseTime: 0,
+      memory: {
+        status: 'unknown',
+        usage: 0,
+        rss: 0
+      },
+      database: {
+        status: 'unknown',
+        connections: 0,
+        responseTime: 0
+      },
+      emergency: {
+        mode: false,
+        fixes_applied: false
       }
+    };
+
+    // Memory check
+    try {
+      const memStats = memoryManager.getMemoryStats();
+      health.memory = {
+        status: memStats.status,
+        usage: memStats.memoryPercent,
+        rss: memStats.rssMB
+      };
+    } catch (error) {
+      health.memory.status = 'error';
     }
-  });
-});
 
-// Communities endpoint (mock response)
-router.get('/communities/trending', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: []
-  });
-});
-
-// Marketplace endpoints (mock responses)
-router.get('/api/marketplace/categories', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: [
-      { id: 1, name: 'Electronics', slug: 'electronics' },
-      { id: 2, name: 'Fashion', slug: 'fashion' },
-      { id: 3, name: 'Home & Garden', slug: 'home-garden' }
-    ]
-  });
-});
-
-router.get('/marketplace/listings', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    data: {
-      listings: [],
-      pagination: {
-        page: 1,
-        limit: 24,
-        total: 0,
-        hasMore: false
-      }
+    // Database check
+    try {
+      const dbHealth = await optimizedDb.healthCheck();
+      health.database = {
+        status: dbHealth.healthy ? 'healthy' : 'unhealthy',
+        connections: dbHealth.stats.totalCount,
+        responseTime: dbHealth.stats.responseTime || 0
+      };
+    } catch (error) {
+      health.database.status = 'error';
     }
-  });
+
+    // Emergency mode check
+    try {
+      const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+      const emergencyMode = await redis.get('emergency_mode');
+      const fixesApplied = await redis.get('emergency:applied_at');
+      
+      health.emergency = {
+        mode: emergencyMode === 'true',
+        fixes_applied: !!fixesApplied
+      };
+      
+      await redis.quit();
+    } catch (error) {
+      // Redis unavailable - assume emergency mode
+      health.emergency.mode = true;
+    }
+
+    // Overall status
+    const memoryOk = health.memory.status !== 'critical' && health.memory.status !== 'error';
+    const databaseOk = health.database.status === 'healthy';
+    const responseTimeOk = (Date.now() - startTime) < 5000;
+
+    if (memoryOk && databaseOk && responseTimeOk) {
+      health.status = 'healthy';
+    } else if (health.memory.status === 'critical' || health.database.status === 'error') {
+      health.status = 'critical';
+    } else {
+      health.status = 'degraded';
+    }
+
+    health.responseTime = Date.now() - startTime;
+
+    // Set appropriate status code
+    const statusCode = health.status === 'healthy' ? 200 : 
+                      health.status === 'degraded' ? 200 : 503;
+
+    res.status(statusCode).json(health);
+
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      responseTime: Date.now() - startTime
+    });
+  }
+});
+
+// Emergency memory cleanup endpoint
+router.post('/emergency-memory-cleanup', async (req, res) => {
+  try {
+    console.log('🚨 Emergency memory cleanup requested');
+    const beforeStats = memoryManager.getMemoryStats();
+    
+    // Force cleanup
+    const afterStats = memoryManager.forceCleanup();
+    
+    res.json({
+      success: true,
+      message: 'Memory cleanup completed',
+      before: beforeStats,
+      after: afterStats,
+      freed: beforeStats.heapUsedMB - afterStats.heapUsedMB
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Emergency database cleanup endpoint
+router.post('/emergency-db-cleanup', async (req, res) => {
+  try {
+    console.log('🚨 Emergency database cleanup requested');
+    
+    const beforeStats = optimizedDb.getPoolStats();
+    
+    // Force cleanup connections
+    await optimizedDb.query(`
+      SELECT pg_terminate_backend(pid) 
+      FROM pg_stat_activity 
+      WHERE state = 'idle' 
+      AND query_start < NOW() - INTERVAL '30 seconds'
+    `);
+    
+    const afterStats = optimizedDb.getPoolStats();
+    
+    res.json({
+      success: true,
+      message: 'Database cleanup completed',
+      before: beforeStats,
+      after: afterStats,
+      freed_connections: beforeStats.totalCount - afterStats.totalCount
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 export default router;

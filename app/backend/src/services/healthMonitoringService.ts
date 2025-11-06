@@ -283,7 +283,7 @@ export class HealthMonitoringService {
           new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
         ]);
     
-        if (response.ok) {
+        if ((response as any).ok) {
           services.push({ name: 'Ethereum_RPC', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
           services.push({ name: 'Ethereum_RPC', status: 'degraded', error: `HTTP ${response.status}` });
@@ -308,7 +308,7 @@ export class HealthMonitoringService {
             new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Fallback RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
           ]);
       
-          if (fallbackResponse.ok) {
+          if ((fallbackResponse as any).ok) {
             services.push({ name: 'Ethereum_RPC', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using fallback endpoint' });
           } else {
             services.push({ name: 'Ethereum_RPC', status: 'unhealthy', error: `HTTP ${fallbackResponse.status} on fallback` });
@@ -332,7 +332,7 @@ export class HealthMonitoringService {
           new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('IPFS timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
         ]);
     
-        if (response.ok) {
+        if ((response as any).ok) {
           services.push({ name: 'IPFS_Gateway', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
           services.push({ name: 'IPFS_Gateway', status: 'degraded', error: `HTTP ${response.status}` });
@@ -350,7 +350,7 @@ export class HealthMonitoringService {
             new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Pinata timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
           ]);
       
-          if (pinataResponse.ok) {
+          if ((pinataResponse as any).ok) {
             services.push({ name: 'IPFS_Gateway', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using Pinata fallback' });
           } else {
             services.push({ name: 'IPFS_Gateway', status: 'degraded', error: `HTTP ${pinataResponse.status} on Pinata` });

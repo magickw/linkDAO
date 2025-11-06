@@ -128,7 +128,7 @@ export class PerformanceMonitoringController {
         res.json({
           success: true,
           data: {
-            history: Object.fromEntries(history),
+            history: history instanceof Map ? Object.fromEntries(history) : history,
             summary: this.benchmarkService.getBenchmarkSummary()
           }
         });
@@ -279,7 +279,7 @@ export class PerformanceMonitoringController {
       const { pathName, perceivedPerformance, actualDuration, userId, userAgent } = req.body;
 
       if (!pathName || !perceivedPerformance || actualDuration === undefined) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'Missing required fields: pathName, perceivedPerformance, actualDuration'
         });

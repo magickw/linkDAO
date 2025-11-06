@@ -153,24 +153,24 @@ export class CommunityController {
                            error.status === 429;
       
       if (error.message.includes('already exists')) {
-        res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', 409, {
+        res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', {
           retryable: false,
           suggestion: 'Please choose a different community name'
         }));
       } else if (isServiceUnavailable) {
-        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again in a moment.', 503, {
+        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again in a moment.', {
           retryable: true,
           retryAfter: 30,
           errorCode: 'SERVICE_UNAVAILABLE'
         }));
       } else if (isRateLimited) {
-        res.status(429).json(createErrorResponse('RATE_LIMITED', 'Too many requests. Please wait before trying again.', 429, {
+        res.status(429).json(createErrorResponse('RATE_LIMITED', 'Too many requests. Please wait before trying again.', {
           retryable: true,
           retryAfter: 60,
           errorCode: 'RATE_LIMITED'
         }));
       } else {
-        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community', 500, {
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community', {
           retryable: true,
           errorCode: 'INTERNAL_ERROR'
         }));
