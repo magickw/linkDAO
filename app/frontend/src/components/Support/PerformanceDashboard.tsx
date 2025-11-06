@@ -46,6 +46,9 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       try {
         // Get performance report instead of individual metrics
         const report = performanceMonitoringService.generateReport();
+        
+        // Get current alerts
+        const currentAlerts = performanceMonitoringService.getAlerts();
 
         // Map report data to component state
         setCurrentMetrics({
@@ -55,9 +58,11 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           userExperience: report.userExperience
         } as any);
 
-        // Network condition and alerts are not yet implemented
+        // Set alerts from service
+        setAlerts(currentAlerts);
+
+        // Network condition is not yet implemented
         setNetworkCondition(null);
-        setAlerts([]);
 
         setPerformanceHistory([]);
       } catch (error) {
@@ -67,24 +72,18 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
     initializeMonitoring();
 
-    // Set up listeners (stubbed until service supports them)
-    const handleMetricsUpdate = (metrics: PerformanceMetrics) => {
-      setCurrentMetrics(metrics);
-      setPerformanceHistory(prev => [...prev.slice(-99), metrics]);
-    };
-
-    const handleAlert = (alert: PerformanceAlert) => {
-      setAlerts(prev => [...prev, alert]);
-    };
-
-    // Note: These listener methods don't exist yet in the service
-    // performanceMonitoringService.addMetricsListener(handleMetricsUpdate);
-    // performanceMonitoringService.addAlertListener(handleAlert);
+    // Set up polling for alerts (since listeners aren't implemented yet)
+    const alertPollingInterval = setInterval(() => {
+      try {
+        const currentAlerts = performanceMonitoringService.getAlerts();
+        setAlerts(currentAlerts);
+      } catch (error) {
+        console.error('Failed to fetch alerts:', error);
+      }
+    }, 5000); // Poll every 5 seconds
 
     return () => {
-      // Cleanup listeners when they're implemented
-      // performanceMonitoringService.removeMetricsListener(handleMetricsUpdate);
-      // performanceMonitoringService.removeAlertListener(handleAlert);
+      clearInterval(alertPollingInterval);
     };
   }, [isOpen]);
 
@@ -127,7 +126,8 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   const resolveAlert = (alertId: string) => {
-    performanceMonitoringService.resolveAlert(alertId);
+    // Note: performanceMonitoringService.resolveAlert() doesn't exist yet
+    // Just update local state for now
     setAlerts(prev => prev.filter(alert => alert.id !== alertId));
   };
 
