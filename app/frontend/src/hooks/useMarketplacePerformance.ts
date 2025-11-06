@@ -138,10 +138,10 @@ export const useMarketplacePerformance = () => {
     setIsOptimizing(true);
     
     try {
-      const currentMetrics = performanceMonitoringService.getPerformanceSummary();
+      const report = performanceMonitoringService.generateReport();
 
       // Optimize based on Core Web Vitals
-      if (currentMetrics.averageLCP && currentMetrics.averageLCP > 2500) {
+      if (report.pageLoad.largestContentfulPaint > 2500) {
         // Poor LCP - enable aggressive preloading
         navigationPreloadService.updateConfig({
           enabled: true,
@@ -157,7 +157,7 @@ export const useMarketplacePerformance = () => {
         }));
       }
 
-      if (currentMetrics.averageFID && currentMetrics.averageFID > 100) {
+      if (report.pageLoad.firstInputDelay > 100) {
         // Poor FID - reduce JavaScript execution
         setOptimizations(prev => ({
           ...prev,
@@ -165,7 +165,7 @@ export const useMarketplacePerformance = () => {
         }));
       }
 
-      if (currentMetrics.averageCLS && currentMetrics.averageCLS > 0.1) {
+      if (report.pageLoad.cumulativeLayoutShift > 0.1) {
         // Poor CLS - optimize image loading
         setOptimizations(prev => ({
           ...prev,

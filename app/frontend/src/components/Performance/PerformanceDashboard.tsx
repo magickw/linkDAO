@@ -59,11 +59,9 @@ const PerformanceDashboard: React.FC = () => {
       const vitals = performanceMonitoringService.getWebVitals();
       setCoreWebVitals(vitals);
 
-      const activeAlerts = performanceMonitoringService.getActiveAlerts();
-      setAlerts(activeAlerts);
-
-      const summary = performanceMonitoringService.getPerformanceSummary();
-      setPerformanceSummary(summary);
+      // Generate performance report (includes all summary data)
+      const report = performanceMonitoringService.generateReport();
+      setPerformanceSummary(report);
 
       // Get enhanced cache performance metrics
       try {

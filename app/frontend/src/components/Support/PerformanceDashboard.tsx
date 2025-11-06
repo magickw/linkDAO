@@ -16,12 +16,12 @@ import {
   ArrowTrendingDownIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import {
-  performanceMonitoringService,
-  PerformanceMetrics,
-  PerformanceAlert,
-  NetworkCondition
-} from '../../services/performanceMonitoringService';
+import { performanceMonitoringService } from '../../services/performanceMonitoringService';
+
+// Note: These types are stubs until the performance monitoring service is updated
+type PerformanceMetrics = any;
+type PerformanceAlert = any;
+type NetworkCondition = any;
 
 interface PerformanceDashboardProps {
   isOpen: boolean;
@@ -44,20 +44,22 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     // Initialize performance monitoring
     const initializeMonitoring = async () => {
       try {
-        await performanceMonitoringService.initialize();
-        
-        // Get initial data
-        const metrics = performanceMonitoringService.getCurrentMetrics();
-        setCurrentMetrics(metrics);
-        
-        const condition = performanceMonitoringService.getNetworkCondition();
-        setNetworkCondition(condition);
-        
-        const history = performanceMonitoringService.getPerformanceHistory(1);
-        setPerformanceHistory(history);
-        
-        const activeAlerts = performanceMonitoringService.getActiveAlerts();
-        setAlerts(activeAlerts);
+        // Get performance report instead of individual metrics
+        const report = performanceMonitoringService.generateReport();
+
+        // Map report data to component state
+        setCurrentMetrics({
+          pageLoad: report.pageLoad,
+          apiPerformance: report.apiPerformance,
+          resourcePerformance: report.resourcePerformance,
+          userExperience: report.userExperience
+        } as any);
+
+        // Network condition and alerts are not yet implemented
+        setNetworkCondition(null);
+        setAlerts([]);
+
+        setPerformanceHistory([]);
       } catch (error) {
         console.error('Failed to initialize performance monitoring:', error);
       }
@@ -65,7 +67,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
     initializeMonitoring();
 
-    // Set up listeners
+    // Set up listeners (stubbed until service supports them)
     const handleMetricsUpdate = (metrics: PerformanceMetrics) => {
       setCurrentMetrics(metrics);
       setPerformanceHistory(prev => [...prev.slice(-99), metrics]);
@@ -75,12 +77,14 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       setAlerts(prev => [...prev, alert]);
     };
 
-    performanceMonitoringService.addMetricsListener(handleMetricsUpdate);
-    performanceMonitoringService.addAlertListener(handleAlert);
+    // Note: These listener methods don't exist yet in the service
+    // performanceMonitoringService.addMetricsListener(handleMetricsUpdate);
+    // performanceMonitoringService.addAlertListener(handleAlert);
 
     return () => {
-      performanceMonitoringService.removeMetricsListener(handleMetricsUpdate);
-      performanceMonitoringService.removeAlertListener(handleAlert);
+      // Cleanup listeners when they're implemented
+      // performanceMonitoringService.removeMetricsListener(handleMetricsUpdate);
+      // performanceMonitoringService.removeAlertListener(handleAlert);
     };
   }, [isOpen]);
 
