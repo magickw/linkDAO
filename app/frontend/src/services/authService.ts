@@ -90,7 +90,7 @@ class AuthService {
         }
       }
 
-      // Check localStorage for existing session
+      // Check localStorage for existing session with enhanced validation
       if (typeof window !== 'undefined') {
         const storedToken = localStorage.getItem('linkdao_access_token');
         const storedAddress = localStorage.getItem('linkdao_wallet_address');
@@ -608,6 +608,7 @@ class AuthService {
       localStorage.removeItem('linkdao_signature_timestamp');
       localStorage.removeItem('linkdao_user_data');
       localStorage.removeItem('linkdao_refresh_token');
+      localStorage.removeItem('auth_token');
     }
 
     if (token) {

@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { authService, KYCStatus } from '@/services/authService';
 import { enhancedAuthService } from '@/services/enhancedAuthService';
 import { sessionManager } from '@/services/sessionManager';
 import { AuthUser } from '@/types/auth';
 import { UserRole, Permission } from '@/types/auth';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -64,51 +65,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
+  const { validateSession } = useSessionValidation();
 
   // Check if we have a valid stored session
   const checkStoredSession = useCallback(async () => {
     try {
-      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
-      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
-      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-
-      if (storedToken && storedAddress && storedTimestamp && storedUserData) {
-        const timestamp = parseInt(storedTimestamp);
-        const now = Date.now();
-        
-        // Check if token is still valid (within 24 hours)
-        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+      if (!address) return false;
+      
+      const sessionValidation = await validateSession(address);
+      if (sessionValidation.isValid && sessionValidation.token) {
+        // Try to get user data from storage
+        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedUserData) {
           const userData = JSON.parse(storedUserData);
           setUser(userData);
-          setAccessToken(storedToken);
+          setAccessToken(sessionValidation.token);
           console.log('✅ Restored wallet session from storage');
           return true;
-        } else {
-          console.log('⏰ Stored session expired, clearing...');
-          clearStoredSession();
         }
       }
     } catch (error) {
       console.error('Error checking stored session:', error);
-      clearStoredSession();
     }
     return false;
-  }, []);
+  }, [address, validateSession]);
 
   // Clear stored session
   const clearStoredSession = useCallback(() => {
     Object.values(STORAGE_KEYS).forEach(key => {
-      localStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove ${key} from localStorage:`, error);
+      }
     });
   }, []);
 
   // Store session data
   const storeSession = useCallback((token: string, userData: AuthUser) => {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
-    localStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, userData.address);
-    localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
-    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+      localStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, userData.address);
+      localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
+      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to store session:', error);
+    }
   }, []);
 
   // Initialize authentication state
@@ -176,23 +178,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const walletAddress = accounts[0];
 
       // Check if we already have a valid session for this address
-      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
-      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
-
-      if (storedAddress === walletAddress && storedToken && storedTimestamp) {
-        const timestamp = parseInt(storedTimestamp);
-        const now = Date.now();
-        if (now - timestamp < TOKEN_EXPIRY_TIME) {
-          console.log('✅ Using existing valid session');
-          const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-          if (storedUserData) {
-            const userData = JSON.parse(storedUserData);
-            setUser(userData);
-            setAccessToken(storedToken);
-            setIsLoading(false);
-            return;
-          }
+      const sessionValidation = await validateSession(walletAddress);
+      if (sessionValidation.isValid && sessionValidation.token) {
+        console.log('✅ Using existing valid session');
+        // Try to get user data from storage
+        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setUser(userData);
+          setAccessToken(sessionValidation.token);
+          setIsLoading(false);
+          return;
         }
       }
 
@@ -221,7 +217,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [storeSession]);
+  }, [storeSession, validateSession]);
 
   // Login with wallet authentication (legacy method for compatibility)
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
@@ -233,23 +229,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Check if we have a valid session for this address
-      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
-      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
-
-      if (storedAddress === walletAddress && storedToken && storedTimestamp) {
-        const timestamp = parseInt(storedTimestamp);
-        const now = Date.now();
-        if (now - timestamp < TOKEN_EXPIRY_TIME) {
-          console.log('✅ Using existing valid session');
-          const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-          if (storedUserData) {
-            const userData = JSON.parse(storedUserData);
-            setUser(userData);
-            setAccessToken(storedToken);
-            await loadKYCStatus();
-            return { success: true };
-          }
+      const sessionValidation = await validateSession(walletAddress);
+      if (sessionValidation.isValid && sessionValidation.token) {
+        console.log('✅ Using existing valid session');
+        // Try to get user data from storage
+        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          setUser(userData);
+          setAccessToken(sessionValidation.token);
+          await loadKYCStatus();
+          return { success: true };
         }
       }
       

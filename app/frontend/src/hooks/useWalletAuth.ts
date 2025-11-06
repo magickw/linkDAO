@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/services/authService';
+import { enhancedAuthService } from '@/services/enhancedAuthService';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 
 interface WalletInfo {
   isBaseWallet: boolean;
@@ -20,6 +22,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
   const { address, isConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { login, isAuthenticated, user } = useAuth();
+  const { validateSession, clearAllSessions } = useSessionValidation();
   
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +51,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
 
   // Auto-authenticate when wallet connects (with improved logic)
   useEffect(() => {
-    const shouldAutoAuthenticate = () => {
+    const shouldAutoAuthenticate = async () => {
       // Don't auto-authenticate if:
       // 1. Wallet not connected
       // 2. No address
@@ -56,12 +59,19 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       // 4. Currently authenticating
       // 5. Recently attempted authentication (within 30 seconds)
       // 6. Already attempted for this address
+      // 7. Valid session already exists
       
       if (!isConnected || !address || isAuthenticating) {
         return false;
       }
 
       if (isAuthenticated && user?.address === address) {
+        return false;
+      }
+
+      // Check for existing valid session
+      const sessionValidation = await validateSession(address);
+      if (sessionValidation.isValid) {
         return false;
       }
 
@@ -77,19 +87,21 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       return true;
     };
 
-    if (shouldAutoAuthenticate()) {
-      // Mark this address as attempted
-      authAttemptRef.current = address;
-      lastAuthTimeRef.current = Date.now();
-      
-      // Add a delay to ensure wallet is fully connected
-      const timeoutId = setTimeout(() => {
-        authenticate();
-      }, 500);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isConnected, address, isAuthenticated, isAuthenticating, user?.address]);
+    shouldAutoAuthenticate().then(shouldAuth => {
+      if (shouldAuth) {
+        // Mark this address as attempted
+        authAttemptRef.current = address;
+        lastAuthTimeRef.current = Date.now();
+        
+        // Add a delay to ensure wallet is fully connected
+        const timeoutId = setTimeout(() => {
+          authenticate();
+        }, 500);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    });
+  }, [isConnected, address, isAuthenticated, isAuthenticating, user?.address, validateSession]);
 
   const authenticate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!address || !isConnected) {
@@ -108,18 +120,11 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       return { success: true };
     }
 
-    // Check if we have a valid token in storage for this address
-    const existingToken = authService.getToken();
-    if (existingToken && !existingToken.startsWith('mock_token_')) {
-      try {
-        const currentUser = await authService.getCurrentUser();
-        if (currentUser && currentUser.address === address) {
-          console.log('Reusing existing session for address:', address);
-          return { success: true };
-        }
-      } catch (error) {
-        console.log('Existing token invalid, proceeding with new authentication');
-      }
+    // Check for existing valid session before prompting for signature
+    const sessionValidation = await validateSession(address);
+    if (sessionValidation.isValid) {
+      console.log('Using existing valid session for address:', address);
+      return { success: true };
     }
 
     setIsAuthenticating(true);
