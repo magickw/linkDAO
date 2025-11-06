@@ -1,6 +1,6 @@
 export class MemoryManager {
-  private memoryThreshold = 0.85; // 85% threshold
-  private criticalThreshold = 0.95; // 95% critical
+  private memoryThreshold = 0.75; // 75% threshold (more conservative with 2GB)
+  private criticalThreshold = 0.90; // 90% critical (safer margin)
   private checkInterval = 5000; // 5 seconds
   private isMonitoring = false;
   private memoryHistory: number[] = [];

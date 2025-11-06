@@ -5,8 +5,8 @@ import { Redis } from 'ioredis';
 export class EmergencyProductionFixes {
   private dbPool: Pool;
   private redis: Redis;
-  private memoryThreshold = 0.85; // 85% memory threshold
-  private connectionThreshold = 80; // Max 80 DB connections
+  private memoryThreshold = 0.75; // 75% memory threshold (2GB RAM)
+  private connectionThreshold = 25; // Max 25 DB connections (appropriate for 2GB)
 
   constructor(dbPool: Pool, redis: Redis) {
     this.dbPool = dbPool;
@@ -44,7 +44,7 @@ export class EmergencyProductionFixes {
       await this.forceCloseIdleConnections();
       
       // Reduce max connections temporarily
-      this.dbPool.options.max = Math.min(this.connectionThreshold, 50);
+      this.dbPool.options.max = Math.min(this.connectionThreshold, 25);
       
       // Set aggressive idle timeout
       this.dbPool.options.idleTimeoutMillis = 5000; // 5 seconds

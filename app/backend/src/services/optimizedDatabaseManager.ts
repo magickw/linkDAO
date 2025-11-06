@@ -4,8 +4,8 @@ export class OptimizedDatabaseManager {
   private pool: Pool;
   private activeConnections = new Map<string, { client: PoolClient, timestamp: number }>();
   private connectionTimeout = 30000; // 30 seconds
-  private maxConnections = 50; // Reduced from 100
-  private idleTimeout = 10000; // 10 seconds
+  private maxConnections = 20; // Appropriate for 2GB RAM
+  private idleTimeout = 30000; // 30 seconds (more generous)
 
   constructor() {
     this.pool = new Pool({
