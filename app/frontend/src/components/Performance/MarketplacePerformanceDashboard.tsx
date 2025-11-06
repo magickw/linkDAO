@@ -28,7 +28,7 @@ export const MarketplacePerformanceDashboard: React.FC<PerformanceDashboardProps
     updateOptimizations
   } = useMarketplacePerformance();
 
-  const [coreWebVitals, setCoreWebVitals] = useState(performanceMonitoringService.getCoreWebVitals());
+  const [coreWebVitals, setCoreWebVitals] = useState(performanceMonitoringService.getWebVitals());
   const [cacheStats, setCacheStats] = useState({
     product: productCache.getStats(),
     seller: sellerCache.getStats(),
@@ -40,7 +40,7 @@ export const MarketplacePerformanceDashboard: React.FC<PerformanceDashboardProps
     if (!isVisible) return;
 
     const interval = setInterval(() => {
-      setCoreWebVitals(performanceMonitoringService.getCoreWebVitals());
+      setCoreWebVitals(performanceMonitoringService.getWebVitals());
       setCacheStats({
         product: productCache.getStats(),
         seller: sellerCache.getStats(),
