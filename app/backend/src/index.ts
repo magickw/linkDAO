@@ -60,7 +60,7 @@ import {
 } from './middleware/securityMiddleware';
 // Import proper CORS middleware with environment-aware configuration
 import { corsMiddleware } from './middleware/corsMiddleware';
-import { emergencyCorsMiddleware, emergencyPreflightHandler, emergencyCorsHeaders } from './middleware/emergencyCorsMiddleware';
+import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
 // Import enhanced CORS middleware with dynamic validation and monitoring
 import { 
   enhancedCorsMiddleware, 
@@ -299,15 +299,9 @@ const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'true' ?
   emergencyCorsMiddleware : 
   getEnvironmentCorsMiddleware();
 
-if (process.env.EMERGENCY_CORS === 'true') {
-  console.warn('⚠️ Using emergency CORS middleware - should only be temporary');
-  app.use(emergencyCorsHeaders);
-  app.use(emergencyPreflightHandler);
-  app.use(emergencyCorsMiddleware);
-} else {
-  console.log(`🔒 Using enhanced CORS middleware for ${process.env.NODE_ENV || 'development'} environment`);
-  app.use(corsMiddlewareToUse);
-}
+// EMERGENCY CORS FIX - Use simple CORS middleware to fix multiple origins issue
+console.warn('⚠️ Using emergency CORS middleware to fix multiple origins issue');
+app.use(emergencyCorsMiddleware);
 app.use(ddosProtection);
 app.use(requestFingerprinting);
 app.use(hideServerInfo);
@@ -1390,4 +1384,4 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 export default app;
 
 
-// Deployment trigger: 2025-11-05T18:44:18.952Z
+// Deployment trigger: 2025-11-06T23:46:34.293Z
