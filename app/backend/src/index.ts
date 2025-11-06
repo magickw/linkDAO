@@ -257,16 +257,6 @@ if (process.env.RENDER || isResourceConstrained) {
     const memoryLimitMB = parseInt(process.env.MEMORY_LIMIT);
     console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
   }
-
-  // Initialize performance monitoring integration
-  try {
-    const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
-    const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, performanceRedis);
-    await performanceMonitoring.initialize();
-    console.log('✅ Performance monitoring integration initialized');
-  } catch (error) {
-    console.warn('⚠️ Performance monitoring initialization failed:', error.message);
-  }
 }
 
 // Initialize performance optimization
@@ -1125,7 +1115,17 @@ httpServer.listen(PORT, '0.0.0.0', () => {
 
   // Initialize services asynchronously without blocking
   setImmediate(() => {
-    initializeServices().then(({ cacheService, cacheWarmingService }) => {
+    initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
+    // Initialize performance monitoring integration
+    try {
+      const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
+      const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, performanceRedis);
+      await performanceMonitoring.initialize();
+      console.log('✅ Performance monitoring integration initialized');
+    } catch (error: any) {
+      console.warn('⚠️ Performance monitoring initialization failed:', error.message);
+    }
+
     // WebSocket services - disabled on resource-constrained environments
     const enableWebSockets = !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS;
     
