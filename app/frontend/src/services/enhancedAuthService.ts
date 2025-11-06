@@ -465,7 +465,7 @@ class EnhancedAuthService {
   /**
    * Create mock authentication response for offline mode
    */
-  private createMockAuthResponse(address: string): AuthResponse & { refreshToken?: string } {
+  private createMockAuthResponse(address: string): { success: true; token: string; user: AuthUser; refreshToken: string } {
     const mockToken = `mock_token_${address}_${Date.now()}`;
     const mockUser = this.createUserData(address);
 
