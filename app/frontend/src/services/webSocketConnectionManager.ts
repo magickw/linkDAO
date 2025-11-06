@@ -28,6 +28,27 @@ interface ConnectionManagerState {
   resourceConstrained: boolean;
 }
 
+interface FeedUpdate {
+  id: string;
+  type: string;
+  content: any;
+  timestamp: string;
+  // Add other properties as needed
+}
+
+interface NotificationUpdate {
+  id: string;
+  type: string;
+  message: string;
+  timestamp: string;
+  // Add other properties as needed
+}
+
+interface PollingResponse<T> {
+  data: T[];
+  // Add other properties as needed
+}
+
 export class WebSocketConnectionManager {
   private webSocketService: WebSocketService;
   private fallbackConfig: FallbackConfig;
@@ -165,7 +186,7 @@ export class WebSocketConnectionManager {
     }
   }
 
-  private async performPolling(): void {
+  private async performPolling(): Promise<void> {
     try {
       // Poll for feed updates
       await this.pollEndpoint('feed', this.fallbackConfig.endpoints.feed);
@@ -187,7 +208,12 @@ export class WebSocketConnectionManager {
       const lastUpdate = this.lastPollingData.get(type);
       const params = lastUpdate ? { since: lastUpdate.timestamp } : {};
       
-      const response = await requestManager.get(endpoint, { params });
+      const response = await requestManager.request<PollingResponse<FeedUpdate | NotificationUpdate>>(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (response.data && response.data.length > 0) {
         // Store last update timestamp
@@ -197,7 +223,7 @@ export class WebSocketConnectionManager {
         });
 
         // Emit updates as if they came from WebSocket
-        response.data.forEach((update: any) => {
+        response.data.forEach((update: FeedUpdate | NotificationUpdate) => {
           switch (type) {
             case 'feed':
               this.emit('feed_update', update);
