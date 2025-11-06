@@ -16,7 +16,11 @@ const authRateLimit = rateLimit({
       code: 'AUTH_RATE_LIMIT_EXCEEDED',
       message: 'Too many authentication requests, please try again later',
     }
-  }
+  },
+  // Skip validation for X-Forwarded-For header since we've configured trust proxy
+  skipFailedRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 const router = Router();

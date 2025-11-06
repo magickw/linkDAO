@@ -97,6 +97,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // Skip CSRF protection for WebSocket handshake requests
+  if (req.path.startsWith('/socket.io/')) {
+    return next();
+  }
+  
   console.log(`[csrfProtection] ${req.method} ${req.path}`);
   console.log(`[csrfProtection] Headers: ${JSON.stringify({
     'x-session-id': req.headers['x-session-id'],

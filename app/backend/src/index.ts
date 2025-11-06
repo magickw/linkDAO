@@ -173,6 +173,9 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = parseInt(process.env.PORT || '10000', 10);
 
+// Enable trust proxy for proper IP detection behind load balancers/proxies
+app.set('trust proxy', 1);
+
 // Optimize for Render deployment constraints
 const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
 const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
