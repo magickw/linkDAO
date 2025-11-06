@@ -74,7 +74,10 @@
     "seed:marketplace:large": "ts-node scripts/seedDatabase.ts --users=50 --sellers=20 --products=150 --orders=100",
     "test:seller-e2e": "./scripts/run-seller-e2e-tests.sh",
     "test:seller-e2e:ci": "./scripts/run-seller-e2e-tests.sh --workers 1 --timeout 1200",
-    "start:emergency": "NODE_ENV=production node dist/index.js",
+    "start:emergency": "bash scripts/emergency-startup.sh",
+    "start:minimal": "NODE_OPTIONS='--max-old-space-size=800 --optimize-for-size' node src/index.production.standalone.js",
+    "emergency:relief": "bash scripts/immediate-memory-relief.sh",
+    "emergency:build": "NODE_OPTIONS='--max-old-space-size=800 --optimize-for-size' npm run build:standalone",
     "health-check": "curl -f http://localhost:10000/health || exit 1",
     "monitor": "node scripts/monitor-service.js"
   },
