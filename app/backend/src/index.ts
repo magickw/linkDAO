@@ -542,19 +542,19 @@ app.get('/', (req, res) => {
   });
 });
 
-// CSRF token route
-app.get('/api/csrf-token', (req, res) => {
-  const crypto = require('crypto');
-  const csrfToken = crypto.randomBytes(32).toString('hex');
-  
-  res.json({
-    success: true,
-    data: {
-      csrfToken,
-      expiresIn: 3600 // 1 hour
-    }
-  });
-});
+// CSRF token routes are now handled by csrfRoutes to ensure proper token generation and verification
+// app.get('/api/csrf-token', (req, res) => {
+//   const crypto = require('crypto');
+//   const csrfToken = crypto.randomBytes(32).toString('hex');
+//   
+//   res.json({
+//     success: true,
+//     data: {
+//       csrfToken,
+//       expiresIn: 3600 // 1 hour
+//     }
+//   });
+// });
 
 // Import session routes
 import sessionRoutes from './routes/sessionRoutes';
@@ -594,6 +594,9 @@ import securityRoutes from './routes/securityRoutes';
 
 // Use session routes
 app.use('/api', sessionRoutes);
+
+// Use CSRF routes
+// app.use('/api', csrfRoutes); // TEMPORARILY DISABLED to avoid duplicate usage
 
 // Use post routes
 app.use('/api/posts', postRoutes);

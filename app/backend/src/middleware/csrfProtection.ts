@@ -15,31 +15,47 @@ interface CSRFSession {
 }
 
 // Store CSRF secrets per session (in production, use Redis or similar)
+// Using a global store to ensure it persists across requests
 const csrfStore = new Map<string, CSRFSession>();
+
+// Add cleanup function to prevent memory leaks
+setInterval(() => {
+  console.log(`[CSRF] Store cleanup - current size: ${csrfStore.size}`);
+  // In a production environment, we'd use Redis with TTL
+  // For now, we'll just log the size
+}, 60000); // Every minute
 
 /**
  * Generate CSRF token
  */
 export function generateCSRFToken(sessionId: string): string {
-  let session = csrfStore.get(sessionId);
+  // Normalize session ID to lowercase to avoid case sensitivity issues
+  const normalizedSessionId = sessionId.toLowerCase();
+  console.log(`[generateCSRFToken] Creating/retrieving session: ${normalizedSessionId}`);
+  let session = csrfStore.get(normalizedSessionId);
   
   if (!session) {
     session = {
       secret: crypto.randomBytes(CSRF_SECRET_LENGTH).toString('hex'),
       tokens: new Set()
     };
-    csrfStore.set(sessionId, session);
+    csrfStore.set(normalizedSessionId, session);
+    console.log(`[generateCSRFToken] Created new session for: ${normalizedSessionId}`);
+  } else {
+    console.log(`[generateCSRFToken] Using existing session for: ${normalizedSessionId}`);
   }
   
   const token = crypto.randomBytes(CSRF_TOKEN_LENGTH).toString('hex');
   const hash = crypto.createHmac('sha256', session.secret).update(token).digest('hex');
   
   session.tokens.add(hash);
+  console.log(`[generateCSRFToken] Added token hash to session ${normalizedSessionId}: ${hash}`);
   
   // Clean up old tokens (keep last 10)
   if (session.tokens.size > 10) {
     const tokensArray = Array.from(session.tokens);
     session.tokens = new Set(tokensArray.slice(-10));
+    console.log(`[generateCSRFToken] Cleaned up old tokens for session ${normalizedSessionId}`);
   }
   
   return token;
@@ -49,14 +65,27 @@ export function generateCSRFToken(sessionId: string): string {
  * Verify CSRF token
  */
 export function verifyCSRFToken(sessionId: string, token: string): boolean {
-  const session = csrfStore.get(sessionId);
+  // Normalize session ID to lowercase to avoid case sensitivity issues
+  const normalizedSessionId = sessionId.toLowerCase();
+  console.log(`[verifyCSRFToken] Looking for session: ${normalizedSessionId}`);
+  console.log(`[verifyCSRFToken] Available sessions: [${Array.from(csrfStore.keys()).join(', ')}]`);
+  const session = csrfStore.get(normalizedSessionId);
   
   if (!session) {
+    console.log(`[verifyCSRFToken] CSRF verification failed: No session found for ID ${normalizedSessionId}`);
     return false;
   }
   
   const hash = crypto.createHmac('sha256', session.secret).update(token).digest('hex');
-  return session.tokens.has(hash);
+  const isValid = session.tokens.has(hash);
+  console.log(`[verifyCSRFToken] Token verification - session: ${normalizedSessionId}, token: ${token}, hash: ${hash}, valid: ${isValid}`);
+  
+  // If invalid, let's check what tokens we have for this session
+  if (!isValid) {
+    console.log(`[verifyCSRFToken] Tokens for session ${normalizedSessionId}: [${Array.from(session.tokens).join(', ')}]`);
+  }
+  
+  return isValid;
 }
 
 /**
@@ -67,6 +96,12 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return next();
   }
+  
+  console.log(`[csrfProtection] ${req.method} ${req.path}`);
+  console.log(`[csrfProtection] Headers: ${JSON.stringify({
+    'x-session-id': req.headers['x-session-id'],
+    'x-csrf-token': req.headers['x-csrf-token']
+  })}`);
   
   // In development mode, be more lenient with CSRF protection
   if (process.env.NODE_ENV === 'development') {
@@ -90,6 +125,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] as string;
   
   if (!sessionId) {
+    console.log('[csrfProtection] No session ID in request');
     res.status(403).json({
       success: false,
       message: 'CSRF validation failed: No session'
@@ -97,10 +133,15 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return;
   }
   
+  // Normalize session ID to lowercase
+  const normalizedSessionId = sessionId.toLowerCase();
+  console.log(`[csrfProtection] Using normalized session ID: ${normalizedSessionId}`);
+  
   // Get CSRF token from header or body
   const token = req.headers['x-csrf-token'] as string || req.body?._csrf;
   
   if (!token) {
+    console.log('[csrfProtection] No CSRF token in request');
     res.status(403).json({
       success: false,
       message: 'CSRF validation failed: No token'
@@ -108,8 +149,10 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return;
   }
   
+  console.log(`[csrfProtection] Verifying token for session: ${normalizedSessionId}`);
   // Verify token
-  if (!verifyCSRFToken(sessionId, token)) {
+  if (!verifyCSRFToken(normalizedSessionId, token)) {
+    console.log('[csrfProtection] CSRF token verification failed');
     res.status(403).json({
       success: false,
       message: 'CSRF validation failed: Invalid token'
@@ -117,6 +160,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return;
   }
   
+  console.log('[csrfProtection] CSRF validation successful');
   next();
 }
 
@@ -134,7 +178,10 @@ export function getCSRFToken(req: Request, res: Response): void {
     return;
   }
   
-  const token = generateCSRFToken(sessionId);
+  // Normalize session ID to lowercase
+  const normalizedSessionId = sessionId.toLowerCase();
+  console.log(`[getCSRFToken] Generating token for session: ${normalizedSessionId}`);
+  const token = generateCSRFToken(normalizedSessionId);
   
   res.json({
     success: true,
