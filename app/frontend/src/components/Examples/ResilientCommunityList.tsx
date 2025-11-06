@@ -86,16 +86,22 @@ export const ResilientCommunityList: React.FC = () => {
     </div>
   );
 
-  // Wrap with service unavailable handler if there are issues
+  // Show service unavailable handler if there are issues
   if (!isServiceAvailable || error) {
     return (
-      <ServiceUnavailableHandler
-        serviceName="communities"
-        fallbackData={communities}
-        onRetry={retry}
-      >
-        {content}
-      </ServiceUnavailableHandler>
+      <div>
+        <ServiceUnavailableHandler
+          error={error}
+          onRetry={retry}
+          affectedServices={['communities']}
+        />
+        {communities.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-2">Showing cached data:</p>
+            {content}
+          </div>
+        )}
+      </div>
     );
   }
 

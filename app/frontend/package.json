@@ -29,6 +29,7 @@
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
+    "@next/bundle-analyzer": "^16.0.1",
     "@playwright/test": "^1.56.1",
     "@rainbow-me/rainbowkit": "^2.2.9",
     "@socket.io/redis-adapter": "^8.3.0",

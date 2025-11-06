@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { CommunityWithWeb3Data, TokenActivity, GovernanceData } from '../types/web3/index';
 import { tokenService, governanceService } from '../services/web3/index';
 import { web3ErrorHandler } from '../utils/web3ErrorHandling';
-import { useProgressiveEnhancement } from '../utils/progressiveEnhancement';
+import { useWeb3ProgressiveEnhancement } from './useProgressiveEnhancement';
 
 interface UseWeb3CommunityOptions {
   communityId: string;
@@ -40,7 +40,7 @@ export function useWeb3Community(options: UseWeb3CommunityOptions): UseWeb3Commu
   const [error, setError] = useState<string | null>(null);
 
   // Progressive enhancement for Web3 features
-  const { capabilities, featureLevel } = useProgressiveEnhancement({
+  const { capabilities, featureLevel } = useWeb3ProgressiveEnhancement({
     level: 'enhanced',
     requiredCapabilities: ['wallet', 'transactions'],
     gracefulDegradation: true
@@ -189,7 +189,7 @@ export function useWeb3Community(options: UseWeb3CommunityOptions): UseWeb3Commu
     stakeOnPost,
     vote,
     canUseWeb3Features,
-    featureLevel
+    featureLevel: featureLevel as 'basic' | 'enhanced' | 'premium'
   };
 }
 

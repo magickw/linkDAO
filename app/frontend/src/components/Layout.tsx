@@ -421,6 +421,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                   <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
                   <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
                   <li><Link href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</Link></li>
+                  <li><Link href="/blog" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Blog</Link></li>
                 </ul>
               </div>
 

@@ -395,8 +395,11 @@ export class ServiceWorkerCacheService {
       // cachePerformanceMetricsService.updateSyncQueueSize(queueSize);
       
       // Use the offline action queue directly instead of background sync manager
-      const { offlineActionQueue } = await import('./offlineActionQueue');
-      await offlineActionQueue.getReadyActions();
+      const { getOfflineActionQueue } = await import('./offlineActionQueue');
+      const queue = getOfflineActionQueue();
+      if (queue) {
+        await queue.getReadyActions();
+      }
       
       // Record sync operation metrics
       const processingTime = Date.now() - startTime;

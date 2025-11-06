@@ -60,7 +60,8 @@ export {
 // Hooks
 export { useErrorHandler } from '../../hooks/useErrorHandler';
 export {
-  useOfflineSupport
+  useEnhancedOfflineSupport,
+  useOfflineActions
 } from '../../hooks/useOfflineSupport';
 
 // Legacy exports

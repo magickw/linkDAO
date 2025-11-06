@@ -16,11 +16,12 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
   });
 }
 
-const CACHE_NAME = 'web3-social-v3';
-const STATIC_CACHE = 'static-v3';
-const DYNAMIC_CACHE = 'dynamic-v3';
-const IMAGE_CACHE = 'images-v3';
-const PERFORMANCE_CACHE = 'performance-v2';
+const CACHE_NAME = 'web3-social-v4';
+const STATIC_CACHE = 'static-v4';
+const DYNAMIC_CACHE = 'dynamic-v4';
+const IMAGE_CACHE = 'images-v4';
+const PERFORMANCE_CACHE = 'performance-v3';
+const OFFLINE_QUEUE_CACHE = 'offline-queue-v1';
 
 // Enhanced request deduplication and rate limiting
 const pendingRequests = new Map();
@@ -55,18 +56,25 @@ const PERFORMANCE_ASSETS = [
   '/api/content-performance'
 ];
 
-// API endpoints to cache
-const CACHEABLE_APIS = [
-  '/api/posts',
-  '/api/communities',
-  '/api/users',
-  '/api/feed',
-  '/api/profiles',
-  '/api/reputation',
-  '/api/tips',
-  '/api/follow',
-  '/api/search'
-];
+// API endpoints to cache with TTL values
+const CACHEABLE_APIS = {
+  '/api/feed': { ttl: 30000, priority: 'high' }, // 30 seconds
+  '/api/communities': { ttl: 60000, priority: 'high' }, // 60 seconds
+  '/api/profiles': { ttl: 120000, priority: 'medium' }, // 2 minutes
+  '/api/posts': { ttl: 45000, priority: 'high' }, // 45 seconds
+  '/api/users': { ttl: 300000, priority: 'low' }, // 5 minutes
+  '/api/reputation': { ttl: 180000, priority: 'medium' }, // 3 minutes
+  '/api/tips': { ttl: 60000, priority: 'medium' }, // 1 minute
+  '/api/follow': { ttl: 120000, priority: 'medium' }, // 2 minutes
+  '/api/search': { ttl: 300000, priority: 'low' } // 5 minutes
+};
+
+// Critical API responses that should be cached aggressively
+const CRITICAL_APIS = ['/api/feed', '/api/communities', '/api/posts'];
+
+// Action queue for offline operations
+const offlineActionQueue = [];
+const maxQueueSize = 100;
 
 // Install event - cache static assets with graceful failure handling
 self.addEventListener('install', (event) => {
@@ -202,10 +210,21 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-// Network first strategy - for API calls with enhanced deduplication and rate limiting
+// Network first strategy - for API calls with intelligent caching and TTL
 async function networkFirst(request, cacheName) {
   const requestKey = `${request.method}:${request.url}`;
   const now = Date.now();
+  const cacheConfig = getAPICacheConfig(request);
+  
+  // Check if we have fresh cached data first for critical APIs
+  if (isCriticalAPI(request)) {
+    const cachedResponse = await getCachedResponseWithTTL(request, cacheName, cacheConfig.ttl);
+    if (cachedResponse) {
+      // Update cache in background for critical APIs
+      updateCacheInBackground(request, cacheName, requestKey);
+      return cachedResponse;
+    }
+  }
   
   // Rate limiting check
   if (!checkRateLimit(requestKey, now)) {
@@ -227,17 +246,15 @@ async function networkFirst(request, cacheName) {
     }
   }
   
-  // Check if request is already pending
+  // Check if request is already pending (request coalescing)
   if (pendingRequests.has(requestKey)) {
-    console.log('Request already pending, waiting for result:', requestKey);
+    console.log('Request already pending, coalescing:', requestKey);
     try {
       const sharedResponse = await pendingRequests.get(requestKey);
-      // Check if response body is already consumed
       if (sharedResponse.bodyUsed) {
         console.warn('Shared response body already consumed, falling back to cache');
         return await getCachedResponse(request, cacheName);
       }
-      // Clone the response for this caller to avoid body locked errors
       return sharedResponse.clone();
     } catch (error) {
       console.warn('Failed to clone shared response, falling back to cache:', error);
@@ -246,7 +263,7 @@ async function networkFirst(request, cacheName) {
   }
   
   // Create promise for this request
-  const requestPromise = performNetworkRequest(request, cacheName, requestKey);
+  const requestPromise = performNetworkRequest(request, cacheName, requestKey, cacheConfig);
   pendingRequests.set(requestKey, requestPromise);
   
   try {
@@ -259,7 +276,7 @@ async function networkFirst(request, cacheName) {
   }
 }
 
-async function performNetworkRequest(request, cacheName, requestKey) {
+async function performNetworkRequest(request, cacheName, requestKey, cacheConfig) {
   try {
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
@@ -283,8 +300,9 @@ async function performNetworkRequest(request, cacheName, requestKey) {
       try {
         responseToCache = networkResponse.clone();
         responseToReturn = networkResponse.clone();
-        const cache = await caches.open(cacheName);
-        await cache.put(request, responseToCache);
+        
+        // Cache with TTL metadata
+        await cacheResponseWithTTL(request, responseToCache, cacheName, cacheConfig.ttl);
         
         // Clear failed request record on success
         failedRequests.delete(requestKey);
@@ -308,7 +326,6 @@ async function performNetworkRequest(request, cacheName, requestKey) {
       
       // In development, don't aggressively cache 503 errors
       if (isDevelopment && networkResponse.status === 503) {
-        // Don't track 503 errors as aggressively in development
         return networkResponse;
       }
     }
@@ -330,6 +347,75 @@ async function performNetworkRequest(request, cacheName, requestKey) {
     failedRequests.set(requestKey, failureInfo);
     
     return await getCachedResponse(request, cacheName);
+  }
+}
+
+// Cache response with TTL metadata
+async function cacheResponseWithTTL(request, response, cacheName, ttl) {
+  try {
+    const cache = await caches.open(cacheName);
+    const now = Date.now();
+    
+    // Add TTL metadata to response headers
+    const responseWithTTL = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        ...Object.fromEntries(response.headers.entries()),
+        'sw-cached-at': now.toString(),
+        'sw-ttl': ttl.toString()
+      }
+    });
+    
+    await cache.put(request, responseWithTTL);
+  } catch (error) {
+    console.warn('Failed to cache response with TTL:', error);
+  }
+}
+
+// Get cached response with TTL check
+async function getCachedResponseWithTTL(request, cacheName, ttl) {
+  try {
+    const cache = await caches.open(cacheName);
+    const cachedResponse = await cache.match(request);
+    
+    if (!cachedResponse) {
+      return null;
+    }
+    
+    const cachedAt = cachedResponse.headers.get('sw-cached-at');
+    const responseTTL = cachedResponse.headers.get('sw-ttl');
+    
+    if (cachedAt && responseTTL) {
+      const age = Date.now() - parseInt(cachedAt);
+      const maxAge = parseInt(responseTTL);
+      
+      if (age > maxAge) {
+        // Cache expired, remove it
+        await cache.delete(request);
+        return null;
+      }
+    }
+    
+    return cachedResponse;
+  } catch (error) {
+    console.warn('Failed to get cached response with TTL:', error);
+    return null;
+  }
+}
+
+// Background cache update for critical APIs
+async function updateCacheInBackground(request, cacheName, requestKey) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    if (networkResponse.ok) {
+      const cacheConfig = getAPICacheConfig(request);
+      await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
+      console.log('Background cache update successful for:', requestKey);
+    }
+  } catch (error) {
+    console.log('Background cache update failed:', error);
   }
 }
 
@@ -530,7 +616,22 @@ function isImage(request) {
 function isAPI(request) {
   const url = new URL(request.url);
   return url.pathname.startsWith('/api/') || 
-         CACHEABLE_APIS.some(api => url.pathname.startsWith(api));
+         Object.keys(CACHEABLE_APIS).some(api => url.pathname.startsWith(api));
+}
+
+function getAPICacheConfig(request) {
+  const url = new URL(request.url);
+  for (const [apiPath, config] of Object.entries(CACHEABLE_APIS)) {
+    if (url.pathname.startsWith(apiPath)) {
+      return config;
+    }
+  }
+  return { ttl: 60000, priority: 'medium' }; // Default config
+}
+
+function isCriticalAPI(request) {
+  const url = new URL(request.url);
+  return CRITICAL_APIS.some(api => url.pathname.startsWith(api));
 }
 
 function isNavigation(request) {
@@ -538,16 +639,231 @@ function isNavigation(request) {
          (request.method === 'GET' && request.headers.get('accept').includes('text/html'));
 }
 
+// Message handler for offline actions
+self.addEventListener('message', (event) => {
+  const { type, data } = event.data;
+  
+  switch (type) {
+    case 'QUEUE_OFFLINE_ACTION':
+      queueOfflineAction(data);
+      event.ports[0].postMessage({ success: true });
+      break;
+    case 'GET_OFFLINE_STATUS':
+      event.ports[0].postMessage({ 
+        isOnline: navigator.onLine,
+        queueSize: offlineActionQueue.length 
+      });
+      break;
+    case 'SYNC_OFFLINE_ACTIONS':
+      syncOfflineActions().then(() => {
+        event.ports[0].postMessage({ success: true });
+      }).catch(error => {
+        event.ports[0].postMessage({ success: false, error: error.message });
+      });
+      break;
+  }
+});
+
+// Queue offline action
+function queueOfflineAction(action) {
+  if (offlineActionQueue.length >= maxQueueSize) {
+    // Remove oldest action to make room
+    offlineActionQueue.shift();
+  }
+  
+  const queuedAction = {
+    id: generateActionId(),
+    timestamp: Date.now(),
+    ...action
+  };
+  
+  offlineActionQueue.push(queuedAction);
+  
+  // Store in IndexedDB for persistence
+  storeOfflineAction(queuedAction);
+  
+  console.log('Queued offline action:', queuedAction.type);
+}
+
+// Generate unique action ID
+function generateActionId() {
+  return `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Store offline action in IndexedDB
+async function storeOfflineAction(action) {
+  try {
+    const db = await openDB();
+    const transaction = db.transaction(['actions'], 'readwrite');
+    const store = transaction.objectStore('actions');
+    await store.add(action);
+  } catch (error) {
+    console.error('Failed to store offline action:', error);
+  }
+}
+
 // Background sync for offline actions
 self.addEventListener('sync', (event) => {
   console.log('Background sync triggered:', event.tag);
   
-  if (event.tag === 'post-sync') {
+  if (event.tag === 'offline-actions-sync') {
+    event.waitUntil(syncOfflineActions());
+  } else if (event.tag === 'post-sync') {
     event.waitUntil(syncPosts());
   } else if (event.tag === 'reaction-sync') {
     event.waitUntil(syncReactions());
   }
 });
+
+// Sync all offline actions
+async function syncOfflineActions() {
+  try {
+    const db = await openDB();
+    const actions = await getOfflineActions(db);
+    
+    for (const action of actions) {
+      try {
+        const success = await syncSingleAction(action);
+        if (success) {
+          await removeOfflineAction(db, action.id);
+          // Remove from memory queue
+          const index = offlineActionQueue.findIndex(a => a.id === action.id);
+          if (index > -1) {
+            offlineActionQueue.splice(index, 1);
+          }
+          console.log('Synced offline action:', action.type, action.id);
+        }
+      } catch (error) {
+        console.error('Failed to sync action:', action.id, error);
+      }
+    }
+    
+    // Notify clients about sync completion
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'OFFLINE_SYNC_COMPLETE',
+        queueSize: offlineActionQueue.length
+      });
+    });
+  } catch (error) {
+    console.error('Offline actions sync failed:', error);
+  }
+}
+
+// Sync individual action based on type
+async function syncSingleAction(action) {
+  switch (action.type) {
+    case 'CREATE_POST':
+      return await syncCreatePost(action);
+    case 'CREATE_COMMENT':
+      return await syncCreateComment(action);
+    case 'REACT_TO_POST':
+      return await syncReaction(action);
+    case 'JOIN_COMMUNITY':
+      return await syncJoinCommunity(action);
+    case 'FOLLOW_USER':
+      return await syncFollowUser(action);
+    default:
+      console.warn('Unknown action type:', action.type);
+      return false;
+  }
+}
+
+// Sync create post action
+async function syncCreatePost(action) {
+  try {
+    const response = await fetch('/api/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': action.auth || ''
+      },
+      body: JSON.stringify(action.data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync create post:', error);
+    return false;
+  }
+}
+
+// Sync create comment action
+async function syncCreateComment(action) {
+  try {
+    const response = await fetch(`/api/posts/${action.postId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': action.auth || ''
+      },
+      body: JSON.stringify(action.data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync create comment:', error);
+    return false;
+  }
+}
+
+// Sync reaction action
+async function syncReaction(action) {
+  try {
+    const response = await fetch(`/api/posts/${action.postId}/reactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': action.auth || ''
+      },
+      body: JSON.stringify(action.data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync reaction:', error);
+    return false;
+  }
+}
+
+// Sync join community action
+async function syncJoinCommunity(action) {
+  try {
+    const response = await fetch(`/api/communities/${action.communityId}/join`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': action.auth || ''
+      },
+      body: JSON.stringify(action.data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync join community:', error);
+    return false;
+  }
+}
+
+// Sync follow user action
+async function syncFollowUser(action) {
+  try {
+    const response = await fetch(`/api/users/${action.userId}/follow`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': action.auth || ''
+      },
+      body: JSON.stringify(action.data)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to sync follow user:', error);
+    return false;
+  }
+}
 
 // Sync offline posts when back online
 async function syncPosts() {
@@ -607,10 +923,10 @@ async function syncReactions() {
   }
 }
 
-// IndexedDB helpers (simplified)
+// IndexedDB helpers for offline data and action queue
 async function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('OfflineData', 1);
+    const request = indexedDB.open('OfflineData', 2);
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
@@ -624,6 +940,12 @@ async function openDB() {
       
       if (!db.objectStoreNames.contains('reactions')) {
         db.createObjectStore('reactions', { keyPath: 'id', autoIncrement: true });
+      }
+      
+      if (!db.objectStoreNames.contains('actions')) {
+        const actionStore = db.createObjectStore('actions', { keyPath: 'id' });
+        actionStore.createIndex('timestamp', 'timestamp', { unique: false });
+        actionStore.createIndex('type', 'type', { unique: false });
       }
     };
   });
@@ -666,6 +988,28 @@ async function removeOfflineReaction(db, id) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(['reactions'], 'readwrite');
     const store = transaction.objectStore('reactions');
+    const request = store.delete(id);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+async function getOfflineActions(db) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['actions'], 'readonly');
+    const store = transaction.objectStore('actions');
+    const request = store.getAll();
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+async function removeOfflineAction(db, id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(['actions'], 'readwrite');
+    const store = transaction.objectStore('actions');
     const request = store.delete(id);
     
     request.onerror = () => reject(request.error);
@@ -959,4 +1303,48 @@ setInterval(async () => {
   }
 }, 30 * 60 * 1000); // Run every 30 minutes
 
-console.log('Service Worker loaded with enhanced caching and graceful failure handling');
+// Online/offline detection and notification
+self.addEventListener('online', () => {
+  console.log('Connection restored, syncing offline actions');
+  syncOfflineActions();
+  
+  // Notify all clients about online status
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'CONNECTION_STATUS_CHANGED',
+        isOnline: true,
+        queueSize: offlineActionQueue.length
+      });
+    });
+  });
+});
+
+self.addEventListener('offline', () => {
+  console.log('Connection lost, entering offline mode');
+  
+  // Notify all clients about offline status
+  self.clients.matchAll().then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'CONNECTION_STATUS_CHANGED',
+        isOnline: false,
+        queueSize: offlineActionQueue.length
+      });
+    });
+  });
+});
+
+// Load offline actions from IndexedDB on startup
+(async function loadOfflineActions() {
+  try {
+    const db = await openDB();
+    const actions = await getOfflineActions(db);
+    offlineActionQueue.push(...actions);
+    console.log(`Loaded ${actions.length} offline actions from storage`);
+  } catch (error) {
+    console.error('Failed to load offline actions:', error);
+  }
+})();
+
+console.log('Service Worker loaded with enhanced caching, offline support, and action queue');

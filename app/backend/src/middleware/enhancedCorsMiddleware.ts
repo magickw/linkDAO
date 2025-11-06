@@ -1,6 +1,8 @@
 /**
  * Enhanced CORS Middleware
  * Secure cross-origin request handling with advanced security features
+ * Implements dynamic origin validation, environment-specific configurations,
+ * and comprehensive logging with suspicious request detection
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -8,7 +10,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { ApiResponse } from '../utils/apiResponse';
 
 export interface CorsSecurityConfig {
-  allowedOrigins: string[];
+  allowedOrigins: (string | RegExp)[];
   allowedMethods: string[];
   allowedHeaders: string[];
   exposedHeaders: string[];
@@ -20,6 +22,9 @@ export interface CorsSecurityConfig {
   strictOriginValidation: boolean;
   logBlocked: boolean;
   rateLimitPreflight: boolean;
+  dynamicOriginValidation: boolean;
+  suspiciousRequestDetection: boolean;
+  vercelDeploymentSupport: boolean;
 }
 
 export interface CorsSecurityContext {
@@ -41,9 +46,10 @@ export class EnhancedCorsMiddleware {
   private blockedOrigins: Set<string> = new Set();
 
   constructor(config: Partial<CorsSecurityConfig> = {}) {
+    // Set default config first to allow getDefaultAllowedOrigins to access it
     this.config = {
-      allowedOrigins: this.getDefaultAllowedOrigins(),
-      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedOrigins: [],
+      allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
       allowedHeaders: [
         'Origin',
         'X-Requested-With',
@@ -58,62 +64,114 @@ export class EnhancedCorsMiddleware {
         'X-API-Key',
         'X-Client-Version',
         'X-CSRF-Token',
-        'x-csrf-token'
+        'x-csrf-token',
+        'Cache-Control',
+        'X-Device-ID',
+        'X-Session-Token',
+        'X-Refresh-Token',
+        'Pragma',
+        'Expires'
       ],
       exposedHeaders: [
         'X-Request-ID',
         'X-RateLimit-Limit',
         'X-RateLimit-Remaining',
         'X-RateLimit-Reset',
-        'X-Total-Count'
+        'RateLimit-Policy',
+        'X-Total-Count',
+        'X-Response-Time',
+        'X-Backend-Status'
       ],
       credentials: true,
       maxAge: 86400, // 24 hours
       preflightContinue: false,
       optionsSuccessStatus: 200,
       securityHeaders: true,
-      strictOriginValidation: true,
+      strictOriginValidation: process.env.NODE_ENV === 'production',
       logBlocked: true,
-      rateLimitPreflight: true,
+      rateLimitPreflight: process.env.NODE_ENV === 'production',
+      dynamicOriginValidation: true,
+      suspiciousRequestDetection: true,
+      vercelDeploymentSupport: true,
       ...config
     };
+
+    // Now set the allowed origins after config is initialized
+    this.config.allowedOrigins = this.getDefaultAllowedOrigins();
   }
 
   /**
-   * Get default allowed origins based on environment
+   * Get default allowed origins based on environment with dynamic validation
    */
-  private getDefaultAllowedOrigins(): string[] {
+  private getDefaultAllowedOrigins(): (string | RegExp)[] {
     const env = process.env.NODE_ENV || 'development';
     
-    switch (env) {
-      case 'production':
-        return [
-          'https://linkdao.io',
-          'https://www.linkdao.io',
-          'https://app.linkdao.io',
-          'https://marketplace.linkdao.io'
-        ];
+    // Base origins for each environment
+    const baseOrigins: Record<string, (string | RegExp)[]> = {
+      production: [
+        'https://linkdao.io',
+        'https://www.linkdao.io',
+        'https://app.linkdao.io',
+        'https://marketplace.linkdao.io',
+        'https://api.linkdao.io',
+        'https://linkdao-backend.onrender.com',
+        // Vercel deployment patterns
+        'https://linkdao.vercel.app',
+        /^https:\/\/linkdao-.*\.vercel\.app$/,
+        /^https:\/\/.*-linkdao\.vercel\.app$/,
+        // Support for preview deployments
+        /^https:\/\/linkdao-.*-.*\.vercel\.app$/
+      ],
       
-      case 'staging':
-        return [
-          'https://staging.linkdao.io',
-          'https://staging-app.linkdao.io',
-          'https://staging-marketplace.linkdao.io',
-          'http://localhost:3000',
-          'http://localhost:3001'
-        ];
+      staging: [
+        'https://staging.linkdao.io',
+        'https://staging-app.linkdao.io',
+        'https://staging-marketplace.linkdao.io',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8080',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:8080',
+        // Staging Vercel deployments
+        /^https:\/\/staging-linkdao-.*\.vercel\.app$/
+      ],
       
-      case 'development':
-      default:
-        return [
-          'http://localhost:3000',
-          'http://localhost:3001',
-          'http://localhost:8080',
-          'http://127.0.0.1:3000',
-          'http://127.0.0.1:3001',
-          'http://127.0.0.1:8080'
-        ];
+      development: [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8080',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:8080',
+        'https://localhost:3000',
+        'https://localhost:3001',
+        'https://localhost:8080',
+        // Allow any localhost port in development
+        /^http:\/\/localhost:\d+$/,
+        /^http:\/\/127\.0\.0\.1:\d+$/,
+        /^https:\/\/localhost:\d+$/
+      ]
+    };
+
+    const origins = baseOrigins[env] || baseOrigins.development;
+
+    // Add environment variable origins if specified
+    const envOrigins = process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '';
+    if (envOrigins) {
+      const additionalOrigins = envOrigins.split(',').map(o => o.trim()).filter(Boolean);
+      origins.push(...additionalOrigins);
     }
+
+    // Add dynamic Vercel deployment support
+    if (this.config.vercelDeploymentSupport) {
+      origins.push(
+        /^https:\/\/.*\.vercel\.app$/,
+        /^https:\/\/.*-.*\.vercel\.app$/
+      );
+    }
+
+    return origins;
   }
 
   /**
@@ -175,23 +233,40 @@ export class EnhancedCorsMiddleware {
     // Set preflight response headers
     this.setPreflightHeaders(res, origin);
 
-    // Log successful preflight
-    console.debug('CORS preflight approved', {
+    // Log successful preflight with comprehensive details
+    safeLogger.debug('CORS preflight approved', {
       origin,
       requestMethod,
       requestHeaders,
       ip: context.ip,
-      userAgent: context.userAgent
+      userAgent: context.userAgent,
+      referer: context.referer,
+      timestamp: context.timestamp.toISOString(),
+      environment: process.env.NODE_ENV,
+      path: context.path
     });
 
     res.status(this.config.optionsSuccessStatus).end();
   }
 
   /**
-   * Handle actual CORS requests
+   * Handle actual CORS requests with enhanced monitoring
    */
   private handleActualRequest(req: Request, res: Response, context: CorsSecurityContext): void {
     const origin = req.get('Origin');
+
+    // Detect suspicious requests if enabled
+    if (this.config.suspiciousRequestDetection && this.isSuspiciousRequest(context)) {
+      safeLogger.warn('Suspicious CORS request detected', {
+        origin: context.origin,
+        method: context.method,
+        path: context.path,
+        ip: context.ip,
+        userAgent: context.userAgent,
+        referer: context.referer,
+        timestamp: context.timestamp.toISOString()
+      });
+    }
 
     // Validate origin for actual requests
     if (origin && !this.isOriginAllowed(origin)) {
@@ -207,19 +282,23 @@ export class EnhancedCorsMiddleware {
       this.setSecurityHeaders(res);
     }
 
-    // Log successful CORS request
+    // Log successful CORS request with comprehensive details
     if (origin) {
-      console.debug('CORS request approved', {
+      safeLogger.debug('CORS request approved', {
         origin,
         method: context.method,
         path: context.path,
-        ip: context.ip
+        ip: context.ip,
+        userAgent: context.userAgent,
+        referer: context.referer,
+        timestamp: context.timestamp.toISOString(),
+        environment: process.env.NODE_ENV
       });
     }
   }
 
   /**
-   * Check if origin is allowed
+   * Check if origin is allowed with dynamic validation
    */
   private isOriginAllowed(origin?: string): boolean {
     if (!origin) {
@@ -229,21 +308,48 @@ export class EnhancedCorsMiddleware {
 
     // Check if origin is in blocked list
     if (this.blockedOrigins.has(origin)) {
+      safeLogger.warn('Origin blocked - in blocklist', { origin });
       return false;
     }
 
-    // Check against allowed origins
-    if (this.config.allowedOrigins.includes(origin)) {
-      return true;
+    // Check against allowed origins (both strings and RegExp)
+    for (const allowedOrigin of this.config.allowedOrigins) {
+      if (typeof allowedOrigin === 'string') {
+        if (allowedOrigin === origin) {
+          return true;
+        }
+      } else if (allowedOrigin instanceof RegExp) {
+        if (allowedOrigin.test(origin)) {
+          safeLogger.debug('Origin allowed by regex pattern', { origin, pattern: allowedOrigin.source });
+          return true;
+        }
+      }
     }
 
-    // In development, allow localhost with any port
-    if (process.env.NODE_ENV === 'development' && this.isLocalhostOrigin(origin)) {
-      return true;
+    // Dynamic origin validation for development
+    if (this.config.dynamicOriginValidation) {
+      // In development, allow localhost with any port
+      if (process.env.NODE_ENV === 'development' && this.isLocalhostOrigin(origin)) {
+        safeLogger.debug('Origin allowed - localhost in development', { origin });
+        return true;
+      }
+
+      // Check for Vercel deployment patterns
+      if (this.config.vercelDeploymentSupport && this.isVercelDeployment(origin)) {
+        safeLogger.debug('Origin allowed - Vercel deployment', { origin });
+        return true;
+      }
+
+      // Check for LinkDAO subdomain patterns
+      if (this.isLinkDAOSubdomain(origin)) {
+        safeLogger.debug('Origin allowed - LinkDAO subdomain', { origin });
+        return true;
+      }
     }
 
     // Strict validation mode
     if (this.config.strictOriginValidation) {
+      safeLogger.warn('Origin blocked - strict validation', { origin });
       return false;
     }
 
@@ -266,6 +372,56 @@ export class EnhancedCorsMiddleware {
   }
 
   /**
+   * Check if origin is a Vercel deployment
+   */
+  private isVercelDeployment(origin: string): boolean {
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+      
+      // Check for Vercel deployment patterns
+      const vercelPatterns = [
+        /^.*\.vercel\.app$/,
+        /^linkdao-.*\.vercel\.app$/,
+        /^.*-linkdao\.vercel\.app$/,
+        /^linkdao\.vercel\.app$/
+      ];
+
+      return vercelPatterns.some(pattern => pattern.test(hostname));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if origin is a LinkDAO subdomain
+   */
+  private isLinkDAOSubdomain(origin: string): boolean {
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+
+      // Check for LinkDAO subdomain patterns
+      const linkdaoPatterns = [
+        'linkdao.io',
+        /^.*\.linkdao\.io$/,
+        /^staging.*\.linkdao\.io$/,
+        /^dev.*\.linkdao\.io$/,
+        /^test.*\.linkdao\.io$/
+      ];
+
+      return linkdaoPatterns.some(pattern => {
+        if (typeof pattern === 'string') {
+          return hostname === pattern;
+        }
+        return pattern.test(hostname);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Check wildcard origins (e.g., *.linkdao.io)
    */
   private checkWildcardOrigins(origin: string): boolean {
@@ -274,7 +430,7 @@ export class EnhancedCorsMiddleware {
       const hostname = url.hostname;
 
       // Check for subdomain patterns
-      const allowedDomains = ['linkdao.io'];
+      const allowedDomains = ['linkdao.io', 'vercel.app'];
       return allowedDomains.some(domain => 
         hostname.endsWith(`.${domain}`) || hostname === domain
       );
@@ -383,7 +539,63 @@ export class EnhancedCorsMiddleware {
   }
 
   /**
-   * Handle CORS errors
+   * Detect suspicious requests based on patterns
+   */
+  private isSuspiciousRequest(context: CorsSecurityContext): boolean {
+    const { userAgent, referer, origin, method, path } = context;
+
+    // Suspicious user agent patterns
+    const suspiciousUserAgents = [
+      /bot|crawler|spider/i,
+      /scanner|exploit|hack/i,
+      /curl|wget|postman/i,
+      /python|java|go-http/i,
+      /nikto|sqlmap|nmap/i
+    ];
+
+    if (userAgent && suspiciousUserAgents.some(pattern => pattern.test(userAgent))) {
+      return true;
+    }
+
+    // Suspicious path patterns
+    const suspiciousPaths = [
+      /\/admin/i,
+      /\/wp-admin/i,
+      /\/phpmyadmin/i,
+      /\.php$/i,
+      /\.asp$/i,
+      /\.jsp$/i,
+      /\/config/i,
+      /\/backup/i
+    ];
+
+    if (suspiciousPaths.some(pattern => pattern.test(path))) {
+      return true;
+    }
+
+    // Suspicious origin patterns
+    if (origin) {
+      const suspiciousOrigins = [
+        /localhost:\d{5,}/i, // High port numbers
+        /\d+\.\d+\.\d+\.\d+/i, // Direct IP addresses
+        /\.tk$|\.ml$|\.ga$/i // Suspicious TLDs
+      ];
+
+      if (suspiciousOrigins.some(pattern => pattern.test(origin))) {
+        return true;
+      }
+    }
+
+    // Suspicious method/path combinations
+    if (method === 'POST' && path.includes('/api/admin')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle CORS errors with enhanced logging and monitoring
    */
   private handleCorsError(res: Response, context: CorsSecurityContext, message: string): void {
     if (this.config.logBlocked) {
@@ -394,7 +606,14 @@ export class EnhancedCorsMiddleware {
         path: context.path,
         ip: context.ip,
         userAgent: context.userAgent,
-        timestamp: context.timestamp.toISOString()
+        referer: context.referer,
+        timestamp: context.timestamp.toISOString(),
+        environment: process.env.NODE_ENV,
+        allowedOrigins: this.config.allowedOrigins.map(o => 
+          typeof o === 'string' ? o : o.source
+        ).slice(0, 5), // Log first 5 for debugging
+        isSuspicious: this.config.suspiciousRequestDetection ? 
+          this.isSuspiciousRequest(context) : false
       });
     }
 
@@ -403,6 +622,14 @@ export class EnhancedCorsMiddleware {
       this.addToBlockList(context.origin);
     }
 
+    // Set CORS error headers for debugging
+    res.set({
+      'X-CORS-Error': 'true',
+      'X-CORS-Message': message,
+      'X-CORS-Origin': context.origin || 'none',
+      'X-CORS-Timestamp': context.timestamp.toISOString()
+    });
+
     res.status(403).json({
       success: false,
       error: {
@@ -410,7 +637,8 @@ export class EnhancedCorsMiddleware {
         message,
         corsError: true,
         origin: context.origin,
-        timestamp: context.timestamp.toISOString()
+        timestamp: context.timestamp.toISOString(),
+        requestId: res.get('X-Request-ID') || 'unknown'
       }
     });
   }
@@ -425,6 +653,13 @@ export class EnhancedCorsMiddleware {
     setTimeout(() => {
       this.blockedOrigins.delete(origin);
     }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Add origin to block list (public method for testing)
+   */
+  public addToBlockListForTesting(origin: string): void {
+    this.addToBlockList(origin);
   }
 
   /**
@@ -475,6 +710,90 @@ export class EnhancedCorsMiddleware {
   public getBlockedOrigins(): string[] {
     return Array.from(this.blockedOrigins);
   }
+
+  /**
+   * Get CORS statistics for monitoring
+   */
+  public getStatistics(): {
+    preflightCacheSize: number;
+    blockedOriginsCount: number;
+    allowedOriginsCount: number;
+    environment: string;
+    config: Partial<CorsSecurityConfig>;
+  } {
+    return {
+      preflightCacheSize: this.preflightCache.size,
+      blockedOriginsCount: this.blockedOrigins.size,
+      allowedOriginsCount: this.config.allowedOrigins.length,
+      environment: process.env.NODE_ENV || 'development',
+      config: {
+        strictOriginValidation: this.config.strictOriginValidation,
+        dynamicOriginValidation: this.config.dynamicOriginValidation,
+        suspiciousRequestDetection: this.config.suspiciousRequestDetection,
+        vercelDeploymentSupport: this.config.vercelDeploymentSupport,
+        rateLimitPreflight: this.config.rateLimitPreflight,
+        logBlocked: this.config.logBlocked
+      }
+    };
+  }
+
+  /**
+   * Validate origin against current configuration (for testing/debugging)
+   */
+  public validateOrigin(origin: string): {
+    allowed: boolean;
+    reason: string;
+    matchedPattern?: string;
+  } {
+    if (!origin) {
+      return { allowed: true, reason: 'No origin header (mobile app/Postman)' };
+    }
+
+    if (this.blockedOrigins.has(origin)) {
+      return { allowed: false, reason: 'Origin is temporarily blocked' };
+    }
+
+    // Check exact matches
+    for (const allowedOrigin of this.config.allowedOrigins) {
+      if (typeof allowedOrigin === 'string' && allowedOrigin === origin) {
+        return { allowed: true, reason: 'Exact match', matchedPattern: allowedOrigin };
+      }
+      if (allowedOrigin instanceof RegExp && allowedOrigin.test(origin)) {
+        return { allowed: true, reason: 'Regex pattern match', matchedPattern: allowedOrigin.source };
+      }
+    }
+
+    // Check dynamic validation
+    if (this.config.dynamicOriginValidation) {
+      if (process.env.NODE_ENV === 'development' && this.isLocalhostOrigin(origin)) {
+        return { allowed: true, reason: 'Localhost in development mode' };
+      }
+
+      if (this.config.vercelDeploymentSupport && this.isVercelDeployment(origin)) {
+        return { allowed: true, reason: 'Vercel deployment pattern' };
+      }
+
+      if (this.isLinkDAOSubdomain(origin)) {
+        return { allowed: true, reason: 'LinkDAO subdomain pattern' };
+      }
+    }
+
+    return { 
+      allowed: false, 
+      reason: this.config.strictOriginValidation ? 
+        'Strict validation - origin not in allowed list' : 
+        'Origin validation failed'
+    };
+  }
+
+  /**
+   * Clear all caches and reset state (for testing/maintenance)
+   */
+  public reset(): void {
+    this.preflightCache.clear();
+    this.blockedOrigins.clear();
+    safeLogger.info('CORS middleware state reset');
+  }
 }
 
 // Create default instance
@@ -487,14 +806,48 @@ export const corsSecurityMiddleware = enhancedCorsMiddleware.middleware();
 export const developmentCorsMiddleware = new EnhancedCorsMiddleware({
   strictOriginValidation: false,
   logBlocked: false,
-  rateLimitPreflight: false
+  rateLimitPreflight: false,
+  dynamicOriginValidation: true,
+  suspiciousRequestDetection: false,
+  vercelDeploymentSupport: true,
+  securityHeaders: false
+}).middleware();
+
+export const stagingCorsMiddleware = new EnhancedCorsMiddleware({
+  strictOriginValidation: false,
+  logBlocked: true,
+  rateLimitPreflight: true,
+  dynamicOriginValidation: true,
+  suspiciousRequestDetection: true,
+  vercelDeploymentSupport: true,
+  securityHeaders: true
 }).middleware();
 
 export const productionCorsMiddleware = new EnhancedCorsMiddleware({
   strictOriginValidation: true,
   logBlocked: true,
   rateLimitPreflight: true,
+  dynamicOriginValidation: true,
+  suspiciousRequestDetection: true,
+  vercelDeploymentSupport: true,
   securityHeaders: true
 }).middleware();
+
+/**
+ * Get environment-appropriate CORS middleware
+ */
+export const getEnvironmentCorsMiddleware = (): any => {
+  const env = process.env.NODE_ENV || 'development';
+  
+  switch (env) {
+    case 'production':
+      return productionCorsMiddleware;
+    case 'staging':
+      return stagingCorsMiddleware;
+    case 'development':
+    default:
+      return developmentCorsMiddleware;
+  }
+};
 
 export default enhancedCorsMiddleware;

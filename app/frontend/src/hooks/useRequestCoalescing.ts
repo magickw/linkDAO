@@ -83,13 +83,40 @@ export function useRequestCoalescing<T>(
   // Function to get cached data without making request
   const getCachedData = useCallback((): T | null => {
     const cached = cacheRef.current.get(key);
-    return cached ? cached.data : null;
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.data;
+    }
+    return null;
+  }, [key, ttl]);
+  
+  // Function to set cached data
+  const setCachedData = useCallback((data: T): void => {
+    cacheRef.current.set(key, { 
+      data, 
+      timestamp: Date.now() 
+    });
   }, [key]);
+  
+  // Function to get cache metadata (including stale data)
+  const getCacheMetadata = useCallback(() => {
+    const cached = cacheRef.current.get(key);
+    if (!cached) return null;
+    
+    return {
+      data: cached.data,
+      timestamp: cached.timestamp,
+      age: Date.now() - cached.timestamp,
+      isStale: Date.now() - cached.timestamp > ttl,
+      isExpired: Date.now() - cached.timestamp > ttl * 2
+    };
+  }, [key, ttl]);
   
   return {
     request: coalescedRequest,
     invalidateCache,
-    getCachedData
+    getCachedData,
+    setCachedData,
+    getCacheMetadata
   };
 }
 

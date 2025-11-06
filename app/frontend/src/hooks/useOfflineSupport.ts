@@ -1,377 +1,309 @@
-/**
- * React Hook for Offline Support
- * Provides easy access to offline functionality and sync status
- */
-
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  offlineSupportService, 
-  SyncStatus, 
-  OfflineCapabilities, 
-  OfflineDocument 
-} from '../services/offlineSupportService';
-import { 
-  performanceMonitoringService,
-  PerformanceMetrics,
-  PerformanceAlert
-} from '../services/performanceMonitoringService';
-import { 
-  intelligentPreloadingService,
-  PreloadingStrategy
-} from '../services/intelligentPreloadingService';
+import { getOfflineActionQueue } from '../services/offlineActionQueue';
+
+interface OfflineStatus {
+  isOnline: boolean;
+  queueSize: number;
+  isSupported: boolean;
+}
 
 interface UseOfflineSupportReturn {
-  // Connection status
   isOnline: boolean;
-  syncStatus: SyncStatus | null;
-  capabilities: OfflineCapabilities | null;
-
-  // Offline documents
-  offlineDocuments: OfflineDocument[];
-
-  // Performance monitoring
-  performanceMetrics: PerformanceMetrics | null;
-  performanceAlerts: PerformanceAlert[];
-
-  // Preloading
-  preloadingStrategy: PreloadingStrategy | null;
-  preloadingStats: any;
-
-  // Queue management
+  queueSize: number;
+  isSupported: boolean;
   queuedActions: any[];
   syncInProgress: boolean;
   lastSyncTime: Date | null;
-
-  // Actions
-  syncDocuments: () => Promise<void>;
-  cacheDocument: (url: string) => Promise<void>;
-  clearOfflineCache: () => Promise<void>;
-  isDocumentAvailableOffline: (url: string) => Promise<boolean>;
-  syncNow: () => Promise<void>;
+  queueAction: (action: any) => Promise<boolean>;
+  syncActions: () => Promise<boolean>;
+  syncNow: () => Promise<boolean>;
   clearQueue: () => void;
   removeAction: (actionId: string) => void;
   getQueueStats: () => any;
-
-  // Performance actions
+  isActionQueued: (actionId: string) => boolean;
+  // Additional properties for compatibility
+  syncStatus: any;
+  offlineDocuments: any[];
+  isDocumentAvailableOffline: (docId: string) => boolean;
+  capabilities: any;
+  performanceMetrics: any;
+  performanceAlerts: any[];
+  syncDocuments: () => Promise<void>;
+  cacheDocument: (doc: any) => void;
+  clearOfflineCache: () => void;
   getAdaptiveLoadingStrategy: () => any;
-  trackDocumentView: (documentId: string, timeSpent: number) => void;
-  trackSearchQuery: (query: string) => void;
-
-  // Loading states
   loading: boolean;
   syncing: boolean;
-  error: string | null;
+  error: Error | null;
 }
 
-export const useOfflineSupport = (): UseOfflineSupportReturn => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [capabilities, setCapabilities] = useState<OfflineCapabilities | null>(null);
-  const [offlineDocuments, setOfflineDocuments] = useState<OfflineDocument[]>([]);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
-  const [performanceAlerts, setPerformanceAlerts] = useState<PerformanceAlert[]>([]);
-  const [preloadingStrategy, setPreloadingStrategy] = useState<PreloadingStrategy | null>(null);
-  const [preloadingStats, setPreloadingStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Queue management state
+export const useEnhancedOfflineSupport = (): UseOfflineSupportReturn => {
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      return navigator.onLine;
+    }
+    return false;
+  });
+  const [queueSize, setQueueSize] = useState(0);
   const [queuedActions, setQueuedActions] = useState<any[]>([]);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [trackedActions, setTrackedActions] = useState<Set<string>>(new Set());
+  
+  const isSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator;
 
-  // Initialize services
   useEffect(() => {
-    const initializeServices = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Initialize offline support
-        await offlineSupportService.initialize();
-        
-        // Initialize performance monitoring
-        await performanceMonitoringService.initialize();
-        
-        // Initialize intelligent preloading
-        await intelligentPreloadingService.initialize();
-        
-        // Get initial data
-        const [status, caps, docs, metrics, alerts, strategy, stats] = await Promise.all([
-          offlineSupportService.getSyncStatus(),
-          offlineSupportService.getCapabilities(),
-          offlineSupportService.getOfflineDocuments(),
-          Promise.resolve(performanceMonitoringService.getCurrentMetrics()),
-          Promise.resolve(performanceMonitoringService.getActiveAlerts()),
-          Promise.resolve(intelligentPreloadingService.getPreloadingStrategy()),
-          Promise.resolve(intelligentPreloadingService.getPreloadingStats())
-        ]);
-        
-        setSyncStatus(status);
-        setCapabilities(caps);
-        setOfflineDocuments(docs);
-        setPerformanceMetrics(metrics);
-        setPerformanceAlerts(alerts);
-        setPreloadingStrategy(strategy);
-        setPreloadingStats(stats);
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to initialize offline support');
-        console.error('Offline support initialization error:', err);
-      } finally {
-        setLoading(false);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Update online status from browser events
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Listen to service worker messages for queue updates
+    const handleConnectionStatus = (data: any) => {
+      setIsOnline(data.isOnline);
+      setQueueSize(data.queueSize || 0);
+    };
+
+    const handleSyncComplete = (data: any) => {
+      setQueueSize(data.queueSize || 0);
+      setSyncInProgress(false);
+      setLastSyncTime(new Date());
+      // Clear queued actions tracking
+      setTrackedActions(new Set());
+      setQueuedActions([]);
+    };
+
+    if (isSupported) {
+      const queue = getOfflineActionQueue();
+      if (queue) {
+        queue.addEventListener('CONNECTION_STATUS_CHANGED', handleConnectionStatus);
+        queue.addEventListener('OFFLINE_SYNC_COMPLETE', handleSyncComplete);
+
+        // Get initial status
+        queue.getOfflineStatus().then(initialStatus => {
+          setIsOnline(initialStatus.isOnline);
+          setQueueSize(initialStatus.queueSize);
+        });
       }
-    };
-
-    initializeServices();
-  }, []);
-
-  // Set up event listeners
-  useEffect(() => {
-    // Online/offline status
-    const handleOnlineStatus = (online: boolean) => {
-      setIsOnline(online);
-    };
-
-    // Sync status updates
-    const handleSyncStatus = (status: SyncStatus) => {
-      setSyncStatus(status);
-      setSyncing(status.syncInProgress);
-    };
-
-    // Performance metrics updates
-    const handleMetricsUpdate = (metrics: PerformanceMetrics) => {
-      setPerformanceMetrics(metrics);
-    };
-
-    // Performance alerts
-    const handleAlert = (alert: PerformanceAlert) => {
-      setPerformanceAlerts(prev => [...prev, alert]);
-    };
-
-    // Preloading status
-    const handlePreloadingStatus = (status: { active: boolean; queueSize: number }) => {
-      setPreloadingStats(prev => ({ ...prev, ...status }));
-    };
-
-    // Add listeners
-    offlineSupportService.addOnlineStatusListener(handleOnlineStatus);
-    offlineSupportService.addSyncStatusListener(handleSyncStatus);
-    performanceMonitoringService.addMetricsListener(handleMetricsUpdate);
-    performanceMonitoringService.addAlertListener(handleAlert);
-    intelligentPreloadingService.addPreloadingListener(handlePreloadingStatus);
+    }
 
     return () => {
-      // Remove listeners
-      offlineSupportService.removeOnlineStatusListener(handleOnlineStatus);
-      offlineSupportService.removeSyncStatusListener(handleSyncStatus);
-      performanceMonitoringService.removeMetricsListener(handleMetricsUpdate);
-      performanceMonitoringService.removeAlertListener(handleAlert);
-      intelligentPreloadingService.removePreloadingListener(handlePreloadingStatus);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      }
+      
+      if (isSupported) {
+        const queue = getOfflineActionQueue();
+        if (queue) {
+          queue.removeEventListener('CONNECTION_STATUS_CHANGED', handleConnectionStatus);
+          queue.removeEventListener('OFFLINE_SYNC_COMPLETE', handleSyncComplete);
+        }
+      }
     };
-  }, []);
+  }, [isSupported]);
 
-  // Sync documents
-  const syncDocuments = useCallback(async () => {
-    try {
-      setSyncing(true);
-      setError(null);
-      
-      await offlineSupportService.syncDocuments();
-      
-      // Refresh offline documents
-      const docs = await offlineSupportService.getOfflineDocuments();
-      setOfflineDocuments(docs);
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sync documents');
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
-  // Cache document
-  const cacheDocument = useCallback(async (url: string) => {
-    try {
-      setError(null);
-      await offlineSupportService.cacheDocument(url);
-      
-      // Refresh offline documents
-      const docs = await offlineSupportService.getOfflineDocuments();
-      setOfflineDocuments(docs);
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cache document');
-    }
-  }, []);
-
-  // Clear offline cache
-  const clearOfflineCache = useCallback(async () => {
-    try {
-      setError(null);
-      await offlineSupportService.clearOfflineCache();
-      
-      // Refresh data
-      const [status, docs] = await Promise.all([
-        offlineSupportService.getSyncStatus(),
-        offlineSupportService.getOfflineDocuments()
-      ]);
-      
-      setSyncStatus(status);
-      setOfflineDocuments(docs);
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clear cache');
-    }
-  }, []);
-
-  // Check if document is available offline
-  const isDocumentAvailableOffline = useCallback(async (url: string) => {
-    try {
-      return await offlineSupportService.isDocumentAvailableOffline(url);
-    } catch (err) {
-      console.error('Failed to check document availability:', err);
+  const queueAction = useCallback(async (action: any): Promise<boolean> => {
+    if (!isSupported) {
+      console.warn('Offline support not available');
       return false;
     }
-  }, []);
 
-  // Get adaptive loading strategy
-  const getAdaptiveLoadingStrategy = useCallback(() => {
-    return performanceMonitoringService.getAdaptiveLoadingStrategy();
-  }, []);
+    const queue = getOfflineActionQueue();
+    if (!queue) {
+      console.warn('Offline action queue not available');
+      return false;
+    }
 
-  // Track document view
-  const trackDocumentView = useCallback((documentId: string, timeSpent: number) => {
-    intelligentPreloadingService.trackDocumentView(documentId, timeSpent);
-  }, []);
-
-  // Track search query
-  const trackSearchQuery = useCallback((query: string) => {
-    intelligentPreloadingService.trackSearchQuery(query);
-  }, []);
-
-  // Sync now
-  const syncNow = useCallback(async () => {
-    setSyncInProgress(true);
     try {
-      await syncDocuments();
-      setLastSyncTime(new Date());
+      const success = await queue.queueAction(action);
+      if (success && action.id) {
+        setTrackedActions(prev => new Set(prev).add(action.id));
+        setQueueSize(prev => prev + 1);
+        setQueuedActions(prev => [...prev, action]);
+      }
+      return success;
+    } catch (error) {
+      console.error('Failed to queue action:', error);
+      return false;
+    }
+  }, [isSupported]);
+
+  const syncActions = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) {
+      console.warn('Offline support not available');
+      return false;
+    }
+
+    const queue = getOfflineActionQueue();
+    if (!queue) {
+      console.warn('Offline action queue not available');
+      return false;
+    }
+
+    try {
+      setSyncInProgress(true);
+      const result = await queue.syncOfflineActions();
+      if (result) {
+        setLastSyncTime(new Date());
+      }
+      return result;
+    } catch (error) {
+      console.error('Failed to sync actions:', error);
+      return false;
     } finally {
       setSyncInProgress(false);
     }
-  }, [syncDocuments]);
+  }, [isSupported]);
 
-  // Clear queue
+  const syncNow = useCallback(async (): Promise<boolean> => {
+    return syncActions();
+  }, [syncActions]);
+
   const clearQueue = useCallback(() => {
     setQueuedActions([]);
+    setQueueSize(0);
+    setTrackedActions(new Set());
   }, []);
 
-  // Remove single action from queue
   const removeAction = useCallback((actionId: string) => {
-    setQueuedActions(prev => prev.filter((a: any) => a.id !== actionId));
+    setQueuedActions(prev => prev.filter(action => action.id !== actionId));
+    setTrackedActions(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(actionId);
+      return newSet;
+    });
+    setQueueSize(prev => Math.max(0, prev - 1));
   }, []);
 
-  // Get queue stats
   const getQueueStats = useCallback(() => {
+    const byPriority = queuedActions.reduce((acc, action) => {
+      const priority = action.priority || 'medium';
+      acc[priority] = (acc[priority] || 0) + 1;
+      return acc;
+    }, { high: 0, medium: 0, low: 0 });
+
+    const oldestAction = queuedActions.length > 0 
+      ? new Date(Math.min(...queuedActions.map(a => a.timestamp || Date.now())))
+      : null;
+
     return {
-      total: queuedActions.length,
-      pending: queuedActions.filter((a: any) => a.status === 'pending').length,
-      failed: queuedActions.filter((a: any) => a.status === 'failed').length
+      byPriority,
+      oldestAction,
+      total: queuedActions.length
     };
   }, [queuedActions]);
 
+  const isActionQueued = useCallback((actionId: string): boolean => {
+    return trackedActions.has(actionId);
+  }, [trackedActions]);
+
   return {
     isOnline,
-    syncStatus,
-    capabilities,
-    offlineDocuments,
-    performanceMetrics,
-    performanceAlerts,
-    preloadingStrategy,
-    preloadingStats,
+    queueSize,
+    isSupported,
     queuedActions,
     syncInProgress,
     lastSyncTime,
-    syncDocuments,
-    cacheDocument,
-    clearOfflineCache,
-    isDocumentAvailableOffline,
+    queueAction,
+    syncActions,
     syncNow,
     clearQueue,
     removeAction,
     getQueueStats,
-    getAdaptiveLoadingStrategy,
-    trackDocumentView,
-    trackSearchQuery,
-    loading,
-    syncing,
-    error
+    isActionQueued,
+    // Additional properties for compatibility
+    syncStatus: { 
+      status: syncInProgress ? 'syncing' : 'idle',
+      lastSync: lastSyncTime,
+      progress: 0
+    },
+    offlineDocuments: [],
+    isDocumentAvailableOffline: () => false,
+    capabilities: { offline: isSupported, sync: isSupported },
+    performanceMetrics: { responseTime: 0, errorRate: 0 },
+    performanceAlerts: [],
+    syncDocuments: async () => {},
+    cacheDocument: () => {},
+    clearOfflineCache: () => {},
+    getAdaptiveLoadingStrategy: () => ({ strategy: 'default' }),
+    loading: syncInProgress,
+    syncing: syncInProgress,
+    error: null
   };
 };
 
-/**
- * Hook for performance monitoring
- */
-export const usePerformanceMonitoring = () => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
-  const [history, setHistory] = useState<PerformanceMetrics[]>([]);
+// Hook for specific action types
+export const useOfflineActions = () => {
+  const { queueAction, isOnline, queueSize, isSupported } = useEnhancedOfflineSupport();
+  const status = { isOnline, queueSize, isSupported };
 
-  useEffect(() => {
-    // Initialize performance monitoring
-    const initializeMonitoring = async () => {
-      try {
-        await performanceMonitoringService.initialize();
-        
-        const currentMetrics = performanceMonitoringService.getCurrentMetrics();
-        setMetrics(currentMetrics);
-        
-        const activeAlerts = performanceMonitoringService.getActiveAlerts();
-        setAlerts(activeAlerts);
-        
-        const performanceHistory = performanceMonitoringService.getPerformanceHistory(1);
-        setHistory(performanceHistory);
-      } catch (error) {
-        console.error('Failed to initialize performance monitoring:', error);
-      }
-    };
+  const queueCreatePost = useCallback(async (postData: any, auth?: string) => {
+    return queueAction({
+      type: 'CREATE_POST',
+      data: postData,
+      auth,
+      id: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    });
+  }, [queueAction]);
 
-    initializeMonitoring();
+  const queueCreateComment = useCallback(async (postId: string, commentData: any, auth?: string) => {
+    return queueAction({
+      type: 'CREATE_COMMENT',
+      postId,
+      data: commentData,
+      auth,
+      id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    });
+  }, [queueAction]);
 
-    // Set up listeners
-    const handleMetricsUpdate = (newMetrics: PerformanceMetrics) => {
-      setMetrics(newMetrics);
-      setHistory(prev => [...prev.slice(-99), newMetrics]);
-    };
+  const queueReaction = useCallback(async (postId: string, reactionData: any, auth?: string) => {
+    return queueAction({
+      type: 'REACT_TO_POST',
+      postId,
+      data: reactionData,
+      auth,
+      id: `reaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    });
+  }, [queueAction]);
 
-    const handleAlert = (alert: PerformanceAlert) => {
-      setAlerts(prev => [...prev, alert]);
-    };
+  const queueJoinCommunity = useCallback(async (communityId: string, joinData: any, auth?: string) => {
+    return queueAction({
+      type: 'JOIN_COMMUNITY',
+      communityId,
+      data: joinData,
+      auth,
+      id: `join_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    });
+  }, [queueAction]);
 
-    performanceMonitoringService.addMetricsListener(handleMetricsUpdate);
-    performanceMonitoringService.addAlertListener(handleAlert);
-
-    return () => {
-      performanceMonitoringService.removeMetricsListener(handleMetricsUpdate);
-      performanceMonitoringService.removeAlertListener(handleAlert);
-    };
-  }, []);
-
-  const resolveAlert = useCallback((alertId: string) => {
-    performanceMonitoringService.resolveAlert(alertId);
-    setAlerts(prev => prev.filter(alert => alert.id !== alertId));
-  }, []);
-
-  const getNetworkCondition = useCallback(() => {
-    return performanceMonitoringService.getNetworkCondition();
-  }, []);
+  const queueFollowUser = useCallback(async (userId: string, followData: any, auth?: string) => {
+    return queueAction({
+      type: 'FOLLOW_USER',
+      userId,
+      data: followData,
+      auth,
+      id: `follow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    });
+  }, [queueAction]);
 
   return {
-    metrics,
-    alerts,
-    history,
-    resolveAlert,
-    getNetworkCondition
+    status,
+    queueCreatePost,
+    queueCreateComment,
+    queueReaction,
+    queueJoinCommunity,
+    queueFollowUser
   };
 };
+
+// Maintain compatibility with existing code
+export const useOfflineSupport = useEnhancedOfflineSupport;
+
+export default useEnhancedOfflineSupport;

@@ -3,7 +3,7 @@
  * Integrates offline action queue and background sync with the existing cache service
  */
 
-import { offlineActionQueue, OfflineAction } from './offlineActionQueue';
+import { getOfflineActionQueue, OfflineAction } from './offlineActionQueue';
 import { backgroundSyncManager } from './backgroundSyncManager';
 import { serviceWorkerCacheService } from './serviceWorkerCacheService';
 
@@ -37,8 +37,7 @@ export class BackgroundSyncIntegration {
     if (this.isInitialized) return;
 
     try {
-      // Initialize offline action queue
-      await offlineActionQueue.initialize();
+      // Offline action queue is ready to use (no initialization needed)
       
       // Initialize service worker cache service
       await serviceWorkerCacheService.initialize();
@@ -87,7 +86,9 @@ export class BackgroundSyncIntegration {
       maxRetries: 3 // Add the missing maxRetries property
     };
 
-    const actionId = await offlineActionQueue.enqueue(action);
+    const queue = getOfflineActionQueue();
+    const success = queue ? await queue.queueAction(action) : false;
+    const actionId = success ? `action_${Date.now()}` : null;
     
     // Trigger immediate sync if network is available and suitable
     if (navigator.onLine && backgroundSyncManager.isNetworkSuitable()) {
@@ -130,8 +131,9 @@ export class BackgroundSyncIntegration {
     syncStats: any;
     cacheStats: any;
   }> {
+    const queue = getOfflineActionQueue();
     const [queueStatus, syncStats, cacheStats] = await Promise.all([
-      offlineActionQueue.getStatus(),
+      queue ? queue.getOfflineStatus() : { isOnline: false, queueSize: 0 },
       backgroundSyncManager.getSyncStats(),
       serviceWorkerCacheService.getCacheStats()
     ]);
@@ -148,7 +150,10 @@ export class BackgroundSyncIntegration {
    * Clear all queued actions
    */
   async clearQueue(): Promise<void> {
-    await offlineActionQueue.clearQueue();
+    const queue = getOfflineActionQueue();
+    if (queue) {
+      await queue.clearQueue();
+    }
   }
 
   /**
@@ -196,15 +201,18 @@ export class BackgroundSyncIntegration {
 
   private async processSyncByType(actionType: string): Promise<void> {
     try {
-      const actions = await offlineActionQueue.getActionsByType(actionType);
+      const queue = getOfflineActionQueue();
+      if (!queue) return;
+
+      const actions = await queue.getActionsByType(actionType);
       
       for (const action of actions) {
         try {
           await this.processAction(action);
-          await offlineActionQueue.markActionCompleted(action.id);
+          await queue.markActionCompleted(action.id);
         } catch (error) {
           console.error(`Failed to process ${actionType} action:`, error);
-          await offlineActionQueue.retryWithBackoff(action);
+          await queue.retryWithBackoff(action);
         }
       }
     } catch (error) {
@@ -378,10 +386,13 @@ export class BackgroundSyncIntegration {
 
     // Listen for queue status updates
     window.addEventListener('offlineQueueStatusUpdate', async (event: any) => {
-      const queueStatus = await offlineActionQueue.getStatus();
+      const queue = getOfflineActionQueue();
+      if (!queue) return;
+      
+      const queueStatus = await queue.getOfflineStatus();
       
       // Trigger sync if queue is getting large
-      if (queueStatus.totalActions > this.config.maxQueueSize * 0.8) {
+      if (queueStatus.queueSize > this.config.maxQueueSize * 0.8) {
         console.log('Queue size threshold reached, triggering sync');
         await this.triggerSync();
       }

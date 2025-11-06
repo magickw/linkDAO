@@ -21,7 +21,7 @@ import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
-import { OfflineIndicator } from '@/components/OfflineIndicator';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import Head from 'next/head';
 import '../styles/globals.css';
 import '../styles/enhanced-glassmorphism.css';
@@ -271,7 +271,7 @@ function AppContent({ Component, pageProps, router }: AppProps) {
   return (
     <>
       <Component {...pageProps} />
-      <OfflineIndicator isOnline={isOnline} isBackendAvailable={isBackendAvailable} />
+      <OfflineIndicator />
       
       {/* Offline Indicator */}
       {!isOnline && (

@@ -1,328 +1,315 @@
-/**
- * Progressive enhancement framework for Web3 features
- */
-
-export type FeatureLevel = 'basic' | 'enhanced' | 'premium';
-export type Web3Capability = 'wallet' | 'transactions' | 'contracts' | 'governance' | 'staking';
+// Progressive Enhancement Utilities
+// Provides fallback functionality when backend services are unavailable
 
 export interface FeatureConfig {
-  level: FeatureLevel;
-  requiredCapabilities: Web3Capability[];
-  fallbackComponent?: React.ComponentType<any>;
-  fallbackProps?: Record<string, any>;
-  gracefulDegradation: boolean;
+  name: string;
+  isAvailable: boolean;
+  fallbackEnabled: boolean;
+  priority: 'critical' | 'important' | 'optional';
 }
 
-export interface Web3CapabilityStatus {
-  wallet: boolean;
-  transactions: boolean;
-  contracts: boolean;
-  governance: boolean;
-  staking: boolean;
+interface CachedData {
+  timestamp: number;
+  data: any;
+  ttl: number;
 }
 
-export interface ProgressiveEnhancementConfig {
-  enableFallbacks: boolean;
-  showWeb3Prompts: boolean;
-  cacheCapabilities: boolean;
-  retryFailedCapabilities: boolean;
-  capabilityCheckInterval: number;
-}
+class ProgressiveEnhancementService {
+  private features: Map<string, FeatureConfig> = new Map();
+  private cachedData: Map<string, CachedData> = new Map();
+  private isOnline: boolean = navigator.onLine;
 
-export class ProgressiveEnhancementManager {
-  private static instance: ProgressiveEnhancementManager;
-  private capabilities: Web3CapabilityStatus = {
-    wallet: false,
-    transactions: false,
-    contracts: false,
-    governance: false,
-    staking: false
-  };
-  
-  private config: ProgressiveEnhancementConfig = {
-    enableFallbacks: true,
-    showWeb3Prompts: true,
-    cacheCapabilities: true,
-    retryFailedCapabilities: true,
-    capabilityCheckInterval: 30000 // 30 seconds
-  };
+  constructor() {
+    this.initializeFeatures();
+    this.setupConnectivityListeners();
+  }
 
-  private capabilityCheckers: Map<Web3Capability, () => Promise<boolean>> = new Map();
-  private lastCheck: Date = new Date(0);
-  private checkInterval?: NodeJS.Timeout;
+  private initializeFeatures() {
+    // Define core features and their availability
+    const coreFeatures: FeatureConfig[] = [
+      { name: 'feed', isAvailable: true, fallbackEnabled: true, priority: 'critical' },
+      { name: 'posts', isAvailable: true, fallbackEnabled: true, priority: 'critical' },
+      { name: 'communities', isAvailable: true, fallbackEnabled: true, priority: 'critical' },
+      { name: 'profiles', isAvailable: true, fallbackEnabled: true, priority: 'important' },
+      { name: 'search', isAvailable: true, fallbackEnabled: true, priority: 'important' },
+      { name: 'notifications', isAvailable: true, fallbackEnabled: false, priority: 'optional' },
+      { name: 'realtime', isAvailable: true, fallbackEnabled: false, priority: 'optional' },
+      { name: 'analytics', isAvailable: true, fallbackEnabled: false, priority: 'optional' }
+    ];
 
-  static getInstance(): ProgressiveEnhancementManager {
-    if (!ProgressiveEnhancementManager.instance) {
-      ProgressiveEnhancementManager.instance = new ProgressiveEnhancementManager();
+    coreFeatures.forEach(feature => {
+      this.features.set(feature.name, feature);
+    });
+  }
+
+  private setupConnectivityListeners() {
+    window.addEventListener('online', () => {
+      this.isOnline = true;
+      this.enableAllFeatures();
+    });
+
+    window.addEventListener('offline', () => {
+      this.isOnline = false;
+      this.enableFallbackMode();
+    });
+  }
+
+  // Check if a feature is available
+  isFeatureAvailable(featureName: string): boolean {
+    const feature = this.features.get(featureName);
+    if (!feature) return false;
+
+    // If offline, only return true if fallback is enabled
+    if (!this.isOnline) {
+      return feature.fallbackEnabled;
     }
-    return ProgressiveEnhancementManager.instance;
+
+    return feature.isAvailable;
   }
 
-  initialize(config?: Partial<ProgressiveEnhancementConfig>): void {
-    this.config = { ...this.config, ...config };
-    this.setupCapabilityCheckers();
-    this.startPeriodicChecks();
-    this.checkAllCapabilities();
-  }
-
-  private setupCapabilityCheckers(): void {
-    this.capabilityCheckers.set('wallet', this.checkWalletCapability.bind(this));
-    this.capabilityCheckers.set('transactions', this.checkTransactionCapability.bind(this));
-    this.capabilityCheckers.set('contracts', this.checkContractCapability.bind(this));
-    this.capabilityCheckers.set('governance', this.checkGovernanceCapability.bind(this));
-    this.capabilityCheckers.set('staking', this.checkStakingCapability.bind(this));
-  }
-
-  private async checkWalletCapability(): Promise<boolean> {
-    try {
-      if (typeof window === 'undefined') return false;
-      
-      // Check for Web3 providers
-      const hasEthereum = !!(window as any).ethereum;
-      const hasWeb3 = !!(window as any).web3;
-      
-      if (!hasEthereum && !hasWeb3) return false;
-
-      // Try to get accounts (this will prompt if not connected)
-      const provider = (window as any).ethereum;
-      if (provider) {
-        const accounts = await provider.request({ method: 'eth_accounts' });
-        return accounts && accounts.length > 0;
-      }
-      
-      return false;
-    } catch (error) {
-      console.warn('Wallet capability check failed:', error);
-      return false;
+  // Disable a feature (e.g., when backend service is down)
+  disableFeature(featureName: string, reason?: string) {
+    const feature = this.features.get(featureName);
+    if (feature) {
+      feature.isAvailable = false;
+      console.warn(`Feature '${featureName}' disabled: ${reason || 'Unknown reason'}`);
     }
   }
 
-  private async checkTransactionCapability(): Promise<boolean> {
-    try {
-      if (!this.capabilities.wallet) return false;
-      
-      const provider = (window as any).ethereum;
-      if (!provider) return false;
-
-      // Check if we can estimate gas (indicates transaction capability)
-      await provider.request({
-        method: 'eth_estimateGas',
-        params: [{
-          to: '0x0000000000000000000000000000000000000000',
-          value: '0x0'
-        }]
-      });
-      
-      return true;
-    } catch (error) {
-      // This is expected to fail, we're just checking if the method exists
-      return true;
+  // Enable a feature
+  enableFeature(featureName: string) {
+    const feature = this.features.get(featureName);
+    if (feature) {
+      feature.isAvailable = true;
+      console.log(`Feature '${featureName}' enabled`);
     }
   }
 
-  private async checkContractCapability(): Promise<boolean> {
-    try {
-      if (!this.capabilities.transactions) return false;
-      
-      const provider = (window as any).ethereum;
-      if (!provider) return false;
-
-      // Check if we can call contract methods
-      const chainId = await provider.request({ method: 'eth_chainId' });
-      return !!chainId;
-    } catch (error) {
-      console.warn('Contract capability check failed:', error);
-      return false;
-    }
+  // Enable all features (when coming back online)
+  private enableAllFeatures() {
+    this.features.forEach((feature, name) => {
+      feature.isAvailable = true;
+    });
+    console.log('All features enabled - connection restored');
   }
 
-  private async checkGovernanceCapability(): Promise<boolean> {
-    // Governance requires contract capability plus specific governance contracts
-    return this.capabilities.contracts && this.hasGovernanceContracts();
+  // Enable only fallback features (when going offline)
+  private enableFallbackMode() {
+    this.features.forEach((feature, name) => {
+      feature.isAvailable = feature.fallbackEnabled;
+    });
+    console.log('Fallback mode enabled - limited functionality available');
   }
 
-  private async checkStakingCapability(): Promise<boolean> {
-    // Staking requires contract capability plus specific staking contracts
-    return this.capabilities.contracts && this.hasStakingContracts();
+  // Cache data for offline use
+  cacheData(key: string, data: any, ttl: number = 300000) { // 5 minutes default TTL
+    this.cachedData.set(key, {
+      timestamp: Date.now(),
+      data,
+      ttl
+    });
   }
 
-  private hasGovernanceContracts(): boolean {
-    // Check if governance contracts are available for current network
-    // This would typically check against a registry of deployed contracts
-    return true; // Simplified for now
-  }
+  // Get cached data
+  getCachedData(key: string): any | null {
+    const cached = this.cachedData.get(key);
+    if (!cached) return null;
 
-  private hasStakingContracts(): boolean {
-    // Check if staking contracts are available for current network
-    return true; // Simplified for now
-  }
-
-  async checkAllCapabilities(): Promise<void> {
-    const now = new Date();
-    if (now.getTime() - this.lastCheck.getTime() < this.config.capabilityCheckInterval) {
-      return; // Skip if checked recently
+    const age = Date.now() - cached.timestamp;
+    if (age > cached.ttl) {
+      this.cachedData.delete(key);
+      return null;
     }
 
-    for (const [capability, checker] of this.capabilityCheckers) {
-      try {
-        this.capabilities[capability] = await checker();
-      } catch (error) {
-        console.warn(`Failed to check ${capability} capability:`, error);
-        this.capabilities[capability] = false;
-      }
-    }
-
-    this.lastCheck = now;
-    this.notifyCapabilityChange();
+    return cached.data;
   }
 
-  private startPeriodicChecks(): void {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-    }
+  // Check if data is cached and fresh
+  hasFreshCache(key: string): boolean {
+    const cached = this.cachedData.get(key);
+    if (!cached) return false;
 
-    this.checkInterval = setInterval(() => {
-      if (this.config.retryFailedCapabilities) {
-        this.checkAllCapabilities();
-      }
-    }, this.config.capabilityCheckInterval);
+    const age = Date.now() - cached.timestamp;
+    return age <= cached.ttl;
   }
 
-  private notifyCapabilityChange(): void {
-    window.dispatchEvent(new CustomEvent('web3-capabilities-changed', {
-      detail: { capabilities: this.capabilities }
-    }));
-  }
-
-  getCapabilities(): Web3CapabilityStatus {
-    return { ...this.capabilities };
-  }
-
-  hasCapability(capability: Web3Capability): boolean {
-    return this.capabilities[capability];
-  }
-
-  hasAllCapabilities(capabilities: Web3Capability[]): boolean {
-    return capabilities.every(cap => this.capabilities[cap]);
-  }
-
-  getFeatureLevel(requiredCapabilities: Web3Capability[]): FeatureLevel {
-    const hasAll = this.hasAllCapabilities(requiredCapabilities);
-    const hasWallet = this.hasCapability('wallet');
-    
-    if (hasAll) return 'premium';
-    if (hasWallet) return 'enhanced';
-    return 'basic';
-  }
-
-  shouldShowFeature(config: FeatureConfig): boolean {
-    const currentLevel = this.getFeatureLevel(config.requiredCapabilities);
-    
-    switch (config.level) {
-      case 'basic':
-        return true;
-      case 'enhanced':
-        return currentLevel === 'enhanced' || currentLevel === 'premium';
-      case 'premium':
-        return currentLevel === 'premium';
+  // Get fallback data for a feature
+  getFallbackData(featureName: string): any {
+    switch (featureName) {
+      case 'feed':
+        return this.getCachedData('feed') || this.getEmptyFeedData();
+      case 'communities':
+        return this.getCachedData('communities') || this.getEmptyCommunitiesData();
+      case 'posts':
+        return this.getCachedData('posts') || this.getEmptyPostsData();
+      case 'profiles':
+        return this.getCachedData('profiles') || this.getEmptyProfileData();
       default:
-        return false;
+        return null;
     }
   }
 
-  getFallbackComponent(config: FeatureConfig): React.ComponentType<any> | null {
-    if (!this.shouldShowFeature(config) && config.fallbackComponent) {
-      return config.fallbackComponent;
-    }
-    return null;
-  }
-
-  async enableCapability(capability: Web3Capability): Promise<boolean> {
-    try {
-      switch (capability) {
-        case 'wallet':
-          return await this.enableWallet();
-        case 'transactions':
-          return await this.enableTransactions();
-        default:
-          return false;
-      }
-    } catch (error) {
-      console.error(`Failed to enable ${capability}:`, error);
-      return false;
-    }
-  }
-
-  private async enableWallet(): Promise<boolean> {
-    try {
-      const provider = (window as any).ethereum;
-      if (!provider) {
-        this.showWalletInstallPrompt();
-        return false;
-      }
-
-      await provider.request({ method: 'eth_requestAccounts' });
-      await this.checkAllCapabilities();
-      return this.capabilities.wallet;
-    } catch (error) {
-      console.error('Failed to enable wallet:', error);
-      return false;
-    }
-  }
-
-  private async enableTransactions(): Promise<boolean> {
-    if (!this.capabilities.wallet) {
-      return await this.enableWallet();
-    }
-    return this.capabilities.transactions;
-  }
-
-  private showWalletInstallPrompt(): void {
-    if (this.config.showWeb3Prompts) {
-      window.dispatchEvent(new CustomEvent('show-wallet-install-prompt'));
-    }
-  }
-
-  destroy(): void {
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = undefined;
-    }
-  }
-}
-
-export const progressiveEnhancement = ProgressiveEnhancementManager.getInstance();
-
-// React hook for using progressive enhancement
-export function useProgressiveEnhancement(config: FeatureConfig) {
-  const [capabilities, setCapabilities] = React.useState<Web3CapabilityStatus>(
-    progressiveEnhancement.getCapabilities()
-  );
-
-  React.useEffect(() => {
-    const handleCapabilityChange = (event: CustomEvent) => {
-      setCapabilities(event.detail.capabilities);
+  // Generate empty data structures for fallback
+  private getEmptyFeedData() {
+    return {
+      posts: [],
+      hasMore: false,
+      message: 'No cached posts available. Connect to internet to load fresh content.'
     };
+  }
 
-    window.addEventListener('web3-capabilities-changed', handleCapabilityChange as EventListener);
+  private getEmptyCommunitiesData() {
+    return {
+      communities: [],
+      message: 'No cached communities available. Connect to internet to browse communities.'
+    };
+  }
+
+  private getEmptyPostsData() {
+    return {
+      posts: [],
+      message: 'No cached posts available.'
+    };
+  }
+
+  private getEmptyProfileData() {
+    return {
+      user: null,
+      message: 'Profile data not available offline.'
+    };
+  }
+
+  // Get feature status for UI
+  getFeatureStatus(featureName: string): {
+    available: boolean;
+    fallback: boolean;
+    priority: string;
+    message?: string;
+  } {
+    const feature = this.features.get(featureName);
+    if (!feature) {
+      return {
+        available: false,
+        fallback: false,
+        priority: 'optional',
+        message: 'Feature not found'
+      };
+    }
+
+    const isUsingFallback = !this.isOnline && feature.fallbackEnabled;
     
-    return () => {
-      window.removeEventListener('web3-capabilities-changed', handleCapabilityChange as EventListener);
+    return {
+      available: feature.isAvailable,
+      fallback: isUsingFallback,
+      priority: feature.priority,
+      message: isUsingFallback ? 'Using cached data' : undefined
     };
-  }, []);
+  }
 
-  const shouldShow = progressiveEnhancement.shouldShowFeature(config);
-  const fallbackComponent = progressiveEnhancement.getFallbackComponent(config);
-  const featureLevel = progressiveEnhancement.getFeatureLevel(config.requiredCapabilities);
+  // Get all feature statuses
+  getAllFeatureStatuses(): Record<string, any> {
+    const statuses: Record<string, any> = {};
+    
+    this.features.forEach((feature, name) => {
+      statuses[name] = this.getFeatureStatus(name);
+    });
 
-  return {
-    capabilities,
-    shouldShow,
-    fallbackComponent,
-    featureLevel,
-    enableCapability: progressiveEnhancement.enableCapability.bind(progressiveEnhancement)
-  };
+    return statuses;
+  }
+
+  // Check if core functionality is available
+  isCoreAvailable(): boolean {
+    const coreFeatures = ['feed', 'posts', 'communities'];
+    return coreFeatures.some(feature => this.isFeatureAvailable(feature));
+  }
+
+  // Get degraded mode message
+  getDegradedModeMessage(): string | null {
+    if (this.isOnline) return null;
+
+    const availableFeatures = Array.from(this.features.entries())
+      .filter(([name, feature]) => feature.fallbackEnabled)
+      .map(([name]) => name);
+
+    if (availableFeatures.length === 0) {
+      return 'You are offline. Limited functionality available.';
+    }
+
+    return `You are offline. Available features: ${availableFeatures.join(', ')}`;
+  }
+
+  // Clear expired cache entries
+  clearExpiredCache() {
+    const now = Date.now();
+    
+    this.cachedData.forEach((cached, key) => {
+      const age = now - cached.timestamp;
+      if (age > cached.ttl) {
+        this.cachedData.delete(key);
+      }
+    });
+  }
+
+  // Get cache statistics
+  getCacheStats(): {
+    totalEntries: number;
+    totalSize: number;
+    expiredEntries: number;
+  } {
+    const now = Date.now();
+    let totalSize = 0;
+    let expiredEntries = 0;
+
+    this.cachedData.forEach((cached) => {
+      totalSize += JSON.stringify(cached.data).length;
+      const age = now - cached.timestamp;
+      if (age > cached.ttl) {
+        expiredEntries++;
+      }
+    });
+
+    return {
+      totalEntries: this.cachedData.size,
+      totalSize,
+      expiredEntries
+    };
+  }
 }
 
-// Import React for the hook
-import React from 'react';
+// Export singleton instance
+export const progressiveEnhancement = new ProgressiveEnhancementService();
+
+// Utility functions for components
+export const withFallback = <T>(
+  featureName: string,
+  primaryAction: () => Promise<T>,
+  fallbackAction?: () => T
+): Promise<T> => {
+  if (!progressiveEnhancement.isFeatureAvailable(featureName)) {
+    if (fallbackAction) {
+      return Promise.resolve(fallbackAction());
+    }
+    throw new Error(`Feature '${featureName}' is not available`);
+  }
+
+  return primaryAction().catch((error) => {
+    console.error(`Primary action failed for '${featureName}':`, error);
+    
+    if (fallbackAction) {
+      console.log(`Using fallback for '${featureName}'`);
+      return fallbackAction();
+    }
+    
+    throw error;
+  });
+};
+
+// Hook for React components (to be imported separately)
+export const createProgressiveEnhancementHook = () => {
+  return (featureName: string) => {
+    // This will be implemented in a separate hook file to avoid React dependency here
+    return progressiveEnhancement.getFeatureStatus(featureName);
+  };
+};
+
+export default progressiveEnhancement;

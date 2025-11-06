@@ -3,7 +3,7 @@
  * Handles background sync events and network condition awareness
  */
 
-import { OfflineAction, offlineActionQueue } from './offlineActionQueue';
+import { OfflineAction, getOfflineActionQueue } from './offlineActionQueue';
 
 export interface SyncEventHandler {
   tag: string;
@@ -152,7 +152,10 @@ export class BackgroundSyncManager {
     }
 
     try {
-      const actions = await offlineActionQueue.getReadyActions();
+      const queue = getOfflineActionQueue();
+      if (!queue) return;
+      
+      const actions = await queue.getReadyActions();
       const filteredActions = tag ? 
         actions.filter(action => action.tags.includes(tag)) : 
         actions;
@@ -267,7 +270,8 @@ export class BackgroundSyncManager {
     registeredHandlers: string[];
     queueStatus: any;
   }> {
-    const queueStatus = await offlineActionQueue.getStatus();
+    const queue = getOfflineActionQueue();
+    const queueStatus = queue ? await queue.getOfflineStatus() : { isOnline: false, queueSize: 0 };
     
     return {
       isOnline: this.isOnline,
@@ -398,11 +402,17 @@ export class BackgroundSyncManager {
     const promises = actions.map(async (action) => {
       try {
         await this.processAction(action);
-        await offlineActionQueue.markActionCompleted(action.id);
+        const queue = getOfflineActionQueue();
+        if (queue) {
+          await queue.markActionCompleted(action.id);
+        }
         console.log(`Action ${action.id} completed successfully`);
       } catch (error) {
         console.error(`Action ${action.id} failed:`, error);
-        await offlineActionQueue.retryWithBackoff(action);
+        const queue = getOfflineActionQueue();
+        if (queue) {
+          await queue.retryWithBackoff(action);
+        }
       }
     });
     

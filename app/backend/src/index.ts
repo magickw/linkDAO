@@ -61,6 +61,14 @@ import {
 // Import proper CORS middleware with environment-aware configuration
 import { corsMiddleware } from './middleware/corsMiddleware';
 import { emergencyCorsMiddleware, emergencyPreflightHandler, emergencyCorsHeaders } from './middleware/emergencyCorsMiddleware';
+// Import enhanced CORS middleware with dynamic validation and monitoring
+import { 
+  enhancedCorsMiddleware, 
+  getEnvironmentCorsMiddleware,
+  developmentCorsMiddleware,
+  stagingCorsMiddleware,
+  productionCorsMiddleware
+} from './middleware/enhancedCorsMiddleware';
 // Import new marketplace infrastructure
 import { 
   requestLoggingMiddleware, 
@@ -105,6 +113,7 @@ import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websock
 import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
+import { memoryMonitoringService } from './services/memoryMonitoringService';
 
 // Use dynamic imports to avoid circular dependencies
 let cacheService: any = null;
@@ -161,18 +170,94 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = parseInt(process.env.PORT || '10000', 10);
 
-// Reduce database pool size for memory-constrained environments
-const maxConnections = process.env.RENDER ? 3 : 20; // Render free tier gets minimal pool
-const minConnections = process.env.RENDER ? 1 : 5;
+// Optimize for Render deployment constraints
+const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
+const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
 
-// Initialize database pool for performance optimization
+// Database connection pool optimization for different environments
+const maxConnections = isRenderFree ? 2 : (isRenderPro ? 5 : (process.env.RENDER ? 3 : 20));
+const minConnections = isRenderFree ? 1 : (isRenderPro ? 2 : (process.env.RENDER ? 1 : 5));
+
+// Initialize optimized database pool
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: maxConnections,
   min: minConnections,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  idleTimeoutMillis: isRenderFree ? 20000 : (isRenderPro ? 30000 : 60000),
+  connectionTimeoutMillis: isRenderFree ? 5000 : (isRenderPro ? 3000 : 2000),
+  // Add connection cleanup and resource management
+  allowExitOnIdle: true,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+  // Add statement timeout to prevent long-running queries
+  statement_timeout: isResourceConstrained ? 30000 : 60000,
+  // Add query timeout for resource management
+  query_timeout: isResourceConstrained ? 25000 : 55000,
 });
+
+// Add database pool event handlers for monitoring and cleanup
+dbPool.on('connect', (client) => {
+  console.log(`📊 Database connection established (active: ${dbPool.totalCount}/${maxConnections})`);
+});
+
+dbPool.on('error', (err, client) => {
+  console.error('❌ Database pool error:', err);
+  
+  // Force garbage collection on database errors in constrained environments
+  if (isResourceConstrained && global.gc) {
+    setTimeout(() => global.gc && global.gc(), 1000);
+  }
+});
+
+dbPool.on('remove', (client) => {
+  console.log(`📊 Database connection removed (active: ${dbPool.totalCount}/${maxConnections})`);
+});
+
+// Add periodic connection pool health check
+if (process.env.RENDER || isResourceConstrained) {
+  setInterval(() => {
+    const poolStats = {
+      total: dbPool.totalCount,
+      idle: dbPool.idleCount,
+      waiting: dbPool.waitingCount,
+      max: maxConnections
+    };
+    
+    // Log pool stats if there are issues
+    if (poolStats.waiting > 0 || poolStats.total > maxConnections * 0.8) {
+      console.warn(`⚠️ Database pool status:`, poolStats);
+    }
+    
+    // Force cleanup if pool is at capacity
+    if (poolStats.total >= maxConnections && poolStats.idle === 0) {
+      console.warn('🚨 Database pool at capacity - forcing cleanup');
+      if (global.gc) {
+        global.gc();
+      }
+    }
+  }, 60000); // Check every minute
+}
+
+// Initialize memory monitoring service
+if (process.env.RENDER || isResourceConstrained) {
+  const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : 'Standard');
+  console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
+  
+  // Start memory monitoring with adaptive intervals
+  const monitoringInterval = isRenderFree ? 30000 : (isRenderPro ? 45000 : 60000);
+  memoryMonitoringService.startMonitoring(monitoringInterval);
+  
+  // Log initial memory stats
+  const initialStats = memoryMonitoringService.getMemoryStats();
+  console.log(`📊 Initial memory: ${initialStats.heapUsed}MB heap / ${initialStats.rss}MB RSS`);
+  
+  // Add process memory limit monitoring if specified
+  if (process.env.MEMORY_LIMIT) {
+    const memoryLimitMB = parseInt(process.env.MEMORY_LIMIT);
+    console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
+  }
+}
 
 // Initialize performance optimization
 const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
@@ -200,10 +285,22 @@ import {
 // Core middleware stack (order matters!)
 app.use(securityHeaders);
 app.use(helmetMiddleware);
-// EMERGENCY CORS FIX - Use permissive CORS temporarily
-app.use(emergencyCorsHeaders);
-app.use(emergencyPreflightHandler);
-app.use(emergencyCorsMiddleware);
+
+// Enhanced CORS Configuration with Dynamic Origin Validation
+// Use environment-appropriate CORS middleware with comprehensive logging and monitoring
+const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'true' ? 
+  emergencyCorsMiddleware : 
+  getEnvironmentCorsMiddleware();
+
+if (process.env.EMERGENCY_CORS === 'true') {
+  console.warn('⚠️ Using emergency CORS middleware - should only be temporary');
+  app.use(emergencyCorsHeaders);
+  app.use(emergencyPreflightHandler);
+  app.use(emergencyCorsMiddleware);
+} else {
+  console.log(`🔒 Using enhanced CORS middleware for ${process.env.NODE_ENV || 'development'} environment`);
+  app.use(corsMiddlewareToUse);
+}
 app.use(ddosProtection);
 app.use(requestFingerprinting);
 app.use(hideServerInfo);
@@ -295,6 +392,100 @@ app.get('/api/marketplace/health', (req, res) => {
       requestId: res.locals.requestId
     }
   });
+});
+
+// CORS monitoring endpoint for debugging and administration
+app.get('/api/cors/status', (req, res) => {
+  try {
+    const corsStats = enhancedCorsMiddleware.getStatistics();
+    const testOrigin = req.query.origin as string;
+    
+    let originValidation;
+    if (testOrigin) {
+      originValidation = enhancedCorsMiddleware.validateOrigin(testOrigin);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        statistics: corsStats,
+        emergencyMode: process.env.EMERGENCY_CORS === 'true',
+        currentOrigin: req.get('Origin') || null,
+        originValidation: originValidation || null,
+        blockedOrigins: enhancedCorsMiddleware.getBlockedOrigins(),
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to get CORS status',
+        details: error.message
+      }
+    });
+  }
+});
+
+// Enhanced health check with memory and resource information
+app.get('/health/detailed', (req, res) => {
+  try {
+    const memoryStats = memoryMonitoringService.getMemoryStats();
+    const uptime = process.uptime();
+    
+    const healthData = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: {
+        seconds: Math.floor(uptime),
+        human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`
+      },
+      memory: {
+        heapUsed: `${memoryStats.heapUsed}MB`,
+        heapTotal: `${memoryStats.heapTotal}MB`,
+        rss: `${memoryStats.rss}MB`,
+        external: `${memoryStats.external}MB`,
+        thresholds: {
+          warning: `${memoryStats.thresholds.warning}MB`,
+          critical: `${memoryStats.thresholds.critical}MB`,
+          gc: `${memoryStats.thresholds.gc}MB`
+        }
+      },
+      environment: {
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        render: !!process.env.RENDER,
+        renderPro: !!process.env.RENDER_PRO,
+        resourceConstrained: isResourceConstrained
+      },
+      database: {
+        connected: !!dbPool,
+        totalConnections: dbPool?.totalCount || 0,
+        idleConnections: dbPool?.idleCount || 0,
+        waitingConnections: dbPool?.waitingCount || 0,
+        maxConnections: maxConnections
+      },
+      services: {
+        webSocket: !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS,
+        monitoring: !isResourceConstrained && !process.env.DISABLE_MONITORING,
+        memoryMonitoring: true
+      }
+    };
+
+    res.json({
+      success: true,
+      data: healthData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Health check failed',
+        details: error.message
+      }
+    });
+  }
 });
 
 // API v1 routes with proper prefixes and middleware ordering
@@ -911,31 +1102,48 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(({ cacheService, cacheWarmingService }) => {
-    // WebSocket service (enabled with Render Pro 2GB RAM)
-    try {
-      const webSocketService = initializeWebSocket(httpServer);
-      console.log('✅ WebSocket service initialized');
-      console.log(`🔌 WebSocket ready for real-time updates`);
-    } catch (error) {
-      console.warn('⚠️ WebSocket service initialization failed:', error);
+    // WebSocket services - disabled on resource-constrained environments
+    const enableWebSockets = !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS;
+    
+    if (enableWebSockets) {
+      try {
+        const webSocketService = initializeWebSocket(httpServer);
+        console.log('✅ WebSocket service initialized');
+        console.log(`🔌 WebSocket ready for real-time updates`);
+      } catch (error) {
+        console.warn('⚠️ WebSocket service initialization failed:', error);
+      }
+    } else {
+      const reason = isRenderFree ? 'Render free tier' : 
+                    isResourceConstrained ? 'resource constraints' : 
+                    'manual disable';
+      console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
     }
 
-    // Admin WebSocket service
-    try {
-      const adminWebSocketService = initializeAdminWebSocket(httpServer);
-      console.log('✅ Admin WebSocket service initialized');
-      console.log(`🔧 Admin real-time dashboard ready`);
-    } catch (error) {
-      console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+    // Admin WebSocket service - only on non-constrained environments
+    if (enableWebSockets && !isRenderFree) {
+      try {
+        const adminWebSocketService = initializeAdminWebSocket(httpServer);
+        console.log('✅ Admin WebSocket service initialized');
+        console.log(`🔧 Admin real-time dashboard ready`);
+      } catch (error) {
+        console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+      }
+    } else {
+      console.log('⚠️ Admin WebSocket service disabled for resource optimization');
     }
 
-    // Seller WebSocket service
-    try {
-      const sellerWebSocketService = initializeSellerWebSocket();
-      console.log('✅ Seller WebSocket service initialized');
-      console.log(`🛒 Seller real-time updates ready`);
-    } catch (error) {
-      console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+    // Seller WebSocket service - only on non-constrained environments
+    if (enableWebSockets && !isRenderFree) {
+      try {
+        const sellerWebSocketService = initializeSellerWebSocket();
+        console.log('✅ Seller WebSocket service initialized');
+        console.log(`🛒 Seller real-time updates ready`);
+      } catch (error) {
+        console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+      }
+    } else {
+      console.log('⚠️ Seller WebSocket service disabled for resource optimization');
     }
     
     // Initialize cache service
@@ -977,23 +1185,37 @@ httpServer.listen(PORT, '0.0.0.0', () => {
       console.log('📝 Server will continue without caching');
     }
 
-    // Comprehensive monitoring
-    try {
-      comprehensiveMonitoringService.startMonitoring(60000);
-      console.log('✅ Comprehensive monitoring service started');
-      console.log('📊 System health monitoring active');
-    } catch (error) {
-      console.warn('⚠️ Monitoring service initialization failed:', error);
+    // Comprehensive monitoring - disabled on resource-constrained environments
+    const enableMonitoring = !isResourceConstrained && !process.env.DISABLE_MONITORING;
+    
+    if (enableMonitoring) {
+      try {
+        // Use longer intervals on Render Pro to reduce overhead
+        const monitoringInterval = isRenderPro ? 120000 : 60000; // 2min for Pro, 1min for others
+        comprehensiveMonitoringService.startMonitoring(monitoringInterval);
+        console.log('✅ Comprehensive monitoring service started');
+        console.log(`📊 System health monitoring active (${monitoringInterval/1000}s intervals)`);
+      } catch (error) {
+        console.warn('⚠️ Monitoring service initialization failed:', error);
+      }
+    } else {
+      const reason = isRenderFree ? 'Render free tier' : 
+                    isResourceConstrained ? 'resource constraints' : 
+                    'manual disable';
+      console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
     }
 
-
-    // Order event listener
-    try {
-      orderEventListenerService.startListening();
-      console.log('✅ Order event listener started');
-      console.log('🔄 Listening for order events to trigger messaging automation');
-    } catch (error) {
-      console.warn('⚠️ Order event listener failed to start:', error);
+    // Order event listener - disabled on resource-constrained environments
+    if (enableMonitoring && !isRenderFree) {
+      try {
+        orderEventListenerService.startListening();
+        console.log('✅ Order event listener started');
+        console.log('🔄 Listening for order events to trigger messaging automation');
+      } catch (error) {
+        console.warn('⚠️ Order event listener failed to start:', error);
+      }
+    } else {
+      console.log('⚠️ Order event listener disabled for resource optimization');
     }
   }).catch((error) => {
     console.error('Failed to initialize services:', error);
@@ -1012,44 +1234,97 @@ httpServer.on('error', (error: any) => {
   process.exit(1);
 });
 
-// Graceful shutdown handling
+// Enhanced graceful shutdown with proper resource cleanup
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
   
+  const shutdownTimeout = isResourceConstrained ? 5000 : 10000; // Shorter timeout for constrained environments
+  let shutdownTimer: NodeJS.Timeout;
+  
   try {
-    // Close WebSocket service
-    shutdownWebSocket();
+    // Set force shutdown timer
+    shutdownTimer = setTimeout(() => {
+      console.error(`Could not close connections in time (${shutdownTimeout}ms), forcefully shutting down`);
+      process.exit(1);
+    }, shutdownTimeout);
     
-    // Close Admin WebSocket service
-    shutdownAdminWebSocket();
+    console.log('🔌 Closing WebSocket services...');
     
-    // Close Seller WebSocket service
-    shutdownSellerWebSocket();
+    // Close WebSocket services with timeout
+    try {
+      shutdownWebSocket();
+      shutdownAdminWebSocket();
+      shutdownSellerWebSocket();
+      console.log('✅ WebSocket services closed');
+    } catch (error) {
+      console.warn('⚠️ Error closing WebSocket services:', error);
+    }
     
-    // Stop monitoring service
-    comprehensiveMonitoringService.stopMonitoring();
+    console.log('📊 Stopping monitoring services...');
+    
+    // Stop memory monitoring service
+    try {
+      memoryMonitoringService.stopMonitoring();
+      console.log('✅ Memory monitoring service stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping memory monitoring service:', error);
+    }
+    
+    // Stop comprehensive monitoring service
+    try {
+      comprehensiveMonitoringService.stopMonitoring();
+      console.log('✅ Comprehensive monitoring service stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping comprehensive monitoring service:', error);
+    }
+    
+    console.log('⚡ Stopping performance optimizer...');
     
     // Stop performance optimizer
-    performanceOptimizer.stop();
+    try {
+      performanceOptimizer.stop();
+      console.log('✅ Performance optimizer stopped');
+    } catch (error) {
+      console.warn('⚠️ Error stopping performance optimizer:', error);
+    }
     
-    // Close database pool
-    await dbPool.end();
+    console.log('🗄️ Closing database connections...');
+    
+    // Close database pool with timeout
+    try {
+      await Promise.race([
+        dbPool.end(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database close timeout')), 3000)
+        )
+      ]);
+      console.log('✅ Database pool closed');
+    } catch (error) {
+      console.warn('⚠️ Error closing database pool:', error);
+    }
+    
+    console.log('🌐 Closing HTTP server...');
     
     // Close HTTP server
     httpServer.close(() => {
-      console.log('HTTP server closed');
+      console.log('✅ HTTP server closed');
+      clearTimeout(shutdownTimer);
+      
+      // Final memory cleanup
+      if (global.gc) {
+        console.log('🗑️ Final garbage collection...');
+        global.gc();
+      }
+      
+      console.log('🎯 Graceful shutdown completed');
       process.exit(0);
     });
+    
   } catch (error) {
-    console.error('Error during graceful shutdown:', error);
+    console.error('❌ Error during graceful shutdown:', error);
+    clearTimeout(shutdownTimer!);
     process.exit(1);
   }
-  
-  // Force close after 10 seconds
-  setTimeout(() => {
-    console.error('Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
 };
 
 // Handle shutdown signals

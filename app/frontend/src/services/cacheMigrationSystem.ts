@@ -576,17 +576,18 @@ export class CacheMigrationSystem {
       const queueData = JSON.parse(legacyQueue);
       
       // Import background sync manager to handle queue migration
-      const { backgroundSyncManager } = await import('./backgroundSyncManager');
-      const { offlineActionQueue } = await import('./offlineActionQueue');
+      const { getOfflineActionQueue } = await import('./offlineActionQueue');
       
       // Migrate each queued action
+      const offlineActionQueue = getOfflineActionQueue();
       for (const action of queueData) {
-        await offlineActionQueue.enqueue({
+        await offlineActionQueue.queueAction({
           type: action.type,
           data: action.data,
-          maxRetries: action.maxRetries || 3,
-          priority: action.priority || 'medium',
-          tags: ['migrated']
+          auth: action.auth,
+          postId: action.postId,
+          communityId: action.communityId,
+          userId: action.userId
         });
       }
 
