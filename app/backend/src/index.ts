@@ -519,7 +519,8 @@ app.use('/api/v1/seller/security', sellerSecurityRoutes);
 
 // Backward compatibility routes (without version prefix)
 app.use('/api/marketplace', marketplaceApiRoutes);
-app.use('/api/auth', authApiRoutes);
+// NOTE: OLD auth routes disabled - using new AuthenticationService routes at line 774
+// app.use('/api/auth', authApiRoutes);
 app.use('/api/cart', cartApiRoutes);
 app.use('/api/sellers', sellerApiRoutes);
 app.use('/api/marketplace/seller/tier', automatedTierUpgradeRoutes);

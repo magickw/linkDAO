@@ -107,22 +107,24 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
   try {
     // Check for common injection patterns
     const suspiciousPatterns = [
-      // SQL Injection
-      /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
-      /(\b(OR|AND)\s+\d+\s*=\s*\d+)/i,
-      
+      // SQL Injection - More specific patterns to reduce false positives
+      /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b.*\b(FROM|INTO|WHERE|TABLE|DATABASE)\b)/i,
+      /(\b(OR|AND)\s+['"]*\d+\s*=\s*['"]*\d+)/i,
+      /(;|\-\-|\/\*)\s*(SELECT|INSERT|UPDATE|DELETE|DROP)/i,
+
       // XSS
       /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
       /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
-      /javascript:/i,
-      /on\w+\s*=/i,
-      
+      /javascript:\s*[^\s]/i,
+      /on(load|error|click|mouse\w+)\s*=/i,
+
       // Command Injection (avoid flagging JSON structural quotes)
-      /(\||&|;|\$\(|\`)/,
-      /(rm\s|cat\s|ls\s|pwd|whoami)/i,
-      
+      /(\||&&|;)\s*(rm\s|cat\s|ls\s|curl\s|wget\s)/i,
+      /\$\([^)]*\)/,
+      /`[^`]*`/,
+
       // Path Traversal
-      /(\.\.[\/\\])/,
+      /(\.\.[\/\\]){2,}/,
       /(\/etc\/passwd|\/etc\/shadow)/i,
     ];
 
@@ -134,6 +136,11 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
 
     for (const pattern of suspiciousPatterns) {
       if (pattern.test(requestData)) {
+        safeLogger.warn('Potential malicious content detected', {
+          pattern: pattern.toString(),
+          path: req.path,
+          method: req.method,
+        });
         return res.status(400).json({
           error: 'Invalid Input',
           message: 'Request contains potentially malicious content',
