@@ -1099,6 +1099,27 @@ app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
+// Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)
+app.all('/socket.io/*', (req, res) => {
+  res.status(503).json({
+    success: false,
+    error: 'WebSocket service temporarily unavailable',
+    message: 'Real-time features are disabled on this server configuration. Please try again later or use polling mode.',
+    code: 'WEBSOCKET_DISABLED'
+  });
+});
+
+// Communities fallback route (redirect to API endpoint)
+app.all('/communities*', (req, res) => {
+  const apiPath = `/api${req.path}`;
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+    message: `Did you mean ${apiPath}? Community endpoints require the /api prefix.`,
+    suggestion: apiPath
+  });
+});
+
 // Error handling middleware (must be last)
 app.use(errorCorrelationMiddleware);
 app.use(enhancedErrorHandler); // Use enhanced error handler as primary

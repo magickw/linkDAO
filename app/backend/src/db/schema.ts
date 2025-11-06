@@ -3286,8 +3286,8 @@ export const mobileGovernanceSessions = pgTable("mobile_governance_sessions", {
 export const authSessions = pgTable("auth_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
-  sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
-  refreshToken: varchar("refresh_token", { length: 255 }).notNull().unique(),
+  sessionToken: varchar("session_token", { length: 512 }).notNull().unique(),
+  refreshToken: varchar("refresh_token", { length: 512 }).notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   refreshExpiresAt: timestamp("refresh_expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
