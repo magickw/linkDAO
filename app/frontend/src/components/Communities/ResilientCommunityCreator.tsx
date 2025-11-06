@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Users, Clock, AlertCircle, CheckCircle, WifiOff, Image } from 'lucide-react';
 import { useActionQueue } from '../../hooks/useActionQueue';
 import ConnectivityErrorBoundary from '../ErrorHandling/ConnectivityErrorBoundary';
+import { EnhancedStatusIndicator } from '../Status/EnhancedStatusIndicator';
+import { communityCircuitBreaker } from '../../services/circuitBreaker';
 
 interface CommunityData {
   name: string;
@@ -50,8 +52,10 @@ export const ResilientCommunityCreator: React.FC<ResilientCommunityCreatorProps>
   });
   const [newRule, setNewRule] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'queued' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'queued' | 'error' | 'retrying'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [estimatedRetryTime, setEstimatedRetryTime] = useState(0);
   
   const { addAction, queueSize } = useActionQueue();
   const isOnline = navigator.onLine;
@@ -108,80 +112,153 @@ export const ResilientCommunityCreator: React.FC<ResilientCommunityCreatorProps>
     setErrorMessage('');
 
     try {
-      if (isOnline) {
-        // Try direct submission first
-        try {
-          const formDataToSend = new FormData();
-          formDataToSend.append('name', formData.name);
-          formDataToSend.append('description', formData.description);
-          formDataToSend.append('category', formData.category);
-          formDataToSend.append('isPrivate', formData.isPrivate.toString());
-          
-          if (formData.rules && formData.rules.length > 0) {
-            formDataToSend.append('rules', JSON.stringify(formData.rules));
-          }
-          
-          if (formData.avatar) {
-            formDataToSend.append('avatar', formData.avatar);
-          }
+      // Use circuit breaker for resilient API calls
+      const success = await communityCircuitBreaker.execute(
+        async () => {
+          const communityData = {
+            name: formData.name,
+            displayName: formData.name,
+            description: formData.description,
+            category: formData.category,
+            isPublic: !formData.isPrivate,
+            rules: formData.rules || [],
+            iconUrl: formData.avatar ? await fileToBase64(formData.avatar) : undefined
+          };
 
           const response = await fetch('/api/communities', {
             method: 'POST',
-            body: formDataToSend
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(communityData)
           });
 
           if (response.ok) {
             const result = await response.json();
-            setSubmitStatus('success');
-            setFormData({
-              name: '',
-              description: '',
-              category: '',
-              isPrivate: false,
-              rules: []
-            });
-            onCommunityCreated?.(result.id);
-            return;
-          } else if (response.status === 503 || response.status === 429) {
-            // Service unavailable or rate limited, queue the action
-            throw new Error('Service temporarily unavailable');
+            return result.data;
+          } else if (response.status === 503 || response.status === 429 || response.status >= 500) {
+            const errorData = await response.json().catch(() => ({}));
+            const error = new Error(errorData.error || `Service temporarily unavailable (${response.status})`);
+            (error as any).status = response.status;
+            (error as any).retryable = errorData.retryable;
+            (error as any).retryAfter = errorData.retryAfter;
+            throw error;
           } else {
-            throw new Error(`Failed to create community: ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create community: ${response.statusText}`);
           }
-        } catch (fetchError) {
-          // If direct submission fails, queue the action
-          console.log('Direct submission failed, queuing action:', fetchError);
+        },
+        async () => {
+          // Fallback: queue the action
+          console.log('Using fallback: queuing community creation');
+          const actionId = await addAction('community_create', {
+            ...formData,
+            avatar: formData.avatar ? await fileToBase64(formData.avatar) : undefined
+          }, {
+            priority: 'high',
+            maxRetries: 3
+          });
+          return null; // Indicates fallback was used
         }
+      );
+
+      if (success) {
+        // Direct submission succeeded
+        setSubmitStatus('success');
+        setFormData({
+          name: '',
+          description: '',
+          category: '',
+          isPrivate: false,
+          rules: []
+        });
+        setRetryCount(0);
+        onCommunityCreated?.(success.id);
+      } else {
+        // Fallback was used - action was queued
+        setSubmitStatus('queued');
+        setFormData({
+          name: '',
+          description: '',
+          category: '',
+          isPrivate: false,
+          rules: []
+        });
+        setRetryCount(0);
+        onCommunityQueued?.('queued-action-id');
       }
-
-      // Queue the action for later processing
-      const actionId = await addAction('community_create', {
-        ...formData,
-        // Convert File to base64 for storage
-        avatar: formData.avatar ? await fileToBase64(formData.avatar) : undefined
-      }, {
-        priority: 'high',
-        maxRetries: 3
-      });
-
-      setSubmitStatus('queued');
-      setFormData({
-        name: '',
-        description: '',
-        category: '',
-        isPrivate: false,
-        rules: []
-      });
-      onCommunityQueued?.(actionId);
 
     } catch (error) {
       console.error('Failed to submit community:', error);
-      setSubmitStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to create community');
+      
+      // Check if we should retry
+      const isRetryableError = error instanceof Error && (
+        (error as any).retryable ||
+        error.message.includes('503') ||
+        error.message.includes('Service temporarily unavailable') ||
+        error.message.includes('network') ||
+        error.message.includes('timeout')
+      );
+
+      if (isRetryableError && retryCount < 3) {
+        setSubmitStatus('retrying');
+        setRetryCount(prev => prev + 1);
+        
+        const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+        setEstimatedRetryTime(retryDelay / 1000);
+        
+        setTimeout(() => {
+          handleSubmit(e);
+        }, retryDelay);
+        return;
+      }
+
+      // If not retryable or max retries exceeded, try to queue
+      if (!isOnline || retryCount >= 3) {
+        try {
+          const actionId = await addAction('community_create', {
+            ...formData,
+            avatar: formData.avatar ? await fileToBase64(formData.avatar) : undefined
+          }, {
+            priority: 'high',
+            maxRetries: 3
+          });
+          
+          setSubmitStatus('queued');
+          setFormData({
+            name: '',
+            description: '',
+            category: '',
+            isPrivate: false,
+            rules: []
+          });
+          setRetryCount(0);
+          onCommunityQueued?.(actionId);
+        } catch (queueError) {
+          setSubmitStatus('error');
+          setErrorMessage('Failed to queue community creation. Please try again.');
+        }
+      } else {
+        setSubmitStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to create community');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, isOnline, addAction, onCommunityCreated, onCommunityQueued]);
+  }, [formData, isOnline, addAction, onCommunityCreated, onCommunityQueued, retryCount]);
+
+  const handleRetry = useCallback(() => {
+    setRetryCount(0);
+    setSubmitStatus('idle');
+    setErrorMessage('');
+    
+    // Create a synthetic form event for retry
+    const syntheticEvent = {
+      preventDefault: () => {}
+    } as React.FormEvent;
+    
+    handleSubmit(syntheticEvent);
+  }, [handleSubmit]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -240,34 +317,46 @@ export const ResilientCommunityCreator: React.FC<ResilientCommunityCreatorProps>
           </div>
         )}
 
-        {/* Success/Error Messages */}
+        {/* Enhanced Status Messages */}
         {submitStatus === 'success' && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-700">Community created successfully!</span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="success"
+            message="Community created successfully!"
+            onDismiss={() => setSubmitStatus('idle')}
+            className="mb-4"
+          />
         )}
 
         {submitStatus === 'queued' && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-blue-700">
-                Community queued and will be created when service is available
-              </span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="queued"
+            message="Community queued and will be created when service is available"
+            details="Your community is safely stored and will be created automatically"
+            className="mb-4"
+          />
+        )}
+
+        {submitStatus === 'retrying' && (
+          <EnhancedStatusIndicator
+            status="retrying"
+            message="Retrying community creation..."
+            retryCount={retryCount}
+            maxRetries={3}
+            estimatedTime={estimatedRetryTime}
+            className="mb-4"
+          />
         )}
 
         {submitStatus === 'error' && errorMessage && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-700">{errorMessage}</span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="error"
+            message={errorMessage}
+            retryable={retryCount < 3}
+            onRetry={handleRetry}
+            onDismiss={() => setSubmitStatus('idle')}
+            actionLabel="Try Again"
+            className="mb-4"
+          />
         )}
 
         {/* Community Form */}

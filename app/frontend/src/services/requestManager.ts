@@ -351,3 +351,31 @@ class RequestManager {
 
 // Export singleton instance
 export const requestManager = new RequestManager();
+
+// Integration with performance optimization services
+import { performanceIntegrationService } from './performanceIntegrationService';
+
+/**
+ * Enhanced API request function with performance optimization
+ */
+export const performanceOptimizedRequest = async <T>(
+  url: string,
+  options: RequestInit = {},
+  config: {
+    enableCaching?: boolean;
+    enableDeduplication?: boolean;
+    enableCompression?: boolean;
+    cacheType?: 'feed' | 'communities' | 'profiles' | 'marketplace' | 'governance' | 'static';
+  } = {}
+): Promise<T> => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
+  
+  return performanceIntegrationService.optimizedRequest<T>(fullUrl, options, {
+    enableCaching: config.enableCaching ?? true,
+    enableDeduplication: config.enableDeduplication ?? true,
+    enableCompression: config.enableCompression ?? true,
+    enableMonitoring: true,
+    cacheType: config.cacheType ?? 'feed'
+  });
+};

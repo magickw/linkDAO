@@ -1,7 +1,10 @@
 /**
- * Enhanced Request Manager with improved 503 error handling
- * Provides better user experience during service outages
+ * Enhanced Request Manager with circuit breaker integration and graceful degradation
+ * Provides better user experience during service outages with comprehensive resilience features
  */
+
+import { CircuitBreaker, apiCircuitBreaker } from './circuitBreaker';
+import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
 
 interface RequestConfig {
   retries?: number;
@@ -9,6 +12,11 @@ interface RequestConfig {
   timeout?: number;
   fallbackData?: any;
   showUserFeedback?: boolean;
+  circuitBreaker?: CircuitBreaker;
+  enableCoalescing?: boolean;
+  cacheKey?: string;
+  cacheTTL?: number;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 interface ServiceStatus {
@@ -16,6 +24,17 @@ interface ServiceStatus {
   lastChecked: number;
   consecutiveFailures: number;
   nextRetryTime: number;
+  circuitBreakerState: string;
+  requestCount: number;
+  errorRate: number;
+}
+
+interface RequestMetrics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  lastRequestTime: number;
 }
 
 class EnhancedRequestManager {
@@ -23,15 +42,30 @@ class EnhancedRequestManager {
     isAvailable: true,
     lastChecked: 0,
     consecutiveFailures: 0,
-    nextRetryTime: 0
+    nextRetryTime: 0,
+    circuitBreakerState: 'CLOSED',
+    requestCount: 0,
+    errorRate: 0
   };
 
-  private readonly MAX_CONSECUTIVE_FAILURES = 3;
+  private metrics: RequestMetrics = {
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    averageResponseTime: 0,
+    lastRequestTime: 0
+  };
+
+  private readonly MAX_CONSECUTIVE_FAILURES = 5; // Aligned with circuit breaker
   private readonly SERVICE_CHECK_INTERVAL = 30000; // 30 seconds
   private readonly CIRCUIT_BREAKER_TIMEOUT = 60000; // 1 minute
+  private readonly REQUEST_DEDUPLICATION_WINDOW = 1000; // 1 second
+  
+  private pendingRequests = new Map<string, Promise<any>>();
+  private requestTimestamps = new Map<string, number>();
 
   /**
-   * Make an HTTP request with enhanced error handling
+   * Make an HTTP request with enhanced error handling, circuit breaker, and request coalescing
    */
   async request<T>(
     url: string,
@@ -41,35 +75,79 @@ class EnhancedRequestManager {
     const {
       retries = 3,
       retryDelay = 1000,
-      timeout = 10000,
+      timeout = 15000,
       fallbackData,
-      showUserFeedback = true
+      showUserFeedback = true,
+      circuitBreaker = apiCircuitBreaker,
+      enableCoalescing = true,
+      cacheKey,
+      cacheTTL = 30000,
+      priority = 'medium'
     } = config;
 
-    // Check circuit breaker
-    if (!this.isServiceAvailable()) {
-      if (fallbackData !== undefined) {
-        console.log('Service unavailable, returning fallback data');
-        return fallbackData;
+    const startTime = Date.now();
+    this.metrics.totalRequests++;
+    this.metrics.lastRequestTime = startTime;
+
+    // Generate request key for deduplication
+    const requestKey = this.generateRequestKey(url, options);
+    
+    // Check for request deduplication
+    if (enableCoalescing && this.shouldDeduplicateRequest(requestKey)) {
+      const existingRequest = this.pendingRequests.get(requestKey);
+      if (existingRequest) {
+        console.log('Deduplicating request:', requestKey);
+        return existingRequest;
       }
-      throw new Error('Service is currently unavailable. Please try again later.');
+    }
+
+    // Use request coalescing for GET requests
+    if (enableCoalescing && options.method?.toUpperCase() === 'GET' && cacheKey) {
+      return globalRequestCoalescer.request(
+        cacheKey,
+        () => this.executeRequestWithCircuitBreaker<T>(url, options, config, circuitBreaker),
+        cacheTTL
+      );
+    }
+
+    // Execute request with circuit breaker
+    const requestPromise = this.executeRequestWithCircuitBreaker<T>(url, options, config, circuitBreaker);
+    
+    if (enableCoalescing) {
+      this.pendingRequests.set(requestKey, requestPromise);
+      this.requestTimestamps.set(requestKey, startTime);
     }
 
     try {
-      const result = await this.executeWithRetry<T>(url, options, retries, retryDelay, timeout);
-      this.recordSuccess();
+      const result = await requestPromise;
+      this.recordSuccess(Date.now() - startTime);
       return result;
     } catch (error) {
-      this.recordFailure(error as Error);
-      
-      // Return fallback data if available
-      if (fallbackData !== undefined && (error as any).status === 503) {
-        console.log('Request failed, returning fallback data');
-        return fallbackData;
-      }
-      
+      this.recordFailure(error as Error, Date.now() - startTime);
       throw error;
+    } finally {
+      if (enableCoalescing) {
+        this.pendingRequests.delete(requestKey);
+        this.requestTimestamps.delete(requestKey);
+      }
     }
+  }
+
+  /**
+   * Execute request with circuit breaker integration
+   */
+  private async executeRequestWithCircuitBreaker<T>(
+    url: string,
+    options: RequestInit,
+    config: RequestConfig,
+    circuitBreaker: CircuitBreaker
+  ): Promise<T> {
+    const { fallbackData, retries = 3, retryDelay = 1000, timeout = 15000 } = config;
+
+    return circuitBreaker.execute(
+      () => this.executeWithRetry<T>(url, options, retries, retryDelay, timeout),
+      fallbackData ? () => fallbackData : undefined
+    );
   }
 
   /**
@@ -197,49 +275,129 @@ class EnhancedRequestManager {
   }
 
   /**
-   * Record a successful request
+   * Record a successful request with metrics
    */
-  private recordSuccess(): void {
+  private recordSuccess(responseTime: number): void {
     this.serviceStatus.isAvailable = true;
     this.serviceStatus.consecutiveFailures = 0;
     this.serviceStatus.lastChecked = Date.now();
     this.serviceStatus.nextRetryTime = 0;
+    this.serviceStatus.requestCount++;
+    
+    this.metrics.successfulRequests++;
+    this.updateAverageResponseTime(responseTime);
+    this.updateErrorRate();
   }
 
   /**
-   * Record a failed request
+   * Record a failed request with enhanced metrics
    */
-  private recordFailure(error: Error): void {
-    const isServiceError = (error as any).status === 503 || (error as any).isServiceUnavailable;
+  private recordFailure(error: Error, responseTime?: number): void {
+    const isServiceError = (error as any).status === 503 || 
+                          (error as any).status >= 500 ||
+                          (error as any).isServiceUnavailable ||
+                          error.message.includes('timeout') ||
+                          error.message.includes('network');
+    
+    this.metrics.failedRequests++;
+    if (responseTime) {
+      this.updateAverageResponseTime(responseTime);
+    }
+    this.updateErrorRate();
     
     if (isServiceError) {
       this.serviceStatus.consecutiveFailures++;
       this.serviceStatus.lastChecked = Date.now();
+      this.serviceStatus.requestCount++;
       
-      // If we've hit the failure threshold, open the circuit breaker
-      if (this.serviceStatus.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
-        this.serviceStatus.isAvailable = false;
-        this.serviceStatus.nextRetryTime = Date.now() + this.CIRCUIT_BREAKER_TIMEOUT;
-        console.log(`Circuit breaker opened. Service will be retried after ${this.CIRCUIT_BREAKER_TIMEOUT}ms`);
-      }
+      // Update service status based on circuit breaker state
+      this.updateServiceStatusFromCircuitBreaker();
     }
   }
 
   /**
-   * Get current service status
+   * Update average response time
+   */
+  private updateAverageResponseTime(responseTime: number): void {
+    const totalRequests = this.metrics.successfulRequests + this.metrics.failedRequests;
+    this.metrics.averageResponseTime = 
+      (this.metrics.averageResponseTime * (totalRequests - 1) + responseTime) / totalRequests;
+  }
+
+  /**
+   * Update error rate
+   */
+  private updateErrorRate(): void {
+    const totalRequests = this.metrics.successfulRequests + this.metrics.failedRequests;
+    this.metrics.errorRate = totalRequests > 0 ? this.metrics.failedRequests / totalRequests : 0;
+  }
+
+  /**
+   * Update service status from circuit breaker state
+   */
+  private updateServiceStatusFromCircuitBreaker(): void {
+    this.serviceStatus.circuitBreakerState = apiCircuitBreaker.getState();
+    this.serviceStatus.isAvailable = !apiCircuitBreaker.isOpen();
+  }
+
+  /**
+   * Generate request key for deduplication
+   */
+  private generateRequestKey(url: string, options: RequestInit): string {
+    const method = options.method || 'GET';
+    const body = options.body ? JSON.stringify(options.body) : '';
+    return `${method}:${url}:${body}`;
+  }
+
+  /**
+   * Check if request should be deduplicated
+   */
+  private shouldDeduplicateRequest(requestKey: string): boolean {
+    const timestamp = this.requestTimestamps.get(requestKey);
+    if (!timestamp) return false;
+    
+    return Date.now() - timestamp < this.REQUEST_DEDUPLICATION_WINDOW;
+  }
+
+  /**
+   * Get current service status with enhanced metrics
    */
   getServiceStatus(): ServiceStatus {
+    this.updateServiceStatusFromCircuitBreaker();
     return { ...this.serviceStatus };
   }
 
   /**
-   * Manually reset the circuit breaker
+   * Get request metrics
+   */
+  getMetrics(): RequestMetrics {
+    return { ...this.metrics };
+  }
+
+  /**
+   * Manually reset the circuit breaker and metrics
    */
   resetCircuitBreaker(): void {
+    apiCircuitBreaker.reset();
     this.serviceStatus.isAvailable = true;
     this.serviceStatus.consecutiveFailures = 0;
     this.serviceStatus.nextRetryTime = 0;
-    console.log('Circuit breaker manually reset');
+    this.serviceStatus.circuitBreakerState = 'CLOSED';
+    console.log('Circuit breaker and service status manually reset');
+  }
+
+  /**
+   * Reset metrics
+   */
+  resetMetrics(): void {
+    this.metrics = {
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      averageResponseTime: 0,
+      lastRequestTime: 0
+    };
+    console.log('Request metrics reset');
   }
 
   /**

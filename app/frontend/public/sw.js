@@ -23,17 +23,25 @@ const IMAGE_CACHE = 'images-v4';
 const PERFORMANCE_CACHE = 'performance-v3';
 const OFFLINE_QUEUE_CACHE = 'offline-queue-v1';
 
-// Enhanced request deduplication and rate limiting
+// Enhanced request deduplication and rate limiting with circuit breaker integration
 const pendingRequests = new Map();
 const failedRequests = new Map();
 const requestCounts = new Map();
+const circuitBreakerStates = new Map(); // Track circuit breaker states per service
 // Development mode detection
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 50; // Much higher for development
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 10; // Reduced for better rate limiting
 const BACKOFF_MULTIPLIER = isDevelopment ? 1.2 : 2; // Lower backoff in development
 const MAX_BACKOFF_TIME = isDevelopment ? 5000 : 300000; // 5 seconds max backoff in development
+
+// Circuit breaker configuration for service worker
+const CIRCUIT_BREAKER_CONFIG = {
+  failureThreshold: 5,
+  recoveryTimeout: 60000, // 60 seconds as specified
+  halfOpenMaxCalls: 3
+};
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -56,17 +64,19 @@ const PERFORMANCE_ASSETS = [
   '/api/content-performance'
 ];
 
-// API endpoints to cache with TTL values
+// API endpoints to cache with TTL values - aligned with requirements
 const CACHEABLE_APIS = {
-  '/api/feed': { ttl: 30000, priority: 'high' }, // 30 seconds
-  '/api/communities': { ttl: 60000, priority: 'high' }, // 60 seconds
-  '/api/profiles': { ttl: 120000, priority: 'medium' }, // 2 minutes
-  '/api/posts': { ttl: 45000, priority: 'high' }, // 45 seconds
-  '/api/users': { ttl: 300000, priority: 'low' }, // 5 minutes
-  '/api/reputation': { ttl: 180000, priority: 'medium' }, // 3 minutes
-  '/api/tips': { ttl: 60000, priority: 'medium' }, // 1 minute
-  '/api/follow': { ttl: 120000, priority: 'medium' }, // 2 minutes
-  '/api/search': { ttl: 300000, priority: 'low' } // 5 minutes
+  '/api/feed': { ttl: 30000, priority: 'high', staleTTL: 300000 }, // 30s fresh, 5min stale
+  '/api/communities': { ttl: 60000, priority: 'high', staleTTL: 600000 }, // 60s fresh, 10min stale
+  '/api/profiles': { ttl: 120000, priority: 'medium', staleTTL: 900000 }, // 2min fresh, 15min stale
+  '/api/posts': { ttl: 45000, priority: 'high', staleTTL: 300000 }, // 45s fresh, 5min stale
+  '/api/users': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
+  '/api/reputation': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
+  '/api/tips': { ttl: 60000, priority: 'medium', staleTTL: 300000 }, // 1min fresh, 5min stale
+  '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
+  '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
+  '/api/marketplace': { ttl: 60000, priority: 'medium', staleTTL: 600000 }, // 1min fresh, 10min stale
+  '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 } // 3min fresh, 15min stale
 };
 
 // Critical API responses that should be cached aggressively
@@ -210,11 +220,19 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-// Network first strategy - for API calls with intelligent caching and TTL
+// Network first strategy with enhanced circuit breaker and graceful degradation
 async function networkFirst(request, cacheName) {
   const requestKey = `${request.method}:${request.url}`;
   const now = Date.now();
   const cacheConfig = getAPICacheConfig(request);
+  const serviceKey = getServiceKey(request);
+  
+  // Check circuit breaker state for this service
+  const circuitState = getCircuitBreakerState(serviceKey);
+  if (circuitState === 'OPEN') {
+    console.log('Circuit breaker is OPEN for service:', serviceKey);
+    return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
+  }
   
   // Check if we have fresh cached data first for critical APIs
   if (isCriticalAPI(request)) {
@@ -229,7 +247,7 @@ async function networkFirst(request, cacheName) {
   // Rate limiting check
   if (!checkRateLimit(requestKey, now)) {
     console.log('Rate limit exceeded for:', requestKey);
-    return await getCachedResponse(request, cacheName);
+    return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
   }
   
   // Check if request recently failed with exponential backoff
@@ -242,7 +260,7 @@ async function networkFirst(request, cacheName) {
     
     if (now - failureInfo.lastFailure < backoffTime) {
       console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
-      return await getCachedResponse(request, cacheName);
+      return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }
   
@@ -253,17 +271,17 @@ async function networkFirst(request, cacheName) {
       const sharedResponse = await pendingRequests.get(requestKey);
       if (sharedResponse.bodyUsed) {
         console.warn('Shared response body already consumed, falling back to cache');
-        return await getCachedResponse(request, cacheName);
+        return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
       }
       return sharedResponse.clone();
     } catch (error) {
       console.warn('Failed to clone shared response, falling back to cache:', error);
-      return await getCachedResponse(request, cacheName);
+      return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }
   
   // Create promise for this request
-  const requestPromise = performNetworkRequest(request, cacheName, requestKey, cacheConfig);
+  const requestPromise = performNetworkRequestWithCircuitBreaker(request, cacheName, requestKey, cacheConfig, serviceKey);
   pendingRequests.set(requestKey, requestPromise);
   
   try {
@@ -600,6 +618,126 @@ function generatePlaceholderSVG(width, height, text, backgroundColor) {
       'Access-Control-Allow-Origin': '*'
     }
   });
+}
+
+// Enhanced circuit breaker functions for service worker
+function getServiceKey(request) {
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split('/');
+  
+  if (pathParts[1] === 'api' && pathParts[2]) {
+    return pathParts[2]; // e.g., 'feed', 'communities', 'posts'
+  }
+  
+  return 'default';
+}
+
+function getCircuitBreakerState(serviceKey) {
+  const state = circuitBreakerStates.get(serviceKey);
+  if (!state) {
+    // Initialize circuit breaker state
+    circuitBreakerStates.set(serviceKey, {
+      state: 'CLOSED',
+      failures: 0,
+      lastFailure: 0,
+      halfOpenCalls: 0
+    });
+    return 'CLOSED';
+  }
+  
+  const now = Date.now();
+  
+  // Check if circuit should transition from OPEN to HALF_OPEN
+  if (state.state === 'OPEN' && now - state.lastFailure > CIRCUIT_BREAKER_CONFIG.recoveryTimeout) {
+    state.state = 'HALF_OPEN';
+    state.halfOpenCalls = 0;
+    console.log(`Circuit breaker for ${serviceKey} transitioning to HALF_OPEN`);
+  }
+  
+  return state.state;
+}
+
+function recordCircuitBreakerSuccess(serviceKey) {
+  const state = circuitBreakerStates.get(serviceKey);
+  if (!state) return;
+  
+  if (state.state === 'HALF_OPEN') {
+    state.halfOpenCalls++;
+    if (state.halfOpenCalls >= CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls) {
+      state.state = 'CLOSED';
+      state.failures = 0;
+      console.log(`Circuit breaker for ${serviceKey} closed after successful recovery`);
+    }
+  } else if (state.state === 'CLOSED') {
+    // Reset failure count on success
+    state.failures = Math.max(0, state.failures - 1);
+  }
+}
+
+function recordCircuitBreakerFailure(serviceKey, error) {
+  const state = circuitBreakerStates.get(serviceKey) || {
+    state: 'CLOSED',
+    failures: 0,
+    lastFailure: 0,
+    halfOpenCalls: 0
+  };
+  
+  const isServiceFailure = error?.status >= 500 || 
+                          error?.status === 503 ||
+                          error?.message?.includes('fetch') ||
+                          error?.message?.includes('timeout');
+  
+  if (isServiceFailure) {
+    state.failures++;
+    state.lastFailure = Date.now();
+    
+    if (state.state === 'HALF_OPEN' || 
+        (state.state === 'CLOSED' && state.failures >= CIRCUIT_BREAKER_CONFIG.failureThreshold)) {
+      state.state = 'OPEN';
+      state.halfOpenCalls = 0;
+      console.warn(`Circuit breaker for ${serviceKey} opened due to ${state.failures} failures`);
+    }
+    
+    circuitBreakerStates.set(serviceKey, state);
+  }
+}
+
+async function performNetworkRequestWithCircuitBreaker(request, cacheName, requestKey, cacheConfig, serviceKey) {
+  try {
+    const result = await performNetworkRequest(request, cacheName, requestKey, cacheConfig);
+    recordCircuitBreakerSuccess(serviceKey);
+    return result;
+  } catch (error) {
+    recordCircuitBreakerFailure(serviceKey, error);
+    throw error;
+  }
+}
+
+async function getCachedResponseWithFallback(request, cacheName, cacheConfig) {
+  // Try fresh cache first
+  const freshCache = await getCachedResponseWithTTL(request, cacheName, cacheConfig.ttl);
+  if (freshCache) {
+    return freshCache;
+  }
+  
+  // Try stale cache
+  const staleCache = await getCachedResponseWithTTL(request, cacheName, cacheConfig.staleTTL || cacheConfig.ttl * 10);
+  if (staleCache) {
+    console.log('Using stale cache as fallback');
+    // Add header to indicate stale data
+    const staleResponse = new Response(staleCache.body, {
+      status: staleCache.status,
+      statusText: staleCache.statusText,
+      headers: {
+        ...Object.fromEntries(staleCache.headers.entries()),
+        'X-Cache-Status': 'stale'
+      }
+    });
+    return staleResponse;
+  }
+  
+  // Final fallback
+  return await getCachedResponse(request, cacheName);
 }
 
 // Helper functions

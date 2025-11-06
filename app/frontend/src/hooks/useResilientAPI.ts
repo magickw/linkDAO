@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { requestManager } from '../services/requestManager';
+import { enhancedRequestManager } from '../services/enhancedRequestManager';
 import { apiCircuitBreaker, communityCircuitBreaker, feedCircuitBreaker, marketplaceCircuitBreaker, CircuitBreaker } from '../services/circuitBreaker';
 import { useRequestCoalescing } from './useRequestCoalescing';
 import { actionQueue } from '../services/actionQueueService';
@@ -72,47 +72,43 @@ export function useResilientAPI<T>(
   );
 
   const makeAPIRequest = useCallback(async (): Promise<T> => {
-    const executeRequest = async () => {
-      return await requestManager.request<T>(url, options, {
-        timeout: 20000,
-        retries: 2,
-        deduplicate: true
-      });
+    // Enhanced fallback strategy function
+    const getFallbackData = async () => {
+      const cached = getCachedData();
+      const cacheMetadata = getCacheMetadata();
+      
+      // Try cached data first (even if stale)
+      if (cached) {
+        console.log('Using cached data as fallback');
+        return cached;
+      }
+      
+      // Try fallback data
+      if (fallbackData) {
+        console.log('Using provided fallback data');
+        return fallbackData;
+      }
+      
+      // If we have stale data, use it
+      if (cacheMetadata && cacheMetadata.data && Date.now() - cacheMetadata.timestamp < staleTTL) {
+        console.log('Using stale cached data as fallback');
+        return cacheMetadata.data;
+      }
+      
+      throw new Error('Service temporarily unavailable - no fallback data available');
     };
 
-    if (enableCircuitBreaker && circuitBreaker) {
-      return circuitBreaker.execute(
-        executeRequest,
-        async () => {
-          // Enhanced fallback strategy
-          const cached = getCachedData();
-          const cacheMetadata = getCacheMetadata();
-          
-          // Try cached data first (even if stale)
-          if (cached) {
-            console.log('Using cached data as fallback');
-            return cached;
-          }
-          
-          // Try fallback data
-          if (fallbackData) {
-            console.log('Using provided fallback data');
-            return fallbackData;
-          }
-          
-          // If we have stale data, use it
-          if (cacheMetadata && cacheMetadata.data && Date.now() - cacheMetadata.timestamp < staleTTL) {
-            console.log('Using stale cached data as fallback');
-            return cacheMetadata.data;
-          }
-          
-          throw new Error('Service temporarily unavailable - no fallback data available');
-        }
-      );
-    } else {
-      return executeRequest();
-    }
-  }, [url, options, enableCircuitBreaker, circuitBreaker, getCachedData, getCacheMetadata, fallbackData, staleTTL]);
+    return await enhancedRequestManager.request<T>(url, options, {
+      timeout: 20000,
+      retries: 2,
+      circuitBreaker: enableCircuitBreaker ? circuitBreaker : undefined,
+      enableCoalescing: true,
+      cacheKey,
+      cacheTTL,
+      fallbackData: await getFallbackData().catch(() => undefined),
+      priority: 'medium'
+    });
+  }, [url, options, enableCircuitBreaker, circuitBreaker, getCachedData, getCacheMetadata, fallbackData, staleTTL, cacheKey, cacheTTL]);
 
   const fetchData = useCallback(async (isRetry = false, isBackground = false) => {
     if (!isBackground) {

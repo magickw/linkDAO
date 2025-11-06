@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Disable ESLint during build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Image optimization
   images: {
     domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com'],

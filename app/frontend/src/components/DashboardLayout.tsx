@@ -288,7 +288,7 @@ export default function DashboardLayout({
         {/* Footer (same as main Layout) */}
         <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {/* Quick Links */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
@@ -297,6 +297,16 @@ export default function DashboardLayout({
                   <li><a href="/communities/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</a></li>
                   <li><a href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</a></li>
                   <li><a href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</a></li>
+                </ul>
+              </div>
+
+              {/* Resources */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resources</h3>
+                <ul className="space-y-2">
+                  <li><a href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</a></li>
+                  <li><a href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</a></li>
+                  <li><a href="/blog" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Blog</a></li>
                 </ul>
               </div>
 

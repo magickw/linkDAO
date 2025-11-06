@@ -1,408 +1,320 @@
 /**
- * React hook for performance optimization with graceful degradation
+ * Performance Optimization Hook
+ * React hook for using performance optimization features
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { 
-  performanceOptimizer, 
-  LoadingState, 
-  FallbackMechanism, 
-  PerformanceMetrics 
-} from '../services/performanceOptimizer';
-import { NetworkCondition } from '../services/networkConditionDetector';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { performanceIntegrationService, integratedApiRequest } from '../services/performanceIntegrationService';
 
 interface UsePerformanceOptimizationOptions {
-  componentKey: string;
   enableAutoOptimization?: boolean;
-  enableLoadingStates?: boolean;
-  enableFallbacks?: boolean;
+  monitoringInterval?: number;
+  reportingEnabled?: boolean;
 }
 
-interface PerformanceOptimizationHook {
-  // Network condition
-  networkCondition: NetworkCondition | null;
-  
-  // Loading states
-  loadingState: LoadingState | null;
-  setLoadingState: (state: Partial<LoadingState>) => void;
-  clearLoadingState: () => void;
-  
-  // Optimized request
-  optimizeRequest: <T>(
-    key: string,
-    requestFn: () => Promise<T>,
-    options?: {
-      priority?: 'low' | 'medium' | 'high' | 'urgent';
-      cacheTTL?: number;
-      fallbackData?: T;
-      enableBatching?: boolean;
-    }
-  ) => Promise<T>;
-  
-  // Performance metrics
-  performanceMetrics: PerformanceMetrics;
-  recordPerformanceMetric: (type: 'render' | 'request' | 'memory', value: number) => void;
-  
-  // Optimization settings
-  optimizedSettings: {
-    imageQuality: number;
-    enableAnimations: boolean;
-    updateInterval: number;
-    maxConcurrentRequests: number;
-    requestTimeout: number;
-    enableOfflineCache: boolean;
-  };
-  
-  // Feature flags
-  shouldEnableFeature: (feature: 'animations' | 'realtime_updates' | 'image_preload' | 'auto_refresh') => boolean;
-  getOptimizedUpdateInterval: (baseInterval: number) => number;
-  
-  // Fallback mechanisms
-  fallbackMechanism: FallbackMechanism | null;
-  
-  // Cache management
-  clearCache: (pattern?: string) => void;
-  getCacheStats: () => {
-    size: number;
-    hitRate: number;
-    totalRequests: number;
-    cacheHits: number;
-  };
+interface PerformanceState {
+  isLoading: boolean;
+  metrics: any;
+  recommendations: string[];
+  error: string | null;
 }
 
-export const usePerformanceOptimization = (
-  options: UsePerformanceOptimizationOptions
-): PerformanceOptimizationHook => {
+interface OptimizedRequestOptions {
+  enableCaching?: boolean;
+  enableDeduplication?: boolean;
+  enableCompression?: boolean;
+  enableMonitoring?: boolean;
+  cacheType?: 'feed' | 'communities' | 'profiles' | 'marketplace' | 'governance' | 'static';
+}
+
+export function usePerformanceOptimization(options: UsePerformanceOptimizationOptions = {}) {
   const {
-    componentKey,
     enableAutoOptimization = true,
-    enableLoadingStates = true,
-    enableFallbacks = true
+    monitoringInterval = 30000, // 30 seconds
+    reportingEnabled = true
   } = options;
 
-  // State management
-  const [networkCondition, setNetworkCondition] = useState<NetworkCondition | null>(null);
-  const [loadingState, setLoadingStateInternal] = useState<LoadingState | null>(null);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics>(
-    performanceOptimizer.getPerformanceMetrics()
-  );
-  const [optimizedSettings, setOptimizedSettings] = useState(
-    performanceOptimizer.getOptimizedSettings()
-  );
-  const [fallbackMechanism, setFallbackMechanism] = useState<FallbackMechanism | null>(null);
+  const [state, setState] = useState<PerformanceState>({
+    isLoading: false,
+    metrics: null,
+    recommendations: [],
+    error: null
+  });
 
-  // Refs for cleanup
-  const listenersRef = useRef<Map<string, Function>>(new Map());
-  const isInitializedRef = useRef(false);
+  const intervalRef = useRef<NodeJS.Timeout>();
+  const mountedRef = useRef(true);
 
-  // Handle network condition changes
-  const handleNetworkConditionChange = useCallback((condition: NetworkCondition) => {
-    setNetworkCondition(condition);
-    setOptimizedSettings(performanceOptimizer.getOptimizedSettings());
-  }, []);
+  // Load performance metrics
+  const loadMetrics = useCallback(async () => {
+    if (!mountedRef.current) return;
 
-  // Handle loading state changes
-  const handleLoadingStateChange = useCallback((data: { key: string; state: LoadingState }) => {
-    if (data.key === componentKey) {
-      setLoadingStateInternal(data.state);
-    }
-  }, [componentKey]);
-
-  // Handle loading state cleared
-  const handleLoadingStateCleared = useCallback((data: { key: string }) => {
-    if (data.key === componentKey) {
-      setLoadingStateInternal(null);
-    }
-  }, [componentKey]);
-
-  // Handle fallback activation
-  const handleFallbackActivated = useCallback((data: { key: string; mechanism: FallbackMechanism }) => {
-    if (data.key === componentKey) {
-      setFallbackMechanism(data.mechanism);
-    }
-  }, [componentKey]);
-
-  // Loading state management
-  const setLoadingState = useCallback((state: Partial<LoadingState>) => {
-    if (!enableLoadingStates) return;
-    performanceOptimizer.setLoadingState(componentKey, state);
-  }, [componentKey, enableLoadingStates]);
-
-  const clearLoadingState = useCallback(() => {
-    if (!enableLoadingStates) return;
-    performanceOptimizer.clearLoadingState(componentKey);
-  }, [componentKey, enableLoadingStates]);
-
-  // Optimized request
-  const optimizeRequest = useCallback(async <T>(
-    key: string,
-    requestFn: () => Promise<T>,
-    requestOptions: {
-      priority?: 'low' | 'medium' | 'high' | 'urgent';
-      cacheTTL?: number;
-      fallbackData?: T;
-      enableBatching?: boolean;
-    } = {}
-  ): Promise<T> => {
-    const fullKey = `${componentKey}_${key}`;
-    
     try {
-      const result = await performanceOptimizer.optimizeRequest(
-        fullKey,
-        requestFn,
-        requestOptions
-      );
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // Clear any existing fallback
-      setFallbackMechanism(null);
+      const report = performanceIntegrationService.getPerformanceReport();
       
-      return result;
+      if (mountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          metrics: report.summary,
+          recommendations: report.recommendations
+        }));
+      }
     } catch (error) {
-      // Fallback will be handled by the optimizer if enabled
-      throw error;
+      if (mountedRef.current) {
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to load metrics'
+        }));
+      }
     }
-  }, [componentKey]);
-
-  // Performance metrics
-  const recordPerformanceMetric = useCallback((
-    type: 'render' | 'request' | 'memory',
-    value: number
-  ) => {
-    performanceOptimizer.recordPerformanceMetric(type, value);
-    setPerformanceMetrics(performanceOptimizer.getPerformanceMetrics());
   }, []);
 
-  // Feature flags
-  const shouldEnableFeature = useCallback((
-    feature: 'animations' | 'realtime_updates' | 'image_preload' | 'auto_refresh'
-  ): boolean => {
-    return performanceOptimizer.shouldEnableFeature(feature);
-  }, []);
-
-  const getOptimizedUpdateInterval = useCallback((baseInterval: number): number => {
-    return performanceOptimizer.getOptimizedUpdateInterval(baseInterval);
-  }, []);
-
-  // Cache management
-  const clearCache = useCallback((pattern?: string) => {
-    performanceOptimizer.clearCache(pattern);
-  }, []);
-
-  const getCacheStats = useCallback(() => {
-    return performanceOptimizer.getCacheStats();
-  }, []);
-
-  // Initialize and set up event listeners
+  // Setup monitoring interval
   useEffect(() => {
-    if (isInitializedRef.current) return;
-    isInitializedRef.current = true;
-
-    // Start performance optimizer if auto-optimization is enabled
-    if (enableAutoOptimization) {
-      performanceOptimizer.start();
+    if (reportingEnabled) {
+      loadMetrics();
+      
+      if (monitoringInterval > 0) {
+        intervalRef.current = setInterval(loadMetrics, monitoringInterval);
+      }
     }
 
-    // Set up event listeners
-    const listeners = new Map<string, Function>();
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [loadMetrics, monitoringInterval, reportingEnabled]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Optimized API request function
+  const optimizedRequest = useCallback(async <T>(
+    url: string,
+    options: RequestInit = {},
+    requestOptions: OptimizedRequestOptions = {}
+  ): Promise<T> => {
+    const config = enableAutoOptimization 
+      ? performanceIntegrationService.getOptimalConfiguration()
+      : {
+          enableCaching: true,
+          enableDeduplication: true,
+          enableCompression: true,
+          enableMonitoring: true,
+          ...requestOptions
+        };
+
+    return integratedApiRequest<T>(url, options, config);
+  }, [enableAutoOptimization]);
+
+  // Preload critical resources
+  const preloadResources = useCallback(async (urls: string[]) => {
+    try {
+      await performanceIntegrationService.preloadCriticalResources(urls);
+      if (reportingEnabled) {
+        loadMetrics(); // Refresh metrics after preloading
+      }
+    } catch (error) {
+      console.warn('Resource preloading failed:', error);
+    }
+  }, [loadMetrics, reportingEnabled]);
+
+  // Clear performance data
+  const clearData = useCallback(() => {
+    performanceIntegrationService.clearAllData();
+    if (reportingEnabled) {
+      loadMetrics();
+    }
+  }, [loadMetrics, reportingEnabled]);
+
+  // Get detailed performance report
+  const getDetailedReport = useCallback(() => {
+    return performanceIntegrationService.getPerformanceReport();
+  }, []);
+
+  // Export performance data
+  const exportData = useCallback(() => {
+    return performanceIntegrationService.exportPerformanceData();
+  }, []);
+
+  return {
+    // State
+    ...state,
     
-    listeners.set('network_condition_changed', handleNetworkConditionChange);
-    listeners.set('loading_state_changed', handleLoadingStateChange);
-    listeners.set('loading_state_cleared', handleLoadingStateCleared);
+    // Actions
+    optimizedRequest,
+    preloadResources,
+    clearData,
+    loadMetrics,
+    getDetailedReport,
+    exportData,
     
-    if (enableFallbacks) {
-      listeners.set('fallback_activated', handleFallbackActivated);
+    // Utilities
+    isServiceInitialized: performanceIntegrationService.isServiceInitialized(),
+    requestCount: performanceIntegrationService.getRequestCount()
+  };
+}
+
+/**
+ * Hook for caching specific data with performance optimization
+ */
+export function useOptimizedCache<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  options: {
+    ttl?: number;
+    cacheType?: 'feed' | 'communities' | 'profiles' | 'marketplace' | 'governance' | 'static';
+    enableDeduplication?: boolean;
+  } = {}
+) {
+  const {
+    ttl = 60000, // 1 minute default
+    cacheType = 'feed',
+    enableDeduplication = true
+  } = options;
+
+  const [data, setData] = useState<T | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<number>(0);
+
+  const fetchData = useCallback(async (force = false) => {
+    // Check if we need to fetch (TTL check)
+    if (!force && data && Date.now() - lastFetch < ttl) {
+      return data;
     }
 
-    // Register listeners
-    listeners.forEach((callback, event) => {
-      performanceOptimizer.on(event, callback);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await fetchFn();
+      setData(result);
+      setLastFetch(Date.now());
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Fetch failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [data, fetchFn, lastFetch, ttl]);
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const invalidate = useCallback(() => {
+    setData(null);
+    setLastFetch(0);
+  }, []);
+
+  const refresh = useCallback(() => {
+    return fetchData(true);
+  }, [fetchData]);
+
+  return {
+    data,
+    isLoading,
+    error,
+    fetchData,
+    invalidate,
+    refresh,
+    isStale: data && Date.now() - lastFetch > ttl,
+    age: data ? Date.now() - lastFetch : 0
+  };
+}
+
+/**
+ * Hook for monitoring component performance
+ */
+export function useComponentPerformance(componentName: string) {
+  const renderStartTime = useRef<number>(performance.now());
+  const mountTime = useRef<number>(0);
+  const renderCount = useRef<number>(0);
+
+  useEffect(() => {
+    mountTime.current = performance.now();
+    renderCount.current++;
+
+    // Record mount performance
+    performanceIntegrationService.optimizedRequest('/api/performance/component', {
+      method: 'POST',
+      body: JSON.stringify({
+        component: componentName,
+        event: 'mount',
+        duration: mountTime.current - renderStartTime.current,
+        renderCount: renderCount.current
+      })
+    }, {
+      enableCaching: false,
+      enableDeduplication: false,
+      enableCompression: true,
+      enableMonitoring: false
+    }).catch(() => {
+      // Silently fail for performance tracking
     });
 
-    listenersRef.current = listeners;
-
-    // Get initial states
-    setNetworkCondition(performanceOptimizer.getPerformanceMetrics().timestamp ? 
-      { type: 'fast', effectiveType: '4g', downlink: 10, rtt: 100, saveData: false, timestamp: new Date() } : 
-      null
-    );
-    setOptimizedSettings(performanceOptimizer.getOptimizedSettings());
-    setPerformanceMetrics(performanceOptimizer.getPerformanceMetrics());
-    
-    if (enableLoadingStates) {
-      const existingLoadingState = performanceOptimizer.getLoadingState(componentKey);
-      if (existingLoadingState) {
-        setLoadingStateInternal(existingLoadingState);
-      }
-    }
-
-    // Cleanup on unmount
     return () => {
-      listeners.forEach((callback, event) => {
-        performanceOptimizer.off(event, callback);
+      // Record unmount
+      const unmountTime = performance.now();
+      performanceIntegrationService.optimizedRequest('/api/performance/component', {
+        method: 'POST',
+        body: JSON.stringify({
+          component: componentName,
+          event: 'unmount',
+          duration: unmountTime - mountTime.current,
+          renderCount: renderCount.current
+        })
+      }, {
+        enableCaching: false,
+        enableDeduplication: false,
+        enableCompression: true,
+        enableMonitoring: false
+      }).catch(() => {
+        // Silently fail for performance tracking
       });
-      
-      // Clear loading state on unmount
-      if (enableLoadingStates) {
-        performanceOptimizer.clearLoadingState(componentKey);
-      }
     };
-  }, [
-    componentKey,
-    enableAutoOptimization,
-    enableLoadingStates,
-    enableFallbacks,
-    handleNetworkConditionChange,
-    handleLoadingStateChange,
-    handleLoadingStateCleared,
-    handleFallbackActivated
-  ]);
+  }, [componentName]);
 
-  // Update performance metrics periodically
+  // Update render count on each render
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPerformanceMetrics(performanceOptimizer.getPerformanceMetrics());
-    }, 10000); // Update every 10 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  return {
-    networkCondition,
-    loadingState,
-    setLoadingState,
-    clearLoadingState,
-    optimizeRequest,
-    performanceMetrics,
-    recordPerformanceMetric,
-    optimizedSettings,
-    shouldEnableFeature,
-    getOptimizedUpdateInterval,
-    fallbackMechanism,
-    clearCache,
-    getCacheStats
-  };
-};
-
-// Specialized hooks for common use cases
-export const useOptimizedDataFetching = (componentKey: string) => {
-  const optimization = usePerformanceOptimization({
-    componentKey,
-    enableAutoOptimization: true,
-    enableLoadingStates: true,
-    enableFallbacks: true
+    renderCount.current++;
   });
 
-  const fetchData = useCallback(async <T>(
-    key: string,
-    fetchFn: () => Promise<T>,
-    options: {
-      priority?: 'low' | 'medium' | 'high' | 'urgent';
-      fallbackData?: T;
-      showLoading?: boolean;
-    } = {}
-  ): Promise<T> => {
-    const { priority = 'medium', fallbackData, showLoading = true } = options;
-
-    if (showLoading) {
-      optimization.setLoadingState({
-        isLoading: true,
-        progress: 0,
-        message: 'Loading data...'
-      });
-    }
-
-    try {
-      const result = await optimization.optimizeRequest(key, fetchFn, {
-        priority,
-        fallbackData,
-        cacheTTL: 30000 // 30 seconds default cache
-      });
-
-      if (showLoading) {
-        optimization.clearLoadingState();
-      }
-
-      return result;
-    } catch (error) {
-      if (showLoading) {
-        optimization.clearLoadingState();
-      }
-      throw error;
-    }
-  }, [optimization]);
+  const recordCustomEvent = useCallback((eventName: string, duration?: number) => {
+    performanceIntegrationService.optimizedRequest('/api/performance/component', {
+      method: 'POST',
+      body: JSON.stringify({
+        component: componentName,
+        event: eventName,
+        duration: duration || 0,
+        renderCount: renderCount.current
+      })
+    }, {
+      enableCaching: false,
+      enableDeduplication: false,
+      enableCompression: true,
+      enableMonitoring: false
+    }).catch(() => {
+      // Silently fail for performance tracking
+    });
+  }, [componentName]);
 
   return {
-    ...optimization,
-    fetchData
+    renderCount: renderCount.current,
+    recordCustomEvent
   };
-};
-
-export const useOptimizedRealTimeUpdates = (componentKey: string, baseInterval: number = 10000) => {
-  const optimization = usePerformanceOptimization({
-    componentKey,
-    enableAutoOptimization: true,
-    enableLoadingStates: false,
-    enableFallbacks: true
-  });
-
-  const [updateInterval, setUpdateInterval] = useState(baseInterval);
-  const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(true);
-
-  // Update interval based on network conditions
-  useEffect(() => {
-    const optimizedInterval = optimization.getOptimizedUpdateInterval(baseInterval);
-    setUpdateInterval(optimizedInterval);
-    
-    const shouldEnable = optimization.shouldEnableFeature('realtime_updates');
-    setIsRealTimeEnabled(shouldEnable);
-  }, [optimization, baseInterval]);
-
-  return {
-    ...optimization,
-    updateInterval,
-    isRealTimeEnabled,
-    shouldUpdate: isRealTimeEnabled && optimization.networkCondition?.type !== 'offline'
-  };
-};
-
-export const useOptimizedAnimations = (componentKey: string) => {
-  const optimization = usePerformanceOptimization({
-    componentKey,
-    enableAutoOptimization: true,
-    enableLoadingStates: false,
-    enableFallbacks: false
-  });
-
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  // Update animation settings based on network conditions and user preferences
-  useEffect(() => {
-    const shouldEnable = optimization.shouldEnableFeature('animations');
-    setAnimationsEnabled(shouldEnable);
-    
-    // Check for reduced motion preference
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(mediaQuery.matches);
-    
-    const handleChange = (e: MediaQueryListEvent) => {
-      setReducedMotion(e.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [optimization]);
-
-  return {
-    ...optimization,
-    animationsEnabled: animationsEnabled && !reducedMotion,
-    reducedMotion,
-    shouldAnimate: (priority: 'low' | 'medium' | 'high' = 'medium') => {
-      if (reducedMotion) return false;
-      if (!animationsEnabled) return priority === 'high';
-      return true;
-    }
-  };
-};
+}
 
 export default usePerformanceOptimization;

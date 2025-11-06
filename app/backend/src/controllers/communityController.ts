@@ -142,10 +142,38 @@ export class CommunityController {
       res.status(201).json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error creating community:', error);
+      
+      // Enhanced error handling with retry guidance
+      const isServiceUnavailable = error.message?.includes('database') || 
+                                  error.message?.includes('connection') ||
+                                  error.message?.includes('timeout') ||
+                                  error.code === 'ECONNREFUSED';
+      
+      const isRateLimited = error.message?.includes('rate limit') ||
+                           error.status === 429;
+      
       if (error.message.includes('already exists')) {
-        res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', 409));
+        res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', 409, {
+          retryable: false,
+          suggestion: 'Please choose a different community name'
+        }));
+      } else if (isServiceUnavailable) {
+        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again in a moment.', 503, {
+          retryable: true,
+          retryAfter: 30,
+          errorCode: 'SERVICE_UNAVAILABLE'
+        }));
+      } else if (isRateLimited) {
+        res.status(429).json(createErrorResponse('RATE_LIMITED', 'Too many requests. Please wait before trying again.', 429, {
+          retryable: true,
+          retryAfter: 60,
+          errorCode: 'RATE_LIMITED'
+        }));
       } else {
-        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community'));
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community', 500, {
+          retryable: true,
+          errorCode: 'INTERNAL_ERROR'
+        }));
       }
     }
   }

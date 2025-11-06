@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { authService, KYCStatus } from '@/services/authService';
+import { enhancedAuthService } from '@/services/enhancedAuthService';
+import { sessionManager } from '@/services/sessionManager';
 import { AuthUser } from '@/types/auth';
 import { UserRole, Permission } from '@/types/auth';
 
@@ -33,6 +35,11 @@ interface AuthContextType {
   isAdmin: boolean;
   isModerator: boolean;
   isSuperAdmin: boolean;
+  
+  // Enhanced authentication with session recovery
+  enhancedAuthenticate: (options?: { forceRefresh?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  recoverSession: () => Promise<boolean>;
+  getSessionStatus: () => any;
 }
 
 // Storage keys for session persistence
@@ -457,6 +464,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, handleLogout]);
 
+  // Enhanced authentication method
+  const enhancedAuthenticate = useCallback(async (options: { forceRefresh?: boolean } = {}): Promise<{ success: boolean; error?: string }> => {
+    if (!address || !isConnected || !connector) {
+      return { success: false, error: 'Wallet not connected' };
+    }
+
+    try {
+      const result = await enhancedAuthService.authenticateWallet(
+        address,
+        connector,
+        'connected',
+        {
+          forceRefresh: options.forceRefresh,
+          timeout: 30000,
+          retries: 3
+        }
+      );
+
+      if (result.success && result.user && result.token) {
+        setUser(result.user);
+        setAccessToken(result.token);
+        await loadKYCStatus();
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || 'Authentication failed' };
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Authentication error' };
+    }
+  }, [address, isConnected, connector, loadKYCStatus]);
+
+  // Session recovery method
+  const recoverSession = useCallback(async (): Promise<boolean> => {
+    if (!address) return false;
+
+    try {
+      const result = await enhancedAuthService.recoverAuthentication(address);
+      
+      if (result.success && result.user && result.token) {
+        setUser(result.user);
+        setAccessToken(result.token);
+        await loadKYCStatus();
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Session recovery failed:', error);
+      return false;
+    }
+  }, [address, loadKYCStatus]);
+
+  // Get session status
+  const getSessionStatus = useCallback(() => {
+    return {
+      ...enhancedAuthService.getSessionStatus(),
+      ...sessionManager.getSessionStatus()
+    };
+  }, []);
+
   // Auto-refresh token periodically (less aggressive)
   useEffect(() => {
     if (!accessToken || !user) return;
@@ -500,6 +567,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin,
     isModerator,
     isSuperAdmin,
+    // Enhanced authentication methods
+    enhancedAuthenticate,
+    recoverSession,
+    getSessionStatus,
   };
 
   return (

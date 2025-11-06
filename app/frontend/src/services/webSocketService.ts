@@ -3,55 +3,391 @@ import { io, Socket } from 'socket.io-client';
 // Get the WebSocket URL from environment variables, fallback to backend URL
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+interface WebSocketConfig {
+  url?: string;
+  maxReconnectAttempts?: number;
+  reconnectDelay?: number;
+  maxReconnectDelay?: number;
+  backoffFactor?: number;
+  heartbeatInterval?: number;
+  connectionTimeout?: number;
+  resourceAware?: boolean;
+  enableFallback?: boolean;
+}
+
+interface ConnectionState {
+  isConnected: boolean;
+  isReconnecting: boolean;
+  reconnectAttempts: number;
+  lastConnected: Date | null;
+  lastError: Error | null;
+  connectionQuality: 'excellent' | 'good' | 'poor' | 'unknown';
+}
+
+interface ResourceConstraints {
+  memoryUsage: number;
+  connectionCount: number;
+  networkLatency: number;
+  isLowPowerMode: boolean;
+}
+
 class WebSocketService {
   private socket: Socket | null = null;
   private listeners: Map<string, Function[]> = new Map();
+  private config: WebSocketConfig;
+  private connectionState: ConnectionState;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private resourceConstraints: ResourceConstraints;
+  private fallbackToPolling: boolean = false;
+  private isOptional: boolean = false;
+
+  constructor(config: WebSocketConfig = {}) {
+    this.config = {
+      url: config.url || WS_URL,
+      maxReconnectAttempts: config.maxReconnectAttempts || 10,
+      reconnectDelay: config.reconnectDelay || 1000,
+      maxReconnectDelay: config.maxReconnectDelay || 30000,
+      backoffFactor: config.backoffFactor || 2,
+      heartbeatInterval: config.heartbeatInterval || 30000,
+      connectionTimeout: config.connectionTimeout || 20000,
+      resourceAware: config.resourceAware ?? true,
+      enableFallback: config.enableFallback ?? true,
+      ...config
+    };
+
+    this.connectionState = {
+      isConnected: false,
+      isReconnecting: false,
+      reconnectAttempts: 0,
+      lastConnected: null,
+      lastError: null,
+      connectionQuality: 'unknown'
+    };
+
+    this.resourceConstraints = {
+      memoryUsage: 0,
+      connectionCount: 0,
+      networkLatency: 0,
+      isLowPowerMode: false
+    };
+
+    this.detectResourceConstraints();
+    this.setupVisibilityHandlers();
+  }
+
+  private detectResourceConstraints(): void {
+    if (typeof window === 'undefined') return;
+
+    // Check for resource constraints
+    const navigator = window.navigator as any;
+    
+    // Check for low-power mode or data saver
+    this.isOptional = !!(
+      navigator.connection?.saveData ||
+      navigator.deviceMemory && navigator.deviceMemory < 4 ||
+      navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4
+    );
+
+    // Monitor memory usage if available
+    if ('memory' in performance) {
+      const memInfo = (performance as any).memory;
+      this.resourceConstraints.memoryUsage = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
+    }
+
+    // Check network conditions
+    if (navigator.connection) {
+      const connection = navigator.connection;
+      this.resourceConstraints.networkLatency = connection.rtt || 0;
+      this.resourceConstraints.isLowPowerMode = connection.saveData || false;
+      
+      // Use polling for slow connections
+      if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
+        this.fallbackToPolling = true;
+      }
+    }
+
+    console.log('WebSocket resource constraints detected:', {
+      isOptional: this.isOptional,
+      fallbackToPolling: this.fallbackToPolling,
+      constraints: this.resourceConstraints
+    });
+  }
+
+  private setupVisibilityHandlers(): void {
+    if (typeof document === 'undefined') return;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Reduce activity when page is hidden
+        this.pauseHeartbeat();
+      } else {
+        // Resume activity when page becomes visible
+        this.resumeHeartbeat();
+        if (this.config.resourceAware && !this.socket?.connected) {
+          this.attemptReconnection();
+        }
+      }
+    });
+
+    // Handle online/offline events
+    window.addEventListener('online', () => {
+      if (!this.socket?.connected && this.config.enableFallback) {
+        this.attemptReconnection();
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      this.emit('network_offline');
+    });
+  }
 
   connect() {
     if (this.socket?.connected) {
-      return;
+      return Promise.resolve();
     }
 
-    // Add additional options for better connection handling
-    this.socket = io(WS_URL, {
-      transports: ['websocket', 'polling'], // Try WebSocket first, then polling
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
+    // Skip connection if resource-constrained and WebSocket is optional
+    if (this.isOptional && this.config.resourceAware) {
+      console.log('WebSocket connection skipped due to resource constraints');
+      this.emit('connection_skipped', { reason: 'resource_constraints' });
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      try {
+        this.connectionState.isReconnecting = false;
+        
+        // Determine transport method based on constraints
+        const transports = this.fallbackToPolling ? 
+          ['polling', 'websocket'] : 
+          ['websocket', 'polling'];
+
+        // Add additional options for better connection handling
+        this.socket = io(this.config.url!, {
+          transports,
+          reconnection: false, // We handle reconnection manually
+          reconnectionAttempts: 0,
+          timeout: this.config.connectionTimeout,
+          forceNew: true,
+          upgrade: !this.fallbackToPolling,
+          rememberUpgrade: false
+        });
+
+        this.setupSocketEventHandlers(resolve, reject);
+
+      } catch (error) {
+        this.handleConnectionError(error as Error);
+        reject(error);
+      }
     });
+  }
+
+  private setupSocketEventHandlers(resolve?: () => void, reject?: (error: Error) => void): void {
+    if (!this.socket) return;
 
     this.socket.on('connect', () => {
       console.log('Connected to WebSocket server');
+      this.connectionState.isConnected = true;
+      this.connectionState.isReconnecting = false;
+      this.connectionState.reconnectAttempts = 0;
+      this.connectionState.lastConnected = new Date();
+      this.connectionState.lastError = null;
+      this.connectionState.connectionQuality = 'good';
+
+      this.startHeartbeat();
       this.emit('connected');
+      resolve?.();
     });
 
     this.socket.on('disconnect', (reason) => {
       console.log('Disconnected from WebSocket server:', reason);
-      this.emit('disconnected');
+      this.connectionState.isConnected = false;
+      this.stopHeartbeat();
+      
+      this.emit('disconnected', { reason });
+
+      // Attempt reconnection based on disconnect reason
+      if (this.shouldReconnect(reason)) {
+        this.attemptReconnection();
+      }
     });
 
     this.socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
-      this.emit('error', error.message);
+      this.handleConnectionError(error);
+      reject?.(error);
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      console.error('WebSocket reconnection failed');
+      this.handleReconnectionFailure();
     });
 
     // Listen for all custom events and emit them to local listeners
     this.socket.onAny((event, ...args) => {
       this.emit(event, ...args);
     });
+
+    // Handle heartbeat responses
+    this.socket.on('pong', () => {
+      this.updateConnectionQuality();
+    });
+  }
+
+  private shouldReconnect(reason: string): boolean {
+    // Don't reconnect for certain reasons
+    const noReconnectReasons = [
+      'io client disconnect',
+      'transport close',
+      'forced close'
+    ];
+
+    if (noReconnectReasons.includes(reason)) {
+      return false;
+    }
+
+    // Don't reconnect if resource-constrained and optional
+    if (this.isOptional && this.config.resourceAware) {
+      return false;
+    }
+
+    return this.connectionState.reconnectAttempts < this.config.maxReconnectAttempts!;
+  }
+
+  private attemptReconnection(): void {
+    if (this.connectionState.isReconnecting || 
+        this.connectionState.reconnectAttempts >= this.config.maxReconnectAttempts!) {
+      this.handleReconnectionFailure();
+      return;
+    }
+
+    this.connectionState.isReconnecting = true;
+    this.connectionState.reconnectAttempts++;
+
+    // Calculate exponential backoff delay
+    const baseDelay = this.config.reconnectDelay!;
+    const backoffDelay = baseDelay * Math.pow(this.config.backoffFactor!, this.connectionState.reconnectAttempts - 1);
+    const delay = Math.min(backoffDelay, this.config.maxReconnectDelay!);
+
+    // Add jitter to prevent thundering herd
+    const jitter = Math.random() * 0.1 * delay;
+    const finalDelay = delay + jitter;
+
+    console.log(`Attempting WebSocket reconnection in ${finalDelay}ms (attempt ${this.connectionState.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+
+    this.emit('reconnecting', {
+      attempt: this.connectionState.reconnectAttempts,
+      maxAttempts: this.config.maxReconnectAttempts,
+      delay: finalDelay
+    });
+
+    this.reconnectTimeout = setTimeout(() => {
+      this.connect().catch((error) => {
+        console.error('Reconnection attempt failed:', error);
+        this.attemptReconnection();
+      });
+    }, finalDelay);
+  }
+
+  private handleConnectionError(error: Error): void {
+    this.connectionState.lastError = error;
+    this.connectionState.connectionQuality = 'poor';
+    this.emit('error', error.message);
+
+    // Switch to polling if WebSocket fails repeatedly
+    if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
+      console.log('Switching to polling transport due to repeated WebSocket failures');
+      this.fallbackToPolling = true;
+    }
+  }
+
+  private handleReconnectionFailure(): void {
+    console.error('WebSocket max reconnection attempts reached');
+    this.connectionState.isReconnecting = false;
+    
+    this.emit('reconnection_failed', {
+      attempts: this.connectionState.reconnectAttempts,
+      lastError: this.connectionState.lastError
+    });
+
+    // Fallback to polling if enabled
+    if (this.config.enableFallback && !this.fallbackToPolling) {
+      console.log('Falling back to polling transport');
+      this.fallbackToPolling = true;
+      this.connectionState.reconnectAttempts = 0;
+      setTimeout(() => this.connect(), 5000);
+    }
+  }
+
+  private startHeartbeat(): void {
+    if (this.heartbeatInterval) return;
+
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket?.connected) {
+        this.socket.emit('ping');
+      }
+    }, this.config.heartbeatInterval);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  private pauseHeartbeat(): void {
+    this.stopHeartbeat();
+  }
+
+  private resumeHeartbeat(): void {
+    if (this.socket?.connected) {
+      this.startHeartbeat();
+    }
+  }
+
+  private updateConnectionQuality(): void {
+    const now = Date.now();
+    const lastPing = now;
+    
+    // Simple quality assessment based on response time
+    if (this.resourceConstraints.networkLatency < 100) {
+      this.connectionState.connectionQuality = 'excellent';
+    } else if (this.resourceConstraints.networkLatency < 300) {
+      this.connectionState.connectionQuality = 'good';
+    } else {
+      this.connectionState.connectionQuality = 'poor';
+    }
   }
 
   disconnect() {
+    this.connectionState.isReconnecting = false;
+    
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    this.stopHeartbeat();
+
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
+
+    this.connectionState.isConnected = false;
+    this.emit('disconnected', { reason: 'manual_disconnect' });
   }
 
   register(address: string) {
     if (this.socket?.connected) {
       this.socket.emit('register', address);
+    } else if (this.config.enableFallback) {
+      // Queue the registration for when connection is restored
+      this.once('connected', () => {
+        this.socket?.emit('register', address);
+      });
     }
   }
 
@@ -72,6 +408,14 @@ class WebSocketService {
     }
   }
 
+  once(event: string, callback: Function) {
+    const onceWrapper = (...args: any[]) => {
+      this.off(event, onceWrapper);
+      callback(...args);
+    };
+    this.on(event, onceWrapper);
+  }
+
   emit(event: string, ...args: any[]) {
     const listeners = this.listeners.get(event);
     if (listeners) {
@@ -88,15 +432,72 @@ class WebSocketService {
   send(event: string, data: any) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
+    } else if (this.config.enableFallback) {
+      console.warn(`WebSocket not connected, queuing message: ${event}`);
+      // Queue message for when connection is restored
+      this.once('connected', () => {
+        this.socket?.emit(event, data);
+      });
     } else {
-      console.warn('Cannot send message, WebSocket not connected');
+      console.warn('Cannot send message, WebSocket not connected and fallback disabled');
     }
   }
 
   isConnected(): boolean {
     return this.socket?.connected || false;
   }
+
+  getConnectionState(): ConnectionState {
+    return { ...this.connectionState };
+  }
+
+  getResourceConstraints(): ResourceConstraints {
+    return { ...this.resourceConstraints };
+  }
+
+  isOptionalConnection(): boolean {
+    return this.isOptional;
+  }
+
+  // Force reconnection (useful for manual retry)
+  forceReconnect(): void {
+    if (this.socket?.connected) {
+      this.disconnect();
+    }
+    this.connectionState.reconnectAttempts = 0;
+    this.connect();
+  }
+
+  // Update configuration at runtime
+  updateConfig(newConfig: Partial<WebSocketConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+  }
+
+  // Get connection statistics
+  getStats() {
+    return {
+      isConnected: this.connectionState.isConnected,
+      isReconnecting: this.connectionState.isReconnecting,
+      reconnectAttempts: this.connectionState.reconnectAttempts,
+      lastConnected: this.connectionState.lastConnected,
+      connectionQuality: this.connectionState.connectionQuality,
+      isOptional: this.isOptional,
+      fallbackToPolling: this.fallbackToPolling,
+      resourceConstraints: this.resourceConstraints
+    };
+  }
 }
 
-// Export a singleton instance
-export const webSocketService = new WebSocketService();
+// Export a singleton instance with resource-aware configuration
+export const webSocketService = new WebSocketService({
+  resourceAware: true,
+  enableFallback: true,
+  maxReconnectAttempts: 10,
+  reconnectDelay: 1000,
+  maxReconnectDelay: 30000,
+  backoffFactor: 2
+});
+
+// Export the class for custom instances
+export { WebSocketService };
+export type { WebSocketConfig, ConnectionState, ResourceConstraints };

@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { Send, Clock, AlertCircle, CheckCircle, WifiOff } from 'lucide-react';
 import { useActionQueue } from '../../hooks/useActionQueue';
 import ConnectivityErrorBoundary from '../ErrorHandling/ConnectivityErrorBoundary';
+import { EnhancedStatusIndicator } from '../Status/EnhancedStatusIndicator';
+import { apiCircuitBreaker } from '../../services/circuitBreaker';
 
 interface PostData {
   content: string;
@@ -26,8 +28,10 @@ export const ResilientPostCreator: React.FC<ResilientPostCreatorProps> = ({
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'queued' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'queued' | 'error' | 'retrying'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [estimatedRetryTime, setEstimatedRetryTime] = useState(0);
   
   const { addAction, queueSize } = useActionQueue();
   const isOnline = navigator.onLine;
@@ -52,9 +56,9 @@ export const ResilientPostCreator: React.FC<ResilientPostCreatorProps> = ({
     };
 
     try {
-      if (isOnline) {
-        // Try direct submission first
-        try {
+      // Use circuit breaker for resilient API calls
+      const success = await apiCircuitBreaker.execute(
+        async () => {
           const response = await fetch('/api/posts', {
             method: 'POST',
             headers: {
@@ -65,42 +69,109 @@ export const ResilientPostCreator: React.FC<ResilientPostCreatorProps> = ({
 
           if (response.ok) {
             const result = await response.json();
-            setSubmitStatus('success');
-            setContent('');
-            setTags([]);
-            onPostCreated?.(result.id);
-            return;
-          } else if (response.status === 503 || response.status === 429) {
-            // Service unavailable or rate limited, queue the action
-            throw new Error('Service temporarily unavailable');
+            return result.data;
+          } else if (response.status === 503 || response.status === 429 || response.status >= 500) {
+            const errorData = await response.json().catch(() => ({}));
+            const error = new Error(errorData.error || `Service temporarily unavailable (${response.status})`);
+            (error as any).status = response.status;
+            (error as any).retryable = errorData.retryable;
+            (error as any).retryAfter = errorData.retryAfter;
+            throw error;
           } else {
-            throw new Error(`Failed to create post: ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create post: ${response.statusText}`);
           }
-        } catch (fetchError) {
-          // If direct submission fails, queue the action
-          console.log('Direct submission failed, queuing action:', fetchError);
+        },
+        async () => {
+          // Fallback: queue the action
+          console.log('Using fallback: queuing post creation');
+          const actionId = await addAction('post', postData, {
+            priority: 'high',
+            maxRetries: 3
+          });
+          return null; // Indicates fallback was used
         }
+      );
+
+      if (success) {
+        // Direct submission succeeded
+        setSubmitStatus('success');
+        setContent('');
+        setTags([]);
+        setRetryCount(0);
+        onPostCreated?.(success.id);
+      } else {
+        // Fallback was used - action was queued
+        setSubmitStatus('queued');
+        setContent('');
+        setTags([]);
+        setRetryCount(0);
+        onPostQueued?.('queued-action-id');
       }
-
-      // Queue the action for later processing
-      const actionId = await addAction('post', postData, {
-        priority: 'high',
-        maxRetries: 3
-      });
-
-      setSubmitStatus('queued');
-      setContent('');
-      setTags([]);
-      onPostQueued?.(actionId);
 
     } catch (error) {
       console.error('Failed to submit post:', error);
-      setSubmitStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit post');
+      
+      // Check if we should retry
+      const isRetryableError = error instanceof Error && (
+        (error as any).retryable ||
+        error.message.includes('503') ||
+        error.message.includes('Service temporarily unavailable') ||
+        error.message.includes('network') ||
+        error.message.includes('timeout')
+      );
+
+      if (isRetryableError && retryCount < 3) {
+        setSubmitStatus('retrying');
+        setRetryCount(prev => prev + 1);
+        
+        const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+        setEstimatedRetryTime(retryDelay / 1000);
+        
+        setTimeout(() => {
+          handleSubmit(e);
+        }, retryDelay);
+        return;
+      }
+
+      // If not retryable or max retries exceeded, try to queue
+      if (!isOnline || retryCount >= 3) {
+        try {
+          const actionId = await addAction('post', postData, {
+            priority: 'high',
+            maxRetries: 3
+          });
+          
+          setSubmitStatus('queued');
+          setContent('');
+          setTags([]);
+          setRetryCount(0);
+          onPostQueued?.(actionId);
+        } catch (queueError) {
+          setSubmitStatus('error');
+          setErrorMessage('Failed to queue post. Please try again.');
+        }
+      } else {
+        setSubmitStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to create post');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  }, [content, communityId, tags, isOnline, addAction, onPostCreated, onPostQueued]);
+  }, [content, communityId, tags, isOnline, addAction, onPostCreated, onPostQueued, retryCount]);
+
+  const handleRetry = useCallback(() => {
+    setRetryCount(0);
+    setSubmitStatus('idle');
+    setErrorMessage('');
+    
+    // Create a synthetic form event for retry
+    const syntheticEvent = {
+      preventDefault: () => {}
+    } as React.FormEvent;
+    
+    handleSubmit(syntheticEvent);
+  }, [handleSubmit]);
 
   const handleTagAdd = useCallback((tag: string) => {
     if (tag && !tags.includes(tag)) {
@@ -158,34 +229,46 @@ export const ResilientPostCreator: React.FC<ResilientPostCreatorProps> = ({
           </div>
         )}
 
-        {/* Success/Error Messages */}
+        {/* Enhanced Status Messages */}
         {submitStatus === 'success' && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-green-700">Post created successfully!</span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="success"
+            message="Post created successfully!"
+            onDismiss={() => setSubmitStatus('idle')}
+            className="mb-4"
+          />
         )}
 
         {submitStatus === 'queued' && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-blue-700">
-                Post queued and will be submitted when service is available
-              </span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="queued"
+            message="Post queued and will be submitted when service is available"
+            details="Your post is safely stored and will be published automatically"
+            className="mb-4"
+          />
+        )}
+
+        {submitStatus === 'retrying' && (
+          <EnhancedStatusIndicator
+            status="retrying"
+            message="Retrying post submission..."
+            retryCount={retryCount}
+            maxRetries={3}
+            estimatedTime={estimatedRetryTime}
+            className="mb-4"
+          />
         )}
 
         {submitStatus === 'error' && errorMessage && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              <span className="text-sm text-red-700">{errorMessage}</span>
-            </div>
-          </div>
+          <EnhancedStatusIndicator
+            status="error"
+            message={errorMessage}
+            retryable={retryCount < 3}
+            onRetry={handleRetry}
+            onDismiss={() => setSubmitStatus('idle')}
+            actionLabel="Try Again"
+            className="mb-4"
+          />
         )}
 
         {/* Post Form */}

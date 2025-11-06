@@ -257,6 +257,16 @@ if (process.env.RENDER || isResourceConstrained) {
     const memoryLimitMB = parseInt(process.env.MEMORY_LIMIT);
     console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
   }
+
+  // Initialize performance monitoring integration
+  try {
+    const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
+    const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, performanceRedis);
+    await performanceMonitoring.initialize();
+    console.log('✅ Performance monitoring integration initialized');
+  } catch (error) {
+    console.warn('⚠️ Performance monitoring initialization failed:', error.message);
+  }
 }
 
 // Initialize performance optimization
@@ -361,6 +371,20 @@ app.use('/api/docs', apiDocsRoutes);
 // System monitoring routes
 import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
 app.use('/api/monitoring', systemMonitoringRoutes);
+
+// Performance monitoring routes
+import { createPerformanceMonitoringRoutes } from './routes/performanceMonitoringRoutes';
+import { Redis } from 'ioredis';
+
+// Create Redis instance for performance monitoring
+const performanceRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  enableReadyCheck: false,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 50, 2000)
+});
+
+const performanceMonitoringRoutes = createPerformanceMonitoringRoutes(dbPool, performanceRedis);
+app.use('/api/performance', performanceMonitoringRoutes);
 
 // ===== BACKEND API INTEGRATION ROUTES =====
 // Import marketplace API routes (from backend-api-integration spec)

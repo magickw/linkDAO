@@ -44,7 +44,8 @@ export class PostController {
         safeLogger.warn('POST /api/posts - Missing required fields:', { author: !!input.author, content: !!input.content });
         return res.status(400).json({ 
           success: false,
-          error: 'Author and content are required' 
+          error: 'Author and content are required',
+          retryable: false
         });
       }
       
@@ -66,9 +67,40 @@ export class PostController {
         name: error.name
       });
       
+      // Enhanced error handling with retry guidance
+      const isServiceUnavailable = error.message?.includes('database') || 
+                                  error.message?.includes('connection') ||
+                                  error.message?.includes('timeout') ||
+                                  error.code === 'ECONNREFUSED';
+      
+      const isRateLimited = error.message?.includes('rate limit') ||
+                           error.status === 429;
+      
+      if (isServiceUnavailable) {
+        return res.status(503).json({ 
+          success: false,
+          error: 'Service temporarily unavailable. Please try again in a moment.',
+          retryable: true,
+          retryAfter: 30, // seconds
+          errorCode: 'SERVICE_UNAVAILABLE'
+        });
+      }
+      
+      if (isRateLimited) {
+        return res.status(429).json({ 
+          success: false,
+          error: 'Too many requests. Please wait before trying again.',
+          retryable: true,
+          retryAfter: 60, // seconds
+          errorCode: 'RATE_LIMITED'
+        });
+      }
+      
       return res.status(500).json({ 
         success: false,
-        error: 'Failed to create post. Please try again.' 
+        error: 'Failed to create post. Please try again.',
+        retryable: true,
+        errorCode: 'INTERNAL_ERROR'
       });
     }
   }

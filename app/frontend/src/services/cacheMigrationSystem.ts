@@ -377,13 +377,13 @@ export class CacheMigrationSystem {
         description: 'Migrate localStorage offline queue to IndexedDB',
         required: false,
         execute: async () => {
-          await this.migrateLegacyCache('images-v2', 'enhanced-cache-v1');
+          await this.migrateOfflineQueue();
         },
         rollback: async () => {
-          await this.restoreLegacyCache('images-v2');
+          await this.restoreOfflineQueue();
         },
         validate: async () => {
-          return await this.validateImageCache();
+          return await this.validateOfflineQueue();
         }
       },
       {

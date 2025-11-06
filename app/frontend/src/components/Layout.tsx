@@ -410,7 +410,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
               <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
               <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
               {/* Quick Links */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
@@ -419,6 +419,13 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                   <li><Link href="/communities" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
                   <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
                   <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
+                </ul>
+              </div>
+
+              {/* Resources */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resources</h3>
+                <ul className="space-y-2">
                   <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
                   <li><Link href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</Link></li>
                   <li><Link href="/blog" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Blog</Link></li>
