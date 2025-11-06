@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { cacheService } from '../services/cacheService';
 import { logger } from '../utils/logger';
+import { productionConfig } from '../config/productionConfig';
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -255,9 +256,23 @@ export const rateLimitingService = RateLimitingService.getInstance();
 
 // General API rate limiter
 export const generalRateLimit = rateLimitingService.createRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 100,
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: productionConfig.rateLimiting.general.windowMs,
+  maxRequests: productionConfig.rateLimiting.general.max,
+  message: productionConfig.rateLimiting.general.message
+});
+
+// Feed rate limiter
+export const feedRateLimit = rateLimitingService.createRateLimit({
+  windowMs: productionConfig.rateLimiting.feed.windowMs,
+  maxRequests: productionConfig.rateLimiting.feed.max,
+  message: productionConfig.rateLimiting.feed.message
+});
+
+// Create post rate limiter
+export const createPostRateLimit = rateLimitingService.createRateLimit({
+  windowMs: productionConfig.rateLimiting.createPost.windowMs,
+  maxRequests: productionConfig.rateLimiting.createPost.max,
+  message: productionConfig.rateLimiting.createPost.message
 });
 
 // Authentication rate limiter (more restrictive)

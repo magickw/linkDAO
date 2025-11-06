@@ -3,16 +3,12 @@ import { csrfProtection } from '../middleware/csrfProtection';
 import { feedController } from '../controllers/feedController';
 import { validateRequest } from '../middleware/validation';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
+import { feedRateLimit } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();
 
 // Apply rate limiting to all routes
-router.use(rateLimitingMiddleware({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Increased limit each IP to 500 requests per windowMs
-  message: 'Too many feed requests from this IP'
-}));
+router.use(feedRateLimit);
 
 // Get personalized feed with filtering (optional authentication for personalization)
 router.get('/enhanced', 

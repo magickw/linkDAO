@@ -1,7 +1,7 @@
 import express from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { PostController } from '../controllers/postController';
-import { feedLimiter, createPostLimiter } from '../middleware/rateLimiter';
+import { createPostRateLimit } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();
 const postController = new PostController();
@@ -45,7 +45,7 @@ router.get('/diagnostic', async (req, res) => {
 });
 
 // Specific routes first (more specific routes before general ones)
-router.get('/feed', feedLimiter, postController.getFeed.bind(postController));
+router.get('/feed', postController.getFeed.bind(postController));
 router.get('/author/:author', postController.getPostsByAuthor.bind(postController));
 router.get('/tag/:tag', postController.getPostsByTag.bind(postController));
 router.get('/:id', postController.getPostById.bind(postController));
@@ -59,7 +59,7 @@ const csrfMiddleware = isDevelopment ?
 
 const rateLimitMiddleware = isDevelopment ?
   (req: any, res: any, next: any) => next() : // Skip rate limiting in development
-  createPostLimiter; // Use rate limiting in production
+  createPostRateLimit; // Use rate limiting in production
 
 router.post('/', csrfMiddleware, rateLimitMiddleware, postController.createPost.bind(postController));
 router.put('/:id', csrfMiddleware, postController.updatePost.bind(postController));

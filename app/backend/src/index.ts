@@ -115,6 +115,9 @@ import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adm
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
 import { memoryMonitoringService } from './services/memoryMonitoringService';
 
+// Import production configuration
+import { productionConfig } from './config/productionConfig';
+
 // Use dynamic imports to avoid circular dependencies
 let cacheService: any = null;
 let cacheWarmingService: any = null;
@@ -176,16 +179,17 @@ const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
 const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
 
 // Database connection pool optimization for different environments
-const maxConnections = isRenderFree ? 2 : (isRenderPro ? 5 : (process.env.RENDER ? 3 : 20));
-const minConnections = isRenderFree ? 1 : (isRenderPro ? 2 : (process.env.RENDER ? 1 : 5));
+const dbConfig = productionConfig.database;
+const maxConnections = isRenderFree ? dbConfig.maxConnections : (isRenderPro ? 5 : (process.env.RENDER ? 3 : 20));
+const minConnections = isRenderFree ? dbConfig.minConnections : (isRenderPro ? 2 : (process.env.RENDER ? 1 : 5));
 
 // Initialize optimized database pool
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: maxConnections,
   min: minConnections,
-  idleTimeoutMillis: isRenderFree ? 20000 : (isRenderPro ? 30000 : 60000),
-  connectionTimeoutMillis: isRenderFree ? 5000 : (isRenderPro ? 3000 : 2000),
+  idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis : (isRenderPro ? 30000 : 60000),
+  connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis : (isRenderPro ? 3000 : 2000),
   // Add connection cleanup and resource management
   allowExitOnIdle: true,
   keepAlive: true,
@@ -1134,7 +1138,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     
     if (enableWebSockets) {
       try {
-        const webSocketService = initializeWebSocket(httpServer);
+        const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
         console.log('✅ WebSocket service initialized');
         console.log(`🔌 WebSocket ready for real-time updates`);
       } catch (error) {

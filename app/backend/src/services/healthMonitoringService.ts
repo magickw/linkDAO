@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 import { logger } from '../utils/logger';
 
+// Import production configuration
+import { productionConfig } from '../config/productionConfig';
+
 // Health check status types
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
@@ -245,35 +248,41 @@ export class HealthMonitoringService {
       let overallStatus: HealthStatus = 'healthy';
       const failedServices = [];
 
-      // Check ENS service
+      // Check ENS service with timeout and fallback
       try {
-        await new Promise((resolve, reject) => {
-          require('dns').resolve('ethereum.org', (err: any) => {
-            if (err) reject(err);
-            else resolve(true);
-          });
-        });
+        await Promise.race([
+          new Promise((resolve, reject) => {
+            require('dns').resolve('ethereum.org', (err: any) => {
+              if (err) reject(err);
+              else resolve(true);
+            });
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('DNS timeout')), productionConfig.externalServices.dnsTimeout))
+        ]);
         services.push({ name: 'ENS', status: 'healthy', responseTime: Date.now() - startTime });
       } catch (error) {
-        services.push({ name: 'ENS', status: 'degraded', error: 'DNS resolution failed' });
+        services.push({ name: 'ENS', status: 'degraded', error: 'DNS resolution failed or timeout' });
         failedServices.push('ENS');
         overallStatus = 'degraded';
       }
 
-      // Check blockchain RPC endpoints
+      // Check blockchain RPC endpoints with better error handling and fallback
       try {
-        const response = await fetch('https://cloudflare-eth.com', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_blockNumber',
-            params: [],
-            id: 1
+        const response = await Promise.race([
+          fetch('https://cloudflare-eth.com', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              method: 'eth_blockNumber',
+              params: [],
+              id: 1
+            }),
+            signal: AbortSignal.timeout(productionConfig.externalServices.rpcTimeout)
           }),
-          signal: AbortSignal.timeout(5000)
-        });
-        
+          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
+        ]);
+    
         if (response.ok) {
           services.push({ name: 'Ethereum_RPC', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
@@ -282,18 +291,47 @@ export class HealthMonitoringService {
           overallStatus = 'degraded';
         }
       } catch (error) {
-        services.push({ name: 'Ethereum_RPC', status: 'unhealthy', error: 'Connection failed' });
-        failedServices.push('Ethereum_RPC');
-        overallStatus = failedServices.length > 1 ? 'unhealthy' : 'degraded';
+        // Try fallback RPC endpoint
+        try {
+          const fallbackResponse = await Promise.race([
+            fetch('https://mainnet.infura.io/v3/1f6040196b894a6e90ef4842c62503d7', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_blockNumber',
+                params: [],
+                id: 1
+              }),
+              signal: AbortSignal.timeout(productionConfig.externalServices.rpcTimeout)
+            }),
+            new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Fallback RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
+          ]);
+      
+          if (fallbackResponse.ok) {
+            services.push({ name: 'Ethereum_RPC', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using fallback endpoint' });
+          } else {
+            services.push({ name: 'Ethereum_RPC', status: 'unhealthy', error: `HTTP ${fallbackResponse.status} on fallback` });
+            failedServices.push('Ethereum_RPC');
+            overallStatus = failedServices.length > 1 ? 'unhealthy' : 'degraded';
+          }
+        } catch (fallbackError) {
+          services.push({ name: 'Ethereum_RPC', status: 'unhealthy', error: 'All RPC endpoints failed' });
+          failedServices.push('Ethereum_RPC');
+          overallStatus = failedServices.length > 1 ? 'unhealthy' : 'degraded';
+        }
       }
 
-      // Check IPFS gateway
+      // Check IPFS gateway with better timeout handling and fallback
       try {
-        const response = await fetch('https://ipfs.io/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/readme', {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(5000)
-        });
-        
+        const response = await Promise.race([
+          fetch('https://ipfs.io/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/readme', {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(productionConfig.externalServices.ipfsTimeout)
+          }),
+          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('IPFS timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
+        ]);
+    
         if (response.ok) {
           services.push({ name: 'IPFS_Gateway', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
@@ -302,9 +340,28 @@ export class HealthMonitoringService {
           if (overallStatus === 'healthy') overallStatus = 'degraded';
         }
       } catch (error) {
-        services.push({ name: 'IPFS_Gateway', status: 'degraded', error: 'Connection timeout' });
-        failedServices.push('IPFS_Gateway');
-        if (overallStatus === 'healthy') overallStatus = 'degraded';
+        // Try Pinata as fallback
+        try {
+          const pinataResponse = await Promise.race([
+            fetch('https://gateway.pinata.cloud/ipfs/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG/readme', {
+              method: 'HEAD',
+              signal: AbortSignal.timeout(productionConfig.externalServices.ipfsTimeout)
+            }),
+            new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Pinata timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
+          ]);
+      
+          if (pinataResponse.ok) {
+            services.push({ name: 'IPFS_Gateway', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using Pinata fallback' });
+          } else {
+            services.push({ name: 'IPFS_Gateway', status: 'degraded', error: `HTTP ${pinataResponse.status} on Pinata` });
+            failedServices.push('IPFS_Gateway');
+            if (overallStatus === 'healthy') overallStatus = 'degraded';
+          }
+        } catch (pinataError) {
+          services.push({ name: 'IPFS_Gateway', status: 'degraded', error: 'Connection timeout - using fallback mechanisms' });
+          failedServices.push('IPFS_Gateway');
+          if (overallStatus === 'healthy') overallStatus = 'degraded';
+        }
       }
 
       return {
