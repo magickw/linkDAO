@@ -162,10 +162,11 @@ const PerformanceDashboard: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Resolve alert
+  // Resolve alert (local state only - service doesn't have alert management yet)
   const resolveAlert = (alertId: string) => {
-    performanceMonitoringService.resolveAlert(alertId);
-    setAlerts(prev => prev.map(alert => 
+    // Note: performanceMonitoringService.resolveAlert() doesn't exist yet
+    // Just update local state for now
+    setAlerts(prev => prev.map(alert =>
       alert.id === alertId ? { ...alert, resolved: true } : alert
     ));
   };
