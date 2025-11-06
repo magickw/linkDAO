@@ -15,6 +15,15 @@ interface PerformanceEntry {
   metadata?: Record<string, any>;
 }
 
+interface PerformanceAlert {
+  id: string;
+  type: 'warning' | 'critical';
+  metric: string;
+  message: string;
+  timestamp: number;
+  resolved: boolean;
+}
+
 interface PerformanceReport {
   timestamp: string;
   pageLoad: {
@@ -56,6 +65,7 @@ interface PerformanceThresholds {
 
 class PerformanceMonitoringService {
   private entries: PerformanceEntry[] = [];
+  private alerts: PerformanceAlert[] = [];
   private observers: PerformanceObserver[] = [];
   private isMonitoring = false;
   
@@ -530,32 +540,91 @@ class PerformanceMonitoringService {
     const metrics = this.getApiPerformanceMetrics(entries);
     const pageLoad = this.getPageLoadMetrics();
     
+    // Clear existing alerts
+    this.alerts = [];
+    
     if (metrics.averageResponseTime > this.thresholds.apiResponseTime) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'warning',
+        metric: 'api-response-time',
+        message: 'API response times are high - consider caching or optimization',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('API response times are high - consider caching or optimization');
     }
     
     if (metrics.errorRate > 5) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'critical',
+        metric: 'api-error-rate',
+        message: 'High API error rate detected - check network connectivity',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('High API error rate detected - check network connectivity');
     }
     
     if (pageLoad.firstContentfulPaint > this.thresholds.firstContentfulPaint) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'warning',
+        metric: 'fcp',
+        message: 'First Contentful Paint is slow - optimize critical rendering path',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('First Contentful Paint is slow - optimize critical rendering path');
     }
     
     if (pageLoad.largestContentfulPaint > this.thresholds.largestContentfulPaint) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'critical',
+        metric: 'lcp',
+        message: 'Largest Contentful Paint is slow - optimize main content loading',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('Largest Contentful Paint is slow - optimize main content loading');
     }
     
     if (pageLoad.cumulativeLayoutShift > this.thresholds.cumulativeLayoutShift) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'warning',
+        metric: 'cls',
+        message: 'High layout shift detected - ensure proper image and content sizing',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('High layout shift detected - ensure proper image and content sizing');
     }
     
     if (pageLoad.firstInputDelay > this.thresholds.firstInputDelay) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'critical',
+        metric: 'fid',
+        message: 'First Input Delay is high - reduce JavaScript execution time',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('First Input Delay is high - reduce JavaScript execution time');
     }
 
     const resourceMetrics = this.getResourcePerformanceMetrics(entries);
     if (resourceMetrics.cacheHitRate < 50) {
+      this.alerts.push({
+        id: this.generateId(),
+        type: 'warning',
+        metric: 'cache-hit-rate',
+        message: 'Low cache hit rate - review caching strategy',
+        timestamp: Date.now(),
+        resolved: false
+      });
       recommendations.push('Low cache hit rate - review caching strategy');
     }
 
@@ -574,6 +643,42 @@ class PerformanceMonitoringService {
    */
   getWebVitals() {
     return { ...this.vitalsData };
+  }
+
+  /**
+   * Get adaptive loading strategy based on current network conditions
+   */
+  getAdaptiveLoadingStrategy(): {
+    imageQuality: 'low' | 'medium' | 'high';
+    prefetchEnabled: boolean;
+    lazyLoadingThreshold: number;
+    cacheStrategy: 'aggressive' | 'normal' | 'conservative';
+  } {
+    // For now, return default strategy
+    // In a real implementation, this would adapt based on network conditions
+    return {
+      imageQuality: 'high',
+      prefetchEnabled: true,
+      lazyLoadingThreshold: 1000,
+      cacheStrategy: 'normal'
+    };
+  }
+
+  /**
+   * Get current performance alerts
+   */
+  getAlerts(): PerformanceAlert[] {
+    return this.alerts.filter(alert => !alert.resolved);
+  }
+
+  /**
+   * Resolve a performance alert
+   */
+  resolveAlert(alertId: string): void {
+    const alert = this.alerts.find(a => a.id === alertId);
+    if (alert) {
+      alert.resolved = true;
+    }
   }
 
   /**
@@ -604,7 +709,7 @@ class PerformanceMonitoringService {
    */
   exportData(): {
     entries: PerformanceEntry[];
-    vitals: typeof this.vitalsData;
+    vitals: { fcp: number; lcp: number; cls: number; fid: number; ttfb: number; };
     report: PerformanceReport;
   } {
     return {

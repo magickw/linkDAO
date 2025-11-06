@@ -463,7 +463,7 @@ class SessionManager {
         ? this.encryptSessionData(session)
         : session) : null,
       origin: window.location.origin
-    }, event.origin);
+    }, { targetOrigin: event.origin });
   }
 
   /**

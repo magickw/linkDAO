@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
 
   // Check if we have a valid stored session

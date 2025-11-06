@@ -320,11 +320,12 @@ class CommunityPerformanceService {
     const tipReceivers = 45; // number of users who received tips
     
     // Performance metrics from performance monitoring service
-    const perfMetrics = performanceMonitoringService.getCurrentMetrics();
-    const pageLoadTime = perfMetrics.documentLoadTime;
-    const apiResponseTime = perfMetrics.searchResponseTime;
-    const errorRate = 0.5; // percentage
-    
+    const perfReport = performanceMonitoringService.generateReport();
+    // Map the performance report to the expected metrics structure
+    const pageLoadTime = perfReport.pageLoad.loadComplete || perfReport.pageLoad.domContentLoaded;
+    const apiResponseTime = perfReport.apiPerformance.averageResponseTime;
+    const errorRate = perfReport.apiPerformance.errorRate;
+
     return {
       communityId: community.id,
       communityName: community.displayName,

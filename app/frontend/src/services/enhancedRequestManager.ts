@@ -329,7 +329,7 @@ class EnhancedRequestManager {
    */
   private updateErrorRate(): void {
     const totalRequests = this.metrics.successfulRequests + this.metrics.failedRequests;
-    this.metrics.errorRate = totalRequests > 0 ? this.metrics.failedRequests / totalRequests : 0;
+    this.serviceStatus.errorRate = totalRequests > 0 ? this.metrics.failedRequests / totalRequests : 0;
   }
 
   /**
