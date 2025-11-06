@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Simple, robust production build script for Render
+# Memory-optimized production build script for Render
 # This script MUST create dist/index.js or the deployment will fail
 
 echo "🚀 Building LinkDAO Backend for Production"
@@ -8,16 +8,24 @@ echo "Environment: ${NODE_ENV:-production}"
 echo "Node: $(node --version)"
 echo "NPM: $(npm --version)"
 
+# Set memory limits for TypeScript compilation
+export NODE_OPTIONS="--max-old-space-size=1400 --optimize-for-size --gc-interval=100"
+
 # Create dist directory
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
-# Run TypeScript compilation
-echo "🔨 Compiling TypeScript..."
-echo "Running: npx tsc"
+# Clean any previous build artifacts to free memory
+echo "🧹 Cleaning previous build artifacts..."
+rm -rf dist/* 2>/dev/null || true
+rm -f dist/.tsbuildinfo 2>/dev/null || true
 
-# Don't let the script fail - we need to check the result ourselves
-npx tsc 2>&1 || true
+# Run TypeScript compilation with memory optimization
+echo "🔨 Compiling TypeScript with memory optimization..."
+echo "Memory settings: $NODE_OPTIONS"
+
+# Use production TypeScript config with memory optimizations
+npx tsc --project tsconfig.production.json 2>&1 || true
 
 # Verify the build succeeded
 if [ -f "dist/index.js" ]; then
@@ -26,20 +34,30 @@ if [ -f "dist/index.js" ]; then
     echo "📊 Total .js files: $(find dist -name '*.js' 2>/dev/null | wc -l)"
     exit 0
 else
-    echo "❌ ERROR: dist/index.js was not created!"
-    echo "📂 Listing dist directory:"
-    ls -la dist/ 2>&1 || echo "dist/ does not exist"
-    echo ""
-    echo "🔍 Checking for TypeScript installation:"
-    which tsc || echo "tsc not found in PATH"
-    npx tsc --version || echo "npx tsc failed"
-    echo ""
-    echo "🔍 Checking tsconfig.json:"
-    if [ -f "tsconfig.json" ]; then
-        echo "✅ tsconfig.json exists"
-        cat tsconfig.json | head -20
+    echo "❌ TypeScript compilation failed - trying chunked compilation..."
+    
+    # Try chunked compilation
+    if command -v jq >/dev/null 2>&1; then
+        echo "🔄 Attempting chunked compilation..."
+        bash scripts/build-production-chunked.sh
+        if [ -f "dist/index.js" ]; then
+            echo "✅ Chunked compilation successful!"
+            exit 0
+        fi
     else
-        echo "❌ tsconfig.json not found"
+        echo "⚠️  jq not available, skipping chunked compilation"
     fi
-    exit 1
+    
+    echo "🔄 Attempting fallback compilation..."
+    bash scripts/build-production-fallback.sh
+    
+    if [ -f "dist/index.js" ]; then
+        echo "✅ Fallback build successful!"
+        exit 0
+    else
+        echo "❌ All build methods failed!"
+        echo "📂 Listing dist directory:"
+        ls -la dist/ 2>&1 || echo "dist/ does not exist"
+        exit 1
+    fi
 fi
