@@ -50,6 +50,14 @@ export interface SwapQuoteResponse {
   error?: string;
 }
 
+export interface TokenInfo {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  logoURI?: string;
+}
+
 export class DEXService {
   private baseUrl: string;
   private enabled: boolean;
@@ -116,6 +124,129 @@ export class DEXService {
   }
 
   /**
+   * Get popular tokens for a specific chain
+   */
+  async getPopularTokens(chainId: number = 1): Promise<TokenInfo[]> {
+    if (!this.enabled) {
+      return this.getDefaultPopularTokens(chainId);
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/dex/popular-tokens?chainId=${chainId}`,
+        {
+          signal: AbortSignal.timeout(5000)
+        }
+      );
+
+      if (!response.ok) {
+        // Return default tokens if API fails
+        return this.getDefaultPopularTokens(chainId);
+      }
+
+      const data = await response.json();
+      return data.tokens || this.getDefaultPopularTokens(chainId);
+    } catch (error) {
+      console.warn('Failed to get popular tokens:', error);
+      // Return default tokens if API fails
+      return this.getDefaultPopularTokens(chainId);
+    }
+  }
+
+  /**
+   * Get default popular tokens for different chains
+   */
+  private getDefaultPopularTokens(chainId: number): TokenInfo[] {
+    switch (chainId) {
+      case 1: // Ethereum Mainnet
+        return [
+          {
+            address: '0x0000000000000000000000000000000000000000',
+            symbol: 'ETH',
+            name: 'Ethereum',
+            decimals: 18
+          },
+          {
+            address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            symbol: 'USDC',
+            name: 'USD Coin',
+            decimals: 6
+          },
+          {
+            address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            symbol: 'USDT',
+            name: 'Tether USD',
+            decimals: 6
+          },
+          {
+            address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+            symbol: 'WBTC',
+            name: 'Wrapped Bitcoin',
+            decimals: 8
+          }
+        ];
+      case 8453: // Base
+        return [
+          {
+            address: '0x0000000000000000000000000000000000000000',
+            symbol: 'ETH',
+            name: 'Ethereum',
+            decimals: 18
+          },
+          {
+            address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+            symbol: 'USDC',
+            name: 'USD Coin',
+            decimals: 6
+          },
+          {
+            address: '0x4200000000000000000000000000000000000006',
+            symbol: 'WETH',
+            name: 'Wrapped Ether',
+            decimals: 18
+          }
+        ];
+      case 137: // Polygon
+        return [
+          {
+            address: '0x0000000000000000000000000000000000000000',
+            symbol: 'MATIC',
+            name: 'Polygon',
+            decimals: 18
+          },
+          {
+            address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+            symbol: 'USDC',
+            name: 'USD Coin (PoS)',
+            decimals: 6
+          },
+          {
+            address: '0xc2132D05D31c914a87C6611C10748AaCB6D3cC19',
+            symbol: 'USDT',
+            name: 'Tether USD',
+            decimals: 6
+          }
+        ];
+      default:
+        // Return basic tokens for other chains
+        return [
+          {
+            address: '0x0000000000000000000000000000000000000000',
+            symbol: 'ETH',
+            name: 'Native Token',
+            decimals: 18
+          },
+          {
+            address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            symbol: 'USDC',
+            name: 'USD Coin',
+            decimals: 6
+          }
+        ];
+    }
+  }
+
+  /**
    * Get a swap quote for token pair
    */
   async getSwapQuote(params: SwapQuoteParams): Promise<SwapQuoteResponse | null> {
@@ -150,6 +281,33 @@ export class DEXService {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error'
       };
+    }
+  }
+
+  /**
+   * Validate token address and get token information
+   */
+  async validateToken(tokenAddress: string, chainId: number = 1): Promise<TokenInfo | null> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/dex/validate/${tokenAddress}?chainId=${chainId}`,
+        {
+          signal: AbortSignal.timeout(5000)
+        }
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn('Failed to validate token:', error);
+      return null;
     }
   }
 

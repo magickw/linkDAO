@@ -15,3 +15,4 @@ export * from './retryUtils';
 export * from './fuzzySearchUtils';
 export * from './aiSuggestionService';
 export * from './enhancedSearchService';
+export * from './dexService';
