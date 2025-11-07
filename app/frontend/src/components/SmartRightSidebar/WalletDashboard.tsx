@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EnhancedWalletData, TokenBalance, Transaction, QuickAction } from '../../types/wallet';
 
 interface WalletDashboardProps {
-  walletData: EnhancedWalletData;
+  walletData: EnhancedWalletData | null;
   onQuickAction: (action: QuickAction) => void;
   onPortfolioClick: () => void;
   className?: string;
@@ -17,9 +17,16 @@ const WalletDashboard = React.memo(function WalletDashboard({
   const [isLoading, setIsLoading] = useState(false);
   const [animateChange, setAnimateChange] = useState(false);
   
-  // Temporarily disable real-time prices to fix refresh issue
-  // Use wallet data directly without price updates
-  const displayWalletData = walletData;
+  // Handle case where walletData is null
+  const displayWalletData = walletData || {
+    address: '0x0000000000000000000000000000000000000000',
+    balances: [],
+    recentTransactions: [],
+    portfolioValue: 0,
+    portfolioChange: 0,
+    quickActions: []
+  };
+  
   const pricesLoading = false;
   const pricesError = null;
   const lastUpdated = new Date();
@@ -59,11 +66,20 @@ const WalletDashboard = React.memo(function WalletDashboard({
   };
 
   const formatAddress = (address: string) => {
-    return `${address.substring(0, 6)}...${address.substring(38)}`;
+    if (!address || address.length < 10) return '0x0000...0000';
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
   const isPositive = displayWalletData.portfolioChange >= 0;
   // Removed price data stale check since we're using static data
+
+  // Handle case where there are no balances
+  const topHoldings = displayWalletData.balances && displayWalletData.balances.length > 0 
+    ? displayWalletData.balances.slice(0, 3) 
+    : [];
+
+  // Handle case where there are no quick actions
+  const quickActions = displayWalletData.quickActions || [];
 
   return (
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
@@ -116,32 +132,34 @@ const WalletDashboard = React.memo(function WalletDashboard({
             Top Holdings
           </h4>
           <div className="space-y-2">
-            {displayWalletData.balances.slice(0, 3).map((token, index) => {
-              const percentage = (token.valueUSD / displayWalletData.portfolioValue) * 100;
+            {topHoldings.map((token, index) => {
+              const percentage = displayWalletData.portfolioValue > 0 
+                ? (token.valueUSD / displayWalletData.portfolioValue) * 100 
+                : 0;
               const tokenIsPositive = token.change24h >= 0;
               
               return (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xs font-bold">
-                      {token.symbol.substring(0, 2)}
+                      {token.symbol ? token.symbol.substring(0, 2) : 'TK'}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white text-sm">
-                        {token.symbol}
+                        {token.symbol || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatNumber(token.balance)} {token.symbol}
+                        {formatNumber(token.balance || 0)} {token.symbol || ''}
                       </p>
                     </div>
                   </div>
                   
                   <div className="text-right">
                     <p className="font-medium text-gray-900 dark:text-white text-sm">
-                      {formatCurrency(token.valueUSD)}
+                      {formatCurrency(token.valueUSD || 0)}
                     </p>
                     <p className={`text-xs ${tokenIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                      {tokenIsPositive ? '+' : ''}{token.change24h.toFixed(2)}%
+                      {tokenIsPositive ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
                     </p>
                   </div>
                   
@@ -154,6 +172,13 @@ const WalletDashboard = React.memo(function WalletDashboard({
                 </div>
               );
             })}
+            
+            {topHoldings.length === 0 && (
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                <p>No holdings found</p>
+                <p className="text-xs mt-1">Connect your wallet to see your assets</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -163,9 +188,9 @@ const WalletDashboard = React.memo(function WalletDashboard({
             Quick Actions
           </h4>
           <div className="grid grid-cols-2 gap-2">
-            {displayWalletData.quickActions.map((action, index) => (
+            {quickActions.map((action, index) => (
               <button
-                key={action.id}
+                key={action.id || index}
                 onClick={() => onQuickAction(action)}
                 disabled={action.disabled || isLoading}
                 className={`
@@ -176,13 +201,19 @@ const WalletDashboard = React.memo(function WalletDashboard({
                 title={action.tooltip}
               >
                 <div className="text-xl mb-1 group-hover:scale-110 transition-transform duration-200">
-                  {action.icon}
+                  {action.icon || '⚡'}
                 </div>
                 <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                  {action.label}
+                  {action.label || 'Action'}
                 </span>
               </button>
             ))}
+            
+            {quickActions.length === 0 && (
+              <div className="col-span-2 text-center py-2 text-gray-500 dark:text-gray-400">
+                <p>No quick actions available</p>
+              </div>
+            )}
           </div>
         </div>
 

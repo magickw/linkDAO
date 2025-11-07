@@ -380,11 +380,13 @@ export default function SmartRightSidebar({
         {/* Trending Now (moved here from left sidebar) */}
         <TrendingContentWidget context={context} />
 
-        {/* Transaction Mini Feed */}
-        <TransactionMiniFeed
-          transactions={walletData.recentTransactions}
-          onTransactionClick={handleTransactionClick}
-        />
+        {/* Transaction Mini Feed - only show if we have transactions */}
+        {walletData && walletData.recentTransactions && walletData.recentTransactions.length > 0 && (
+          <TransactionMiniFeed
+            transactions={walletData.recentTransactions}
+            onTransactionClick={handleTransactionClick}
+          />
+        )}
 
         {/* Trending content moved to left sidebar */}
       </div>

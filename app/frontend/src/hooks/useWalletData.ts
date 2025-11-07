@@ -84,7 +84,10 @@ export function useWalletData({
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
-    if (!address) return;
+    if (!address) {
+      setWalletData(null);
+      return;
+    }
 
     try {
       setIsLoadingBalance(true);
@@ -342,18 +345,41 @@ export function useWalletData({
         ? sortedTokens.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (portfolioValue || 1))), 0)
         : 0;
 
+      // Transform service token balances to match frontend types
+      const transformedBalances = sortedTokens.map(t => ({
+        symbol: t.symbol,
+        name: t.name,
+        balance: parseFloat(t.balance || '0'),
+        valueUSD: t.valueUSD,
+        change24h: t.change24h,
+        contractAddress: t.address,
+        chains: [chainId]
+      }));
+
+      // Transform transactions to match frontend types
+      const transformedTransactions = recentTransactions.map((tx: any) => ({
+        id: tx.id,
+        type: tx.type,
+        status: tx.status,
+        amount: Number(tx.amount || 0),
+        token: typeof tx.token === 'string' ? tx.token : tx.token?.symbol || '',
+        toToken: tx.toToken,
+        valueUSD: tx.valueUSD ? Number(tx.valueUSD) : undefined,
+        timestamp: tx.timestamp instanceof Date ? tx.timestamp : new Date(tx.timestamp),
+        from: tx.from,
+        to: tx.to,
+        gasUsed: tx.gasUsed ? Number(tx.gasUsed) : undefined,
+        gasPrice: tx.gasPrice ? Number(tx.gasPrice) : undefined,
+        hash: tx.hash,
+        contractName: tx.contractName,
+        nftAction: tx.nftAction,
+        nftName: tx.nftName
+      }));
+
       const data: EnhancedWalletData = {
         address,
-        balances: sortedTokens.map(t => ({
-          symbol: t.symbol,
-          name: t.name,
-          balance: parseFloat(t.balance || '0'),
-          valueUSD: t.valueUSD,
-          change24h: t.change24h,
-          contractAddress: t.address,
-          chains: [chainId]
-        })),
-        recentTransactions: recentTransactions as any, // Type cast to handle different Transaction types
+        balances: transformedBalances,
+        recentTransactions: transformedTransactions,
         portfolioValue,
         portfolioChange,
         quickActions: [
@@ -406,6 +432,8 @@ export function useWalletData({
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch wallet data';
       setError(errorMessage);
       console.error('Wallet data fetch error:', err);
+      // Even on error, set walletData to null to avoid showing stale data
+      setWalletData(null);
     } finally {
       setIsLoadingBalance(false);
     }
