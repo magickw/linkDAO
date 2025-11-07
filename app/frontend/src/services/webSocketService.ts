@@ -317,8 +317,13 @@ class WebSocketService {
 
     // Switch to polling if WebSocket fails repeatedly
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
-      // Silently switch to polling
+      console.warn('WebSocket unavailable, using polling fallback');
       this.fallbackToPolling = true;
+    }
+    
+    // Reset current URL index after too many failures to try primary URL again
+    if (this.connectionState.reconnectAttempts > 5) {
+      this.currentUrlIndex = 0;
     }
   }
 
@@ -333,10 +338,18 @@ class WebSocketService {
 
     // Fallback to polling if enabled
     if (this.config.enableFallback && !this.fallbackToPolling) {
-      // Silently fallback to polling
+      console.warn('WebSocket reconnection failed, falling back to polling');
       this.fallbackToPolling = true;
       this.connectionState.reconnectAttempts = 0;
       setTimeout(() => this.connect(), 5000);
+    } else {
+      // If already using polling, try to reconnect with WebSocket after a delay
+      setTimeout(() => {
+        this.fallbackToPolling = false;
+        this.connectionState.reconnectAttempts = 0;
+        this.currentUrlIndex = 0;
+        this.connect();
+      }, 30000); // Try WebSocket again after 30 seconds
     }
   }
 

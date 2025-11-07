@@ -21,11 +21,19 @@ class GeoLocationService {
   private cachedLocation: GeoLocationData | null = null;
   private lastFetchTime: number = 0;
   private cacheDuration: number = 30 * 60 * 1000; // 30 minutes
+  private failureCount: number = 0;
+  private maxFailures: number = 3; // Max consecutive failures before disabling
 
   async getLocation(): Promise<GeoLocationData | null> {
     // Return cached location if still valid
     if (this.cachedLocation && Date.now() - this.lastFetchTime < this.cacheDuration) {
       return this.cachedLocation;
+    }
+
+    // Disable service if too many consecutive failures
+    if (this.failureCount >= this.maxFailures) {
+      console.warn('Geolocation service disabled due to repeated failures');
+      return null;
     }
 
     // Try multiple services as fallbacks
@@ -35,16 +43,19 @@ class GeoLocationService {
         if (location) {
           this.cachedLocation = location;
           this.lastFetchTime = Date.now();
+          this.failureCount = 0; // Reset failure count on success
           return location;
         }
       } catch (error) {
-        logger.warn(`Geolocation service failed (${serviceUrl}):`, error);
+        console.warn(`Geolocation service failed, trying next:`, error);
+        this.failureCount++;
         // Continue to next service
       }
     }
 
     // If all services fail, return null
-    logger.warn('All geolocation services failed, using default location');
+    console.warn('All geolocation services failed, using default location');
+    this.failureCount++;
     return null;
   }
 
@@ -73,26 +84,31 @@ class GeoLocationService {
 
       const data = await response.json();
 
+      // Validate response data
+      if (!data) {
+        throw new Error('Empty response data');
+      }
+
       // Parse response based on service
       if (url.includes('ipapi.co')) {
         return {
-          country: data.country_name || data.country,
-          region: data.region || data.region_name,
-          city: data.city,
-          latitude: parseFloat(data.latitude),
-          longitude: parseFloat(data.longitude),
-          timezone: data.timezone,
-          isp: data.org || data.isp
+          country: data.country_name || data.country || '',
+          region: data.region || data.region_name || '',
+          city: data.city || '',
+          latitude: parseFloat(data.latitude) || 0,
+          longitude: parseFloat(data.longitude) || 0,
+          timezone: data.timezone || '',
+          isp: data.org || data.isp || ''
         };
       } else if (url.includes('ipwho.is')) {
         return {
-          country: data.country,
-          region: data.region,
-          city: data.city,
-          latitude: parseFloat(data.latitude),
-          longitude: parseFloat(data.longitude),
-          timezone: data.timezone,
-          isp: data.connection?.isp || data.isp
+          country: data.country || '',
+          region: data.region || '',
+          city: data.city || '',
+          latitude: parseFloat(data.latitude) || 0,
+          longitude: parseFloat(data.longitude) || 0,
+          timezone: data.timezone || '',
+          isp: data.connection?.isp || data.isp || ''
         };
       }
 

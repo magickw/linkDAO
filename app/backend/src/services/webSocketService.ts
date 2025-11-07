@@ -167,6 +167,15 @@ export class WebSocketService {
     }
 
     safeLogger.info(`WebSocket service initialized with resource awareness: ${this.isResourceConstrained ? 'constrained' : 'normal'} mode`);
+    
+    // Log the actual configuration being used
+    safeLogger.info('WebSocket configuration:', {
+      path: socketConfig.path,
+      transports: socketConfig.transports,
+      corsOrigins: allowedOrigins,
+      maxConnections: this.config.maxConnections,
+      isResourceConstrained: this.isResourceConstrained
+    });
   }
 
   private detectResourceConstraints(): void {
