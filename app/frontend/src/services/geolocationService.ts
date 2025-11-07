@@ -76,17 +76,20 @@ export class GeolocationService {
             timestamp: Date.now()
           });
 
-          console.info(`Geolocation obtained from ${provider.name}`);
+          // Silently return location without logging
           return location;
         }
       } catch (error) {
-        console.warn(`Geolocation provider ${provider.name} failed:`, error);
-        // Continue to next provider
+        // Silently continue to next provider to reduce console spam
+        // Only log if it's the last provider
+        if (provider === this.providers[this.providers.length - 1]) {
+          console.warn('All geolocation providers unavailable');
+        }
       }
     }
 
     // All providers failed - cache null result to avoid repeated attempts
-    console.warn('All geolocation providers failed, continuing without location data');
+    // Silently fail - geolocation is optional
     this.cache.set(cacheKey, {
       data: null,
       timestamp: Date.now()

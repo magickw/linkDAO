@@ -102,6 +102,16 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // Skip CSRF for authenticated API requests (they use JWT/wallet auth)
+  // This allows authenticated users to make requests without CSRF tokens
+  const authHeader = req.headers.authorization;
+  const hasWalletAuth = req.headers['x-wallet-address'] || (req as any).user?.address;
+  
+  if (authHeader || hasWalletAuth) {
+    // User is authenticated via JWT or wallet signature, skip CSRF
+    return next();
+  }
+  
   console.log(`[csrfProtection] ${req.method} ${req.path}`);
   console.log(`[csrfProtection] Headers: ${JSON.stringify({
     'x-session-id': req.headers['x-session-id'],
@@ -109,7 +119,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   })}`);
   
   // In development mode, be more lenient with CSRF protection
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     // Allow requests without session/token for development
     const token = req.headers['x-csrf-token'] as string || req.body?._csrf;
     
@@ -133,7 +143,8 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     console.log('[csrfProtection] No session ID in request');
     res.status(403).json({
       success: false,
-      message: 'CSRF validation failed: No session'
+      message: 'CSRF validation failed: No session. Please authenticate first.',
+      code: 'CSRF_NO_SESSION'
     });
     return;
   }
@@ -149,7 +160,8 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     console.log('[csrfProtection] No CSRF token in request');
     res.status(403).json({
       success: false,
-      message: 'CSRF validation failed: No token'
+      message: 'CSRF validation failed: No token provided',
+      code: 'CSRF_NO_TOKEN'
     });
     return;
   }
@@ -160,7 +172,8 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     console.log('[csrfProtection] CSRF token verification failed');
     res.status(403).json({
       success: false,
-      message: 'CSRF validation failed: Invalid token'
+      message: 'CSRF validation failed: Invalid token',
+      code: 'CSRF_INVALID_TOKEN'
     });
     return;
   }

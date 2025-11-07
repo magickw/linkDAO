@@ -107,11 +107,7 @@ class WebSocketService {
       }
     }
 
-    console.log('WebSocket resource constraints detected:', {
-      isOptional: this.isOptional,
-      fallbackToPolling: this.fallbackToPolling,
-      constraints: this.resourceConstraints
-    });
+    // Silently detect constraints without logging
   }
 
   private setupVisibilityHandlers(): void {
@@ -149,7 +145,7 @@ class WebSocketService {
 
     // Skip connection if resource-constrained and WebSocket is optional
     if (this.isOptional && this.config.resourceAware) {
-      console.log('WebSocket connection skipped due to resource constraints');
+      // Silently skip connection
       this.emit('connection_skipped', { reason: 'resource_constraints' });
       return Promise.resolve();
     }
@@ -187,7 +183,7 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('Connected to WebSocket server');
+      // Silently connect without logging
       this.connectionState.isConnected = true;
       this.connectionState.isReconnecting = false;
       this.connectionState.reconnectAttempts = 0;
@@ -201,7 +197,7 @@ class WebSocketService {
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('Disconnected from WebSocket server:', reason);
+      // Silently disconnect without logging
       this.connectionState.isConnected = false;
       this.stopHeartbeat();
       
@@ -214,13 +210,16 @@ class WebSocketService {
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+      // Only log first error to reduce console spam
+      if (this.connectionState.reconnectAttempts === 0) {
+        console.warn('WebSocket unavailable, using polling fallback');
+      }
       this.handleConnectionError(error);
       reject?.(error);
     });
 
     this.socket.on('reconnect_failed', () => {
-      console.error('WebSocket reconnection failed');
+      // Silently handle reconnection failure
       this.handleReconnectionFailure();
     });
 
@@ -274,7 +273,10 @@ class WebSocketService {
     const jitter = Math.random() * 0.1 * delay;
     const finalDelay = delay + jitter;
 
-    console.log(`Attempting WebSocket reconnection in ${finalDelay}ms (attempt ${this.connectionState.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+    // Only log first few reconnection attempts to reduce console spam
+    if (this.connectionState.reconnectAttempts <= 2) {
+      console.log(`WebSocket reconnecting (attempt ${this.connectionState.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+    }
 
     this.emit('reconnecting', {
       attempt: this.connectionState.reconnectAttempts,
@@ -284,7 +286,7 @@ class WebSocketService {
 
     this.reconnectTimeout = setTimeout(() => {
       this.connect().catch((error) => {
-        console.error('Reconnection attempt failed:', error);
+        // Silently retry without logging every failure
         this.attemptReconnection();
       });
     }, finalDelay);
@@ -297,13 +299,13 @@ class WebSocketService {
 
     // Switch to polling if WebSocket fails repeatedly
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
-      console.log('Switching to polling transport due to repeated WebSocket failures');
+      // Silently switch to polling
       this.fallbackToPolling = true;
     }
   }
 
   private handleReconnectionFailure(): void {
-    console.error('WebSocket max reconnection attempts reached');
+    // Silently handle max reconnection attempts
     this.connectionState.isReconnecting = false;
     
     this.emit('reconnection_failed', {
@@ -313,7 +315,7 @@ class WebSocketService {
 
     // Fallback to polling if enabled
     if (this.config.enableFallback && !this.fallbackToPolling) {
-      console.log('Falling back to polling transport');
+      // Silently fallback to polling
       this.fallbackToPolling = true;
       this.connectionState.reconnectAttempts = 0;
       setTimeout(() => this.connect(), 5000);
@@ -348,9 +350,6 @@ class WebSocketService {
   }
 
   private updateConnectionQuality(): void {
-    const now = Date.now();
-    const lastPing = now;
-    
     // Simple quality assessment based on response time
     if (this.resourceConstraints.networkLatency < 100) {
       this.connectionState.connectionQuality = 'excellent';
@@ -433,13 +432,12 @@ class WebSocketService {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else if (this.config.enableFallback) {
-      console.warn(`WebSocket not connected, queuing message: ${event}`);
-      // Queue message for when connection is restored
+      // Silently queue message for when connection is restored
       this.once('connected', () => {
         this.socket?.emit(event, data);
       });
     } else {
-      console.warn('Cannot send message, WebSocket not connected and fallback disabled');
+      // Silently fail - WebSocket is optional
     }
   }
 

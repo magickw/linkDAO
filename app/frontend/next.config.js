@@ -22,6 +22,13 @@ const nextConfig = {
       tls: false,
     };
 
+    // Add alias for @react-native-async-storage/async-storage to use our fallback
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@react-native-async-storage/async-storage': 
+        require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
+    };
+
     // Add Workbox webpack plugin for service worker generation
     if (!isServer) {
       const WorkboxPlugin = require('workbox-webpack-plugin');

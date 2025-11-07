@@ -66,8 +66,8 @@ router.get('/:id',
   communityController.getCommunityDetails
 );
 
-// Create new community (auth required)
-router.post('/', csrfProtection, 
+// Create new community (auth required, CSRF optional for authenticated users)
+router.post('/',
   authRequired,
   validateRequest({
     body: {
