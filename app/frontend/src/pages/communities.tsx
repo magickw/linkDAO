@@ -81,6 +81,20 @@ const CommunitiesPage: React.FC = () => {
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const { address, isConnected } = useAccount();
 
+  // Add error boundary for the whole component
+  const [componentError, setComponentError] = useState<Error | null>(null);
+
+  // Catch any errors during rendering
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Communities page runtime error:', event.error);
+      setComponentError(event.error);
+    };
+    
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
@@ -604,17 +618,23 @@ const CommunitiesPage: React.FC = () => {
 
 
 
-  // Show posts from followed communities and suggested posts for home feed
-  const filteredPosts = posts.filter(post => 
-    joinedCommunities.includes(post.communityId) || // Posts from joined communities
-    post.upvotes > 100 || // Popular posts (suggested)
-    post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) || // Interest-based suggestions
-    // Show posts from LinkDAO community when no communities are joined
-    (joinedCommunities.length === 0 && communityList.find(c => c.name === 'linkdao')?.id === post.communityId)
-  );
-
   // Defensive: normalize communities to array for rendering
   const communityList: Community[] = Array.isArray(communities) ? communities : [];
+
+  // Show posts from followed communities and suggested posts for home feed
+  const filteredPosts = Array.isArray(posts) ? posts.filter(post => {
+    // Defensive checks
+    if (!post || !post.communityId) return false;
+    if (!Array.isArray(post.tags)) post.tags = [];
+    
+    return (
+      joinedCommunities.includes(post.communityId) || // Posts from joined communities
+      post.upvotes > 100 || // Popular posts (suggested)
+      post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) || // Interest-based suggestions
+      // Show posts from LinkDAO community when no communities are joined
+      (joinedCommunities.length === 0 && communityList.find(c => c.name === 'linkdao')?.id === post.communityId)
+    );
+  }) : [];
 
   // Mobile Web3 community data
   const communityData = communityList.map(community => ({
@@ -890,6 +910,35 @@ const CommunitiesPage: React.FC = () => {
           </div>
         </VisualPolishIntegration>
       </ErrorBoundary>
+    );
+  }
+
+  // Add error logging
+  if (error) {
+    console.error('Communities page error:', error);
+  }
+
+  // Show component error if it exists
+  if (componentError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Communities</h2>
+          <p className="text-gray-700 dark:text-gray-300 mb-4">{componentError.message}</p>
+          <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded text-xs overflow-auto mb-4">
+            {componentError.stack}
+          </pre>
+          <button
+            onClick={() => {
+              setComponentError(null);
+              window.location.reload();
+            }}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
     );
   }
 

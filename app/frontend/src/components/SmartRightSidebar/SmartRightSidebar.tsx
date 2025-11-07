@@ -244,13 +244,17 @@ export default function SmartRightSidebar({
       const toTokenAddress = toTokenData?.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as example
 
       // Get real swap quote from DEX service
-      const quote = await dexService.getSwapQuote({
+      const quoteResponse = await dexService.getSwapQuote({
         tokenInAddress: fromTokenAddress,
         tokenOutAddress: toTokenAddress,
         amountIn: amount,
         slippageTolerance: 0.5, // 0.5% slippage
         recipient: walletData.address
       });
+
+      if (!quoteResponse || !quoteResponse.success) {
+        throw new Error(quoteResponse?.message || 'Failed to get swap quote');
+      }
 
       const decimals = fromToken === 'USDC' ? 6 : 18;
       const amountBigInt = parseAmount(amount.toString(), decimals);

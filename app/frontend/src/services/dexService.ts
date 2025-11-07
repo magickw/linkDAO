@@ -21,6 +21,35 @@ export interface TokenDiscoveryResult {
   error?: string;
 }
 
+export interface SwapQuoteParams {
+  tokenInAddress: string;
+  tokenOutAddress: string;
+  amountIn: number;
+  slippageTolerance?: number;
+  recipient?: string;
+}
+
+export interface SwapQuoteResult {
+  amountIn: string;
+  amountOut: string;
+  priceImpact: string;
+  gasEstimate: string;
+  route: any[];
+  timestamp: number;
+}
+
+export interface SwapQuoteResponse {
+  success: boolean;
+  data?: {
+    quote: SwapQuoteResult;
+    tokenIn: Token;
+    tokenOut: Token;
+    timestamp: number;
+  };
+  message?: string;
+  error?: string;
+}
+
 export class DEXService {
   private baseUrl: string;
   private enabled: boolean;
@@ -82,6 +111,44 @@ export class DEXService {
         tokens: [],
         cached: false,
         error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Get a swap quote for token pair
+   */
+  async getSwapQuote(params: SwapQuoteParams): Promise<SwapQuoteResponse | null> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/dex/quote`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(params),
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }
+      );
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn('Failed to get swap quote:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
