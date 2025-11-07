@@ -1187,7 +1187,7 @@ app.use(globalErrorHandler); // Keep as fallback
 app.use(notFoundHandler);
 
 // Catch all API routes (should be just before error handlers)
-app.use('/api/*', (req,9 res) => {
+app.use('/api/*', (req, res) => {
   res.json({
     success: true,
     message: `API endpoint ${req.method} ${req.originalUrl} - fixed version`,
