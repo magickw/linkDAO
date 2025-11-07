@@ -160,7 +160,53 @@ export class HealthMonitoringService {
       const startTime = Date.now();
       try {
         // Try to use the cache service
-        const { cacheService } = await import('./cacheService');
+        let cacheService;
+        try {
+          const cacheModule = await import('./cacheService');
+          cacheService = cacheModule.cacheService || cacheModule.default;
+        } catch (importError) {
+          // If we can't import the cache service, it's not configured
+          return {
+            name: 'cache',
+            status: 'degraded' as HealthStatus,
+            responseTime: Date.now() - startTime,
+            lastChecked: new Date().toISOString(),
+            error: 'Cache service not configured',
+            details: { 
+              connected: false,
+              message: 'Cache service not configured - using fallback'
+            },
+            impact: 'medium',
+            recoveryActions: [
+              'Configure Redis connection string',
+              'Add REDIS_URL environment variable',
+              'Verify Redis server is running'
+            ],
+            dependencies: ['redis']
+          };
+        }
+        
+        if (!cacheService) {
+          return {
+            name: 'cache',
+            status: 'degraded' as HealthStatus,
+            responseTime: Date.now() - startTime,
+            lastChecked: new Date().toISOString(),
+            error: 'Cache service not available',
+            details: { 
+              connected: false,
+              message: 'Cache service not available - using fallback'
+            },
+            impact: 'medium',
+            recoveryActions: [
+              'Check cache service configuration',
+              'Verify Redis availability',
+              'Review cache service logs'
+            ],
+            dependencies: ['redis']
+          };
+        }
+        
         const healthCheck = await cacheService.healthCheck();
         
         if (!healthCheck.connected) {

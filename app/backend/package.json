@@ -79,7 +79,8 @@
     "emergency:relief": "bash scripts/immediate-memory-relief.sh",
     "emergency:build": "NODE_OPTIONS='--max-old-space-size=800 --optimize-for-size' npm run build:standalone",
     "health-check": "curl -f http://localhost:10000/health || exit 1",
-    "monitor": "node scripts/monitor-service.js"
+    "monitor": "node scripts/monitor-service.js",
+    "deploy:production": "bash scripts/deploy-production.sh"
   },
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.922.0",

@@ -83,7 +83,7 @@ export default function PortfolioModal({
     return `${address.substring(0, 8)}...${address.substring(34)}`;
   };
 
-  const isPositive = walletData.portfolioChange >= 0;
+  const isPositive = (walletData.portfolioChange || 0) >= 0;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -118,7 +118,7 @@ export default function PortfolioModal({
                 Portfolio Analytics
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {formatAddress(walletData.address)}
+                {walletData.address ? formatAddress(walletData.address) : ''}
               </p>
             </div>
             
@@ -158,7 +158,7 @@ export default function PortfolioModal({
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Value</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(walletData.portfolioValue)}
+                  {formatCurrency(walletData.portfolioValue || 0)}
                 </p>
                 <p className={`text-sm flex items-center justify-center mt-1 ${
                   isPositive ? 'text-green-500' : 'text-red-500'
@@ -170,14 +170,14 @@ export default function PortfolioModal({
                   >
                     <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
-                  {isPositive ? '+' : ''}{walletData.portfolioChange.toFixed(2)}%
+                  {isPositive ? '+' : ''}{(walletData.portfolioChange || 0).toFixed(2)}%
                 </p>
               </div>
 
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Assets</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {walletData.balances.length}
+                  {(walletData.balances || []).length}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Tokens
@@ -187,19 +187,23 @@ export default function PortfolioModal({
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Best Performer</p>
                 <p className="text-2xl font-bold text-green-500">
-                  {walletData.balances
-                    .sort((a, b) => b.change24h - a.change24h)[0]?.symbol || 'N/A'}
+                  {walletData.balances && walletData.balances.length > 0
+                    ? walletData.balances
+                        .sort((a, b) => b.change24h - a.change24h)[0]?.symbol || 'N/A'
+                    : 'N/A'}
                 </p>
                 <p className="text-sm text-green-500 mt-1">
-                  +{walletData.balances
-                    .sort((a, b) => b.change24h - a.change24h)[0]?.change24h.toFixed(2) || '0'}%
+                  {walletData.balances && walletData.balances.length > 0
+                    ? `+${walletData.balances
+                        .sort((a, b) => b.change24h - a.change24h)[0]?.change24h.toFixed(2) || '0'}%`
+                    : '0%'}
                 </p>
               </div>
 
               <div className="text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Transactions</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {walletData.recentTransactions.length}
+                  {(walletData.recentTransactions || []).length}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Recent
@@ -248,7 +252,7 @@ export default function PortfolioModal({
                     Recent Activity
                   </h3>
                   <div className="space-y-3">
-                    {walletData.recentTransactions.slice(0, 5).map((tx: any, index: number) => {
+                    {walletData.recentTransactions && walletData.recentTransactions.slice(0, 5).map((tx: any, index: number) => {
                       const chainId = tx.chainId as number | undefined;
                       const chainLabel = (cid?: number) => {
                         switch (cid) {
@@ -347,9 +351,9 @@ export default function PortfolioModal({
                 </div>
 
                 <div className="space-y-3">
-                  {walletData.balances.map((token, index) => {
-                    const percentage = (token.valueUSD / walletData.portfolioValue) * 100;
-                    const tokenIsPositive = token.change24h >= 0;
+                  {walletData.balances && walletData.balances.map((token, index) => {
+                    const percentage = ((token.valueUSD || 0) / (walletData.portfolioValue || 1)) * 100;
+                    const tokenIsPositive = (token.change24h || 0) >= 0;
                     
                     return (
                       <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
@@ -438,7 +442,7 @@ export default function PortfolioModal({
                         
                         <div className="text-center">
                           <p className="font-medium text-gray-900 dark:text-white">
-                            {formatNumber(token.balance)} {token.symbol}
+                            {formatNumber(token.balance || 0)} {token.symbol}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             {percentage.toFixed(1)}% of portfolio
@@ -447,10 +451,10 @@ export default function PortfolioModal({
                         
                         <div className="text-right">
                           <p className="font-semibold text-gray-900 dark:text-white">
-                            {formatCurrency(token.valueUSD)}
+                            {formatCurrency(token.valueUSD || 0)}
                           </p>
                           <p className={`text-sm ${tokenIsPositive ? 'text-green-500' : 'text-red-500'}`}>
-                            {tokenIsPositive ? '+' : ''}{token.change24h.toFixed(2)}%
+                            {tokenIsPositive ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
                           </p>
                         </div>
                       </div>
@@ -495,19 +499,21 @@ export default function PortfolioModal({
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Total Return</span>
                         <span className={`font-medium ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                          {isPositive ? '+' : ''}{walletData.portfolioChange.toFixed(2)}%
+                          {isPositive ? '+' : ''}{(walletData.portfolioChange || 0).toFixed(2)}%
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Best Asset</span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {walletData.balances.sort((a, b) => b.change24h - a.change24h)[0]?.symbol}
+                          {walletData.balances && walletData.balances.length > 0
+                            ? walletData.balances.sort((a, b) => b.change24h - a.change24h)[0]?.symbol
+                            : 'N/A'}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Diversification</span>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {walletData.balances.length} assets
+                          {walletData.balances ? walletData.balances.length : 0} assets
                         </span>
                       </div>
                     </div>

@@ -1,5 +1,52 @@
 #!/bin/bash
 
+# Production deployment script for LinkDAO backend
+echo "🚀 Starting LinkDAO backend production deployment..."
+
+# Check if we're on the correct branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "⚠️  Warning: Not on main branch. Current branch: $CURRENT_BRANCH"
+fi
+
+# Ensure we have the latest code
+echo "📥 Pulling latest code..."
+git pull origin main
+
+# Install dependencies
+echo "📦 Installing dependencies..."
+npm install --no-audit --prefer-offline
+
+# Build the application
+echo "🏗️  Building application..."
+npm run build
+
+# Check if build was successful
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed. Aborting deployment."
+  exit 1
+fi
+
+echo "✅ Build successful"
+
+# Show deployment configuration
+echo "📋 Deployment configuration:"
+echo "   Plan: Standard (2GB RAM)"
+echo "   WebSocket: Enabled"
+echo "   Node Options: --max-old-space-size=1536 --optimize-for-size"
+
+# Instructions for Render deployment
+echo ""
+echo "📋 To deploy to Render:"
+echo "1. Push changes to GitHub main branch"
+echo "2. Render will automatically deploy with the updated configuration"
+echo "3. Monitor the deployment at: https://dashboard.render.com"
+
+echo ""
+echo "✅ Production deployment preparation complete!"
+echo "🔗 Backend URL: https://api.linkdao.io"
+echo "📊 Health check: https://api.linkdao.io/health"
+
 # Production Deployment Script for Marketplace API
 # This script handles the complete production deployment process
 

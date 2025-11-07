@@ -282,6 +282,26 @@ if (process.env.RENDER || isResourceConstrained) {
     const memoryLimitMB = parseInt(process.env.MEMORY_LIMIT);
     console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
   }
+  
+  // Add more aggressive memory monitoring for Standard tier
+  if (isRenderStandard) {
+    setInterval(() => {
+      const usage = process.memoryUsage();
+      const heapUsedMB = usage.heapUsed / 1024 / 1024;
+      const heapTotalMB = usage.heapTotal / 1024 / 1024;
+      
+      // Log memory usage if it's high
+      if (heapUsedMB > 800) { // 800MB threshold for 2GB plan
+        console.warn(`⚠️ HIGH MEMORY USAGE: ${heapUsedMB.toFixed(1)}MB / ${heapTotalMB.toFixed(1)}MB`);
+      }
+      
+      // Trigger garbage collection if available and memory is very high
+      if (heapUsedMB > 1200 && global.gc) { // 1.2GB threshold
+        console.log('🗑️ Triggering garbage collection due to high memory usage');
+        global.gc();
+      }
+    }, 30000); // Check every 30 seconds
+  }
 }
 
 // Initialize performance optimization
@@ -1127,12 +1147,26 @@ app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
 // Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)
 app.all('/socket.io/*', (req, res) => {
-  res.status(503).json({
-    success: false,
-    error: 'WebSocket service temporarily unavailable',
-    message: 'Real-time features are disabled on this server configuration. Please try again later or use polling mode.',
-    code: 'WEBSOCKET_DISABLED'
-  });
+  // Check if WebSockets should be enabled
+  const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' || 
+                           (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
+  
+  if (webSocketsEnabled) {
+    // Forward to actual WebSocket handler
+    res.status(426).json({
+      success: false,
+      error: 'Upgrade Required',
+      message: 'This endpoint requires a WebSocket upgrade. Please use a WebSocket client.',
+      code: 'UPGRADE_REQUIRED'
+    });
+  } else {
+    res.status(503).json({
+      success: false,
+      error: 'WebSocket service temporarily unavailable',
+      message: 'Real-time features are disabled on this server configuration. Please try again later or use polling mode.',
+      code: 'WEBSOCKET_DISABLED'
+    });
+  }
 });
 
 // Communities fallback route (redirect to API endpoint)
@@ -1153,7 +1187,7 @@ app.use(globalErrorHandler); // Keep as fallback
 app.use(notFoundHandler);
 
 // Catch all API routes (should be just before error handlers)
-app.use('/api/*', (req, res) => {
+app.use('/api/*', (req,9 res) => {
   res.json({
     success: true,
     message: `API endpoint ${req.method} ${req.originalUrl} - fixed version`,

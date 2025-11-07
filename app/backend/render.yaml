@@ -2,7 +2,7 @@ services:
   - type: web
     name: linkdao-backend
     env: node
-    plan: starter # Can upgrade to standard if needed
+    plan: standard
     buildCommand: npm install --no-audit --prefer-offline && npm run build
     startCommand: npm start
     envVars:
@@ -11,6 +11,10 @@ services:
       - key: NODE_OPTIONS
         value: "--max-old-space-size=1536 --optimize-for-size"
       - key: RENDER
+        value: "true"
+      - key: RENDER_SERVICE_TYPE
+        value: "standard"
+      - key: ENABLE_WEBSOCKETS
         value: "true"
     healthCheckPath: /health
     autoDeploy: true
