@@ -97,6 +97,19 @@ export function useWalletData({
       const walletServiceInstance = new WalletService(chainId);
       const walletData = await walletServiceInstance.getWalletData(address as `0x${string}`);
 
+      // Update token balances with real market prices using cryptoPriceService
+      const tokensWithPrices = await cryptoPriceService.updateTokenBalances(
+        walletData.tokens.map(token => ({
+          symbol: token.symbol,
+          name: token.name,
+          balance: parseFloat(token.balanceFormatted || '0'),
+          valueUSD: 0, // Will be updated by price service
+          change24h: 0, // Will be updated by price service
+          contractAddress: token.address,
+          chains: [chainId]
+        }))
+      );
+
       // Discover additional tokens the user might hold
       let discoveredTokens: any[] = [];
       try {
@@ -108,6 +121,20 @@ export function useWalletData({
 
       // Merge discovered tokens with existing balances
       const allTokens: ServiceTokenBalance[] = [...walletData.tokens];
+      
+      // Update the original tokens with price data
+      for (let i = 0; i < allTokens.length; i++) {
+        const priceData = tokensWithPrices.find(t => t.symbol === allTokens[i].symbol);
+        if (priceData) {
+          allTokens[i] = {
+            ...allTokens[i],
+            valueUSD: priceData.valueUSD,
+            change24h: priceData.change24h,
+            priceUSD: priceData.valueUSD / priceData.balance || 0
+          };
+        }
+      }
+      
       for (const discoveredToken of discoveredTokens) {
         // Only add if not already in the list
         if (!allTokens.some(t => t.symbol === discoveredToken.symbol)) {
@@ -461,6 +488,53 @@ export function useWalletData({
       fetchWalletData();
     }
   }, [address, fetchWalletData, chainId, providedChainId, connectedChainId]);
+
+  // Subscribe to price updates for real-time wallet value updates
+  useEffect(() => {
+    if (!walletData?.balances || walletData.balances.length === 0) {
+      return;
+    }
+
+    const tokenSymbols = walletData.balances.map(balance => balance.symbol);
+    
+    const unsubscribe = cryptoPriceService.subscribe({
+      tokens: tokenSymbols,
+      callback: (prices) => {
+        // Update wallet data with new prices
+        setWalletData(currentData => {
+          if (!currentData) return currentData;
+          
+          const updatedBalances = currentData.balances.map(balance => {
+            const priceData = prices.get(balance.symbol.toUpperCase());
+            if (priceData) {
+              return {
+                ...balance,
+                valueUSD: balance.balance * priceData.current_price,
+                change24h: priceData.price_change_percentage_24h || 0
+              };
+            }
+            return balance;
+          });
+          
+          const newPortfolioValue = updatedBalances.reduce((sum, b) => sum + b.valueUSD, 0);
+          const newPortfolioChange = updatedBalances.length > 0
+            ? updatedBalances.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (newPortfolioValue || 1))), 0)
+            : 0;
+          
+          return {
+            ...currentData,
+            balances: updatedBalances,
+            portfolioValue: newPortfolioValue,
+            portfolioChange: newPortfolioChange
+          };
+        });
+        
+        setLastUpdated(new Date());
+      }
+    });
+
+    return unsubscribe;
+  }, [walletData?.balances]);
 
   // Transform data for the wallet page
   const portfolio = walletData ? {

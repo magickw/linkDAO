@@ -5,6 +5,7 @@
 
 import { PublicClient, createPublicClient, http, formatEther, Address } from 'viem';
 import { mainnet, sepolia, base, baseSepolia, polygon, arbitrum } from 'viem/chains';
+import { cryptoPriceService } from './cryptoPriceService';
 
 export interface TokenBalance {
   symbol: string;
@@ -428,11 +429,11 @@ export class WalletService {
       const ethBalance = await rpcCallQueue.add(() => 
         this.publicClient.getBalance({ address })
       );
-      const ethPrice = await this.getTokenPrice('ethereum');
+      const nativeSymbol = chainId === 137 ? 'MATIC' : 'ETH';
+      const ethPrice = await this.getTokenPrice(nativeSymbol);
       const ethBalanceFormatted = formatEther(ethBalance);
       const ethValueUSD = parseFloat(ethBalanceFormatted) * ethPrice;
 
-      const nativeSymbol = chainId === 137 ? 'MATIC' : 'ETH';
       const nativeName = chainId === 137 ? 'Polygon' : 'Ethereum';
       balances.push({
         symbol: nativeSymbol,
@@ -442,7 +443,7 @@ export class WalletService {
         balanceFormatted: ethBalanceFormatted,
         decimals: 18,
         valueUSD: ethValueUSD,
-        change24h: await this.getTokenChange24h(chainId === 137 ? 'matic-network' : 'ethereum'),
+        change24h: await this.getTokenChange24h(nativeSymbol),
         priceUSD: ethPrice,
         isNative: true
       });
@@ -464,7 +465,7 @@ export class WalletService {
 
           if (balance && balance > 0n) {
             const balanceFormatted = this.formatTokenBalance(balance, token.decimals);
-            const price = await this.getTokenPrice(token.symbol.toLowerCase());
+            const price = await this.getTokenPrice(token.symbol);
             const valueUSD = parseFloat(balanceFormatted) * price;
 
             return {
@@ -475,7 +476,7 @@ export class WalletService {
               balanceFormatted,
               decimals: token.decimals,
               valueUSD,
-              change24h: await this.getTokenChange24h(token.symbol.toLowerCase()),
+              change24h: await this.getTokenChange24h(token.symbol),
               priceUSD: price,
               isNative: false
             } as TokenBalance;
@@ -598,73 +599,32 @@ export class WalletService {
   }
 
   /**
-   * Get token price from CoinGecko API (with caching and rate limiting)
+   * Get token price using the centralized crypto price service
    */
-  private async getTokenPrice(tokenId: string): Promise<number> {
-    const cached = this.priceCache.get(tokenId);
-    if (cached && Date.now() - cached.timestamp < this.PRICE_CACHE_DURATION) {
-      return cached.price;
-    }
-
-    // Rate limiting check
-    const now = Date.now();
-    if (now - this.lastPriceApiCallTime < this.MIN_PRICE_API_CALL_INTERVAL) {
-      // Return cached price if available, otherwise return 0
-      return cached?.price || 0;
-    }
-
+  private async getTokenPrice(tokenSymbol: string): Promise<number> {
     try {
-      this.lastPriceApiCallTime = now;
-      
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd&include_24hr_change=true`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Price API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const price = data[tokenId]?.usd || 0;
-
-      this.priceCache.set(tokenId, {
-        price,
-        timestamp: Date.now()
-      });
-
-      return price;
+      // Use the centralized crypto price service which has better caching and rate limiting
+      const priceData = await cryptoPriceService.getPrice(tokenSymbol);
+      return priceData?.current_price || 0;
     } catch (error) {
-      console.warn(`Failed to fetch price for ${tokenId}:`, error);
-      // Return cached price if available, otherwise return 0
+      console.warn(`Failed to fetch price for ${tokenSymbol}:`, error);
+      
+      // Fallback to cached price if available
+      const cached = this.priceCache.get(tokenSymbol);
       return cached?.price || 0;
     }
   }
 
   /**
-   * Get 24h price change for a token (with rate limiting)
+   * Get 24h price change for a token using the centralized crypto price service
    */
-  private async getTokenChange24h(tokenId: string): Promise<number> {
-    // Rate limiting check
-    const now = Date.now();
-    if (now - this.lastPriceApiCallTime < this.MIN_PRICE_API_CALL_INTERVAL) {
-      return 0;
-    }
-
+  private async getTokenChange24h(tokenSymbol: string): Promise<number> {
     try {
-      this.lastPriceApiCallTime = now;
-      
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd&include_24hr_change=true`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Price API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data[tokenId]?.usd_24h_change || 0;
+      // Use the centralized crypto price service
+      const priceData = await cryptoPriceService.getPrice(tokenSymbol);
+      return priceData?.price_change_percentage_24h || 0;
     } catch (error) {
-      console.warn(`Failed to fetch 24h change for ${tokenId}:`, error);
+      console.warn(`Failed to fetch 24h change for ${tokenSymbol}:`, error);
       return 0;
     }
   }
