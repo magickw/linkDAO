@@ -311,9 +311,11 @@ app.use(helmetMiddleware);
 
 // Enhanced CORS Configuration with Dynamic Origin Validation
 // Use environment-appropriate CORS middleware with comprehensive logging and monitoring
-const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'true' ? 
-  emergencyCorsMiddleware : 
-  getEnvironmentCorsMiddleware();
+// EMERGENCY FIX: Use emergency CORS middleware to fix multiple origins issue
+// The emergency middleware ensures only ONE origin is set in Access-Control-Allow-Origin header
+const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'false' ?
+  getEnvironmentCorsMiddleware() :
+  emergencyCorsMiddleware;
 
 // Apply CORS middleware only once
 app.use(corsMiddlewareToUse);

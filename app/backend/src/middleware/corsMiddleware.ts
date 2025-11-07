@@ -452,7 +452,6 @@ export const developmentCorsMiddleware = cors({
 /**
  * Ultra-permissive CORS for debugging connection issues
  */
- */
 export const debugCorsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Set permissive CORS headers
   res.header('Access-Control-Allow-Origin', '*');
