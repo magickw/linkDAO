@@ -58,9 +58,10 @@ import {
   fileUploadSecurity,
   apiRateLimit,
 } from './middleware/securityMiddleware';
-// ULTRA EMERGENCY CORS FIX - Import only this one
-import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
-// OLD CORS IMPORTS - Temporarily disabled to fix multiple origins issue
+// ULTIMATE CORS FIX - Uses lowest-level HTTP APIs
+import { ultimateCorsMiddleware } from './middleware/ultimateCors';
+// OLD CORS IMPORTS - All disabled
+// import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
 // import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
 // import {
@@ -307,14 +308,15 @@ import {
 } from './middleware/securityEnhancementsMiddleware';
 
 // Core middleware stack (order matters!)
-// ULTRA EMERGENCY CORS FIX - Apply this FIRST before anything else
-// This middleware prevents all other middleware from setting CORS headers
-app.use(ultraEmergencyCorsMiddleware);
+// ULTIMATE CORS FIX - Uses res.writeHead() at lowest HTTP level
+// This CANNOT be overridden by any other middleware or environment variables
+app.use(ultimateCorsMiddleware);
 
 app.use(securityHeaders);
 app.use(helmetMiddleware);
 
-// OLD CORS CONFIGURATION - Disabled to fix multiple origins issue
+// OLD CORS CONFIGURATION - All disabled
+// app.use(ultraEmergencyCorsMiddleware);
 // const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'false' ?
 //   getEnvironmentCorsMiddleware() :
 //   emergencyCorsMiddleware;
