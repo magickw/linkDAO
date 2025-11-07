@@ -58,16 +58,17 @@ import {
   fileUploadSecurity,
   apiRateLimit,
 } from './middleware/securityMiddleware';
-// Import proper CORS middleware with environment-aware configuration
-import { corsMiddleware } from './middleware/corsMiddleware';
-import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
-// Import enhanced CORS middleware with dynamic validation and monitoring
-import { 
-  enhancedCorsMiddleware, 
-  getEnvironmentCorsMiddleware,
-  developmentCorsMiddleware,
-  productionCorsMiddleware
-} from './middleware/corsMiddleware';
+// ULTRA EMERGENCY CORS FIX - Import only this one
+import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
+// OLD CORS IMPORTS - Temporarily disabled to fix multiple origins issue
+// import { corsMiddleware } from './middleware/corsMiddleware';
+// import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
+// import {
+//   enhancedCorsMiddleware,
+//   getEnvironmentCorsMiddleware,
+//   developmentCorsMiddleware,
+//   productionCorsMiddleware
+// } from './middleware/corsMiddleware';
 // Import new marketplace infrastructure
 import { 
   requestLoggingMiddleware, 
@@ -306,19 +307,18 @@ import {
 } from './middleware/securityEnhancementsMiddleware';
 
 // Core middleware stack (order matters!)
+// ULTRA EMERGENCY CORS FIX - Apply this FIRST before anything else
+// This middleware prevents all other middleware from setting CORS headers
+app.use(ultraEmergencyCorsMiddleware);
+
 app.use(securityHeaders);
 app.use(helmetMiddleware);
 
-// Enhanced CORS Configuration with Dynamic Origin Validation
-// Use environment-appropriate CORS middleware with comprehensive logging and monitoring
-// EMERGENCY FIX: Use emergency CORS middleware to fix multiple origins issue
-// The emergency middleware ensures only ONE origin is set in Access-Control-Allow-Origin header
-const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'false' ?
-  getEnvironmentCorsMiddleware() :
-  emergencyCorsMiddleware;
-
-// Apply CORS middleware only once
-app.use(corsMiddlewareToUse);
+// OLD CORS CONFIGURATION - Disabled to fix multiple origins issue
+// const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'false' ?
+//   getEnvironmentCorsMiddleware() :
+//   emergencyCorsMiddleware;
+// app.use(corsMiddlewareToUse);
 
 app.use(ddosProtection);
 app.use(requestFingerprinting);
