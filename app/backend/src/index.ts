@@ -315,9 +315,8 @@ const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'true' ?
   emergencyCorsMiddleware : 
   getEnvironmentCorsMiddleware();
 
-// EMERGENCY CORS FIX - Use simple CORS middleware to fix multiple origins issue
-console.warn('⚠️ Using emergency CORS middleware to fix multiple origins issue');
-app.use(corsMiddlewareToUse);  // Use the properly configured CORS middleware
+// Apply CORS middleware only once
+app.use(corsMiddlewareToUse);
 
 app.use(ddosProtection);
 app.use(requestFingerprinting);
@@ -429,22 +428,11 @@ app.get('/api/marketplace/health', (req, res) => {
 // CORS monitoring endpoint for debugging and administration
 app.get('/api/cors/status', (req, res) => {
   try {
-    const corsStats = enhancedCorsMiddleware.getStatistics();
-    const testOrigin = req.query.origin as string;
-    
-    let originValidation;
-    if (testOrigin) {
-      originValidation = enhancedCorsMiddleware.validateOrigin(testOrigin);
-    }
-
     res.json({
       success: true,
       data: {
-        statistics: corsStats,
         emergencyMode: process.env.EMERGENCY_CORS === 'true',
         currentOrigin: req.get('Origin') || null,
-        originValidation: originValidation || null,
-        blockedOrigins: enhancedCorsMiddleware.getBlockedOrigins(),
         timestamp: new Date().toISOString()
       }
     });

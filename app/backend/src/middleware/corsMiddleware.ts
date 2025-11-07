@@ -452,6 +452,7 @@ export const developmentCorsMiddleware = cors({
 /**
  * Ultra-permissive CORS for debugging connection issues
  */
+ */
 export const debugCorsMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   // Set permissive CORS headers
   res.header('Access-Control-Allow-Origin', '*');
@@ -474,13 +475,36 @@ export const debugCorsMiddleware = (req: Request, res: Response, next: NextFunct
  * Production CORS middleware (strict)
  */
 export const productionCorsMiddleware = cors({
-  origin: [
-    'https://www.linkdao.io',
-    'https://linkdao.io',
-    'https://linkdao.vercel.app',
-    /https:\/\/linkdao-.*\.vercel\.app$/,
-    /https:\/\/.*\.vercel\.app$/
-  ],
+  // Use a function to dynamically determine the allowed origin
+  origin: (origin, callback) => {
+    // List of allowed origins
+    const allowedOrigins = [
+      'https://www.linkdao.io',
+      'https://linkdao.io',
+      'https://linkdao.vercel.app',
+      'https://app.linkdao.io',
+      'https://marketplace.linkdao.io',
+      'https://linkdao-backend.onrender.com',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001'
+    ];
+    
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin is allowed or if it matches a Vercel pattern
+    if (allowedOrigins.includes(origin) || 
+        /https:\/\/linkdao-.*\.vercel\.app$/.test(origin) || 
+        /https:\/\/.*\.vercel\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [

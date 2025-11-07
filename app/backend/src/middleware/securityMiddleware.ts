@@ -34,7 +34,10 @@ export const helmetMiddleware = (req: Request, res: Response, next: NextFunction
 
 /**
  * Enhanced CORS configuration
+ * NOTE: This middleware is NOT used in the application to avoid CORS conflicts.
+ * The application uses the corsMiddleware from corsMiddleware.ts instead.
  */
+/*
 export const corsMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // Set CORS headers
   res.header('Access-Control-Allow-Origin', '*');
@@ -51,6 +54,8 @@ export const corsMiddleware = (req: Request, res: Response, next: NextFunction) 
   
   next();
 };
+
+*/
 
 /**
  * DDoS protection middleware
