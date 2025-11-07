@@ -156,12 +156,9 @@ export class EnhancedCorsMiddleware {
 
     const origins = baseOrigins[env] || baseOrigins.development;
 
-    // Add environment variable origins if specified
-    const envOrigins = process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ORIGIN || '';
-    if (envOrigins) {
-      const additionalOrigins = envOrigins.split(',').map(o => o.trim()).filter(Boolean);
-      origins.push(...additionalOrigins);
-    }
+    // CORS FIX: Do NOT read CORS_ALLOWED_ORIGINS or CORS_ORIGIN environment variables
+    // This was causing multiple origins to be set as a comma-separated string
+    // Instead, only use the hardcoded origins above
 
     // Add dynamic Vercel deployment support
     if (this.config.vercelDeploymentSupport) {

@@ -100,7 +100,11 @@ export const securityConfig: SecurityConfig = {
     lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900000'), // 15 minutes
     sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '3600000'), // 1 hour
     requireMFA: process.env.REQUIRE_MFA === 'true',
-    allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://linkdao.io,https://www.linkdao.io').split(','),
+    // CORS FIX: Hardcoded allowed origins (no environment variables)
+    // This prevents multiple origins being set as a comma-separated string
+    allowedOrigins: process.env.NODE_ENV === 'production'
+      ? ['https://www.linkdao.io', 'https://linkdao.io', 'https://linkdao.vercel.app']
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
   },
   
   encryption: {

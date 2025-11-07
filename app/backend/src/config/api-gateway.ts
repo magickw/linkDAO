@@ -57,21 +57,20 @@ class APIGatewayManager {
   private loadConfiguration(): GatewayConfig {
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Parse allowed origins
-    const allowedOrigins = process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : isProduction
-        ? [
-            'https://www.linkdao.io',
-            'https://linkdao.io',
-            'https://linkdao.vercel.app',
-            'https://www.linkdao.vercel.app'
-          ]
-        : [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://127.0.0.1:3000'
-          ];
+    // CORS FIX: Hardcoded allowed origins (no environment variables)
+    // This prevents multiple origins being set as a comma-separated string
+    const allowedOrigins = isProduction
+      ? [
+          'https://www.linkdao.io',
+          'https://linkdao.io',
+          'https://linkdao.vercel.app',
+          'https://www.linkdao.vercel.app'
+        ]
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3000'
+        ];
 
     return {
       cors: {
