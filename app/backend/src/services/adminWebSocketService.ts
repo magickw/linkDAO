@@ -84,9 +84,13 @@ export class AdminWebSocketService {
     if (existingService && (existingService as any).io) {
       this.io = (existingService as any).io;
     } else {
+      const allowedOrigins = process.env.FRONTEND_URL 
+        ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+        : ["http://localhost:3000"];
+        
       this.io = new Server(httpServer, {
         cors: {
-          origin: process.env.FRONTEND_URL || "http://localhost:3000",
+          origin: allowedOrigins,
           methods: ["GET", "POST"]
         },
         pingTimeout: 60000,

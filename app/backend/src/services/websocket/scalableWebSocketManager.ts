@@ -70,9 +70,13 @@ export class ScalableWebSocketManager {
     });
 
     // Initialize Socket.IO with Redis adapter
+    const allowedOrigins = process.env.FRONTEND_URL 
+      ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+      : ['http://localhost:3006'];
+      
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3006',
+        origin: allowedOrigins,
         credentials: true,
       },
       transports: ['websocket', 'polling'],
