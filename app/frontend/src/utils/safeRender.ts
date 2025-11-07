@@ -6,7 +6,7 @@
 /**
  * Safely render a value, converting objects to strings
  */
-export function safeRender(value: any): string | number | null {
+export function safeRender(value: any): string | number | boolean | null {
   if (value === null || value === undefined) {
     return null;
   }
@@ -14,6 +14,11 @@ export function safeRender(value: any): string | number | null {
   // Primitives are safe to render
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value;
+  }
+  
+  // Convert boolean to string
+  if (typeof value === 'boolean') {
+    return value.toString();
   }
 
   // Arrays should be joined
