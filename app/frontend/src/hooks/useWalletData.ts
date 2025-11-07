@@ -100,7 +100,8 @@ export function useWalletData({
       // Discover additional tokens the user might hold
       let discoveredTokens: any[] = [];
       try {
-        discoveredTokens = await dexService.discoverTokens(address, chainId);
+        const discoveryResult = await dexService.discoverTokens(address, chainId);
+        discoveredTokens = discoveryResult.tokens || [];
       } catch (err) {
         console.warn('Failed to discover tokens:', err);
       }
