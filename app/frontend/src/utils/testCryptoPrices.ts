@@ -58,9 +58,9 @@ export async function testTokenBalanceUpdate() {
   console.log('\n🔄 Testing token balance updates...');
   
   const mockBalances = [
-    { symbol: 'ETH', balance: 2.5, valueUSD: 0, change24h: 0, contractAddress: '0x0', chains: [1] },
-    { symbol: 'USDC', balance: 1000, valueUSD: 0, change24h: 0, contractAddress: '0x1', chains: [1] },
-    { symbol: 'LINK', balance: 100, valueUSD: 0, change24h: 0, contractAddress: '0x2', chains: [1] },
+    { symbol: 'ETH', name: 'Ethereum', balance: 2.5, valueUSD: 0, change24h: 0, contractAddress: '0x0', chains: [1] },
+    { symbol: 'USDC', name: 'USD Coin', balance: 1000, valueUSD: 0, change24h: 0, contractAddress: '0x1', chains: [1] },
+    { symbol: 'LINK', name: 'Chainlink', balance: 100, valueUSD: 0, change24h: 0, contractAddress: '0x2', chains: [1] },
   ];
   
   try {
