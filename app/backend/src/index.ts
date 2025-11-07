@@ -783,15 +783,15 @@ import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
 // TEMPORARILY DISABLED: These routes cause crashes during module loading
 // TODO: Fix and re-enable after identifying the root cause
-import dexTradingRoutes from './routes/dexTradingRoutes';
-import stakingRoutes from './routes/stakingRoutes';
-import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
+// import dexTradingRoutes from './routes/dexTradingRoutes';
+// import stakingRoutes from './routes/stakingRoutes';
+// import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
 
-app.use('/api/dex', dexTradingRoutes);
-app.use('/api/staking', stakingRoutes);
-app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
+// app.use('/api/dex', dexTradingRoutes);
+// app.use('/api/staking', stakingRoutes);
+// app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
-process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
+// process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
 
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());

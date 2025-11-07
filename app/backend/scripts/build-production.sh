@@ -9,7 +9,8 @@ echo "Node: $(node --version)"
 echo "NPM: $(npm --version)"
 
 # Set memory limits for TypeScript compilation
-export NODE_OPTIONS="--max-old-space-size=1400 --optimize-for-size --gc-interval=100"
+# With 2GB RAM on Render Standard, we can use more memory
+export NODE_OPTIONS="--max-old-space-size=1800"
 
 # Create dist directory
 echo "📁 Creating dist directory..."
@@ -29,35 +30,29 @@ npx tsc --project tsconfig.production.json 2>&1 || true
 
 # Verify the build succeeded
 if [ -f "dist/index.js" ]; then
+    # Check if this is the real TypeScript build, not a fallback
+    if grep -q "Starting LinkDAO Backend (Standalone Mode)" dist/index.js 2>/dev/null; then
+        echo "❌ ERROR: dist/index.js contains standalone fallback code!"
+        echo "❌ TypeScript compilation must have failed"
+        echo "❌ Standalone mode is disabled for production"
+        rm -f dist/index.js
+        exit 1
+    fi
+
     echo "✅ Build successful!"
     echo "📊 dist/index.js size: $(ls -lh dist/index.js | awk '{print $5}')"
     echo "📊 Total .js files: $(find dist -name '*.js' 2>/dev/null | wc -l)"
     exit 0
 else
-    echo "❌ TypeScript compilation failed - trying chunked compilation..."
-    
-    # Try chunked compilation
-    if command -v jq >/dev/null 2>&1; then
-        echo "🔄 Attempting chunked compilation..."
-        bash scripts/build-production-chunked.sh
-        if [ -f "dist/index.js" ]; then
-            echo "✅ Chunked compilation successful!"
-            exit 0
-        fi
-    else
-        echo "⚠️  jq not available, skipping chunked compilation"
-    fi
-    
-    echo "🔄 Attempting fallback compilation..."
-    bash scripts/build-production-fallback.sh
-    
-    if [ -f "dist/index.js" ]; then
-        echo "✅ Fallback build successful!"
-        exit 0
-    else
-        echo "❌ All build methods failed!"
-        echo "📂 Listing dist directory:"
-        ls -la dist/ 2>&1 || echo "dist/ does not exist"
-        exit 1
-    fi
+    echo "❌ TypeScript compilation failed!"
+    echo "❌ Standalone fallback mode is DISABLED"
+    echo "❌ Build must succeed with proper TypeScript compilation"
+    echo "📂 Listing dist directory:"
+    ls -la dist/ 2>&1 || echo "dist/ does not exist"
+    echo ""
+    echo "💡 Troubleshooting:"
+    echo "   - Check if tsconfig.production.json exists"
+    echo "   - Verify memory settings (NODE_OPTIONS)"
+    echo "   - Review TypeScript compilation errors above"
+    exit 1
 fi

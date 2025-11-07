@@ -22,7 +22,6 @@
     "noEmitOnError": false,
     "typeRoots": ["./src/types", "./node_modules/@types"],
     "incremental": false,
-    "tsBuildInfoFile": false,
     "maxNodeModuleJsDepth": 0,
     "disableSizeLimit": true,
     "preserveWatchOutput": false,
