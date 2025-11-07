@@ -66,9 +66,8 @@ import {
   enhancedCorsMiddleware, 
   getEnvironmentCorsMiddleware,
   developmentCorsMiddleware,
-  stagingCorsMiddleware,
   productionCorsMiddleware
-} from './middleware/enhancedCorsMiddleware';
+} from './middleware/corsMiddleware';
 // Import new marketplace infrastructure
 import { 
   requestLoggingMiddleware, 
@@ -107,6 +106,8 @@ import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceS
 // Import performance optimization middleware
 import PerformanceOptimizationIntegration from './middleware/performanceOptimizationIntegration';
 import { Pool } from 'pg';
+
+// Enhanced CORS middleware is already imported as a function
 
 // Import services
 import { initializeWebSocketFix, shutdownWebSocketFix } from './services/websocketConnectionFix';
@@ -179,28 +180,41 @@ app.set('trust proxy', 1);
 // Optimize for Render deployment constraints
 const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
 const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
 const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
 
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
-const maxConnections = isRenderFree ? dbConfig.maxConnections : (isRenderPro ? 5 : (process.env.RENDER ? 3 : 20));
-const minConnections = isRenderFree ? dbConfig.minConnections : (isRenderPro ? 2 : (process.env.RENDER ? 1 : 5));
+// Increase connection pool sizes for Render Standard (2GB RAM)
+const maxConnections = isRenderFree ? dbConfig.maxConnections : 
+                     (isRenderPro ? 5 : 
+                     (isRenderStandard ? 15 : 
+                     (process.env.RENDER ? 3 : 20)));
+const minConnections = isRenderFree ? dbConfig.minConnections : 
+                      (isRenderPro ? 2 : 
+                      (isRenderStandard ? 5 : 
+                      (process.env.RENDER ? 1 : 5)));
 
 // Initialize optimized database pool
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: maxConnections,
   min: minConnections,
-  idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis : (isRenderPro ? 30000 : 60000),
-  connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis : (isRenderPro ? 3000 : 2000),
+  // Increase timeouts for better performance with more resources
+  idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis : 
+                    (isRenderPro ? 30000 : 
+                    (isRenderStandard ? 60000 : 60000)),
+  connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis : 
+                          (isRenderPro ? 3000 : 
+                          (isRenderStandard ? 5000 : 2000)),
   // Add connection cleanup and resource management
   allowExitOnIdle: true,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
-  // Add statement timeout to prevent long-running queries
-  statement_timeout: isResourceConstrained ? 30000 : 60000,
-  // Add query timeout for resource management
-  query_timeout: isResourceConstrained ? 25000 : 55000,
+  // Relax statement timeouts for better performance with more resources
+  statement_timeout: isResourceConstrained ? 30000 : 90000,
+  // Relax query timeouts for better performance with more resources
+  query_timeout: isResourceConstrained ? 25000 : 85000,
 });
 
 // Add database pool event handlers for monitoring and cleanup
@@ -243,16 +257,18 @@ if (process.env.RENDER || isResourceConstrained) {
         global.gc();
       }
     }
-  }, 60000); // Check every minute
+  }, isRenderStandard ? 30000 : 60000); // Check more frequently for Standard tier
 }
 
 // Initialize memory monitoring service
 if (process.env.RENDER || isResourceConstrained) {
-  const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : 'Standard');
+  const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : (isRenderStandard ? 'Standard' : 'Standard'));
   console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
   
   // Start memory monitoring with adaptive intervals
-  const monitoringInterval = isRenderFree ? 30000 : (isRenderPro ? 45000 : 60000);
+  const monitoringInterval = isRenderFree ? 30000 : 
+                            (isRenderPro ? 45000 : 
+                            (isRenderStandard ? 40000 : 60000));
   memoryMonitoringService.startMonitoring(monitoringInterval);
   
   // Log initial memory stats
@@ -301,7 +317,8 @@ const corsMiddlewareToUse = process.env.EMERGENCY_CORS === 'true' ?
 
 // EMERGENCY CORS FIX - Use simple CORS middleware to fix multiple origins issue
 console.warn('⚠️ Using emergency CORS middleware to fix multiple origins issue');
-app.use(emergencyCorsMiddleware);
+app.use(corsMiddlewareToUse);  // Use the properly configured CORS middleware
+
 app.use(ddosProtection);
 app.use(requestFingerprinting);
 app.use(hideServerInfo);
@@ -1385,3 +1402,4 @@ export default app;
 
 
 // Deployment trigger: 2025-11-06T23:46:34.293Z
+// Post creation fix: 2025-11-07T00:17:31.299Z

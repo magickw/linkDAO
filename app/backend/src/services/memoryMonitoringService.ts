@@ -199,13 +199,20 @@ export class MemoryMonitoringService {
 export function createMemoryMonitoringService(): MemoryMonitoringService {
   const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
   const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+  const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
   const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
 
   // Set thresholds based on environment
   const thresholds: MemoryThresholds = {
-    warning: isRenderFree ? 400 : (isRenderPro ? 800 : 1200),
-    critical: isRenderFree ? 450 : (isRenderPro ? 900 : 1400),
-    gc: isRenderFree ? 350 : (isRenderPro ? 700 : 1000)
+    warning: isRenderFree ? 400 : 
+             (isRenderStandard ? 1200 : 
+             (isRenderPro ? 800 : 1200)),
+    critical: isRenderFree ? 450 : 
+              (isRenderStandard ? 1400 : 
+              (isRenderPro ? 900 : 1400)),
+    gc: isRenderFree ? 350 : 
+        (isRenderStandard ? 1000 : 
+        (isRenderPro ? 700 : 1000))
   };
 
   return new MemoryMonitoringService(thresholds, isResourceConstrained);

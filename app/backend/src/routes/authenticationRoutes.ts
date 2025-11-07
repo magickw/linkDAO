@@ -119,15 +119,36 @@ export function createAuthenticationRoutes(
  * Create authentication routes with default configuration
  */
 export function createDefaultAuthRoutes(): Router {
-  const connectionString = process.env.DATABASE_URL!;
-  const jwtSecret = process.env.JWT_SECRET!;
+  const connectionString = process.env.DATABASE_URL;
+  const jwtSecret = process.env.JWT_SECRET;
+  const nodeEnv = process.env.NODE_ENV || 'development';
 
-  if (!connectionString) {
+  if (!connectionString && nodeEnv !== 'development') {
     throw new Error('DATABASE_URL environment variable is required');
   }
 
+  // In development mode without database, return a minimal router
+  if (!connectionString && nodeEnv === 'development') {
+    console.warn('⚠️ Running authentication routes in development mode without database');
+    const router = Router();
+    
+    // Add minimal auth endpoints for development
+    router.post('/login', (req, res) => {
+      res.json({ success: true, message: 'Development mode - authentication disabled', token: 'dev-token' });
+    });
+    
+    router.post('/logout', (req, res) => {
+      res.json({ success: true, message: 'Logged out' });
+    });
+    
+    router.get('/profile', (req, res) => {
+      res.json({ success: true, user: { id: 'dev-user', address: '0x123...abc' } });
+    });
+    
+    return router;
+  }
+
   // Allow missing JWT_SECRET in development mode
-  const nodeEnv = process.env.NODE_ENV || 'development';
   if (!jwtSecret) {
     if (nodeEnv === 'development') {
       console.warn('⚠️  Using default JWT secret in development mode');
