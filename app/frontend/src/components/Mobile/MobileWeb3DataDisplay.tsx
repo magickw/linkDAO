@@ -60,14 +60,16 @@ export const MobileWeb3DataDisplay: React.FC<MobileWeb3DataDisplayProps> = ({
   const [activeTab, setActiveTab] = useState<'tokens' | 'staking' | 'governance'>('tokens');
 
   const formatCurrency = (value: number) => {
+    if (value >= 1000000000) return `$${(value / 1000000000).toFixed(2)}B`;
     if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
     if (value >= 1000) return `$${(value / 1000).toFixed(2)}K`;
     return `$${value.toFixed(2)}`;
   };
 
   const formatNumber = (value: number, decimals: number = 2) => {
-    if (value >= 1000000) return `${(value / 1000000).toFixed(decimals)}M`;
-    if (value >= 1000) return `${(value / 1000).toFixed(decimals)}K`;
+    if (value >= 1000000000) return `${(value / 1000000000).toFixed(2)}B`;
+    if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
     return value.toFixed(decimals);
   };
 

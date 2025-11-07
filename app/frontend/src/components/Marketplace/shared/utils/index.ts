@@ -74,11 +74,14 @@ export const formatTokenAmount = (
  * Convert a number to a human-readable format (e.g., 1.5K, 2.3M)
  */
 export const formatNumber = (num: number): string => {
+  if (num >= 1000000000) {
+    return (num / 1000000000).toFixed(2) + 'B';
+  }
   if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
+    return (num / 1000000).toFixed(2) + 'M';
   }
   if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'K';
+    return (num / 1000).toFixed(2) + 'K';
   }
   return num.toString();
 };

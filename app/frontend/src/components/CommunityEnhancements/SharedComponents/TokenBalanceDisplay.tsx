@@ -33,17 +33,25 @@ export const TokenBalanceDisplay: React.FC<TokenBalanceDisplayProps> = ({
   className = ''
 }) => {
   const formatBalance = (balance: number): string => {
+    if (balance >= 1000000000) {
+      // Billion or more: format as X.XXB
+      return `${(balance / 1000000000).toFixed(2)}B`;
+    }
     if (balance >= 1000000) {
-      return `${(balance / 1000000).toFixed(1)}M`;
+      // Million or more: format as X.XXM
+      return `${(balance / 1000000).toFixed(2)}M`;
     }
     if (balance >= 1000) {
-      return `${(balance / 1000).toFixed(1)}K`;
+      // Thousand or more: format as X.XXK
+      return `${(balance / 1000).toFixed(2)}K`;
     }
     if (balance >= 1) {
-      return balance.toFixed(0);
+      // 1 or more: show with 2 decimal places
+      return balance.toFixed(2);
     }
     if (balance > 0) {
-      return balance.toFixed(2);
+      // Less than 1: show with up to 6 decimal places, but trim trailing zeros
+      return balance.toFixed(6).replace(/\.?0+$/, '');
     }
     return '0';
   };

@@ -350,7 +350,7 @@ export function useWalletData({
       const transformedBalances = sortedTokens.map(t => ({
         symbol: t.symbol,
         name: t.name,
-        balance: parseFloat(t.balance || '0'),
+        balance: parseFloat(t.balanceFormatted || '0'), // Use balanceFormatted instead of raw balance
         valueUSD: t.valueUSD,
         change24h: t.change24h,
         contractAddress: t.address,
