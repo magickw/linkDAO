@@ -19,6 +19,9 @@ import { FloatingChatWidget } from '@/components/Messaging'; // Changed from Mes
 const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar'), {
   ssr: false
 });
+const PriceServiceDebug = dynamic(() => import('@/components/Debug/PriceServiceDebug'), {
+  ssr: false
+});
 
 interface LayoutProps {
   children: ReactNode;
@@ -488,6 +491,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
       {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
       {isConnected && <FloatingChatWidget />} {/* Changed from MessagingWidget to FloatingChatWidget */}
+      
+      {/* Price Service Debug Panel - Development only */}
+      {process.env.NODE_ENV === 'development' && <PriceServiceDebug />}
     </div>
   );
 }
