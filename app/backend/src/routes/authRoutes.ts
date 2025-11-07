@@ -6,10 +6,11 @@ import { authMiddleware } from '../middleware/authMiddleware';
 import { body } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 
-// Rate limiting for auth endpoints
+// Rate limiting for auth endpoints - increased from 20 to 60 requests per minute
+// to accommodate multiple auth attempts and service worker retries
 const authRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // 20 requests per minute
+  max: 60, // Increased from 20 to 60 requests per minute
   message: {
     success: false,
     error: {

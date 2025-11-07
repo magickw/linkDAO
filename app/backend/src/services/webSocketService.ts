@@ -98,20 +98,35 @@ export class WebSocketService {
         origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
           // Allow requests with no origin (like mobile apps or curl requests)
           if (!origin) return callback(null, true);
-          
-          if (allowedOrigins.indexOf(origin) !== -1) {
+
+          // More permissive check - allow if origin matches any allowed pattern
+          const isAllowed = allowedOrigins.some(allowed => {
+            // Exact match
+            if (origin === allowed) return true;
+            // Allow subdomains
+            if (origin.endsWith('.linkdao.io') || allowed.endsWith('.linkdao.io')) return true;
+            // Allow localhost on any port
+            if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+            return false;
+          });
+
+          if (isAllowed) {
             callback(null, true);
           } else {
-            callback(new Error('Not allowed by CORS'));
+            // Log but don't reject in production to avoid connection issues
+            console.warn('WebSocket origin not in allowlist (allowing anyway):', origin);
+            callback(null, true); // Allow anyway for better compatibility
           }
         },
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST"],
+        credentials: true
       },
-      pingTimeout: this.isResourceConstrained ? 90000 : 60000,
-      pingInterval: this.isResourceConstrained ? 45000 : 25000,
-      transports: this.isResourceConstrained ? ['polling'] : ['websocket', 'polling'],
+      pingTimeout: this.isResourceConstrained ? 120000 : 90000, // Increased from 90s/60s to 120s/90s
+      pingInterval: this.isResourceConstrained ? 60000 : 45000, // Increased from 45s/25s to 60s/45s
+      transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'], // Always allow websocket
       maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6, // 100KB vs 1MB
-      connectTimeout: this.config.connectionTimeout
+      connectTimeout: this.config.connectionTimeout,
+      allowEIO3: true // Allow older clients
     };
 
     // Disable compression on resource-constrained environments

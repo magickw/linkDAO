@@ -652,6 +652,10 @@ app.use('/api/follow', followRoutes);
 // Use community routes
 app.use('/api/communities', communityRoutes);
 
+// Frontend compatibility: Also mount community routes at /communities (without /api prefix)
+// This fixes the 404 errors from service worker trying to access /communities/trending
+app.use('/communities', communityRoutes);
+
 // Community treasury routes
 import communityTreasuryRoutes from './routes/communityTreasuryRoutes';
 app.use('/api/communities', communityTreasuryRoutes);
