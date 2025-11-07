@@ -3,6 +3,8 @@
  * Prevents React Error #31 by ensuring only primitives are rendered
  */
 
+import React from 'react';
+
 /**
  * Safely render a value, converting objects to strings
  */
@@ -160,4 +162,6 @@ export function withSafeRender<P extends object>(
       return <>{fallback}</>;
     }
   };
+  
+  return SafeComponent;
 }
