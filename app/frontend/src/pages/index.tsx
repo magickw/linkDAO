@@ -113,8 +113,9 @@ export default function Home() {
       // Listen for new posts
       const handleFeedUpdate = (data: any) => {
         console.log('New post received:', data);
-        setHasNewPosts(true);
-        addToast('New posts available', 'info');
+        // Add the new post to the feed immediately
+        setFeedRefreshKey(prev => prev + 1);
+        addToast('New post added to feed', 'success');
       };
 
       on('feed_update', handleFeedUpdate);
@@ -133,10 +134,10 @@ export default function Home() {
     }
 
     try {
-      await createPost({ ...postData, author: address });
+      const newPost = await createPost({ ...postData, author: address });
       addToast('Post created successfully!', 'success');
       closeModal('postCreation');
-      // Refresh feed to show new post
+      // Refresh the feed to show the new post
       setFeedRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error creating post:', error);

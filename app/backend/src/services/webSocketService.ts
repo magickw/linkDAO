@@ -671,7 +671,7 @@ export class WebSocketService {
   }
 
   // Send real-time feed update with intelligent routing
-  sendFeedUpdate(data: { postId: string; authorAddress: string; communityId?: string; contentType?: string }) {
+  sendFeedUpdate(data: { postId: string; authorAddress: string; communityId?: string; contentType?: string; post?: any }) {
     const priority = data.contentType === 'urgent' ? 'urgent' : 'medium';
     
     // Send to global feed subscribers

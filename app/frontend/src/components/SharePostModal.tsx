@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 
@@ -161,14 +162,48 @@ export default function SharePostModal({
     onClose();
   };
 
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="share-modal-title"
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 id="share-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
             Share Post
           </h3>
           <button
@@ -296,4 +331,9 @@ export default function SharePostModal({
       </div>
     </div>
   );
+
+  // Use portal to render modal at document root level
+  return typeof window !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null;
 }

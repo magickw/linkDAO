@@ -192,7 +192,7 @@ export default function EnhancedPostCard({
       animate={{ opacity: 1, y: 0 }}
       className={`relative ${className}`}
     >
-      <GlassPanel className="p-0 overflow-hidden hover:shadow-xl transition-all duration-300 group">
+      <GlassPanel className="p-0 hover:shadow-xl transition-all duration-300 group">
         {/* Trending/Pinned Badge */}
         {(post.trending || post.isPinned || post.isSponsored) && (
           <div className="absolute top-4 right-4 z-10 flex space-x-2">

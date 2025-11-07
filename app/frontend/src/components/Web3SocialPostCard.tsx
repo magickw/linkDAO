@@ -442,16 +442,17 @@ export default function Web3SocialPostCard({
   const engagementScore = engagementMetrics.score;
 
   return (
-    <GestureHandler
-      onDoubleTap={handleDoubleTap}
-      onLongPress={handleLongPress}
-      className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 ${postTypeStyles.borderColor} overflow-hidden transition-all duration-300 hover:shadow-xl ${className}`}
-    >
-      {/* Background gradient overlay */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${postTypeStyles.bgGradient} opacity-30`} />
-      
-      {/* Content container */}
-      <div className="relative z-10">
+    <>
+      <GestureHandler
+        onDoubleTap={handleDoubleTap}
+        onLongPress={handleLongPress}
+        className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 ${postTypeStyles.borderColor} transition-all duration-300 hover:shadow-xl ${className}`}
+      >
+        {/* Background gradient overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${postTypeStyles.bgGradient} opacity-30 rounded-xl`} />
+        
+        {/* Content container */}
+        <div className="relative z-10">
         {/* Post Header with enhanced visual hierarchy */}
         <div className="p-4 flex items-start justify-between">
           <div className="flex items-center space-x-3 flex-1">
@@ -806,5 +807,6 @@ export default function Web3SocialPostCard({
         />
       </div>
     </GestureHandler>
+    </>
   );
 }

@@ -1100,7 +1100,9 @@ export class FeedService {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'new_post') {
-            const transformedPost = convertBackendPostToPost(data.post);
+            // Extract the post data from the message
+            const postData = data.data.post || data.data;
+            const transformedPost = convertBackendPostToPost(postData);
             callback(transformedPost);
             
             // Track success event

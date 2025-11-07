@@ -547,7 +547,8 @@ export class FeedService {
           postId: newPost[0].id.toString(),
           authorAddress,
           communityId,
-          contentType: 'post'
+          contentType: 'post',
+          post: postResponse // Include the full post data
         });
       }
 
