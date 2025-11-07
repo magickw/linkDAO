@@ -17,13 +17,18 @@ export interface FeedResponse {
 }
 
 interface BackendFeedResponse {
-  posts: any[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
+  success: boolean;
+  data: {
+    posts: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   };
+  message?: string;
+  timestamp?: string;
 }
 
 // Cache configuration
@@ -196,25 +201,25 @@ export class FeedService {
         throw error;
       }
 
-      const data: BackendFeedResponse = await response.json();
-      
+      const response_data: BackendFeedResponse = await response.json();
+
       // Validate response data structure
-      if (!data || !Array.isArray(data.posts)) {
-        console.warn('Invalid feed response structure:', data);
+      if (!response_data || !response_data.data || !Array.isArray(response_data.data.posts)) {
+        console.warn('Invalid feed response structure:', response_data);
         return {
           posts: [],
           hasMore: false,
           totalPages: 0
         };
       }
-      
+
       // Transform backend posts to frontend posts
-      const posts = data.posts.map(convertBackendPostToPost);
-      
+      const posts = response_data.data.posts.map(convertBackendPostToPost);
+
       const result: FeedResponse = {
         posts,
-        hasMore: data.pagination?.page < data.pagination?.totalPages || false,
-        totalPages: data.pagination?.totalPages || 0
+        hasMore: response_data.data.pagination?.page < response_data.data.pagination?.totalPages || false,
+        totalPages: response_data.data.pagination?.totalPages || 0
       };
       
       // Cache the result
@@ -224,13 +229,13 @@ export class FeedService {
       feedAnalytics.trackEvent({
         eventType: 'feed_load_success',
         timestamp: new Date(),
-        metadata: { 
-          filter, 
-          page, 
+        metadata: {
+          filter,
+          page,
           limit,
           postCount: posts.length,
-          hasMore: data.pagination.page < data.pagination.totalPages,
-          totalPages: data.pagination.totalPages
+          hasMore: response_data.data.pagination.page < response_data.data.pagination.totalPages,
+          totalPages: response_data.data.pagination.totalPages
         }
       });
       
@@ -490,8 +495,15 @@ export class FeedService {
         throw error;
       }
 
-      const data: BackendFeedResponse = await response.json();
-      const posts = data.posts.map(convertBackendPostToPost);
+      const response_data: BackendFeedResponse = await response.json();
+
+      // Validate response structure
+      if (!response_data || !response_data.data || !Array.isArray(response_data.data.posts)) {
+        console.warn('Invalid trending posts response structure:', response_data);
+        return [];
+      }
+
+      const posts = response_data.data.posts.map(convertBackendPostToPost);
       
       // Track success event
       feedAnalytics.trackEvent({
