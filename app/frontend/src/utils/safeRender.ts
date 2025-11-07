@@ -151,9 +151,10 @@ export function withSafeRender<P extends object>(
   Component: React.ComponentType<P>,
   fallback: React.ReactNode = null
 ): React.ComponentType<P> {
-  return function SafeComponent(props: P) {
+  const SafeComponent: React.FC<P> = (props) => {
     try {
-      return <Component {...props} />;
+      const WrappedComponent = Component;
+      return <WrappedComponent {...props} />;
     } catch (error) {
       console.error('Rendering error caught:', error);
       return <>{fallback}</>;
