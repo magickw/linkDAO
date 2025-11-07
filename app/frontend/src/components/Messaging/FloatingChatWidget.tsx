@@ -227,7 +227,6 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       'top-left': 'top-6 left-6 md:top-6 md:left-6'
     }[position] || 'bottom-6 right-6 md:bottom-6 md:right-6';
     
-    console.log('FloatingChatWidget position classes:', classes, 'position:', position);
     return classes;
   };
 

@@ -212,24 +212,29 @@ export class FeedService {
   async getTrendingPosts(options: { page: number; limit: number; timeRange: string }) {
     const { page, limit, timeRange } = options;
     const offset = (page - 1) * limit;
-    const timeFilter = this.buildTimeFilter(timeRange);
-
+    
     try {
+      const timeFilter = this.buildTimeFilter(timeRange);
+
       // Check cache first (only for first page)
       if (page === 1) {
-        const cachedTrending = await trendingCacheService.getTrendingScores(timeRange);
-        if (cachedTrending) {
-          safeLogger.info(`Cache hit for trending ${timeRange}`);
-          return {
-            posts: cachedTrending.slice(0, limit),
-            pagination: {
-              page,
-              limit,
-              total: cachedTrending.length,
-              totalPages: Math.ceil(cachedTrending.length / limit),
-              cached: true
-            }
-          };
+        try {
+          const cachedTrending = await trendingCacheService.getTrendingScores(timeRange);
+          if (cachedTrending) {
+            safeLogger.info(`Cache hit for trending ${timeRange}`);
+            return {
+              posts: cachedTrending.slice(0, limit),
+              pagination: {
+                page,
+                limit,
+                total: cachedTrending.length,
+                totalPages: Math.ceil(cachedTrending.length / limit),
+                cached: true
+              }
+            };
+          }
+        } catch (cacheError) {
+          safeLogger.warn('Cache retrieval failed, continuing with database query:', cacheError);
         }
       }
 
@@ -367,7 +372,18 @@ export class FeedService {
       };
     } catch (error) {
       safeLogger.error('Error getting trending posts:', error);
-      throw new Error('Failed to retrieve trending posts');
+      
+      // Return empty result instead of throwing to prevent 500 errors
+      return {
+        posts: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          cached: false
+        }
+      };
     }
   }
 

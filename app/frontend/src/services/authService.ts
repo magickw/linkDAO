@@ -2,6 +2,7 @@ import { signMessage } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
 import { AuthUser, UserRole } from '@/types/auth';
+import { csrfService } from './csrfService';
 
 export interface AuthResponse {
   success: boolean;
@@ -225,6 +226,9 @@ class AuthService {
         if (data.success && data.sessionToken) {
           this.setToken(data.sessionToken);
           console.log('✅ Authentication successful for address:', address);
+          
+          // Initialize CSRF service with session token as session ID
+          await csrfService.initialize(data.sessionToken);
           
           const userData: AuthUser = {
             id: `user_${address}`,
@@ -614,7 +618,7 @@ class AuthService {
     if (token) {
       try {
         // Fire-and-forget; do not surface network errors to the UI
-        await fetch(`${this.baseUrl}/auth/logout`, {
+        await fetch(`${this.baseUrl}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -661,6 +665,8 @@ class AuthService {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
     }
+    // Also clear CSRF service
+    csrfService.clear();
   }
 
   /**
@@ -757,7 +763,7 @@ class AuthService {
   async adminLogout(): Promise<void> {
     try {
       if (this.token) {
-        await fetch(`${this.baseUrl}/auth/admin/logout`, {
+        await fetch(`${this.baseUrl}/api/auth/admin/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.token}`,

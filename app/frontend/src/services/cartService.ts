@@ -2,6 +2,9 @@
  * Cart Service - Manages shopping cart state and persistence
  */
 
+import { csrfService } from './csrfService';
+import { authService } from './authService';
+
 export interface CartItem {
   id: string;
   title: string;
@@ -86,6 +89,9 @@ class CartService {
   private constructor() {
     // Check for authentication on initialization
     this.checkAuthStatus();
+    
+    // Subscribe to auth status changes
+    this.setupAuthListener();
   }
 
   static getInstance(): CartService {
@@ -124,13 +130,19 @@ class CartService {
   }
 
   // Get authentication headers
-  private getAuthHeaders(): HeadersInit {
+  private async getAuthHeaders(): Promise<HeadersInit> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
     
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+    
+    // Add CSRF headers for authenticated requests
+    if (this.isAuthenticated) {
+      const csrfHeaders = await csrfService.getCSRFHeaders();
+      Object.assign(headers, csrfHeaders);
     }
     
     return headers;
@@ -573,8 +585,9 @@ class CartService {
   // Backend API methods
   private async getCartFromBackend(): Promise<CartState | null> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart`, {
-        headers: this.getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -595,9 +608,10 @@ class CartService {
 
   private async saveCartToBackend(state: CartState): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart/sync`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers,
         body: JSON.stringify({
           items: state.items.map(item => ({
             productId: item.id,
@@ -622,9 +636,10 @@ class CartService {
 
   private async addItemToBackend(productId: string, quantity: number): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart/items`, {
         method: 'POST',
-        headers: this.getAuthHeaders(),
+        headers,
         body: JSON.stringify({
           productId,
           quantity,
@@ -647,9 +662,10 @@ class CartService {
 
   private async removeItemFromBackend(itemId: string): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart/items/${itemId}`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -668,9 +684,10 @@ class CartService {
 
   private async updateItemQuantityInBackend(itemId: string, quantity: number): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart/items/${itemId}`, {
         method: 'PUT',
-        headers: this.getAuthHeaders(),
+        headers,
         body: JSON.stringify({
           quantity,
         }),
@@ -692,9 +709,10 @@ class CartService {
 
   private async clearBackendCart(): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await fetch(`${this.baseURL}/cart`, {
         method: 'DELETE',
-        headers: this.getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -796,6 +814,25 @@ class CartService {
       totals: this.calculateTotals(items),
       lastUpdated: new Date(),
     };
+  }
+
+  // Subscribe to authentication status changes
+  private setupAuthListener(): void {
+    // If we're in a browser environment, set up a storage listener
+    if (typeof window !== 'undefined') {
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'auth_token') {
+          this.checkAuthStatus();
+        }
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      
+      // Also check periodically in case of same-tab changes
+      setInterval(() => {
+        this.checkAuthStatus();
+      }, 5000);
+    }
   }
 }
 
