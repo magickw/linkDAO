@@ -387,7 +387,7 @@ import postRoutes from './routes/postRoutes';
 import feedRoutes from './routes/feedRoutes';
 import userRoutes from './routes/userRoutes';
 import communityRoutes from './routes/communityRoutes';
-import notificationRoutes from './routes/notificationRoutes';
+import notificationRoutes from './routes/realTimeNotificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
 
@@ -589,6 +589,9 @@ import orderManagementRoutes from './routes/orderManagementRoutes';
 
 // Import seller analytics routes
 import sellerAnalyticsRoutes from './routes/sellerAnalyticsRoutes';
+
+// Import seller performance routes
+import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
 
 // Import member behavior routes
 import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
