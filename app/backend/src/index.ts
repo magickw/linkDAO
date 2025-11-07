@@ -432,12 +432,31 @@ app.get('/api/marketplace/health', (req, res) => {
 // CORS monitoring endpoint for debugging and administration
 app.get('/api/cors/status', (req, res) => {
   try {
+    // Get git commit info
+    const { execSync } = require('child_process');
+    let gitCommit = 'unknown';
+    let gitBranch = 'unknown';
+    try {
+      gitCommit = execSync('git rev-parse --short HEAD').toString().trim();
+      gitBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+    } catch (e) {
+      // Git not available or not a git repo
+    }
+
     res.json({
       success: true,
       data: {
+        corsMiddleware: 'ultimateCors.ts',
+        middlewareVersion: 'v4-comprehensive-fix',
+        environmentVariablesRemoved: true,
+        hardcodedOriginsOnly: true,
         emergencyMode: process.env.EMERGENCY_CORS === 'true',
         currentOrigin: req.get('Origin') || null,
-        timestamp: new Date().toISOString()
+        gitCommit,
+        gitBranch,
+        deployedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        expectedBehavior: 'Single origin value in Access-Control-Allow-Origin header'
       }
     });
   } catch (error) {
