@@ -3,6 +3,13 @@ import { io, Socket } from 'socket.io-client';
 // Get the WebSocket URL from environment variables, fallback to backend URL
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+// Add fallback URLs
+const WS_FALLBACK_URLS = [
+  process.env.NEXT_PUBLIC_WS_URL,
+  process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http://', 'ws://').replace('https://', 'wss://'),
+  'ws://localhost:10000'
+].filter(Boolean) as string[];
+
 interface WebSocketConfig {
   url?: string;
   maxReconnectAttempts?: number;
@@ -41,6 +48,7 @@ class WebSocketService {
   private resourceConstraints: ResourceConstraints;
   private fallbackToPolling: boolean = false;
   private isOptional: boolean = false;
+  private currentUrlIndex: number = 0;
 
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -138,7 +146,8 @@ class WebSocketService {
     });
   }
 
-  connect() {
+  // Try connecting with different URLs as fallback
+  async connect(): Promise<void> {
     if (this.socket?.connected) {
       return Promise.resolve();
     }
@@ -150,6 +159,13 @@ class WebSocketService {
       return Promise.resolve();
     }
 
+    // Try different URLs if we've had multiple failures
+    if (this.connectionState.reconnectAttempts > 3) {
+      this.currentUrlIndex = (this.currentUrlIndex + 1) % WS_FALLBACK_URLS.length;
+    }
+
+    const currentUrl = WS_FALLBACK_URLS[this.currentUrlIndex] || this.config.url || WS_URL;
+
     return new Promise<void>((resolve, reject) => {
       try {
         this.connectionState.isReconnecting = false;
@@ -160,14 +176,16 @@ class WebSocketService {
           ['websocket', 'polling'];
 
         // Add additional options for better connection handling
-        this.socket = io(this.config.url!, {
+        this.socket = io(currentUrl, {
           transports,
           reconnection: false, // We handle reconnection manually
           reconnectionAttempts: 0,
           timeout: this.config.connectionTimeout,
           forceNew: true,
           upgrade: !this.fallbackToPolling,
-          rememberUpgrade: false
+          rememberUpgrade: false,
+          // Add path configuration for better compatibility
+          path: '/socket.io/'
         });
 
         this.setupSocketEventHandlers(resolve, reject);
@@ -463,6 +481,7 @@ class WebSocketService {
       this.disconnect();
     }
     this.connectionState.reconnectAttempts = 0;
+    this.currentUrlIndex = 0; // Reset to primary URL
     this.connect();
   }
 
@@ -481,7 +500,8 @@ class WebSocketService {
       connectionQuality: this.connectionState.connectionQuality,
       isOptional: this.isOptional,
       fallbackToPolling: this.fallbackToPolling,
-      resourceConstraints: this.resourceConstraints
+      resourceConstraints: this.resourceConstraints,
+      currentUrl: WS_FALLBACK_URLS[this.currentUrlIndex] || this.config.url || WS_URL
     };
   }
 }

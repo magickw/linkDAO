@@ -1,118 +1,117 @@
-/**
- * Geolocation Service with Multiple Fallback Providers
- * Handles IP-based geolocation with graceful degradation
- */
+import { logger } from '../utils/logger';
 
-export interface LocationData {
-  country?: string;
-  countryCode?: string;
-  city?: string;
-  region?: string;
-  latitude?: number;
-  longitude?: number;
-  timezone?: string;
+// Multiple geolocation services as fallbacks
+const GEO_SERVICES = [
+  'https://ipapi.co/json/',
+  'https://ipwho.is/',
+  'https://api.ipgeolocation.io/ipgeo?apiKey=YOUR_API_KEY' // You'll need to add your own API key
+];
+
+interface GeoLocationData {
+  country: string;
+  region: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  isp: string;
 }
 
-export class GeolocationService {
-  private providers = [
-    {
-      name: 'ipapi.co',
-      url: 'https://ipapi.co/json/',
-      transform: (data: any): LocationData => ({
-        country: data.country_name,
-        countryCode: data.country_code,
-        city: data.city,
-        region: data.region,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        timezone: data.timezone
-      })
-    },
-    {
-      name: 'ipwhois.app',
-      url: 'https://ipwhois.app/json/',
-      transform: (data: any): LocationData => ({
-        country: data.country,
-        countryCode: data.country_code,
-        city: data.city,
-        region: data.region,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        timezone: data.timezone
-      })
-    }
-  ];
+class GeoLocationService {
+  private cachedLocation: GeoLocationData | null = null;
+  private lastFetchTime: number = 0;
+  private cacheDuration: number = 30 * 60 * 1000; // 30 minutes
 
-  private cache: Map<string, { data: LocationData | null; timestamp: number }> = new Map();
-  private cacheTimeout = 1000 * 60 * 60; // 1 hour
-
-  /**
-   * Get location data for an IP address
-   * Returns null if all providers fail (non-blocking)
-   */
-  async getLocation(ip?: string): Promise<LocationData | null> {
-    // Check cache first
-    const cacheKey = ip || 'self';
-    const cached = this.cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      return cached.data;
+  async getLocation(): Promise<GeoLocationData | null> {
+    // Return cached location if still valid
+    if (this.cachedLocation && Date.now() - this.lastFetchTime < this.cacheDuration) {
+      return this.cachedLocation;
     }
 
-    // Try each provider in sequence
-    for (const provider of this.providers) {
+    // Try multiple services as fallbacks
+    for (const serviceUrl of GEO_SERVICES) {
       try {
-        const url = ip ? `${provider.url}${ip}` : provider.url;
-        const response = await fetch(url, {
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const location = provider.transform(data);
-          
-          // Cache the result
-          this.cache.set(cacheKey, {
-            data: location,
-            timestamp: Date.now()
-          });
-
-          // Silently return location without logging
+        const location = await this.fetchFromService(serviceUrl);
+        if (location) {
+          this.cachedLocation = location;
+          this.lastFetchTime = Date.now();
           return location;
         }
       } catch (error) {
-        // Silently continue to next provider to reduce console spam
-        // Only log if it's the last provider
-        if (provider === this.providers[this.providers.length - 1]) {
-          console.warn('All geolocation providers unavailable');
-        }
+        logger.warn(`Geolocation service failed (${serviceUrl}):`, error);
+        // Continue to next service
       }
     }
 
-    // All providers failed - cache null result to avoid repeated attempts
-    // Silently fail - geolocation is optional
-    this.cache.set(cacheKey, {
-      data: null,
-      timestamp: Date.now()
-    });
-
+    // If all services fail, return null
+    logger.warn('All geolocation services failed, using default location');
     return null;
   }
 
-  /**
-   * Get location with a default fallback
-   */
-  async getLocationWithFallback(ip?: string, fallback: LocationData = {}): Promise<LocationData> {
-    const location = await this.getLocation(ip);
-    return location || fallback;
+  private async fetchFromService(url: string): Promise<GeoLocationData | null> {
+    // Skip ip-api.com which is rate-limited
+    if (url.includes('ip-api.com')) {
+      throw new Error('Skipping ip-api.com due to rate limiting');
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Parse response based on service
+      if (url.includes('ipapi.co')) {
+        return {
+          country: data.country_name || data.country,
+          region: data.region || data.region_name,
+          city: data.city,
+          latitude: parseFloat(data.latitude),
+          longitude: parseFloat(data.longitude),
+          timezone: data.timezone,
+          isp: data.org || data.isp
+        };
+      } else if (url.includes('ipwho.is')) {
+        return {
+          country: data.country,
+          region: data.region,
+          city: data.city,
+          latitude: parseFloat(data.latitude),
+          longitude: parseFloat(data.longitude),
+          timezone: data.timezone,
+          isp: data.connection?.isp || data.isp
+        };
+      }
+
+      return null;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    }
   }
 
-  /**
-   * Clear the cache
-   */
+  // Clear cache (useful for testing)
   clearCache(): void {
-    this.cache.clear();
+    this.cachedLocation = null;
+    this.lastFetchTime = 0;
   }
 }
 
-// Singleton instance
-export const geolocationService = new GeolocationService();
+export const geoLocationService = new GeoLocationService();
+export default geoLocationService;

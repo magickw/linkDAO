@@ -382,235 +382,26 @@ app.use(threatDetection);
 app.use(securityAuditLogging);
 app.use(fileUploadSecurity);
 
-// Import health routes
-import emergencyHealthRoutes from './routes/emergencyHealthRoutes';
+// Import routes
+import postRoutes from './routes/postRoutes';
+import feedRoutes from './routes/feedRoutes';
+import userRoutes from './routes/userRoutes';
+import communityRoutes from './routes/communityRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
 
-// Health and monitoring routes (before other routes)
-app.use('/', healthRoutes);
-
-// Emergency routes for service availability
-app.use('/', emergencyHealthRoutes);
-
-// Emergency routes for service availability
-app.use('/', emergencyHealthRoutes);
-
-// API documentation routes
-import apiDocsRoutes from './routes/apiDocsRoutes';
-app.use('/api/docs', apiDocsRoutes);
-
-// System monitoring routes
-import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
-app.use('/api/monitoring', systemMonitoringRoutes);
-
-// Performance monitoring routes
-import { createPerformanceMonitoringRoutes } from './routes/performanceMonitoringRoutes';
-import { Redis } from 'ioredis';
-
-// Create Redis instance for performance monitoring
-const performanceRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  enableReadyCheck: false,
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => Math.min(times * 50, 2000)
-});
-
-const performanceMonitoringRoutes = createPerformanceMonitoringRoutes(dbPool, performanceRedis);
-app.use('/api/performance', performanceMonitoringRoutes);
-
-// ===== BACKEND API INTEGRATION ROUTES =====
-// Import marketplace API routes (from backend-api-integration spec)
-import marketplaceApiRoutes from './routes/marketplaceRoutes';
-import authApiRoutes from './routes/authRoutes';
-import cartApiRoutes from './routes/cartRoutes';
-import sellerApiRoutes from './routes/sellerRoutes';
-import automatedTierUpgradeRoutes from './routes/automatedTierUpgradeRoutes';
-import sellerSecurityRoutes from './routes/sellerSecurityRoutes';
-import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
-
-// Marketplace API health check
-app.get('/api/marketplace/health', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      service: 'Marketplace API',
-      status: 'healthy',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-      endpoints: {
-        listings: '/api/marketplace/listings',
-        sellers: '/api/marketplace/sellers',
-        search: '/api/marketplace/search'
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString(),
-      requestId: res.locals.requestId
-    }
-  });
-});
-
-// CORS monitoring endpoint for debugging and administration
-app.get('/api/cors/status', (req, res) => {
-  try {
-    // Get git commit info
-    const { execSync } = require('child_process');
-    let gitCommit = 'unknown';
-    let gitBranch = 'unknown';
-    try {
-      gitCommit = execSync('git rev-parse --short HEAD').toString().trim();
-      gitBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-    } catch (e) {
-      // Git not available or not a git repo
-    }
-
-    res.json({
-      success: true,
-      data: {
-        corsMiddleware: 'ultimateCors.ts',
-        middlewareVersion: 'v4-comprehensive-fix',
-        environmentVariablesRemoved: true,
-        hardcodedOriginsOnly: true,
-        emergencyMode: process.env.EMERGENCY_CORS === 'true',
-        currentOrigin: req.get('Origin') || null,
-        gitCommit,
-        gitBranch,
-        deployedAt: new Date().toISOString(),
-        timestamp: new Date().toISOString(),
-        expectedBehavior: 'Single origin value in Access-Control-Allow-Origin header'
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: {
-        message: 'Failed to get CORS status',
-        details: error.message
-      }
-    });
-  }
-});
-
-// Enhanced health check with memory and resource information
-app.get('/health/detailed', (req, res) => {
-  try {
-    const memoryStats = memoryMonitoringService.getMemoryStats();
-    const uptime = process.uptime();
-    
-    const healthData = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: {
-        seconds: Math.floor(uptime),
-        human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`
-      },
-      memory: {
-        heapUsed: `${memoryStats.heapUsed}MB`,
-        heapTotal: `${memoryStats.heapTotal}MB`,
-        rss: `${memoryStats.rss}MB`,
-        external: `${memoryStats.external}MB`,
-        thresholds: {
-          warning: `${memoryStats.thresholds.warning}MB`,
-          critical: `${memoryStats.thresholds.critical}MB`,
-          gc: `${memoryStats.thresholds.gc}MB`
-        }
-      },
-      environment: {
-        nodeVersion: process.version,
-        platform: process.platform,
-        arch: process.arch,
-        render: !!process.env.RENDER,
-        renderPro: !!process.env.RENDER_PRO,
-        resourceConstrained: isResourceConstrained
-      },
-      database: {
-        connected: !!dbPool,
-        totalConnections: dbPool?.totalCount || 0,
-        idleConnections: dbPool?.idleCount || 0,
-        waitingConnections: dbPool?.waitingCount || 0,
-        maxConnections: maxConnections
-      },
-      services: {
-        webSocket: !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS,
-        monitoring: !isResourceConstrained && !process.env.DISABLE_MONITORING,
-        memoryMonitoring: true
-      }
-    };
-
-    res.json({
-      success: true,
-      data: healthData
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: {
-        message: 'Health check failed',
-        details: error.message
-      }
-    });
-  }
-});
-
-// API v1 routes with proper prefixes and middleware ordering
-app.use('/api/v1/marketplace', marketplaceApiRoutes);
-app.use('/api/v1/auth', authApiRoutes);
-app.use('/api/v1/cart', cartApiRoutes);
-app.use('/api/v1/sellers', sellerApiRoutes);
-app.use('/api/v1/marketplace/seller/tier', automatedTierUpgradeRoutes);
-app.use('/api/v1/seller/security', sellerSecurityRoutes);
-
-// Backward compatibility routes (without version prefix)
-app.use('/api/marketplace', marketplaceApiRoutes);
-// NOTE: OLD auth routes disabled - using new AuthenticationService routes at line 774
-// app.use('/api/auth', authApiRoutes);
-app.use('/api/cart', cartApiRoutes);
-app.use('/api/sellers', sellerApiRoutes);
-app.use('/api/marketplace/seller/tier', automatedTierUpgradeRoutes);
-app.use('/api/seller/security', sellerSecurityRoutes);
-
-// Basic API info route
-app.get('/', (req, res) => {
-  res.json({ 
-    success: true,
-    data: {
-      message: 'LinkDAO Marketplace API', 
-      version: '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString(),
-      status: 'healthy',
-      endpoints: {
-        health: '/health',
-        ping: '/ping',
-        status: '/status',
-        api: '/api/*'
-      }
-    },
-    metadata: {
-      timestamp: new Date().toISOString(),
-      requestId: res.locals.requestId
-    }
-  });
-});
-
-// CSRF token routes are now handled by csrfRoutes to ensure proper token generation and verification
-// app.get('/api/csrf-token', (req, res) => {
-//   const crypto = require('crypto');
-//   const csrfToken = crypto.randomBytes(32).toString('hex');
-//   
-//   res.json({
-//     success: true,
-//     data: {
-//       csrfToken,
-//       expiresIn: 3600 // 1 hour
-//     }
-//   });
-// });
+// Register routes with enhanced error handling
+app.use('/api/posts', postRoutes);
+app.use('/api/feed', feedRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/health', healthRoutes);
 
 // Import session routes
 import sessionRoutes from './routes/sessionRoutes';
-
-// Import post routes
-import postRoutes from './routes/postRoutes';
 
 // Import feed routes
 import feedRoutes from './routes/feedRoutes';
@@ -1226,6 +1017,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
         const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
         console.log('✅ WebSocket service initialized');
         console.log(`🔌 WebSocket ready for real-time updates`);
+        testWebSocketConnectivity(); // Add this line to test connectivity
       } catch (error) {
         console.warn('⚠️ WebSocket service initialization failed:', error);
       }

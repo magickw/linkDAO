@@ -59,7 +59,7 @@ export class WebSocketService {
   private userSockets: Map<string, Set<string>> = new Map(); // walletAddress -> Set of socketIds
   private subscriptions: Map<string, Subscription> = new Map(); // subscriptionId -> Subscription
   private userSubscriptions: Map<string, Set<string>> = new Map(); // walletAddress -> Set of subscriptionIds
-  private messageQueue: Map<string, BroadcastMessage[]> = new Map(); // walletAddress -> queued messages
+  private messageQueue: Map<string, BroadcastMessage[]> = newMap(); // walletAddress -> queued messages
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private reconnectionTimeouts: Map<string, NodeJS.Timeout> = new Map();
   private config: WebSocketServiceConfig;
@@ -77,39 +77,60 @@ export class WebSocketService {
       ...config
     };
 
-    this.detectResourceConstraints();
-    // Parse allowed origins from environment variables
-    const frontendUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+    // Detect resource constraints from environment
+    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' || 
+                         process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
+                         process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
+
+    const memoryLimit = process.env.MEMORY_LIMIT ? parseInt(process.env.MEMORY_LIMIT) : 512;
+    const isLowMemory = memoryLimit < 1024; // Less than 1GB
+
+    // Check current memory usage
+    const memUsage = process.memoryUsage();
+    const memUsageMB = memUsage.heapUsed / 1024 / 1024;
+    const isHighMemoryUsage = memUsageMB > this.config.memoryThreshold!;
+
+    this.isResourceConstrained = isRenderFree || isLowMemory || isHighMemoryUsage || 
+                                process.env.DISABLE_WEBSOCKET_FEATURES === 'true';
+
+    if (this.isResourceConstrained) {
+      // Reduce limits for resource-constrained environments
+      this.config.maxConnections = Math.min(this.config.maxConnections!, 100);
+      this.config.messageQueueLimit = Math.min(this.config.messageQueueLimit!, 20);
+      this.config.heartbeatInterval = Math.max(this.config.heartbeatInterval!, 60000);
+    }
+
+    // Enhanced CORS configuration for better compatibility
     const allowedOrigins = [
-      ...frontendUrls,
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://www.linkdao.io",
-      "https://linkdao.io",
-      "https://app.linkdao.io",
-      "https://marketplace.linkdao.io",
-      "https://linkdao-backend.onrender.com",
-      "https://api.linkdao.io"
+      'https://www.linkdao.io',
+      'https://linkdao.io',
+      'https://app.linkdao.io',
+      'https://marketplace.linkdao.io',
+      'https://api.linkdao.io',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001'
     ];
 
-    // Adjust configuration based on resource constraints
+    // Add any custom origins from environment variables
+    if (process.env.FRONTEND_URL) {
+      const customOrigins = process.env.FRONTEND_URL.split(',').map(url => url.trim());
+      allowedOrigins.push(...customOrigins);
+    }
+
     const socketConfig: any = {
       cors: {
-        origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+        origin: (origin, callback) => {
           // Allow requests with no origin (like mobile apps or curl requests)
           if (!origin) return callback(null, true);
-
-          // More permissive check - allow if origin matches any allowed pattern
-          const isAllowed = allowedOrigins.some(allowed => {
-            // Exact match
-            if (origin === allowed) return true;
-            // Allow subdomains
-            if (origin.endsWith('.linkdao.io') || allowed.endsWith('.linkdao.io')) return true;
-            // Allow localhost on any port
-            if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
-            return false;
-          });
-
+          
+          // Check if origin is in allowlist
+          const isAllowed = allowedOrigins.some(allowedOrigin => 
+            origin === allowedOrigin || 
+            origin.startsWith(allowedOrigin.replace(/\./g, '\\.').replace(/\*/g, '.*'))
+          );
+          
           if (isAllowed) {
             callback(null, true);
           } else {
@@ -126,7 +147,9 @@ export class WebSocketService {
       transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'], // Always allow websocket
       maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6, // 100KB vs 1MB
       connectTimeout: this.config.connectionTimeout,
-      allowEIO3: true // Allow older clients
+      allowEIO3: true, // Allow older clients
+      // Add path configuration for better compatibility
+      path: '/socket.io/'
     };
 
     // Disable compression on resource-constrained environments
