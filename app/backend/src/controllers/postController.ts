@@ -1,15 +1,23 @@
 import { Request, Response } from 'express';
+import { PostService } from '../services/postService';
+import { CreatePostInput } from '../models/Post';
 
-// Simple in-memory storage for posts
-let posts: any[] = [];
-let nextId = 1;
+// Remove in-memory storage
+// let posts: any[] = [];
+// let nextId = 1;
 
 export class PostController {
+  private postService: PostService;
+
+  constructor() {
+    this.postService = new PostService();
+  }
+
   async createPost(req: Request, res: Response): Promise<Response> {
     try {
       console.log('POST /api/posts - Creating post');
       
-      const { content, author, type = 'text', visibility = 'public' } = req.body;
+      const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef } = req.body;
       
       if (!content || content.trim() === '') {
         return res.status(400).json({
@@ -18,18 +26,26 @@ export class PostController {
         });
       }
       
-      const post = {
-        id: (nextId++).toString(),
-        content: content.trim(),
-        author: author || 'anonymous',
-        type,
-        visibility,
-        createdAt: new Date().toISOString(),
-        likes: 0,
-        comments: 0
+      if (!author) {
+        return res.status(400).json({
+          success: false,
+          error: 'Author is required'
+        });
+      }
+      
+      // Prepare input for PostService
+      const postInput: CreatePostInput = {
+        author,
+        content,
+        tags,
+        media,
+        parentId,
+        onchainRef
       };
       
-      posts.push(post);
+      // Create post using PostService
+      const post = await this.postService.createPost(postInput);
+      
       console.log('Post created:', post.id);
       
       return res.status(201).json({
@@ -40,20 +56,18 @@ export class PostController {
       console.error('Error creating post:', error);
       return res.status(500).json({
         success: false,
-        error: 'Failed to create post'
+        error: error.message || 'Failed to create post'
       });
     }
   }
 
   async getAllPosts(req: Request, res: Response): Promise<Response> {
     try {
-      const sortedPosts = [...posts].sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const posts = await this.postService.getAllPosts();
       
       return res.json({
         success: true,
-        data: sortedPosts
+        data: posts
       });
     } catch (error: any) {
       return res.status(500).json({
@@ -66,7 +80,7 @@ export class PostController {
   async getPostById(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const post = posts.find(p => p.id === id);
+      const post = await this.postService.getPostById(id);
       
       if (!post) {
         return res.status(404).json({
@@ -88,17 +102,39 @@ export class PostController {
   }
 
   async getFeed(req: Request, res: Response): Promise<Response> {
-    return this.getAllPosts(req, res);
+    try {
+      const { forUser } = req.query;
+      
+      if (!forUser || typeof forUser !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'forUser parameter is required'
+        });
+      }
+      
+      const posts = await this.postService.getFeed(forUser);
+      
+      return res.json({
+        success: true,
+        data: posts
+      });
+    } catch (error: any) {
+      console.error('Error getting feed:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve feed'
+      });
+    }
   }
 
   async getPostsByAuthor(req: Request, res: Response): Promise<Response> {
     try {
       const { author } = req.params;
-      const authorPosts = posts.filter(p => p.author === author);
+      const posts = await this.postService.getPostsByAuthor(author);
       
       return res.json({
         success: true,
-        data: authorPosts
+        data: posts
       });
     } catch (error: any) {
       return res.status(500).json({
@@ -111,13 +147,11 @@ export class PostController {
   async getPostsByTag(req: Request, res: Response): Promise<Response> {
     try {
       const { tag } = req.params;
-      const taggedPosts = posts.filter(p => 
-        p.content && p.content.toLowerCase().includes('#' + tag.toLowerCase())
-      );
+      const posts = await this.postService.getPostsByTag(tag);
       
       return res.json({
         success: true,
-        data: taggedPosts
+        data: posts
       });
     } catch (error: any) {
       return res.status(500).json({
@@ -130,22 +164,26 @@ export class PostController {
   async updatePost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const { content } = req.body;
+      const { content, tags, media } = req.body;
       
-      const postIndex = posts.findIndex(p => p.id === id);
-      if (postIndex === -1) {
+      const updateInput = {
+        content,
+        tags,
+        media
+      };
+      
+      const post = await this.postService.updatePost(id, updateInput);
+      
+      if (!post) {
         return res.status(404).json({
           success: false,
           error: 'Post not found'
         });
       }
       
-      if (content) posts[postIndex].content = content;
-      posts[postIndex].updatedAt = new Date().toISOString();
-      
       return res.json({
         success: true,
-        data: posts[postIndex]
+        data: post
       });
     } catch (error: any) {
       return res.status(500).json({
@@ -158,16 +196,15 @@ export class PostController {
   async deletePost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const postIndex = posts.findIndex(p => p.id === id);
+      const deleted = await this.postService.deletePost(id);
       
-      if (postIndex === -1) {
+      if (!deleted) {
         return res.status(404).json({
           success: false,
           error: 'Post not found'
         });
       }
       
-      posts.splice(postIndex, 1);
       return res.status(204).send();
     } catch (error: any) {
       return res.status(500).json({

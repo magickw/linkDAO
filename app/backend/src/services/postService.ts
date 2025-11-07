@@ -132,7 +132,10 @@ export class PostService {
         dbPost = await databaseService.createPost(
           user.id,
           contentCid,
-          input.parentId ? parseInt(input.parentId) : undefined
+          input.parentId ? parseInt(input.parentId) : undefined,
+          mediaCids.length > 0 ? mediaCids : undefined,
+          input.tags && input.tags.length > 0 ? input.tags : undefined,
+          input.onchainRef
         );
         
         // Update post with moderation metadata
@@ -263,10 +266,10 @@ export class PostService {
         author,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         contentCid: dbPost.contentCid,
-        mediaCids: [], // Would need to store media CIDs in database
-        tags: [], // Would need to store tags in database
+        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
         createdAt,
-        onchainRef: '' // Would need to store onchainRef in database
+        onchainRef: dbPost.onchainRef || ''
       };
     });
     
@@ -410,7 +413,7 @@ export class PostService {
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt,
-          onchainRef: '' // Would need to store onchainRef in database
+          onchainRef: dbPost.onchainRef || ''
         };
       }));
       
@@ -471,10 +474,10 @@ export class PostService {
           author: authorAddress,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
           contentCid: dbPost.contentCid,
-          mediaCids: [], // Would need to store media CIDs in database
-          tags: [], // Would need to store tags in database
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
           createdAt,
-          onchainRef: '' // Would need to store onchainRef in database
+          onchainRef: dbPost.onchainRef || ''
         };
       }));
       

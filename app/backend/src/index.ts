@@ -390,6 +390,15 @@ import communityRoutes from './routes/communityRoutes';
 import notificationRoutes from './routes/realTimeNotificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
+import sessionRoutes from './routes/sessionRoutes';
+import viewRoutes from './routes/viewRoutes';
+import bookmarkRoutes from './routes/bookmarkRoutes';
+import shareRoutes from './routes/shareRoutes';
+import followRoutes from './routes/followRoutes';
+import messagingRoutes from './routes/messagingRoutes';
+import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+import mobileRoutes from './routes/mobileRoutes';
+import securityRoutes from './routes/securityRoutes';
 
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
@@ -400,38 +409,19 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/health', healthRoutes);
 
-// Import session routes
-import sessionRoutes from './routes/sessionRoutes';
-
-// Import feed routes
-import feedRoutes from './routes/feedRoutes';
-
-// Import view tracking routes
-import viewRoutes from './routes/viewRoutes';
-
-// Import bookmark routes
-import bookmarkRoutes from './routes/bookmarkRoutes';
-
-// Import share routes
-import shareRoutes from './routes/shareRoutes';
-
-// Import follow routes
-import followRoutes from './routes/followRoutes';
-
-// Import community routes
-import communityRoutes from './routes/communityRoutes';
-
-// Import messaging routes
-import messagingRoutes from './routes/messagingRoutes';
-
-// Import notification preferences routes
-// DISABLED: Heavy routes that load massive dependencies (~200MB)
-// These load Firebase Admin SDK and other heavy packages
-import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
-import mobileRoutes from './routes/mobileRoutes';
-
-// Import security routes
-import securityRoutes from './routes/securityRoutes';
+// Add root-level health endpoint for frontend compatibility
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
+    }
+  });
+});
 
 // Use session routes
 app.use('/api', sessionRoutes);
@@ -500,8 +490,6 @@ import adminAIRoutes from './routes/admin/ai';
 import { systemHealthMonitoringRoutes } from './routes/systemHealthMonitoringRoutes';
 // Import workflow automation routes
 import workflowAutomationRoutes from './routes/workflowAutomationRoutes';
-// Import analytics routes
-import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
 import marketplaceRegistrationRoutes from './routes/marketplaceRegistrationRoutes';
 // Import dispute resolution routes
@@ -852,6 +840,17 @@ app.use('/api/cache', cacheRoutes);
 // CSRF token routes
 app.use('/api', csrfRoutes);
 
+// Add root-level CSRF token endpoint for frontend compatibility
+app.get('/csrf-token', (req, res) => {
+  // Generate a simple CSRF token
+  const token = require('crypto').randomBytes(32).toString('hex');
+  res.status(200).json({
+    success: true,
+    csrfToken: token,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Import order event listener service
 import { orderEventListenerService } from './services/orderEventListenerService';
 
@@ -945,22 +944,27 @@ app.all('/socket.io/*', (req, res) => {
   const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' || 
                            (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
   
-  if (webSocketsEnabled) {
-    // Forward to actual WebSocket handler
-    res.status(426).json({
-      success: false,
-      error: 'Upgrade Required',
-      message: 'This endpoint requires a WebSocket upgrade. Please use a WebSocket client.',
-      code: 'UPGRADE_REQUIRED'
-    });
-  } else {
-    res.status(503).json({
+  if (!webSocketsEnabled) {
+    // WebSockets disabled - return 503
+    return res.status(503).json({
       success: false,
       error: 'WebSocket service temporarily unavailable',
-      message: 'Real-time features are disabled on this server configuration. Please try again later or use polling mode.',
-      code: 'WEBSOCKET_DISABLED'
+      message: 'Real-time features are disabled on this server configuration. Please use polling mode.',
+      code: 'WEBSOCKET_DISABLED',
+      fallback: 'polling'
     });
   }
+  
+  // WebSockets enabled but this is an HTTP request to a WebSocket endpoint
+  // Return 426 to indicate upgrade required
+  res.status(426).json({
+    success: false,
+    error: 'Upgrade Required',
+    message: 'This endpoint requires a WebSocket connection. Please use a WebSocket client.',
+    code: 'UPGRADE_REQUIRED',
+    protocols: ['websocket'],
+    fallback: 'polling'
+  });
 });
 
 // Communities fallback route (redirect to API endpoint)
@@ -1002,15 +1006,15 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
-    // Initialize performance monitoring integration
-    try {
-      const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
-      const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, performanceRedis);
-      await performanceMonitoring.initialize();
-      console.log('✅ Performance monitoring integration initialized');
-    } catch (error: any) {
-      console.warn('⚠️ Performance monitoring initialization failed:', error.message);
-    }
+    // Initialize performance monitoring integration (disabled for now - requires Redis)
+    // try {
+    //   const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
+    //   const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, null);
+    //   await performanceMonitoring.initialize();
+    //   console.log('✅ Performance monitoring integration initialized');
+    // } catch (error: any) {
+    //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
+    // }
 
     // WebSocket services - disabled on resource-constrained environments
     const enableWebSockets = !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS;
@@ -1020,7 +1024,6 @@ httpServer.listen(PORT, '0.0.0.0', () => {
         const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
         console.log('✅ WebSocket service initialized');
         console.log(`🔌 WebSocket ready for real-time updates`);
-        testWebSocketConnectivity(); // Add this line to test connectivity
       } catch (error) {
         console.warn('⚠️ WebSocket service initialization failed:', error);
       }

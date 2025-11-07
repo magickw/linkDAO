@@ -107,12 +107,15 @@ export class DatabaseService {
 
 
   // Post operations
-  async createPost(authorId: string, contentCid: string, parentId?: number) {
+  async createPost(authorId: string, contentCid: string, parentId?: number, mediaCids?: string[], tags?: string[], onchainRef?: string) {
     try {
       const result = await this.db.insert(schema.posts).values({
         authorId,
         contentCid,
         parentId: parentId || null,
+        mediaCids: mediaCids ? JSON.stringify(mediaCids) : null,
+        tags: tags ? JSON.stringify(tags) : null,
+        onchainRef: onchainRef || null,
         isTokenGated: false
       }).returning();
       

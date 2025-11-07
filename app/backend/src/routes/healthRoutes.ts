@@ -1,27 +1,49 @@
 import { Router, Request, Response } from 'express';
-import { successResponse, errorResponse } from '../utils/apiResponse';
-import { healthMonitoringService } from '../services/healthMonitoringService';
 import { getWebSocketService } from '../services/webSocketService';
 
 const router = Router();
 
-// Basic health check
-router.get('/health', async (req: Request, res: Response) => {
+// Basic health check - mounted at /api/health so this becomes /api/health
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const healthData = await healthMonitoringService.getSystemHealth();
-    res.status(200).json(successResponse(healthData, 'System is healthy'));
+    const memoryUsage = process.memoryUsage();
+    const healthData = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+        total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+        rss: Math.round(memoryUsage.rss / 1024 / 1024)
+      },
+      environment: process.env.NODE_ENV || 'development'
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: healthData,
+      message: 'System is healthy'
+    });
   } catch (error) {
-    res.status(503).json(errorResponse('System health check failed', error));
+    res.status(503).json({
+      success: false,
+      error: 'System health check failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// WebSocket connectivity test
-router.get('/health/websocket', (req: Request, res: Response) => {
+// WebSocket connectivity test - becomes /api/health/websocket
+router.get('/websocket', (req: Request, res: Response) => {
   try {
     const webSocketService = getWebSocketService();
     
     if (!webSocketService) {
-      return res.status(503).json(errorResponse('WebSocket service not initialized'));
+      return res.status(503).json({
+        success: false,
+        error: 'WebSocket service not initialized',
+        message: 'WebSocket service is not available'
+      });
     }
     
     const stats = webSocketService.getStats();
@@ -30,29 +52,65 @@ router.get('/health/websocket', (req: Request, res: Response) => {
       websocket: {
         initialized: true,
         connectedClients: stats.connectedUsers,
-        maxConnections: stats.maxConnections,
-        isResourceConstrained: stats.isResourceConstrained,
-        features: {
-          heartbeat: stats.features.heartbeat,
-          compression: stats.features.compression,
-          realTimeUpdates: stats.features.realTimeUpdates
-        }
+        activeUsers: stats.activeUsers,
+        totalSubscriptions: stats.totalSubscriptions,
+        rooms: stats.rooms,
+        queuedMessages: stats.queuedMessages,
+        resourceConstraints: stats.resourceConstraints
       }
     };
     
-    res.status(200).json(successResponse(response, 'WebSocket service is healthy'));
+    res.status(200).json({
+      success: true,
+      data: response,
+      message: 'WebSocket service is healthy'
+    });
   } catch (error) {
-    res.status(503).json(errorResponse('WebSocket health check failed', error));
+    res.status(503).json({
+      success: false,
+      error: 'WebSocket health check failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
-// Detailed health check with external services
-router.get('/health/detailed', async (req: Request, res: Response) => {
+// Detailed health check with external services - becomes /api/health/detailed
+router.get('/detailed', async (req: Request, res: Response) => {
   try {
-    const healthData = await healthMonitoringService.getDetailedHealth();
-    res.status(200).json(successResponse(healthData, 'Detailed system health check completed'));
+    const memoryUsage = process.memoryUsage();
+    const webSocketService = getWebSocketService();
+    
+    const healthData = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      memory: {
+        used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+        total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+        rss: Math.round(memoryUsage.rss / 1024 / 1024),
+        external: Math.round(memoryUsage.external / 1024 / 1024)
+      },
+      environment: process.env.NODE_ENV || 'development',
+      websocket: webSocketService ? {
+        enabled: true,
+        stats: webSocketService.getStats()
+      } : {
+        enabled: false,
+        reason: 'Service not initialized'
+      }
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: healthData,
+      message: 'Detailed system health check completed'
+    });
   } catch (error) {
-    res.status(503).json(errorResponse('Detailed health check failed', error));
+    res.status(503).json({
+      success: false,
+      error: 'Detailed health check failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
