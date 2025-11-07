@@ -39,13 +39,48 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+// CORS configuration - FIXED to use single origin value
+app.use((req, res, next) => {
+  const requestOrigin = req.get('Origin');
+
+  // List of allowed origins
+  const allowedOrigins = [
+    'https://www.linkdao.io',
+    'https://linkdao.io',
+    'https://linkdao.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
+  ];
+
+  // Determine which single origin to allow
+  let singleOrigin = '*';
+
+  if (requestOrigin) {
+    if (allowedOrigins.includes(requestOrigin)) {
+      singleOrigin = requestOrigin;
+    } else if (requestOrigin.includes('vercel.app') && requestOrigin.includes('linkdao')) {
+      singleOrigin = requestOrigin;
+    }
+  }
+
+  // Set CORS headers with SINGLE origin value
+  res.setHeader('Access-Control-Allow-Origin', singleOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Request-ID, X-Correlation-ID, X-Session-ID, X-Wallet-Address, X-Chain-ID, X-CSRF-Token, x-csrf-token, Cache-Control');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Vary', 'Origin');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  next();
+});
 
 // Compression
 app.use(compression());
