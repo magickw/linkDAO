@@ -70,12 +70,19 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
           const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH/native token
           const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as fallback
 
-          const quote = await dexService.getSwapQuote({
+          const quoteResponse = await dexService.getSwapQuote({
             tokenInAddress: fromTokenAddress,
             tokenOutAddress: toTokenAddress,
             amountIn: parseFloat(fromAmount),
             slippageTolerance: slippage
           });
+
+          // Check if the response is successful
+          if (!quoteResponse || !quoteResponse.success || !quoteResponse.data) {
+            throw new Error('Failed to get swap quote');
+          }
+
+          const quote = quoteResponse.data.quote;
 
           // Calculate exchange rate
           const rate = parseFloat(quote.amountOut) / parseFloat(quote.amountIn);
