@@ -82,6 +82,20 @@ router.get(
 );
 
 /**
+ * @route GET /reputation/:walletAddress/events
+ * @desc Get reputation events for a wallet address (alias for history)
+ * @access Public
+ * @param {string} walletAddress - The wallet address to get events for
+ * @query {number} limit - Maximum number of events to return (default: 10, max: 100)
+ * @returns {Object} Reputation events
+ */
+router.get(
+  '/:walletAddress/events',
+  reputationRateLimit,
+  reputationController.getReputationHistory.bind(reputationController)
+);
+
+/**
  * @route POST /marketplace/reputation/:walletAddress/calculate
  * @desc Calculate comprehensive reputation for a wallet address
  * @access Protected (should be called by internal services)

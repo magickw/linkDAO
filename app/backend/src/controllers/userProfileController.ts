@@ -16,7 +16,7 @@ export class UserProfileController {
     };
     
     const profile = await userProfileService.createProfile(input);
-    return res.status(201).json(profile);
+    return res.status(201).json({ data: profile });
   }
 
   getProfileById = async (req: Request, res: Response): Promise<Response> => {
@@ -32,9 +32,10 @@ export class UserProfileController {
     const { address } = req.params;
     const profile = await userProfileService.getProfileByAddress(address);
     if (!profile) {
-      throw new NotFoundError('Profile not found');
+      // Return null instead of 404 to allow frontend to handle gracefully
+      return res.json({ data: null });
     }
-    return res.json(profile);
+    return res.json({ data: profile });
   }
 
   updateProfile = async (req: Request, res: Response): Promise<Response> => {
@@ -55,7 +56,7 @@ export class UserProfileController {
     if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return res.json(profile);
+    return res.json({ data: profile });
   }
 
   deleteProfile = async (req: Request, res: Response): Promise<Response> => {

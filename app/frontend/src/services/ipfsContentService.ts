@@ -57,5 +57,3 @@ export class IPFSContentService {
     this.cache.delete(cid);
   }
 }
-
-export const ipfsContentService = new IPFSContentService();

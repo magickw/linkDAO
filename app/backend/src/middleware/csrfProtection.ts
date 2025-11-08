@@ -112,6 +112,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return next();
   }
   
+  // Skip CSRF for profile creation endpoint (users need to create profile before having a session)
+  if (req.path === '/api/profiles' && req.method === 'POST') {
+    return next();
+  }
+  
   console.log(`[csrfProtection] ${req.method} ${req.path}`);
   console.log(`[csrfProtection] Headers: ${JSON.stringify({
     'x-session-id': req.headers['x-session-id'],

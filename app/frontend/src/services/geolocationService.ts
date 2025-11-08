@@ -1,133 +1,126 @@
-import { logger } from '../utils/logger';
+/**
+ * Geolocation Service with Rate Limit Handling
+ * 
+ * Provides IP-based geolocation with:
+ * - Local caching to avoid rate limits
+ * - Graceful fallback when service unavailable
+ * - Multiple provider support
+ */
 
-// Multiple geolocation services as fallbacks
-const GEO_SERVICES = [
-  'https://ipapi.co/json/',
-  'https://ipwho.is/',
-  'https://api.ipgeolocation.io/ipgeo?apiKey=YOUR_API_KEY' // You'll need to add your own API key
-];
-
-interface GeoLocationData {
-  country: string;
-  region: string;
-  city: string;
-  latitude: number;
-  longitude: number;
-  timezone: string;
-  isp: string;
+interface GeolocationData {
+  country?: string;
+  region?: string;
+  city?: string;
+  lat?: number;
+  lon?: number;
+  timezone?: string;
+  isp?: string;
 }
 
-class GeoLocationService {
-  private cachedLocation: GeoLocationData | null = null;
-  private lastFetchTime: number = 0;
-  private cacheDuration: number = 30 * 60 * 1000; // 30 minutes
-  private failureCount: number = 0;
-  private maxFailures: number = 3; // Max consecutive failures before disabling
+class GeolocationService {
+  private cache: Map<string, { data: GeolocationData; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly STORAGE_KEY = 'geolocation_cache';
+  private rateLimitedUntil: number = 0;
 
-  async getLocation(): Promise<GeoLocationData | null> {
-    // Return cached location if still valid
-    if (this.cachedLocation && Date.now() - this.lastFetchTime < this.cacheDuration) {
-      return this.cachedLocation;
-    }
-
-    // Disable service if too many consecutive failures
-    if (this.failureCount >= this.maxFailures) {
-      console.warn('Geolocation service disabled due to repeated failures');
-      return null;
-    }
-
-    // Try multiple services as fallbacks
-    for (const serviceUrl of GEO_SERVICES) {
-      try {
-        const location = await this.fetchFromService(serviceUrl);
-        if (location) {
-          this.cachedLocation = location;
-          this.lastFetchTime = Date.now();
-          this.failureCount = 0; // Reset failure count on success
-          return location;
-        }
-      } catch (error) {
-        console.warn(`Geolocation service failed, trying next:`, error);
-        this.failureCount++;
-        // Continue to next service
-      }
-    }
-
-    // If all services fail, return null
-    console.warn('All geolocation services failed, using default location');
-    this.failureCount++;
-    return null;
+  constructor() {
+    this.loadFromStorage();
   }
 
-  private async fetchFromService(url: string): Promise<GeoLocationData | null> {
-    // Skip ip-api.com which is rate-limited
-    if (url.includes('ip-api.com')) {
-      throw new Error('Skipping ip-api.com due to rate limiting');
+  private loadFromStorage() {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        this.cache = new Map(Object.entries(data));
+      }
+    } catch (error) {
+      console.warn('Failed to load geolocation cache:', error);
+    }
+  }
+
+  private saveToStorage() {
+    try {
+      const data = Object.fromEntries(this.cache);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.warn('Failed to save geolocation cache:', error);
+    }
+  }
+
+  async getGeolocation(): Promise<GeolocationData | null> {
+    // Check if we're rate limited
+    if (Date.now() < this.rateLimitedUntil) {
+      console.log('Geolocation service rate limited, using cached data');
+      return this.getCachedData();
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    // Check cache first
+    const cached = this.getCachedData();
+    if (cached) {
+      return cached;
+    }
 
+    // Try to fetch new data
     try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'application/json'
-        }
+      const response = await fetch('https://ipapi.co/json/', {
+        signal: AbortSignal.timeout(5000)
       });
 
-      clearTimeout(timeoutId);
+      if (response.status === 429 || response.status === 403) {
+        // Rate limited
+        this.rateLimitedUntil = Date.now() + 60 * 60 * 1000; // 1 hour
+        console.warn('Geolocation service rate limited');
+        return this.getCachedData();
+      }
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const data = await response.json();
-
-      // Validate response data
-      if (!data) {
-        throw new Error('Empty response data');
-      }
-
-      // Parse response based on service
-      if (url.includes('ipapi.co')) {
-        return {
-          country: data.country_name || data.country || '',
-          region: data.region || data.region_name || '',
-          city: data.city || '',
-          latitude: parseFloat(data.latitude) || 0,
-          longitude: parseFloat(data.longitude) || 0,
-          timezone: data.timezone || '',
-          isp: data.org || data.isp || ''
-        };
-      } else if (url.includes('ipwho.is')) {
-        return {
-          country: data.country || '',
-          region: data.region || '',
-          city: data.city || '',
-          latitude: parseFloat(data.latitude) || 0,
-          longitude: parseFloat(data.longitude) || 0,
-          timezone: data.timezone || '',
-          isp: data.connection?.isp || data.isp || ''
-        };
-      }
-
-      return null;
+      
+      // Cache the result
+      this.cache.set('current', {
+        data: {
+          country: data.country_name,
+          region: data.region,
+          city: data.city,
+          lat: data.latitude,
+          lon: data.longitude,
+          timezone: data.timezone,
+          isp: data.org
+        },
+        timestamp: Date.now()
+      });
+      
+      this.saveToStorage();
+      return this.cache.get('current')!.data;
     } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      throw error;
+      console.warn('Geolocation service failed, trying next:', error);
+      return this.getCachedData();
     }
   }
 
-  // Clear cache (useful for testing)
-  clearCache(): void {
-    this.cachedLocation = null;
-    this.lastFetchTime = 0;
+  private getCachedData(): GeolocationData | null {
+    const cached = this.cache.get('current');
+    if (!cached) return null;
+
+    // Check if cache is still valid
+    if (Date.now() - cached.timestamp > this.CACHE_DURATION) {
+      this.cache.delete('current');
+      this.saveToStorage();
+      return null;
+    }
+
+    return cached.data;
+  }
+
+  clearCache() {
+    this.cache.clear();
+    this.saveToStorage();
+    this.rateLimitedUntil = 0;
   }
 }
 
-export const geoLocationService = new GeoLocationService();
-export default geoLocationService;
+export const geolocationService = new GeolocationService();

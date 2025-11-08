@@ -9,7 +9,7 @@ import TrendingBadge from '../TrendingBadge/TrendingBadge';
 import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
-import { ipfsContentService } from '../../services/ipfsContentService';
+import { IPFSContentService } from '../../services/ipfsContentService';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -48,7 +48,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
     const fetchContent = async () => {
       if (post.contentCid) {
         try {
-          const contentText = await ipfsContentService.getContentFromIPFS(post.contentCid);
+          const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
           setContent(contentText);
         } catch (error) {
           console.error('Failed to fetch content:', error);

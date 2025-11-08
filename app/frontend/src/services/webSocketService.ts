@@ -1,13 +1,26 @@
 import { io, Socket } from 'socket.io-client';
 
 // Get the WebSocket URL from environment variables, fallback to backend URL
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+// Dynamically detect WebSocket URL based on environment
+const getWebSocketUrl = () => {
+  // In browser, use current origin
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    return `${protocol}//${host}`;
+  }
+  // Fallback for SSR
+  return process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+};
+
+const WS_URL = getWebSocketUrl();
 
 // Add fallback URLs
 const WS_FALLBACK_URLS = [
   process.env.NEXT_PUBLIC_WS_URL,
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http://', 'ws://').replace('https://', 'wss://'),
-  'ws://localhost:10000'
+  // Only use localhost in development
+  ...(process.env.NODE_ENV === 'development' ? ['ws://localhost:10000'] : [])
 ].filter(Boolean) as string[];
 
 interface WebSocketConfig {
