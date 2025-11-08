@@ -1,13 +1,13 @@
-import { db } from '../db/index.js';
+import { db } from '../db/index.ts';
 import { 
   returns, 
   returnPolicies, 
   returnStatusHistory, 
   refundTransactions 
-} from '../db/schema.js';
+} from '../db/schema.ts';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger.js';
+import { safeLogger } from '../utils/logger.ts';
 
 export interface CreateReturnRequest {
   orderId: string;

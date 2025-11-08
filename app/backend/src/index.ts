@@ -128,8 +128,8 @@ let cacheWarmingService: any = null;
 async function initializeServices() {
   if (!cacheService) {
     try {
-      // Explicitly import the JavaScript version
-      const cacheModule: any = await import('./services/cacheService.js');
+      // Explicitly import the TypeScript version
+      const cacheModule: any = await import('./services/cacheService.ts');
       if (cacheModule.default) {
         // If it's a class, we need to create an instance
         if (typeof cacheModule.default === 'function') {

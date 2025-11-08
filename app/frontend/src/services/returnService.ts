@@ -1,4 +1,5 @@
-import { apiClient } from '../config/api';
+import { fetchWithRetry } from '../utils/apiUtils';
+import { API_BASE_URL } from '../config/api';
 
 export interface CreateReturnRequest {
   orderId: string;
@@ -24,51 +25,69 @@ export interface RefundRequest {
 
 class ReturnService {
   async createReturn(request: CreateReturnRequest) {
-    const response = await apiClient.post('/returns', request);
-    return response.data;
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+
+    return res;
   }
 
   async getReturn(returnId: string) {
-    const response = await apiClient.get(`/returns/${returnId}`);
-    return response.data;
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}`);
+    return res;
   }
 
   async getUserReturns(userId: string, role: 'buyer' | 'seller', limit = 20, offset = 0) {
-    const response = await apiClient.get(`/returns/user/${userId}`, {
-      params: { role, limit, offset }
-    });
-    return response.data;
+    const params = new URLSearchParams({ role, limit: String(limit), offset: String(offset) });
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/user/${userId}?${params.toString()}`);
+    return res;
   }
 
   async approveReturn(returnId: string, approverId: string, notes?: string) {
-    const response = await apiClient.post(`/returns/${returnId}/approve`, {
-      approverId,
-      notes
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approverId, notes })
     });
-    return response.data;
+
+    return res;
   }
 
   async rejectReturn(returnId: string, rejectorId: string, reason: string) {
-    const response = await apiClient.post(`/returns/${returnId}/reject`, {
-      rejectorId,
-      reason
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${returnId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejectorId, reason })
     });
-    return response.data;
+
+    return res;
   }
 
   async processRefund(request: RefundRequest) {
-    const response = await apiClient.post(`/returns/${request.returnId}/refund`, request);
-    return response.data;
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/returns/${request.returnId}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
+
+    return res;
   }
 
   async getReturnPolicy(sellerId: string) {
-    const response = await apiClient.get(`/return-policies/${sellerId}`);
-    return response.data;
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/return-policies/${sellerId}`);
+    return res;
   }
 
   async saveReturnPolicy(policy: any) {
-    const response = await apiClient.post('/return-policies', policy);
-    return response.data;
+    const res = await fetchWithRetry<any>(`${API_BASE_URL}/return-policies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy)
+    });
+
+    return res;
   }
 }
 

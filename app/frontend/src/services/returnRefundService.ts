@@ -221,23 +221,18 @@ class ReturnRefundService {
     error?: string;
   }> {
     try {
-      // Call the backend API to process the refund
-      const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/refund`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ provider: paymentProvider })
-        }
-      );
+      // Call the backend API to process the refund.
+      // fetchWithRetry will throw an ApiError for non-2xx responses, so we can
+      // directly ask for the typed response body here.
+      const data = await fetchWithRetry<{
+        transactionHash?: string;
+        refundId?: string;
+      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: paymentProvider })
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process refund');
-      }
-
-      const data = await response.json();
-      
       // Return success response with transaction details
       return {
         success: true,
@@ -292,7 +287,8 @@ class ReturnRefundService {
     acceptsReturns: boolean;
   }): Promise<{ success: boolean; policyId?: string; error?: string }> {
     try {
-      const response = await fetchWithRetry(
+      // fetchWithRetry returns parsed JSON when using a generic type.
+      const data = await fetchWithRetry<{ id: string }>(
         `${API_BASE_URL}/marketplace/return-policies`,
         {
           method: 'POST',
@@ -301,7 +297,6 @@ class ReturnRefundService {
         }
       );
 
-      const data = await response;
       return { success: true, policyId: data.id };
     } catch (error) {
       console.error('Error creating return policy:', error);
@@ -429,20 +424,25 @@ class ReturnRefundService {
     carrier: 'usps' | 'ups' | 'fedex';
   }): Promise<{ success: boolean; labelUrl?: string; trackingNumber?: string; error?: string }> {
     try {
-      const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/label`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        }
-      );
+      const res = await fetchWithRetry<{
+        labelUrl?: string;
+        trackingNumber?: string;
+        success?: boolean;
+        error?: string;
+      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/label`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate return label');
-      }
-
-      return await response.json();
+      // Normalize the backend response into the expected shape. Some backends
+      // may omit the `success` boolean; coerce to boolean to satisfy typings.
+      return {
+        success: !!res.success,
+        labelUrl: res.labelUrl,
+        trackingNumber: res.trackingNumber,
+        error: res.error
+      };
     } catch (error) {
       console.error('Error generating return label:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to generate label' };
@@ -461,20 +461,17 @@ class ReturnRefundService {
     previousReturns: number;
   }): Promise<{ riskScore: number; riskLevel: 'low' | 'medium' | 'high'; flags: string[] }> {
     try {
-      const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/risk-assessment`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        }
-      );
+      const res = await fetchWithRetry<{
+        riskScore: number;
+        riskLevel: 'low' | 'medium' | 'high';
+        flags: string[];
+      }>(`${API_BASE_URL}/marketplace/returns/${returnId}/risk-assessment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to get risk assessment');
-      }
-
-      return await response.json();
+      return res;
     } catch (error) {
       console.error('Error getting risk assessment:', error);
       return { riskScore: 0, riskLevel: 'low', flags: [] };

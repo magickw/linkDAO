@@ -12,7 +12,6 @@ import { BoostButton } from '@/components/Staking/BoostButton';
 import { RealTimeStakingUpdates } from '@/components/Staking/RealTimeStakingUpdates';
 import { EnhancedLeftSidebar } from '@/components/CommunityEnhancements/EnhancedLeftSidebar/EnhancedLeftSidebar';
 import CommunityRightSidebar from '@/components/Community/CommunityRightSidebar';
-import { CreateCommunityModal } from '@/components/CommunityEnhancements/Modals/CreateCommunityModal';
 import TokenReactionSystem from '@/components/TokenReactionSystem/TokenReactionSystem';
 import { EnhancedTipButton } from '@/components/Web3PostInteractions/EnhancedTipButton';
 import { OnChainVerificationBadge } from '@/components/OnChainVerification/OnChainVerificationBadge';
@@ -37,12 +36,6 @@ import TokenPriceSparkline, { generateMockPriceHistory } from '@/components/Comm
 import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPulse';
 import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { RecentAndFollowedCommunities } from '@/components/CommunityEnhancements/EnhancedLeftSidebar/RecentAndFollowedCommunities';
-
-// Contract service for deployed addresses
-import { getLDAOTokenAddress, getLDAOTreasuryAddress } from '@/services/contractService';
-// First post service for creating greeting posts
-import { createFirstGreetingPost } from '@/services/firstPostService';
 
 import {
   TrendingUp,
@@ -62,39 +55,93 @@ import {
   Coins,
   Shield,
   Vote,
-  Trophy,
-  X
+  Trophy
 } from 'lucide-react';
 import { CommunityService } from '@/services/communityService';
-import { CommunityPostService } from '@/services/communityPostService';
-import { CommunityInteractionService } from '@/services/communityInteractionService';
-import { CommunityMembershipService } from '@/services/communityMembershipService';
-import { CommunityRankingService } from '@/services/communityRankingService';
-import { FeedService } from '@/services/feedService';
 import { Community } from '@/models/Community';
-import { FeedSortType, FeedFilter } from '@/types/feed';
-import { useAccount } from 'wagmi';
-import { transformCommunitiesWithUserContext } from '@/utils/communityTransformers';
+import { FeedSortType } from '@/types/feed';
 
-const CommunitiesPage = () => {
+// Mock data for demonstration - will be removed
+const mockCommunities = [
+  {
+    id: 'ethereum-builders',
+    name: 'ethereum-builders',
+    displayName: 'Ethereum Builders',
+    description: 'Building the future of Ethereum ecosystem',
+    memberCount: 12400,
+    avatar: '🔷',
+    banner: 'https://placehold.co/800x200/667eea/ffffff?text=Ethereum+Builders',
+    category: 'Development',
+    tags: ['ethereum', 'development', 'smart-contracts'],
+    isPublic: true,
+    rules: ['Be respectful', 'No spam', 'Share quality content'],
+    moderators: ['0x1234...5678'],
+    treasuryAddress: '0x1234567890123456789012345678901234567890',
+    governanceToken: 'ETH-BUILD',
+    createdAt: new Date('2023-01-15'),
+    updatedAt: new Date(),
+    settings: {
+      allowedPostTypes: [],
+      requireApproval: false,
+      minimumReputation: 0,
+      stakingRequirements: []
+    }
+  },
+  {
+    id: 'defi-traders',
+    name: 'defi-traders',
+    displayName: 'DeFi Traders',
+    description: 'Decentralized Finance trading strategies and insights',
+    memberCount: 8900,
+    avatar: '💰',
+    banner: 'https://placehold.co/800x200/10b981/ffffff?text=DeFi+Traders',
+    category: 'Finance',
+    tags: ['defi', 'trading', 'yield-farming'],
+    isPublic: true,
+    rules: ['No financial advice', 'Share research', 'Verify claims'],
+    moderators: ['0x2345...6789'],
+    treasuryAddress: '0x2345678901234567890123456789012345678901',
+    governanceToken: 'DEFI-TRD',
+    createdAt: new Date('2023-02-20'),
+    updatedAt: new Date(),
+    settings: {
+      allowedPostTypes: [],
+      requireApproval: false,
+      minimumReputation: 100,
+      stakingRequirements: []
+    }
+  },
+  {
+    id: 'nft-collectors',
+    name: 'nft-collectors',
+    displayName: 'NFT Collectors',
+    description: 'Discover, trade, and showcase NFT collections',
+    memberCount: 21000,
+    avatar: '🎨',
+    banner: 'https://placehold.co/800x200/8b5cf6/ffffff?text=NFT+Collectors',
+    category: 'Art',
+    tags: ['nft', 'art', 'collectibles'],
+    isPublic: true,
+    rules: ['Original content only', 'No price manipulation', 'Respect artists'],
+    moderators: ['0x3456...7890'],
+    treasuryAddress: '0x3456789012345678901234567890123456789012',
+    governanceToken: 'NFT-COL',
+    createdAt: new Date('2023-03-10'),
+    updatedAt: new Date(),
+    settings: {
+      allowedPostTypes: [],
+      requireApproval: false,
+      minimumReputation: 50,
+      stakingRequirements: []
+    }
+  }
+];
+
+// Mock posts removed - now fetching from backend API
+
+const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
-  const { address, isConnected } = useAccount();
-
-  // Add error boundary for the whole component
-  const [componentError, setComponentError] = useState<Error | null>(null);
-
-  // Catch any errors during rendering
-  useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('Communities page runtime error:', event.error);
-      setComponentError(event.error);
-    };
-    
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
@@ -105,9 +152,9 @@ const CommunitiesPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
-
-  // Web3 mobile state - derived from wallet connection
-  const walletConnected = isConnected;
+  
+  // Web3 mobile state
+  const [walletConnected, setWalletConnected] = useState(false);
   const [userBalance, setUserBalance] = useState(1250);
   const [stakingRewards, setStakingRewards] = useState(45);
   const [governanceNotifications, setGovernanceNotifications] = useState(3);
@@ -128,10 +175,7 @@ const CommunitiesPage = () => {
   const [stakingData, setStakingData] = useState<Record<string, any>>({});
   const [governanceProposals, setGovernanceProposals] = useState<any[]>([]);
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
-
-  // Trending communities with ranking scores
-  const [trendingCommunities, setTrendingCommunities] = useState<any[]>([]);
-
+  
   // Hover preview state with debouncing
   const [hoveredPost, setHoveredPost] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
@@ -142,13 +186,8 @@ const CommunitiesPage = () => {
   
   // Keyboard shortcuts state
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
-  
-  // Create community modal state
-  const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
-  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
 
-  
   // Load communities and enhanced Web3 data on component mount
   useEffect(() => {
     const loadEnhancedCommunities = async () => {
@@ -168,106 +207,6 @@ const CommunitiesPage = () => {
           // Instead of using mock data, show empty array
           communitiesData = [];
         }
-        
-        // ✅ Ensure the LinkDAO community exists
-        let linkDAOCommunity = communitiesData.find(c => c.name === 'linkdao');
-        
-        if (!linkDAOCommunity && isConnected && address) {
-          try {
-            // Use the deployed addresses from the contract service
-            const treasuryAddress = getLDAOTreasuryAddress();
-            const governanceToken = getLDAOTokenAddress();
-            
-            linkDAOCommunity = await CommunityService.createCommunity({
-              name: 'linkdao',
-              displayName: 'LinkDAO',
-              description: 'The official LinkDAO community - A decentralized social platform built on Ethereum combining blockchain technology with social networking.',
-              rules: [
-                'Be respectful to all community members',
-                'No spam or promotional content',
-                'Stay on topic and contribute meaningfully',
-                'No hate speech or harassment'
-              ],
-              category: 'dao',
-              tags: ['decentralized', 'social', 'ethereum', 'web3'],
-              isPublic: true,
-              treasuryAddress: treasuryAddress,
-              governanceToken: governanceToken,
-              settings: {
-                allowedPostTypes: [
-                  { id: 'discussion', name: 'Discussion', description: 'General discussion posts', enabled: true },
-                  { id: 'proposal', name: 'Proposal', description: 'Governance proposals', enabled: true },
-                  { id: 'announcement', name: 'Announcement', description: 'Community announcements', enabled: true }
-                ],
-                requireApproval: false,
-                minimumReputation: 0,
-                stakingRequirements: []
-              }
-            });
-            
-            // Add the newly created community to the list if it's not already there
-            if (!communitiesData.find(c => c.id === linkDAOCommunity.id)) {
-              communitiesData = [...communitiesData, linkDAOCommunity];
-            }
-            
-            // Create the first greeting post if this is a new community
-            try {
-              const greetingPost = await createFirstGreetingPost(linkDAOCommunity.id);
-              if (!greetingPost) {
-                console.warn('Failed to create greeting post for new community');
-              } else {
-                console.log('Successfully created greeting post for new community');
-              }
-            } catch (postError) {
-              console.error('Error creating greeting post:', postError);
-            }
-          } catch (createError) {
-            console.error('Failed to create LinkDAO community:', createError);
-            // Continue with existing communities if creation fails
-          }
-        } else if (linkDAOCommunity) {
-          // Ensure the LinkDAO community is at the beginning of the list
-          communitiesData = [
-            linkDAOCommunity,
-            ...communitiesData.filter(c => c.name !== 'linkdao')
-          ];
-          
-          // Automatically join new users to LinkDAO community if they haven't joined any communities yet
-          // and they're connected with a wallet
-          if (isConnected && address && joinedCommunities.length === 0) {
-            try {
-              // Check if user is already a member
-              const membership = await CommunityMembershipService.getMembership(
-                linkDAOCommunity.id,
-                address
-              );
-              
-              const isMember = !!membership;
-              
-              if (!isMember) {
-                // Join the user to the LinkDAO community
-                const result = await CommunityInteractionService.joinCommunity({
-                  communityId: linkDAOCommunity.id,
-                  userAddress: address
-                });
-                
-                if (result.success && result.data) {
-                  setJoinedCommunities(prev => [...prev, linkDAOCommunity.id]);
-                  setUserRoles(prev => ({ ...prev, [linkDAOCommunity.id]: result.data!.role }));
-                }
-              } else {
-                // User is already a member, add to joined communities if not already there
-                if (!joinedCommunities.includes(linkDAOCommunity.id)) {
-                  setJoinedCommunities(prev => [...prev, linkDAOCommunity.id]);
-                  setUserRoles(prev => ({ ...prev, [linkDAOCommunity.id]: membership.role }));
-                }
-              }
-            } catch (joinError) {
-              console.error('Error joining user to LinkDAO community:', joinError);
-            }
-          }
-        }
-        
         setCommunities(communitiesData);
 
         // Load enhanced Web3 data
@@ -285,63 +224,32 @@ const CommunitiesPage = () => {
     };
 
     loadEnhancedCommunities();
-  }, [isConnected, address]);
-
-  // Fetch trending communities from the service
-  useEffect(() => {
-    const fetchTrendingCommunities = async () => {
-      try {
-        const trending = await CommunityRankingService.getTrendingCommunities({ limit: 10 });
-        setTrendingCommunities(trending);
-      } catch (error) {
-        console.error('Failed to fetch trending communities:', error);
-        setTrendingCommunities([]);
-      }
-    };
-
-    fetchTrendingCommunities();
   }, []);
 
-  // Load posts from backend API with pagination using CommunityPostService
+  // Load posts from backend API with pagination
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
     try {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
-
-      // Ensure we're showing posts from the LinkDAO community if no communities are joined
-      let effectiveCommunities = joinedCommunities;
-      if (joinedCommunities.length === 0 && communities.length > 0) {
-        // Find the LinkDAO community
-        const linkDAOCommunity = communities.find(c => c.name === 'linkdao');
-        if (linkDAOCommunity) {
-          effectiveCommunities = [linkDAOCommunity.id];
-        }
-      }
-
-      const feedFilter: FeedFilter = {
-        sortBy: sortBy as FeedSortType,
+      
+      // Import FeedService dynamically to avoid circular dependencies
+      const { FeedService } = await import('../services/feedService');
+      
+      const response = await FeedService.getEnhancedFeed({
+        sortBy: sortBy,
         timeRange: timeFilter,
-        communities: effectiveCommunities.length > 0 ? effectiveCommunities : undefined,
-        feedSource: effectiveCommunities.length > 0 ? 'all' : 'all'
-      };
-
-      const response = await FeedService.getEnhancedFeed(feedFilter, pageNum, 20);
-
-      // Validate response
-      if (!response || !Array.isArray(response.posts)) {
-        console.warn('Invalid feed response:', response);
-        if (!append) setPosts([]);
-        setHasMore(false);
-        return;
-      }
-
+        feedSource: 'all'
+      }, pageNum, 20);
+      
+      const newPosts = response.posts || [];
+      
       if (append) {
-        setPosts(prev => [...prev, ...response.posts]);
+        setPosts(prev => [...prev, ...newPosts]);
       } else {
-        setPosts(response.posts);
+        setPosts(newPosts);
       }
-
-      setHasMore(response.hasMore);
+      
+      setHasMore(newPosts.length === 20);
       setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
@@ -412,45 +320,19 @@ const CommunitiesPage = () => {
   };
 
   const handleJoinCommunity = async (communityId: string) => {
-    if (!address) {
-      console.error('Wallet not connected');
-      // Show a toast or modal to prompt wallet connection
-      return;
-    }
-
     try {
       if (joinedCommunities.includes(communityId)) {
-        // Leave community using CommunityInteractionService
-        const result = await CommunityInteractionService.leaveCommunity({
-          communityId,
-          userAddress: address
-        });
-
-        if (result.success) {
-          setJoinedCommunities(prev => prev.filter(id => id !== communityId));
-          setUserRoles(prev => ({ ...prev, [communityId]: 'visitor' }));
-          if (isMobile) triggerHapticFeedback('success');
-        } else {
-          console.error('Failed to leave community:', result.message);
-        }
+        // Leave community - would need user address from wallet context
+        setJoinedCommunities(prev => prev.filter(id => id !== communityId));
+        setUserRoles(prev => ({ ...prev, [communityId]: 'visitor' }));
       } else {
-        // Join community using CommunityInteractionService
-        const result = await CommunityInteractionService.joinCommunity({
-          communityId,
-          userAddress: address
-        });
-
-        if (result.success && result.data) {
-          setJoinedCommunities(prev => [...prev, communityId]);
-          setUserRoles(prev => ({ ...prev, [communityId]: result.data!.role }));
-          if (isMobile) triggerHapticFeedback('success');
-        } else {
-          console.error('Failed to join community:', result.message);
-        }
+        // Join community - would need user address from wallet context
+        setJoinedCommunities(prev => [...prev, communityId]);
+        setUserRoles(prev => ({ ...prev, [communityId]: 'member' }));
       }
+      if (isMobile) triggerHapticFeedback('success');
     } catch (err) {
       console.error('Error joining/leaving community:', err);
-      // Show error toast to user
     }
   };
 
@@ -489,27 +371,6 @@ const CommunitiesPage = () => {
     } catch (err) {
       console.error('Error creating community:', err);
       throw err;
-    }
-  };
-
-  const handleCreateCommunityClick = async (_communityData: any): Promise<void> => {
-    setShowCreateCommunityModal(true);
-  };
-
-  const handleCloseCreateCommunityModal = () => {
-    setShowCreateCommunityModal(false);
-  };
-
-  const handleCreateCommunitySubmit = async (communityData: any) => {
-    setIsCreatingCommunity(true);
-    try {
-      await handleCreateCommunity(communityData);
-      setShowCreateCommunityModal(false);
-    } catch (error) {
-      console.error('Failed to create community:', error);
-      throw error;
-    } finally {
-      setIsCreatingCommunity(false);
     }
   };
 
@@ -618,23 +479,15 @@ const CommunitiesPage = () => {
 
 
 
+  // Show posts from followed communities and suggested posts for home feed
+  const filteredPosts = posts.filter(post => 
+    joinedCommunities.includes(post.communityId) || // Posts from joined communities
+    post.upvotes > 100 || // Popular posts (suggested)
+    post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) // Interest-based suggestions
+  );
+
   // Defensive: normalize communities to array for rendering
   const communityList: Community[] = Array.isArray(communities) ? communities : [];
-
-  // Show posts from followed communities and suggested posts for home feed
-  const filteredPosts = Array.isArray(posts) ? posts.filter(post => {
-    // Defensive checks
-    if (!post || !post.communityId) return false;
-    if (!Array.isArray(post.tags)) post.tags = [];
-    
-    return (
-      joinedCommunities.includes(post.communityId) || // Posts from joined communities
-      post.upvotes > 100 || // Popular posts (suggested)
-      post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) || // Interest-based suggestions
-      // Show posts from LinkDAO community when no communities are joined
-      (joinedCommunities.length === 0 && communityList.find(c => c.name === 'linkdao')?.id === post.communityId)
-    );
-  }) : [];
 
   // Mobile Web3 community data
   const communityData = communityList.map(community => ({
@@ -649,36 +502,218 @@ const CommunitiesPage = () => {
     stakingRewards: Math.floor(Math.random() * 20)
   }));
 
-  // Remove the custom mobile implementation and use the standard Layout component for both mobile and desktop
-
-  // Add error logging
-  if (error) {
-    console.error('Communities page error:', error);
-  }
-
-  // Show component error if it exists
-  if (componentError) {
+  if (isMobile) {
     return (
-      <Layout title="Communities - LinkDAO Enhanced" fullWidth={true}>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Communities</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">{componentError.message}</p>
-            <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded text-xs overflow-auto mb-4">
-              {componentError.stack}
-            </pre>
-            <button
-              onClick={() => {
-                setComponentError(null);
-                window.location.reload();
-              }}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
-            >
-              Reload Page
-            </button>
+      <ErrorBoundary>
+        <VisualPolishIntegration>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <Head>
+              <title>Communities - LinkDAO Enhanced</title>
+              <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
+            </Head>
+
+            {/* Enhanced Mobile Header */}
+            <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">Communities</h1>
+                  <div className="flex items-center space-x-2">
+                    {/* Governance Notifications */}
+                    {governanceNotifications > 0 && (
+                      <div className="relative">
+                        <button className={`p-2 text-gray-600 hover:text-gray-900 ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}`}>
+                          <Vote className="w-5 h-5" />
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            {governanceNotifications}
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Web3 Data Display */}
+            <div className="p-4">
+              <MobileWeb3DataDisplay
+                tokenData={{
+                  symbol: 'LDAO',
+                  balance: userBalance,
+                  value: userBalance * 0.5,
+                  change24h: 2.5,
+                  price: 0.5
+                }}
+                stakingData={{
+                  totalStaked: 500,
+                  rewards: stakingRewards,
+                  apy: 12.5,
+                  lockPeriod: '30 days'
+                }}
+                governanceData={{
+                  votingPower: 150,
+                  activeProposals: governanceNotifications,
+                  votesParticipated: 8,
+                  totalProposals: 12
+                }}
+                gasPrice={25}
+                networkName="Ethereum"
+                compact={true}
+              />
+            </div>
+
+            {/* Real-Time Staking Updates */}
+            <div className="px-4 mb-4">
+              <RealTimeStakingUpdates
+                communityIds={joinedCommunities}
+                className="bg-white rounded-lg shadow-sm border p-3"
+                showAnimations={true}
+              />
+            </div>
+
+            {/* Collapsible Sidebar */}
+            <div className="px-4 mb-4">
+              <CollapsibleWeb3Sidebar
+                communities={communityData}
+                currentCommunity={undefined}
+                onCommunitySelect={(id) => {
+                  const community = communityList.find(c => c.id === id);
+                  if (community) {
+                    router.push(`/dao/${community.name}`);
+                  }
+                }}
+                onCreateCommunity={() => router.push('/create-community')}
+                walletConnected={walletConnected}
+                totalStakingRewards={stakingRewards}
+                governanceNotifications={governanceNotifications}
+              />
+            </div>
+
+            {/* Enhanced Mobile Posts Feed */}
+            <div className="px-4 pb-24 space-y-4">
+              {/* Mobile Loading State */}
+              {loading && (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <div className="h-3 bg-gray-200 rounded w-1/3" />
+                          <div className="h-2 bg-gray-200 rounded w-1/4" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-12 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Mobile Empty State */}
+              {!loading && filteredPosts.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Users className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No posts yet
+                  </h3>
+                  <p className="text-gray-500 mb-6 px-4">
+                    {joinedCommunities.length === 0 
+                      ? "Join communities to see posts"
+                      : "Be the first to post!"
+                    }
+                  </p>
+                  <button
+                    onClick={handleCreatePost}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Create Post
+                  </button>
+                </div>
+              )}
+
+              {filteredPosts.map(post => {
+                const community = communityList.find(c => c.id === post.communityId);
+                const stakingInfo = stakingData[post.communityId];
+                
+                return (
+                  <CompactWeb3PostCard
+                    key={post.id}
+                    post={{
+                      id: post.id,
+                      title: post.title,
+                      content: post.content,
+                      author: {
+                        name: post.authorName,
+                        avatar: '👤',
+                        address: post.author
+                      },
+                      community: {
+                        name: community?.displayName || 'Unknown',
+                        avatar: community?.avatar || '🏛️'
+                      },
+                      metrics: {
+                        upvotes: post.upvotes,
+                        comments: post.commentCount,
+                        views: Math.floor(Math.random() * 1000),
+                        stakingAmount: post.stakedTokens,
+                        stakerCount: Math.floor(Math.random() * 50)
+                      },
+                      timestamp: new Date(post.createdAt).toLocaleDateString(),
+                      isUpvoted: false,
+                      isSaved: false,
+                      postType: post.type as any,
+                      onChainProof: post.isStaked
+                    }}
+                    onUpvote={() => handleUpvote(post.id)}
+                    onComment={() => handleComment(post.id)}
+                    onShare={() => handleShare(post.id)}
+                    onSave={() => handleSave(post.id)}
+                    onTip={(amount?: number) => handleTip(post.id, amount)}
+                    onStake={() => handleStake(post.id)}
+                    onViewPost={() => handleViewPost(post.id)}
+                    walletConnected={walletConnected}
+                  />
+                );
+              })}
+
+              {/* Mobile Load More */}
+              {loadingMore && (
+                <div className="flex justify-center py-6">
+                  <div className="flex items-center space-x-2 text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                    <span className="text-sm">Loading...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile End of Feed */}
+              {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
+                <div className="text-center py-6">
+                  <p className="text-gray-500 text-sm">
+                    You've reached the end! 🎉
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Floating Action Button */}
+            <div className="fixed bottom-20 right-4 z-50">
+              <button
+                onClick={handleCreatePost}
+                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-w-[44px] min-h-[44px]"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
           </div>
-        </div>
-      </Layout>
+        </VisualPolishIntegration>
+      </ErrorBoundary>
     );
   }
 
@@ -686,242 +721,97 @@ const CommunitiesPage = () => {
     <ErrorBoundary>
       <VisualPolishIntegration>
         <Layout title="Communities - LinkDAO Enhanced" fullWidth={true}>
-          <>
-            <Head>
-              <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
-            </Head>
+          <Head>
+            <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
+          </Head>
 
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-              <div className="grid grid-cols-12 gap-4 sm:gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl py-6">
-            {/* Enhanced Left Sidebar - Discovery + Actions */}
+          <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
+            {/* Enhanced Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
-                {/* Dynamic Onboarding Flow - Show when no communities joined */}
-                {joinedCommunities.length === 0 && (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="text-center">
-                      <div className="text-4xl mb-4">👋</div>
-                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Welcome to LinkDAO</h2>
-                      <p className="text-gray-600 dark:text-gray-300 mb-6">
-                        Start your DAO journey — explore, vote, and connect.
-                      </p>
-                      
-                      <div className="space-y-4 mb-6">
-                        {/* Step 1: Select Interests */}
-                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-2xl">🪐</span>
-                            <div className="text-left">
-                              <h3 className="font-medium text-gray-900 dark:text-white">Step 1: Select Interests</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Choose what you're passionate about</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Step 2: Join or Create a DAO */}
-                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-2xl">🗳</span>
-                            <div className="text-left">
-                              <h3 className="font-medium text-gray-900 dark:text-white">Step 2: Join or Create a DAO</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Connect with like-minded people</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Step 3: Post or Vote */}
-                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-2xl">💬</span>
-                            <div className="text-left">
-                              <h3 className="font-medium text-gray-900 dark:text-white">Step 3: Post or Vote</h3>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Share ideas and participate in governance</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => router.push('/communities?sort=trending')}
-                        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all w-full"
-                      >
-                        Explore Communities
-                      </button>
-                      
-                      <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
-                        Start your DAO journey — explore, vote, and connect.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent and Followed Communities - This replaces the "Your Communities" section */}
-                <RecentAndFollowedCommunities 
-                  allCommunities={communityList} 
-                  joinedCommunityIds={joinedCommunities} 
-                  onLeaveCommunity={handleJoinCommunity}
+              <div className="sticky top-24 space-y-4">
+                <EnhancedLeftSidebar
+                  communities={communityList.map(community => ({
+                    ...community,
+                    icon: community.avatar || '🏛️',
+                    isActive: joinedCommunities.includes(community.id),
+                    brandColors: {
+                      primary: '#6366f1',
+                      secondary: '#8b5cf6',
+                      accent: '#06b6d4'
+                    },
+                    userMembership: {
+                      isJoined: joinedCommunities.includes(community.id),
+                      joinDate: new Date(),
+                      reputation: Math.floor(Math.random() * 1000),
+                      tokenBalance: tokenBalances[community.id] || 0
+                    },
+                    activityMetrics: {
+                      postsToday: Math.floor(Math.random() * 50),
+                      activeMembers: Math.floor(Math.random() * 1000),
+                      trendingScore: Math.floor(Math.random() * 100),
+                      engagementRate: Math.random(),
+                      activityLevel: 'high' as const
+                    },
+                    governance: {
+                      activeProposals: Math.floor(Math.random() * 5),
+                      userVotingPower: Math.floor(Math.random() * 500),
+                      participationRate: Math.random()
+                    },
+                    governanceNotifications: Math.floor(Math.random() * 3)
+                  }))}
+                  selectedCommunity={undefined}
+                  availableFilters={[
+                    { id: 'defi', label: 'DeFi' },
+                    { id: 'nft', label: 'NFT' },
+                    { id: 'governance', label: 'Governance' },
+                    { id: 'high-activity', label: 'High Activity' }
+                  ]}
+                  selectedFilters={selectedFilters}
+                  userRoles={userRoles as Record<string, 'member' | 'admin' | 'moderator'>}
+                  tokenBalances={tokenBalances}
+                  onCommunitySelect={(communityId) => {
+                    const community = communityList.find(c => c.id === communityId);
+                    if (community) router.push(`/dao/${community.name}`);
+                  }}
+                  onFiltersChange={handleFiltersChange}
+                  onQuickAction={handleQuickAction}
+                  onCreateCommunity={handleCreateCommunity}
                 />
-
-                {/* Trending Communities Section - Moved from center content to sidebar */}
-                {trendingCommunities.length > 0 && (
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-                        <TrendingUp className="w-4 h-4 mr-2 text-orange-500" />
-                        Trending
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Top 5</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {trendingCommunities.slice(0, 5).map((community, index) => (
-                        <div
-                          key={community.id}
-                          onClick={() => router.push(`/dao/${community.name}`)}
-                          className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors"
-                        >
-                          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-pink-500 text-white text-xs font-bold">
-                            #{index + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-1">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {community.icon} {community.name}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                              <span>{community.memberCount.toLocaleString()} members</span>
-                              <span>•</span>
-                              <span className="flex items-center text-orange-500">
-                                <TrendingUp className="w-3 h-3 mr-1" />
-                                {Math.round(community.growthMetrics.trendingScore)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {trendingCommunities.length > 5 && (
-                      <Link
-                        href="/communities?sort=trending"
-                        className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline mt-3"
-                      >
-                        View all trending →
-                      </Link>
-                    )}
-                  </div>
-                )}
-
-                {/* Shortcuts Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Shortcuts</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={handleCreatePost}
-                      className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      title="New Post"
-                    >
-                      <span className="text-lg">✏️</span>
-                      <span className="text-xs mt-1">New Post</span>
-                    </button>
-                  
-                    <button 
-                      onClick={handleCreateCommunityClick}
-                      className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      title="New Community"
-                    >
-                      <span className="text-lg">🏗️</span>
-                      <span className="text-xs mt-1">New Community</span>
-                    </button>
-                  
-                    <button 
-                      onClick={() => router.push('/notifications')}
-                      className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      title="Notifications"
-                    >
-                      <span className="text-lg">🔔</span>
-                      <span className="text-xs mt-1">Notifications</span>
-                    </button>
-                  
-                    <button 
-                      onClick={() => router.push('/bookmarks')}
-                      className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                      title="Bookmarks"
-                    >
-                      <span className="text-lg">⭐</span>
-                      <span className="text-xs mt-1">Bookmarks</span>
-                    </button>
-                  
-                    <button 
-                      onClick={() => router.push('/activity')}
-                      className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors col-span-2"
-                      title="Activity Feed"
-                    >
-                      <span className="text-lg">📈</span>
-                      <span className="text-xs mt-1">Activity Feed</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Optional: Gamified Progress Tracker */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Your Progress</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <span className={joinedCommunities.length > 0 ? 'text-green-500' : 'text-gray-400'}>✓</span>
-                      <span className="text-sm">Joined first DAO</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-400">⬜</span>
-                      <span className="text-sm">Voted in proposal</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-gray-400">⬜</span>
-                      <span className="text-sm">Created post</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
             {/* Enhanced Center Feed */}
-            <div className="col-span-12 lg:col-span-6 space-y-4 sm:space-y-6">
+            <div className="col-span-12 lg:col-span-6">
               {/* Quick Filter Chips - Sticky */}
-              <div className="sticky top-16 sm:top-20 z-10 bg-gray-50 dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="sticky top-20 z-10 bg-white dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
                 <QuickFilterChips
                   activeFilters={activeQuickFilters}
                   onFilterToggle={handleQuickFilterToggle}
                   className="py-2"
                 />
               </div>
-            
-              {/* Show feed when user has joined communities */}
-              {joinedCommunities.length > 0 && (
-                <>
-                  {/* Live Post Updates */}
-                  <div className="mb-4 sm:mb-6">
-                    <LivePostUpdates
-                      postIds={filteredPosts.map(p => p.id)}
-                      className="bg-white rounded-lg shadow-sm border"
-                      showAnimations={true}
-                      maxUpdatesPerPost={3}
-                    />
-                  </div>
-                </>
-              )}
+              
+              {/* Live Post Updates */}
+              <div className="mb-6">
+                <LivePostUpdates
+                  postIds={filteredPosts.map(p => p.id)}
+                  className="bg-white rounded-lg shadow-sm border"
+                  showAnimations={true}
+                  maxUpdatesPerPost={3}
+                />
+              </div>
 
               {/* Enhanced Loading State */}
               {loading && (
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 animate-pulse">
-                      <div className="flex space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                      <div className="flex space-x-3">
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                          <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                          <div className="h-16 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
                         </div>
                       </div>
                     </div>
@@ -930,16 +820,16 @@ const CommunitiesPage = () => {
               )}
 
               {/* Enhanced Empty State with Error Handling */}
-              {!loading && joinedCommunities.length > 0 && filteredPosts.length === 0 && (
+              {!loading && filteredPosts.length === 0 && (
                 <EmptyStates
-                  type={error ? 'no-posts' : activeQuickFilters.length > 0 ? 'no-filter-results' : 'no-posts'}
+                  type={error ? 'no-posts' : joinedCommunities.length === 0 ? 'not-joined' : activeQuickFilters.length > 0 ? 'no-filter-results' : 'no-posts'}
                   onAction={error ? () => { setError(null); fetchPosts(1, false); } : handleCreatePost}
                   actionLabel={error ? 'Try Again' : undefined}
                   activeFilters={activeQuickFilters}
                 />
               )}
 
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-4">
                 {filteredPosts.map(post => {
                   const community = communityList.find(c => c.id === post.communityId);
                   const stakingInfo = stakingData[post.communityId];
@@ -978,16 +868,17 @@ const CommunitiesPage = () => {
                       >
                         <div className="flex">
                           {/* Enhanced Voting Section */}
-                          <div className="flex flex-col items-center p-2 sm:p-3 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
+                          <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'up', 1);
                               }}
-                              className="p-1.5 sm:p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors">
-                              <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                              className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
+                            >
+                              <ArrowUp className="w-5 h-5" />
                             </button>
-                            <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white py-1">
+                            <span className="text-sm font-bold text-gray-900 dark:text-white py-1">
                               {post.upvotes - post.downvotes}
                             </span>
                             <button
@@ -995,8 +886,9 @@ const CommunitiesPage = () => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'down', 1);
                               }}
-                              className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
-                              <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                            >
+                              <ArrowDown className="w-5 h-5" />
                             </button>
                             
                             {/* Staking Indicator */}
@@ -1017,7 +909,7 @@ const CommunitiesPage = () => {
                             )}
                           </div>
 
-                          <div className="flex-1 p-3 sm:p-4">
+                          <div className="flex-1 p-4">
                             {/* Simplified Post Header */}
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
@@ -1029,7 +921,7 @@ const CommunitiesPage = () => {
                                 <span>•</span>
                                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                               </div>
-                            
+                              
                               {/* Consolidated Web3 Status */}
                               {post.isStaked && (
                                 <div className="flex items-center space-x-1 text-xs">
@@ -1041,16 +933,16 @@ const CommunitiesPage = () => {
                               )}
                             </div>
 
-                            <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                               {post.title}
                             </h3>
 
-                            <p className="text-gray-700 dark:text-gray-300 mb-3 text-xs sm:text-sm line-clamp-3">
+                            <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-3">
                               {post.content}
                             </p>
 
                             {/* Simplified Tags - Show only first 3 */}
-                            <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                            <div className="flex flex-wrap gap-1 mb-3">
                               {post.tags.slice(0, 3).map(tag => (
                                 <span
                                   key={tag}
@@ -1068,25 +960,28 @@ const CommunitiesPage = () => {
 
                             {/* Streamlined Interaction Bar */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2 sm:space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                                <button
+                              <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                                <button 
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
-                                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                  <span className="hidden xs:inline">{post.commentCount}</span>
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                >
+                                  <MessageCircle className="w-4 h-4" />
+                                  <span>{post.commentCount}</span>
                                 </button>
-                              
-                                <button
+                                
+                                <button 
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
-                                  <Share className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                  <span className="hidden sm:inline">Share</span>
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                >
+                                  <Share className="w-4 h-4" />
+                                  <span>Share</span>
                                 </button>
-
-                                <button
+                                
+                                <button 
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
-                                  <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                >
+                                  <Bookmark className="w-4 h-4" />
                                 </button>
                               </div>
 
@@ -1094,9 +989,9 @@ const CommunitiesPage = () => {
                               <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
                                 {walletConnected && (
                                   <div className="relative group">
-                                    <button className="flex items-center space-x-1 px-2 sm:px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
+                                    <button className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
                                       <Coins className="w-3 h-3" />
-                                      <span className="hidden xs:inline">Web3</span>
+                                      <span>Web3</span>
                                     </button>
                                     
                                     {/* Dropdown Menu */}
@@ -1109,7 +1004,7 @@ const CommunitiesPage = () => {
                                       </button>
                                       <button
                                         onClick={() => handleBoost(post.id, 10)}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                                       >
                                         🚀 Boost Post
                                       </button>
@@ -1136,31 +1031,31 @@ const CommunitiesPage = () => {
 
               {/* Load More Indicator */}
               {loadingMore && (
-                <div className="flex justify-center py-6 sm:py-8">
+                <div className="flex justify-center py-8">
                   <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-600" />
-                    <span className="text-xs sm:text-sm">Loading more posts...</span>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+                    <span>Loading more posts...</span>
                   </div>
                 </div>
               )}
 
               {/* End of Feed Indicator */}
               {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
-                <div className="text-center py-6 sm:py-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
                     You've reached the end! 🎉
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Community-Focused Right Sidebar with Tabs */}
+            {/* Community-Focused Right Sidebar */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
-                <CommunityRightSidebar 
+              <div className="sticky top-24">
+                <CommunityRightSidebar
                   communities={communityList}
                   joinedCommunityIds={joinedCommunities}
-                  onCommunitySelect={(community) => router.push(`/dao/${community.name}`)}
+                  onCommunitySelect={handleCommunitySelect}
                 />
               </div>
             </div>
@@ -1184,22 +1079,12 @@ const CommunitiesPage = () => {
               position={hoverPosition}
             />
           )}
-        
+          
           {/* Keyboard Shortcuts Modal */}
           <KeyboardShortcutsModal
             isOpen={showKeyboardHelp}
             onClose={() => setShowKeyboardHelp(false)}
           />
-        
-          {/* Create Community Modal */}
-          <CreateCommunityModal
-            isOpen={showCreateCommunityModal}
-            onClose={handleCloseCreateCommunityModal}
-            onSubmit={handleCreateCommunitySubmit}
-            isLoading={isCreatingCommunity}
-          />
-        </div>
-        </>
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>
