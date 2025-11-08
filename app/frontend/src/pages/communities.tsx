@@ -669,10 +669,25 @@ const CommunitiesPage: React.FC = () => {
             </Head>
 
             {/* Enhanced Mobile Header */}
-            <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-40">
               <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">Communities</h1>
+                  <div className="flex items-center">
+                    {/* Hamburger menu button to access main navigation */}
+                    <button
+                      onClick={() => {
+                        // Dispatch a custom event to toggle the main navigation menu
+                        window.dispatchEvent(new CustomEvent('toggle-mobile-menu'));
+                      }}
+                      className="mr-3 p-2 text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      aria-label="Open navigation menu"
+                    >
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                      </svg>
+                    </button>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">Communities</h1>
+                  </div>
                   <div className="flex items-center space-x-2">
                     {/* Governance Notifications */}
                     {governanceNotifications > 0 && (
@@ -691,7 +706,7 @@ const CommunitiesPage: React.FC = () => {
             </div>
 
             {/* Mobile Navigation Bar - Added for user navigation */}
-            <div className="sticky top-16 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="sticky top-16 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <div className="flex overflow-x-auto py-2 px-2 hide-scrollbar">
                 {[
                   { name: 'Home', href: '/', icon: '🏠' },

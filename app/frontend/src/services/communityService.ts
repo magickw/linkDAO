@@ -9,6 +9,7 @@ import { communityPerformanceService } from './communityPerformanceService';
 import { requestManager } from './requestManager';
 import { communityCircuitBreaker } from './circuitBreaker';
 import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
+import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -61,13 +62,14 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/communities`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -358,13 +360,14 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/communities/${id}`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -420,13 +423,14 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/communities/${id}`,
         {
           method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           signal: controller.signal,
         },
         COMMUNITY_RETRY_OPTIONS

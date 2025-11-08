@@ -493,7 +493,7 @@ export class EnhancedMarketplaceService {
 
     try {
       // Preload categories
-      const response = await fetch(`${this.baseURL}/api/marketplace/categories`);
+      const response = await fetch(`${this.baseURL}/api/marketplace/listings/categories`);
       results.categories = response.ok;
     } catch (error) {
       console.warn('Failed to preload categories:', error);

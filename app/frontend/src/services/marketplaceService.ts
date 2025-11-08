@@ -960,7 +960,7 @@ export class UnifiedMarketplaceService {
 
   async getCategories(): Promise<CategoryInfo[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/categories`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/categories`, {
         signal: this.createTimeoutSignal(10000)
       });
 

@@ -1,15 +1,13 @@
 import { 
   CommunityMembership, 
-  CreateCommunityMembershipInput, 
+  CreateCommunityMembershipInput,
   UpdateCommunityMembershipInput,
-  CommunityMembershipStats 
+  CommunityMembershipStats
 } from '../models/CommunityMembership';
+import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
-const BACKEND_API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:10000';
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 /**
  * Community Membership API Service
@@ -35,11 +33,12 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/members`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify(data),
         signal: controller.signal,
       });
@@ -74,11 +73,12 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         signal: controller.signal,
       });
       
@@ -303,11 +303,12 @@ export class CommunityMembershipService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${communityId}/members/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify(data),
         signal: controller.signal,
       });

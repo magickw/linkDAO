@@ -2,15 +2,14 @@ import {
   CommunityPost, 
   CreateCommunityPostInput, 
   UpdateCommunityPostInput,
-  Comment,
-  CreateCommentInput,
-  UpdateCommentInput,
   VoteInput,
-  CommunityPostStats
+  CreateCommentInput,
+  Comment
 } from '../models/CommunityPost';
 import { CommunityOfflineCacheService } from './communityOfflineCacheService';
 import { fetchWithRetry, RetryOptions } from './retryUtils';
 import { communityPerformanceService } from './communityPerformanceService';
+import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -71,13 +70,14 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/communities/${data.communityId}/posts`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -330,13 +330,14 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/community-posts/${postId}`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -384,13 +385,14 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/community-posts/${postId}`,
         {
           method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           signal: controller.signal,
         },
         COMMUNITY_POST_RETRY_OPTIONS
@@ -440,13 +442,14 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/community-posts/${data.postId}/vote`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -516,13 +519,14 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}/community-posts/${data.postId}/comments`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: authHeaders,
           body: JSON.stringify(data),
           signal: controller.signal,
         },
@@ -532,24 +536,18 @@ export class CommunityPostService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        // Handle backend unavailable or endpoint not found
-        if (response.status === 503 || response.status === 404) {
-          console.warn('Backend unavailable, creating mock comment');
-          return this.createMockComment(data);
-        }
-        
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const error = await response.json();
         throw new Error(error.error || 'Failed to create comment');
       }
       
       const comment = await response.json();
       
-      // Track comment event for performance metrics
+      // Track comment creation event for performance metrics
       if (comment) {
         communityPerformanceService.trackEvent({
           eventType: 'comment_added',
-          communityId: '', // This would be retrieved from the post
-          userId: data.author,
+          communityId: data.communityId,
+          userId: data.authorId,
           timestamp: new Date(),
           metadata: {
             postId: data.postId,
@@ -559,42 +557,27 @@ export class CommunityPostService {
       }
       
       return comment;
-    } catch (error: unknown) {
+    } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'create_comment',
+          data: { postId: data.postId, commentData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Comment creation queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
       
-      // Handle network errors (backend down)
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.warn('Network error, creating mock comment');
-        return this.createMockComment(data);
-      }
-      
       throw error;
     }
-  }
-
-  /**
-   * Create a mock comment for development/offline use
-   */
-  private static createMockComment(data: CreateCommentInput): Comment {
-    return {
-      id: `mock-comment-${Date.now()}`,
-      postId: data.postId,
-      parentId: data.parentId,
-      author: data.author || 'MockUser',
-      content: data.content,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      upvotes: 0,
-      downvotes: 0,
-      replies: [],
-      depth: data.parentId ? 1 : 0,
-      isDeleted: false,
-      isEdited: false
-    };
   }
 
   /**

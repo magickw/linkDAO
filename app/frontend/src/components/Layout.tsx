@@ -50,7 +50,18 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   // Check if we're on the home/feed page
   const isHomePage = router.pathname === '/';
 
-  
+  // Add effect to listen for custom toggle event from communities page
+  useEffect(() => {
+    const handleToggleMenu = () => {
+      setIsMenuOpen(prev => !prev);
+    };
+    
+    window.addEventListener('toggle-mobile-menu', handleToggleMenu);
+    
+    return () => {
+      window.removeEventListener('toggle-mobile-menu', handleToggleMenu);
+    };
+  }, []);
 
   // Live badge counts
   const { conversations } = useChatHistory();
@@ -250,7 +261,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                     <li key={item.name}>
                       <Link
                         href={item.href}
-                        className={`group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${isActive
+                        className={`group relative flex items-center px-33 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${isActive
                             ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                             : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
                           } hover:scale-[1.03]`}
@@ -317,9 +328,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-2">
-            {/* Hamburger menu button - only show on non-home pages */}
-            
-          
             {/* Dark mode toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -340,7 +348,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
             <ConnectButton />
 
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => {
+                setIsMenuOpen(!isMenuOpen);
+              }}
               className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -356,7 +366,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
             <nav className="px-2 pt-2 pb-4 space-y-1">
               <ul className="space-y-1">
                 {allNavItems.map((item) => (
@@ -368,7 +378,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
                         }`}
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                      }}
                     >
                       <span className="mr-2">{item.icon}</span>
                       <span className="flex-1">{item.name}</span>

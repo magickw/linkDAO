@@ -10,7 +10,13 @@ import {
 } from '../models/CommunityMembership';
 import { ModerationQueue as ModerationQueueItem } from '../types/auth';
 import { requestManager } from './requestManager';
-import { analyticsService } from './analyticsService';
+import { 
+  CreatePostRequest, 
+  CreatePostResponse,
+  ModerationAction,
+  CommunitySettings
+} from '../models/Community';
+import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -481,11 +487,12 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for post creation
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           authorAddress: request.authorAddress,
           title: request.title,
@@ -547,11 +554,12 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // Longer timeout for AI operations
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           authorAddress: request.authorAddress,
           title: request.title,
@@ -611,11 +619,12 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${action.communityId}/moderate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           moderatorAddress: action.moderatorAddress,
           targetType: action.targetType,
@@ -672,11 +681,12 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
+      // Get authentication headers
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           moderatorAddress: settingsUpdate.moderatorAddress,
           settings: settingsUpdate.settings
