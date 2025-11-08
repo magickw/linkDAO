@@ -225,6 +225,29 @@ const OrdersPage: React.FC = () => {
           Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}
         </div>
       )}
+      
+      {/* Return Status */}
+      {order.returnEligible !== undefined && (
+        <div className="mt-3 flex items-center gap-2">
+          {order.returnEligible ? (
+            <>
+              <RefreshCw className="w-3 h-3 text-blue-400" />
+              <span className="text-blue-400 text-sm">
+                Eligible for return until {order.returnDeadline?.toLocaleDateString()}
+              </span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-3 h-3 text-yellow-400" />
+              <span className="text-yellow-400 text-sm">
+                {order.returnDeadline && new Date() > order.returnDeadline 
+                  ? 'Return period expired' 
+                  : 'Not eligible for return'}
+              </span>
+            </>
+          )}
+        </div>
+      )}
     </GlassPanel>
   );
 

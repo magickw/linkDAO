@@ -76,7 +76,7 @@ import { FeedSortType, FeedFilter } from '@/types/feed';
 import { useAccount } from 'wagmi';
 import { transformCommunitiesWithUserContext } from '@/utils/communityTransformers';
 
-const CommunitiesPage: React.FC = () => {
+const CommunitiesPage = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const { address, isConnected } = useAccount();
@@ -691,10 +691,11 @@ const CommunitiesPage: React.FC = () => {
               <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
             </Head>
 
-            <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+              <div className="grid grid-cols-12 gap-4 sm:gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl py-6">
             {/* Enhanced Left Sidebar - Discovery + Actions */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="sticky top-24 space-y-6">
+              <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
                 {/* Dynamic Onboarding Flow - Show when no communities joined */}
                 {joinedCommunities.length === 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
@@ -885,9 +886,9 @@ const CommunitiesPage: React.FC = () => {
             </div>
 
             {/* Enhanced Center Feed */}
-            <div className="col-span-12 lg:col-span-6">
+            <div className="col-span-12 lg:col-span-6 space-y-4 sm:space-y-6">
               {/* Quick Filter Chips - Sticky */}
-              <div className="sticky top-20 z-10 bg-white dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="sticky top-16 sm:top-20 z-10 bg-gray-50 dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
                 <QuickFilterChips
                   activeFilters={activeQuickFilters}
                   onFilterToggle={handleQuickFilterToggle}
@@ -899,7 +900,7 @@ const CommunitiesPage: React.FC = () => {
               {joinedCommunities.length > 0 && (
                 <>
                   {/* Live Post Updates */}
-                  <div className="mb-6">
+                  <div className="mb-4 sm:mb-6">
                     <LivePostUpdates
                       postIds={filteredPosts.map(p => p.id)}
                       className="bg-white rounded-lg shadow-sm border"
@@ -912,15 +913,15 @@ const CommunitiesPage: React.FC = () => {
 
               {/* Enhanced Loading State */}
               {loading && (
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-                      <div className="flex space-x-3">
-                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 animate-pulse">
+                      <div className="flex space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
                         <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                          <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                          <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                          <div className="h-16 sm:h-20 bg-gray-200 dark:bg-gray-700 rounded" />
                         </div>
                       </div>
                     </div>
@@ -938,7 +939,7 @@ const CommunitiesPage: React.FC = () => {
                 />
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredPosts.map(post => {
                   const community = communityList.find(c => c.id === post.communityId);
                   const stakingInfo = stakingData[post.communityId];
@@ -977,17 +978,16 @@ const CommunitiesPage: React.FC = () => {
                       >
                         <div className="flex">
                           {/* Enhanced Voting Section */}
-                          <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
+                          <div className="flex flex-col items-center p-2 sm:p-3 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'up', 1);
                               }}
-                              className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
-                            >
-                              <ArrowUp className="w-5 h-5" />
+                              className="p-1.5 sm:p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors">
+                              <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white py-1">
+                            <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white py-1">
                               {post.upvotes - post.downvotes}
                             </span>
                             <button
@@ -995,9 +995,8 @@ const CommunitiesPage: React.FC = () => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'down', 1);
                               }}
-                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                            >
-                              <ArrowDown className="w-5 h-5" />
+                              className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors">
+                              <ArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                             
                             {/* Staking Indicator */}
@@ -1018,7 +1017,7 @@ const CommunitiesPage: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="flex-1 p-4">
+                          <div className="flex-1 p-3 sm:p-4">
                             {/* Simplified Post Header */}
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
@@ -1042,16 +1041,16 @@ const CommunitiesPage: React.FC = () => {
                               )}
                             </div>
 
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
+                            <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                               {post.title}
                             </h3>
 
-                            <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-3">
+                            <p className="text-gray-700 dark:text-gray-300 mb-3 text-xs sm:text-sm line-clamp-3">
                               {post.content}
                             </p>
 
                             {/* Simplified Tags - Show only first 3 */}
-                            <div className="flex flex-wrap gap-1 mb-3">
+                            <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
                               {post.tags.slice(0, 3).map(tag => (
                                 <span
                                   key={tag}
@@ -1069,28 +1068,25 @@ const CommunitiesPage: React.FC = () => {
 
                             {/* Streamlined Interaction Bar */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                                <button 
+                              <div className="flex items-center space-x-2 sm:space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                                <button
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                                >
-                                  <MessageCircle className="w-4 h-4" />
-                                  <span>{post.commentCount}</span>
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
+                                  <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span className="hidden xs:inline">{post.commentCount}</span>
                                 </button>
                               
-                                <button 
+                                <button
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                                >
-                                  <Share className="w-4 h-4" />
-                                  <span>Share</span>
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
+                                  <Share className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span className="hidden sm:inline">Share</span>
                                 </button>
-                              
-                                <button 
+
+                                <button
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                                >
-                                  <Bookmark className="w-4 h-4" />
+                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-1.5 sm:px-2 py-1 rounded transition-colors">
+                                  <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                               </div>
 
@@ -1098,9 +1094,9 @@ const CommunitiesPage: React.FC = () => {
                               <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
                                 {walletConnected && (
                                   <div className="relative group">
-                                    <button className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
+                                    <button className="flex items-center space-x-1 px-2 sm:px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
                                       <Coins className="w-3 h-3" />
-                                      <span>Web3</span>
+                                      <span className="hidden xs:inline">Web3</span>
                                     </button>
                                     
                                     {/* Dropdown Menu */}
@@ -1140,18 +1136,18 @@ const CommunitiesPage: React.FC = () => {
 
               {/* Load More Indicator */}
               {loadingMore && (
-                <div className="flex justify-center py-8">
+                <div className="flex justify-center py-6 sm:py-8">
                   <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
-                    <span>Loading more posts...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-blue-600" />
+                    <span className="text-xs sm:text-sm">Loading more posts...</span>
                   </div>
                 </div>
               )}
 
               {/* End of Feed Indicator */}
               {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400">
+                <div className="text-center py-6 sm:py-8">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
                     You've reached the end! 🎉
                   </p>
                 </div>
@@ -1160,7 +1156,7 @@ const CommunitiesPage: React.FC = () => {
 
             {/* Community-Focused Right Sidebar with Tabs */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="sticky top-24">
+              <div className="lg:sticky lg:top-24 space-y-4 sm:space-y-6">
                 <CommunityRightSidebar 
                   communities={communityList}
                   joinedCommunityIds={joinedCommunities}
@@ -1202,7 +1198,8 @@ const CommunitiesPage: React.FC = () => {
             onSubmit={handleCreateCommunitySubmit}
             isLoading={isCreatingCommunity}
           />
-          </>
+        </div>
+        </>
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>

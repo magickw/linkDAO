@@ -264,6 +264,17 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
             </Button>
           )}
           
+          {orderStatus.status === 'DELIVERED' && (
+            <Button
+              variant="outline"
+              onClick={() => router.push('/returns')}
+              className="flex items-center gap-2 text-blue-400 border-blue-400 hover:bg-blue-400/10"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Request Return
+            </Button>
+          )}
+          
           {actions.canCancel && (
             <Button
               variant="outline"

@@ -28,6 +28,9 @@ export interface Order {
     name: string;
     avatar?: string;
   };
+  // Add return eligibility information
+  returnEligible?: boolean;
+  returnDeadline?: Date;
 }
 
 export interface OrderTrackingStatus {
@@ -155,6 +158,41 @@ class OrderService {
   }
 
   /**
+   * Check if an order is eligible for return
+   */
+  async checkReturnEligibility(orderId: string): Promise<{ eligible: boolean; deadline?: Date; reason?: string }> {
+    try {
+      // Call the return refund service to check eligibility
+      // This would typically be an API endpoint, but we'll simulate the logic here
+      const order = await this.getOrderById(orderId);
+      
+      if (!order) {
+        return { eligible: false, reason: 'Order not found' };
+      }
+      
+      // Orders are eligible for return if they are delivered and within the return window
+      if (order.status !== 'DELIVERED' && order.status !== 'COMPLETED') {
+        return { eligible: false, reason: 'Order must be delivered before returning' };
+      }
+      
+      // Check if within return window (typically 30 days)
+      const deliveryDate = order.estimatedDelivery || order.createdAt;
+      const deadline = new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      const now = new Date();
+      
+      if (now > deadline) {
+        return { eligible: false, reason: 'Return period has expired', deadline };
+      }
+      
+      return { eligible: true, deadline };
+    } catch (error) {
+      console.error('Error checking return eligibility:', error);
+      // Allow return by default if check fails
+      return { eligible: true };
+    }
+  }
+
+  /**
    * Confirm delivery for an order
    */
   async confirmDelivery(orderId: string, deliveryInfo: any): Promise<boolean> {
@@ -240,6 +278,13 @@ class OrderService {
   private transformOrder(order: any): Order {
     // This is a simplified transformation - in a real implementation,
     // you would map the actual backend order structure to the frontend format
+    
+    // Add return eligibility information
+    const deliveryDate = order.status === 'SHIPPED' ? new Date(Date.now() + 86400000 * 3) : new Date(order.createdAt);
+    const returnDeadline = new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const now = new Date();
+    const returnEligible = (order.status === 'DELIVERED' || order.status === 'COMPLETED') && now < returnDeadline;
+    
     return {
       id: order.id,
       status: order.status as OrderStatus,
@@ -263,7 +308,9 @@ class OrderService {
         id: order.sellerId || 'seller_1',
         name: 'Marketplace Seller',
         avatar: '/api/placeholder/40/40'
-      }
+      },
+      returnEligible,
+      returnDeadline
     };
   }
 

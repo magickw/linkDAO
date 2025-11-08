@@ -11,6 +11,8 @@ import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
+import ReturnRefundModal from '@/components/Marketplace/ReturnRefundModal';
+import { returnRefundService } from '@/services/returnRefundService';
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -72,6 +74,7 @@ const MarketplaceContent: React.FC = () => {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showReturnRefundModal, setShowReturnRefundModal] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
 
   const cart = useCart();
@@ -84,27 +87,38 @@ const MarketplaceContent: React.FC = () => {
       {
         label: cartCount > 0 ? `View cart (${cartCount})` : 'View cart',
         description: 'Review items before checkout',
-        href: '/marketplace/cart',
+        href: '/marketplace/cart' as const,
+        action: undefined as string | undefined,
       },
       {
         label: 'Secure checkout',
         description: 'Complete escrow-backed purchases',
-        href: '/marketplace/checkout',
+        href: '/marketplace/checkout' as const,
+        action: undefined as string | undefined,
       },
       {
         label: 'Get LDAO Tokens',
         description: 'Buy, stake, and earn with LDAO tokens',
-        href: '/token',
+        href: '/token' as const,
+        action: undefined as string | undefined,
       },
       {
         label: 'Orders & tracking',
         description: 'View your purchase history',
-        href: '/orders',
+        href: '/orders' as const,
+        action: undefined as string | undefined,
+      },
+      {
+        label: 'Returns & Refunds',
+        description: 'Request returns and manage refunds',
+        href: '/returns' as const,
+        action: undefined as string | undefined,
       },
       {
         label: 'Support & disputes',
         description: 'Escalate issues with sellers',
-        href: '/marketplace/disputes',
+        href: '/marketplace/disputes' as const,
+        action: undefined as string | undefined,
       },
     ];
   }, [cart.state.totals.itemCount]);
@@ -562,14 +576,18 @@ const MarketplaceContent: React.FC = () => {
                   {actionsMenuOpen && (
                     <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
                       <ul className="py-2">
-                        {marketplaceActions.map((action) => (
-                          <li key={action.href}>
+                        {marketplaceActions.map((action, index) => (
+                          <li key={action.href || action.action || index}>
                             <button
                               type="button"
                               className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                               onClick={() => {
                                 setActionsMenuOpen(false);
-                                router.push(action.href);
+                                if (action.action === 'open-return-refund-modal') {
+                                  setShowReturnRefundModal(true);
+                                } else if (action.href) {
+                                  router.push(action.href);
+                                }
                               }}
                             >
                               <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
@@ -878,6 +896,33 @@ const MarketplaceContent: React.FC = () => {
             />
           </>
         )}
+
+        {/* Return & Refund Modal */}
+        <ReturnRefundModal
+          isOpen={showReturnRefundModal}
+          onClose={() => setShowReturnRefundModal(false)}
+          order={{
+            id: 'order_demo_001',
+            productId: 'prod_demo_001',
+            productTitle: 'Sample Product - Demo Order',
+            productImage: '/api/placeholder/400/400',
+            amount: 0.1,
+            currency: 'ETH',
+            orderDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            canReturn: true,
+            canRefund: true,
+            returnDeadline: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000).toISOString()
+          }}
+          onSubmit={async (request) => {
+            try {
+              await returnRefundService.submitReturnRequest(request);
+              addToast('Return request submitted successfully!', 'success');
+            } catch (error) {
+              addToast('Failed to submit return request', 'error');
+              throw error;
+            }
+          }}
+        />
       </div>
     </Layout>
   );
@@ -932,7 +977,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
     }
   }, [address, addToast, marketplaceService, service]);
 
-  useEffect(() => {
+  useEffect(()4 => {
     let mounted = true;
     const fetchListings = async () => {
       if (address) {
