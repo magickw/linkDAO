@@ -70,17 +70,13 @@ class ReturnRefundService {
    */
   async submitReturnRequest(request: ReturnRefundRequest): Promise<ReturnRefundResponse> {
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/marketplace/returns`, {
+      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}/marketplace/returns`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit return request');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error submitting return request:', error);
       throw error; // Don't fallback to mock in production
@@ -92,15 +88,11 @@ class ReturnRefundService {
    */
   async checkReturnEligibility(orderId: string, productId: string): Promise<ReturnEligibility> {
     try {
-      const response = await fetchWithRetry(
+      const response = await fetchWithRetry<ReturnEligibility>(
         `${API_BASE_URL}/marketplace/returns/eligibility?orderId=${orderId}&productId=${productId}`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to check return eligibility');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error checking return eligibility:', error);
       throw error; // Don't fallback to mock in production
@@ -112,13 +104,9 @@ class ReturnRefundService {
    */
   async getReturnRequest(returnId: string): Promise<ReturnRefundResponse> {
     try {
-      const response = await fetchWithRetry(`${API_BASE_URL}/marketplace/returns/${returnId}`);
+      const response = await fetchWithRetry<ReturnRefundResponse>(`${API_BASE_URL}/marketplace/returns/${returnId}`);
 
-      if (!response.ok) {
-        throw new Error('Failed to get return request details');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error getting return request:', error);
       throw error;
@@ -134,15 +122,11 @@ class ReturnRefundService {
     endDate?: string;
   }): Promise<ReturnRefundResponse[]> {
     try {
-      const response = await fetchWithRetry(
+      const response = await fetchWithRetry<ReturnRefundResponse[]>(
         `${API_BASE_URL}/marketplace/returns/user/${userAddress}?role=seller&limit=100&offset=0`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to get user returns');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error getting user returns:', error);
       return [];
@@ -157,10 +141,6 @@ class ReturnRefundService {
       const response = await fetchWithRetry(`${API_BASE_URL}/marketplace/returns/${returnId}/cancel`, {
         method: 'POST'
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to cancel return request');
-      }
 
       return { success: true };
     } catch (error) {
@@ -188,10 +168,6 @@ class ReturnRefundService {
           body: JSON.stringify(tracking)
         }
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to update return tracking');
-      }
 
       return { success: true };
     } catch (error) {
@@ -227,10 +203,6 @@ class ReturnRefundService {
           })
         }
       );
-
-      if (!apiResponse.ok) {
-        throw new Error('Failed to respond to return request');
-      }
 
       return { success: true };
     } catch (error) {
@@ -291,15 +263,16 @@ class ReturnRefundService {
     conditions: string[];
   }> {
     try {
-      const response = await fetchWithRetry(
+      const response = await fetchWithRetry<{
+        returnWindow: number; // days
+        restockingFee: number; // percentage
+        freeReturnShipping: boolean;
+        conditions: string[];
+      }>(
         `${API_BASE_URL}/marketplace/products/${productId}/refund-policy`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to get refund policy');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error getting refund policy:', error);
       throw error; // Don't fallback to mock in production
@@ -328,12 +301,7 @@ class ReturnRefundService {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create return policy');
-      }
-
-      const data = await response.json();
+      const data = await response;
       return { success: true, policyId: data.id };
     } catch (error) {
       console.error('Error creating return policy:', error);
@@ -366,11 +334,6 @@ class ReturnRefundService {
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update return policy');
-      }
-
       return { success: true };
     } catch (error) {
       console.error('Error updating return policy:', error);
@@ -390,11 +353,7 @@ class ReturnRefundService {
         `${API_BASE_URL}/marketplace/return-policies/${sellerId}`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to get seller return policy');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error getting seller return policy:', error);
       return null;
@@ -410,7 +369,11 @@ class ReturnRefundService {
     riskFactors: string[];
   }> {
     try {
-      const response = await fetchWithRetry(
+      const response = await fetchWithRetry<{
+        riskScore: number;
+        riskLevel: 'low' | 'medium' | 'high';
+        riskFactors: string[];
+      }>(
         `${API_BASE_URL}/marketplace/returns/risk-assessment`,
         {
           method: 'POST',
@@ -419,11 +382,7 @@ class ReturnRefundService {
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to calculate return risk');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error calculating return risk:', error);
       // Return a default low risk score if the service fails
@@ -453,11 +412,7 @@ class ReturnRefundService {
         `${API_BASE_URL}/marketplace/returns/analytics?${params.toString()}`
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to get return analytics');
-      }
-
-      return await response.json();
+      return response;
     } catch (error) {
       console.error('Error getting return analytics:', error);
       throw error;
