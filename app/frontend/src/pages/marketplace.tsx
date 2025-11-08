@@ -977,7 +977,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
     }
   }, [address, addToast, marketplaceService, service]);
 
-  useEffect(()4 => {
+  useEffect(() => {
     let mounted = true;
     const fetchListings = async () => {
       if (address) {
