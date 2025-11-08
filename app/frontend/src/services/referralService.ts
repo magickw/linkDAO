@@ -112,17 +112,26 @@ export class ReferralService {
     error?: string;
   }> {
     try {
-      // In a real implementation, this would call the backend API
-      // For now, we'll simulate a successful referral recording
+      const response = await fetch('/api/ldao/referral/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          referralCode,
+          referredUserAddress
+        })
+      });
       
-      console.log(`Recording referral: ${referralCode} -> ${referredUserAddress}`);
+      const data = await response.json();
       
-      // Simulate a reward amount (e.g., 10 LDAO tokens)
-      const rewardAmount = 10;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to record referral');
+      }
       
       return {
         success: true,
-        rewardAmount
+        rewardAmount: data.rewardAmount
       };
     } catch (error) {
       console.error('Failed to record referral:', error);
@@ -138,24 +147,12 @@ export class ReferralService {
    */
   async getReferralRewards(userAddress: string): Promise<ReferralReward[]> {
     try {
-      // In a real implementation, this would fetch from backend/database
-      // For now, we'll simulate some referral rewards
-      
-      const rewards: ReferralReward[] = [];
-      
-      // Simulate 3 referral rewards
-      for (let i = 0; i < 3; i++) {
-        rewards.push({
-          id: `reward_${userAddress}_${i}`,
-          referrer: userAddress,
-          referredUser: `0x${Math.random().toString(16).substr(2, 40)}`,
-          amount: 10,
-          timestamp: Date.now() - (i * 86400000), // 1 day apart
-          status: i === 0 ? 'pending' : i === 1 ? 'claimed' : 'expired'
-        });
+      const response = await fetch(`/api/ldao/referral/rewards?address=${userAddress}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch referral rewards');
       }
-      
-      return rewards;
+      const data = await response.json();
+      return data.rewards;
     } catch (error) {
       console.error('Failed to get referral rewards:', error);
       return [];

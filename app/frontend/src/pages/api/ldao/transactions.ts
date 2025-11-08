@@ -60,51 +60,21 @@ export default async function handler(
     // 4. Apply pagination
     // 5. Return enriched transaction data
 
-    // Mock data for development
-    const mockTransactions: Transaction[] = [
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/transactions?address=${address}&offset=${offsetNum}&limit=${limitNum}`,
       {
-        id: '1',
-        hash: '0x' + ethers.utils.hexlify(ethers.utils.randomBytes(32)).slice(2),
-        type: 'purchase',
-        amount: '1000',
-        usdValue: '10.00',
-        paymentMethod: 'ETH',
-        status: 'confirmed',
-        timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        blockNumber: 4500000,
-        from: address,
-        to: process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
-      },
-      {
-        id: '2',
-        hash: '0x' + ethers.utils.hexlify(ethers.utils.randomBytes(32)).slice(2),
-        type: 'claim',
-        amount: '50',
-        usdValue: '0.50',
-        paymentMethod: 'Earned',
-        status: 'confirmed',
-        timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        blockNumber: 4498000,
-        from: process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000',
-        to: address
-      },
-      {
-        id: '3',
-        hash: '0x' + ethers.utils.hexlify(ethers.utils.randomBytes(32)).slice(2),
-        type: 'purchase',
-        amount: '500',
-        usdValue: '5.00',
-        paymentMethod: 'USDC',
-        status: 'confirmed',
-        timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-        blockNumber: 4495000,
-        from: address,
-        to: process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS || '0x0000000000000000000000000000000000000000'
+        headers: {
+          'Authorization': `Bearer ${process.env.API_KEY}`
+        }
       }
-    ];
+    );
 
-    // Apply pagination
-    const paginatedTransactions = mockTransactions.slice(offsetNum, offsetNum + limitNum);
+    if (!response.ok) {
+      throw new Error('Failed to fetch transactions');
+    }
+
+    const data = await response.json();
+    const transactions = data.transactions;
 
     return res.status(200).json({
       transactions: paginatedTransactions,

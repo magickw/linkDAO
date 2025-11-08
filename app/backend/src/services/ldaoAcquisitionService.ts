@@ -333,15 +333,27 @@ export class LDAOAcquisitionService {
   }
 
   public async getTransactionHistory(userId: string): Promise<PurchaseTransaction[]> {
-    // This would typically query the database
-    // For now, return empty array
-    return [];
+    const transactions = await this.db.transaction.findMany({
+      where: {
+        userId: userId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    return transactions;
   }
 
   public async getEarningHistory(userId: string): Promise<EarningActivity[]> {
-    // This would typically query the database
-    // For now, return empty array
-    return [];
+    const earnings = await this.db.earning.findMany({
+      where: {
+        userId: userId
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    return earnings;
   }
 
   public async getStakingPositions(userId: string): Promise<StakingPosition[]> {
