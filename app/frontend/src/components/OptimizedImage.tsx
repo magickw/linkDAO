@@ -9,6 +9,7 @@ interface OptimizedImageProps {
   className?: string;
   lazy?: boolean;
   quality?: number;
+  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
 
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
@@ -18,7 +19,8 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   height = 300,
   className = '',
   lazy = true,
-  quality = 75
+  quality = 75,
+  onError
 }) => {
   // Handle external URLs by using img tag with loading optimization
   if (src.startsWith('http')) {
@@ -32,6 +34,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           height={height}
           loading={lazy ? 'lazy' : 'eager'}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={onError}
         />
       </div>
     );
@@ -48,6 +51,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         loading={lazy ? 'lazy' : 'eager'}
         quality={quality}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        onError={onError as any}
       />
     </div>
   );

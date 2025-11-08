@@ -649,284 +649,7 @@ const CommunitiesPage: React.FC = () => {
     stakingRewards: Math.floor(Math.random() * 20)
   }));
 
-  if (isMobile) {
-    return (
-      <ErrorBoundary>
-        <VisualPolishIntegration>
-          <style jsx>{`
-            .hide-scrollbar {
-              -ms-overflow-style: none;
-              scrollbar-width: none;
-            }
-            .hide-scrollbar::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Head>
-              <title>Communities - LinkDAO Enhanced</title>
-              <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
-            </Head>
-
-            {/* Enhanced Mobile Header */}
-            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-40">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {/* Hamburger menu button to access main navigation */}
-                    <button
-                      onClick={() => {
-                        // Dispatch a custom event to toggle the main navigation menu
-                        window.dispatchEvent(new CustomEvent('toggle-mobile-menu'));
-                      }}
-                      className="mr-3 p-2 text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      aria-label="Open navigation menu"
-                    >
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                      </svg>
-                    </button>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">Communities</h1>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {/* Governance Notifications */}
-                    {governanceNotifications > 0 && (
-                      <div className="relative">
-                        <button className={`p-2 text-gray-600 hover:text-gray-900 ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}`}>
-                          <Vote className="w-5 h-5" />
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {governanceNotifications}
-                          </span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Navigation Bar - Added for user navigation */}
-            <div className="sticky top-16 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex overflow-x-auto py-2 px-2 hide-scrollbar">
-                {[
-                  { name: 'Home', href: '/', icon: '🏠' },
-                  { name: 'Governance', href: '/governance', icon: '🗳️' },
-                  { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
-                  { name: 'Profile', href: '/profile', icon: '👤' }
-                ].map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => router.push(item.href)}
-                    className="flex flex-col items-center px-3 py-2 text-xs font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors min-w-[60px] min-h-[44px]"
-                  >
-                    <span className="text-lg mb-1">{item.icon}</span>
-                    <span>{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Mobile Web3 Data Display */}
-            <div className="p-4">
-              <MobileWeb3DataDisplay
-                tokenData={{
-                  symbol: 'LDAO',
-                  balance: userBalance,
-                  value: userBalance * 0.5,
-                  change24h: 2.5,
-                  price: 0.5
-                }}
-                stakingData={{
-                  totalStaked: 500,
-                  rewards: stakingRewards,
-                  apy: 12.5,
-                  lockPeriod: '30 days'
-                }}
-                governanceData={{
-                  votingPower: 150,
-                  activeProposals: governanceNotifications,
-                  votesParticipated: 8,
-                  totalProposals: 12
-                }}
-                gasPrice={25}
-                networkName="Ethereum"
-                compact={true}
-              />
-            </div>
-
-            {/* Real-Time Staking Updates */}
-            <div className="px-4 mb-4">
-              <RealTimeStakingUpdates
-                communityIds={joinedCommunities}
-                className="bg-white rounded-lg shadow-sm border p-3"
-                showAnimations={true}
-              />
-            </div>
-
-            {/* Collapsible Sidebar */}
-            <div className="px-4 mb-4">
-              <CollapsibleWeb3Sidebar
-                communities={communityData}
-                currentCommunity={undefined}
-                onCommunitySelect={(id) => {
-                  const community = communityList.find(c => c.id === id);
-                  if (community) {
-                    router.push(`/dao/${community.name}`);
-                  }
-                }}
-                onCreateCommunity={() => setShowCreateCommunityModal(true)}
-                walletConnected={walletConnected}
-                totalStakingRewards={stakingRewards}
-                governanceNotifications={governanceNotifications}
-              />
-            </div>
-
-            {/* Mobile Gamified Progress Tracker */}
-            <div className="px-4 mb-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Your Progress</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <span className={joinedCommunities.length > 0 ? 'text-green-500' : 'text-gray-400'}>✓</span>
-                    <span className="text-sm">Joined first DAO</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">⬜</span>
-                    <span className="text-sm">Voted in proposal</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">⬜</span>
-                    <span className="text-sm">Created post</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Enhanced Mobile Posts Feed */}
-            <div className="px-4 pb-24 space-y-4">
-              {/* Mobile Loading State */}
-              {loading && (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                        <div className="flex-1 space-y-1">
-                          <div className="h-3 bg-gray-200 rounded w-1/3" />
-                          <div className="h-2 bg-gray-200 rounded w-1/4" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-12 bg-gray-200 rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Mobile Empty State */}
-              {!loading && filteredPosts.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Users className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Welcome to LinkDAO
-                  </h3>
-                  <p className="text-gray-500 mb-6 px-4">
-                    Start your DAO journey — explore, vote, and connect.
-                  </p>
-                  <button
-                    onClick={() => router.push('/communities?sort=trending')}
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
-                  >
-                    <Users className="w-5 h-5 mr-2" />
-                    Explore Communities
-                  </button>
-                </div>
-              )}
-
-              {filteredPosts.map(post => {
-                const community = communityList.find(c => c.id === post.communityId);
-                const stakingInfo = stakingData[post.communityId];
-                
-                return (
-                  <CompactWeb3PostCard
-                    key={post.id}
-                    post={{
-                      id: post.id,
-                      title: post.title,
-                      content: post.content,
-                      author: {
-                        name: post.authorName,
-                        avatar: '👤',
-                        address: post.author
-                      },
-                      community: {
-                        name: community?.displayName || 'Unknown',
-                        avatar: community?.avatar || '🏛️'
-                      },
-                      metrics: {
-                        upvotes: post.upvotes,
-                        comments: post.commentCount,
-                        views: Math.floor(Math.random() * 1000),
-                        stakingAmount: post.stakedTokens,
-                        stakerCount: Math.floor(Math.random() * 50)
-                      },
-                      timestamp: new Date(post.createdAt).toLocaleDateString(),
-                      isUpvoted: false,
-                      isSaved: false,
-                      postType: post.type as any,
-                      onChainProof: post.isStaked
-                    }}
-                    onUpvote={() => handleUpvote(post.id)}
-                    onComment={() => handleComment(post.id)}
-                    onShare={() => handleShare(post.id)}
-                    onSave={() => handleSave(post.id)}
-                    onTip={(amount?: number) => handleTip(post.id, amount)}
-                    onStake={() => handleStake(post.id)}
-                    onViewPost={() => handleViewPost(post.id)}
-                    walletConnected={walletConnected}
-                  />
-                );
-              })}
-
-              {/* Mobile Load More */}
-              {loadingMore && (
-                <div className="flex justify-center py-6">
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-                    <span className="text-sm">Loading...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Mobile End of Feed */}
-              {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 text-sm">
-                    You've reached the end! 🎉
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Floating Action Button */}
-            <div className="fixed bottom-20 right-4 z-50">
-              <button
-                onClick={handleCreateCommunityClick}
-                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-w-[44px] min-h-[44px]"
-                aria-label="Create Community"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-        </VisualPolishIntegration>
-      </ErrorBoundary>
-    );
-  }
+  // Remove the custom mobile implementation and use the standard Layout component for both mobile and desktop
 
   // Add error logging
   if (error) {
@@ -936,24 +659,26 @@ const CommunitiesPage: React.FC = () => {
   // Show component error if it exists
   if (componentError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Communities</h2>
-          <p className="text-gray-700 dark:text-gray-300 mb-4">{componentError.message}</p>
-          <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded text-xs overflow-auto mb-4">
-            {componentError.stack}
-          </pre>
-          <button
-            onClick={() => {
-              setComponentError(null);
-              window.location.reload();
-            }}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
-          >
-            Reload Page
-          </button>
+      <Layout title="Communities - LinkDAO Enhanced" fullWidth={true}>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-bold text-red-600 mb-4">Error Loading Communities</h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">{componentError.message}</p>
+            <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded text-xs overflow-auto mb-4">
+              {componentError.stack}
+            </pre>
+            <button
+              onClick={() => {
+                setComponentError(null);
+                window.location.reload();
+              }}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
@@ -961,11 +686,12 @@ const CommunitiesPage: React.FC = () => {
     <ErrorBoundary>
       <VisualPolishIntegration>
         <Layout title="Communities - LinkDAO Enhanced" fullWidth={true}>
-          <Head>
-            <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
-          </Head>
+          <>
+            <Head>
+              <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
+            </Head>
 
-          <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
+            <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
             {/* Enhanced Left Sidebar - Discovery + Actions */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-6">
@@ -1476,6 +1202,7 @@ const CommunitiesPage: React.FC = () => {
             onSubmit={handleCreateCommunitySubmit}
             isLoading={isCreatingCommunity}
           />
+          </>
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>

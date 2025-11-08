@@ -38,6 +38,16 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const [showShareModal, setShowShareModal] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked || false);
   const [content, setContent] = useState<string>('');
+  const [imageError, setImageError] = useState(false);
+  const [ipfsGatewayIndex, setIpfsGatewayIndex] = useState(0);
+
+  // List of IPFS gateways to try as fallbacks
+  const ipfsGateways = [
+    'https://ipfs.io/ipfs/',
+    'https://gateway.pinata.cloud/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://dweb.link/ipfs/'
+  ];
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
@@ -57,8 +67,17 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       }
     };
 
+    // Debug: Log post data to see if mediaCids is present
+    console.log('EnhancedPostCard mounted with post:', {
+      id: post.id,
+      contentCid: post.contentCid,
+      mediaCids: post.mediaCids,
+      mediaCidsLength: post.mediaCids?.length,
+      hasMediaCids: !!post.mediaCids && post.mediaCids.length > 0
+    });
+
     fetchContent();
-  }, [post.contentCid]);
+  }, [post.contentCid, post.id, post.mediaCids]);
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -176,16 +195,60 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         <p>{content || 'Loading content...'}</p>
 
         {/* Media */}
-        {post.mediaCids && post.mediaCids.length > 0 && (
+        {post.mediaCids && post.mediaCids.length > 0 && !imageError && (
           <div onClick={onExpand}>
             <OptimizedImage
-              src={`https://ipfs.io/ipfs/${post.mediaCids[0]}`}
+              src={`${ipfsGateways[ipfsGatewayIndex]}${post.mediaCids[0]}`}
               alt="Post media"
               width={600}
               height={300}
               lazy={true}
               quality={0.85}
+              onError={(e) => {
+                console.error('Image failed to load:', {
+                  postId: post.id,
+                  mediaCid: post.mediaCids[0],
+                  gateway: ipfsGateways[ipfsGatewayIndex],
+                  fullUrl: `${ipfsGateways[ipfsGatewayIndex]}${post.mediaCids[0]}`,
+                  error: e
+                });
+
+                // Try next gateway if available
+                if (ipfsGatewayIndex < ipfsGateways.length - 1) {
+                  console.log(`Trying next IPFS gateway: ${ipfsGateways[ipfsGatewayIndex + 1]}`);
+                  setIpfsGatewayIndex(ipfsGatewayIndex + 1);
+                } else {
+                  console.error('All IPFS gateways failed for this image');
+                  setImageError(true);
+                }
+              }}
             />
+          </div>
+        )}
+        {/* Show error message if image failed to load from all gateways */}
+        {post.mediaCids && post.mediaCids.length > 0 && imageError && (
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              Failed to load image from IPFS
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500 font-mono">
+              CID: {post.mediaCids[0]}
+            </p>
+            <button
+              onClick={() => {
+                setImageError(false);
+                setIpfsGatewayIndex(0);
+              }}
+              className="mt-2 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {/* Debug: Show CID */}
+        {post.mediaCids && post.mediaCids.length > 0 && process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-500 mt-1">
+            CID: {post.mediaCids[0]} (Gateway: {ipfsGateways[ipfsGatewayIndex]})
           </div>
         )}
 

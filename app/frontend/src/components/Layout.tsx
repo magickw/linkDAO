@@ -44,7 +44,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   const touchStart = useRef<number>(0);
 
   // Check if we're on the home/feed page
@@ -167,8 +167,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   // Add keyboard event listener for mobile menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && mobileMenuOpen) {
-        setMobileMenuOpen(false);
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
       }
       // Add Ctrl/Cmd + K for search focus
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -183,7 +183,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [mobileMenuOpen]);
+  }, [isMenuOpen]);
 
   // Add touch event handlers for swipe gestures
   useEffect(() => {
@@ -194,12 +194,12 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     const handleTouchEnd = (e: TouchEvent) => {
       const diff = e.changedTouches[0].clientX - touchStart.current;
       // Swipe right from edge to open menu
-      if (diff > 50 && !mobileMenuOpen && touchStart.current < 50) {
-        setMobileMenuOpen(true);
+      if (diff > 50 && !isMenuOpen && touchStart.current < 50) {
+        setIsMenuOpen(true);
       }
       // Swipe left to close menu
-      else if (diff < -50 && mobileMenuOpen) {
-        setMobileMenuOpen(false);
+      else if (diff < -50 && isMenuOpen) {
+        setIsMenuOpen(false);
       }
     };
 
@@ -210,7 +210,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [mobileMenuOpen]);
+  }, [isMenuOpen]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">

@@ -370,7 +370,7 @@ export default function Wallet() {
           {activeTab === 'overview' && (
             <div>
               {/* Portfolio Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg shadow-md p-6 text-white">
                   <h2 className="text-lg font-medium mb-2">Total Balance</h2>
                   <p className="text-3xl font-bold">
@@ -385,13 +385,7 @@ export default function Wallet() {
                     </p>
                   </div>
                 </div>
-                
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                  <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">ETH Balance</h2>
-                  <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-2">{balanceData?.formatted || '0'} ETH</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">≈ ${(parseFloat(balanceData?.formatted || '0') * 1700).toLocaleString()}</p>
-                </div>
-                
+
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Portfolio Value</h2>
                   <p className="text-3xl font-bold text-secondary-600 dark:text-secondary-400 mt-2">
@@ -407,59 +401,9 @@ export default function Wallet() {
                   </div>
                 </div>
               </div>
-              
-              {/* Portfolio Performance Chart */}
+
+              {/* Your Assets */}
               <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Portfolio Performance</h2>
-                  <div className="flex space-x-2">
-                    {(['1d', '1w', '1m', '1y'] as const).map((timeframe) => (
-                      <button
-                        key={timeframe}
-                        onClick={() => setPortfolioTimeframe(timeframe)}
-                        className={`px-3 py-1 text-xs rounded-full ${
-                          portfolioTimeframe === timeframe
-                            ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {timeframe.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  {isPerformanceLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div>
-                      <span className="text-gray-500 dark:text-gray-400">Loading chart...</span>
-                    </div>
-                  ) : performanceData ? (
-                    <div className="w-full h-full p-4">
-                      <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
-                        Portfolio Performance ({portfolioTimeframe})
-                      </p>
-                      <div className="text-center text-gray-500 dark:text-gray-400">
-                        Chart visualization would be displayed here
-                        <br />
-                        Current value: {formatCurrency(performanceData.values[performanceData.values.length - 1] || 0)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <p className="text-gray-500 dark:text-gray-400 mb-2">Portfolio Performance Tracking</p>
-                      <p className="text-sm text-gray-400 dark:text-gray-500">
-                        Historical performance data requires integration with a price API.
-                        <br />
-                        This feature will be available soon.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Token Balances */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Your Assets</h2>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -536,6 +480,56 @@ export default function Wallet() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              {/* Portfolio Performance Chart */}
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Portfolio Performance</h2>
+                  <div className="flex space-x-2">
+                    {(['1d', '1w', '1m', '1y'] as const).map((timeframe) => (
+                      <button
+                        key={timeframe}
+                        onClick={() => setPortfolioTimeframe(timeframe)}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          portfolioTimeframe === timeframe
+                            ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {timeframe.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  {isPerformanceLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div>
+                      <span className="text-gray-500 dark:text-gray-400">Loading chart...</span>
+                    </div>
+                  ) : performanceData ? (
+                    <div className="w-full h-full p-4">
+                      <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
+                        Portfolio Performance ({portfolioTimeframe})
+                      </p>
+                      <div className="text-center text-gray-500 dark:text-gray-400">
+                        Chart visualization would be displayed here
+                        <br />
+                        Current value: {formatCurrency(performanceData.values[performanceData.values.length - 1] || 0)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 mb-2">Portfolio Performance Tracking</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500">
+                        Historical performance data requires integration with a price API.
+                        <br />
+                        This feature will be available soon.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
