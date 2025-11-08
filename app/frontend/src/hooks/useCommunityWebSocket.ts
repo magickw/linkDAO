@@ -185,7 +185,7 @@ export function useCommunityWebSocket(optionsOrId?: UseCommunityWebSocketOptions
   useEffect(() => {
     return () => {
       listenersRef.current.forEach((callback, event) => {
-        communityWebSocketService.off(event, callback as (...args: any[]) => void);
+        communityWebSocketService.off(event, callback);
       });
       listenersRef.current.clear();
     };

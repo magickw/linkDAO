@@ -64,7 +64,17 @@ interface CommentData {
 export class FeedService {
   // Get enhanced personalized feed
   async getEnhancedFeed(options: FeedOptions) {
-    const { userAddress, page, limit, sort, communities: filterCommunities, timeRange, feedSource = 'all' } = options;
+    // Default to following feed and newest posts if not specified
+    const { 
+      userAddress, 
+      page, 
+      limit, 
+      sort = 'new', // Default to newest
+      communities: filterCommunities, 
+      timeRange = 'all', // Default to all time
+      feedSource = 'following' // Default to following feed
+    } = options;
+    
     const offset = (page - 1) * limit;
 
     // Build time range filter
@@ -107,7 +117,7 @@ export class FeedService {
       }
     }
 
-    // Build sort order
+    // Build sort order - default to newest posts
     const sortOrder = this.buildSortOrder(sort);
 
     try {
@@ -1293,19 +1303,19 @@ export class FeedService {
     }
   }
 
-  // Helper method to build sort order
+  // Helper method to build sort order - default to newest posts
   private buildSortOrder(sort: string) {
     switch (sort) {
       case 'new':
-        return desc(posts.createdAt);
+        return desc(posts.createdAt); // Newest first
       case 'top':
         return desc(posts.stakedValue);
       case 'following':
         // This would need additional logic to filter by followed users
-        return desc(posts.createdAt);
+        return desc(posts.createdAt); // Newest first for following feed
       case 'hot':
       default:
-        return desc(posts.stakedValue);
+        return desc(posts.createdAt); // Default to newest instead of stakedValue
     }
   }
 

@@ -5,11 +5,8 @@
  * when WebSocket connections fail or are unavailable due to resource constraints.
  */
 
-import { webSocketService as wsService } from './webSocketService';
+import { webSocketService, WebSocketService } from './webSocketService';
 import { requestManager } from './requestManager';
-
-// Type assertion to ensure proper typing
-const webSocketService: any = wsService;
 
 interface FallbackConfig {
   enabled: boolean;
@@ -53,7 +50,7 @@ interface PollingResponse<T> {
 }
 
 export class WebSocketConnectionManager {
-  private webSocketService: any;
+  private webSocketService: WebSocketService;
   private fallbackConfig: FallbackConfig;
   private state: ConnectionManagerState;
   private pollingInterval: NodeJS.Timeout | null = null;

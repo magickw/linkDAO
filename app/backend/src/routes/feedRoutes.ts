@@ -25,7 +25,7 @@ router.get('/enhanced',
       sort: { type: 'string', optional: true, enum: ['hot', 'new', 'top', 'following', 'rising'] },
       communities: { type: 'array', optional: true },
       timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month', 'all'] },
-      feedSource: { type: 'string', optional: true, enum: ['all', 'following', 'communities'] }
+      feedSource: { type: 'string', optional: true, enum: ['all', 'following'] }
     }
   }),
   feedController.getEnhancedFeed

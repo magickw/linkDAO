@@ -81,27 +81,14 @@ export class CacheService {
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
           keyPrefix: this.config.redis.keyPrefix,
-          lazyConnect: true,
+          lazyConnect: true,  // Add this to ensure consistent behavior
           retryStrategy: (times) => {
-            // More robust retry strategy with exponential backoff
-            if (times > 10) {
+            // Stop retrying after 3 attempts to prevent infinite loops
+            if (times > 3) {
               safeLogger.warn('Max Redis retry attempts reached, giving up');
               return null;
             }
-            const delay = Math.min(times * 100, 3000);
-            safeLogger.info(`Redis reconnecting in ${delay}ms... (attempt ${times})`);
-            return delay;
-          },
-          // Add connection keep-alive
-          keepAlive: 30000,
-          // Add connection retry on error
-          reconnectOnError: (err) => {
-            const targetError = "READONLY";
-            if (err.message.includes(targetError)) {
-              // Only reconnect when the error includes "READONLY"
-              return true;
-            }
-            return false;
+            return Math.min(times * 100, 3000);
           }
         });
       } else {
@@ -116,25 +103,11 @@ export class CacheService {
           commandTimeout: this.config.redis.commandTimeout,
           lazyConnect: true,
           retryStrategy: (times) => {
-            // More robust retry strategy with exponential backoff
-            if (times > 10) {
+            if (times > 3) {
               safeLogger.warn('Max Redis retry attempts reached, giving up');
               return null;
             }
-            const delay = Math.min(times * 100, 3000);
-            safeLogger.info(`Redis reconnecting in ${delay}ms... (attempt ${times})`);
-            return delay;
-          },
-          // Add connection keep-alive
-          keepAlive: 30000,
-          // Add connection retry on error
-          reconnectOnError: (err) => {
-            const targetError = "READONLY";
-            if (err.message.includes(targetError)) {
-              // Only reconnect when the error includes "READONLY"
-              return true;
-            }
-            return false;
+            return Math.min(times * 100, 3000);
           }
         });
       }

@@ -1,32 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 // Get the WebSocket URL from environment variables, fallback to backend URL
-// Dynamically detect WebSocket URL based on environment
-const getWebSocketUrl = () => {
-  // In browser, use current origin
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}`;
-  }
-  // Fallback for SSR
-  return process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
-};
-
-const WS_URL = getWebSocketUrl();
-
-// Add fallback URLs with proper WebSocket paths
-
-const WS_FALLBACK_URLS = [
-  process.env.NEXT_PUBLIC_WS_URL,
-  process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http://', 'ws://').replace('https://', 'wss://'),
-  // Ensure proper path is included
-  process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace('http://', 'ws://').replace('https://://', 'wss://')}/socket.io/` : undefined,
-  // Only use localhost in development
-  ...(process.env.NODE_ENV === 'development' ? ['ws://localhost:10000/socket.io/'] : []),
-  // Production fallback with proper path
-  'wss://api.linkdao.io/socket.io/'
-].filter(Boolean) as string[];
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 interface WebSocketConfig {
   url?: string;
@@ -66,7 +41,6 @@ class WebSocketService {
   private resourceConstraints: ResourceConstraints;
   private fallbackToPolling: boolean = false;
   private isOptional: boolean = false;
-  private currentUrlIndex: number = 0;
 
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -142,12 +116,12 @@ class WebSocketService {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         // Reduce activity when page is hidden
-        (this as any).pauseHeartbeat();
+        this.pauseHeartbeat();
       } else {
         // Resume activity when page becomes visible
-        (this as any).resumeHeartbeat();
+        this.resumeHeartbeat();
         if (this.config.resourceAware && !this.socket?.connected) {
-          (this as any).attemptReconnection();
+          this.attemptReconnection();
         }
       }
     });
@@ -155,17 +129,16 @@ class WebSocketService {
     // Handle online/offline events
     window.addEventListener('online', () => {
       if (!this.socket?.connected && this.config.enableFallback) {
-        (this as any).attemptReconnection();
+        this.attemptReconnection();
       }
     });
 
     window.addEventListener('offline', () => {
-      (this as any).emit('network_offline');
+      this.emit('network_offline');
     });
   }
 
-  // Try connecting with different URLs as fallback
-  async connect(): Promise<void> {
+  connect() {
     if (this.socket?.connected) {
       return Promise.resolve();
     }
@@ -173,16 +146,9 @@ class WebSocketService {
     // Skip connection if resource-constrained and WebSocket is optional
     if (this.isOptional && this.config.resourceAware) {
       // Silently skip connection
-      (this as any).emit('connection_skipped', { reason: 'resource_constraints' });
+      this.emit('connection_skipped', { reason: 'resource_constraints' });
       return Promise.resolve();
     }
-
-    // Try different URLs if we've had multiple failures
-    if (this.connectionState.reconnectAttempts > 3) {
-      this.currentUrlIndex = (this.currentUrlIndex + 1) % WS_FALLBACK_URLS.length;
-    }
-
-    const currentUrl = WS_FALLBACK_URLS[this.currentUrlIndex] || this.config.url || WS_URL;
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -194,22 +160,20 @@ class WebSocketService {
           ['websocket', 'polling'];
 
         // Add additional options for better connection handling
-        this.socket = io(currentUrl, {
+        this.socket = io(this.config.url!, {
           transports,
           reconnection: false, // We handle reconnection manually
           reconnectionAttempts: 0,
           timeout: this.config.connectionTimeout,
           forceNew: true,
           upgrade: !this.fallbackToPolling,
-          rememberUpgrade: false,
-          // Add path configuration for better compatibility
-          path: '/socket.io/'
+          rememberUpgrade: false
         });
 
-        (this as any).setupSocketEventHandlers(resolve, reject);
+        this.setupSocketEventHandlers(resolve, reject);
 
       } catch (error) {
-        (this as any).handleConnectionError(error as Error);
+        this.handleConnectionError(error as Error);
         reject(error);
       }
     });
@@ -227,54 +191,46 @@ class WebSocketService {
       this.connectionState.lastError = null;
       this.connectionState.connectionQuality = 'good';
 
-      (this as any).startHeartbeat();
-      (this as any).emit('connected');
+      this.startHeartbeat();
+      this.emit('connected');
       resolve?.();
     });
 
     this.socket.on('disconnect', (reason) => {
       // Silently disconnect without logging
       this.connectionState.isConnected = false;
-      (this as any).stopHeartbeat();
+      this.stopHeartbeat();
       
-      (this as any).emit('disconnected', { reason });
+      this.emit('disconnected', { reason });
 
       // Attempt reconnection based on disconnect reason
-      if ((this as any).shouldReconnect(reason)) {
-        (this as any).attemptReconnection();
+      if (this.shouldReconnect(reason)) {
+        this.attemptReconnection();
       }
     });
 
     this.socket.on('connect_error', (error) => {
       // Only log first error to reduce console spam
       if (this.connectionState.reconnectAttempts === 0) {
-        console.warn('WebSocket connection error, using polling fallback:', error.message);
+        console.warn('WebSocket unavailable, using polling fallback');
       }
-      (this as any).handleConnectionError(error);
+      this.handleConnectionError(error);
       reject?.(error);
     });
 
     this.socket.on('reconnect_failed', () => {
       // Silently handle reconnection failure
-      (this as any).handleReconnectionFailure();
+      this.handleReconnectionFailure();
     });
 
     // Listen for all custom events and emit them to local listeners
     this.socket.onAny((event, ...args) => {
-      (this as any).emit(event, ...args);
+      this.emit(event, ...args);
     });
 
     // Handle heartbeat responses
     this.socket.on('pong', () => {
-      (this as any).updateConnectionQuality();
-    });
-    
-    // Handle server info messages
-    this.socket.on('server_info', (data) => {
-      // Handle server constraints information
-      if (data.resourceConstrained) {
-        console.log('WebSocket server is resource constrained, performance may be degraded');
-      }
+      this.updateConnectionQuality();
     });
   }
 
@@ -301,7 +257,7 @@ class WebSocketService {
   private attemptReconnection(): void {
     if (this.connectionState.isReconnecting || 
         this.connectionState.reconnectAttempts >= this.config.maxReconnectAttempts!) {
-      (this as any).handleReconnectionFailure();
+      this.handleReconnectionFailure();
       return;
     }
 
@@ -322,7 +278,7 @@ class WebSocketService {
       console.log(`WebSocket reconnecting (attempt ${this.connectionState.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
     }
 
-    (this as any).emit('reconnecting', {
+    this.emit('reconnecting', {
       attempt: this.connectionState.reconnectAttempts,
       maxAttempts: this.config.maxReconnectAttempts,
       delay: finalDelay
@@ -331,26 +287,20 @@ class WebSocketService {
     this.reconnectTimeout = setTimeout(() => {
       this.connect().catch((error) => {
         // Silently retry without logging every failure
-        (this as any).attemptReconnection();
+        this.attemptReconnection();
       });
     }, finalDelay);
   }
 
-  
   private handleConnectionError(error: Error): void {
     this.connectionState.lastError = error;
     this.connectionState.connectionQuality = 'poor';
-    (this as any).emit('error', error.message);
+    this.emit('error', error.message);
 
     // Switch to polling if WebSocket fails repeatedly
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
-      console.warn('WebSocket unavailable, using polling fallback:', error.message);
+      // Silently switch to polling
       this.fallbackToPolling = true;
-    }
-    
-    // Reset current URL index after too many failures to try primary URL again
-    if (this.connectionState.reconnectAttempts > 5) {
-      this.currentUrlIndex = 0;
     }
   }
 
@@ -358,25 +308,17 @@ class WebSocketService {
     // Silently handle max reconnection attempts
     this.connectionState.isReconnecting = false;
     
-    (this as any).emit('reconnection_failed', {
+    this.emit('reconnection_failed', {
       attempts: this.connectionState.reconnectAttempts,
       lastError: this.connectionState.lastError
     });
 
     // Fallback to polling if enabled
     if (this.config.enableFallback && !this.fallbackToPolling) {
-      console.warn('WebSocket reconnection failed, falling back to polling');
+      // Silently fallback to polling
       this.fallbackToPolling = true;
       this.connectionState.reconnectAttempts = 0;
       setTimeout(() => this.connect(), 5000);
-    } else {
-      // If already using polling, try to reconnect with WebSocket after a delay
-      setTimeout(() => {
-        this.fallbackToPolling = false;
-        this.connectionState.reconnectAttempts = 0;
-        this.currentUrlIndex = 0;
-        this.connect();
-      }, 30000); // Try WebSocket again after 30 seconds
     }
   }
 
@@ -426,7 +368,7 @@ class WebSocketService {
       this.reconnectTimeout = null;
     }
 
-    (this as any).stopHeartbeat();
+    this.stopHeartbeat();
 
     if (this.socket) {
       this.socket.disconnect();
@@ -434,7 +376,7 @@ class WebSocketService {
     }
 
     this.connectionState.isConnected = false;
-    (this as any).emit('disconnected', { reason: 'manual_disconnect' });
+    this.emit('disconnected', { reason: 'manual_disconnect' });
   }
 
   register(address: string) {
@@ -442,7 +384,7 @@ class WebSocketService {
       this.socket.emit('register', address);
     } else if (this.config.enableFallback) {
       // Queue the registration for when connection is restored
-      (this as any).once('connected', () => {
+      this.once('connected', () => {
         this.socket?.emit('register', address);
       });
     }
@@ -491,7 +433,7 @@ class WebSocketService {
       this.socket.emit(event, data);
     } else if (this.config.enableFallback) {
       // Silently queue message for when connection is restored
-      (this as any).once('connected', () => {
+      this.once('connected', () => {
         this.socket?.emit(event, data);
       });
     } else {
@@ -521,7 +463,6 @@ class WebSocketService {
       this.disconnect();
     }
     this.connectionState.reconnectAttempts = 0;
-    this.currentUrlIndex = 0; // Reset to primary URL
     this.connect();
   }
 
@@ -540,8 +481,7 @@ class WebSocketService {
       connectionQuality: this.connectionState.connectionQuality,
       isOptional: this.isOptional,
       fallbackToPolling: this.fallbackToPolling,
-      resourceConstraints: this.resourceConstraints,
-      currentUrl: WS_FALLBACK_URLS[this.currentUrlIndex] || this.config.url || WS_URL
+      resourceConstraints: this.resourceConstraints
     };
   }
 }

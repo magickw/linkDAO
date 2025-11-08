@@ -84,10 +84,6 @@ export class ScalableWebSocketManager {
       pingInterval: 25000,
       maxHttpBufferSize: 1e6, // 1MB
       allowEIO3: true,
-      path: '/socket.io/', // Ensure proper path
-      serveClient: false,
-      cookie: false,
-      upgradeTimeout: 30000, // 30 seconds for upgrade
     });
 
     // Set up Redis adapter for multi-instance support

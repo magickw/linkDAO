@@ -95,11 +95,7 @@ export class AdminWebSocketService {
         },
         pingTimeout: 60000,
         pingInterval: 25000,
-        transports: ['websocket', 'polling'],
-        path: '/socket.io/', // Ensure proper path
-        serveClient: false,
-        cookie: false,
-        upgradeTimeout: 30000 // 30 seconds for upgrade
+        transports: ['websocket', 'polling']
       });
     }
 

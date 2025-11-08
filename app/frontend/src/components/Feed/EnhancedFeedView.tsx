@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EnhancedPost as FeedEnhancedPost, FeedFilter, FeedSortType, FeedError } from '../../types/feed';
 import { useFeedSortingPreferences, useDisplayPreferences, useAutoRefreshPreferences } from '../../hooks/useFeedPreferences';
-import { FeedSortingHeader } from './FeedSortingTabs';
 import InfiniteScrollFeed from './InfiniteScrollFeed';
 import LikedByModal from './LikedByModal';
 import TrendingContentDetector, { TrendingBadge } from './TrendingContentDetector';
@@ -109,7 +108,7 @@ const EnhancedFeedView = React.memo(({
     } catch {}
   }, []);
   
-  // Preferences hooks
+  // Preferences hooks - now defaults to following feed with newest posts
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
   const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage } = useDisplayPreferences();
   const { isEnabled: autoRefreshEnabled, interval: refreshInterval } = useAutoRefreshPreferences();
@@ -118,7 +117,7 @@ const EnhancedFeedView = React.memo(({
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
-    communityId,
+    feedSource: 'following', // Always default to following feed
     ...initialFilter
   });
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
@@ -136,9 +135,9 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      communityId
+      feedSource: 'following' // Always keep it as following
     }));
-  }, [currentSort, currentTimeRange, communityId]);
+  }, [currentSort, currentTimeRange]);
 
   // Auto-refresh functionality - memoized
   useEffect(() => {
@@ -458,8 +457,22 @@ const EnhancedFeedView = React.memo(({
         {/* Trending Content Detector - Hidden, runs in background */}
         {trendingDetector}
 
-        {/* Minimal Sorting Tabs - Facebook Style */}
-        {sortingHeader}
+        {/* Simplified Header - Just show that it's the following feed */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Following Feed</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Newest posts from accounts you follow
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                Following
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Error state */}
         {errorState}

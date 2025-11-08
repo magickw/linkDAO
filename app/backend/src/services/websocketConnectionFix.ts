@@ -29,15 +29,12 @@ export class WebSocketConnectionFix {
         allowEIO3: true, // Support older clients
         pingTimeout: 60000, // 60 seconds
         pingInterval: 25000, // 25 seconds
-        upgradeTimeout: 30000, // 30 seconds for upgrade
+        upgradeTimeout: 30000, // 30 seconds
         maxHttpBufferSize: 1e6, // 1MB
         allowRequest: (req, callback) => {
           // Always allow connections for now
           callback(null, true);
-        },
-        path: '/socket.io/', // Ensure proper path
-        serveClient: false,
-        cookie: false
+        }
       });
 
       this.setupConnectionHandlers();

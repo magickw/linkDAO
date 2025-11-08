@@ -3,58 +3,34 @@
  * Implements all the suggested UX improvements for LinkDAO home/feed interface
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Heart,
-  MessageCircle,
-  Share2,
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  MessageCircle, 
+  Send, 
+  Heart, 
+  Share2, 
+  Bookmark, 
+  MoreHorizontal, 
+  Eye,
   TrendingUp,
   Clock,
-  Users,
-  Eye,
-  ChevronUp,
-  Sparkles,
-  Image as ImageIcon,
+  Award,
+  Zap,
+  Hash,
   Play,
   ExternalLink,
-  Hash,
-  Zap,
-  Award,
-  Filter,
-  Search,
-  Bell,
-  Bookmark
+  Sparkles,
+  ThumbsUp,
+  Flame,
+  Star
 } from 'lucide-react';
-// Simple useInView hook replacement
-const useInView = (options: { threshold: number; triggerOnce: boolean }) => {
-  const [inView, setInView] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry.isIntersecting);
-      },
-      { threshold: options.threshold }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
-    };
-  }, [options.threshold]);
-
-  return { ref, inView };
-};
-import FacebookStylePostComposer from './FacebookStylePostComposer';
 import { GlassPanel } from '@/design-system';
-import { CreatePostInput } from '@/models/Post';
+import { useToast } from '@/context/ToastContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { useAccount } from 'wagmi';
+import { useInView } from 'react-intersection-observer';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 interface EnhancedPost {
   id: string;
@@ -113,11 +89,11 @@ export default function EnhancedHomeFeed({
   className = ''
 }: EnhancedHomeFeedProps) {
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
-  const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
+  const [activeTab, setActiveTab] = useState<'following'>('following');
   const [showNewPostsBanner, setShowNewPostsBanner] = useState(false);
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'following' | 'communities'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'following'>('following');
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   
@@ -193,10 +169,6 @@ export default function EnhancedHomeFeed({
       // In a real implementation, this would check if the user follows the post author
       return true;
     }
-    if (selectedFilter === 'communities') {
-      // In a real implementation, this would check if the post is from a community the user belongs to
-      return true;
-    }
     return true;
   }).filter(post => 
     post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -211,84 +183,37 @@ export default function EnhancedHomeFeed({
   };
 
   return (
-    <div className={`max-w-2xl mx-auto ${className}`}>
-      {/* Enhanced Search Bar */}
+    <div className={className}>
+      {/* Enhanced Feed Header */}
       <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search posts, hashtags, or users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-          />
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
-            <Filter className="w-5 h-5 text-gray-400 cursor-pointer hover:text-primary-500 transition-colors" />
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Feed</h2>
+          <div className="flex items-center space-x-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+              <MessageCircle className="w-4 h-4 mr-1" />
+              Following
+            </span>
           </div>
         </div>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          See the latest posts from accounts you follow
+        </p>
       </div>
 
-      {/* Post Composer */}
-      <FacebookStylePostComposer
-        onSubmit={onPostSubmit}
-        isLoading={isLoading}
-        userName={userProfile?.handle || userProfile?.ens || 'You'}
-        className="mb-6"
-      />
-
-      {/* New Posts Banner */}
-      <AnimatePresence>
-        {showNewPostsBanner && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="mb-6"
-          >
-            <button
-              onClick={showNewPosts}
-              className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 px-4 rounded-xl flex items-center justify-center space-x-2 transition-colors"
-            >
-              <ChevronUp className="w-5 h-5" />
-              <span>Show {newPostsCount} new posts</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Enhanced Feed Tabs */}
+      {/* Feed Filter - Simplified to only show Following */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex space-x-1 bg-white dark:bg-gray-800 rounded-xl p-1 shadow-sm">
-          {(['hot', 'new', 'top', 'rising'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                activeTab === tab
-                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              {tab === 'hot' && <TrendingUp className="w-4 h-4 inline mr-1" />}
-              {tab === 'new' && <Clock className="w-4 h-4 inline mr-1" />}
-              {tab === 'top' && <Award className="w-4 h-4 inline mr-1" />}
-              {tab === 'rising' && <Zap className="w-4 h-4 inline mr-1" />}
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <select
-            value={selectedFilter}
-            onChange={(e) => setSelectedFilter(e.target.value as any)}
-            className="text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          <button
+            onClick={() => setActiveTab('following')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              activeTab === 'following'
+                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
           >
-            <option value="all">All Posts</option>
-            <option value="following">Following</option>
-            <option value="communities">Communities</option>
-          </select>
+            <MessageCircle className="w-4 h-4 inline mr-1" />
+            Following
+          </button>
         </div>
       </div>
 
@@ -508,21 +433,26 @@ export default function EnhancedHomeFeed({
             </GlassPanel>
           </motion.div>
         ))}
-
-        {/* Load More Trigger */}
-        <div ref={loadMoreRef} className="py-8">
-          {loadingMore && (
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-            </div>
-          )}
-          {!hasMore && (
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              <p>You've reached the end of the feed!</p>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Load More Trigger */}
+      <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+        {loadingMore && (
+          <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading more posts...</span>
+          </div>
+        )}
+      </div>
+
+      {/* End of Feed Indicator */}
+      {!hasMore && posts.length > 0 && (
+        <div className="text-center py-8">
+          <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+            🎉 You've reached the end!
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -33,9 +33,10 @@ interface AutoRefreshPreferences {
 }
 
 export const useFeedSortingPreferences = (): FeedPreferences => {
-  const [currentSort, setCurrentSort] = useState<FeedSortType>(FeedSortType.HOT);
-  const [currentTimeRange, setCurrentTimeRange] = useState('day');
-  const [currentFeedSource, setCurrentFeedSource] = useState<'following' | 'all'>('all');
+  // Default to 'new' sort and 'following' feed source
+  const [currentSort, setCurrentSort] = useState<FeedSortType>(FeedSortType.NEW);
+  const [currentTimeRange, setCurrentTimeRange] = useState('all');
+  const [currentFeedSource, setCurrentFeedSource] = useState<'following' | 'all'>('following');
   const [currentPostTypes, setCurrentPostTypes] = useState<string[]>([]);
 
   const updateSort = (sort: FeedSortType, save = false) => {
@@ -103,9 +104,25 @@ export const useFeedSortingPreferences = (): FeedPreferences => {
     const savedFeedSource = localStorage.getItem('feedSource') as 'following' | 'all';
     const savedPostTypes = localStorage.getItem('feedPostTypes');
     
-    if (savedSort) setCurrentSort(savedSort);
-    if (savedTimeRange) setCurrentTimeRange(savedTimeRange);
-    if (savedFeedSource) setCurrentFeedSource(savedFeedSource);
+    // Set defaults if nothing is saved
+    if (savedSort) {
+      setCurrentSort(savedSort);
+    } else {
+      setCurrentSort(FeedSortType.NEW); // Default to newest
+    }
+    
+    if (savedTimeRange) {
+      setCurrentTimeRange(savedTimeRange);
+    } else {
+      setCurrentTimeRange('all'); // Default to all time
+    }
+    
+    if (savedFeedSource) {
+      setCurrentFeedSource(savedFeedSource);
+    } else {
+      setCurrentFeedSource('following'); // Default to following
+    }
+    
     if (savedPostTypes) {
       try {
         setCurrentPostTypes(JSON.parse(savedPostTypes));
@@ -133,65 +150,4 @@ export const useFeedPreferences = (): FeedPreferences => {
   return useFeedSortingPreferences();
 };
 
-export const useDisplayPreferences = (): DisplayPreferences => {
-  const [preferences, setPreferences] = useState({
-    showTrending: true,
-    showSocialProof: true,
-    showTrendingBadges: true,
-    showPreviews: true,
-    compactMode: false,
-    infiniteScroll: true,
-    postsPerPage: 20
-  });
-
-  const updateDisplayPreferences = (newPreferences: Partial<DisplayPreferences>) => {
-    setPreferences(prev => ({ ...prev, ...newPreferences }));
-    localStorage.setItem('displayPreferences', JSON.stringify({ ...preferences, ...newPreferences }));
-  };
-
-  useEffect(() => {
-    const saved = localStorage.getItem('displayPreferences');
-    if (saved) {
-      try {
-        setPreferences(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse display preferences:', e);
-      }
-    }
-  }, []);
-
-  return {
-    ...preferences,
-    updateDisplayPreferences
-  };
-};
-
-export const useAutoRefreshPreferences = (): AutoRefreshPreferences => {
-  const [preferences, setPreferences] = useState({
-    enabled: false,
-    isEnabled: false,
-    interval: 30000 // 30 seconds
-  });
-
-  const updateAutoRefreshPreferences = (newPreferences: Partial<AutoRefreshPreferences>) => {
-    setPreferences(prev => ({ ...prev, ...newPreferences }));
-    localStorage.setItem('autoRefreshPreferences', JSON.stringify({ ...preferences, ...newPreferences }));
-  };
-
-  useEffect(() => {
-    const saved = localStorage.getItem('autoRefreshPreferences');
-    if (saved) {
-      try {
-        setPreferences(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse auto refresh preferences:', e);
-      }
-    }
-  }, []);
-
-  return {
-    ...preferences,
-    isEnabled: preferences.enabled,
-    updateAutoRefreshPreferences
-  };
-};
+// ... existing code for display and auto-refresh preferences ...

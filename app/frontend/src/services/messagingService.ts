@@ -3,12 +3,9 @@
  * Provides instant chat, encryption, multi-device support, and message management
  */
 
-import { webSocketService as wsService } from './webSocketService';
+import { webSocketService } from './webSocketService';
 import { ethers } from 'ethers';
 import { OfflineMessageQueueService } from './offlineMessageQueueService';
-
-// Type assertion to ensure proper typing
-const webSocketService: any = wsService;
 
 export interface ChatMessage {
   id: string;

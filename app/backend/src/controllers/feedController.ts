@@ -16,10 +16,10 @@ export class FeedController {
       const {
         page = 1,
         limit = 20,
-        sort = 'hot',
+        sort = 'new', // Default to newest posts
         communities = [],
-        timeRange = 'day',
-        feedSource = 'all' // New parameter for following feed
+        timeRange = 'all', // Default to all time
+        feedSource = 'following' // Default to following feed
       } = req.query;
 
       // If user is not authenticated and requests 'following' feed, return empty result

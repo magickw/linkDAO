@@ -119,7 +119,6 @@ export class WebSocketService {
       allowedOrigins.push(...customOrigins);
     }
 
-    
     const socketConfig: any = {
       cors: {
         origin: (origin, callback) => {
@@ -143,20 +142,14 @@ export class WebSocketService {
         methods: ["GET", "POST"],
         credentials: true
       },
-      pingTimeout: this.isResourceConstrained ? 120000 : 90000,
-      pingInterval: this.isResourceConstrained ? 60000 : 45000,
-      transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'],
-      maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6,
+      pingTimeout: this.isResourceConstrained ? 120000 : 90000, // Increased from 90s/60s to 120s/90s
+      pingInterval: this.isResourceConstrained ? 60000 : 45000, // Increased from 45s/25s to 60s/45s
+      transports: this.isResourceConstrained ? ['polling', 'websocket'] : ['websocket', 'polling'], // Always allow websocket
+      maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6, // 100KB vs 1MB
       connectTimeout: this.config.connectionTimeout,
-      allowEIO3: true,
-      path: '/socket.io/', // Ensure proper path
-      serveClient: false,
-      cookie: false,
-      // Add upgrade handling options
-      allowUpgrades: true,
-      upgradeTimeout: 30000, // 30 seconds for upgrade
-      httpCompression: !this.isResourceConstrained,
-      perMessageDeflate: !this.isResourceConstrained
+      allowEIO3: true, // Allow older clients
+      // Add path configuration for better compatibility
+      path: '/socket.io/'
     };
 
     // Disable compression on resource-constrained environments
