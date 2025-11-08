@@ -372,7 +372,7 @@ export class UnifiedMarketplaceService {
       }
 
       // Try marketplace/listings endpoint first
-      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
 
@@ -406,7 +406,7 @@ export class UnifiedMarketplaceService {
 
   async getProductById(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/listings/${id}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -429,7 +429,7 @@ export class UnifiedMarketplaceService {
 
   async getListingById(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/listings/${id}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings/${id}`, {
         signal: this.createTimeoutSignal(15000), // Increase timeout to 15 seconds
         headers: {
           'Content-Type': 'application/json',
@@ -597,7 +597,7 @@ export class UnifiedMarketplaceService {
         }
       });
 
-      const response = await fetch(`${this.baseUrl}/marketplace/search?${params.toString()}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/search?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -624,7 +624,7 @@ export class UnifiedMarketplaceService {
         limit: limit.toString()
       });
 
-      const response = await fetch(`${this.baseUrl}/marketplace/search-suggestions?${params.toString()}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/search-suggestions?${params.toString()}`, {
         signal: this.createTimeoutSignal(5000)
       });
       
@@ -657,7 +657,7 @@ export class UnifiedMarketplaceService {
         sortBy: 'ending_soon'
       };
 
-      const response = await fetch(`${this.baseUrl}/marketplace/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -679,7 +679,7 @@ export class UnifiedMarketplaceService {
 
   async placeBid(auctionId: string, bidAmount: number, bidderAddress: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/auctions/${auctionId}/bid`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/auctions/${auctionId}/bid`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -708,7 +708,7 @@ export class UnifiedMarketplaceService {
     data: any;
   }) => void): Promise<() => void> {
     try {
-      const eventSource = new EventSource(`${this.baseUrl}/marketplace/auctions/${auctionId}/stream`);
+      const eventSource = new EventSource(`${this.baseUrl}/api/marketplace/auctions/${auctionId}/stream`);
       
       eventSource.onmessage = (event) => {
         try {
@@ -738,7 +738,7 @@ export class UnifiedMarketplaceService {
 
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -770,7 +770,7 @@ export class UnifiedMarketplaceService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/listings?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
       
@@ -947,7 +947,7 @@ export class UnifiedMarketplaceService {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/health`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/health`, {
         signal: this.createTimeoutSignal(10000)
       });
 

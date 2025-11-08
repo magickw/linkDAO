@@ -673,7 +673,7 @@ class SellerService {
   // Dashboard Data
   async getDashboardStats(walletAddress: string): Promise<SellerDashboardStats> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/dashboard/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/dashboard/${walletAddress}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch dashboard stats: ${response.status} ${response.statusText}`);
       }
@@ -732,7 +732,7 @@ class SellerService {
   // Notifications
   async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/notifications/${walletAddress}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
       }
@@ -752,7 +752,7 @@ class SellerService {
   }
 
   async markNotificationRead(notificationId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${notificationId}/read`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/notifications/${notificationId}/read`, {
       method: 'PUT',
     });
     
@@ -768,7 +768,7 @@ class SellerService {
 
   // Orders Management
   async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
-    const url = new URL(`${this.baseUrl}/marketplace/seller/orders/${walletAddress}`);
+    const url = new URL(`${this.baseUrl}/api/marketplace/seller/orders/${walletAddress}`);
     if (status) {
       url.searchParams.append('status', status);
     }
@@ -794,7 +794,7 @@ class SellerService {
   }
 
   async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/status`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/orders/${orderId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -813,7 +813,7 @@ class SellerService {
   }
 
   async addTrackingNumber(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/tracking`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/orders/${orderId}/tracking`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -833,7 +833,7 @@ class SellerService {
 
   // Listings Management
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
-    const url = new URL(`${this.baseUrl}/marketplace/seller/listings/${walletAddress}`);
+    const url = new URL(`${this.baseUrl}/api/marketplace/seller/listings/${walletAddress}`);
     if (status) {
       url.searchParams.append('status', status);
     }
@@ -900,7 +900,7 @@ class SellerService {
   }
 
   async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -923,7 +923,7 @@ class SellerService {
   }
 
   async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings/${listingId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -946,7 +946,7 @@ class SellerService {
   }
 
   async deleteListing(listingId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings/${listingId}`, {
       method: 'DELETE',
     });
     
@@ -963,7 +963,7 @@ class SellerService {
   // Analytics
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/analytics/${walletAddress}?period=${period}`);
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/analytics/${walletAddress}?period=${period}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch analytics: ${response.status} ${response.statusText}`);
       }
@@ -1021,7 +1021,7 @@ class SellerService {
 
   // Verification
   async sendEmailVerification(email: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/verification/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1040,7 +1040,7 @@ class SellerService {
   }
 
   async verifyEmail(token: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email/verify`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/verification/email/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1059,7 +1059,7 @@ class SellerService {
   }
 
   async sendPhoneVerification(phone: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/verification/phone`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1078,7 +1078,7 @@ class SellerService {
   }
 
   async verifyPhone(phone: string, code: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone/verify`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/verification/phone/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1098,7 +1098,7 @@ class SellerService {
 
   // KYC
   async submitKYC(walletAddress: string, kycData: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/kyc/${walletAddress}`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/kyc/${walletAddress}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1117,7 +1117,7 @@ class SellerService {
   }
 
   async getKYCStatus(walletAddress: string): Promise<{ status: string; documents: string[] }> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/kyc/${walletAddress}`);
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/kyc/${walletAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch KYC status: ${response.status} ${response.statusText}`);
     }
@@ -1133,7 +1133,7 @@ class SellerService {
   // Payments & Withdrawals
   async getPaymentHistory(walletAddress: string): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/payments/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/payments/${walletAddress}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch payment history: ${response.status} ${response.statusText}`);
       }
@@ -1151,7 +1151,7 @@ class SellerService {
   }
 
   async requestWithdrawal(walletAddress: string, amount: number, currency: string, method: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/withdraw`, {
+    const response = await fetch(`${this.baseUrl}/api/marketplace/seller/withdraw`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1172,7 +1172,7 @@ class SellerService {
   // Disputes
   async getDisputes(walletAddress: string): Promise<any[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/disputes/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/disputes/${walletAddress}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch disputes: ${response.status} ${response.statusText}`);
       }
@@ -1190,7 +1190,7 @@ class SellerService {
   }
 
   async respondToDispute(disputeId: string, response: string, evidence?: string[]): Promise<void> {
-    const apiResponse = await fetch(`${this.baseUrl}/marketplace/seller/disputes/${disputeId}/respond`, {
+    const apiResponse = await fetch(`${this.baseUrl}/api/marketplace/seller/disputes/${disputeId}/respond`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
