@@ -21,7 +21,7 @@ const WS_FALLBACK_URLS = [
   process.env.NEXT_PUBLIC_WS_URL,
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http://', 'ws://').replace('https://', 'wss://'),
   // Ensure proper path is included
-  process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace('http://', 'ws://').replace('https://', 'wss://')}/socket.io/` : undefined,
+  process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace('http://', 'ws://').replace('https://://', 'wss://')}/socket.io/` : undefined,
   // Only use localhost in development
   ...(process.env.NODE_ENV === 'development' ? ['ws://localhost:10000/socket.io/'] : []),
   // Production fallback with proper path
@@ -142,12 +142,12 @@ class WebSocketService {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         // Reduce activity when page is hidden
-        this.pauseHeartbeat();
+        (this as any).pauseHeartbeat();
       } else {
         // Resume activity when page becomes visible
-        this.resumeHeartbeat();
+        (this as any).resumeHeartbeat();
         if (this.config.resourceAware && !this.socket?.connected) {
-          this.attemptReconnection();
+          (this as any).attemptReconnection();
         }
       }
     });
@@ -155,12 +155,12 @@ class WebSocketService {
     // Handle online/offline events
     window.addEventListener('online', () => {
       if (!this.socket?.connected && this.config.enableFallback) {
-        this.attemptReconnection();
+        (this as any).attemptReconnection();
       }
     });
 
     window.addEventListener('offline', () => {
-      this.emit('network_offline');
+      (this as any).emit('network_offline');
     });
   }
 
@@ -173,7 +173,7 @@ class WebSocketService {
     // Skip connection if resource-constrained and WebSocket is optional
     if (this.isOptional && this.config.resourceAware) {
       // Silently skip connection
-      this.emit('connection_skipped', { reason: 'resource_constraints' });
+      (this as any).emit('connection_skipped', { reason: 'resource_constraints' });
       return Promise.resolve();
     }
 
@@ -206,10 +206,10 @@ class WebSocketService {
           path: '/socket.io/'
         });
 
-        this.setupSocketEventHandlers(resolve, reject);
+        (this as any).setupSocketEventHandlers(resolve, reject);
 
       } catch (error) {
-        this.handleConnectionError(error as Error);
+        (this as any).handleConnectionError(error as Error);
         reject(error);
       }
     });
@@ -227,21 +227,21 @@ class WebSocketService {
       this.connectionState.lastError = null;
       this.connectionState.connectionQuality = 'good';
 
-      this.startHeartbeat();
-      this.emit('connected');
+      (this as any).startHeartbeat();
+      (this as any).emit('connected');
       resolve?.();
     });
 
     this.socket.on('disconnect', (reason) => {
       // Silently disconnect without logging
       this.connectionState.isConnected = false;
-      this.stopHeartbeat();
+      (this as any).stopHeartbeat();
       
-      this.emit('disconnected', { reason });
+      (this as any).emit('disconnected', { reason });
 
       // Attempt reconnection based on disconnect reason
-      if (this.shouldReconnect(reason)) {
-        this.attemptReconnection();
+      if ((this as any).shouldReconnect(reason)) {
+        (this as any).attemptReconnection();
       }
     });
 
@@ -250,23 +250,23 @@ class WebSocketService {
       if (this.connectionState.reconnectAttempts === 0) {
         console.warn('WebSocket connection error, using polling fallback:', error.message);
       }
-      this.handleConnectionError(error);
+      (this as any).handleConnectionError(error);
       reject?.(error);
     });
 
     this.socket.on('reconnect_failed', () => {
       // Silently handle reconnection failure
-      this.handleReconnectionFailure();
+      (this as any).handleReconnectionFailure();
     });
 
     // Listen for all custom events and emit them to local listeners
     this.socket.onAny((event, ...args) => {
-      this.emit(event, ...args);
+      (this as any).emit(event, ...args);
     });
 
     // Handle heartbeat responses
     this.socket.on('pong', () => {
-      this.updateConnectionQuality();
+      (this as any).updateConnectionQuality();
     });
     
     // Handle server info messages
@@ -301,7 +301,7 @@ class WebSocketService {
   private attemptReconnection(): void {
     if (this.connectionState.isReconnecting || 
         this.connectionState.reconnectAttempts >= this.config.maxReconnectAttempts!) {
-      this.handleReconnectionFailure();
+      (this as any).handleReconnectionFailure();
       return;
     }
 
@@ -322,7 +322,7 @@ class WebSocketService {
       console.log(`WebSocket reconnecting (attempt ${this.connectionState.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
     }
 
-    this.emit('reconnecting', {
+    (this as any).emit('reconnecting', {
       attempt: this.connectionState.reconnectAttempts,
       maxAttempts: this.config.maxReconnectAttempts,
       delay: finalDelay
@@ -331,7 +331,7 @@ class WebSocketService {
     this.reconnectTimeout = setTimeout(() => {
       this.connect().catch((error) => {
         // Silently retry without logging every failure
-        this.attemptReconnection();
+        (this as any).attemptReconnection();
       });
     }, finalDelay);
   }
@@ -340,7 +340,7 @@ class WebSocketService {
   private handleConnectionError(error: Error): void {
     this.connectionState.lastError = error;
     this.connectionState.connectionQuality = 'poor';
-    this.emit('error', error.message);
+    (this as any).emit('error', error.message);
 
     // Switch to polling if WebSocket fails repeatedly
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
@@ -353,18 +353,12 @@ class WebSocketService {
       this.currentUrlIndex = 0;
     }
   }
-    
-    // Reset current URL index after too many failures to try primary URL again
-    if (this.connectionState.reconnectAttempts > 5) {
-      this.currentUrlIndex = 0;
-    }
-  }
 
   private handleReconnectionFailure(): void {
     // Silently handle max reconnection attempts
     this.connectionState.isReconnecting = false;
     
-    this.emit('reconnection_failed', {
+    (this as any).emit('reconnection_failed', {
       attempts: this.connectionState.reconnectAttempts,
       lastError: this.connectionState.lastError
     });
@@ -432,7 +426,7 @@ class WebSocketService {
       this.reconnectTimeout = null;
     }
 
-    this.stopHeartbeat();
+    (this as any).stopHeartbeat();
 
     if (this.socket) {
       this.socket.disconnect();
@@ -440,7 +434,7 @@ class WebSocketService {
     }
 
     this.connectionState.isConnected = false;
-    this.emit('disconnected', { reason: 'manual_disconnect' });
+    (this as any).emit('disconnected', { reason: 'manual_disconnect' });
   }
 
   register(address: string) {
@@ -448,7 +442,7 @@ class WebSocketService {
       this.socket.emit('register', address);
     } else if (this.config.enableFallback) {
       // Queue the registration for when connection is restored
-      this.once('connected', () => {
+      (this as any).once('connected', () => {
         this.socket?.emit('register', address);
       });
     }
@@ -497,7 +491,7 @@ class WebSocketService {
       this.socket.emit(event, data);
     } else if (this.config.enableFallback) {
       // Silently queue message for when connection is restored
-      this.once('connected', () => {
+      (this as any).once('connected', () => {
         this.socket?.emit(event, data);
       });
     } else {

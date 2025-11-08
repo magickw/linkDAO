@@ -3,7 +3,8 @@
  * Extends existing WebSocket service for community enhancements
  */
 
-import { webSocketService } from './webSocketService';
+import { WebSocketService, webSocketService } from './webSocketService';
+import { EventEmitter } from 'events';
 import { cacheInvalidationService } from './communityCache';
 import { 
   EnhancedPost, 
@@ -11,6 +12,9 @@ import {
   WalletActivity,
   ActivityEvent 
 } from '../types/communityEnhancements';
+
+// Type assertion to ensure proper typing
+const webSocketServiceTyped = webSocketService as any;
 
 // Real-time event types
 export interface CommunityRealTimeEvents {
@@ -64,7 +68,7 @@ interface ConnectionState {
 /**
  * Enhanced Community WebSocket Service
  */
-export class CommunityWebSocketService {
+export class CommunityWebSocketService extends EventEmitter {
   private messageQueue: QueuedMessage[] = [];
   private connectionState: ConnectionState = {
     isConnected: false,
@@ -79,6 +83,7 @@ export class CommunityWebSocketService {
   private queueProcessInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+    super();
     this.initializeWebSocketListeners();
     this.startHeartbeat();
     this.startQueueProcessor();
@@ -89,7 +94,7 @@ export class CommunityWebSocketService {
    */
   private initializeWebSocketListeners(): void {
     // Connection events
-    webSocketService.on('connected', () => {
+    webSocketServiceTyped.on('connected', () => {
       this.connectionState.isConnected = true;
       this.connectionState.lastConnected = Date.now();
       this.connectionState.reconnectAttempts = 0;
@@ -103,12 +108,12 @@ export class CommunityWebSocketService {
       this.emit('connection:established');
     });
 
-    webSocketService.on('disconnected', () => {
+    webSocketServiceTyped.on('disconnected', () => {
       this.connectionState.isConnected = false;
       this.emit('connection:lost');
     });
 
-    webSocketService.on('error', (error: string) => {
+    webSocketServiceTyped.on('error', (error: string) => {
       this.connectionState.reconnectAttempts++;
       this.emit('connection:error', error);
     });
@@ -122,7 +127,7 @@ export class CommunityWebSocketService {
    */
   private setupCommunityEventListeners(): void {
     // Community updates
-    webSocketService.on('community:updated', (data: any) => {
+    webSocketServiceTyped.on('community:updated', (data: any) => {
       cacheInvalidationService.handleRealTimeUpdate({
         type: 'community_updated',
         data: { communityId: data.communityId }
@@ -130,37 +135,37 @@ export class CommunityWebSocketService {
       this.emit('community:updated', data);
     });
 
-    webSocketService.on('community:member_joined', (data: any) => {
+    webSocketServiceTyped.on('community:member_joined', (data: any) => {
       this.emit('community:member_joined', data);
     });
 
-    webSocketService.on('community:member_left', (data: any) => {
+    webSocketServiceTyped.on('community:member_left', (data: any) => {
       this.emit('community:member_left', data);
     });
 
     // Post updates
-    webSocketService.on('post:created', (data: any) => {
+    webSocketServiceTyped.on('post:created', (data: any) => {
       this.emit('post:created', data);
     });
 
-    webSocketService.on('post:updated', (data: any) => {
+    webSocketServiceTyped.on('post:updated', (data: any) => {
       this.emit('post:updated', data);
     });
 
-    webSocketService.on('post:reaction', (data: any) => {
+    webSocketServiceTyped.on('post:reaction', (data: any) => {
       this.emit('post:reaction', data);
     });
 
-    webSocketService.on('post:tip', (data: any) => {
+    webSocketServiceTyped.on('post:tip', (data: any) => {
       this.emit('post:tip', data);
     });
 
     // Governance updates
-    webSocketService.on('governance:proposal_created', (data: any) => {
+    webSocketServiceTyped.on('governance:proposal_created', (data: any) => {
       this.emit('governance:proposal_created', data);
     });
 
-    webSocketService.on('governance:proposal_updated', (data: any) => {
+    webSocketServiceTyped.on('governance:proposal_updated', (data: any) => {
       cacheInvalidationService.handleRealTimeUpdate({
         type: 'proposal_updated',
         data: { url: data.proposalUrl }
@@ -168,29 +173,29 @@ export class CommunityWebSocketService {
       this.emit('governance:proposal_updated', data);
     });
 
-    webSocketService.on('governance:vote_cast', (data: any) => {
+    webSocketServiceTyped.on('governance:vote_cast', (data: any) => {
       this.emit('governance:vote_cast', data);
     });
 
     // Activity updates
-    webSocketService.on('activity:new', (data: any) => {
+    webSocketServiceTyped.on('activity:new', (data: any) => {
       this.emit('activity:new', data);
     });
 
-    webSocketService.on('activity:tip_received', (data: any) => {
+    webSocketServiceTyped.on('activity:tip_received', (data: any) => {
       this.emit('activity:tip_received', data);
     });
 
-    webSocketService.on('activity:badge_earned', (data: any) => {
+    webSocketServiceTyped.on('activity:badge_earned', (data: any) => {
       this.emit('activity:badge_earned', data);
     });
 
     // Live updates
-    webSocketService.on('live:viewers_count', (data: any) => {
+    webSocketServiceTyped.on('live:viewers_count', (data: any) => {
       this.emit('live:viewers_count', data);
     });
 
-    webSocketService.on('live:comment_added', (data: any) => {
+    webSocketServiceTyped.on('live:comment_added', (data: any) => {
       this.emit('live:comment_added', data);
     });
   }
@@ -199,7 +204,7 @@ export class CommunityWebSocketService {
    * Connect to WebSocket service
    */
   connect(): void {
-    webSocketService.connect();
+    webSocketServiceTyped.connect();
   }
 
   /**
@@ -208,16 +213,16 @@ export class CommunityWebSocketService {
   disconnect(): void {
     this.connectionState.subscribedCommunities.clear();
     this.connectionState.subscribedPosts.clear();
-    
+
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
     }
-    
+
     if (this.queueProcessInterval) {
       clearInterval(this.queueProcessInterval);
     }
-    
-    webSocketService.disconnect();
+
+    webSocketServiceTyped.disconnect();
   }
 
   /**
@@ -234,7 +239,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
       this.connectionState.subscribedCommunities.add(communityId);
     } else {
       this.queueMessage(message.event, message.data);
@@ -255,7 +260,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
     }
 
     this.connectionState.subscribedCommunities.delete(communityId);
@@ -275,7 +280,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
       this.connectionState.subscribedPosts.add(postId);
     } else {
       this.queueMessage(message.event, message.data);
@@ -296,7 +301,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
     }
 
     this.connectionState.subscribedPosts.delete(postId);
@@ -312,7 +317,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
     } else {
       this.queueMessage(message.event, message.data);
     }
@@ -328,7 +333,7 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
     } else {
       this.queueMessage(message.event, message.data);
     }
@@ -344,57 +349,13 @@ export class CommunityWebSocketService {
     };
 
     if (this.connectionState.isConnected) {
-      webSocketService.send(message.event, message.data);
+      webSocketServiceTyped.send(message.event, message.data);
     } else {
       this.queueMessage(message.event, message.data);
     }
   }
 
-  /**
-   * Register event listener
-   */
-  on<K extends keyof CommunityRealTimeEvents>(
-    event: K,
-    callback: (data: CommunityRealTimeEvents[K]) => void
-  ): void;
-  on(event: string, callback: Function): void;
-  on(event: string, callback: Function): void {
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, new Set());
-    }
-    this.eventListeners.get(event)!.add(callback);
-  }
 
-  /**
-   * Remove event listener
-   */
-  off<K extends keyof CommunityRealTimeEvents>(
-    event: K,
-    callback: (data: CommunityRealTimeEvents[K]) => void
-  ): void;
-  off(event: string, callback: Function): void;
-  off(event: string, callback: Function): void {
-    const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      listeners.delete(callback);
-    }
-  }
-
-  /**
-   * Emit event to listeners
-   */
-  private emit(event: string, data?: any): void {
-    const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      listeners.forEach(callback => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`Error in community WebSocket listener for event ${event}:`, error);
-        }
-      });
-    }
-  }
 
   /**
    * Queue message for offline scenarios
@@ -429,7 +390,7 @@ export class CommunityWebSocketService {
 
     messagesToProcess.forEach(message => {
       try {
-        webSocketService.send(message.event, message.data);
+        webSocketServiceTyped.send(message.event, message.data);
       } catch (error) {
         console.error('Error processing queued message:', error);
         
@@ -448,12 +409,12 @@ export class CommunityWebSocketService {
   private resubscribeAll(): void {
     // Resubscribe to communities
     this.connectionState.subscribedCommunities.forEach(communityId => {
-      webSocketService.send('subscribe:community', { communityId });
+      webSocketServiceTyped.send('subscribe:community', { communityId });
     });
 
     // Resubscribe to posts
     this.connectionState.subscribedPosts.forEach(postId => {
-      webSocketService.send('subscribe:post', { postId });
+      webSocketServiceTyped.send('subscribe:post', { postId });
     });
   }
 
@@ -463,7 +424,7 @@ export class CommunityWebSocketService {
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
       if (this.connectionState.isConnected) {
-        webSocketService.send('ping', { timestamp: Date.now() });
+        webSocketServiceTyped.send('ping', { timestamp: Date.now() });
       }
     }, 30000); // Send ping every 30 seconds
   }
