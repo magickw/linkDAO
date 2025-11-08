@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   RefreshCw,
   MessageSquare,
-  Truck
+  Truck,
+  FileText,
+  X
 } from 'lucide-react';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';

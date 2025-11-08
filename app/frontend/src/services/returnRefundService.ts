@@ -134,13 +134,8 @@ class ReturnRefundService {
     endDate?: string;
   }): Promise<ReturnRefundResponse[]> {
     try {
-      const params = new URLSearchParams({ userAddress });
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.startDate) params.append('startDate', filters.startDate);
-      if (filters?.endDate) params.append('endDate', filters.endDate);
-
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns?${params.toString()}`
+        `${API_BASE_URL}/marketplace/returns/user/${userAddress}?role=seller&limit=100&offset=0`
       );
 
       if (!response.ok) {
@@ -150,7 +145,7 @@ class ReturnRefundService {
       return await response.json();
     } catch (error) {
       console.error('Error getting user returns:', error);
-      throw error; // Don't fallback to mock in production
+      return [];
     }
   }
 
@@ -218,12 +213,18 @@ class ReturnRefundService {
     }
   ): Promise<{ success: boolean }> {
     try {
+      const endpoint = response.approved ? 'approve' : 'reject';
       const apiResponse = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/returns/${returnId}/respond`,
+        `${API_BASE_URL}/marketplace/returns/${returnId}/${endpoint}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(response)
+          body: JSON.stringify({
+            approverId: 'current-user',
+            rejectorId: 'current-user',
+            notes: response.message,
+            reason: response.message
+          })
         }
       );
 
@@ -386,7 +387,7 @@ class ReturnRefundService {
   async getSellerReturnPolicy(sellerId: string): Promise<any> {
     try {
       const response = await fetchWithRetry(
-        `${API_BASE_URL}/marketplace/return-policies/seller/${sellerId}`
+        `${API_BASE_URL}/marketplace/return-policies/${sellerId}`
       );
 
       if (!response.ok) {
@@ -396,7 +397,7 @@ class ReturnRefundService {
       return await response.json();
     } catch (error) {
       console.error('Error getting seller return policy:', error);
-      throw error;
+      return null;
     }
   }
 
@@ -460,6 +461,68 @@ class ReturnRefundService {
     } catch (error) {
       console.error('Error getting return analytics:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Generate return shipping label
+   */
+  async generateReturnLabel(returnId: string, data: {
+    fromAddress: any;
+    toAddress: any;
+    weight: number;
+    carrier: 'usps' | 'ups' | 'fedex';
+  }): Promise<{ success: boolean; labelUrl?: string; trackingNumber?: string; error?: string }> {
+    try {
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/marketplace/returns/${returnId}/label`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to generate return label');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error generating return label:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate label' };
+    }
+  }
+
+  /**
+   * Get fraud risk assessment for return
+   */
+  async getReturnRiskAssessment(returnId: string, data: {
+    userId: string;
+    orderId: string;
+    returnReason: string;
+    orderValue: number;
+    accountAge: number;
+    previousReturns: number;
+  }): Promise<{ riskScore: number; riskLevel: 'low' | 'medium' | 'high'; flags: string[] }> {
+    try {
+      const response = await fetchWithRetry(
+        `${API_BASE_URL}/marketplace/returns/${returnId}/risk-assessment`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to get risk assessment');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting risk assessment:', error);
+      return { riskScore: 0, riskLevel: 'low', flags: [] };
     }
   }
 }

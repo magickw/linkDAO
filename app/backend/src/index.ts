@@ -868,8 +868,14 @@ try {
 // Import receipt routes
 import receiptRoutes from './routes/receiptRoutes';
 
+// Import return routes
+import returnRoutes from './routes/returnRoutes';
+
 // Order event handler routes
 app.use('/api/order-events', orderEventHandlerRoutes);
+
+// Return and refund routes
+app.use('/api/marketplace', returnRoutes);
 
 // x402 payment routes
 if (x402PaymentRoutes) {

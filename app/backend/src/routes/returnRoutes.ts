@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { returnService } from '../services/returnService.js';
 import { returnPolicyService } from '../services/returnPolicyService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { refundPaymentService } from '../services/refundPaymentService';
+import { returnFraudDetectionService } from '../services/returnFraudDetectionService';
+import { returnLabelService } from '../services/returnLabelService';
+import { returnAnalyticsService } from '../services/returnAnalyticsService';
 
 const router = Router();
 
@@ -61,14 +65,29 @@ router.post('/returns/:returnId/reject', authMiddleware, async (req, res) => {
 
 router.post('/returns/:returnId/refund', authMiddleware, async (req, res) => {
   try {
-    const { amount, reason, refundMethod } = req.body;
-    const refund = await returnService.processRefund({
-      returnId: req.params.returnId,
-      amount,
-      reason,
-      refundMethod
-    });
-    res.json(refund);
+    const { provider = 'stripe', paymentIntentId, recipientAddress } = req.body;
+    
+    let result;
+    if (provider === 'stripe' && paymentIntentId) {
+      result = await refundPaymentService.processStripeRefund(paymentIntentId, req.body.amount);
+    } else if (provider === 'blockchain' && recipientAddress) {
+      result = await refundPaymentService.processBlockchainRefund(recipientAddress, req.body.amount);
+    } else {
+      return res.status(400).json({ error: 'Invalid refund provider or missing parameters' });
+    }
+    
+    if (result.success) {
+      await returnService.processRefund({
+        returnId: req.params.returnId,
+        amount: req.body.amount,
+        reason: req.body.reason,
+        refundMethod: provider,
+        transactionHash: result.transactionHash,
+        refundId: result.refundId
+      });
+    }
+    
+    res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -90,6 +109,40 @@ router.get('/return-policies/:sellerId', async (req, res) => {
     res.json(policy);
   } catch (error: any) {
     res.status(404).json({ error: error.message });
+  }
+});
+
+// Fraud detection endpoint
+router.post('/returns/:returnId/risk-assessment', authMiddleware, async (req, res) => {
+  try {
+    const risk = await returnFraudDetectionService.calculateRiskScore(req.body);
+    res.json(risk);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Generate return label
+router.post('/returns/:returnId/label', authMiddleware, async (req, res) => {
+  try {
+    const label = await returnLabelService.generateShippingLabel(req.body);
+    res.json(label);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Enhanced analytics
+router.get('/returns/analytics', authMiddleware, async (req, res) => {
+  try {
+    const { sellerId, periodStart, periodEnd } = req.query;
+    const analytics = await returnAnalyticsService.getEnhancedAnalytics(
+      sellerId as string,
+      { start: periodStart as string, end: periodEnd as string }
+    );
+    res.json(analytics);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 });
 
