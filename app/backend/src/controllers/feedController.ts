@@ -5,6 +5,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
+import { MetadataService } from '../services/metadataService';
 
 export class FeedController {
   // Get enhanced personalized feed (optional authentication)
@@ -516,6 +517,33 @@ export class FeedController {
     } catch (error) {
       safeLogger.error('Error toggling bookmark:', error);
       res.status(500).json(apiResponse.error('Failed to toggle bookmark'));
+    }
+  }
+
+  // Get content from IPFS by CID
+  async getContentFromIPFS(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { cid } = req.params;
+
+      // Validate CID format (basic validation)
+      if (!cid || cid.length < 46 || cid.length > 64) {
+        res.status(400).json(apiResponse.error('Invalid CID format', 400));
+        return;
+      }
+
+      try {
+        // Create metadata service instance
+        const metadataService = new MetadataService();
+        const content = await metadataService.getFromIPFS(cid);
+        
+        res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully'));
+      } catch (ipfsError) {
+        safeLogger.error('Error retrieving content from IPFS:', ipfsError);
+        res.status(500).json(apiResponse.error('Failed to retrieve content from IPFS'));
+      }
+    } catch (error) {
+      safeLogger.error('Error in getContentFromIPFS:', error);
+      res.status(500).json(apiResponse.error('Internal server error'));
     }
   }
 }

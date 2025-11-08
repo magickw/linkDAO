@@ -1,5 +1,5 @@
 // Mock EnhancedPostCard component for testing
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
 import { useCacheInvalidation } from '../../hooks/useCacheInvalidation';
@@ -9,6 +9,7 @@ import TrendingBadge from '../TrendingBadge/TrendingBadge';
 import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
+import { ipfsContentService } from '../../services/ipfsContentService';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -36,10 +37,28 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const [showTipModal, setShowTipModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(post.isBookmarked || false);
+  const [content, setContent] = useState<string>('');
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
   const { invalidateFeedCache, invalidateUserCache, invalidateCommunityCache } = useCacheInvalidation();
+
+  // Fetch content from IPFS when component mounts
+  useEffect(() => {
+    const fetchContent = async () => {
+      if (post.contentCid) {
+        try {
+          const contentText = await ipfsContentService.getContentFromIPFS(post.contentCid);
+          setContent(contentText);
+        } catch (error) {
+          console.error('Failed to fetch content:', error);
+          setContent(`Failed to load content (CID: ${post.contentCid})`);
+        }
+      }
+    };
+
+    fetchContent();
+  }, [post.contentCid]);
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -154,7 +173,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
       {/* Content */}
       <div>
-        <p>Content from IPFS: {post.contentCid}</p>
+        <p>{content || 'Loading content...'}</p>
 
         {/* Media */}
         {post.mediaCids && post.mediaCids.length > 0 && (

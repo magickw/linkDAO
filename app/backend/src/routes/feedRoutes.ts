@@ -215,4 +215,14 @@ router.get('/posts/:postId/engagement',
   feedController.getLikedByData
 );
 
+// Get content from IPFS by CID (public access)
+router.get('/content/:cid',
+  validateRequest({
+    params: {
+      cid: { type: 'string', required: true }
+    }
+  }),
+  feedController.getContentFromIPFS
+);
+
 export default router;
