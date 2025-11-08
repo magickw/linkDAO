@@ -1,4 +1,4 @@
-import express = require('express');
+import express from 'express';
 import { x402PaymentService } from '../services/x402PaymentService';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';

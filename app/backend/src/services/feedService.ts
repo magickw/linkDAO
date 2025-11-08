@@ -88,7 +88,7 @@ export class FeedService {
 
     // Build following filter if feedSource is 'following'
     let followingFilter = sql`1=1`;
-    if (feedSource === 'following') {
+    if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
       const user = await db.select({ id: users.id })
         .from(users)
@@ -104,12 +104,12 @@ export class FeedService {
 
         const followingIds = followingList.map(f => f.followingId);
 
-        // Filter posts to only show from followed users
+        // Filter posts to show from followed users OR the user's own posts
         if (followingIds.length > 0) {
-          followingFilter = inArray(posts.authorId, followingIds);
+          followingFilter = sql`(${inArray(posts.authorId, followingIds)} OR ${eq(posts.authorId, userId)})`;
         } else {
-          // If not following anyone, return empty result
-          followingFilter = sql`1=0`;
+          // If not following anyone, show only user's own posts
+          followingFilter = eq(posts.authorId, userId);
         }
       } else {
         // User doesn't exist, return empty result
@@ -149,7 +149,8 @@ export class FeedService {
           timeFilter,
           communityFilter,
           followingFilter,
-          moderationFilter // Add moderation filter
+          moderationFilter, // Add moderation filter
+          isNull(posts.parentId) // Only show top-level posts, not comments
         ))
         .orderBy(sortOrder)
         .limit(limit)
@@ -200,7 +201,8 @@ export class FeedService {
           timeFilter,
           communityFilter,
           followingFilter,
-          moderationFilter // Include moderation filter in count
+          moderationFilter, // Include moderation filter in count
+          isNull(posts.parentId) // Only count top-level posts
         ));
 
       return {

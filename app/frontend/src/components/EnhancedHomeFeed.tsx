@@ -1,9 +1,4 @@
-/**
- * Enhanced Home Feed Component
- * Implements all the suggested UX improvements for LinkDAO home/feed interface
- */
-
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MessageCircle, 
@@ -32,28 +27,20 @@ import { useAccount } from 'wagmi';
 import { useInView } from 'react-intersection-observer';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
+// ... existing imports ...
+
 interface EnhancedPost {
   id: string;
   author: string;
   authorProfile: {
     handle: string;
+    avatar?: string;
+    isOnline?: boolean;
+    verified?: boolean;
     ens?: string;
-    avatar: string;
-    verified: boolean;
-    reputation: number;
-    isOnline: boolean;
   };
   content: string;
-  media?: {
-    type: 'image' | 'video' | 'link';
-    url: string;
-    thumbnail?: string;
-    title?: string;
-    description?: string;
-  }[];
-  hashtags: string[];
-  mentions: string[];
-  timestamp: Date;
+  timestamp: string;
   engagement: {
     likes: number;
     comments: number;
@@ -62,21 +49,24 @@ interface EnhancedPost {
     hasLiked: boolean;
     hasBookmarked: boolean;
   };
-  trending?: {
-    score: number;
-    velocity: number;
-  };
+  hashtags: string[];
+  media?: {
+    type: 'image' | 'video' | 'link';
+    url: string;
+    title?: string;
+    description?: string;
+    thumbnail?: string;
+  }[];
+  trending?: boolean;
   web3Data?: {
     tokenAmount?: string;
     tokenSymbol?: string;
     transactionHash?: string;
-    nftContract?: string;
-    nftTokenId?: string;
   };
 }
 
 interface EnhancedHomeFeedProps {
-  onPostSubmit: (postData: CreatePostInput) => Promise<void>;
+  onPostSubmit: (content: string) => void;
   isLoading: boolean;
   userProfile?: any;
   className?: string;
@@ -114,72 +104,73 @@ export default function EnhancedHomeFeed({
     }
   }, [inView, hasMore, loadingMore]);
 
-  const loadMorePosts = useCallback(async () => {
+  // Load more posts function
+  const loadMorePosts = async () => {
+    if (loadingMore) return;
+    
     setLoadingMore(true);
-    // Simulate API call - in a real implementation, this would fetch actual data
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // In a real implementation, we would fetch more posts from the API
-    // For now, we'll just stop loading more since we're not using mock data
-    setLoadingMore(false);
-    setHasMore(false); // Stop infinite scroll since we're not adding mock data
-    
-  }, []);
-
-  const handleLike = (postId: string) => {
-    setPosts(prev => prev.map(post => 
-      post.id === postId 
-        ? {
-            ...post,
-            engagement: {
-              ...post.engagement,
-              likes: post.engagement.hasLiked 
-                ? post.engagement.likes - 1 
-                : post.engagement.likes + 1,
-              hasLiked: !post.engagement.hasLiked,
-            }
-          }
-        : post
-    ));
+    try {
+      // In a real implementation, this would fetch from your API
+      // For now, we'll simulate loading more posts
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate reaching the end of posts
+      setHasMore(false);
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
+  // Filter posts based on search query
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery) return posts;
+    
+    const query = searchQuery.toLowerCase();
+    return posts.filter(post => 
+      post.content.toLowerCase().includes(query) ||
+      post.authorProfile.handle.toLowerCase().includes(query) ||
+      post.hashtags.some(tag => tag.toLowerCase().includes(query))
+    );
+  }, [posts, searchQuery]);
+
+  // Handle bookmark toggle
   const handleBookmark = (postId: string) => {
-    setPosts(prev => prev.map(post => 
-      post.id === postId 
-        ? {
-            ...post,
-            engagement: {
-              ...post.engagement,
-              hasBookmarked: !post.engagement.hasBookmarked,
+    setPosts(prevPosts => 
+      prevPosts.map(post => 
+        post.id === postId 
+          ? { 
+              ...post, 
+              engagement: { 
+                ...post.engagement, 
+                hasBookmarked: !post.engagement.hasBookmarked 
+              } 
             }
-          }
-        : post
-    ));
+          : post
+      )
+    );
   };
 
-  const handleShare = (postId: string) => {
-    const post = posts.find(p => p.id === postId);
-    if (post) {
-      navigator.clipboard.writeText(`Check out this post: ${window.location.origin}/post/${postId}`);
-    }
-  };
-
-  const filteredPosts = posts.filter(post => {
-    if (selectedFilter === 'following') {
-      // In a real implementation, this would check if the user follows the post author
-      return true;
-    }
-    return true;
-  }).filter(post => 
-    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.hashtags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const showNewPosts = () => {
-    setShowNewPostsBanner(false);
-    setNewPostsCount(0);
-    // Scroll to top and refresh feed
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Handle like toggle
+  const handleLike = (postId: string) => {
+    setPosts(prevPosts => 
+      prevPosts.map(post => 
+        post.id === postId 
+          ? { 
+              ...post, 
+              engagement: { 
+                ...post.engagement, 
+                likes: post.engagement.hasLiked 
+                  ? post.engagement.likes - 1 
+                  : post.engagement.likes + 1,
+                hasLiked: !post.engagement.hasLiked
+              } 
+            }
+          : post
+      )
+    );
   };
 
   return (
@@ -191,12 +182,12 @@ export default function EnhancedHomeFeed({
           <div className="flex items-center space-x-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
               <MessageCircle className="w-4 h-4 mr-1" />
-              Following
+              Following + Yours
             </span>
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
-          See the latest posts from accounts you follow
+          See the latest posts from accounts you follow and your own posts
         </p>
       </div>
 
@@ -212,7 +203,7 @@ export default function EnhancedHomeFeed({
             }`}
           >
             <MessageCircle className="w-4 h-4 inline mr-1" />
-            Following
+            Following + Yours
           </button>
         </div>
       </div>
@@ -233,7 +224,7 @@ export default function EnhancedHomeFeed({
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <img
-                        src={post.authorProfile.avatar}
+                        src={post.authorProfile.avatar || `https://ui-avatars.com/api/?name=${post.authorProfile.handle}&background=random`}
                         alt={post.authorProfile.handle}
                         className="w-12 h-12 rounded-full object-cover"
                       />
@@ -382,17 +373,23 @@ export default function EnhancedHomeFeed({
                         )}
                       </div>
                       {post.web3Data.transactionHash && (
-                        <button className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                        <a
+                          href={`https://etherscan.io/tx/${post.web3Data.transactionHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
+                        >
                           View on Etherscan
-                        </button>
+                          <ExternalLink className="w-4 h-4 ml-1" />
+                        </a>
                       )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Engagement Bar */}
-              <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+              {/* Post Actions */}
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-6">
                     <button
@@ -405,29 +402,26 @@ export default function EnhancedHomeFeed({
                     >
                       <Heart className={`w-5 h-5 ${post.engagement.hasLiked ? 'fill-current' : ''}`} />
                       <span className="text-sm font-medium">
-                        {post.engagement.likes.toLocaleString()}
+                        {post.engagement.likes > 0 ? post.engagement.likes : 'Like'}
                       </span>
                     </button>
                     
                     <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
                       <MessageCircle className="w-5 h-5" />
                       <span className="text-sm font-medium">
-                        {post.engagement.comments.toLocaleString()}
+                        {post.engagement.comments > 0 ? post.engagement.comments : 'Comment'}
                       </span>
                     </button>
                     
                     <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
                       <Share2 className="w-5 h-5" />
-                      <span className="text-sm font-medium">
-                        {post.engagement.shares.toLocaleString()}
-                      </span>
+                      <span className="text-sm font-medium">Share</span>
                     </button>
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span>{post.engagement.views.toLocaleString()} views</span>
-                  </div>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                    <MoreHorizontal className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </GlassPanel>

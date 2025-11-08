@@ -1,10 +1,15 @@
 // Use dynamic import to handle missing dependencies gracefully
 let CdpClient: any = null;
+let cdpSdk: any = null;
+
 try {
-  const cdpSdk = require('@coinbase/cdp-sdk');
+  // Simple direct import - this should work based on our test
+  cdpSdk = require('@coinbase/cdp-sdk');
   CdpClient = cdpSdk.CdpClient;
+  console.log('✅ CDP SDK loaded successfully with direct import');
 } catch (error) {
-  console.warn('CDP SDK not available, x402 payments will use mock implementation:', error);
+  console.warn('⚠️ CDP SDK not available, x402 payments will use mock implementation:', error);
+  console.warn('📝 This is not an error - falling back to mock implementation for x402 payments');
 }
 
 import { safeLogger } from '../utils/safeLogger';
@@ -32,26 +37,32 @@ export class X402PaymentService {
   constructor() {
     // Initialize CDP client with API key and secret from environment variables
     try {
-      if (CdpClient) {
+      if (CdpClient && cdpSdk) {
         const apiKeyId = process.env.CDP_API_KEY_ID || process.env.COINBASE_API_KEY;
         const apiKeySecret = process.env.CDP_API_KEY_SECRET || process.env.COINBASE_API_SECRET;
         
+        console.log('🔑 Checking for CDP API credentials...');
         if (apiKeyId && apiKeySecret) {
+          console.log('🔐 Initializing CDP client with provided credentials...');
           this.cdpClient = new CdpClient({
             apiKeyId,
             apiKeySecret,
           });
-          safeLogger.info('CDP client initialized successfully');
+          safeLogger.info('✅ CDP client initialized successfully');
+          console.log('✅ CDP client initialized successfully');
         } else {
-          safeLogger.warn('CDP API credentials not found. x402 payments will use mock implementation.');
+          safeLogger.warn('⚠️ CDP API credentials not found. x402 payments will use mock implementation.');
+          console.log('⚠️ CDP API credentials not found. x402 payments will use mock implementation.');
           this.cdpClient = null;
         }
       } else {
-        safeLogger.warn('CDP SDK not available. x402 payments will use mock implementation.');
+        safeLogger.warn('⚠️ CDP SDK not available. x402 payments will use mock implementation.');
+        console.log('⚠️ CDP SDK not available. x402 payments will use mock implementation.');
         this.cdpClient = null;
       }
     } catch (error) {
-      safeLogger.warn('Failed to initialize CDP client. x402 payments will use mock implementation.', error);
+      safeLogger.warn('⚠️ Failed to initialize CDP client. x402 payments will use mock implementation.', error);
+      console.warn('⚠️ Failed to initialize CDP client. x402 payments will use mock implementation.', error);
       this.cdpClient = null;
     }
   }

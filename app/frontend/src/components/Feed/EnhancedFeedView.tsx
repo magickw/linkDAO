@@ -238,24 +238,10 @@ const EnhancedFeedView = React.memo(({
   // Handle posts loading - memoized
   const handlePostsLoad = useCallback((newPosts: FeedEnhancedPost[]) => {
     let convertedPosts = newPosts.map(convertFeedPostToCardPost);
-    // Client-side fallback: if feedSource is following and we have following list, filter authors
-    if (filter.feedSource === 'following' && following && following.length > 0) {
-      const followingSet = new Set(following.map(a => a.toLowerCase()));
-      convertedPosts = convertedPosts.filter(p => followingSet.has(p.author.toLowerCase()));
-    }
-    // Client-side community filter: if user has joined communities, prioritize/show those
-    if (userCommunityIds.length > 0) {
-      const communitySet = new Set(userCommunityIds);
-      convertedPosts = convertedPosts.filter(p => !p.communityId || communitySet.has(p.communityId));
-    }
-    // Client-side topics filter: if user has interest tags, include posts matching any
-    if (userInterestTags.length > 0) {
-      const tagSet = new Set(userInterestTags);
-      convertedPosts = convertedPosts.filter(p => (p.tags || []).some(t => tagSet.has(String(t).toLowerCase())) || (p.communityId ? true : false));
-    }
+    // No client-side filtering needed since backend handles it
     setPosts(convertedPosts);
     setError(null); // Clear any previous errors
-  }, [convertFeedPostToCardPost, filter.feedSource, following, userCommunityIds, userInterestTags]);
+  }, [convertFeedPostToCardPost]);
 
   // Handle trending updates - memoized
   const handleTrendingUpdate = useCallback((trending: EnhancedPost[]) => {
@@ -461,14 +447,14 @@ const EnhancedFeedView = React.memo(({
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Following Feed</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Feed</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Newest posts from accounts you follow
+                Posts from accounts you follow and your own posts
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                Following
+                Following + Yours
               </span>
             </div>
           </div>
