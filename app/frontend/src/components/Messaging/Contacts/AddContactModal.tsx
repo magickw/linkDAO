@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, UserPlusIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useContacts } from '@/contexts/ContactContext';
-import { ContactFormData, CONTACT_TAGS } from '@/types/contacts';
+import { CONTACT_TAGS } from '@/types/contacts';
 
 interface AddContactModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onContactAdded?: () => void;
 }
 
-const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) => {
-  const { groups, addContact } = useContacts();
-  const [formData, setFormData] = useState<ContactFormData>({
-    walletAddress: '',
-    ensName: '',
-    nickname: '',
-    groups: [],
-    tags: [],
-    notes: ''
-  });
+const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose, onContactAdded }) => {
+  const { groups, addContact, createGroup } = useContacts();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupIcon, setNewGroupIcon] = useState('👥');
+
+  const [formData, setFormData] = useState({
+    walletAddress: '',
+    ensName: '',
+    nickname: '',
+    groups: [] as string[],
+    tags: [] as string[],
+    notes: ''
+  });
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -39,30 +44,76 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
     }
   }, [isOpen]);
 
+  const handleGroupToggle = (groupId: string) => {
+    setFormData(prev => {
+      const newGroups = prev.groups.includes(groupId)
+        ? prev.groups.filter(id => id !== groupId)
+        : [...prev.groups, groupId];
+      return { ...prev, groups: newGroups };
+    });
+  };
+
+  const handleTagToggle = (tag: string) => {
+    const newSelected = new Set(selectedTags);
+    if (newSelected.has(tag)) {
+      newSelected.delete(tag);
+    } else {
+      newSelected.add(tag);
+    }
+    setSelectedTags(newSelected);
+    
+    setFormData(prev => {
+      const newTags = newSelected.has(tag)
+        ? [...prev.tags, tag]
+        : prev.tags.filter(t => t !== tag);
+      return { ...prev, tags: newTags };
+    });
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    
+    try {
+      // Create a simple group with default color
+      await createGroup({
+        name: newGroupName.trim(),
+        type: 'custom',
+        icon: newGroupIcon,
+        color: '#4CAF50', // Default green color
+        description: ''
+      });
+      
+      setNewGroupName('');
+      setShowCreateGroup(false);
+    } catch (err) {
+      setError('Failed to create group');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // Validate required fields
       if (!formData.walletAddress.trim()) {
         throw new Error('Wallet address is required');
       }
+
       if (!formData.nickname.trim()) {
         throw new Error('Nickname is required');
       }
 
-      // Validate wallet address format
-      if (!/^0x[a-fA-F0-9]{40}$/.test(formData.walletAddress)) {
-        throw new Error('Invalid wallet address format');
-      }
-
       await addContact({
-        ...formData,
-        tags: Array.from(selectedTags)
+        walletAddress: formData.walletAddress.trim(),
+        ensName: formData.ensName.trim() || undefined,
+        nickname: formData.nickname.trim(),
+        groups: formData.groups,
+        tags: formData.tags,
+        notes: formData.notes.trim() || undefined
       });
 
+      onContactAdded?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add contact');
@@ -71,70 +122,34 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
     }
   };
 
-  const handleTagToggle = (tag: string) => {
-    const newTags = new Set(selectedTags);
-    if (newTags.has(tag)) {
-      newTags.delete(tag);
-    } else {
-      newTags.add(tag);
-    }
-    setSelectedTags(newTags);
-  };
-
-  const handleGroupToggle = (groupId: string) => {
-    const newGroups = formData.groups.includes(groupId)
-      ? formData.groups.filter(id => id !== groupId)
-      : [...formData.groups, groupId];
-    
-    setFormData(prev => ({ ...prev, groups: newGroups }));
-  };
-
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* Backdrop */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md mx-4 bg-gray-800 rounded-xl shadow-xl border border-gray-700"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="w-full max-w-md bg-gray-800 rounded-xl shadow-2xl border border-gray-700"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <UserPlusIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Add New Contact</h2>
-                <p className="text-sm text-gray-400">Add a wallet address or ENS name</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            <h3 className="text-lg font-semibold text-white">Add New Contact</h3>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1 text-gray-400 hover:text-white transition-colors"
+              aria-label="Close"
             >
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Error Message */}
+          <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {error && (
-              <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
-                {error}
+              <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg">
+                <p className="text-sm text-red-300">{error}</p>
               </div>
             )}
 
@@ -147,7 +162,7 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
                 type="text"
                 value={formData.walletAddress}
                 onChange={(e) => setFormData(prev => ({ ...prev, walletAddress: e.target.value }))}
-                placeholder="0x..."
+                placeholder="0x... or ENS name"
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -184,22 +199,82 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
 
             {/* Groups */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Groups
-              </label>
-              <div className="space-y-2">
-                {groups.map(group => (
-                  <label key={group.id} className="flex items-center gap-3 cursor-pointer">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Groups
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateGroup(true)}
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+                >
+                  <PlusIcon className="w-3 h-3" />
+                  Create Group
+                </button>
+              </div>
+              
+              {showCreateGroup ? (
+                <div className="mb-3 p-3 bg-gray-700 rounded-lg">
+                  <div className="flex gap-2 mb-2">
                     <input
-                      type="checkbox"
-                      checked={formData.groups.includes(group.id)}
-                      onChange={() => handleGroupToggle(group.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                      type="text"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      placeholder="Group name"
+                      className="flex-1 px-2 py-1 text-sm bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      autoFocus
                     />
-                    <span className="text-lg">{group.icon}</span>
-                    <span className="text-sm text-gray-300">{group.name}</span>
-                  </label>
-                ))}
+                    <select
+                      value={newGroupIcon}
+                      onChange={(e) => setNewGroupIcon(e.target.value)}
+                      className="px-2 py-1 text-sm bg-gray-600 border border-gray-500 rounded text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="👥">👥</option>
+                      <option value="⭐">⭐</option>
+                      <option value="💼">💼</option>
+                      <option value="🏛️">🏛️</option>
+                      <option value="🎮">🎮</option>
+                      <option value="🎨">🎨</option>
+                      <option value="🎵">🎵</option>
+                      <option value="📚">📚</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCreateGroup}
+                      className="flex-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                    >
+                      Create
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateGroup(false)}
+                      className="flex-1 px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 text-white rounded"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {groups.length > 0 ? (
+                  groups.map(group => (
+                    <label key={group.id} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.groups.includes(group.id)}
+                        onChange={() => handleGroupToggle(group.id)}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-lg">{group.icon}</span>
+                      <span className="text-sm text-gray-300">{group.name}</span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No groups yet. Create one above!</p>
+                )}
               </div>
             </div>
 

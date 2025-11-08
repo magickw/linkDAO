@@ -125,20 +125,16 @@ const ContactContext = createContext<ContactContextType | undefined>(undefined);
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(contactReducer, initialState);
 
-  // Initialize default groups
+  // Initialize groups (without default groups)
   useEffect(() => {
     const initializeGroups = () => {
       const savedGroups = localStorage.getItem('linkdao-contact-groups');
       if (savedGroups) {
         dispatch({ type: 'SET_GROUPS', payload: JSON.parse(savedGroups) });
       } else {
-        const defaultGroups: ContactGroup[] = DEFAULT_CONTACT_GROUPS.map(group => ({
-          ...group,
-          id: `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date()
-        }));
-        dispatch({ type: 'SET_GROUPS', payload: defaultGroups });
-        localStorage.setItem('linkdao-contact-groups', JSON.stringify(defaultGroups));
+        // Initialize with empty array instead of default groups
+        dispatch({ type: 'SET_GROUPS', payload: [] });
+        localStorage.setItem('linkdao-contact-groups', JSON.stringify([]));
       }
     };
 

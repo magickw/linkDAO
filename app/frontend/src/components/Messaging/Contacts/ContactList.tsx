@@ -13,7 +13,7 @@ interface ContactListProps {
 
 const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false }) => {
   const { contacts, groups, searchFilters } = useContacts();
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['favorites', 'friends']));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Filter contacts based on search criteria
@@ -60,7 +60,9 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false 
   const groupedContacts = useMemo(() => {
     if (flat) return {} as Record<string, Contact[]>;
     const grouped: Record<string, Contact[]> = {};
-    groups.forEach(group => {
+    // Only show custom groups
+    const customGroups = groups.filter(group => group.type === 'custom');
+    customGroups.forEach(group => {
       grouped[group.id] = filteredContacts.filter(contact =>
         contact.groups.some(contactGroup => contactGroup.id === group.id)
       );
@@ -78,123 +80,123 @@ const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false 
     setExpandedGroups(newExpanded);
   };
 
+  // Only show custom groups in the UI
+  const customGroups = groups.filter(group => group.type === 'custom');
+
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-white">MY CONTACTS</h2>
-          <span className="text-sm text-gray-400">({filteredContacts.length})</span>
+    <>
+      <div className={`flex flex-col h-full ${className}`}>
+        {/* Add Contact Button */}
+        <div className="p-3 border-b border-gray-700">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            <UserPlusIcon className="w-4 h-4" />
+            <span>Add Contact</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-          title="Add Contact"
-        >
-          <UserPlusIcon className="w-5 h-5" />
-        </button>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {flat ? (
-          <div className="space-y-1 p-2">
-            {filteredContacts.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">No contacts found</div>
-            ) : (
-              filteredContacts.map(contact => (
-                <ContactCard key={contact.id} contact={contact} className="mx-1" />
-              ))
-            )}
-          </div>
-        ) : (
-          groups.map(group => {
-          const groupContacts = groupedContacts[group.id] || [];
-          const isExpanded = expandedGroups.has(group.id);
-
-          if (groupContacts.length === 0 && searchFilters.query) {
-            return null;
-          }
-
-          return (
-            <div key={group.id} className="border-b border-gray-800 last:border-b-0">
-              <button
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-800 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  {isExpanded ? (
-                    <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-                  ) : (
-                    <ChevronRightIcon className="w-4 h-4 text-gray-400" />
-                  )}
-                  <span className="text-lg">{group.icon}</span>
-                  <span className="text-sm font-medium text-gray-300 uppercase tracking-wide">
-                    {group.name}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    ({groupContacts.length})
-                  </span>
-                </div>
-              </button>
-
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+        {/* Contact Groups */}
+        {!flat && customGroups.length > 0 ? (
+          <div className="flex-1 overflow-y-auto">
+            {customGroups.map(group => {
+              const groupContacts = groupedContacts[group.id] || [];
+              const isExpanded = expandedGroups.has(group.id);
+              
+              return (
+                <div key={group.id} className="border-b border-gray-700 last:border-b-0">
+                  {/* Group Header */}
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-750 transition-colors"
                   >
-                    {groupContacts.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500 text-sm">
-                        No contacts in this group
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{group.icon}</span>
+                      <div>
+                        <h3 className="font-medium text-white">{group.name}</h3>
+                        <p className="text-xs text-gray-400">{groupContacts.length} contacts</p>
                       </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronDownIcon className="w-4 h-4 text-gray-400" />
                     ) : (
-                      <div className="space-y-1 pb-2">
-                        {groupContacts.map(contact => (
-                          <ContactCard
-                            key={contact.id}
-                            contact={contact}
-                            className="mx-2"
-                          />
-                        ))}
-                      </div>
+                      <ChevronRightIcon className="w-4 h-4 text-gray-400" />
                     )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-          })
-        )}
+                  </button>
 
-        {/* Empty State */}
-        {!flat && contacts.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
-              <span className="text-3xl">📱</span>
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No Contacts Yet</h3>
-            <p className="text-gray-400 text-sm mb-6 max-w-sm">
-              Start building your Web3 network by adding contacts.
+                  {/* Group Contacts */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pb-2">
+                          {groupContacts.map(contact => (
+                            <ContactCard key={contact.id} contact={contact} />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        ) : !flat ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+            <UserPlusIcon className="w-12 h-12 text-gray-500 mb-3" />
+            <h3 className="text-lg font-medium text-white mb-1">No Groups Yet</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Create custom groups to organize your contacts
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
             >
-              Add Your First Contact
+              Add Contact
             </button>
+          </div>
+        ) : null}
+
+        {/* Flat List View */}
+        {flat && (
+          <div className="flex-1 overflow-y-auto">
+            {filteredContacts.length > 0 ? (
+              filteredContacts.map(contact => (
+                <ContactCard key={contact.id} contact={contact} />
+              ))
+            ) : (
+              <div className="p-4 text-center">
+                <UserPlusIcon className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-white mb-1">No Contacts Found</h3>
+                <p className="text-sm text-gray-400 mb-4">
+                  Add your first contact to get started
+                </p>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                >
+                  Add Contact
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
+      {/* Add Contact Modal */}
       <AddContactModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
+        onContactAdded={() => {
+          // Refresh or any other logic after adding contact
+        }}
       />
-    </div>
+    </>
   );
 };
 
