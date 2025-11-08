@@ -149,9 +149,14 @@ export class WebSocketService {
       maxHttpBufferSize: this.isResourceConstrained ? 1e5 : 1e6,
       connectTimeout: this.config.connectionTimeout,
       allowEIO3: true,
-      path: '/socket.io/',
+      path: '/socket.io/', // Ensure proper path
       serveClient: false,
-      cookie: false
+      cookie: false,
+      // Add upgrade handling options
+      allowUpgrades: true,
+      upgradeTimeout: 30000, // 30 seconds for upgrade
+      httpCompression: !this.isResourceConstrained,
+      perMessageDeflate: !this.isResourceConstrained
     };
 
     // Disable compression on resource-constrained environments
