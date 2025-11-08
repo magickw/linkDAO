@@ -146,8 +146,94 @@ export const useFeedSortingPreferences = (): FeedPreferences => {
   };
 };
 
+export const useDisplayPreferences = (): DisplayPreferences => {
+  const [displayPreferences, setDisplayPreferences] = useState<DisplayPreferences>({
+    showTrending: true,
+    showSocialProof: true,
+    showTrendingBadges: true,
+    showPreviews: true,
+    compactMode: false,
+    infiniteScroll: true,
+    postsPerPage: 20,
+    updateDisplayPreferences: () => {}
+  });
+
+  const updateDisplayPreferences = (preferences: Partial<DisplayPreferences>) => {
+    const updatedPreferences = { ...displayPreferences, ...preferences };
+    setDisplayPreferences(updatedPreferences);
+    localStorage.setItem('feedDisplayPreferences', JSON.stringify(updatedPreferences));
+  };
+
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem('feedDisplayPreferences');
+    if (savedPreferences) {
+      try {
+        const parsedPreferences = JSON.parse(savedPreferences);
+        setDisplayPreferences({
+          ...displayPreferences,
+          ...parsedPreferences,
+          updateDisplayPreferences
+        });
+      } catch (e) {
+        console.error('Failed to parse display preferences:', e);
+      }
+    } else {
+      // Set the update function
+      setDisplayPreferences(prev => ({
+        ...prev,
+        updateDisplayPreferences
+      }));
+    }
+  }, []);
+
+  return {
+    ...displayPreferences,
+    updateDisplayPreferences
+  };
+};
+
+export const useAutoRefreshPreferences = (): AutoRefreshPreferences => {
+  const [autoRefreshPreferences, setAutoRefreshPreferences] = useState<AutoRefreshPreferences>({
+    isEnabled: false,
+    enabled: false,
+    interval: 30000, // 30 seconds
+    updateAutoRefreshPreferences: () => {}
+  });
+
+  const updateAutoRefreshPreferences = (preferences: Partial<AutoRefreshPreferences>) => {
+    const updatedPreferences = { ...autoRefreshPreferences, ...preferences };
+    setAutoRefreshPreferences(updatedPreferences);
+    localStorage.setItem('feedAutoRefreshPreferences', JSON.stringify(updatedPreferences));
+  };
+
+  useEffect(() => {
+    const savedPreferences = localStorage.getItem('feedAutoRefreshPreferences');
+    if (savedPreferences) {
+      try {
+        const parsedPreferences = JSON.parse(savedPreferences);
+        setAutoRefreshPreferences({
+          ...autoRefreshPreferences,
+          ...parsedPreferences,
+          updateAutoRefreshPreferences
+        });
+      } catch (e) {
+        console.error('Failed to parse auto-refresh preferences:', e);
+      }
+    } else {
+      // Set the update function
+      setAutoRefreshPreferences(prev => ({
+        ...prev,
+        updateAutoRefreshPreferences
+      }));
+    }
+  }, []);
+
+  return {
+    ...autoRefreshPreferences,
+    updateAutoRefreshPreferences
+  };
+};
+
 export const useFeedPreferences = (): FeedPreferences => {
   return useFeedSortingPreferences();
 };
-
-// ... existing code for display and auto-refresh preferences ...
