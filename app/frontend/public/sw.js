@@ -16,18 +16,40 @@ if (typeof self !== 'undefined' && self.location && self.location.hostname === '
   });
 }
 
-const CACHE_NAME = 'web3-social-v4';
-const STATIC_CACHE = 'static-v4';
-const DYNAMIC_CACHE = 'dynamic-v4';
-const IMAGE_CACHE = 'images-v4';
-const PERFORMANCE_CACHE = 'performance-v3';
+const CACHE_NAME = 'linkdao-v1';
+const STATIC_CACHE = 'static-v1';
+const DYNAMIC_CACHE = 'dynamic-v1';
+const IMAGE_CACHE = 'images-v1';
+const API_CACHE = 'api-v1';
 const OFFLINE_QUEUE_CACHE = 'offline-queue-v1';
 
-// Enhanced request deduplication and rate limiting with circuit breaker integration
+// Request tracking and circuit breaker
 const pendingRequests = new Map();
 const failedRequests = new Map();
 const requestCounts = new Map();
-const circuitBreakerStates = new Map(); // Track circuit breaker states per service
+const circuitBreakerStates = new Map();
+
+// Health check configuration
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+const HEALTH_CHECK_ENDPOINTS = [
+  '/health',
+  '/api/health',
+  '/api/status'
+];
+
+// Service endpoints and their fallbacks
+const SERVICE_ENDPOINTS = {
+  api: [
+    'https://api.linkdao.io',
+    'https://api-backup.linkdao.io',
+    'https://api-fallback.linkdao.io'
+  ],
+  websocket: [
+    'wss://api.linkdao.io/socket.io',
+    'wss://ws.linkdao.io/socket.io',
+    'wss://realtime.linkdao.io/socket.io'
+  ]
+};
 // Development mode detection
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 

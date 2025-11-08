@@ -26,10 +26,26 @@ export interface ReferralReward {
 export class ReferralService {
   private static instance: ReferralService;
   private apiBaseUrl: string;
+  private apiEndpoints: { [key: string]: string[] };
+  private endpointRetryDelays: { [key: string]: number };
 
   private constructor() {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-  }
+    this.endpointRetryDelays = {};
+    
+    // Define API endpoint fallbacks
+    this.apiEndpoints = {
+      rewards: [
+        '/api/ldao/referral/rewards',
+        '/api/referral/rewards',
+        '/api/rewards'
+      ],
+      record: [
+        '/api/ldao/referral/record',
+        '/api/referral/record',
+        '/api/record'
+      ]
+    };
 
   static getInstance(): ReferralService {
     if (!ReferralService.instance) {
@@ -111,28 +127,52 @@ export class ReferralService {
     rewardAmount?: number;
     error?: string;
   }> {
-    try {
-      const response = await fetch('/api/ldao/referral/record', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          referralCode,
-          referredUserAddress
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to record referral');
-      }
-      
-      return {
-        success: true,
-        rewardAmount: data.rewardAmount
-      };
+    const maxRetries = 3;
+    const baseDelay = 1000;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await fetch('/api/ldao/referral/record', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            referralCode,
+            referredUserAddress
+          })
+        });
+
+        if (response.status === 404) {
+          console.warn('Referral record endpoint not found');
+          return {
+            success: false,
+            error: 'Service temporarily unavailable'
+          };
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+          
+          if (response.status === 503 || response.status === 502 || response.status === 504) {
+            if (attempt < maxRetries - 1) {
+              const delay = baseDelay * Math.pow(2, attempt);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              continue;
+            }
+          }
+          
+          return {
+            success: false,
+            error: data.error || `Failed to record referral (${response.status})`
+          };
+        }
+        
+        const data = await response.json();
+        return {
+          success: true,
+          rewardAmount: data.rewardAmount
+        };
     } catch (error) {
       console.error('Failed to record referral:', error);
       return {
@@ -146,18 +186,44 @@ export class ReferralService {
    * Get referral rewards for a user
    */
   async getReferralRewards(userAddress: string): Promise<ReferralReward[]> {
-    try {
-      const response = await fetch(`/api/ldao/referral/rewards?address=${userAddress}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch referral rewards');
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await fetch(`/api/ldao/referral/rewards?address=${userAddress}`);
+        
+        if (response.status === 404) {
+          console.warn('Referral rewards endpoint not found, using fallback data');
+          return this.getFallbackRewards(userAddress);
+        }
+
+        if (!response.ok) {
+          if (response.status === 503 || response.status === 502 || response.status === 504) {
+            // Server unavailable, retry after delay
+            const delay = baseDelay * Math.pow(2, attempt);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.rewards;
+      } catch (error) {
+        if (attempt === maxRetries - 1) {
+          console.error('Failed to get referral rewards after retries:', error);
+          return this.getFallbackRewards(userAddress);
+        }
+        const delay = baseDelay * Math.pow(2, attempt);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      const data = await response.json();
-      return data.rewards;
-    } catch (error) {
-      console.error('Failed to get referral rewards:', error);
-      return [];
     }
+    return this.getFallbackRewards(userAddress);
   }
+
+  private getFallbackRewards(userAddress: string): ReferralReward[] {
+    return [];
 
   /**
    * Claim referral rewards
