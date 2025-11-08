@@ -6,7 +6,7 @@ import {
   LeaveCommunityRequest,
   CreatePostRequest,
   ModerationAction,
-  CommunitySettings
+  UpdateCommunitySettingsParams
 } from '../services/communityInteractionService';
 
 export interface UseCommunityInteractionsReturn {
@@ -291,16 +291,9 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
 
     try {
       setLoading(true);
-      const result = await CommunityInteractionService.getCommunityAnalytics(
-        communityId,
-        address
-      );
-
-      if (!result.success || !result.data) {
-        return null;
-      }
-
-      return result.data;
+      // TODO: Implement analytics functionality when the service method is available
+      console.warn('getCommunityAnalytics method not implemented in CommunityInteractionService');
+      return null;
     } catch (err) {
       console.error('Error fetching analytics:', err);
       return null;

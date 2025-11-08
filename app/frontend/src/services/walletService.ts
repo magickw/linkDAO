@@ -417,16 +417,96 @@ export class WalletService {
   }
 
   /**
+   * Discover all ERC-20 tokens held by an address using block explorer API
+   */
+  private async discoverTokensFromExplorer(address: Address): Promise<Array<{ address: string; symbol: string; name: string; decimals: number }>> {
+    const chainId = this.publicClient.chain?.id || 1;
+
+    // Map chain IDs to their explorer APIs
+    const explorerConfigs: Record<number, { baseUrl: string; apiKey?: string }> = {
+      1: { baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY },
+      8453: { baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY },
+      84532: { baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY },
+      137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY },
+      42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY },
+      11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY },
+    };
+
+    const config = explorerConfigs[chainId];
+    if (!config) {
+      console.warn(`No explorer config for chain ${chainId}`);
+      return [];
+    }
+
+    // Try unified v2 endpoint first
+    const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
+    if (unifiedKey && chainId !== 11155111) {
+      try {
+        const url = new URL('https://api.etherscan.io/v2/api');
+        url.searchParams.set('chainid', String(chainId));
+        url.searchParams.set('module', 'account');
+        url.searchParams.set('action', 'tokenlist');
+        url.searchParams.set('address', address);
+        url.searchParams.set('apikey', unifiedKey);
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        if (data && data.status === '1' && Array.isArray(data.result)) {
+          return data.result.map((token: any) => ({
+            address: token.contractAddress || token.TokenAddress,
+            symbol: token.symbol || token.TokenSymbol || 'UNKNOWN',
+            name: token.name || token.TokenName || 'Unknown Token',
+            decimals: parseInt(token.decimals || token.TokenDeccimal || '18', 10)
+          }));
+        }
+      } catch (err) {
+        console.warn('Unified API token discovery failed:', err);
+      }
+    }
+
+    // Fallback to per-chain API
+    try {
+      if (!config.apiKey) {
+        console.warn(`No API key configured for chain ${chainId}`);
+        return [];
+      }
+
+      const url = new URL(config.baseUrl);
+      url.searchParams.set('module', 'account');
+      url.searchParams.set('action', 'tokenlist');
+      url.searchParams.set('address', address);
+      url.searchParams.set('apikey', config.apiKey);
+
+      const response = await fetch(url.toString());
+      const data = await response.json();
+
+      if (data && data.status === '1' && Array.isArray(data.result)) {
+        return data.result.map((token: any) => ({
+          address: token.contractAddress || token.TokenAddress,
+          symbol: token.symbol || token.TokenSymbol || 'UNKNOWN',
+          name: token.name || token.TokenName || 'Unknown Token',
+          decimals: parseInt(token.decimals || token.TokenDeccimal || '18', 10)
+        }));
+      }
+    } catch (err) {
+      console.warn('Explorer token discovery failed:', err);
+    }
+
+    return [];
+  }
+
+  /**
    * Get token balances for a wallet address with rate limiting
    */
   async getTokenBalances(address: Address): Promise<TokenBalance[]> {
     const balances: TokenBalance[] = [];
     const chainId = this.publicClient.chain?.id || 1;
-    const tokens = getTokensForChain(chainId);
+    const knownTokens = getTokensForChain(chainId);
 
     try {
       // Get ETH balance with rate limiting
-      const ethBalance = await rpcCallQueue.add(() => 
+      const ethBalance = await rpcCallQueue.add(() =>
         this.publicClient.getBalance({ address })
       );
       const nativeSymbol = chainId === 137 ? 'MATIC' : 'ETH';
@@ -448,11 +528,27 @@ export class WalletService {
         isNative: true
       });
 
+      // Discover all tokens from block explorer
+      const discoveredTokens = await this.discoverTokensFromExplorer(address);
+
+      // Merge known tokens with discovered tokens (prioritize known tokens for metadata)
+      const allTokens = [...knownTokens];
+      for (const discovered of discoveredTokens) {
+        if (!allTokens.some(t => t.address.toLowerCase() === discovered.address.toLowerCase())) {
+          allTokens.push({
+            symbol: discovered.symbol,
+            name: discovered.name,
+            address: discovered.address as Address,
+            decimals: discovered.decimals
+          });
+        }
+      }
+
       // Get ERC20 token balances with rate limiting and retry logic
-      const tokenBalancePromises = tokens.map(async (token) => {
+      const tokenBalancePromises = allTokens.map(async (token) => {
         try {
           // Use rate limiting queue for RPC calls
-          const balanceResult = await rpcCallQueue.add(() => 
+          const balanceResult = await rpcCallQueue.add(() =>
             this.publicClient.readContract({
               address: token.address,
               abi: ERC20_ABI,
@@ -492,7 +588,7 @@ export class WalletService {
       // Wait for all token balance requests with concurrency control
       const tokenResults = await Promise.all(tokenBalancePromises);
       const validTokenBalances = tokenResults.filter((result): result is TokenBalance => result !== null);
-      
+
       // Add valid token balances to the result
       balances.push(...validTokenBalances);
 

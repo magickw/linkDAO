@@ -10,12 +10,6 @@ import {
 } from '../models/CommunityMembership';
 import { ModerationQueue as ModerationQueueItem } from '../types/auth';
 import { requestManager } from './requestManager';
-import { 
-  CreatePostRequest, 
-  CreatePostResponse,
-  ModerationAction,
-  CommunitySettings
-} from '../models/Community';
 import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
@@ -98,11 +92,13 @@ export interface ModerationAction {
   duration?: number;
 }
 
-export interface CommunitySettings {
+export interface UpdateCommunitySettingsParams {
   communityId: string;
   moderatorAddress: string;
   settings: any;
 }
+
+
 
 /**
  * Community Interaction Service
@@ -157,25 +153,21 @@ export class CommunityInteractionService {
         body: JSON.stringify(input),
       });
 
-      // Track successful post creation
-      analyticsService.trackUserEvent('post_created', {
-        communityId: input.communityId,
-        postType: input.postType || 'discussion',
-        titleLength: input.title.length,
-        contentLength: input.content.length,
-        tagCount: input.tags?.length || 0,
-        mediaCount: input.mediaUrls?.length || 0
-      });
+      // TODO: Implement analytics tracking when analyticsService is available
+      // analyticsService.trackUserEvent('post_created', {
+      //   communityId: input.communityId,
+      //   postType: input.postType || 'discussion',
+      //   titleLength: input.title.length,
+      //   contentLength: input.content.length,
+      //   tagCount: input.tags?.length || 0,
+      //   mediaCount: input.mediaUrls?.length || 0
+      // });
 
       return response.success;
     } catch (error) {
       console.error('Error creating post:', error);
       
-      // Track error
-      analyticsService.trackUserEvent('post_creation_error', {
-        communityId: input.communityId,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      // TODO: Implement error tracking when analyticsService is available
       
       return false;
     }
@@ -309,20 +301,13 @@ export class CommunityInteractionService {
         },
       });
 
-      // Track successful community join
-      analyticsService.trackUserEvent('community_joined', {
-        communityId
-      });
+      // TODO: Implement success tracking when analyticsService is available
 
       return response.success;
     } catch (error) {
       console.error('Error joining community:', error);
       
-      // Track error
-      analyticsService.trackUserEvent('community_join_error', {
-        communityId,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      // TODO: Implement error tracking when analyticsService is available
       
       return false;
     }
@@ -340,20 +325,13 @@ export class CommunityInteractionService {
         },
       });
 
-      // Track successful community leave
-      analyticsService.trackUserEvent('community_left', {
-        communityId
-      });
+      // TODO: Implement success tracking when analyticsService is available
 
       return response.success;
     } catch (error) {
       console.error('Error leaving community:', error);
       
-      // Track error
-      analyticsService.trackUserEvent('community_leave_error', {
-        communityId,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      // TODO: Implement error tracking when analyticsService is available
       
       return false;
     }
@@ -673,7 +651,7 @@ export class CommunityInteractionService {
    * @param settingsUpdate - Community settings update
    * @returns Success status
    */
-  static async updateCommunitySettings(settingsUpdate: CommunitySettings): Promise<{
+  static async updateCommunitySettings(settingsUpdate: UpdateCommunitySettingsParams): Promise<{
     success: boolean;
     message?: string;
   }> {
@@ -841,73 +819,6 @@ export class CommunityInteractionService {
     }
   }
 
-  /**
-   * Get community analytics (moderator only)
-   * @param communityId - Community ID
-   * @param moderatorAddress - Moderator wallet address
-   * @returns Community analytics data
-   */
-  static async getCommunityAnalytics(communityId: string, moderatorAddress: string): Promise<{
-    success: boolean;
-    data?: {
-      memberGrowth: number[];
-      postActivity: number[];
-      engagementMetrics: {
-        averagePostsPerDay: number;
-        averageCommentsPerPost: number;
-        activeMembers: number;
-        retentionRate: number;
-      };
-    };
-    message?: string;
-  }> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    try {
-      const response = await fetch(
-          `${BACKEND_API_BASE_URL}/api/communities/${communityId}/analytics?moderator=${moderatorAddress}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-        }
-      );
-      
-      clearTimeout(timeoutId);
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        return {
-          success: false,
-          message: result.error || 'Failed to fetch community analytics'
-        };
-      }
-      
-      return {
-        success: true,
-        data: result.data,
-        message: 'Analytics fetched successfully'
-      };
-    } catch (error) {
-      clearTimeout(timeoutId);
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        return {
-          success: false,
-          message: 'Request timeout'
-        };
-      }
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to fetch analytics'
-      };
-    }
-  }
 }
 
 export const communityInteractionService = new CommunityInteractionService();

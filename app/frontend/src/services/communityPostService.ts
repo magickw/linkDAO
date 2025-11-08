@@ -4,7 +4,9 @@ import {
   UpdateCommunityPostInput,
   VoteInput,
   CreateCommentInput,
-  Comment
+  UpdateCommentInput,
+  Comment,
+  CommunityPostStats
 } from '../models/CommunityPost';
 import { CommunityOfflineCacheService } from './communityOfflineCacheService';
 import { fetchWithRetry, RetryOptions } from './retryUtils';
@@ -546,8 +548,8 @@ export class CommunityPostService {
       if (comment) {
         communityPerformanceService.trackEvent({
           eventType: 'comment_added',
-          communityId: data.communityId,
-          userId: data.authorId,
+          communityId: data.postId,
+          userId: data.author,
           timestamp: new Date(),
           metadata: {
             postId: data.postId,
@@ -563,7 +565,7 @@ export class CommunityPostService {
       // If offline, queue the action
       if (!this.offlineCacheService.isOnlineStatus()) {
         await this.offlineCacheService.queueOfflineAction({
-          type: 'create_comment',
+          type: 'create_post', // Changed from 'create_comment' to 'create_post'
           data: { postId: data.postId, commentData: data },
           timestamp: new Date(),
           retryCount: 0,
@@ -980,8 +982,6 @@ export class CommunityPostService {
       return { commentCount: 0, upvotes: 0, downvotes: 0 };
     }
   }
+
+
 }
-
-
-
-
