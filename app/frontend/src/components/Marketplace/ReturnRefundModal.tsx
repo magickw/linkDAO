@@ -3,7 +3,7 @@
  * Features: Return reason selection, evidence upload, automatic refund processing
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -22,6 +22,7 @@ import { useAccount } from 'wagmi';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { useToast } from '@/context/ToastContext';
+import { returnRefundService } from '@/services/returnRefundService';
 
 export interface ReturnRefundRequest {
   orderId: string;
