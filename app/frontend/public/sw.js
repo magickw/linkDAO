@@ -37,6 +37,7 @@ const HEALTH_CHECK_ENDPOINTS = [
   '/api/status'
 ];
 
+
 // Service endpoints and their fallbacks
 const SERVICE_ENDPOINTS = {
   api: [
@@ -45,9 +46,14 @@ const SERVICE_ENDPOINTS = {
     'https://api-fallback.linkdao.io'
   ],
   websocket: [
-    'wss://api.linkdao.io/socket.io',
-    'wss://ws.linkdao.io/socket.io',
-    'wss://realtime.linkdao.io/socket.io'
+    'wss://api.linkdao.io/socket.io/',
+    'wss://ws.linkdao.io/socket.io/',
+    'wss://realtime.linkdao.io/socket.io/'
+  ],
+  geolocation: [
+    'https://ip-api.com/json/',
+    'https://api.ipify.org/?format=json',
+    'https://ipinfo.io/json'
   ]
 };
 // Development mode detection
@@ -356,11 +362,34 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         return networkResponse;
       }
     } else {
-      // Track failure with exponential backoff
-      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
-      failureInfo.attempts += 1;
-      failureInfo.lastFailure = Date.now();
-      failedRequests.set(requestKey, failureInfo);
+      // Special handling for specific error cases
+      const url = new URL(request.url);
+      
+      // Handle WebSocket connection failures
+      if (url.pathname.includes('socket.io')) {
+        console.warn('WebSocket endpoint failed:', networkResponse.status, requestKey);
+        // Don't aggressively backoff WebSocket failures, try polling fallback immediately
+        failedRequests.delete(requestKey);
+      }
+      // Handle geolocation API failures (ip-api.com)
+      else if (url.hostname.includes('ip-api.com')) {
+        console.warn('Geolocation API failed, trying alternative:', networkResponse.status, requestKey);
+        // Try alternative geolocation services immediately
+        failedRequests.delete(requestKey);
+      }
+      // Handle image loading failures
+      else if (url.pathname.includes('/_next/image')) {
+        console.warn('Image loading failed:', networkResponse.status, requestKey);
+        // Don't backoff image failures, let them fail fast
+        failedRequests.delete(requestKey);
+      }
+      else {
+        // Track failure with exponential backoff for other requests
+        const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+        failureInfo.attempts += 1;
+        failureInfo.lastFailure = Date.now();
+        failedRequests.set(requestKey, failureInfo);
+      }
       
       console.warn(`Request failed with status ${networkResponse.status}:`, requestKey);
       
@@ -378,13 +407,29 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       return networkResponse;
     }
   } catch (error) {
-    console.log('Network failed, trying cache:', error);
+    console.log('Network failed, trying cache:', error.message);
     
-    // Track failure with exponential backoff
-    const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
-    failureInfo.attempts += 1;
-    failureInfo.lastFailure = Date.now();
-    failedRequests.set(requestKey, failureInfo);
+    // Special handling for different error types
+    const url = new URL(request.url);
+    
+    // Handle WebSocket connection failures
+    if (url.pathname.includes('socket.io')) {
+      console.warn('WebSocket connection failed, falling back to polling:', error.message);
+      // Don't backoff WebSocket failures, they're expected to fallback to polling
+    }
+    // Handle geolocation API failures
+    else if (url.hostname.includes('ip-api.com')) {
+      console.warn('Geolocation service failed, trying next:', error.message);
+      // Try alternative geolocation services immediately
+    }
+    else {
+      // Track failure with exponential backoff for other requests
+      const requestKey = `${request.method}:${request.url}`;
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+    }
     
     return await getCachedResponse(request, cacheName);
   }
@@ -643,8 +688,33 @@ function generatePlaceholderSVG(width, height, text, backgroundColor) {
 }
 
 // Enhanced circuit breaker functions for service worker
+
 function getServiceKey(request) {
   const url = new URL(request.url);
+  const hostname = url.hostname;
+  
+  // Special handling for different service types
+  if (hostname.includes('socket.io') || hostname.includes('websocket')) {
+    return 'websocket';
+  }
+  
+  if (hostname.includes('ip-api.com') || hostname.includes('ipify.org') || hostname.includes('ipinfo.io')) {
+    return 'geolocation';
+  }
+  
+  const pathParts = url.pathname.split('/');
+  
+  if (pathParts[1] === 'api' && pathParts[2]) {
+    return pathParts[2]; // e.g., 'feed', 'communities', 'posts'
+  }
+  
+  return 'default';
+}
+  
+  if (hostname.includes('ip-api.com') || hostname.includes('ipify.org') || hostname.includes('ipinfo.io')) {
+    return 'geolocation';
+  }
+  
   const pathParts = url.pathname.split('/');
   
   if (pathParts[1] === 'api' && pathParts[2]) {
@@ -1218,7 +1288,7 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Rate limiting helper function
+// Rate limiting helper function with service-specific handling
 function checkRateLimit(requestKey, now) {
   // Skip rate limiting in development mode
   if (isDevelopment) {
@@ -1226,9 +1296,20 @@ function checkRateLimit(requestKey, now) {
   }
 
   const endpoint = requestKey.split(':')[1].split('?')[0]; // Extract endpoint without query params
+  const url = new URL(endpoint, 'http://localhost'); // Create URL object for parsing
 
   // Skip rate limiting for placeholder endpoints
   if (endpoint.includes('/api/placeholder')) {
+    return true;
+  }
+  
+  // Skip rate limiting for WebSocket endpoints
+  if (url.pathname.includes('socket.io')) {
+    return true;
+  }
+  
+  // Skip rate limiting for geolocation services to allow fallback attempts
+  if (url.hostname.includes('ip-api.com') || url.hostname.includes('ipify.org') || url.hostname.includes('ipinfo.io')) {
     return true;
   }
 

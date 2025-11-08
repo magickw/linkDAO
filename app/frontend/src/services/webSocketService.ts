@@ -15,12 +15,17 @@ const getWebSocketUrl = () => {
 
 const WS_URL = getWebSocketUrl();
 
-// Add fallback URLs
+// Add fallback URLs with proper WebSocket paths
+
 const WS_FALLBACK_URLS = [
   process.env.NEXT_PUBLIC_WS_URL,
   process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http://', 'ws://').replace('https://', 'wss://'),
+  // Ensure proper path is included
+  process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace('http://', 'ws://').replace('https://', 'wss://')}/socket.io/` : undefined,
   // Only use localhost in development
-  ...(process.env.NODE_ENV === 'development' ? ['ws://localhost:10000'] : [])
+  ...(process.env.NODE_ENV === 'development' ? ['ws://localhost:10000/socket.io/'] : []),
+  // Production fallback with proper path
+  'wss://api.linkdao.io/socket.io/'
 ].filter(Boolean) as string[];
 
 interface WebSocketConfig {
@@ -243,7 +248,7 @@ class WebSocketService {
     this.socket.on('connect_error', (error) => {
       // Only log first error to reduce console spam
       if (this.connectionState.reconnectAttempts === 0) {
-        console.warn('WebSocket unavailable, using polling fallback');
+        console.warn('WebSocket connection error, using polling fallback:', error.message);
       }
       this.handleConnectionError(error);
       reject?.(error);
@@ -262,6 +267,14 @@ class WebSocketService {
     // Handle heartbeat responses
     this.socket.on('pong', () => {
       this.updateConnectionQuality();
+    });
+    
+    // Handle server info messages
+    this.socket.on('server_info', (data) => {
+      // Handle server constraints information
+      if (data.resourceConstrained) {
+        console.log('WebSocket server is resource constrained, performance may be degraded');
+      }
     });
   }
 
@@ -323,6 +336,7 @@ class WebSocketService {
     }, finalDelay);
   }
 
+  
   private handleConnectionError(error: Error): void {
     this.connectionState.lastError = error;
     this.connectionState.connectionQuality = 'poor';
@@ -330,9 +344,15 @@ class WebSocketService {
 
     // Switch to polling if WebSocket fails repeatedly
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
-      console.warn('WebSocket unavailable, using polling fallback');
+      console.warn('WebSocket unavailable, using polling fallback:', error.message);
       this.fallbackToPolling = true;
     }
+    
+    // Reset current URL index after too many failures to try primary URL again
+    if (this.connectionState.reconnectAttempts > 5) {
+      this.currentUrlIndex = 0;
+    }
+  }
     
     // Reset current URL index after too many failures to try primary URL again
     if (this.connectionState.reconnectAttempts > 5) {
