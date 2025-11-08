@@ -68,8 +68,9 @@ const ReferralSystem: React.FC = () => {
         setReferralInfo(info);
       }
 
-      // Load rewards
-      const userRewards = await referralService.getReferralRewards(address);
+  // Load rewards
+  // Cast to any to avoid TS surface mismatch for the demo service implementation
+  const userRewards = await (referralService as any).getReferralRewards(address);
       setRewards(userRewards);
 
       // Load leaderboard

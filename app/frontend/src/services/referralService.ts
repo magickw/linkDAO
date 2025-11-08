@@ -1,8 +1,14 @@
 /**
- * Referral Service - Manages referral links and rewards for token acquisition
+ * Referral Service - lightweight frontend implementation for demo & UI
+ * Provides methods used by UI components. In production these should call
+ * backend APIs; here we keep simple mock/fetch-based implementations.
  */
 
-import { ethers } from 'ethers';
+// Lightweight fallback utilities to avoid adding heavy dependencies in the frontend demo
+const randomHex = (length = 40) => {
+  // generate pseudo-random hex (not cryptographically secure) for demo purposes
+  return Array.from({ length }).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+};
 
 export interface ReferralInfo {
   referrer: string;
@@ -23,300 +29,86 @@ export interface ReferralReward {
   transactionHash?: string;
 }
 
-export class ReferralService {
-  private static instance: ReferralService;
-  private apiBaseUrl: string;
-  private apiEndpoints: { [key: string]: string[] };
-  private endpointRetryDelays: { [key: string]: number };
+export class FrontendReferralService {
+  private static instance: FrontendReferralService;
+  private apiBase: string;
 
   private constructor() {
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-    this.endpointRetryDelays = {};
-    
-    // Define API endpoint fallbacks
-    this.apiEndpoints = {
-      rewards: [
-        '/api/ldao/referral/rewards',
-        '/api/referral/rewards',
-        '/api/rewards'
-      ],
-      record: [
-        '/api/ldao/referral/record',
-        '/api/referral/record',
-        '/api/record'
-      ]
-    };
-
-  static getInstance(): ReferralService {
-    if (!ReferralService.instance) {
-      ReferralService.instance = new ReferralService();
-    }
-    return ReferralService.instance;
+    this.apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   }
 
-  /**
-   * Generate a unique referral code for a user
-   */
-  async generateReferralCode(userAddress: string): Promise<{
-    success: boolean;
-    referralCode?: string;
-    referralLink?: string;
-    error?: string;
-  }> {
-    try {
-      // In a real implementation, this would call the backend API
-      // For now, we'll generate a mock referral code
-      
-      // Generate a unique referral code based on user address
-      const referralCode = ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes(`${userAddress}_${Date.now()}`)
-      ).substring(2, 10);
-      
-      const referralLink = `${window.location.origin}/token?ref=${referralCode}`;
-      
-      return {
-        success: true,
-        referralCode,
-        referralLink
-      };
-    } catch (error) {
-      console.error('Failed to generate referral code:', error);
-      return {
-        success: false,
-        error: 'Failed to generate referral code'
-      };
-    }
+  static getInstance(): FrontendReferralService {
+    if (!FrontendReferralService.instance) FrontendReferralService.instance = new FrontendReferralService();
+    return FrontendReferralService.instance;
   }
 
-  /**
-   * Get referral information for a user
-   */
+  async generateReferralCode(userAddress: string): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
+    const code = randomHex(8);
+    const link = typeof window !== 'undefined' ? `${window.location.origin}/token?ref=${code}` : `/token?ref=${code}`;
+    return { success: true, referralCode: code, referralLink: link };
+  }
+
   async getReferralInfo(userAddress: string): Promise<ReferralInfo | null> {
-    try {
-      // In a real implementation, this would fetch from backend/database
-      // For now, we'll simulate referral data
-      
-      const referralData = await this.generateReferralCode(userAddress);
-      
-      if (!referralData.success) {
-        return null;
-      }
-      
-      return {
-        referrer: userAddress,
-        referralCode: referralData.referralCode!,
-        referralLink: referralData.referralLink!,
-        totalReferrals: Math.floor(Math.random() * 10),
-        totalRewards: parseFloat((Math.random() * 1000).toFixed(2)),
-        pendingRewards: parseFloat((Math.random() * 100).toFixed(2))
-      };
-    } catch (error) {
-      console.error('Failed to get referral info:', error);
-      return null;
-    }
+    const codeRes = await this.generateReferralCode(userAddress);
+    if (!codeRes.success) return null;
+    return {
+      referrer: userAddress,
+      referralCode: codeRes.referralCode!,
+      referralLink: codeRes.referralLink!,
+      totalReferrals: Math.floor(Math.random() * 10),
+      totalRewards: parseFloat((Math.random() * 500).toFixed(2)),
+      pendingRewards: parseFloat((Math.random() * 100).toFixed(2))
+    };
   }
 
-  /**
-   * Record a referral event
-   */
-  async recordReferral(
-    referralCode: string,
-    referredUserAddress: string
-  ): Promise<{
-    success: boolean;
-    rewardAmount?: number;
-    error?: string;
-  }> {
-    const maxRetries = 3;
-    const baseDelay = 1000;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const response = await fetch('/api/ldao/referral/record', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            referralCode,
-            referredUserAddress
-          })
-        });
-
-        if (response.status === 404) {
-          console.warn('Referral record endpoint not found');
-          return {
-            success: false,
-            error: 'Service temporarily unavailable'
-          };
-        }
-
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({ error: 'Unknown error' }));
-          
-          if (response.status === 503 || response.status === 502 || response.status === 504) {
-            if (attempt < maxRetries - 1) {
-              const delay = baseDelay * Math.pow(2, attempt);
-              await new Promise(resolve => setTimeout(resolve, delay));
-              continue;
-            }
-          }
-          
-          return {
-            success: false,
-            error: data.error || `Failed to record referral (${response.status})`
-          };
-        }
-        
-        const data = await response.json();
-        return {
-          success: true,
-          rewardAmount: data.rewardAmount
-        };
-    } catch (error) {
-      console.error('Failed to record referral:', error);
-      return {
-        success: false,
-        error: 'Failed to record referral'
-      };
-    }
-  }
-
-  /**
-   * Get referral rewards for a user
-   */
   async getReferralRewards(userAddress: string): Promise<ReferralReward[]> {
-    const maxRetries = 3;
-    const baseDelay = 1000; // 1 second
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const response = await fetch(`/api/ldao/referral/rewards?address=${userAddress}`);
-        
-        if (response.status === 404) {
-          console.warn('Referral rewards endpoint not found, using fallback data');
-          return this.getFallbackRewards(userAddress);
-        }
-
-        if (!response.ok) {
-          if (response.status === 503 || response.status === 502 || response.status === 504) {
-            // Server unavailable, retry after delay
-            const delay = baseDelay * Math.pow(2, attempt);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.rewards;
-      } catch (error) {
-        if (attempt === maxRetries - 1) {
-          console.error('Failed to get referral rewards after retries:', error);
-          return this.getFallbackRewards(userAddress);
-        }
-        const delay = baseDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-    return this.getFallbackRewards(userAddress);
-  }
-
-  private getFallbackRewards(userAddress: string): ReferralReward[] {
-    return [];
-
-  /**
-   * Claim referral rewards
-   */
-  async claimRewards(userAddress: string): Promise<{
-    success: boolean;
-    totalAmount?: number;
-    transactionHash?: string;
-    error?: string;
-  }> {
+    // Try to fetch from backend if available, otherwise return empty array
     try {
-      // In a real implementation, this would interact with smart contracts
-      // For now, we'll simulate a successful reward claim
-      
-      console.log(`Claiming rewards for user: ${userAddress}`);
-      
-      // Simulate claiming rewards
-      const totalAmount = parseFloat((Math.random() * 100).toFixed(2));
-      
-      return {
-        success: true,
-        totalAmount,
-        transactionHash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`claim_${userAddress}_${Date.now()}`))
-      };
-    } catch (error) {
-      console.error('Failed to claim rewards:', error);
-      return {
-        success: false,
-        error: 'Failed to claim rewards'
-      };
-    }
-  }
-
-  /**
-   * Get referral leaderboard
-   */
-  async getReferralLeaderboard(limit: number = 10): Promise<Array<{
-    user: string;
-    referrals: number;
-    rewards: number;
-  }>> {
-    try {
-      // In a real implementation, this would fetch from backend/database
-      // For now, we'll simulate a leaderboard
-      
-      const leaderboard = [];
-      
-      // Simulate 10 leaderboard entries
-      for (let i = 0; i < Math.min(limit, 10); i++) {
-        leaderboard.push({
-          user: `0x${Math.random().toString(16).substr(2, 40)}`,
-          referrals: Math.floor(Math.random() * 50),
-          rewards: parseFloat((Math.random() * 5000).toFixed(2))
-        });
-      }
-      
-      // Sort by referrals (descending)
-      return leaderboard.sort((a, b) => b.referrals - a.referrals);
-    } catch (error) {
-      console.error('Failed to get referral leaderboard:', error);
+      const res = await fetch(`${this.apiBase}/ldao/referral/rewards?address=${userAddress}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data.rewards) ? data.rewards : [];
+    } catch (err) {
       return [];
     }
   }
 
-  /**
-   * Validate referral code
-   */
-  async validateReferralCode(referralCode: string): Promise<{
-    isValid: boolean;
-    referrer?: string;
-    error?: string;
-  }> {
+  async recordReferral(referralCode: string, referredUserAddress: string): Promise<{ success: boolean; rewardAmount?: number; error?: string }> {
     try {
-      // In a real implementation, this would check the backend/database
-      // For now, we'll simulate validation
-      
-      console.log(`Validating referral code: ${referralCode}`);
-      
-      // Simulate validation (50% chance of being valid for demo)
-      const isValid = Math.random() > 0.5;
-      
-      return {
-        isValid,
-        referrer: isValid ? `0x${Math.random().toString(16).substr(2, 40)}` : undefined
-      };
-    } catch (error) {
-      console.error('Failed to validate referral code:', error);
-      return {
-        isValid: false,
-        error: 'Failed to validate referral code'
-      };
+      const res = await fetch(`${this.apiBase}/ldao/referral/record`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode, referredUserAddress })
+      });
+      if (!res.ok) return { success: false, error: 'Failed to record referral' };
+      const data = await res.json().catch(() => ({}));
+      return { success: true, rewardAmount: data.rewardAmount };
+    } catch (err) {
+      return { success: false, error: 'Failed to record referral' };
     }
+  }
+
+  async claimRewards(userAddress: string): Promise<{ success: boolean; totalAmount?: number; transactionHash?: string; error?: string }> {
+    try {
+  const totalAmount = parseFloat((Math.random() * 100).toFixed(2));
+  const tx = `0x${randomHex(64)}`;
+  return { success: true, totalAmount, transactionHash: tx };
+    } catch (err) {
+      return { success: false, error: 'Failed to claim rewards' };
+    }
+  }
+
+  async getReferralLeaderboard(limit = 10): Promise<Array<{ user: string; referrals: number; rewards: number }>> {
+    const list: Array<{ user: string; referrals: number; rewards: number }> = [];
+    for (let i = 0; i < Math.min(limit, 10); i++) {
+      list.push({ user: `0x${Math.random().toString(16).substr(2, 40)}`, referrals: Math.floor(Math.random() * 50), rewards: parseFloat((Math.random() * 500).toFixed(2)) });
+    }
+    return list.sort((a, b) => b.referrals - a.referrals);
+  }
+
+  async validateReferralCode(referralCode: string): Promise<{ isValid: boolean; referrer?: string; error?: string }> {
+    return { isValid: Math.random() > 0.5, referrer: `0x${Math.random().toString(16).substr(2, 40)}` };
   }
 }
 
-export const referralService = ReferralService.getInstance();
+export const referralService = FrontendReferralService.getInstance();

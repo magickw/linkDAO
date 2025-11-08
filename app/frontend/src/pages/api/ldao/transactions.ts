@@ -76,9 +76,10 @@ export default async function handler(
     const data = await response.json();
     const transactions = data.transactions;
 
+    // Return fetched transactions (apply server-side pagination if needed)
     return res.status(200).json({
-      transactions: paginatedTransactions,
-      total: mockTransactions.length
+      transactions: Array.isArray(transactions) ? transactions : [],
+      total: Array.isArray(transactions) ? transactions.length : 0
     });
 
   } catch (error) {

@@ -57,6 +57,7 @@ import {
   Vote,
   Trophy
 } from 'lucide-react';
+import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
 import { CommunityService } from '@/services/communityService';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
@@ -800,6 +801,25 @@ const CommunitiesPage: React.FC = () => {
                   maxUpdatesPerPost={3}
                 />
               </div>
+
+              {/* Suggested Communities - use shared CommunityCardEnhanced component */}
+              {!loading && communityList.length > 0 && (
+                <div className="mb-6">
+                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Suggested Communities</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {communityList.slice(0, 6).map(c => (
+                      <CommunityCardEnhanced
+                        key={c.id}
+                        community={c}
+                        compact={true}
+                        onSelect={() => handleCommunitySelect(c)}
+                        onJoin={() => handleJoinCommunity(c.id)}
+                        showTrendingInfo={false}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Enhanced Loading State */}
               {loading && (
