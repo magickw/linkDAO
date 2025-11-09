@@ -1,391 +1,461 @@
-import type { IPFSHTTPClient } from 'ipfs-http-client';
+import { create, IPFSHTTPClient } from 'ipfs-http-client';
 import { safeLogger } from '../utils/safeLogger';
 import { Readable } from 'stream';
 
-// IPFS configuration
-const IPFS_CONFIG = {
-  host: process.env.IPFS_HOST || 'api.pinata.cloud',
-  port: parseInt(process.env.IPFS_PORT || '443', 10),
-  protocol: process.env.IPFS_PROTOCOL || 'https',
-  projectId: process.env.IPFS_PROJECT_ID,
-  projectSecret: process.env.IPFS_PROJECT_SECRET,
-  gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
-};
-
-export interface NFTMetadata {
+export interface IPFSFileMetadata {
+  id: string;
   name: string;
-  description: string;
-  image: string;
-  animation_url?: string;
-  external_url?: string;
-  attributes: Array<{
-    trait_type: string;
-    value: string | number;
-    display_type?: string;
-  }>;
-  properties?: {
-    category?: string;
-    creators?: Array<{
-      address: string;
-      share: number;
-    }>;
+  size: number;
+  mimeType?: string;
+  createdAt: Date;
+  ipfsHash: string;
+  gatewayUrl: string;
+  tags?: string[];
+  description?: string;
+}
+
+export interface IPFSUploadOptions {
+  pin?: boolean;
+  metadata?: {
+    name?: string;
+    mimeType?: string;
+    tags?: string[];
+    description?: string;
   };
 }
 
-export interface IPFSUploadResult {
-  hash: string;
-  url: string;
-  size: number;
+export interface IPFSDownloadResult {
+  content: Buffer;
+  metadata: IPFSFileMetadata;
 }
 
-class IPFSService {
+export interface IPFSConnectionConfig {
+  url: string;
+  projectId?: string;
+  projectSecret?: string;
+}
+
+export class IPFSService {
   private client: IPFSHTTPClient | null = null;
   private gatewayUrl: string;
-  private projectId: string | undefined;
-  private projectSecret: string | undefined;
+  private defaultPinning: boolean;
 
-  constructor() {
-    this.gatewayUrl = IPFS_CONFIG.gatewayUrl;
-    this.projectId = IPFS_CONFIG.projectId;
-    this.projectSecret = IPFS_CONFIG.projectSecret;
-  }
+  constructor(config?: IPFSConnectionConfig) {
+    // Use environment variables for configuration
+    const apiUrl = config?.url || process.env.IPFS_API_URL || 'http://localhost:5001';
+    this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
+    this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false';
 
-  private async initializeClient(): Promise<void> {
     try {
-      const { create } = await import('ipfs-http-client');
+      // Create IPFS client
+      this.client = create({
+        url: apiUrl,
+        headers: config?.projectId && config?.projectSecret ? {
+          'Authorization': `Basic ${Buffer.from(`${config.projectId}:${config.projectSecret}`).toString('base64')}`
+        } : undefined
+      });
       
-      if (this.projectId && this.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
-        // Configure for Pinata
-        this.client = create({
-          host: 'api.pinata.cloud',
-          port: 443,
-          protocol: 'https',
-          headers: {
-            Authorization: `Bearer ${this.projectId}`
-          },
-          apiPath: '/data'
-        });
-      } else if (this.projectId && this.projectSecret) {
-        // Generic IPFS with authentication
-        this.client = create({
-          host: IPFS_CONFIG.host,
-          port: IPFS_CONFIG.port,
-          protocol: IPFS_CONFIG.protocol,
-          headers: {
-            Authorization: `Bearer ${this.projectId}`
-          }
-        });
-      } else {
-        // Standard IPFS configuration
-        this.client = create({
-          host: IPFS_CONFIG.host,
-          port: IPFS_CONFIG.port,
-          protocol: IPFS_CONFIG.protocol,
-        });
-      }
+      safeLogger.info('IPFS service initialized', { apiUrl, gatewayUrl: this.gatewayUrl });
     } catch (error) {
-      safeLogger.error('Failed to initialize IPFS client:', error);
+      safeLogger.error('Failed to initialize IPFS service:', error);
+      throw new Error('IPFS service initialization failed');
     }
-  }
-
-  private async ensureClient(): Promise<IPFSHTTPClient> {
-    if (!this.client) {
-      await this.initializeClient();
-    }
-    if (!this.client) {
-      throw new Error('IPFS client not available');
-    }
-    return this.client;
   }
 
   /**
    * Upload file to IPFS
    */
-  async uploadFile(file: Buffer | Uint8Array, filename?: string): Promise<IPFSUploadResult> {
-    try {
-      const client = await this.ensureClient();
-      
-      // For Pinata, we need to use a different approach
-      if (this.projectId && this.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
-        // Use Pinata's dedicated API
-        const formData = new FormData();
-        // Convert Buffer to Uint8Array for Blob compatibility
-        const uint8Array = new Uint8Array(file);
-        const fileBlob = new Blob([uint8Array], { type: 'application/octet-stream' });
-        formData.append('file', fileBlob, filename || 'file');
-        
-        const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.projectId}`
-          },
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const result: any = await response.json();
-        return {
-          hash: (result.IpfsHash as string),
-          url: `${this.gatewayUrl}${result.IpfsHash as string}`,
-          size: (result.PinSize as number)
-        };
-      } else {
-        // Standard IPFS client
-        const result = await client.add({
-          content: file,
-          path: filename,
-        });
-
-        return {
-          hash: result.cid.toString(),
-          url: `${this.gatewayUrl}${result.cid.toString()}`,
-          size: result.size,
-        };
-      }
-    } catch (error) {
-      safeLogger.error('Error uploading file to IPFS:', error);
-      throw new Error('Failed to upload file to IPFS');
+  async uploadFile(
+    content: Buffer | string | Readable,
+    options?: IPFSUploadOptions
+  ): Promise<IPFSFileMetadata> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
     }
-  }
 
-  /**
-   * Upload JSON metadata to IPFS
-   */
-  async uploadMetadata(metadata: NFTMetadata): Promise<IPFSUploadResult> {
     try {
-      const metadataString = JSON.stringify(metadata, null, 2);
-      const buffer = Buffer.from(metadataString);
-
-      const client = await this.ensureClient();
-      const result = await client.add({
-        content: buffer,
-        path: 'metadata.json',
+      const startTime = Date.now();
+      safeLogger.info('Starting IPFS upload', { 
+        size: Buffer.isBuffer(content) ? content.length : 'unknown',
+        name: options?.metadata?.name 
       });
 
-      return {
-        hash: result.cid.toString(),
-        url: `${this.gatewayUrl}${result.cid.toString()}`,
-        size: result.size,
+      // Prepare file object
+      const file = {
+        content: content,
+        path: options?.metadata?.name || `file-${Date.now()}`
       };
+
+      // Add file to IPFS
+      const result = await this.client.add(file, {
+        pin: options?.pin !== undefined ? options.pin : this.defaultPinning,
+        wrapWithDirectory: false
+      });
+
+      const metadata: IPFSFileMetadata = {
+        id: result.hash,
+        name: options?.metadata?.name || result.path,
+        size: result.size,
+        mimeType: options?.metadata?.mimeType,
+        createdAt: new Date(),
+        ipfsHash: result.hash,
+        gatewayUrl: `${this.gatewayUrl}/${result.hash}`,
+        tags: options?.metadata?.tags,
+        description: options?.metadata?.description
+      };
+
+      const endTime = Date.now();
+      safeLogger.info(`IPFS upload completed`, {
+        hash: result.hash,
+        size: result.size,
+        duration: endTime - startTime
+      });
+
+      return metadata;
     } catch (error) {
-      safeLogger.error('Error uploading metadata to IPFS:', error);
-      throw new Error('Failed to upload metadata to IPFS');
+      safeLogger.error('IPFS upload failed:', error);
+      throw new Error(`IPFS upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * Upload multiple files to IPFS (for collections)
+   * Upload multiple files to IPFS as a directory
    */
-  async uploadMultipleFiles(files: Array<{ content: Buffer; filename: string }>): Promise<IPFSUploadResult[]> {
-    try {
-      const results: IPFSUploadResult[] = [];
+  async uploadDirectory(
+    files: Array<{ content: Buffer | string; path: string }>,
+    options?: IPFSUploadOptions
+  ): Promise<{ rootHash: string; files: IPFSFileMetadata[] }> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
 
-      for (const file of files) {
-        const result = await this.uploadFile(file.content, file.filename);
+    try {
+      const startTime = Date.now();
+      safeLogger.info('Starting IPFS directory upload', { fileCount: files.length });
+
+      // Add all files to IPFS
+      const filesToAdd = files.map(file => ({
+        content: file.content,
+        path: file.path
+      }));
+
+      const results = [];
+      for (const file of filesToAdd) {
+        const result = await this.client.add(file, {
+          pin: options?.pin !== undefined ? options.pin : this.defaultPinning,
+          wrapWithDirectory: true
+        });
         results.push(result);
       }
 
-      return results;
+      // Create directory structure
+      const root = await this.client.addAll(filesToAdd, {
+        pin: options?.pin !== undefined ? options.pin : this.defaultPinning,
+        wrapWithDirectory: true
+      });
+
+      // Convert results to metadata
+      const fileMetadata = results.map((result, index) => ({
+        id: result.hash,
+        name: files[index].path,
+        size: result.size,
+        mimeType: this.getMimeType(files[index].path),
+        createdAt: new Date(),
+        ipfsHash: result.hash,
+        gatewayUrl: `${this.gatewayUrl}/${result.hash}`,
+        tags: options?.metadata?.tags,
+        description: options?.metadata?.description
+      }));
+
+      const endTime = Date.now();
+      safeLogger.info(`IPFS directory upload completed`, {
+        rootHash: root.cid.toString(),
+        fileCount: files.length,
+        duration: endTime - startTime
+      });
+
+      return {
+        rootHash: root.cid.toString(),
+        files: fileMetadata
+      };
     } catch (error) {
-      safeLogger.error('Error uploading multiple files to IPFS:', error);
-      throw new Error('Failed to upload files to IPFS');
+      safeLogger.error('IPFS directory upload failed:', error);
+      throw new Error(`IPFS directory upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * Pin content to IPFS (to ensure persistence)
+   * Download file from IPFS
    */
-  async pinContent(hash: string): Promise<void> {
-    try {
-      const client = await this.ensureClient();
-      await client.pin.add(hash);
-    } catch (error) {
-      safeLogger.error('Error pinning content to IPFS:', error);
-      throw new Error('Failed to pin content to IPFS');
+  async downloadFile(ipfsHash: string): Promise<IPFSDownloadResult> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
     }
-  }
 
-  /**
-   * Unpin content from IPFS
-   */
-  async unpinContent(hash: string): Promise<void> {
     try {
-      const client = await this.ensureClient();
-      await client.pin.rm(hash);
-    } catch (error) {
-      safeLogger.error('Error unpinning content from IPFS:', error);
-      throw new Error('Failed to unpin content from IPFS');
-    }
-  }
+      const startTime = Date.now();
+      safeLogger.info('Starting IPFS download', { hash: ipfsHash });
 
-  /**
-   * Get content from IPFS
-   */
-  async getContent(hash: string): Promise<Buffer> {
-    try {
-      const chunks: Uint8Array[] = [];
-      
-      const client = await this.ensureClient();
-      for await (const chunk of client.cat(hash)) {
+      // Get file content
+      const chunks = [];
+      for await (const chunk of this.client.cat(ipfsHash)) {
         chunks.push(chunk);
       }
 
-      return Buffer.concat(chunks);
-    } catch (error) {
-      safeLogger.error('Error getting content from IPFS:', error);
-      throw new Error('Failed to get content from IPFS');
-    }
-  }
+      const content = Buffer.concat(chunks);
+      const size = content.length;
 
-  /**
-   * Get metadata from IPFS
-   */
-  async getMetadata(hash: string): Promise<NFTMetadata> {
-    try {
-      const content = await this.getContent(hash);
-      return JSON.parse(content.toString());
-    } catch (error) {
-      safeLogger.error('Error getting metadata from IPFS:', error);
-      throw new Error('Failed to get metadata from IPFS');
-    }
-  }
-
-  /**
-   * Validate NFT metadata format
-   */
-  validateMetadata(metadata: any): metadata is NFTMetadata {
-    return (
-      typeof metadata === 'object' &&
-      typeof metadata.name === 'string' &&
-      typeof metadata.description === 'string' &&
-      typeof metadata.image === 'string' &&
-      Array.isArray(metadata.attributes) &&
-      metadata.attributes.every((attr: any) =>
-        typeof attr.trait_type === 'string' &&
-        (typeof attr.value === 'string' || typeof attr.value === 'number')
-      )
-    );
-  }
-
-  /**
-   * Generate content hash for duplicate detection
-   */
-  generateContentHash(content: Buffer): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(content).digest('hex');
-  }
-
-  /**
-   * Create NFT metadata with proper format
-   */
-  createNFTMetadata(params: {
-    name: string;
-    description: string;
-    imageHash: string;
-    animationHash?: string;
-    externalUrl?: string;
-    attributes: Array<{
-      trait_type: string;
-      value: string | number;
-      display_type?: string;
-    }>;
-    creator?: string;
-  }): NFTMetadata {
-    const metadata: NFTMetadata = {
-      name: params.name,
-      description: params.description,
-      image: `${this.gatewayUrl}${params.imageHash}`,
-      attributes: params.attributes,
-    };
-
-    if (params.animationHash) {
-      metadata.animation_url = `${this.gatewayUrl}${params.animationHash}`;
-    }
-
-    if (params.externalUrl) {
-      metadata.external_url = params.externalUrl;
-    }
-
-    if (params.creator) {
-      metadata.properties = {
-        creators: [{
-          address: params.creator,
-          share: 100,
-        }],
+      // Create metadata
+      const metadata: IPFSFileMetadata = {
+        id: ipfsHash,
+        name: `file-${ipfsHash.slice(0, 8)}`,
+        size: size,
+        createdAt: new Date(),
+        ipfsHash: ipfsHash,
+        gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
       };
-    }
 
-    return metadata;
-  }
+      const endTime = Date.now();
+      safeLogger.info(`IPFS download completed`, {
+        hash: ipfsHash,
+        size: size,
+        duration: endTime - startTime
+      });
 
-  /**
-   * Batch upload for NFT collections
-   */
-  async batchUploadCollection(items: Array<{
-    name: string;
-    description: string;
-    image: Buffer;
-    attributes: Array<{
-      trait_type: string;
-      value: string | number;
-    }>;
-  }>): Promise<Array<{ tokenId: number; metadataHash: string; imageHash: string }>> {
-    try {
-      const results = [];
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        
-        // Upload image
-        const imageResult = await this.uploadFile(item.image, `${i}.png`);
-        
-        // Create metadata
-        const metadata = this.createNFTMetadata({
-          name: item.name,
-          description: item.description,
-          imageHash: imageResult.hash,
-          attributes: item.attributes,
-        });
-
-        // Upload metadata
-        const metadataResult = await this.uploadMetadata(metadata);
-
-        results.push({
-          tokenId: i,
-          metadataHash: metadataResult.hash,
-          imageHash: imageResult.hash,
-        });
-      }
-
-      return results;
+      return { content, metadata };
     } catch (error) {
-      safeLogger.error('Error batch uploading collection:', error);
-      throw new Error('Failed to batch upload collection');
+      safeLogger.error(`IPFS download failed for ${ipfsHash}:`, error);
+      throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * Get IPFS gateway URL
+   * Check if file exists on IPFS
    */
-  getGatewayUrl(): string {
-    return this.gatewayUrl;
-  }
+  async fileExists(ipfsHash: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
 
-  /**
-   * Check if IPFS node is accessible
-   */
-  async isNodeAccessible(): Promise<boolean> {
     try {
-      const client = await this.ensureClient();
-      await client.id();
+      // Try to get file stats to check if it exists
+      await this.client.files.stat(`/${ipfsHash}`);
       return true;
     } catch (error) {
+      // If error occurs, the file likely doesn't exist
+      if ((error as any).code === 'ERR_NOT_FOUND') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Pin file to IPFS node
+   */
+  async pinFile(ipfsHash: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      await this.client.pin.add(ipfsHash);
+      safeLogger.info('File pinned successfully', { hash: ipfsHash });
+      return true;
+    } catch (error) {
+      safeLogger.error(`Failed to pin file ${ipfsHash}:`, error);
       return false;
+    }
+  }
+
+  /**
+   * Unpin file from IPFS node
+   */
+  async unpinFile(ipfsHash: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      await this.client.pin.rm(ipfsHash);
+      safeLogger.info('File unpinned successfully', { hash: ipfsHash });
+      return true;
+    } catch (error) {
+      safeLogger.error(`Failed to unpin file ${ipfsHash}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get file metadata from IPFS
+   */
+  async getFileMetadata(ipfsHash: string): Promise<IPFSFileMetadata> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      const stats = await this.client.files.stat(`/${ipfsHash}`);
+      
+      return {
+        id: ipfsHash,
+        name: stats.name,
+        size: stats.size,
+        createdAt: new Date(),
+        ipfsHash: ipfsHash,
+        gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
+      };
+    } catch (error) {
+      safeLogger.error(`Failed to get metadata for ${ipfsHash}:`, error);
+      throw new Error(`Failed to get metadata: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get IPFS node information
+   */
+  async getNodeInfo(): Promise<any> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      const id = await this.client.id();
+      return id;
+    } catch (error) {
+      safeLogger.error('Failed to get IPFS node info:', error);
+      throw new Error(`Failed to get node info: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get file size
+   */
+  async getFileSize(ipfsHash: string): Promise<number> {
+    try {
+      const metadata = await this.getFileMetadata(ipfsHash);
+      return metadata.size;
+    } catch (error) {
+      safeLogger.error(`Failed to get file size for ${ipfsHash}:`, error);
+      throw new Error(`Failed to get file size: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Verify file integrity by comparing sizes
+   */
+  async verifyFileIntegrity(originalSize: number, ipfsHash: string): Promise<boolean> {
+    try {
+      const currentSize = await this.getFileSize(ipfsHash);
+      return originalSize === currentSize;
+    } catch (error) {
+      safeLogger.error(`Failed to verify file integrity for ${ipfsHash}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get content identifier (CID) version of file
+   */
+  async getCIDVersion(ipfsHash: string): Promise<string> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      const cid = await this.client.resolve(`/ipfs/${ipfsHash}`);
+      return cid;
+    } catch (error) {
+      safeLogger.error(`Failed to resolve CID for ${ipfsHash}:`, error);
+      throw new Error(`Failed to resolve CID: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Helper method to get MIME type from file extension
+   */
+  private getMimeType(filename: string): string {
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      'txt': 'text/plain',
+      'pdf': 'application/pdf',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'mp4': 'video/mp4',
+      'mov': 'video/quicktime',
+      'avi': 'video/x-msvideo',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'json': 'application/json',
+      'xml': 'application/xml',
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'ts': 'application/typescript'
+    };
+
+    return mimeTypes[extension || ''] || 'application/octet-stream';
+  }
+
+  /**
+   * Get total size of pinned objects
+   */
+  async getPinnedSize(): Promise<number> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      const pins = await this.client.pin.ls();
+      let totalSize = 0;
+
+      // Note: IPFS API doesn't directly provide size for all pins
+      // This is a simplified implementation
+      for await (const pin of pins) {
+        try {
+          const size = await this.getFileSize(pin.cid.toString());
+          totalSize += size;
+        } catch (error) {
+          // Skip files that can't be accessed
+          continue;
+        }
+      }
+
+      return totalSize;
+    } catch (error) {
+      safeLogger.error('Failed to get pinned size:', error);
+      throw new Error(`Failed to get pinned size: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Get pin status for a file
+   */
+  async getPinStatus(ipfsHash: string): Promise<'pinned' | 'unpinned' | 'unknown'> {
+    if (!this.client) {
+      throw new Error('IPFS client not initialized');
+    }
+
+    try {
+      const pins = await this.client.pin.ls({ paths: [ipfsHash] });
+      for await (const pin of pins) {
+        if (pin.cid.toString() === ipfsHash) {
+          return 'pinned';
+        }
+      }
+      return 'unpinned';
+    } catch (error) {
+      safeLogger.error(`Failed to get pin status for ${ipfsHash}:`, error);
+      return 'unknown';
     }
   }
 }
 
-export default new IPFSService();
+// Export singleton instance with default configuration
+const ipfsService = new IPFSService();
+export default ipfsService;

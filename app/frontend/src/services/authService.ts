@@ -230,20 +230,30 @@ class AuthService {
           // Initialize CSRF service with session token as session ID
           await csrfService.initialize(data.sessionToken);
           
-          const userData: AuthUser = {
-            id: `user_${address}`,
-            address: address,
-            handle: `user_${address.slice(0, 6)}`,
-            ens: undefined,
-            email: undefined,
-            kycStatus: 'none',
-            role: 'user' as UserRole,
-            permissions: [],
-            isActive: true,
-            isSuspended: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+          // Use user data from backend response if available, otherwise create default user
+          const responseUserData = data.data?.user || data.user;
+          let userData: AuthUser;
+          
+          if (responseUserData) {
+            // Use user data from backend response
+            userData = responseUserData;
+          } else {
+            // Create default user object if not provided by backend
+            userData = {
+              id: `user_${address}`,
+              address: address,
+              handle: `user_${address.slice(0, 6)}`,
+              ens: undefined,
+              email: undefined,
+              kycStatus: 'none',
+              role: 'user' as UserRole,
+              permissions: [],
+              isActive: true,
+              isSuspended: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+          }
 
           // Store session data for persistence
           if (typeof window !== 'undefined') {
@@ -390,20 +400,25 @@ class AuthService {
       const data = await response.json();
       
       if (data.success && data.data.authenticated) {
-        // Convert session data to AuthUser format
+        // Convert session data to AuthUser format, use role and permissions from backend if available
         return {
           id: data.data.sessionId || `user_${data.data.walletAddress}`,
           address: data.data.walletAddress,
-          handle: `user_${data.data.walletAddress.slice(0, 6)}`,
-          ens: undefined,
-          email: undefined,
-          kycStatus: 'none',
-          role: 'user' as UserRole,
-          permissions: [],
-          isActive: true,
-          isSuspended: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          handle: data.data.handle || `user_${data.data.walletAddress.slice(0, 6)}`,
+          ens: data.data.ens,
+          email: data.data.email,
+          kycStatus: data.data.kycStatus || 'none',
+          role: data.data.role || 'user' as UserRole,
+          permissions: data.data.permissions || [],
+          isActive: data.data.isActive ?? true,
+          isSuspended: data.data.isSuspended ?? false,
+          suspensionReason: data.data.suspensionReason,
+          suspensionExpiresAt: data.data.suspensionExpiresAt,
+          lastLogin: data.data.lastLogin,
+          createdAt: data.data.createdAt || new Date().toISOString(),
+          updatedAt: data.data.updatedAt || new Date().toISOString(),
+          preferences: data.data.preferences,
+          privacySettings: data.data.privacySettings,
         };
       }
       
@@ -424,6 +439,8 @@ class AuthService {
             id: `mock_${address}`,
             address: address,
             handle: `user_${address.slice(0, 6)}`,
+            ens: undefined,
+            email: undefined,
             kycStatus: 'none',
             role: 'user' as UserRole,
             permissions: [],
@@ -431,6 +448,8 @@ class AuthService {
             isSuspended: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            preferences: undefined,
+            privacySettings: undefined,
           } as AuthUser;
         }
       }

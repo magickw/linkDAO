@@ -477,6 +477,12 @@ app.use('/api/mobile', mobileRoutes);
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
 
+// Import storage routes
+import { storageRoutes } from './routes/storageRoutes';
+
+// Storage routes for self-hosted storage
+app.use('/api/storage', storageRoutes);
+
 // Proxy routes (should be after specific API routes)
 app.use('/', proxyRoutes);
 
