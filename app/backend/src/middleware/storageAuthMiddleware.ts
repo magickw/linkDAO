@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { selfHostedStorageService } from './selfHostedStorageService';
+import { selfHostedStorageService } from '../services/selfHostedStorageService';
 import { safeLogger } from '../utils/safeLogger';
 
 // Define user roles for access control

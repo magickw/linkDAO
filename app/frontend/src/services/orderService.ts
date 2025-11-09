@@ -1,37 +1,9 @@
 import { 
   Order as MarketplaceOrder, 
   OrderEvent, 
-  OrderStatus 
+  OrderStatus,
+  OrderItem
 } from '../types/order';
-
-export interface OrderItem {
-  id: string;
-  title: string;
-  image: string;
-  unitPrice: number;
-  quantity: number;
-  totalPrice: number;
-}
-
-export interface Order {
-  id: string;
-  status: OrderStatus;
-  paymentMethod: 'crypto' | 'fiat';
-  total: number;
-  currency: string;
-  items: OrderItem[];
-  createdAt: Date;
-  estimatedDelivery?: Date;
-  trackingNumber?: string;
-  seller: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  // Add return eligibility information
-  returnEligible?: boolean;
-  returnDeadline?: Date;
-}
 
 export interface OrderTrackingStatus {
   orderId: string;
@@ -62,7 +34,7 @@ class OrderService {
   /**
    * Get all orders for the current user
    */
-  async getOrdersByUser(userAddress: string): Promise<Order[]> {
+  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/orders/user/${userAddress}`, {
         method: 'GET',
@@ -73,23 +45,28 @@ class OrderService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch orders: ${response.status} ${response.statusText}`);
       }
 
-      const { orders } = await response.json();
+      const data = await response.json();
+      const orders = data.orders || [];
       
       // Transform backend orders to frontend format
       return orders.map((order: any) => this.transformOrder(order));
     } catch (error) {
       console.error('Error fetching orders:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch orders');
     }
   }
 
   /**
    * Get order by ID
    */
-  async getOrderById(orderId: string): Promise<Order | null> {
+  async getOrderById(orderId: string): Promise<MarketplaceOrder | null> {
     try {
       const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
         method: 'GET',
@@ -103,14 +80,18 @@ class OrderService {
         if (response.status === 404) {
           return null;
         }
-        throw new Error('Failed to fetch order');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch order: ${response.status} ${response.statusText}`);
       }
 
       const order = await response.json();
       return this.transformOrder(order);
     } catch (error) {
       console.error('Error fetching order:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch order');
     }
   }
 
@@ -129,7 +110,8 @@ class OrderService {
       });
 
       if (!orderResponse.ok) {
-        throw new Error('Failed to fetch order details');
+        const errorData = await orderResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch order details: ${orderResponse.status} ${orderResponse.statusText}`);
       }
 
       const order = await orderResponse.json();
@@ -144,7 +126,8 @@ class OrderService {
       });
 
       if (!historyResponse.ok) {
-        throw new Error('Failed to fetch order history');
+        const errorData = await historyResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch order history: ${historyResponse.status} ${historyResponse.statusText}`);
       }
 
       const timeline = await historyResponse.json();
@@ -153,7 +136,10 @@ class OrderService {
       return this.transformOrderToTrackingStatus(order, timeline);
     } catch (error) {
       console.error('Error fetching order tracking status:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch order tracking status');
     }
   }
 
@@ -207,13 +193,17 @@ class OrderService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to confirm delivery');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to confirm delivery: ${response.status} ${response.statusText}`);
       }
 
       return true;
     } catch (error) {
       console.error('Error confirming delivery:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to confirm delivery');
     }
   }
 
@@ -234,13 +224,17 @@ class OrderService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to release funds');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to release funds: ${response.status} ${response.statusText}`);
       }
 
       return true;
     } catch (error) {
       console.error('Error releasing funds:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to release funds');
     }
   }
 
@@ -262,20 +256,96 @@ class OrderService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to open dispute');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to open dispute: ${response.status} ${response.statusText}`);
       }
 
       return true;
     } catch (error) {
       console.error('Error opening dispute:', error);
-      throw error;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to open dispute');
+    }
+  }
+
+  /**
+   * Update order status
+   */
+  async updateOrderStatus(orderId: string, status: string, metadata?: any): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          status,
+          metadata
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update order status: ${response.status} ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update order status');
+    }
+  }
+
+  /**
+   * Add tracking information to an order
+   */
+  async addTrackingInfo(orderId: string, trackingNumber: string, carrier: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/shipping`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          trackingNumber,
+          carrier,
+          service: 'Standard',
+          fromAddress: {}, // This would be the seller's address
+          packageInfo: {
+            weight: 0,
+            dimensions: { length: 0, width: 0, height: 0 },
+            value: '0',
+            description: 'Package'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to add tracking information: ${response.status} ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error adding tracking information:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to add tracking information');
     }
   }
 
   /**
    * Transform backend order to frontend format
    */
-  private transformOrder(order: any): Order {
+  private transformOrder(order: any): MarketplaceOrder {
     // This is a simplified transformation - in a real implementation,
     // you would map the actual backend order structure to the frontend format
     
@@ -287,30 +357,50 @@ class OrderService {
     
     return {
       id: order.id,
-      status: order.status as OrderStatus,
+      listingId: order.listingId || order.id,
+      buyerAddress: order.buyerAddress || order.buyerId || '',
+      sellerAddress: order.sellerAddress || order.sellerId || '',
+      escrowId: order.escrowId,
+      amount: order.amount?.toString() || '0',
+      paymentToken: order.paymentToken || 'ETH',
       paymentMethod: order.paymentToken && (order.paymentToken.includes('USDC') || order.paymentToken.includes('USDT')) ? 'crypto' : 'fiat',
-      total: parseFloat(order.amount) || 0,
-      currency: 'USD',
-      items: [
-        {
-          id: order.listingId || '1',
-          title: `Order #${order.id}`,
-          image: '/api/placeholder/400/400',
-          unitPrice: parseFloat(order.amount) || 0,
-          quantity: 1,
-          totalPrice: parseFloat(order.amount) || 0
-        }
-      ],
-      createdAt: new Date(order.createdAt),
-      estimatedDelivery: order.status === 'SHIPPED' ? new Date(Date.now() + 86400000 * 3) : undefined,
-      trackingNumber: order.status === 'SHIPPED' ? `TRK${order.id}` : undefined,
-      seller: {
-        id: order.sellerId || 'seller_1',
-        name: 'Marketplace Seller',
-        avatar: '/api/placeholder/40/40'
+      status: order.status as OrderStatus,
+      createdAt: order.createdAt || new Date().toISOString(),
+      shippingAddress: order.shippingAddress,
+      trackingNumber: order.trackingNumber,
+      trackingCarrier: order.trackingCarrier,
+      estimatedDelivery: order.estimatedDelivery,
+      actualDelivery: order.actualDelivery,
+      deliveryConfirmation: order.deliveryConfirmation,
+      totalAmount: parseFloat(order.amount) || 0,
+      currency: order.currency || 'USD',
+      orderNotes: order.orderNotes,
+      orderMetadata: order.orderMetadata,
+      disputeId: order.disputeId,
+      canConfirmDelivery: ['SHIPPED'].includes(order.status),
+      canOpenDispute: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status),
+      canCancel: ['CREATED', 'PAID'].includes(order.status),
+      canRefund: ['COMPLETED', 'DELIVERED'].includes(order.status),
+      isEscrowProtected: !!order.escrowId,
+      daysUntilAutoComplete: order.daysUntilAutoComplete || 7,
+      product: {
+        id: order.listingId || '1',
+        title: order.title || order.product?.title || `Order #${order.id}`,
+        description: order.description || order.product?.description || '',
+        image: order.image || order.product?.image || '/api/placeholder/400/400',
+        category: order.category || order.product?.category || 'General',
+        quantity: order.quantity || order.product?.quantity || 1,
+        unitPrice: order.unitPrice || order.product?.unitPrice || parseFloat(order.amount) || 0,
+        totalPrice: order.totalPrice || order.product?.totalPrice || parseFloat(order.amount) || 0
       },
-      returnEligible,
-      returnDeadline
+      timeline: order.timeline || [],
+      trackingInfo: order.trackingInfo,
+      updatedAt: order.updatedAt || order.createdAt || new Date().toISOString(),
+      billingAddress: order.billingAddress,
+      paymentConfirmationHash: order.paymentConfirmationHash,
+      escrowContractAddress: order.escrowContractAddress,
+      preferences: order.preferences,
+      privacySettings: order.privacySettings
     };
   }
 

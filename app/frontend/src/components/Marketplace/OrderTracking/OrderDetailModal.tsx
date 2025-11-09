@@ -109,8 +109,8 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     
     if (trackingNumber && carrier) {
       try {
-        // Simulate adding tracking info since the method doesn't exist
-        addToast('Tracking information would be added in a real implementation', 'info');
+        await orderService.addTrackingInfo(order.id, trackingNumber, carrier);
+        addToast('Tracking information added successfully', 'success');
         onUpdate();
         loadOrderDetails();
       } catch (error) {
@@ -122,8 +122,8 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
   const handleUpdateStatus = async (newStatus: string) => {
     try {
-      // Simulate updating order status since the method doesn't exist
-      addToast('Order status would be updated in a real implementation', 'info');
+      await orderService.updateOrderStatus(order.id, newStatus);
+      addToast('Order status updated successfully', 'success');
       onUpdate();
       onClose();
     } catch (error) {
@@ -200,6 +200,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         });
       }
       
+      onClick: () => handleUpdateStatus('PROCESSING')
+        });
+      }
+      
       if (order.status === 'PROCESSING' && !order.trackingNumber) {
         actions.push({
           key: 'add_tracking',
@@ -219,6 +223,8 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           onClick: () => handleUpdateStatus('SHIPPED')
         });
       }
+      
+      
     }
 
     return actions;

@@ -293,7 +293,7 @@ export class SelfHostedStorageService {
   private async encryptContent(content: Buffer): Promise<Buffer> {
     try {
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipherGCM('aes-256-gcm', this.encryptionKey, iv);
+      const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
       
       const encrypted = Buffer.concat([
         cipher.update(content),
@@ -320,7 +320,7 @@ export class SelfHostedStorageService {
       const authTag = encryptedContent.subarray(16, 32);
       const encrypted = encryptedContent.subarray(32);
       
-      const decipher = crypto.createDecipherGCM('aes-256-gcm', this.encryptionKey, iv);
+      const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
       decipher.setAuthTag(authTag);
       
       return Buffer.concat([

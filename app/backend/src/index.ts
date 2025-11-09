@@ -940,6 +940,10 @@ app.use('/api/admin/report-export', reportExportRoutes);
 import reportTemplateLibraryRoutes from './routes/reportTemplateLibraryRoutes';
 app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
+// IPFS routes
+import { ipfsRoutes } from './routes/ipfsRoutes';
+app.use('/api/ipfs', ipfsRoutes);
+
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
 // Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)
