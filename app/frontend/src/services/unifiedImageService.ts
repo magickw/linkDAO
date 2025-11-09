@@ -346,11 +346,14 @@ export class UnifiedImageService {
       quality: image.quality,
     }));
 
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+    
     const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/upload`, {
       method: 'POST',
       body: formData,
       headers: {
         // Don't set Content-Type header - let browser set it with boundary for FormData
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
     });
 
@@ -492,10 +495,13 @@ export class UnifiedImageService {
    */
   async deleteImage(imageId: string, context: string): Promise<boolean> {
     try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+      
       const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/${imageId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ context }),
       });

@@ -7,7 +7,7 @@ export class PollService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     
     const response = await fetch(`${API_BASE_URL}/api/polls${endpoint}`, {
       ...options,

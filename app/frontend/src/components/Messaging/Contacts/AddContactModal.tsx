@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, UserPlusIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, UserPlusIcon, CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { useContacts } from '@/contexts/ContactContext';
 import { ContactFormData, CONTACT_TAGS } from '@/types/contacts';
+
+// Predefined emoji icons for groups
+const GROUP_ICONS = [
+  '⭐', '👥', '💼', '🏛️', '🎯', '🚀', '💎', '🌟',
+  '🔥', '💡', '🎨', '🎮', '📚', '🏆', '💰', '🌈'
+];
+
+// Predefined colors for groups
+const GROUP_COLORS = [
+  '#FFD700', '#4CAF50', '#2196F3', '#9C27B0', '#FF5722',
+  '#00BCD4', '#FF9800', '#E91E63', '#8BC34A', '#FFC107'
+];
 
 interface AddContactModalProps {
   isOpen: boolean;
@@ -10,7 +22,7 @@ interface AddContactModalProps {
 }
 
 const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) => {
-  const { groups, addContact } = useContacts();
+  const { groups, addContact, createGroup } = useContacts();
   const [formData, setFormData] = useState<ContactFormData>({
     walletAddress: '',
     ensName: '',
@@ -22,6 +34,12 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  // New group creation state
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('⭐');
+  const [selectedColor, setSelectedColor] = useState('#FFD700');
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -36,6 +54,10 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
       });
       setSelectedTags(new Set());
       setError(null);
+      setIsCreatingGroup(false);
+      setNewGroupName('');
+      setSelectedIcon('⭐');
+      setSelectedColor('#FFD700');
     }
   }, [isOpen]);
 
@@ -85,8 +107,31 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
     const newGroups = formData.groups.includes(groupId)
       ? formData.groups.filter(id => id !== groupId)
       : [...formData.groups, groupId];
-    
+
     setFormData(prev => ({ ...prev, groups: newGroups }));
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) {
+      setError('Group name is required');
+      return;
+    }
+
+    try {
+      await createGroup({
+        name: newGroupName.trim(),
+        icon: selectedIcon,
+        color: selectedColor
+      });
+
+      // Reset group creation form
+      setNewGroupName('');
+      setSelectedIcon('⭐');
+      setSelectedColor('#FFD700');
+      setIsCreatingGroup(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create group');
+    }
   };
 
   if (!isOpen) return null;
@@ -184,23 +229,103 @@ const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) =>
 
             {/* Groups */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Groups
-              </label>
-              <div className="space-y-2">
-                {groups.map(group => (
-                  <label key={group.id} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.groups.includes(group.id)}
-                      onChange={() => handleGroupToggle(group.id)}
-                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-lg">{group.icon}</span>
-                    <span className="text-sm text-gray-300">{group.name}</span>
-                  </label>
-                ))}
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Groups
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingGroup(!isCreatingGroup)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                >
+                  <PlusIcon className="w-3 h-3" />
+                  {isCreatingGroup ? 'Cancel' : 'New Group'}
+                </button>
               </div>
+
+              {/* Create New Group Form */}
+              {isCreatingGroup && (
+                <div className="mb-3 p-3 bg-gray-700/50 border border-gray-600 rounded-lg space-y-2">
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Group name..."
+                    className="w-full px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Select Icon</label>
+                    <div className="flex flex-wrap gap-1">
+                      {GROUP_ICONS.map(icon => (
+                        <button
+                          key={icon}
+                          type="button"
+                          onClick={() => setSelectedIcon(icon)}
+                          className={`w-8 h-8 text-lg rounded border-2 transition-all ${
+                            selectedIcon === icon
+                              ? 'border-blue-500 bg-blue-500/20'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Select Color</label>
+                    <div className="flex flex-wrap gap-1">
+                      {GROUP_COLORS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setSelectedColor(color)}
+                          className={`w-6 h-6 rounded-full border-2 transition-all ${
+                            selectedColor === color
+                              ? 'border-white scale-110'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCreateGroup}
+                    className="w-full px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                  >
+                    Create Group
+                  </button>
+                </div>
+              )}
+
+              {/* Existing Groups List */}
+              {groups.length > 0 ? (
+                <div className="space-y-2">
+                  {groups.map(group => (
+                    <label key={group.id} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.groups.includes(group.id)}
+                        onChange={() => handleGroupToggle(group.id)}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-lg">{group.icon}</span>
+                      <span className="text-sm text-gray-300">{group.name}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                !isCreatingGroup && (
+                  <div className="text-sm text-gray-400 text-center py-2">
+                    No groups yet. Create your first group!
+                  </div>
+                )
+              )}
             </div>
 
             {/* Tags */}

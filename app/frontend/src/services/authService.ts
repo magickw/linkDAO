@@ -32,7 +32,7 @@ class AuthService {
     
     // Load token from localStorage on initialization
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+      this.token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     }
   }
 

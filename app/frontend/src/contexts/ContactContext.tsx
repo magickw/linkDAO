@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import { Contact, ContactGroup, ContactFormData, ContactSearchFilters, ContactContextType, DEFAULT_CONTACT_GROUPS } from '@/types/contacts';
+import { Contact, ContactGroup, ContactFormData, ContactSearchFilters, ContactContextType } from '@/types/contacts';
 
 // Contact reducer actions
 type ContactAction =
@@ -125,20 +125,15 @@ const ContactContext = createContext<ContactContextType | undefined>(undefined);
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(contactReducer, initialState);
 
-  // Initialize default groups
+  // Initialize groups from localStorage
   useEffect(() => {
     const initializeGroups = () => {
       const savedGroups = localStorage.getItem('linkdao-contact-groups');
       if (savedGroups) {
         dispatch({ type: 'SET_GROUPS', payload: JSON.parse(savedGroups) });
       } else {
-        const defaultGroups: ContactGroup[] = DEFAULT_CONTACT_GROUPS.map(group => ({
-          ...group,
-          id: `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date()
-        }));
-        dispatch({ type: 'SET_GROUPS', payload: defaultGroups });
-        localStorage.setItem('linkdao-contact-groups', JSON.stringify(defaultGroups));
+        // Start with empty groups - users will create their own
+        dispatch({ type: 'SET_GROUPS', payload: [] });
       }
     };
 
@@ -177,9 +172,7 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
 
   // Save groups to localStorage whenever groups change
   useEffect(() => {
-    if (state.groups.length > 0) {
-      localStorage.setItem('linkdao-contact-groups', JSON.stringify(state.groups));
-    }
+    localStorage.setItem('linkdao-contact-groups', JSON.stringify(state.groups));
   }, [state.groups]);
 
   const addContact = useCallback(async (contactData: ContactFormData) => {

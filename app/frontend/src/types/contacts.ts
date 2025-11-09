@@ -17,12 +17,9 @@ export interface Contact {
 
 export type ContactStatus = 'online' | 'idle' | 'busy' | 'offline';
 
-export type ContactGroupType = 'favorites' | 'friends' | 'colleagues' | 'dao-members' | 'custom';
-
 export interface ContactGroup {
   id: string;
   name: string;
-  type: ContactGroupType;
   icon: string;
   color: string;
   description?: string;
@@ -65,39 +62,7 @@ export interface ContactContextType {
   startChat: (contact: Contact) => void;
 }
 
-// Default contact groups
-export const DEFAULT_CONTACT_GROUPS: Omit<ContactGroup, 'id' | 'createdAt'>[] = [
-  {
-    name: 'Favorites',
-    type: 'favorites',
-    icon: '⭐',
-    color: '#FFD700',
-    description: 'Your most important contacts'
-  },
-  {
-    name: 'Friends',
-    type: 'friends',
-    icon: '👥',
-    color: '#4CAF50',
-    description: 'Personal connections'
-  },
-  {
-    name: 'Colleagues',
-    type: 'colleagues',
-    icon: '💼',
-    color: '#2196F3',
-    description: 'Work-related contacts'
-  },
-  {
-    name: 'DAO Members',
-    type: 'dao-members',
-    icon: '🏛️',
-    color: '#9C27B0',
-    description: 'Governance participants'
-  }
-];
-
 export const CONTACT_TAGS = [
-  'defi', 'developer', 'artist', 'trader', 'nft', 'governance', 
+  'defi', 'developer', 'artist', 'trader', 'nft', 'governance',
   'community', 'investor', 'builder', 'creator', 'validator', 'whale'
 ];

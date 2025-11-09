@@ -311,7 +311,7 @@ export class OfflineManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
       },
       body: JSON.stringify(payload)
     });
@@ -329,7 +329,7 @@ export class OfflineManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
       },
       body: JSON.stringify(payload)
     });
@@ -348,7 +348,7 @@ export class OfflineManager {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
       },
       body: JSON.stringify({ emoji })
     });
@@ -367,7 +367,7 @@ export class OfflineManager {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
       },
       body: JSON.stringify({ emoji })
     });
@@ -385,7 +385,7 @@ export class OfflineManager {
     const response = await fetch(`/api/chat/messages/${messageId}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+                  'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || ''}`
       }
     });
 

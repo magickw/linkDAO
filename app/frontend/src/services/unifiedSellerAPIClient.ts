@@ -180,11 +180,15 @@ export class UnifiedSellerAPIClient {
 
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     try {
+      // Get authentication token if available
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
       const response = await fetch(endpoint, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           ...options?.headers,
         },
       });
@@ -246,12 +250,16 @@ export class UnifiedSellerAPIClient {
 
   async requestWithFormData<T>(endpoint: string, formData: FormData, options?: Omit<RequestInit, 'body'>): Promise<T> {
     try {
+      // Get authentication token if available
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      
       const response = await fetch(endpoint, {
         ...options,
         method: 'PUT',
         body: formData,
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           ...options?.headers,
         },
       });

@@ -68,7 +68,7 @@ export interface MakeOfferParams {
 
 class NFTService {
   private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     return {
       'Authorization': token ? `Bearer ${token}` : '',
     };

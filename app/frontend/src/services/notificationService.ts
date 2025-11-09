@@ -543,7 +543,7 @@ class NotificationService {
 
   private getAuthToken(): string {
     // Get auth token from localStorage or context
-    return localStorage.getItem('authToken') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
   }
 
   private transformNotification(data: any): AppNotification {

@@ -72,7 +72,7 @@ class DigitalAssetService {
   private baseUrl = '/api/digital-assets';
   
   private async getAuthHeaders(): Promise<HeadersInit> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     return {
       'Authorization': `Bearer ${token}`
     };

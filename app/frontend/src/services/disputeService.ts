@@ -75,7 +75,7 @@ class DisputeService {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,

@@ -358,7 +358,7 @@ export class BackgroundSyncIntegration {
   }
 
   private getAuthToken(): string {
-    return localStorage.getItem('authToken') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
   }
 
   private startPeriodicSync(): void {

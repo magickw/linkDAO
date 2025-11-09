@@ -538,7 +538,7 @@ export class BackgroundSyncManager {
 
   private getAuthToken(): string {
     // Get auth token from localStorage or other secure storage
-    return localStorage.getItem('authToken') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
   }
 
   private createSyncTimeout(): Promise<never> {

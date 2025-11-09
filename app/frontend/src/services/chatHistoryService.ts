@@ -389,7 +389,7 @@ class ChatHistoryService {
   // Private helper methods
   private getAuthToken(): string {
     // Get JWT token from localStorage or context
-    return localStorage.getItem('auth_token') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
   }
 
   private transformMessage(data: any): ChatMessage {

@@ -23,7 +23,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10
 
 class ProjectManagementService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     
     const response = await fetch(`${API_BASE_URL}/api/project-management${endpoint}`, {
       headers: {

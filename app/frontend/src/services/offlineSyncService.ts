@@ -621,7 +621,7 @@ export class OfflineSyncService {
    */
   private getAuthToken(): string {
     // In a real implementation, get from auth service
-    return localStorage.getItem('auth_token') || '';
+    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
   }
 
   /**
