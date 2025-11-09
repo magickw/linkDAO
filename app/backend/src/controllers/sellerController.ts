@@ -974,13 +974,13 @@ export class SellerController {
   // Get seller profile (using seller service)
   async getProfile(req: Request, res: Response) {
     try {
-      const user = (req as any).user;
+      const { walletAddress } = req.params;
       const { sellerService } = await import('../services/sellerService');
       
-      const profile = await sellerService.getSellerProfile(user.walletAddress);
+      const profile = await sellerService.getSellerProfile(walletAddress);
       
       if (!profile) {
-        return res.json({ success: true, data: null });
+        return res.status(404).json({ success: false, error: "Seller profile not found" });
       }
 
       res.json({ success: true, data: profile });
@@ -990,11 +990,56 @@ export class SellerController {
     }
   }
 
+  // Create seller profile
+  async createProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress, businessName, email, description } = req.body;
+      
+      if (!walletAddress || !businessName || !email) {
+        return res.status(400).json({
+          success: false,
+          error: "Missing required fields: walletAddress, businessName, email"
+        });
+      }
+
+      const { sellerService } = await import('../services/sellerService');
+      
+      const profile = await sellerService.createSellerProfile({
+        walletAddress,
+        businessName,
+        email,
+        description: description || ''
+      });
+
+      res.json({ success: true, data: profile });
+    } catch (error) {
+      safeLogger.error("Error creating profile:", error);
+      res.status(500).json({ success: false, error: "Failed to create seller profile" });
+    }
+  }
+
+  // Update seller profile
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const updateData = req.body;
+      
+      const { sellerService } = await import('../services/sellerService');
+      
+      const profile = await sellerService.updateSellerProfile(walletAddress, updateData);
+
+      res.json({ success: true, data: profile });
+    } catch (error) {
+      safeLogger.error("Error updating profile:", error);
+      res.status(500).json({ success: false, error: "Failed to update seller profile" });
+    }
+  }
+
   // Get seller stats (using seller service)
   async getStats(req: Request, res: Response) {
     try {
-      const user = (req as any).user;
-      const stats = await this.getSellerStatsInternal(user.walletAddress);
+      const { walletAddress } = req.params;
+      const stats = await this.getSellerStatsInternal(walletAddress);
       res.json({ success: true, data: stats });
     } catch (error) {
       safeLogger.error("Error fetching stats:", error);

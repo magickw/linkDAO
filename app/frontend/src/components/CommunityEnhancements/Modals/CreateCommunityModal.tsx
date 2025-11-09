@@ -16,6 +16,8 @@ interface CommunityCreationData {
   banner?: File;
   category: string;
   isPrivate: boolean;
+  slug?: string;
+  slugManuallyEdited?: boolean;
   tokenRequirement?: {
     tokenAddress: string;
     minimumBalance: number;
@@ -72,10 +74,27 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
   ];
 
   const handleInputChange = useCallback((field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Generate slug from name if slug hasn't been manually edited
+      if (field === 'name' && !prev.slugManuallyEdited) {
+        updated.slug = value
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+      }
+      
+      // Mark slug as manually edited if user changes it directly
+      if (field === 'slug') {
+        updated.slugManuallyEdited = true;
+      }
+      
+      return updated;
+    });
     
     // Clear error when user starts typing
     if (errors[field]) {
@@ -137,6 +156,16 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
         newErrors.name = 'Community name is required';
       } else if (formData.name.length < 3) {
         newErrors.name = 'Community name must be at least 3 characters';
+      }
+
+      if (!formData.slug?.trim()) {
+        newErrors.slug = 'URL slug is required';
+      } else if (!/^[a-z0-9-]+$/.test(formData.slug)) {
+        newErrors.slug = 'URL slug can only contain lowercase letters, numbers, and hyphens';
+      } else if (formData.slug.length < 3) {
+        newErrors.slug = 'URL slug must be at least 3 characters';
+      } else if (/^-|-$/.test(formData.slug)) {
+        newErrors.slug = 'URL slug cannot start or end with a hyphen';
       }
 
       if (!formData.description.trim()) {
@@ -213,20 +242,17 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           <div className="flex items-center space-x-4">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center">
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                  ${currentStep >= step 
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= step 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
-                  }
-                `}>
+                }`}>
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`
-                    w-12 h-1 mx-2
-                    ${currentStep > step ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'}
-                  `} />
+                  <div className={`w-12 h-1 mx-2 ${
+                    currentStep > step ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
+                  }`} />
                 )}
               </div>
             ))}
@@ -253,20 +279,55 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
                   type="text"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`
-                    w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                    ${errors.name 
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.name 
                       ? 'border-red-300 dark:border-red-600' 
                       : 'border-gray-300 dark:border-gray-600'
-                    }
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                  `}
+                  } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                   placeholder="Enter community name"
                 />
                 {errors.name && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
                 )}
               </div>
+
+              {/* URL Slug */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  URL Slug *
+                </label>
+                <input
+                  type="text"
+                  value={formData.slug || ''}
+                  onChange={(e) => handleInputChange('slug', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.slug 
+                      ? 'border-red-300 dark:border-red-600' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                  placeholder="community-url-slug"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Only lowercase letters, numbers, and hyphens allowed
+                </p>
+                {errors.slug && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.slug}</p>
+                )}
+              </div>
+
+              {/* URL Preview */}
+              {formData.name ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    URL Preview
+                  </label>
+                  <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      /communities/{formData.slug || 'community-name'}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
 
               {/* Description */}
               <div>
@@ -277,14 +338,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   rows={4}
-                  className={`
-                    w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                    ${errors.description 
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.description 
                       ? 'border-red-300 dark:border-red-600' 
                       : 'border-gray-300 dark:border-gray-600'
-                    }
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                  `}
+                  } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                   placeholder="Describe your community's purpose and goals"
                 />
                 {errors.description && (
@@ -387,14 +445,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
                       type="text"
                       value={formData.tokenRequirement.tokenAddress}
                       onChange={(e) => handleTokenRequirementChange('tokenAddress', e.target.value)}
-                      className={`
-                        w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                        ${errors.tokenAddress 
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.tokenAddress 
                           ? 'border-red-300 dark:border-red-600' 
                           : 'border-gray-300 dark:border-gray-600'
-                        }
-                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm
-                      `}
+                        } bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm`}
                       placeholder="0x..."
                     />
                     {errors.tokenAddress && (
@@ -411,14 +466,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
                       type="text"
                       value={formData.tokenRequirement.tokenSymbol}
                       onChange={(e) => handleTokenRequirementChange('tokenSymbol', e.target.value.toUpperCase())}
-                      className={`
-                        w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                        ${errors.tokenSymbol 
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.tokenSymbol 
                           ? 'border-red-300 dark:border-red-600' 
                           : 'border-gray-300 dark:border-gray-600'
-                        }
-                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      `}
+                        } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       placeholder="e.g., USDC, ETH, LINK"
                     />
                     {errors.tokenSymbol && (
@@ -435,14 +487,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
                       type="number"
                       value={formData.tokenRequirement.minimumBalance}
                       onChange={(e) => handleTokenRequirementChange('minimumBalance', parseFloat(e.target.value) || 0)}
-                      className={`
-                        w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                        ${errors.minimumBalance 
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        errors.minimumBalance 
                           ? 'border-red-300 dark:border-red-600' 
                           : 'border-gray-300 dark:border-gray-600'
-                        }
-                        bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                      `}
+                        } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       placeholder="100"
                       min="0"
                       step="0.01"

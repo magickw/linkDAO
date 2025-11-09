@@ -32,6 +32,7 @@ import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import VisualPolishIntegration from '@/components/VisualPolish/VisualPolishIntegration';
 import QuickFilterChips from '@/components/Community/QuickFilterChips';
 import EmptyStates from '@/components/Community/EmptyStates';
+import CreateCommunityModal from '@/components/CommunityEnhancements/Modals/CreateCommunityModal';
 import TokenPriceSparkline, { generateMockPriceHistory } from '@/components/Community/TokenPriceSparkline';
 import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPulse';
 import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
@@ -187,6 +188,10 @@ const CommunitiesPage: React.FC = () => {
   
   // Keyboard shortcuts state
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  
+  // Create community modal state
+  const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
+  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
 
   // Load communities and enhanced Web3 data on component mount
@@ -345,7 +350,7 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleCommunitySelect = (community: any) => {
-    router.push(`/communities/${community.name || community.id}`);
+    router.push(`/communities/${community.slug || community.name || community.id}`);
   };
 
   const handleFiltersChange = (filters: string[]) => {
@@ -366,13 +371,31 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleCreateCommunity = async (communityData: any) => {
+    setIsCreatingCommunity(true);
     try {
-      // TODO: Implement community creation with Web3 features
+      // TODO: Implement actual community creation with Web3 features
       console.log('Creating community:', communityData);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setShowCreateCommunityModal(false);
+      // Navigate to the new community using the slug
+      router.push(`/communities/${communityData.slug}`);
     } catch (err) {
       console.error('Error creating community:', err);
       throw err;
+    } finally {
+      setIsCreatingCommunity(false);
     }
+  };
+
+  const handleCreateCommunityClick = () => {
+    setShowCreateCommunityModal(true);
+  };
+
+  const handleCloseCreateCommunityModal = () => {
+    setShowCreateCommunityModal(false);
   };
 
   const handleBoost = async (postId: string, amount: number) => {
@@ -435,7 +458,11 @@ const CommunitiesPage: React.FC = () => {
     if (isMobile) triggerHapticFeedback('heavy');
   };
   const handleComment = (postId: string) => {
-    router.push(`/communities/${posts.find(p => p.id === postId)?.communityId}?post=${postId}`);
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      const community = communityList.find(c => c.id === post.communityId);
+      router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${postId}`);
+    }
   };
   const handleShare = (postId: string) => {
     console.log('Sharing post:', postId);
@@ -445,7 +472,7 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/communities/${community?.name || post.communityId}?post=${postId}`);
+      router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${postId}`);
     }
   };
 
@@ -582,10 +609,10 @@ const CommunitiesPage: React.FC = () => {
                 onCommunitySelect={(id) => {
                   const community = communityList.find(c => c.id === id);
                   if (community) {
-                    router.push(`/dao/${community.name}`);
+                    router.push(`/communities/${community.slug || community.name}`);
                   }
                 }}
-                onCreateCommunity={() => router.push('/create-community')}
+                onCreateCommunity={handleCreateCommunityClick}
                 walletConnected={walletConnected}
                 totalStakingRewards={stakingRewards}
                 governanceNotifications={governanceNotifications}
@@ -720,9 +747,19 @@ const CommunitiesPage: React.FC = () => {
   return (
     <ErrorBoundary>
       <VisualPolishIntegration>
-        <Layout title="Communities - LinkDAO Enhanced" fullWidth={true}>
+        <Layout title="Communities - LinkDAO" fullWidth={true}>
           <Head>
-            <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
+            <title>Communities - LinkDAO</title>
+            <meta name="description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
+            <meta property="og:title" content="Communities - LinkDAO" />
+            <meta property="og:description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
+            <meta property="og:url" content="https://linkdao.io/communities" />
+            <meta property="og:type" content="website" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content="Communities - LinkDAO" />
+            <meta name="twitter:description" content="Discover and join decentralized communities on LinkDAO. Connect with like-minded individuals, share knowledge, and participate in governance." />
+            <link rel="canonical" href="https://linkdao.io/communities" />
+            <meta name="keywords" content="DAO communities, decentralized communities, Web3, blockchain, governance, LinkDAO" />
           </Head>
 
           <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
@@ -734,7 +771,7 @@ const CommunitiesPage: React.FC = () => {
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Quick Actions</h3>
                   <div className="space-y-2">
                     <button
-                      onClick={() => router.push('/create-community')}
+                      onClick={handleCreateCommunityClick}
                       className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full hover:from-green-600 hover:to-teal-700 transition-all text-sm font-medium"
                     >
                       <Plus className="w-4 h-4" />
@@ -927,7 +964,7 @@ const CommunitiesPage: React.FC = () => {
                       userBalance={userBalance}
                     >
                       <div 
-                        onClick={() => router.push(`/communities/${community?.name || post.communityId}?post=${post.id}`)}
+                        onClick={() => router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${post.id}`)}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
                           const timeout = setTimeout(() => {
@@ -1148,6 +1185,14 @@ const CommunitiesPage: React.FC = () => {
           <KeyboardShortcutsModal
             isOpen={showKeyboardHelp}
             onClose={() => setShowKeyboardHelp(false)}
+          />
+          
+          {/* Create Community Modal */}
+          <CreateCommunityModal
+            isOpen={showCreateCommunityModal}
+            onClose={handleCloseCreateCommunityModal}
+            onSubmit={handleCreateCommunity}
+            isLoading={isCreatingCommunity}
           />
         </Layout>
       </VisualPolishIntegration>

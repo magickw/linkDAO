@@ -965,6 +965,7 @@ export const communityCategories = pgTable("community_categories", {
 export const communities = pgTable("communities", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 64 }).notNull().unique(),
+  slug: varchar("slug", { length: 64 }).notNull().unique(),
   displayName: varchar("display_name", { length: 255 }).notNull(),
   description: text("description"),
   rules: text("rules"), // JSON array of rules
@@ -983,6 +984,7 @@ export const communities = pgTable("communities", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
   nameIdx: index("idx_communities_name").on(t.name),
+  slugIdx: index("idx_communities_slug").on(t.slug),
   categoryIdx: index("idx_communities_category").on(t.category),
   isPublicIdx: index("idx_communities_is_public").on(t.isPublic),
   memberCountIdx: index("idx_communities_member_count").on(t.memberCount),

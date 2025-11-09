@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
+import { databaseService } from '../services/databaseService';
 import { sellers } from '../db/schema';
 import { 
   SellerProfile, 
@@ -234,7 +235,129 @@ export class SellerProfileService {
     }
   }
 
-  // Private helper methods
+  // Get seller tier information
+  async getSellerTier(walletAddress: string): Promise<{ tier: string; benefits: string[] }> {
+    try {
+      const db = databaseService.getDatabase();
+      const [seller] = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.walletAddress, walletAddress))
+        .limit(1);
+
+      if (!seller) {
+        return {
+          tier: 'unverified',
+          benefits: ['Basic seller features']
+        };
+      }
+
+      const tierBenefits = {
+        unverified: ['Basic seller features'],
+        basic: ['Basic seller features', 'Profile visibility'],
+        verified: ['Basic seller features', 'Profile visibility', 'Verified badge', 'Priority support'],
+        premium: ['All features', 'Enhanced visibility', 'Analytics dashboard', 'Dedicated support']
+      };
+
+      return {
+        tier: seller.tier || 'unverified',
+        benefits: tierBenefits[seller.tier as keyof typeof tierBenefits] || tierBenefits.unverified
+      };
+    } catch (error) {
+      safeLogger.error('Error getting seller tier:', error);
+      return {
+        tier: 'unverified',
+        benefits: ['Basic seller features']
+      };
+    }
+  }
+
+  // Get tier progress for next upgrade
+  async getTierProgress(walletAddress: string): Promise<{
+    currentTier: string;
+    nextTier: string;
+    progress: number;
+    requirements: { [key: string]: boolean };
+  }> {
+    try {
+      const db = databaseService.getDatabase();
+      const [seller] = await db
+        .select()
+        .from(sellers)
+        .where(eq(sellers.walletAddress, walletAddress))
+        .limit(1);
+
+      if (!seller) {
+        return {
+          currentTier: 'unverified',
+          nextTier: 'basic',
+          progress: 0,
+          requirements: {
+            profileComplete: false,
+            emailVerified: false,
+            firstListing: false
+          }
+        };
+      }
+
+      const currentTier = seller.tier || 'unverified';
+      const tierProgress = {
+        unverified: {
+          nextTier: 'basic',
+          requirements: {
+            profileComplete: seller.profileCompleteness >= 50,
+            emailVerified: seller.emailVerified || false,
+            firstListing: false
+          }
+        },
+        basic: {
+          nextTier: 'verified',
+          requirements: {
+            profileComplete: seller.profileCompleteness >= 75,
+            emailVerified: seller.emailVerified || false,
+            firstListing: seller.totalListings > 0,
+            noDisputes: true
+          }
+        },
+        verified: {
+          nextTier: 'premium',
+          requirements: {
+            profileComplete: seller.profileCompleteness >= 90,
+            salesVolume: seller.totalSales > 1000,
+            goodRating: seller.averageRating >= 4.5,
+            activeListings: seller.activeListings >= 5
+          }
+        },
+        premium: {
+          nextTier: 'premium',
+          requirements: {}
+        }
+      };
+
+      const tierInfo = tierProgress[currentTier as keyof typeof tierProgress];
+      const requirements = tierInfo.requirements;
+      const completedRequirements = Object.values(requirements).filter(Boolean).length;
+      const totalRequirements = Object.keys(requirements).length;
+      const progress = totalRequirements > 0 ? (completedRequirements / totalRequirements) * 100 : 0;
+
+      return {
+        currentTier,
+        nextTier: tierInfo.nextTier,
+        progress: Math.round(progress),
+        requirements
+      };
+    } catch (error) {
+      safeLogger.error('Error getting tier progress:', error);
+      return {
+        currentTier: 'unverified',
+        nextTier: 'basic',
+        progress: 0,
+        requirements: {}
+      };
+    }
+  }
+
+      
 
   private mapSellerToProfile(seller: any): SellerProfile {
     return {

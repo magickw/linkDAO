@@ -61,6 +61,7 @@ export default function EnhancedCommunityPage() {
         const mockCommunity: Community = {
           id: communityName,
           name: communityName,
+          slug: communityName,
           displayName: `${communityName.replace(/-/g, ' ')}`,
           description: `Welcome to the ${communityName.replace(/-/g, ' ')} community! This is a place for enthusiasts to discuss and share knowledge.`,
           memberCount: Math.floor(Math.random() * 10000) + 1000,

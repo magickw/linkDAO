@@ -169,7 +169,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   }, []);
 
   const handleCommunitySelect = useCallback((communityId: string) => {
-    router.push(`/dao/${communityId}`);
+    router.push(`/communities/${communityId}`);
   }, [router]);
 
   const handleCommunityToggle = useCallback((communityId: string) => {

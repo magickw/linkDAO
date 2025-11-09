@@ -99,7 +99,7 @@ export const RecentAndFollowedCommunities: React.FC<RecentAndFollowedCommunities
   };
 
   const handleCommunityClick = (communityName: string) => {
-    router.push(`/dao/${communityName}`);
+    router.push(`/communities/${communityName}`);
   };
 
   const handleLeaveCommunity = (e: React.MouseEvent, communityId: string) => {

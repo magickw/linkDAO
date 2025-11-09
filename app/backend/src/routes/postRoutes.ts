@@ -19,6 +19,7 @@ router.get('/', postController.getAllPosts.bind(postController));
 router.get('/feed', postController.getFeed.bind(postController));
 router.get('/author/:author', postController.getPostsByAuthor.bind(postController));
 router.get('/tag/:tag', postController.getPostsByTag.bind(postController));
+router.get('/community/:communityId', postController.getPostsByCommunity.bind(postController));
 router.get('/:id', postController.getPostById.bind(postController));
 router.put('/:id', postController.updatePost.bind(postController));
 router.delete('/:id', postController.deletePost.bind(postController));

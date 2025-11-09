@@ -1,6 +1,7 @@
 export interface Community {
   id: string;
   name: string;
+  slug: string;
   displayName: string;
   description: string;
   rules: string[];
@@ -49,6 +50,7 @@ export interface StakingRequirement {
 
 export interface CreateCommunityInput {
   name: string;
+  slug: string;
   displayName: string;
   description: string;
   rules?: string[];
@@ -64,6 +66,7 @@ export interface CreateCommunityInput {
 
 export interface UpdateCommunityInput {
   displayName?: string;
+  slug?: string;
   description?: string;
   rules?: string[];
   avatar?: string;

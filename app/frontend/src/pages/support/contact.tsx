@@ -194,7 +194,7 @@ const ContactPage: NextPage = () => {
                       </div>
                     </a>
                     <a 
-                      href="https://t.me/linkdao" 
+                      href="https://t.me/LinkDAO_web3" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"

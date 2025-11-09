@@ -9,6 +9,7 @@ import { CommunityCardSkeleton, CommunityFeedSkeleton } from '@/components/Commu
 const mockCommunity = {
   id: 'ethereum-builders',
   name: 'ethereum-builders',
+  slug: 'ethereum-builders',
   displayName: 'Ethereum Builders',
   description: 'Building the future of Ethereum ecosystem with innovative smart contracts and decentralized applications',
   memberCount: 12400,
@@ -37,6 +38,7 @@ const mockCommunity2 = {
   ...mockCommunity,
   id: 'defi-traders',
   name: 'defi-traders',
+  slug: 'defi-traders',
   displayName: 'DeFi Traders',
   description: 'Decentralized Finance trading strategies and insights for yield farming, liquidity provision, and risk management',
   memberCount: 8900,

@@ -160,67 +160,51 @@ export class CommunityService {
           console.warn('Community service rate limited (429), returning null');
           return null;
         }
-        const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || `Failed to fetch community (HTTP ${response.status})`);
+        // For other errors, throw to be caught by outer catch
+        throw new Error(`Failed to fetch community: ${response.status}`);
       }
       
-      const json = await safeJson(response);
-      const community = (json as Community) || null;
+      const data = await response.json();
       
-      // Track community view for performance metrics
-      if (community) {
-        // Increment view count
-        community.viewCount = (community.viewCount || 0) + 1;
-        community.lastActiveAt = new Date();
-        
-        // Track view event
-        communityPerformanceService.trackEvent({
-          eventType: 'view_recorded',
-          communityId: community.id,
-          userId: 'anonymous', // This would be the actual user ID in a real implementation
-          timestamp: new Date(),
-          metadata: {
-            viewCount: community.viewCount
-          }
-        });
-        
-        // Cache the community for offline use
-        await this.offlineCacheService.cacheCommunity(community);
+      if (!data.success || !data.data) {
+        return null;
       }
+      
+      const community = data.data;
+      
+      // Cache the community for offline support
+      await this.offlineCacheService.cacheCommunity(community);
       
       return community;
     } catch (error) {
       clearTimeout(timeoutId);
       
-      // If offline, try to get from cache
-      if (!this.offlineCacheService.isOnlineStatus()) {
+      // Try to get from cache on network errors
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TypeError')) {
         const cached = await this.offlineCacheService.getCachedCommunity(id);
         if (cached) {
-          console.warn('Offline mode, returning cached community data');
+          console.warn('Network error, returning cached community data');
           return cached;
         }
       }
       
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      
-      throw error;
+      console.error('Error fetching community:', error);
+      return null;
     }
   }
 
   /**
-   * Get a community by its name with offline support
-   * @param name - Community name (unique identifier)
+   * Get a community by its slug with offline support
+   * @param slug - Community slug
    * @returns The community or null if not found
    */
-  static async getCommunityByName(name: string): Promise<Community | null> {
+  static async getCommunityBySlug(slug: string): Promise<Community | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/name/${name}`,
+        `${BACKEND_API_BASE_URL}/communities/slug/${slug}`,
         {
           method: 'GET',
           headers: {
@@ -243,29 +227,55 @@ export class CommunityService {
           return null;
         }
         if (response.status === 503) {
-          // Service unavailable - return null instead of throwing to prevent UI crashes
+          // Service unavailable - try to get from cache
+          const cached = await this.offlineCacheService.getCachedCommunity(slug);
+          if (cached) {
+            console.warn('Community service unavailable (503), returning cached data');
+            return cached;
+          }
           console.warn('Community service unavailable (503), returning null');
           return null;
         }
         if (response.status === 429) {
-          // Rate limited - return null instead of throwing to prevent UI crashes
+          // Rate limited - try to get from cache
+          const cached = await this.offlineCacheService.getCachedCommunity(slug);
+          if (cached) {
+            console.warn('Community service rate limited (429), returning cached data');
+            return cached;
+          }
           console.warn('Community service rate limited (429), returning null');
           return null;
         }
-        const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || `Failed to fetch community (HTTP ${response.status})`);
+        // For other errors, throw to be caught by outer catch
+        throw new Error(`Failed to fetch community by slug: ${response.status}`);
       }
       
-      const json = await safeJson(response);
-      return (json as Community) || null;
+      const data = await response.json();
+      
+      if (!data.success || !data.data) {
+        return null;
+      }
+      
+      const community = data.data;
+      
+      // Cache the community for offline support
+      await this.offlineCacheService.cacheCommunity(community);
+      
+      return community;
     } catch (error) {
       clearTimeout(timeoutId);
       
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
+      // Try to get from cache on network errors
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TypeError')) {
+        const cached = await this.offlineCacheService.getCachedCommunity(slug);
+        if (cached) {
+          console.warn('Network error, returning cached community data');
+          return cached;
+        }
       }
       
-      throw error;
+      console.error('Error fetching community by slug:', error);
+      return null;
     }
   }
 
@@ -348,6 +358,66 @@ export class CommunityService {
         ];
       }
     );
+  }
+
+  /**
+   * Get a community by its name with offline support
+   * @param name - Community name (unique identifier)
+   * @returns The community or null if not found
+   */
+  static async getCommunityByName(name: string): Promise<Community | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/communities/name/${name}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+      
+      clearTimeout(timeoutId);
+      
+      // Gracefully handle common non-success statuses
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return null in context where user may not be logged in
+          return null;
+        }
+        if (response.status === 503) {
+          // Service unavailable - return null instead of throwing to prevent UI crashes
+          console.warn('Community service unavailable (503), returning null');
+          return null;
+        }
+        if (response.status === 429) {
+          // Rate limited - return null instead of throwing to prevent UI crashes
+          console.warn('Community service rate limited (429), returning null');
+          return null;
+        }
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || `Failed to fetch community (HTTP ${response.status})`);
+      }
+      
+      const json = await safeJson(response);
+      return (json as Community) || null;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
   }
 
   /**

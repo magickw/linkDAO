@@ -214,7 +214,7 @@ export default function Home() {
                 "sameAs": [
                   "https://twitter.com/linkdao",
                   "https://discord.gg/linkdao",
-                  "https://t.me/linkdao",
+                  "https://t.me/linkdao_web3",
                   "https://github.com/linkdao"
                 ],
                 "contactPoint": {
@@ -625,7 +625,7 @@ export default function Home() {
                       Discord
                     </a>
                     <a
-                      href="https://t.me/linkdao"
+                      href="https://t.me/LinkDAO_web3"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition-colors"
@@ -837,7 +837,7 @@ export default function Home() {
                 {/* Enhanced Feed View with Advanced Features */}
                 <Suspense fallback={<FeedSkeleton />}>
                   {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
-                    <CommunityView communityId={navigationState.activeCommunity} />
+                    <CommunityView communitySlug={navigationState.activeCommunity} />
                   ) : (
                     <EnhancedFeedView
                       key={feedRefreshKey}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import Layout from '@/components/Layout';
 import CommunityView from '@/components/CommunityView';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
@@ -8,6 +9,36 @@ export default function CommunityPage() {
   const router = useRouter();
   const { isMobile } = useMobileOptimization();
   const { community, post } = router.query;
+  const [communityData, setCommunityData] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch community data for SEO
+    const fetchCommunityData = async () => {
+      if (community) {
+        try {
+          // In a real implementation, fetch community data
+          // const data = await CommunityService.getCommunityBySlug(community as string);
+          // setCommunityData(data);
+        } catch (error) {
+          console.error('Error fetching community data:', error);
+        }
+      }
+    };
+    fetchCommunityData();
+  }, [community]);
+
+  // Generate SEO metadata
+  const generateSEOMetadata = () => {
+    const communityName = communityData?.displayName || community;
+    const communityDescription = communityData?.description || `Join the ${communityName} community on LinkDAO`;
+    
+    return {
+      title: `${communityName} - LinkDAO Community`,
+      description: communityDescription,
+      url: `https://linkdao.io/communities/${community}`,
+      type: 'website'
+    };
+  };
 
   // If we don't have the community ID yet, show loading state
   if (!community) {
@@ -20,11 +51,58 @@ export default function CommunityPage() {
     );
   }
 
+  const seo = generateSEOMetadata();
+
+  // Generate structured data for SEO
+  const generateStructuredData = () => {
+    if (!communityData) return null;
+    
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: communityData.displayName,
+      description: communityData.description,
+      url: seo.url,
+      logo: communityData.avatar,
+      image: communityData.banner,
+      memberCount: communityData.memberCount,
+      keywords: communityData.tags?.join(', '),
+      sameAs: []
+    };
+  };
+
+  const structuredData = generateStructuredData();
+
   return (
-    <Layout title={`${community} - LinkDAO`} fullWidth={isMobile}>
+    <Layout title={seo.title} fullWidth={isMobile}>
+      <Head>
+        <title>{seo.title}</title>
+        <meta name="description" content={seo.description} />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta property="og:url" content={seo.url} />
+        <meta property="og:type" content={seo.type} />
+        <meta property="og:image" content={communityData?.banner || 'https://linkdao.io/og-image-default.png'} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seo.title} />
+        <meta name="twitter:description" content={seo.description} />
+        <meta name="twitter:image" content={communityData?.banner || 'https://linkdao.io/og-image-default.png'} />
+        <link rel="canonical" href={seo.url} />
+        {communityData?.tags && communityData.tags.map((tag: string) => (
+          <meta key={tag} name="keywords" content={tag} />
+        ))}
+        {structuredData && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(structuredData)
+            }}
+          />
+        )}
+      </Head>
       <div className="px-4 py-6 sm:px-0">
         <CommunityView 
-          communityId={community as string} 
+          communitySlug={community as string} 
           highlightedPostId={post as string}
         />
       </div>

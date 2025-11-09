@@ -22,17 +22,18 @@ import {
 } from 'lucide-react';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { CommunityService } from '@/services/communityService';
+import { PostService } from '@/services/postService';
 import { useWeb3 } from '@/context/Web3Context';
 import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
 
 interface CommunityViewProps {
-  communityId: string;
+  communitySlug: string;
   highlightedPostId?: string;
   className?: string;
 }
 
-export default function CommunityView({ communityId, highlightedPostId, className = '' }: CommunityViewProps) {
+export default function CommunityView({ communitySlug, highlightedPostId, className = '' }: CommunityViewProps) {
   const { isMobile } = useMobileOptimization();
   const router = useRouter();
   const { address, isConnected } = useWeb3();
@@ -44,49 +45,6 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  
-  // Mock posts data - in a real implementation these would be loaded separately
-  const mockPosts = [
-    {
-      id: '1',
-      title: 'New EIP-4844 Implementation Guide',
-      author: 'vitalik.eth',
-      content: 'Just published a comprehensive guide on implementing EIP-4844 proto-danksharding. This will significantly reduce transaction costs for L2 solutions...',
-      upvotes: 245,
-      downvotes: 12,
-      commentCount: 67,
-      createdAt: new Date(Date.now() - 3600000),
-      flair: 'Technical',
-      isStaked: true,
-      stakedTokens: 150
-    },
-    {
-      id: '2',
-      title: `Ethereum Merge Anniversary: What We've Learned`,
-      author: 'ethereum_researcher',
-      content: `It's been over a year since the Ethereum Merge. Let's discuss the key improvements and lessons learned from this historic transition...`,
-      upvotes: 189,
-      downvotes: 8,
-      commentCount: 45,
-      createdAt: new Date(Date.now() - 7200000),
-      flair: 'Discussion',
-      isStaked: false,
-      stakedTokens: 0
-    },
-    {
-      id: '3',
-      title: 'Building a DeFi Protocol: Lessons from the Trenches',
-      author: 'defi_builder',
-      content: `After 2 years of building our DeFi protocol, here are the key technical and business lessons we've learned. AMA!`,
-      upvotes: 156,
-      downvotes: 23,
-      commentCount: 89,
-      createdAt: new Date(Date.now() - 10800000),
-      flair: 'AMA',
-      isStaked: true,
-      stakedTokens: 75
-    }
-  ];
 
   // Mock user membership state for demonstration purposes
   const memberRole = (communityData?.moderators || []).includes(address || '') ? 'admin' : 'member';
@@ -98,42 +56,14 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
         setLoading(true);
         setError(null);
         
-        // In a real implementation, this would call the API
-        // const data = await CommunityService.getCommunityById(communityId);
+        // Fetch real community data from API
+        const data = await CommunityService.getCommunityBySlug(communitySlug);
         
-        // For now using mock data structure to match Community type
-        const mockCommunity: Community = {
-          id: communityId,
-          name: communityId,
-          displayName: communityId.replace(/-/g, ' '),
-          description: `Welcome to the ${communityId.replace(/-/g, ' ')} community! This is a place for enthusiasts to discuss and share knowledge.`,
-          rules: [
-            'Be respectful to all members',
-            'No spam or promotional content',
-            'Stay on topic',
-            'Share quality content'
-          ],
-          memberCount: Math.floor(Math.random() * 10000) + 1000,
-          createdAt: new Date(Date.now() - Math.floor(Math.random() * 31536000000)), // Up to 1 year ago
-          updatedAt: new Date(),
-          avatar: ['🏛️', '🔷', '💰', '🎨', '🚀', '⚡'][Math.floor(Math.random() * 6)],
-          banner: `https://placehold.co/800x200/667eea/ffffff?text=${communityId.replace(/-/g, '+')}`,
-          category: ['Development', 'Finance', 'Art', 'Governance', 'Social'][Math.floor(Math.random() * 5)],
-          tags: ['ethereum', 'blockchain', 'web3'].slice(0, Math.floor(Math.random() * 4)),
-          isPublic: true,
-          moderators: [address || '0x1234567890123456789012345678901234567890'],
-          treasuryAddress: `0x${Math.random().toString(16).substr(2, 40)}`,
-          governanceToken: 'LDAO',
-          settings: {
-            allowedPostTypes: [],
-            requireApproval: false,
-            minimumReputation: 0,
-            stakingRequirements: []
-          }
-        };
-
-        setCommunityData(mockCommunity);
-        setPosts(mockPosts);
+        setCommunityData(data);
+        
+        // Fetch real posts for the community
+        const communityPosts = await PostService.getPostsByCommunity(data.id);
+        setPosts(communityPosts);
       } catch (err) {
         console.error('Error fetching community data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load community');
@@ -142,10 +72,10 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
       }
     };
 
-    if (communityId) {
+    if (communitySlug) {
       fetchCommunityData();
     }
-  }, [communityId, address, isConnected]);
+  }, [communitySlug, address, isConnected]);
 
   const handleVote = (postId: string, type: 'up' | 'down') => {
     setPosts(prev => prev.map(post => {
@@ -198,7 +128,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           {/* Community Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
-              r/{communityData.name}
+              {communityData.displayName || communityData.name}
             </h3>
             <Link 
               href="/communities"
@@ -255,7 +185,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                 </div>
                 <div className="mt-8">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    r/{communityData.name}
+                    {communityData.displayName || communityData.name}
                   </h1>
                   <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                     <span className="flex items-center space-x-1">
@@ -263,7 +193,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                       <span>{communityData.memberCount.toLocaleString()} members</span>
                     </span>
                     <span>•</span>
-                    <span>{Math.floor(Math.random() * 1000) + 100} online</span>
+                    <span>{communityData.onlineMemberCount || 0} online</span>
                   </div>
                 </div>
               </div>
@@ -350,7 +280,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                   onClick={handleCreatePost}
                   className="w-full text-left text-gray-500 dark:text-gray-400 text-sm placeholder-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
-                  Create a post in r/{communityData.name}
+                  Create a post in {communityData.displayName || communityData.name}
                 </button>
               </div>
             </div>
@@ -391,17 +321,17 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                   {/* Post Metadata - Reddit Style */}
                   <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      r/{communityData.name}
+                      {communityData.displayName || communityData.name}
                     </span>
                     <span>•</span>
                     <span>Posted by u/{post.author}</span>
                     <span>•</span>
                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                    {post.isStaked && (
+                    {post.stakedValue && (
                       <>
                         <span>•</span>
                         <span className="text-green-600 dark:text-green-400">
-                          {post.stakedTokens} 🪙
+                          {post.stakedValue} 🪙
                         </span>
                       </>
                     )}
@@ -467,7 +397,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Online</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {Math.floor(Math.random() * 1000) + 100}
+                  {communityData.onlineMemberCount || 0}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -486,6 +416,68 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                     <span className="font-medium">{index + 1}.</span> {rule}
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Live Governance Proposals */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center space-x-1 uppercase tracking-wide">
+              <Vote className="w-3 h-3" />
+              <span>Live Governance</span>
+            </h3>
+            <div className="space-y-2">
+              <div className="text-xs">
+                <div className="font-medium text-gray-900 dark:text-white mb-1">Proposal #42: Treasury Allocation</div>
+                <div className="flex justify-between text-gray-600 dark:text-gray-400 mb-1">
+                  <span>For: 78%</span>
+                  <span>Against: 22%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '78%' }}></div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ends in 3d 12h</div>
+              </div>
+              <div className="text-xs border-t border-gray-200 dark:border-gray-700 pt-2">
+                <div className="font-medium text-gray-900 dark:text-white mb-1">Proposal #43: Protocol Upgrade</div>
+                <div className="flex justify-between text-gray-600 dark:text-gray-400 mb-1">
+                  <span>For: 65%</span>
+                  <span>Against: 35%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: '65%' }}></div>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ends in 5d 8h</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Token Price */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center space-x-1 uppercase tracking-wide">
+              <Coins className="w-3 h-3" />
+              <span>Token Price</span>
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400 text-xs">LDAO</span>
+                <span className="font-medium text-green-600 dark:text-green-400 text-xs">+2.4%</span>
+              </div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">$12.45</div>
+              <div className="h-12 flex items-end">
+                <div className="flex items-end space-x-0.5 w-full">
+                  {[65, 70, 68, 75, 72, 80, 78, 82, 85, 83, 88, 90].map((value, index) => (
+                    <div 
+                      key={index} 
+                      className="bg-gradient-to-t from-blue-500 to-purple-500 rounded-t flex-1"
+                      style={{ height: `${value}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex text-xs text-gray-500 dark:text-gray-400 justify-between">
+                <span>$10.2</span>
+                <span>$15.6</span>
               </div>
             </div>
           </div>

@@ -1028,7 +1028,7 @@ export function loadCommunityLaunchConfig(): CommunityLaunchConfig {
         website: process.env.WEBSITE_URL || 'https://linkdao.io',
         twitter: process.env.TWITTER_URL || 'https://twitter.com/linkdao',
         discord: process.env.DISCORD_URL || 'https://discord.gg/linkdao',
-        telegram: process.env.TELEGRAM_URL || 'https://t.me/linkdao',
+        telegram: process.env.TELEGRAM_URL || 'https://t.me/LinkDAO_web3',
         medium: process.env.MEDIUM_URL || 'https://medium.com/@linkdao'
       },
       announcements: {

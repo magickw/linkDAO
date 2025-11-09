@@ -514,17 +514,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full shadow-sm border border-white/20 dark:border-white/10 hover:from-primary-600 hover:to-secondary-600 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-primary-400/50 transition-all"
-                    title="Create Community"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span>Create Community</span>
-                  </button>
-                
                   {/* User Preferences Controls */}
                   <div className="flex space-x-1">
                     <button
@@ -602,15 +591,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   </div>
                 )}
 
-                {/* Create Post action moved up from footer to reduce whitespace */}
-                <div className="mt-4">
-                  <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Create Post
-                  </button>
-                </div>
+                {/* Create Post action removed per user request */}
               </div>
             </div>
           </>

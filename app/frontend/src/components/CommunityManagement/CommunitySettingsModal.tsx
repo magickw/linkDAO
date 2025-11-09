@@ -218,6 +218,24 @@ export default function CommunitySettingsModal({
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        URL Slug
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.slug || community?.slug || ''}
+                        onChange={(e) => handleInputChange('slug', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Only lowercase letters, numbers, and hyphens allowed
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Current URL: /communities/{formData.slug || community?.slug}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Description
                       </label>
                       <textarea

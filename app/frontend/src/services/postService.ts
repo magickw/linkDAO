@@ -442,4 +442,41 @@ export class PostService {
       throw error;
     }
   }
+
+  /**
+   * Get posts by community
+   * @param communityId - Community ID to get posts for
+   * @returns Array of posts in the community
+   */
+  static async getPostsByCommunity(communityId: string): Promise<Post[]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/community/${communityId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch posts');
+      }
+      
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
 }

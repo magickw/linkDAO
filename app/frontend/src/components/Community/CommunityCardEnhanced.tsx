@@ -184,9 +184,9 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
           </h3>
           <p 
             className="text-sm text-gray-500 dark:text-gray-400 mb-2"
-            aria-label={`Community handle: r/${community.name}`}
+            aria-label={`Community handle: ${community.name}`}
           >
-            r/{community.name}
+            {community.name}
           </p>
           
           {!compact && (

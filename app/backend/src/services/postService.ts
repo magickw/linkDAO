@@ -305,6 +305,48 @@ export class PostService {
     }
   }
 
+  async getPostsByCommunity(communityId: string): Promise<Post[]> {
+    try {
+      // Get posts by community from database
+      const dbPosts = await databaseService.getPostsByCommunity(communityId);
+      
+      // Convert to Post model with proper author information
+      const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
+        // Get the author's profile
+        const author = await userProfileService.getProfileById(dbPost.authorId);
+        const authorAddress = author ? author.walletAddress : 'unknown';
+        
+        // Handle potential null dates by providing default values
+        const createdAt = dbPost.createdAt || new Date();
+        const updatedAt = dbPost.updatedAt || new Date();
+        
+        return {
+          id: dbPost.id.toString(),
+          author: authorAddress,
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          contentCid: dbPost.contentCid,
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt,
+          updatedAt,
+          onchainRef: dbPost.onchainRef || '',
+          // Add moderation fields if they exist
+          moderationStatus: dbPost.moderationStatus,
+          moderationWarning: dbPost.moderationWarning,
+          riskScore: dbPost.riskScore ? parseFloat(dbPost.riskScore.toString()) : undefined,
+          // Add staking field if it exists
+          stakedValue: dbPost.stakedValue ? parseFloat(dbPost.stakedValue.toString()) : undefined
+        };
+      }));
+      
+      // Sort by creation date (newest first)
+      return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (error) {
+      safeLogger.error('Error getting posts by community:', error);
+      return [];
+    }
+  }
+
   async updatePost(id: string, input: UpdatePostInput): Promise<Post | undefined> {
     try {
       const postId = parseInt(id);

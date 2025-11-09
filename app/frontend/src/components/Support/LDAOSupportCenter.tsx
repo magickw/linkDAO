@@ -439,7 +439,7 @@ const LDAOSupportCenter: React.FC = () => {
                 </a>
                 
                 <a
-                  href="https://t.me/web3marketplace"
+                  href="https://t.me/linkdao_web3"
                   className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
                 >
                   <div className="w-8 h-8 bg-blue-600 rounded mr-3"></div>

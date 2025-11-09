@@ -99,6 +99,26 @@ export class CommunityController {
     }
   }
 
+  // Get community by slug
+  async getCommunityBySlug(req: Request, res: Response): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+
+      const community = await communityService.getCommunityBySlug(slug, userAddress);
+
+      if (!community) {
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
+        return;
+      }
+
+      res.json(createSuccessResponse(community, {}));
+    } catch (error) {
+      safeLogger.error('Error getting community by slug:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
+    }
+  }
+
   // Create new community
   async createCommunity(req: Request, res: Response): Promise<void> {
     try {
@@ -110,6 +130,7 @@ export class CommunityController {
 
       const {
         name,
+        slug,
         displayName,
         description,
         category,
@@ -126,6 +147,7 @@ export class CommunityController {
       const community = await communityService.createCommunity({
         creatorAddress: userAddress,
         name,
+        slug,
         displayName,
         description,
         category,

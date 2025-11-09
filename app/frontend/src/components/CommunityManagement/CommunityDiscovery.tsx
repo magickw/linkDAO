@@ -49,11 +49,12 @@ const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({ onCommunitySele
             allowedPostTypes: [],
             requireApproval: false,
             minimumReputation: 0,
-            stakingRequirements: [],
+            stakingRequirements: []
           },
-          viewCount: 15000,
-          engagementScore: 85,
+          avatar: '',
+          banner: '',
           trendingScore: 85,
+          slug: 'ethereum-builders'
         },
         {
           id: '2',
@@ -77,6 +78,7 @@ const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({ onCommunitySele
           viewCount: 12000,
           engagementScore: 92,
           trendingScore: 92,
+          slug: 'defi-innovators',
         },
         {
           id: '3',
@@ -100,6 +102,7 @@ const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({ onCommunitySele
           viewCount: 22000,
           engagementScore: 78,
           trendingScore: 78,
+          slug: 'nft-artists',
         },
         {
           id: '4',
@@ -123,6 +126,7 @@ const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({ onCommunitySele
           viewCount: 8000,
           engagementScore: 65,
           trendingScore: 65,
+          slug: 'dao-governance',
         },
       ];
       

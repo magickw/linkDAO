@@ -161,6 +161,23 @@ export class PostController {
     }
   }
 
+  async getPostsByCommunity(req: Request, res: Response): Promise<Response> {
+    try {
+      const { communityId } = req.params;
+      const posts = await this.postService.getPostsByCommunity(communityId);
+      
+      return res.json({
+        success: true,
+        data: posts
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve posts'
+      });
+    }
+  }
+
   async updatePost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;

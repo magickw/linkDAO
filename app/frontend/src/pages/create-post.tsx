@@ -57,7 +57,7 @@ const CreatePostPage: React.FC = () => {
         tags
       });
 
-      router.push(`/dao/${selectedCommunity}`);
+      router.push(`/communities/${selectedCommunity}`);
     } catch (error) {
       console.error('Error creating post:', error);
       alert(error instanceof Error ? error.message : 'Failed to create post. Please try again.');

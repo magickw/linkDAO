@@ -185,7 +185,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   const navigateToPost = (postId: string, communityId?: string) => {
     if (communityId) {
-      router.push(`/dao/${communityId}?post=${postId}`, undefined, { shallow: true });
+      router.push(`/communities/${communityId}?post=${postId}`, undefined, { shallow: true });
     } else {
       // If no community ID, we can't navigate to a specific post without context
       // This would be an error case in the new routing structure

@@ -17,6 +17,7 @@ interface ListCommunitiesOptions {
 interface CreateCommunityData {
   creatorAddress: string;
   name: string;
+  slug: string;
   displayName: string;
   description: string;
   category: string;
@@ -439,9 +440,138 @@ export class CommunityService {
     }
   }
 
+  // Get community by slug with membership info
+  async getCommunityBySlug(slug: string, userAddress?: string) {
+    try {
+      // Get community details by slug
+      const communityResult = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          rules: communities.rules,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          moderators: communities.moderators,
+          treasuryAddress: communities.treasuryAddress,
+          governanceToken: communities.governanceToken,
+          settings: communities.settings,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+        })
+        .from(communities)
+        .where(eq(communities.slug, slug))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        return null;
+      }
+
+      const community = communityResult[0];
+
+      // Get user membership if userAddress provided
+      let membership = null;
+      if (userAddress) {
+        const membershipResult = await db
+          .select({
+            role: communityMembers.role,
+            reputation: communityMembers.reputation,
+            contributions: communityMembers.contributions,
+            joinedAt: communityMembers.joinedAt,
+            isActive: communityMembers.isActive,
+          })
+          .from(communityMembers)
+          .where(
+            and(
+              eq(communityMembers.communityId, community.id),
+              eq(communityMembers.userAddress, userAddress)
+            )
+          )
+          .limit(1);
+
+        if (membershipResult.length > 0) {
+          membership = membershipResult[0];
+        }
+      }
+
+      // Get community statistics
+      const statsResult = await db
+        .select()
+        .from(communityStats)
+        .where(eq(communityStats.communityId, community.id))
+        .limit(1);
+
+      const stats = statsResult[0] || null;
+
+      const communityData = {
+        id: community.id,
+        name: community.name,
+        slug: community.slug,
+        displayName: community.displayName,
+        description: community.description || '',
+        rules: community.rules ? JSON.parse(community.rules) : [],
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        banner: community.banner,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        isPublic: community.isPublic,
+        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        treasuryAddress: community.treasuryAddress,
+        governanceToken: community.governanceToken,
+        settings: community.settings ? JSON.parse(community.settings) : null,
+        createdAt: community.createdAt,
+        updatedAt: community.updatedAt,
+        // User-specific data
+        isMember: membership !== null,
+        memberRole: membership?.role || null,
+        memberReputation: membership?.reputation || 0,
+        memberContributions: membership?.contributions || 0,
+        memberJoinedAt: membership?.joinedAt || null,
+        // Statistics
+        stats: stats ? {
+          activeMembers7d: stats.activeMembers7d,
+          activeMembers30d: stats.activeMembers30d,
+          posts7d: stats.posts7d,
+          posts30d: stats.posts30d,
+          engagementRate: Number(stats.engagementRate),
+          growthRate7d: Number(stats.growthRate7d),
+          growthRate30d: Number(stats.growthRate30d),
+          trendingScore: Number(stats.trendingScore),
+        } : null,
+      };
+
+      return communityData;
+    } catch (error) {
+      safeLogger.error('Error getting community by slug:', error);
+      throw new Error('Failed to get community by slug');
+    }
+  }
+
   // Create new community with real database operations
   async createCommunity(data: CreateCommunityData) {
     try {
+      // Validate slug format
+      if (!/^[a-z0-9-]+$/.test(data.slug)) {
+        throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
+      }
+      
+      if (/^-|-$/.test(data.slug)) {
+        throw new Error('Slug cannot start or end with a hyphen');
+      }
+      
+      if (data.slug.length < 3) {
+        throw new Error('Slug must be at least 3 characters long');
+      }
+
       // Check if community name already exists
       const existingCommunity = await db
         .select({ id: communities.id })
@@ -453,9 +583,21 @@ export class CommunityService {
         throw new Error('Community name already exists');
       }
 
+      // Check if community slug already exists
+      const existingSlug = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.slug, data.slug))
+        .limit(1);
+
+      if (existingSlug.length > 0) {
+        throw new Error('Community slug already exists');
+      }
+
       // Prepare community data
       const communityData = {
         name: data.name,
+        slug: data.slug,
         displayName: data.displayName,
         description: data.description,
         rules: JSON.stringify(data.rules || []),
@@ -558,6 +700,35 @@ export class CommunityService {
       if (sanitizedUpdateData.description) {
         validateLength(sanitizedUpdateData.description, 1000, 'Description');
       }
+      
+      // Validate slug if provided
+      if (sanitizedUpdateData.slug) {
+        if (!/^[a-z0-9-]+$/.test(sanitizedUpdateData.slug)) {
+          throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
+        }
+        
+        if (/^-|-$/.test(sanitizedUpdateData.slug)) {
+          throw new Error('Slug cannot start or end with a hyphen');
+        }
+        
+        if (sanitizedUpdateData.slug.length < 3) {
+          throw new Error('Slug must be at least 3 characters long');
+        }
+        
+        // Check if slug is already taken by another community
+        const existingSlug = await db
+          .select({ id: communities.id })
+          .from(communities)
+          .where(and(
+            eq(communities.slug, sanitizedUpdateData.slug),
+            ne(communities.id, communityId)
+          ))
+          .limit(1);
+          
+        if (existingSlug.length > 0) {
+          throw new Error('This slug is already taken by another community');
+        }
+      }
       // Check if user has permission to update (must be admin or moderator)
       const membershipResult = await db
         .select({ role: communityMembers.role })
@@ -584,6 +755,10 @@ export class CommunityService {
       
       if (sanitizedUpdateData.displayName !== undefined) {
         updateFields.displayName = sanitizedUpdateData.displayName;
+      }
+      
+      if (sanitizedUpdateData.slug !== undefined) {
+        updateFields.slug = sanitizedUpdateData.slug;
       }
       
       if (sanitizedUpdateData.description !== undefined) {

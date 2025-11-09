@@ -41,7 +41,8 @@ export default function CommunityCreationModal({ isOpen, onClose, onSuccess }: C
       requireApproval: false,
       minimumReputation: 0,
       stakingRequirements: []
-    }
+    },
+    slug: ''
   });
   
   const [currentTag, setCurrentTag] = useState('');
@@ -146,7 +147,8 @@ export default function CommunityCreationModal({ isOpen, onClose, onSuccess }: C
           requireApproval: false,
           minimumReputation: 0,
           stakingRequirements: []
-        }
+        },
+        slug: ''
       });
       setStep(1);
     } catch (error) {
