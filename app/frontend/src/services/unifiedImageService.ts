@@ -500,16 +500,24 @@ export class UnifiedImageService {
   }
 
   /**
-   * Delete image from storage (Note: Cloudinary deletion requires server-side implementation for security)
+   * Delete image via API
    * Requirements: 5.4
    */
-  private async deleteImage(imageId: string, context: string): Promise<boolean> {
+  async deleteImage(imageId: string, context: string): Promise<boolean> {
     try {
-      // Note: In a real implementation with Cloudinary, image deletion should be handled server-side
-      // because it requires authentication with the API key and secret.
-      // This is a security measure - we can't expose those credentials to the frontend.
-      console.warn('Image deletion requires server-side implementation with Cloudinary credentials');
-      return false; // For now, return false as we can't delete from frontend
+      const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/${imageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ context }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete image: ${response.status}`);
+      }
+      
+      return await response.json();
     } catch (error) {
       throw new SellerError(
         SellerErrorType.API_ERROR,

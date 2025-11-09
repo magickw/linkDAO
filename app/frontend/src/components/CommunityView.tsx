@@ -160,6 +160,10 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
     }));
   };
 
+  const handleCreatePost = () => {
+    router.push('/create-post');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
