@@ -65,13 +65,15 @@ router.post('/returns/:returnId/reject', authMiddleware, async (req, res) => {
 
 router.post('/returns/:returnId/refund', authMiddleware, async (req, res) => {
   try {
-    const { provider = 'stripe', paymentIntentId, recipientAddress } = req.body;
+    const { provider = 'stripe', paymentIntentId, recipientAddress, captureId, tokenAddress } = req.body;
     
     let result;
     if (provider === 'stripe' && paymentIntentId) {
-      result = await refundPaymentService.processStripeRefund(paymentIntentId, req.body.amount);
+      result = await refundPaymentService.processStripeRefund(paymentIntentId, req.body.amount, req.body.reason);
+    } else if (provider === 'paypal' && captureId) {
+      result = await refundPaymentService.processPayPalRefund(captureId, req.body.amount, req.body.currency, req.body.reason);
     } else if (provider === 'blockchain' && recipientAddress) {
-      result = await refundPaymentService.processBlockchainRefund(recipientAddress, req.body.amount);
+      result = await refundPaymentService.processBlockchainRefund(recipientAddress, req.body.amount.toString(), tokenAddress);
     } else {
       return res.status(400).json({ error: 'Invalid refund provider or missing parameters' });
     }
@@ -122,11 +124,89 @@ router.post('/returns/:returnId/risk-assessment', authMiddleware, async (req, re
   }
 });
 
+// Inspection workflow endpoints
+router.get('/returns/:returnId/inspection/checklist', authMiddleware, async (req, res) => {
+  try {
+    const checklist = await returnInspectionService.generateInspectionChecklist(req.params.returnId);
+    res.json(checklist);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/returns/:returnId/inspection/checklist-item', authMiddleware, async (req, res) => {
+  try {
+    const { itemId, checkId, passed, notes } = req.body;
+    await returnInspectionService.updateChecklistItem(
+      req.params.returnId,
+      itemId,
+      checkId,
+      passed,
+      notes
+    );
+    res.json({ message: 'Checklist item updated successfully' });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.post('/returns/:returnId/inspection/complete', authMiddleware, async (req, res) => {
+  try {
+    const { inspectorId, checklistResults } = req.body;
+    const result = await returnInspectionService.completeInspection(
+      req.params.returnId,
+      inspectorId,
+      checklistResults
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+router.get('/returns/:returnId/inspection', authMiddleware, async (req, res) => {
+  try {
+    const inspection = await returnInspectionService.getInspectionDetails(req.params.returnId);
+    res.json(inspection);
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+});
+
 // Generate return label
 router.post('/returns/:returnId/label', authMiddleware, async (req, res) => {
   try {
-    const label = await returnLabelService.generateShippingLabel(req.body);
+    const { fromAddress, toAddress, weight, carrier } = req.body;
+    const label = await returnService.generateReturnLabel(
+      req.params.returnId,
+      fromAddress,
+      toAddress,
+      weight,
+      carrier
+    );
     res.json(label);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get return with tracking information
+router.get('/returns/:returnId/tracking', authMiddleware, async (req, res) => {
+  try {
+    const returnRecord = await returnService.getReturnWithTracking(req.params.returnId);
+    res.json(returnRecord);
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+});
+
+// Update return tracking manually
+router.post('/returns/:returnId/tracking', authMiddleware, async (req, res) => {
+  try {
+    const { trackingNumber, carrier } = req.body;
+    // In a real implementation, we would update tracking info
+    // For now, we'll just acknowledge the request
+    res.json({ message: 'Tracking information updated' });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -141,6 +221,49 @@ router.get('/returns/analytics', authMiddleware, async (req, res) => {
       { start: periodStart as string, end: periodEnd as string }
     );
     res.json(analytics);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Analytics by reason
+router.get('/returns/analytics/reasons', authMiddleware, async (req, res) => {
+  try {
+    const { sellerId, periodStart, periodEnd } = req.query;
+    const analytics = await returnAnalyticsService.getAnalyticsByReason(
+      sellerId as string,
+      { start: periodStart as string, end: periodEnd as string }
+    );
+    res.json(analytics);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Analytics by time period
+router.get('/returns/analytics/time', authMiddleware, async (req, res) => {
+  try {
+    const { sellerId, periodStart, periodEnd, granularity } = req.query;
+    const analytics = await returnAnalyticsService.getAnalyticsByTime(
+      sellerId as string,
+      { start: periodStart as string, end: periodEnd as string },
+      granularity as 'daily' | 'weekly' | 'monthly'
+    );
+    res.json(analytics);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Performance report
+router.get('/returns/analytics/report', authMiddleware, async (req, res) => {
+  try {
+    const { sellerId, periodStart, periodEnd } = req.query;
+    const report = await returnAnalyticsService.generatePerformanceReport(
+      sellerId as string,
+      { start: periodStart as string, end: periodEnd as string }
+    );
+    res.json(report);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

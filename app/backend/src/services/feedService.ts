@@ -90,9 +90,10 @@ export class FeedService {
     let followingFilter = sql`1=1`;
     if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
+      const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select({ id: users.id })
         .from(users)
-        .where(eq(users.walletAddress, userAddress))
+        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
 
       if (user.length > 0) {
@@ -103,10 +104,13 @@ export class FeedService {
           .where(eq(follows.followerId, userId));
 
         const followingIds = followingList.map(f => f.followingId);
+        
+        // Always include the user's own posts in the following feed
+        followingIds.push(userId);
 
-        // Filter posts to show from followed users OR the user's own posts
+        // Filter posts to show from followed users AND the user's own posts
         if (followingIds.length > 0) {
-          followingFilter = sql`(${inArray(posts.authorId, followingIds)} OR ${eq(posts.authorId, userId)})`;
+          followingFilter = inArray(posts.authorId, followingIds);
         } else {
           // If not following anyone, show only user's own posts
           followingFilter = eq(posts.authorId, userId);

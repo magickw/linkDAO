@@ -710,19 +710,6 @@ function getServiceKey(request) {
   
   return 'default';
 }
-  
-  if (hostname.includes('ip-api.com') || hostname.includes('ipify.org') || hostname.includes('ipinfo.io')) {
-    return 'geolocation';
-  }
-  
-  const pathParts = url.pathname.split('/');
-  
-  if (pathParts[1] === 'api' && pathParts[2]) {
-    return pathParts[2]; // e.g., 'feed', 'communities', 'posts'
-  }
-  
-  return 'default';
-}
 
 function getCircuitBreakerState(serviceKey) {
   const state = circuitBreakerStates.get(serviceKey);

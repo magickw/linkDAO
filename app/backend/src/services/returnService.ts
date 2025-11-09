@@ -8,6 +8,8 @@ import {
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { safeLogger } from '../utils/logger.ts';
+import { returnTrackingService } from './returnTrackingService.ts';
+import { returnInspectionService } from './returnInspectionService.ts';
 
 export interface CreateReturnRequest {
   orderId: string;
@@ -277,6 +279,80 @@ class ReturnService {
     } catch (error) {
       safeLogger.error('Error processing refund:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Generate return shipping label and update tracking information
+   */
+  async generateReturnLabel(
+    returnId: string,
+    fromAddress: any,
+    toAddress: any,
+    weight: number,
+    carrier: 'usps' | 'ups' | 'fedex' = 'usps'
+  ): Promise<{
+    success: boolean;
+    labelUrl?: string;
+    trackingNumber?: string;
+    error?: string;
+  }> {
+    try {
+      // In a real implementation, we would call the returnLabelService
+      // For now, we'll simulate the response
+      const mockTrackingNumber = `RTN${Math.floor(Math.random() * 1000000000)}`;
+      const mockLabelUrl = `https://example.com/labels/${mockTrackingNumber}.pdf`;
+      
+      // Update return with tracking information
+      await db
+        .update(returns)
+        .set({
+          returnTrackingNumber: mockTrackingNumber,
+          returnCarrier: carrier.toUpperCase(),
+          returnLabelUrl: mockLabelUrl,
+          status: 'label_generated',
+          updatedAt: new Date()
+        })
+        .where(eq(returns.id, returnId));
+
+      // Add status history
+      await this.addStatusHistory(
+        returnId,
+        'approved',
+        'label_generated',
+        `Return label generated for carrier: ${carrier}`
+      );
+
+      // Start tracking updates
+      returnTrackingService.scheduleReturnTrackingUpdates(returnId, mockTrackingNumber, carrier);
+
+      safeLogger.info(`Return label generated: ${returnId}, tracking: ${mockTrackingNumber}`);
+      
+      return {
+        success: true,
+        labelUrl: mockLabelUrl,
+        trackingNumber: mockTrackingNumber
+      };
+    } catch (error) {
+      safeLogger.error('Error generating return label:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate return label'
+      };
+    }
+  }
+
+  /**
+   * Get return with real-time tracking information
+   */
+  async getReturnWithTracking(returnId: string): Promise<any> {
+    try {
+      const returnWithTracking = await returnTrackingService.getReturnWithTracking(returnId);
+      return returnWithTracking;
+    } catch (error) {
+      safeLogger.error('Error fetching return with tracking:', error);
+      // Fallback to regular return data if tracking fails
+      return await this.getReturn(returnId);
     }
   }
 

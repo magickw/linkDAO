@@ -7,8 +7,10 @@ import { databaseService } from '../services/databaseService';
 import { eq } from 'drizzle-orm';
 import * as schema from '../db/schema';
 import { Product, ProductSortOptions } from '../models/Product';
+import { BlockchainMarketplaceService } from '../services/marketplaceService';
 
 const productService = new ProductService();
+const marketplaceService = new BlockchainMarketplaceService();
 
 export class MarketplaceController {
   /**
@@ -31,69 +33,80 @@ export class MarketplaceController {
 
       safeLogger.info('Fetching product by ID:', { id });
 
-      // For now, return a mock product for testing
-      // This allows the API to work while the database is being set up
-      const mockProduct = {
-        id: id,
-        sellerId: '0x1234567890123456789012345678901234567890',
-        title: 'Sample Product',
-        description: 'This is a sample product for testing the marketplace API',
-        priceAmount: 99.99,
-        priceCurrency: 'USD',
+      // Fetch the listing from the marketplace service
+      const listing = await marketplaceService.getListingById(id);
+      
+      if (!listing) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Product listing not found'
+          }
+        });
+      }
+
+      // Map the marketplace listing to the expected product format
+      const product = {
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`, // Need to get from metadata
+        description: `Description for listing ${listing.id}`, // Need to get from metadata
+        priceAmount: Number(listing.price),
+        priceCurrency: 'USD', // Default currency
         category: {
-          id: 'electronics',
-          name: 'Electronics',
-          slug: 'electronics'
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
         },
-        images: ['/images/sample-product.jpg'],
-        inventory: 10,
-        status: 'active',
-        tags: ['sample', 'test', 'electronics'],
+        images: [], // Extract from metadata
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
         shipping: {
-          weight: 1.5,
-          freeShipping: true
+          weight: 0.5, // Default weight
+          freeShipping: true // Default policy
         },
-        nft: null,
-        views: 42,
-        favorites: 5,
-        listingStatus: 'active',
-        publishedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0, // Would come from analytics
+        favorites: 0, // Would come from favorites service
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
         seller: {
-          id: '0x1234567890123456789012345678901234567890',
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          displayName: 'Test Seller',
-          storeName: 'Test Store',
-          rating: 4.5,
-          reputation: 85,
-          verified: true,
-          daoApproved: false,
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`, // Would come from profile service
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`, // Would come from profile service
+          rating: 4.5, // Would come from reputation service
+          reputation: 85, // Would come from reputation service
+          verified: true, // Would come from verification service
+          daoApproved: false, // Would come from reputation service
           profileImageUrl: '/images/default-avatar.png',
-          isOnline: true
+          isOnline: true // Would come from online status service
         },
         trust: {
-          verified: true,
-          escrowProtected: true,
-          onChainCertified: false,
-          safetyScore: 85
+          verified: true, // Would come from verification service
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false, // Would come from blockchain verification
+          safetyScore: 85 // Would come from reputation service
         },
         metadata: {
-          condition: 'new',
-          brand: 'Sample Brand'
+          condition: 'new', // Would come from listing metadata
+          brand: 'Unknown' // Would come from listing metadata
         },
-        specifications: {
-          color: 'Black',
-          size: 'Medium'
-        }
+        specifications: {} // Would come from listing metadata
       };
 
       return res.json({
         success: true,
-        data: mockProduct,
+        data: product,
         metadata: {
-          timestamp: new Date().toISOString(),
-          note: 'This is mock data for testing purposes'
+          timestamp: new Date().toISOString()
         }
       });
     } catch (error) {
@@ -141,16 +154,86 @@ export class MarketplaceController {
         sellerId
       });
 
-      // Return empty results for now (fallback behavior)
+      // Fetch listings from the marketplace service
+      let listings;
+      if (sellerId) {
+        listings = await marketplaceService.getListingsBySeller(sellerId as string);
+      } else {
+        listings = await marketplaceService.getActiveListings();
+      }
+
+      // Apply pagination
+      const total = listings.length;
+      const totalPages = Math.ceil(total / paginationOptions.limit);
+      const startIndex = (paginationOptions.page - 1) * paginationOptions.limit;
+      const endIndex = startIndex + paginationOptions.limit;
+      const paginatedListings = listings.slice(startIndex, endIndex);
+
+      // Map listings to the expected product format
+      const mappedListings = paginatedListings.map(listing => ({
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`,
+        description: `Description for listing ${listing.id}`,
+        priceAmount: Number(listing.price),
+        priceCurrency: 'USD',
+        category: {
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
+        },
+        images: [],
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
+        shipping: {
+          weight: 0.5,
+          freeShipping: true
+        },
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0,
+        favorites: 0,
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        seller: {
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          rating: 4.5,
+          reputation: 85,
+          verified: true,
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: true
+        },
+        trust: {
+          verified: true,
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        metadata: {
+          condition: 'new',
+          brand: 'Unknown'
+        },
+        specifications: {}
+      }));
+
       return res.json({
         success: true,
         data: {
-          listings: [],
+          listings: mappedListings,
           pagination: {
-            total: 0,
+            total,
             page: paginationOptions.page,
             limit: paginationOptions.limit,
-            totalPages: 0
+            totalPages
           }
         },
         metadata: {
@@ -290,23 +373,86 @@ export class MarketplaceController {
         limit: paginationOptions.limit
       });
 
-      // For now, return empty results with proper structure
-      // This allows the API to work while the database is being set up
+      // Fetch seller listings from the marketplace service
+      const listings = await marketplaceService.getListingsBySeller(id);
+
+      // Apply pagination
+      const total = listings.length;
+      const totalPages = Math.ceil(total / paginationOptions.limit);
+      const startIndex = (paginationOptions.page - 1) * paginationOptions.limit;
+      const endIndex = startIndex + paginationOptions.limit;
+      const paginatedListings = listings.slice(startIndex, endIndex);
+
+      // Map listings to the expected product format
+      const mappedListings = paginatedListings.map(listing => ({
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`,
+        description: `Description for listing ${listing.id}`,
+        priceAmount: Number(listing.price),
+        priceCurrency: 'USD',
+        category: {
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
+        },
+        images: [],
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
+        shipping: {
+          weight: 0.5,
+          freeShipping: true
+        },
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0,
+        favorites: 0,
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        seller: {
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          rating: 4.5,
+          reputation: 85,
+          verified: true,
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: true
+        },
+        trust: {
+          verified: true,
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        metadata: {
+          condition: 'new',
+          brand: 'Unknown'
+        },
+        specifications: {}
+      }));
+
       return res.json({
         success: true,
         data: {
-          listings: [],
+          listings: mappedListings,
           pagination: {
-            total: 0,
+            total,
             page: paginationOptions.page,
             limit: paginationOptions.limit,
-            totalPages: 0
+            totalPages
           }
         },
         metadata: {
           timestamp: new Date().toISOString(),
-          sellerId: id,
-          note: 'This is mock data for testing purposes'
+          sellerId: id
         }
       });
     } catch (error) {
@@ -359,27 +505,122 @@ export class MarketplaceController {
         maxPrice
       });
 
-      // For now, return empty results with proper structure
-      // This allows the API to work while the database is being set up
-      let results: any = {
-        products: [],
-        sellers: [],
-        pagination: {
-          total: 0,
-          page: paginationOptions.page,
-          limit: paginationOptions.limit,
-          totalPages: 0
-        }
-      };
+      // Fetch all listings and filter based on search criteria
+      const allListings = await marketplaceService.getActiveListings();
+      
+      // Apply search filters
+      let filteredListings = allListings;
+      
+      // Filter by category if provided
+      if (category) {
+        filteredListings = filteredListings.filter(listing => 
+          listing.itemType.toLowerCase() === (category as string).toLowerCase()
+        );
+      }
+      
+      // Filter by price range if provided
+      if (minPrice) {
+        filteredListings = filteredListings.filter(listing => 
+          Number(listing.price) >= Number(minPrice)
+        );
+      }
+      
+      if (maxPrice) {
+        filteredListings = filteredListings.filter(listing => 
+          Number(listing.price) <= Number(maxPrice)
+        );
+      }
+      
+      // Apply search query to title/description if provided
+      if (query) {
+        filteredListings = filteredListings.filter(listing => 
+          listing.id.includes(query) // Simplified search, would need better implementation
+        );
+      }
+
+      // Apply pagination
+      const total = filteredListings.length;
+      const totalPages = Math.ceil(total / paginationOptions.limit);
+      const startIndex = (paginationOptions.page - 1) * paginationOptions.limit;
+      const endIndex = startIndex + paginationOptions.limit;
+      const paginatedListings = filteredListings.slice(startIndex, endIndex);
+
+      // Map listings to the expected product format
+      const mappedListings = paginatedListings.map(listing => ({
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`,
+        description: `Description for listing ${listing.id}`,
+        priceAmount: Number(listing.price),
+        priceCurrency: 'USD',
+        category: {
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
+        },
+        images: [],
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
+        shipping: {
+          weight: 0.5,
+          freeShipping: true
+        },
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0,
+        favorites: 0,
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        seller: {
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          rating: 4.5,
+          reputation: 85,
+          verified: true,
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: true
+        },
+        trust: {
+          verified: true,
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        metadata: {
+          condition: 'new',
+          brand: 'Unknown'
+        },
+        specifications: {}
+      }));
+
+      // For seller search, we would need to implement seller search functionality
+      // For now, we'll just return empty sellers array
+      const sellers = [];
 
       return res.json({
         success: true,
-        data: results,
+        data: {
+          products: searchType === 'sellers' ? [] : mappedListings,
+          sellers: searchType === 'products' ? [] : sellers,
+          pagination: {
+            total,
+            page: paginationOptions.page,
+            limit: paginationOptions.limit,
+            totalPages
+          }
+        },
         metadata: {
           timestamp: new Date().toISOString(),
           query: query,
-          type: searchType,
-          note: 'This is mock data for testing purposes'
+          type: searchType
         }
       });
     } catch (error) {

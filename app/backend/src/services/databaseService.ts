@@ -1347,9 +1347,10 @@ export class DatabaseService {
 
   async getUserByAddress(address: string) {
     return this.executeQuery(async () => {
+      const normalizedAddress = address.toLowerCase();
       const [user] = await this.db.select()
         .from(schema.users)
-        .where(eq(schema.users.walletAddress, address))
+        .where(sql`LOWER(${schema.users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
       return user || null;
     });

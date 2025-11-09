@@ -14,8 +14,33 @@ router.use(feedRateLimit);
 router.get('/enhanced', 
   // Use optional auth - if user is authenticated, personalize feed; if not, show public feed
   (req, res, next) => {
-    // Skip authentication for now to fix immediate issues
-    // TODO: Implement optional authentication middleware
+    // Try to authenticate but don't fail if no token
+    const authHeader = req.headers['authorization'];
+    if (authHeader) {
+      // Extract token and try to verify it
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        try {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+          
+          // Attach user to request
+          (req as any).user = {
+            address: decoded.walletAddress || decoded.address,
+            walletAddress: decoded.walletAddress || decoded.address,
+            userId: decoded.userId || decoded.id,
+            id: decoded.userId || decoded.id || decoded.walletAddress || decoded.address,
+            kycStatus: decoded.kycStatus,
+            permissions: decoded.permissions || [],
+            isAdmin: decoded.isAdmin || false
+          };
+        } catch (error) {
+          // Token invalid, continue without user
+          console.warn('Invalid token in feed request:', error);
+        }
+      }
+    }
+    // Continue to next middleware regardless
     next();
   },
   validateRequest({

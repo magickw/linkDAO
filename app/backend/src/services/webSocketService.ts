@@ -59,7 +59,7 @@ export class WebSocketService {
   private userSockets: Map<string, Set<string>> = new Map(); // walletAddress -> Set of socketIds
   private subscriptions: Map<string, Subscription> = new Map(); // subscriptionId -> Subscription
   private userSubscriptions: Map<string, Set<string>> = new Map(); // walletAddress -> Set of subscriptionIds
-  private messageQueue: Map<string, BroadcastMessage[]> = newMap(); // walletAddress -> queued messages
+  private messageQueue: Map<string, BroadcastMessage[]> = new Map(); // walletAddress -> queued messages
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private reconnectionTimeouts: Map<string, NodeJS.Timeout> = new Map();
   private config: WebSocketServiceConfig;
