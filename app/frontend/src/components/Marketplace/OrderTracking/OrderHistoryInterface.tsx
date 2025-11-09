@@ -46,10 +46,10 @@ interface OrderHistoryInterfaceProps {
   className?: string;
 }
 
-const OrderHistoryInterface: React.FC<OrderHistoryInterfaceProps> = ({
-  userType,
-  className = ''
-}) => {
+const OrderHistoryInterface = ({
+  userType,
+  className = ''
+}: OrderHistoryInterfaceProps) => {
   const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
 
