@@ -335,7 +335,9 @@ export class UnifiedImageService {
   ): Promise<StorageResult> {
     try {
       // Convert buffer back to a File object to work with Cloudinary
-      const blob = new Blob([image.buffer], { type: `image/${image.format}` });
+      // Convert Node.js Buffer to Uint8Array for browser compatibility
+      const uint8Array = new Uint8Array(image.buffer);
+      const blob = new Blob([uint8Array], { type: `image/${image.format}` });
       const file = new File([blob], `${context}-${Date.now()}.${image.format}`, { type: `image/${image.format}` });
       
       // Get Cloudinary configuration from environment variables
