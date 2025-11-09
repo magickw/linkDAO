@@ -15,6 +15,8 @@ export const PaymentMethodsTab: React.FC = () => {
   const { addToast } = useToast();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState<CreatePaymentMethodInput>({
     type: 'card',
@@ -22,71 +24,71 @@ export const PaymentMethodsTab: React.FC = () => {
     isDefault: false,
   });
 
-  useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      if (walletAddress) {
-        try {
-          setIsLoading(true);
-          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
-          setPaymentMethods(methods);
-        } catch (err) {
-          setError('Failed to load payment methods');
-          console.error('Error fetching payment methods:', err);
-        } finally {
-          setIsLoading(false);
-        }
+  const fetchPaymentMethods = async () => {
+    if (walletAddress) {
+      try {
+        setLoading(true);
+        const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+        setPaymentMethods(methods);
+      } catch (err) {
+        setError('Failed to load payment methods');
+        console.error('Error fetching payment methods:', err);
+      } finally {
+        setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchPaymentMethods();
   }, [walletAddress]);
 
   const addPaymentMethod = async (formData: any) => {
-        if (!walletAddress) return;
-        
-        try {
-          setIsAdding(true);
-          await paymentMethodService.addPaymentMethod(walletAddress!, formData);
-          // Refresh the list
-          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
-          setPaymentMethods(methods);
-          setIsAdding(false);
-          return true;
-        } catch (err) {
-          setError('Failed to add payment method');
-          console.error('Error adding payment method:', err);
-          setIsAdding(false);
-          return false;
-        }
-      };
+    if (!walletAddress) return;
+    
+    try {
+      setIsAdding(true);
+      await paymentMethodService.addPaymentMethod(walletAddress!, formData);
+      // Refresh the list
+      const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+      setPaymentMethods(methods);
+      setIsAdding(false);
+      return true;
+    } catch (err) {
+      setError('Failed to add payment method');
+      console.error('Error adding payment method:', err);
+      setIsAdding(false);
+      return false;
+    }
+  };
 
   const handleAddPaymentMethod = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      await paymentMethodService.addPaymentMethod(address!, formData);
+      await paymentMethodService.addPaymentMethod(walletAddress!, formData);
       addToast('Payment method added successfully', 'success');
       setShowAddForm(false);
       setFormData({ type: 'card', nickname: '', isDefault: false });
-      loadPaymentMethods();
+      fetchPaymentMethods();
     } catch (error) {
       addToast('Failed to add payment method', 'error');
     }
   };
 
-        const setDefault = async (paymentMethodId: string) => {
-        if (!walletAddress) return;
-        
-        try {
-          await paymentMethodService.setDefaultPaymentMethod(walletAddress!, paymentMethodId);
-          // Refresh the list
-          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
-          setPaymentMethods(methods);
-        } catch (err) {
-          setError('Failed to set default payment method');
-          console.error('Error setting default payment method:', err);
-        }
-      };
+  const setDefault = async (paymentMethodId: string) => {
+    if (!walletAddress) return;
+    
+    try {
+      await paymentMethodService.setDefaultPaymentMethod(walletAddress!, paymentMethodId);
+      // Refresh the list
+      const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+      setPaymentMethods(methods);
+    } catch (err) {
+      setError('Failed to set default payment method');
+      console.error('Error setting default payment method:', err);
+    }
+  };
 
   const handleDelete = async (paymentMethodId: string) => {
     if (!confirm('Are you sure you want to delete this payment method?')) return;
@@ -94,7 +96,7 @@ export const PaymentMethodsTab: React.FC = () => {
     try {
       await paymentMethodService.deletePaymentMethod(paymentMethodId);
       addToast('Payment method deleted', 'success');
-      loadPaymentMethods();
+      fetchPaymentMethods();
     } catch (error) {
       addToast('Failed to delete payment method', 'error');
     }
@@ -157,7 +159,7 @@ export const PaymentMethodsTab: React.FC = () => {
                   <Button
                     variant="outline"
                     size="small"
-                    onClick={() => handleSetDefault(method.id)}
+                    onClick={() => setDefault(method.id)}
                     className="border-yellow-400/30 text-yellow-300 hover:bg-yellow-500/20"
                   >
                     Set Default

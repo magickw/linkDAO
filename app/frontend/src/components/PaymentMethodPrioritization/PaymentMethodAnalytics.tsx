@@ -55,13 +55,13 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>(timeframe);
 
   useEffect(() => {
-    if (address) {
+    if (walletAddress) {
       loadAnalytics();
     }
-  }, [address, selectedTimeframe]);
+  }, [walletAddress, selectedTimeframe]);
 
   const loadAnalytics = async () => {
-    if (!address) return;
+    if (!walletAddress) return;
 
     setLoading(true);
     try {
@@ -90,7 +90,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
         }
         
         methodUsage[methodName].count += 1;
-        methodUsage[methodName].totalAmount += order.total;
+        methodUsage[methodName].totalAmount += order.totalAmount;
         
         // Count successful orders (non-cancelled)
         if (order.status !== 'CANCELLED') {
@@ -100,7 +100,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
         // Simulate some cost savings
         if (order.paymentMethod === 'crypto') {
           // Assume 2% savings for crypto payments
-          totalSaved += order.total * 0.02;
+          totalSaved += order.totalAmount * 0.02;
         }
       });
       
@@ -171,7 +171,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
     return `${(value * 100).toFixed(1)}%`;
   };
 
-  if (!address) {
+  if (!walletAddress) {
     return (
       <GlassPanel variant="secondary" className={`p-6 text-center ${className}`}>
         <Wallet className="w-12 h-12 text-white/60 mx-auto mb-4" />

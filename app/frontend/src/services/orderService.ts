@@ -1,8 +1,7 @@
 import { 
   Order as MarketplaceOrder, 
   OrderEvent, 
-  OrderStatus,
-  OrderItem
+  OrderStatus
 } from '../types/order';
 
 export interface OrderTrackingStatus {
@@ -162,7 +161,7 @@ class OrderService {
       }
       
       // Check if within return window (typically 30 days)
-      const deliveryDate = order.estimatedDelivery || order.createdAt;
+      const deliveryDate = new Date(order.estimatedDelivery || order.createdAt);
       const deadline = new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
       const now = new Date();
       
@@ -398,9 +397,7 @@ class OrderService {
       updatedAt: order.updatedAt || order.createdAt || new Date().toISOString(),
       billingAddress: order.billingAddress,
       paymentConfirmationHash: order.paymentConfirmationHash,
-      escrowContractAddress: order.escrowContractAddress,
-      preferences: order.preferences,
-      privacySettings: order.privacySettings
+      escrowContractAddress: order.escrowContractAddress
     };
   }
 

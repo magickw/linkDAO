@@ -21,7 +21,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <Layout title={`r/${community} - LinkDAO`} fullWidth={isMobile}>
+    <Layout title={`${community} - LinkDAO`} fullWidth={isMobile}>
       <div className="px-4 py-6 sm:px-0">
         <CommunityView 
           communityId={community as string} 

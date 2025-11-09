@@ -161,17 +161,17 @@ const OrdersPage: React.FC = () => {
         }> = {
           'crypto': {
             count: orders.filter(order => order.paymentMethod === 'crypto').length,
-            totalValue: orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0),
+            totalValue: orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.totalAmount, 0),
             averageCost: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
+              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.totalAmount, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
               : 0,
             successRate: orders.filter(order => order.paymentMethod === 'crypto' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'crypto').length)
           },
           'fiat': {
             count: orders.filter(order => order.paymentMethod === 'fiat').length,
-            totalValue: orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0),
+            totalValue: orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.totalAmount, 0),
             averageCost: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
+              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.totalAmount, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
               : 0,
             successRate: orders.filter(order => order.paymentMethod === 'fiat' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'fiat').length)
           }
@@ -184,10 +184,10 @@ const OrdersPage: React.FC = () => {
             usageCount: orders.filter(order => order.paymentMethod === 'crypto').length,
             successRate: orders.filter(order => order.paymentMethod === 'crypto' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'crypto').length),
             averageCost: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
+              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.totalAmount, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
               : 0,
             lastUsed: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'crypto')[0].createdAt.toISOString()
+              ? new Date(orders.filter(order => order.paymentMethod === 'crypto')[0].createdAt).toISOString()
               : new Date().toISOString()
           },
           {
@@ -196,10 +196,10 @@ const OrdersPage: React.FC = () => {
             usageCount: orders.filter(order => order.paymentMethod === 'fiat').length,
             successRate: orders.filter(order => order.paymentMethod === 'fiat' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'fiat').length),
             averageCost: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
+              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.totalAmount, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
               : 0,
             lastUsed: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
-              ? orders.filter(order => order.paymentMethod === 'fiat')[0].createdAt.toISOString()
+              ? new Date(orders.filter(order => order.paymentMethod === 'fiat')[0].createdAt).toISOString()
               : new Date().toISOString()
           }
         ];
@@ -209,8 +209,8 @@ const OrdersPage: React.FC = () => {
           completedOrders: orders.filter(order => order.status === 'COMPLETED').length,
           pendingOrders: orders.filter(order => ['CREATED', 'PAID', 'PROCESSING'].includes(order.status)).length,
           disputedOrders: orders.filter(order => order.status === 'DISPUTED').length,
-          totalValue: orders.reduce((sum, order) => sum + order.total, 0),
-          averageOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + order.total, 0) / orders.length : 0,
+          totalValue: orders.reduce((sum, order) => sum + order.totalAmount, 0),
+        averageOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + order.totalAmount, 0) / orders.length : 0,
           completionRate: orders.length > 0 ? orders.filter(order => order.status === 'COMPLETED').length / orders.length : 0,
           statusBreakdown,
           paymentMethodBreakdown,
@@ -222,23 +222,23 @@ const OrdersPage: React.FC = () => {
             const normalized = orders.map<OrderSummary>((order) => ({
               id: order.id,
               product: {
-                id: order.items[0]?.id || '1',
-                title: order.items[0]?.title || `Order #${order.id}`,
-                description: '',
-                image: order.items[0]?.image || '/api/placeholder/400/400',
-                category: '',
-                quantity: order.items[0]?.quantity || 1,
-                unitPrice: order.items[0]?.unitPrice || order.total,
-                totalPrice: order.items[0]?.totalPrice || order.total
+                id: order.product?.id || '1',
+                title: order.product?.title || `Order #${order.id}`,
+                description: order.product?.description || '',
+                image: order.product?.image || '/api/placeholder/400/400',
+                category: order.product?.category || '',
+                quantity: order.product?.quantity || 1,
+                unitPrice: order.product?.unitPrice || order.totalAmount,
+                totalPrice: order.product?.totalPrice || order.totalAmount
               },
               status: order.status,
-              totalAmount: order.total,
+              totalAmount: order.totalAmount,
               currency: order.currency,
-              createdAt: order.createdAt.toISOString(),
-              estimatedDelivery: order.estimatedDelivery?.toISOString(),
+              createdAt: new Date(order.createdAt).toISOString(),
+        estimatedDelivery: order.estimatedDelivery ? new Date(order.estimatedDelivery).toISOString() : undefined,
               trackingCarrier: undefined,
               trackingNumber: order.trackingNumber,
-              sellerName: order.seller?.name || 'Marketplace Seller',
+              sellerName: order.sellerAddress ? `${order.sellerAddress.substring(0, 6)}...${order.sellerAddress.substring(order.sellerAddress.length - 4)}` : 'Unknown Seller',
             }));
             setOrders(normalized);
           } else {

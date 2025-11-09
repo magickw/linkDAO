@@ -729,15 +729,25 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                {/* Create Post Button - Reddit Style */}
+                {/* Quick Actions Card */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <button
-                    onClick={handleCreatePost}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Create Post</span>
-                  </button>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => router.push('/create-community')}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full hover:from-green-600 hover:to-teal-700 transition-all text-sm font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Community</span>
+                    </button>
+                    <button
+                      onClick={handleCreatePost}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Post</span>
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Popular Communities - Reddit Style */}
@@ -757,7 +767,7 @@ const CommunitiesPage: React.FC = () => {
                         <span className="text-lg">{community.avatar || '🏛️'}</span>
                         <div className="text-left flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            r/{community.name}
+                            {community.name}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {community.memberCount?.toLocaleString() || 0} members
@@ -773,10 +783,10 @@ const CommunitiesPage: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span>Help</span>
-                      <span>Reddit Coins</span>
+                      <span>LDAO Tokens</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Reddit Premium</span>
+                      <span>LinkDAO Premium</span>
                       <span>About</span>
                     </div>
                     <div className="flex justify-between">
@@ -865,7 +875,7 @@ const CommunitiesPage: React.FC = () => {
                         onClick={() => handleCommunitySelect(c)}
                         className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
-                        r/{c.name}
+                        {c.name}
                       </button>
                     ))}
                   </div>
@@ -974,7 +984,7 @@ const CommunitiesPage: React.FC = () => {
                             {/* Post Header - Reddit Style */}
                             <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
                               <span className="font-semibold text-gray-900 dark:text-white">
-                                r/{community?.name || post.communityId}
+                                {community?.name || post.communityId}
                               </span>
                               <span>•</span>
                               <span>Posted by u/{post.authorName}</span>
@@ -1074,36 +1084,8 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Right Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                {/* Create Post Button */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <button
-                    onClick={handleCreatePost}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Create Post</span>
-                  </button>
-                </div>
                 
-                {/* Reddit Info Panel */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
-                    Welcome to LinkDAO Communities
-                  </h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    Join communities to discuss topics you're interested in.
-                  </p>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
-                      <Users className="w-4 h-4" />
-                      <span>{communityList.length} communities</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Active discussions</span>
-                    </div>
-                  </div>
-                </div>
+                
                 
                 {/* Trending Today */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -1129,7 +1111,7 @@ const CommunitiesPage: React.FC = () => {
                               {item.title}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
-                              r/{item.community}
+                              {item.community}
                             </div>
                           </div>
                         </div>
@@ -1138,23 +1120,7 @@ const CommunitiesPage: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Footer Links */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-500 dark:text-gray-400">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap gap-2">
-                      <span className="hover:underline cursor-pointer">Help</span>
-                      <span className="hover:underline cursor-pointer">Reddit Coins</span>
-                      <span className="hover:underline cursor-pointer">Reddit Premium</span>
-                      <span className="hover:underline cursor-pointer">About</span>
-                      <span className="hover:underline cursor-pointer">Careers</span>
-                      <span className="hover:underline cursor-pointer">Advertise</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center">
-                    <p>Content Policy • Privacy Policy</p>
-                    <p className="mt-1">© 2025 LinkDAO</p>
-                  </div>
-                </div>
+                
               </div>
             </div>
           </div>

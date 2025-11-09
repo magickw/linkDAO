@@ -129,6 +129,10 @@ export interface Order {
   orderNotes?: string;
   orderMetadata?: any;
   
+  // Return information
+  returnEligible?: boolean;
+  returnDeadline?: string;
+  
   // Timestamps
   createdAt: string;
   updatedAt?: string;

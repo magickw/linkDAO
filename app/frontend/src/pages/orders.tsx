@@ -22,7 +22,8 @@ import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import Layout from '@/components/Layout';
 import OrderTracking from '@/components/Checkout/OrderTracking';
-import { orderService, Order } from '@/services/orderService';
+import { orderService } from '@/services/orderService';
+import { Order } from '@/types/order';
 import { useAccount } from 'wagmi';
 
 type OrderFilter = 'all' | 'CREATED' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'DISPUTED' | 'CANCELLED';
@@ -39,13 +40,13 @@ const OrdersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (address) {
+    if (walletAddress) {
       loadOrders();
     }
-  }, [address]);
+  }, [walletAddress]);
 
   const loadOrders = async () => {
-    if (!address) return;
+    if (!walletAddress) return;
     
     setLoading(true);
     try {
@@ -101,7 +102,7 @@ const OrdersPage: React.FC = () => {
     .filter(order => {
       if (filter !== 'all' && order.status !== filter) return false;
       if (searchQuery && !order.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !order.items.some(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))) {
+          !order.product.title.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       return true;
@@ -113,9 +114,9 @@ const OrdersPage: React.FC = () => {
         case 'oldest':
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         case 'amount-high':
-          return b.total - a.total;
+          return b.totalAmount - a.totalAmount;
         case 'amount-low':
-          return a.total - b.total;
+          return a.totalAmount - b.totalAmount;
         default:
           return 0;
       }
@@ -129,7 +130,7 @@ const OrdersPage: React.FC = () => {
           <div>
             <h3 className="font-semibold text-white">Order #{order.id}</h3>
             <p className="text-white/70 text-sm">
-              {new Date(order.createdAt).toLocaleDateString()} • {order.items.length} item{order.items.length > 1 ? 's' : ''}
+              {new Date(order.createdAt).toLocaleDateString()} • 1 item
             </p>
           </div>
         </div>
@@ -150,20 +151,18 @@ const OrdersPage: React.FC = () => {
       </div>
 
       <div className="space-y-3">
-        {order.items.map((item) => (
-          <div key={item.id} className="flex items-center gap-4">
-            <img
-              src={item.image}
-              alt={item.title}
-              className="w-12 h-12 rounded-lg object-cover"
-            />
-            <div className="flex-1">
-              <h4 className="font-medium text-white text-sm">{item.title}</h4>
-              <p className="text-white/70 text-xs">Qty: {item.quantity}</p>
-            </div>
-            <span className="text-white font-medium">${item.totalPrice}</span>
+        <div className="flex items-center gap-4">
+          <img
+            src={order.product.image}
+            alt={order.product.title}
+            className="w-12 h-12 rounded-lg object-cover"
+          />
+          <div className="flex-1">
+            <h4 className="font-medium text-white text-sm">{order.product.title}</h4>
+            <p className="text-white/70 text-xs">Qty: {order.product.quantity}</p>
           </div>
-        ))}
+          <span className="text-white font-medium">${order.product.totalPrice}</span>
+        </div>
       </div>
 
       <hr className="border-white/20 my-4" />
@@ -171,12 +170,12 @@ const OrdersPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <img
-              src={order.seller.avatar}
-              alt={order.seller.name}
-              className="w-6 h-6 rounded-full"
-            />
-            <span className="text-white/70 text-sm">{order.seller.name}</span>
+            <span className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs">
+              {order.sellerAddress ? order.sellerAddress.substring(0, 2).toUpperCase() : 'S'}
+            </span>
+            <span className="text-white/70 text-sm">
+              {order.sellerAddress ? `${order.sellerAddress.substring(0, 6)}...${order.sellerAddress.substring(order.sellerAddress.length - 4)}` : 'Unknown Seller'}
+            </span>
           </div>
           
           <div className="flex items-center gap-1 text-white/70 text-sm">
@@ -188,14 +187,14 @@ const OrdersPage: React.FC = () => {
             ) : (
               <>
                 <DollarSign className="w-3 h-3" />
-                Card
+                Fiat
               </>
             )}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-white font-semibold">${order.total}</span>
+          <span className="text-white font-semibold">${order.totalAmount.toFixed(2)}</span>
           <Button
             variant="outline"
             size="small"
@@ -222,7 +221,7 @@ const OrdersPage: React.FC = () => {
       {order.estimatedDelivery && order.status !== 'COMPLETED' && (
         <div className="mt-3 flex items-center gap-2 text-white/70 text-sm">
           <Calendar className="w-3 h-3" />
-          Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}
+          Estimated delivery: {new Date(order.estimatedDelivery).toLocaleDateString()}
         </div>
       )}
       
@@ -233,14 +232,14 @@ const OrdersPage: React.FC = () => {
             <>
               <RefreshCw className="w-3 h-3 text-blue-400" />
               <span className="text-blue-400 text-sm">
-                Eligible for return until {order.returnDeadline?.toLocaleDateString()}
+                Eligible for return until {order.returnDeadline ? new Date(order.returnDeadline).toLocaleDateString() : 'N/A'}
               </span>
             </>
           ) : (
             <>
               <AlertTriangle className="w-3 h-3 text-yellow-400" />
               <span className="text-yellow-400 text-sm">
-                {order.returnDeadline && new Date() > order.returnDeadline 
+                {order.returnDeadline && new Date() > new Date(order.returnDeadline) 
                   ? 'Return period expired' 
                   : 'Not eligible for return'}
               </span>
@@ -361,7 +360,7 @@ const OrdersPage: React.FC = () => {
             <GlassPanel variant="secondary" className="p-6 text-center">
               <DollarSign className="w-8 h-8 text-purple-400 mx-auto mb-2" />
               <h3 className="text-2xl font-bold text-white">
-                ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                ${orders.reduce((sum, order) => sum + order.totalAmount, 0).toFixed(2)}
               </h3>
               <p className="text-white/70 text-sm">Total Spent</p>
             </GlassPanel>

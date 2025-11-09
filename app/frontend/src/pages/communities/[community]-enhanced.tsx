@@ -277,7 +277,7 @@ export default function EnhancedCommunityPage() {
                   {communityData.displayName}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  r/{communityData.name}
+                  {communityData.name}
                 </p>
                 <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
                   <span className="flex items-center space-x-1">
@@ -366,7 +366,7 @@ export default function EnhancedCommunityPage() {
                 <Plus className="w-4 h-4 text-gray-600" />
               </div>
               <div className="text-gray-500 dark:text-gray-400">
-                Create a post in r/{communityData.name}
+                Create a post in {communityData.name}
               </div>
             </div>
           </div>
