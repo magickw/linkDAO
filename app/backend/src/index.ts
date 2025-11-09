@@ -524,6 +524,8 @@ import ensValidationRoutes from './routes/ensValidationRoutes';
 import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
+// Import marketplace routes
+import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import database schema
 import { users } from './db/schema';
 import { eq, sql } from 'drizzle-orm';
