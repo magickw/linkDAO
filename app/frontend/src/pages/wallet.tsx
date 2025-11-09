@@ -177,12 +177,39 @@ export default function Wallet() {
     // Set the token and switch to the send tab
     setToken(assetName);
     setActiveTab('send');
-    addToast(`Ready to send ${assetName}`, 'info');
+    
+    // Clear previous recipient to avoid confusion
+    setRecipient('');
+    
+    addToast(`Ready to send ${assetName}. Please enter recipient address.`, 'info');
   };
 
   const handleSwapAsset = (assetName: string) => {
-    // TODO: Implement swap functionality
-    addToast(`Swap feature for ${assetName} coming soon!`, 'info');
+    // Set the token and open a swap interface
+    setToken(assetName);
+    
+    // For now, we'll redirect to a swap interface or open a DEX
+    const selectedToken = availableTokens.find(t => t.symbol === assetName);
+    
+    if (selectedToken) {
+      // Open a swap interface (e.g., Uniswap, 1inch)
+      const swapUrl = `https://app.uniswap.org/swap?inputCurrency=${selectedToken.address || 'ETH'}&chain=${selectedChainId}`;
+      
+      try {
+        const newWindow = window.open(swapUrl, '_blank', 'noopener,noreferrer');
+        if (newWindow) {
+          newWindow.opener = null;
+          addToast(`Opening swap interface for ${assetName}...`, 'info');
+        } else {
+          addToast('Failed to open swap interface. Please check your popup blocker.', 'error');
+        }
+      } catch (error) {
+        console.error('Error opening swap interface:', error);
+        addToast('Failed to open swap interface. Please try again.', 'error');
+      }
+    } else {
+      addToast(`Swap interface not available for ${assetName}`, 'error');
+    }
   };
 
   const formatCurrency = (value: number): string => {
@@ -399,6 +426,74 @@ export default function Wallet() {
                       {portfolio ? formatPercentage(portfolio.change24hPercent) : '+3.2%'} (7d)
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Quick Actions</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <button
+                    onClick={() => {
+                      setActiveTab('send');
+                      setToken('ETH');
+                      setRecipient('');
+                      addToast('Ready to send ETH', 'info');
+                    }}
+                    className="flex flex-col items-center justify-center p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-2">
+                      <span className="text-white font-bold">ETH</span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Send ETH</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      const swapUrl = 'https://app.uniswap.org/swap';
+                      try {
+                        window.open(swapUrl, '_blank', 'noopener,noreferrer');
+                        addToast('Opening swap interface...', 'info');
+                      } catch (error) {
+                        addToast('Failed to open swap interface', 'error');
+                      }
+                    }}
+                    className="flex flex-col items-center justify-center p-4 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Swap</span>
+                  </button>
+                  
+                  <button
+                    onClick={handleViewOnExplorer}
+                    className="flex flex-col items-center justify-center p-4 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14m-4 0v6" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Explorer</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setActiveTab('history');
+                      addToast('Viewing transaction history', 'info');
+                    }}
+                    className="flex flex-col items-center justify-center p-4 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 rounded-lg transition-colors"
+                  >
+                    <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mb-2">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">History</span>
+                  </button>
                 </div>
               </div>
 
