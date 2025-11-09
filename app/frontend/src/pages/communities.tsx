@@ -435,7 +435,7 @@ const CommunitiesPage: React.FC = () => {
     if (isMobile) triggerHapticFeedback('heavy');
   };
   const handleComment = (postId: string) => {
-    router.push(`/dao/${posts.find(p => p.id === postId)?.communityId}/posts/${postId}`);
+    router.push(`/dao/${posts.find(p => p.id === postId)?.communityId}?post=${postId}`);
   };
   const handleShare = (postId: string) => {
     console.log('Sharing post:', postId);
@@ -445,7 +445,7 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/dao/${community?.name || post.communityId}/posts/${postId}`);
+      router.push(`/dao/${community?.name || post.communityId}?post=${postId}`);
     }
   };
 
@@ -480,7 +480,7 @@ const CommunitiesPage: React.FC = () => {
 
 
 
-  // Show posts from followed communities and suggested posts for home feed
+  // Show posts from followed communities and recently visited communities
   const filteredPosts = posts.filter(post => 
     joinedCommunities.includes(post.communityId) || // Posts from joined communities
     post.upvotes > 100 || // Popular posts (suggested)
@@ -802,20 +802,19 @@ const CommunitiesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Suggested Communities - use shared CommunityCardEnhanced component */}
-              {!loading && communityList.length > 0 && (
+              {/* Show user's recently visited communities */}
+              {!loading && joinedCommunities.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Suggested Communities</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {communityList.slice(0, 6).map(c => (
-                      <CommunityCardEnhanced
+                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Your Communities</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 5).map(c => (
+                      <button
                         key={c.id}
-                        community={c}
-                        compact={true}
-                        onSelect={() => handleCommunitySelect(c)}
-                        onJoin={() => handleJoinCommunity(c.id)}
-                        showTrendingInfo={false}
-                      />
+                        onClick={() => handleCommunitySelect(c)}
+                        className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        r/{c.name}
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -866,7 +865,7 @@ const CommunitiesPage: React.FC = () => {
                       userBalance={userBalance}
                     >
                       <div 
-                        onClick={() => router.push(`/dao/${community?.name || post.communityId}/posts/${post.id}`)}
+                        onClick={() => router.push(`/dao/${community?.name || post.communityId}?post=${post.id}`)}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
                           const timeout = setTimeout(() => {

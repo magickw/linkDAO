@@ -53,66 +53,56 @@ router.post('/seller/:walletAddress/sync', csrfProtection,  sellerController.for
 router.get('/seller/:walletAddress/sync/validate', sellerController.validateProfileSync.bind(sellerController));
 router.get('/seller/:walletAddress/history', sellerController.getProfileHistory.bind(sellerController));
 
-// Onboarding routes
-router.get('/seller/onboarding/:walletAddress', (req, res) => {
-  const { walletAddress } = req.params;
-  
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 'wallet-connect',
-        title: 'Connect Wallet',
-        description: 'Connect your Web3 wallet to get started',
-        component: 'WalletConnect',
-        required: true,
-        completed: true
-      },
-      {
-        id: 'profile-setup',
-        title: 'Profile Setup',
-        description: 'Set up your seller profile and store information',
-        component: 'ProfileSetup',
-        required: true,
-        completed: false
-      },
-      {
-        id: 'verification',
-        title: 'Verification',
-        description: 'Verify your email and phone for enhanced features',
-        component: 'Verification',
-        required: false,
-        completed: false
-      },
-      {
-        id: 'payout-setup',
-        title: 'Payout Setup',
-        description: 'Configure your payment preferences',
-        component: 'PayoutSetup',
-        required: true,
-        completed: false
-      },
-      {
-        id: 'first-listing',
-        title: 'Create First Listing',
-        description: 'Create your first product listing',
-        component: 'FirstListing',
-        required: true,
-        completed: false
-      }
-    ]
-  });
+// Onboarding routes - using actual service implementation
+router.get('/seller/onboarding/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const { sellerProfileService } = await import('../services/sellerProfileService');
+    
+    const onboardingStatus = await sellerProfileService.getOnboardingStatus(walletAddress);
+    
+    res.json({
+      success: true,
+      data: onboardingStatus
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get onboarding status',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
-router.put('/seller/onboarding/:walletAddress/:stepId', csrfProtection,  (req, res) => {
-  const { walletAddress, stepId } = req.params;
-  const data = req.body;
-  
-  res.json({
-    success: true,
-    message: `Onboarding step ${stepId} updated successfully`,
-    data
-  });
+router.put('/seller/onboarding/:walletAddress/:stepId', csrfProtection,  async (req, res) => {
+  try {
+    const { walletAddress, stepId } = req.params;
+    const { completed } = req.body;
+    
+    // Normalize step ID: convert hyphens to underscores for backend compatibility
+    // Frontend uses: 'profile-setup', Backend uses: 'profile_setup'
+    const normalizedStep = stepId.replace(/-/g, '_');
+    
+    const { sellerProfileService } = await import('../services/sellerProfileService');
+    
+    const onboardingStatus = await sellerProfileService.updateOnboardingStep(
+      walletAddress,
+      normalizedStep as keyof import('../types/sellerProfile').OnboardingSteps,
+      completed
+    );
+    
+    res.json({
+      success: true,
+      message: `Onboarding step ${stepId} updated successfully`,
+      data: onboardingStatus
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update onboarding step',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 export default router;

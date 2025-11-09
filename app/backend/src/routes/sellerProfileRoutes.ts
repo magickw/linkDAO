@@ -314,4 +314,118 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (re
   }
 });
 
+/**
+ * GET /api/marketplace/seller/{walletAddress}/tier
+ * Get seller's current tier
+ */
+router.get('/seller/:walletAddress/tier',
+  rateLimitWithCache(req => `seller_tier:${req.ip}`, 30, 60), // 30 requests per minute
+  cachingMiddleware.cache('sellerProfile', { ttl: 300 }), // Cache for 5 minutes
+  async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return validationErrorResponse(res, [
+        { field: 'walletAddress', message: 'Invalid wallet address format' }
+      ]);
+    }
+
+    const profile = await sellerProfileService.getProfile(walletAddress);
+    
+    if (!profile) {
+      return notFoundResponse<any>(res, 'Seller profile not found');
+    }
+
+    // Return just the tier information
+    return successResponse(res, {
+      walletAddress: profile.walletAddress,
+      tier: profile.tier,
+      tierDisplayName: profile.tier ? profile.tier.charAt(0).toUpperCase() + profile.tier.slice(1) : 'Basic',
+      isVerified: profile.isVerified,
+      onboardingCompleted: profile.onboardingCompleted
+    }, 200);
+  } catch (error) {
+    safeLogger.error('Error fetching seller tier:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid wallet address')) {
+        return validationErrorResponse(res, [
+          { field: 'walletAddress', message: error.message }
+        ]);
+      }
+    }
+
+    return errorResponse(
+      res,
+      'TIER_FETCH_ERROR',
+      'Failed to fetch seller tier',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+  }
+});
+
+/**
+ * GET /api/marketplace/seller/{walletAddress}/tier/progress
+ * Get seller's tier progression and next tier requirements
+ */
+router.get('/seller/:walletAddress/tier/progress',
+  rateLimitWithCache(req => `seller_tier_progress:${req.ip}`, 30, 60), // 30 requests per minute
+  cachingMiddleware.cache('sellerProfile', { ttl: 300 }), // Cache for 5 minutes
+  async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return validationErrorResponse(res, [
+        { field: 'walletAddress', message: 'Invalid wallet address format' }
+      ]);
+    }
+
+    const profile = await sellerProfileService.getProfile(walletAddress);
+    
+    if (!profile) {
+      return notFoundResponse<any>(res, 'Seller profile not found');
+    }
+
+    // For now, return basic progression information
+    // In a full implementation, this would connect to the tier upgrade service
+    const tierProgress = {
+      walletAddress: profile.walletAddress,
+      currentTier: profile.tier,
+      isVerified: profile.isVerified,
+      onboardingCompleted: profile.onboardingCompleted,
+      progressPercentage: profile.onboardingCompleted ? 100 : profile.profileCompleteness?.score || 0,
+      nextTier: profile.tier === 'basic' ? 'bronze' : profile.tier === 'bronze' ? 'silver' : 'gold',
+      requirements: {
+        completed: profile.onboardingCompleted ? 4 : Math.min(4, Math.floor((profile.profileCompleteness?.score || 0) / 25)),
+        total: 4
+      }
+    };
+
+    return successResponse(res, tierProgress, 200);
+  } catch (error) {
+    safeLogger.error('Error fetching seller tier progress:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid wallet address')) {
+        return validationErrorResponse(res, [
+          { field: 'walletAddress', message: error.message }
+        ]);
+      }
+    }
+
+    return errorResponse(
+      res,
+      'TIER_PROGRESS_FETCH_ERROR',
+      'Failed to fetch seller tier progress',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+  }
+});
+
 export default router;

@@ -982,6 +982,11 @@ app.use(enhancedErrorHandler); // Use enhanced error handler as primary
 app.use(globalErrorHandler); // Keep as fallback
 app.use(notFoundHandler);
 
+// Redirect for cart endpoint (frontend might be requesting /cart instead of /api/cart)
+app.get('/cart', (req, res) => {
+  res.redirect(301, '/api/cart');
+});
+
 // Catch all API routes (should be just before error handlers)
 app.use('/api/*', (req, res) => {
   res.json({

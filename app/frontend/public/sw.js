@@ -227,8 +227,11 @@ async function cacheFirst(request, cacheName) {
     
     if (networkResponse.ok) {
       try {
-        const responseToCache = networkResponse.clone();
-        await cache.put(request, responseToCache);
+        // Check if the request URL scheme is supported for caching
+        if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+          const responseToCache = networkResponse.clone();
+          await cache.put(request, responseToCache);
+        }
       } catch (cacheError) {
         console.warn('Failed to cache static asset:', cacheError);
         // Continue serving the response even if caching fails
@@ -456,7 +459,10 @@ async function cacheResponseWithTTL(request, response, cacheName, ttl) {
       }
     });
     
-    await cache.put(request, responseWithTTL);
+    // Check if the request URL scheme is supported for caching
+    if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+      await cache.put(request, responseWithTTL);
+    }
   } catch (error) {
     console.warn('Failed to cache response with TTL:', error);
   }
@@ -611,7 +617,10 @@ async function updateCache(request, cacheName) {
     
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse);
+      // Check if the request URL scheme is supported for caching
+      if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+        cache.put(request, networkResponse);
+      }
     }
   } catch (error) {
     console.log('Background cache update failed:', error);
@@ -1378,7 +1387,10 @@ async function gracefulCacheAddAll(cache, assets) {
       const response = await fetch(asset);
       
       if (response.ok) {
-        await cache.put(asset, response);
+        // Check if the asset URL scheme is supported for caching
+        if (asset.startsWith('http://') || asset.startsWith('https://')) {
+          await cache.put(asset, response);
+        }
         console.log(`Successfully cached: ${asset}`);
         return { asset, success: true };
       } else {
