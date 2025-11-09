@@ -6,6 +6,7 @@ import { EnhancedEscrowService } from './enhancedEscrowService';
 import { ShippingService } from './shippingService';
 import { NotificationService } from './notificationService';
 import { BlockchainEventService } from './blockchainEventService';
+import { initializeOrderWebSocket, getOrderWebSocketService } from './orderWebSocketService';
 import { 
   MarketplaceOrder, 
   CreateOrderInput, 
@@ -21,6 +22,7 @@ const userProfileService = new UserProfileService();
 const shippingService = new ShippingService();
 const notificationService = new NotificationService();
 const blockchainEventService = new BlockchainEventService();
+const orderWebSocketService = initializeOrderWebSocket();
 
 export class OrderService {
   private enhancedEscrowService: EnhancedEscrowService;
@@ -87,7 +89,13 @@ export class OrderService {
       // Start blockchain event monitoring
       blockchainEventService.monitorOrderEvents(dbOrder.id.toString(), escrowId);
 
-      return this.formatOrder(dbOrder, buyerUser, sellerUser, escrowId);
+      // Send WebSocket updates for order creation
+      const newOrder = this.formatOrder(dbOrder, buyerUser, sellerUser, escrowId);
+      if (orderWebSocketService) {
+        orderWebSocketService.sendOrderCreated(newOrder);
+      }
+
+      return newOrder;
     } catch (error) {
       safeLogger.error('Error creating order:', error);
       throw error;
@@ -150,11 +158,28 @@ export class OrderService {
    */
   async updateOrderStatus(orderId: string, status: OrderStatus, metadata?: any): Promise<boolean> {
     try {
+      // Get current order to capture previous status
+      const currentOrder = await this.getOrderById(orderId);
+      if (!currentOrder) {
+        throw new Error('Order not found');
+      }
+      
+      const previousStatus = currentOrder.status;
+      
       const success = await databaseService.updateOrder(parseInt(orderId), { status: status.toLowerCase() });
       
       if (success) {
         // Create order event
         await this.createOrderEvent(orderId, `STATUS_CHANGED_${status}`, `Order status changed to ${status}`, metadata);
+
+        // Get updated order
+        const updatedOrder = await this.getOrderById(orderId);
+        if (updatedOrder) {
+          // Send WebSocket updates for order status change
+          if (orderWebSocketService) {
+            orderWebSocketService.sendOrderStatusUpdate(updatedOrder, previousStatus);
+          }
+        }
 
         // Send notifications based on status
         await this.handleStatusChangeNotifications(orderId, status);
@@ -219,6 +244,14 @@ export class OrderService {
       // Start delivery tracking
       shippingService.startDeliveryTracking(orderId, trackingInfo.trackingNumber, shippingInfo.carrier);
 
+      // Send WebSocket updates for tracking information
+      if (orderWebSocketService) {
+        orderWebSocketService.sendTrackingUpdate(orderId, order.buyerWalletAddress, {
+          trackingNumber: trackingInfo.trackingNumber,
+          carrier: shippingInfo.carrier
+        });
+      }
+
       return true;
     } catch (error) {
       safeLogger.error('Error processing shipping:', error);
@@ -244,6 +277,12 @@ export class OrderService {
 
       // Create order event
       await this.createOrderEvent(orderId, 'DELIVERY_CONFIRMED', 'Delivery confirmed', deliveryInfo);
+
+      // Send WebSocket updates for delivery confirmation
+      if (orderWebSocketService) {
+        orderWebSocketService.sendDeliveryConfirmation(orderId, order.buyerWalletAddress, deliveryInfo);
+        orderWebSocketService.sendDeliveryConfirmation(orderId, order.sellerWalletAddress, deliveryInfo);
+      }
 
       // Auto-release payment after confirmation period
       setTimeout(async () => {
@@ -325,6 +364,23 @@ export class OrderService {
       // Send notifications
       const otherParty = initiatorAddress === order.buyerWalletAddress ? order.sellerWalletAddress : order.buyerWalletAddress;
       await notificationService.sendOrderNotification(otherParty, 'DISPUTE_INITIATED', orderId, { reason });
+
+      // Send WebSocket updates for dispute initiation
+      if (orderWebSocketService) {
+        orderWebSocketService.handleOrderUpdate({
+          type: 'order_status_changed',
+          orderId,
+          walletAddress: initiatorAddress,
+          data: {
+            orderId,
+            status: OrderStatus.DISPUTED,
+            reason,
+            evidence
+          },
+          timestamp: new Date(),
+          priority: 'high'
+        });
+      }
 
       return true;
     } catch (error) {
@@ -468,6 +524,12 @@ export class OrderService {
 
       // Update order status to completed
       await this.updateOrderStatus(orderId, OrderStatus.COMPLETED);
+
+      // Send WebSocket updates for order completion
+      if (orderWebSocketService) {
+        orderWebSocketService.sendOrderCompletion(orderId, order.buyerWalletAddress);
+        orderWebSocketService.sendOrderCompletion(orderId, order.sellerWalletAddress);
+      }
 
       // Create order event
       await this.createOrderEvent(orderId, 'PAYMENT_RELEASED', 'Payment automatically released to seller');

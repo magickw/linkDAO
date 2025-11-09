@@ -36,7 +36,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
   userType,
   className = ''
 }) => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -45,21 +45,21 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    if (address) {
+    if (walletAddress) {
       loadOrders();
     }
-  }, [address, userType]);
+  }, [walletAddress, userType]);
 
   const loadOrders = async () => {
-    if (!address) return;
+    if (!walletAddress) return;
     
     setLoading(true);
     try {
-      const orders = await orderService.getOrdersByUser(address);
+      const orders = await orderService.getOrdersByUser(walletAddress);
       // Filter orders based on user type (buyer/seller)
       const filteredOrders = userType === 'buyer' 
-        ? orders.filter(order => order.seller.id !== address)
-        : orders.filter(order => order.seller.id === address);
+        ? orders.filter(order => order.buyerAddress === walletAddress)
+        : orders.filter(order => order.sellerAddress === walletAddress);
       setOrders(filteredOrders as any);
       
       if (filteredOrders.length === 0) {
@@ -74,8 +74,8 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
         {
           id: 'order_001',
           listingId: 'listing_001',
-          buyerAddress: userType === 'buyer' ? address : '0x1234567890123456789012345678901234567890',
-          sellerAddress: userType === 'seller' ? address : '0x2345678901234567890123456789012345678901',
+          buyerAddress: userType === 'buyer' ? walletAddress : '0x1234567890123456789012345678901234567890',
+          sellerAddress: userType === 'seller' ? walletAddress : '0x2345678901234567890123456789012345678901',
           product: {
             id: 'prod_001',
             title: 'Premium Wireless Headphones',
