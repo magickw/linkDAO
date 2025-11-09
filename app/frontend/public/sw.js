@@ -74,13 +74,11 @@ const CIRCUIT_BREAKER_CONFIG = {
 // Assets to cache immediately
 const STATIC_ASSETS = [
   '/',
-  '/dashboard',
   '/manifest.json',
   '/offline.html',
-  '/test-performance-optimization',
   '/favicon.ico',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  '/icon-192x192.png',  // Icons are in public root, not /icons/ subdirectory
+  '/icon-512x512.png',
   // Add other critical static assets
 ];
 
@@ -173,6 +171,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Skip Socket.IO requests - let them go directly to the server
+  // Socket.IO needs to handle its own transport mechanism (websocket/polling)
+  if (url.pathname.startsWith('/socket.io/')) {
+    return; // Don't intercept - let Socket.IO handle it
+  }
 
   // Skip non-GET requests
   if (request.method !== 'GET') {

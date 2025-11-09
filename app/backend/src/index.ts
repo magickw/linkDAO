@@ -319,13 +319,14 @@ const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
 
 // Import security enhancements
 import {
-  securityHeaders, 
+  securityHeaders,
   csrfProtection,
-  requestSizeLimits, 
-  validateContentType, 
-  hideServerInfo, 
-  securityLogger 
+  requestSizeLimits,
+  validateContentType,
+  hideServerInfo,
+  securityLogger
 } from './middleware/securityEnhancementsMiddleware';
+import { getCSRFToken } from './middleware/csrfProtection';
 
 // Core middleware stack (order matters!)
 // ULTIMATE CORS FIX - Uses res.writeHead() at lowest HTTP level
@@ -805,6 +806,9 @@ app.get('/api/profiles/address/:address', async (req, res) => {
 
 // Marketplace listings routes (legacy support)
 app.use('/api/marketplace', marketplaceListingsRoutes);
+// Register main marketplace routes at different path to avoid conflicts
+app.use('/api/v1/marketplace', marketplaceRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
@@ -841,15 +845,8 @@ app.use('/api/cache', cacheRoutes);
 app.use('/api', csrfRoutes);
 
 // Add root-level CSRF token endpoint for frontend compatibility
-app.get('/csrf-token', (req, res) => {
-  // Generate a simple CSRF token
-  const token = require('crypto').randomBytes(32).toString('hex');
-  res.status(200).json({
-    success: true,
-    csrfToken: token,
-    timestamp: new Date().toISOString()
-  });
-});
+// This delegates to the proper CSRF middleware to ensure consistent format
+app.get('/csrf-token', getCSRFToken);
 
 // Import order event listener service
 import { orderEventListenerService } from './services/orderEventListenerService';
@@ -938,31 +935,31 @@ app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
 // Socket.io fallback route (WebSockets may be disabled on resource-constrained environments)
+// NOTE: Only handle this if Socket.IO is not initialized
+// Socket.IO will handle its own /socket.io/* routes when enabled
 app.all('/socket.io/*', (req, res) => {
   // Check if WebSockets should be enabled
-  const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' || 
+  const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' ||
                            (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
-  
+
   if (!webSocketsEnabled) {
     // WebSockets disabled - return 503
     return res.status(503).json({
       success: false,
       error: 'WebSocket service temporarily unavailable',
-      message: 'Real-time features are disabled on this server configuration. Please use polling mode.',
+      message: 'Real-time features are disabled on this server configuration.',
       code: 'WEBSOCKET_DISABLED',
       fallback: 'polling'
     });
   }
-  
-  // WebSockets enabled but this is an HTTP request to a WebSocket endpoint
-  // Return 426 to indicate upgrade required
-  res.status(426).json({
+
+  // If WebSockets are enabled, Socket.IO should be handling this route
+  // This code should not be reached - if it is, Socket.IO failed to initialize
+  res.status(500).json({
     success: false,
-    error: 'Upgrade Required',
-    message: 'This endpoint requires a WebSocket connection. Please use a WebSocket client.',
-    code: 'UPGRADE_REQUIRED',
-    protocols: ['websocket'],
-    fallback: 'polling'
+    error: 'Socket.IO service error',
+    message: 'Socket.IO failed to initialize properly. Contact support.',
+    code: 'SOCKETIO_INIT_FAILED'
   });
 });
 

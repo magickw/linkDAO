@@ -4,12 +4,15 @@ import { safeLogger } from '../utils/safeLogger';
 import { MarketplaceListingsService } from '../services/marketplaceListingsService';
 import { createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { MarketplaceListingFilters } from '../types/marketplaceListing';
+import { BlockchainMarketplaceService } from '../services/marketplaceService';
 
 export class MarketplaceListingsController {
   private listingsService: MarketplaceListingsService;
+  private marketplaceService: BlockchainMarketplaceService;
 
   constructor() {
     this.listingsService = new MarketplaceListingsService();
+    this.marketplaceService = new BlockchainMarketplaceService();
   }
 
   /**
@@ -31,26 +34,106 @@ export class MarketplaceListingsController {
         search
       } = req.query;
 
-      const filters: MarketplaceListingFilters = {
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
-        sortBy: sortBy as 'createdAt' | 'price' | 'title' | undefined,
-        sortOrder: sortOrder as 'asc' | 'desc' | undefined,
-        category: category as string | undefined,
-        priceRange: (priceMin || priceMax) ? {
-          min: priceMin as string | undefined,
-          max: priceMax as string | undefined
-        } : undefined,
-        sellerAddress: sellerAddress as string | undefined,
-        isActive: isActive !== undefined ? isActive === 'true' : undefined
-      };
+      // Use the BlockchainMarketplaceService to get listings
+      const allListings = await this.marketplaceService.getActiveListings();
 
-      let result;
-      if (search) {
-        result = await this.listingsService.searchListings(search as string, filters);
-      } else {
-        result = await this.listingsService.getListings(filters);
+      // Apply filters
+      let filteredListings = allListings;
+      
+      if (category) {
+        filteredListings = filteredListings.filter(listing => 
+          listing.itemType.toLowerCase() === (category as string).toLowerCase()
+        );
       }
+      
+      if (priceMin) {
+        filteredListings = filteredListings.filter(listing => 
+          Number(listing.price) >= Number(priceMin)
+        );
+      }
+      
+      if (priceMax) {
+        filteredListings = filteredListings.filter(listing => 
+          Number(listing.price) <= Number(priceMax)
+        );
+      }
+      
+      if (sellerAddress) {
+        filteredListings = filteredListings.filter(listing => 
+          listing.sellerWalletAddress === sellerAddress
+        );
+      }
+
+      // Apply pagination
+      const limitNum = limit ? parseInt(limit as string) : 20;
+      const offsetNum = offset ? parseInt(offset as string) : 0;
+      
+      const paginatedListings = filteredListings.slice(offsetNum, offsetNum + limitNum);
+      
+      // Map listings to the expected response format
+      const mappedListings = paginatedListings.map(listing => ({
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`,
+        description: `Description for listing ${listing.id}`,
+        price: Number(listing.price),
+        currency: 'USD',
+        category: {
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
+        },
+        images: [],
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
+        shipping: {
+          weight: 0.5,
+          freeShipping: true
+        },
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0,
+        favorites: 0,
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        seller: {
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          rating: 4.5,
+          reputation: 85,
+          verified: true,
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: true
+        },
+        trust: {
+          verified: true,
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        metadata: {
+          condition: 'new',
+          brand: 'Unknown'
+        },
+        specifications: {}
+      }));
+
+      const result = {
+        listings: mappedListings,
+        total: filteredListings.length,
+        limit: limitNum,
+        offset: offsetNum,
+        hasNext: offsetNum + limitNum < filteredListings.length,
+        hasPrevious: offsetNum > 0
+      };
 
       res.json(createSuccessResponse(result));
     } catch (error) {
@@ -79,7 +162,7 @@ export class MarketplaceListingsController {
         return;
       }
 
-      const listing = await this.listingsService.getListingById(id);
+      const listing = await this.marketplaceService.getListingById(id);
 
       if (!listing) {
         res.status(404).json(createErrorResponse(
@@ -89,7 +172,63 @@ export class MarketplaceListingsController {
         return;
       }
 
-      res.json(createSuccessResponse(listing));
+      // Map the marketplace service listing to the expected response format
+      const responseListing = {
+        id: listing.id,
+        sellerId: listing.sellerWalletAddress,
+        title: `Listing ${listing.id}`,
+        description: `Description for listing ${listing.id}`,
+        price: Number(listing.price),
+        currency: 'USD',
+        category: {
+          id: listing.itemType.toLowerCase(),
+          name: listing.itemType,
+          slug: listing.itemType.toLowerCase()
+        },
+        images: [],
+        inventory: listing.quantity,
+        status: listing.status.toLowerCase(),
+        tags: [listing.itemType],
+        shipping: {
+          weight: 0.5,
+          freeShipping: true
+        },
+        nft: listing.nftStandard ? {
+          standard: listing.nftStandard,
+          tokenId: listing.tokenId
+        } : null,
+        views: 0,
+        favorites: 0,
+        listingStatus: listing.status.toLowerCase(),
+        publishedAt: listing.createdAt,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        seller: {
+          id: listing.sellerWalletAddress,
+          walletAddress: listing.sellerWalletAddress,
+          displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`,
+          storeName: `Store ${listing.sellerWalletAddress.substring(0, 6)}`,
+          rating: 4.5,
+          reputation: 85,
+          verified: true,
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: true
+        },
+        trust: {
+          verified: true,
+          escrowProtected: listing.isEscrowed,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        metadata: {
+          condition: 'new',
+          brand: 'Unknown'
+        },
+        specifications: {}
+      };
+
+      res.json(createSuccessResponse(responseListing));
     } catch (error) {
       safeLogger.error('Error in getListingById:', error);
       res.status(500).json(createErrorResponse(

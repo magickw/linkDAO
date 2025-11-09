@@ -530,6 +530,11 @@ class AnalyticsService {
     longitude?: number;
   }> {
     const response = await fetch('https://ip-api.com/json/');
+
+    if (!response.ok) {
+      throw new Error(`IP-API request failed with status ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.status === 'success') {
@@ -559,6 +564,11 @@ class AnalyticsService {
   }> {
     // First get IP
     const ipResponse = await fetch('https://api.ipify.org?format=json');
+
+    if (!ipResponse.ok) {
+      throw new Error(`IPify request failed with status ${ipResponse.status}`);
+    }
+
     const ipData = await ipResponse.json();
 
     if (!ipData.ip) {
@@ -569,6 +579,11 @@ class AnalyticsService {
     const apiKey = process.env.NEXT_PUBLIC_IPINFO_API_KEY;
     if (apiKey) {
       const locationResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=${apiKey}`);
+
+      if (!locationResponse.ok) {
+        throw new Error(`IPinfo request failed with status ${locationResponse.status}`);
+      }
+
       const locationData = await locationResponse.json();
 
       const [lat, lon] = (locationData.loc || '').split(',');
