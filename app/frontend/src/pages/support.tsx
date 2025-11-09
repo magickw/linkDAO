@@ -22,6 +22,7 @@ import {
   Lightbulb,
   AlertCircle
 } from 'lucide-react';
+import Layout from '@/components/Layout';
 import SupportDocuments from '@/components/Support/SupportDocuments';
 import LDAOSupportCenter from '@/components/Support/LDAOSupportCenter';
 import UserGuideCard from '@/components/Support/UserGuideCard';
@@ -151,7 +152,7 @@ const SupportPage: NextPage = () => {
         <meta name="description" content="Get help with LDAO tokens, marketplace features, and platform support" />
       </Head>
       
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Layout title="Support Center - LinkDAO">
         {/* Hero Section */}
         <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
@@ -413,7 +414,7 @@ const SupportPage: NextPage = () => {
             </div>
           </div>
         </div>
-      </div>
+      </Layout>
     </>
   );
 };

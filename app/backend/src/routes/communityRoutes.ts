@@ -620,6 +620,7 @@ router.put('/:id', csrfProtection,
     },
     body: {
       displayName: { type: 'string', optional: true, minLength: 3, maxLength: 100 },
+      slug: { type: 'string', optional: true, minLength: 3, maxLength: 64, pattern: '^[a-z0-9-]+$' },
       description: { type: 'string', optional: true, minLength: 10, maxLength: 1000 },
       category: { type: 'string', optional: true },
       tags: { type: 'array', optional: true },
