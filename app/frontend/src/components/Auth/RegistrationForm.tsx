@@ -48,52 +48,75 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const { address: walletAddress } = useAccount();
   const { register } = useAuth();
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.handle.trim()) {
-      newErrors.handle = 'Handle is required';
-    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(formData.handle)) {
-      newErrors.handle = 'Handle must be 3-20 characters and contain only letters, numbers, and underscores';
-    }
-    
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    
-    if (!formData.agreeToTerms) {
-      newErrors.terms = 'You must agree to the terms and conditions';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  if (!walletAddress) {
-      setErrors({ ...errors, submit: 'Wallet not connected. Please connect your wallet first.' });
-      return;
-    }
-
-    // Call the registration function with the form data and connected wallet address
-    register({
-      ...formData,
-      address: walletAddress,
-      profileCid: JSON.stringify(profileData)
-    });
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: ''
-      }));
-    }
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.handle.trim()) {
+      newErrors.handle = 'Handle is required';
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(formData.handle)) {
+      newErrors.handle = 'Handle must be 3-20 characters and contain only letters, numbers, and underscores';
+    }
+    
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!formData.agreeToTerms) {
+      newErrors.terms = 'You must agree to the terms and conditions';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    if (!walletAddress) {
+      setErrors({ ...errors, submit: 'Wallet not connected. Please connect your wallet first.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Call the registration function with the form data and connected wallet address
+      const result = await register({
+        ...formData,
+        address: walletAddress
+      });
+
+      if (result.success) {
+        console.log('Registration successful');
+        onSuccess?.();
+      } else {
+        setErrors({ ...errors, submit: result.error || 'Registration failed' });
+        onError?.(result.error || 'Registration failed');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      const errorMessage = error.message || 'Registration failed';
+      setErrors({ ...errors, submit: errorMessage });
+      onError?.(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
   const handleNestedChange = (section: string, field: string, value: any) => {
