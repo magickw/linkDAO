@@ -321,12 +321,22 @@ export class OrderService {
       return {
         totalOrders: analytics.totalOrders || 0,
         totalVolume: analytics.totalVolume || '0',
+        totalRevenue: analytics.totalRevenue || '0',
         averageOrderValue: analytics.averageOrderValue || '0',
         completionRate: analytics.completionRate || 0,
         disputeRate: analytics.disputeRate || 0,
+        cancellationRate: analytics.cancellationRate || 0,
+        avgShippingTime: analytics.avgShippingTime || 0,
+        avgResponseTime: analytics.avgResponseTime || 0,
+        repeatCustomerRate: analytics.repeatCustomerRate || 0,
+        processingOrders: analytics.processingOrders || 0,
+        completedOrders: analytics.completedOrders || 0,
+        disputedOrders: analytics.disputedOrders || 0,
+        cancelledOrders: analytics.cancelledOrders || 0,
         topCategories: analytics.topCategories || [],
         monthlyTrends: analytics.monthlyTrends || [],
-        recentOrders: await this.getOrdersByUser(userAddress)
+        recentOrders: await this.getOrdersByUser(userAddress),
+        timeRange: analytics.timeRange
       };
     } catch (error) {
       safeLogger.error('Error getting order analytics:', error);

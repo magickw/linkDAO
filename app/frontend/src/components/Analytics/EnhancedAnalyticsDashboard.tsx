@@ -98,7 +98,7 @@ const EnhancedAnalyticsDashboard: React.FC<{
   const [selectedTimeRange, setSelectedTimeRange] = useState<keyof typeof timeRangeMap>('7d');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'overview' | 'engagement' | 'members' | 'insights'>('overview');
+  const [viewMode, setViewMode] = useState<'overview' | 'engagement' | 'members' | 'insights' | 'trends'>('overview');
   const [analyticsData, setAnalyticsData] = useState<MarketplaceAnalytics | null>(null);
   const [insights, setInsights] = useState<AnalyticsInsight[]>([]);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesPoint[]>([]);

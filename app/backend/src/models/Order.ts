@@ -91,12 +91,26 @@ export interface OrderEvent {
 export interface OrderAnalytics {
   totalOrders: number;
   totalVolume: string;
+  totalRevenue: string;
   averageOrderValue: string;
   completionRate: number;
   disputeRate: number;
+  cancellationRate: number;
+  avgShippingTime: number;
+  avgResponseTime: number;
+  repeatCustomerRate: number;
+  processingOrders: number;
+  completedOrders: number;
+  disputedOrders: number;
+  cancelledOrders: number;
   topCategories: CategoryAnalytics[];
   monthlyTrends: MonthlyTrend[];
   recentOrders: MarketplaceOrder[];
+  timeRange: {
+    start: Date;
+    end: Date;
+    period: 'week' | 'month' | 'year';
+  };
 }
 
 export interface CategoryAnalytics {

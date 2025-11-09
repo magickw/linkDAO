@@ -405,6 +405,35 @@ class OrderService {
   }
 
   /**
+   * Get order analytics for a user
+   */
+  async getOrderAnalytics(userAddress: string, timeframe: 'week' | 'month' | 'year' = 'month'): Promise<any> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/analytics/${userAddress}?timeframe=${timeframe}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch order analytics: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching order analytics:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to fetch order analytics');
+    }
+  }
+
+  /**
    * Transform order and timeline to tracking status format
    */
   private transformOrderToTrackingStatus(order: any, timeline: OrderEvent[]): OrderTrackingStatus {
