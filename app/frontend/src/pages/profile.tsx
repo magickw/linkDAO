@@ -141,13 +141,27 @@ export default function Profile() {
     setProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      // In a real app, you would upload the file to IPFS or a similar service
-      // and get a CID. For now, we'll just use the file name as a placeholder.
-      setProfile(prev => ({ ...prev, avatar: file.name }));
-      addToast(`Selected file: ${file.name}`, 'info');
+      
+      try {
+        // Dynamically import unifiedImageService to avoid SSR issues
+        const { unifiedImageService } = await import('@/services/unifiedImageService');
+        
+        // Show uploading state
+        addToast('Uploading avatar...', 'info');
+        
+        // Upload the image using the unified service
+        const uploadResult = await unifiedImageService.uploadImage(file, 'profile');
+        
+        // Update profile state with the returned URL
+        setProfile(prev => ({ ...prev, avatar: uploadResult.cdnUrl }));
+        addToast('Avatar uploaded successfully!', 'success');
+      } catch (error) {
+        console.error('Error uploading avatar:', error);
+        addToast(`Failed to upload avatar: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     }
   };
 

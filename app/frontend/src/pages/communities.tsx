@@ -345,7 +345,7 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleCommunitySelect = (community: any) => {
-    router.push(`/dao/${community.name || community.id}`);
+    router.push(`/communities/${community.name || community.id}`);
   };
 
   const handleFiltersChange = (filters: string[]) => {
@@ -435,7 +435,7 @@ const CommunitiesPage: React.FC = () => {
     if (isMobile) triggerHapticFeedback('heavy');
   };
   const handleComment = (postId: string) => {
-    router.push(`/dao/${posts.find(p => p.id === postId)?.communityId}?post=${postId}`);
+    router.push(`/communities/${posts.find(p => p.id === postId)?.communityId}?post=${postId}`);
   };
   const handleShare = (postId: string) => {
     console.log('Sharing post:', postId);
@@ -445,7 +445,7 @@ const CommunitiesPage: React.FC = () => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       const community = communityList.find(c => c.id === post.communityId);
-      router.push(`/dao/${community?.name || post.communityId}?post=${postId}`);
+      router.push(`/communities/${community?.name || post.communityId}?post=${postId}`);
     }
   };
 
@@ -563,13 +563,15 @@ const CommunitiesPage: React.FC = () => {
               />
             </div>
 
-            {/* Real-Time Staking Updates */}
+            {/* Mobile Create Post Button - Reddit Style */}
             <div className="px-4 mb-4">
-              <RealTimeStakingUpdates
-                communityIds={joinedCommunities}
-                className="bg-white rounded-lg shadow-sm border p-3"
-                showAnimations={true}
-              />
+              <button
+                onClick={handleCreatePost}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Create Post</span>
+              </button>
             </div>
 
             {/* Collapsible Sidebar */}
@@ -591,22 +593,19 @@ const CommunitiesPage: React.FC = () => {
             </div>
 
             {/* Enhanced Mobile Posts Feed */}
-            <div className="px-4 pb-24 space-y-4">
+            <div className="px-0 pb-24 space-y-0">
               {/* Mobile Loading State */}
               {loading && (
-                <div className="space-y-4">
+                <div className="space-y-0">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                        <div className="flex-1 space-y-1">
-                          <div className="h-3 bg-gray-200 rounded w-1/3" />
-                          <div className="h-2 bg-gray-200 rounded w-1/4" />
+                    <div key={i} className="bg-white dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                      <div className="flex space-x-3">
+                        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded" />
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-12 bg-gray-200 rounded" />
                       </div>
                     </div>
                   ))}
@@ -727,91 +726,144 @@ const CommunitiesPage: React.FC = () => {
           </Head>
 
           <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
-            {/* Enhanced Left Sidebar */}
+            {/* Reddit-style Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                <EnhancedLeftSidebar
-                  communities={communityList.map(community => ({
-                    ...community,
-                    icon: community.avatar || '🏛️',
-                    isActive: joinedCommunities.includes(community.id),
-                    brandColors: {
-                      primary: '#6366f1',
-                      secondary: '#8b5cf6',
-                      accent: '#06b6d4'
-                    },
-                    userMembership: {
-                      isJoined: joinedCommunities.includes(community.id),
-                      joinDate: new Date(),
-                      reputation: Math.floor(Math.random() * 1000),
-                      tokenBalance: tokenBalances[community.id] || 0
-                    },
-                    activityMetrics: {
-                      postsToday: Math.floor(Math.random() * 50),
-                      activeMembers: Math.floor(Math.random() * 1000),
-                      trendingScore: Math.floor(Math.random() * 100),
-                      engagementRate: Math.random(),
-                      activityLevel: 'high' as const
-                    },
-                    governance: {
-                      activeProposals: Math.floor(Math.random() * 5),
-                      userVotingPower: Math.floor(Math.random() * 500),
-                      participationRate: Math.random()
-                    },
-                    governanceNotifications: Math.floor(Math.random() * 3)
-                  }))}
-                  selectedCommunity={undefined}
-                  availableFilters={[
-                    { id: 'defi', label: 'DeFi' },
-                    { id: 'nft', label: 'NFT' },
-                    { id: 'governance', label: 'Governance' },
-                    { id: 'high-activity', label: 'High Activity' }
-                  ]}
-                  selectedFilters={selectedFilters}
-                  userRoles={userRoles as Record<string, 'member' | 'admin' | 'moderator'>}
-                  tokenBalances={tokenBalances}
-                  onCommunitySelect={(communityId) => {
-                    const community = communityList.find(c => c.id === communityId);
-                    if (community) router.push(`/dao/${community.name}`);
-                  }}
-                  onFiltersChange={handleFiltersChange}
-                  onQuickAction={handleQuickAction}
-                  onCreateCommunity={handleCreateCommunity}
-                />
+                {/* Create Post Button - Reddit Style */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <button
+                    onClick={handleCreatePost}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Post</span>
+                  </button>
+                </div>
+                
+                {/* Popular Communities - Reddit Style */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                      Popular Communities
+                    </h2>
+                  </div>
+                  <div className="p-2">
+                    {communityList.slice(0, 8).map(community => (
+                      <button
+                        key={community.id}
+                        onClick={() => handleCommunitySelect(community)}
+                        className="w-full flex items-center space-x-2 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <span className="text-lg">{community.avatar || '🏛️'}</span>
+                        <div className="text-left flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            r/{community.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {community.memberCount?.toLocaleString() || 0} members
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Sidebar Footer - Reddit Style */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Help</span>
+                      <span>Reddit Coins</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Reddit Premium</span>
+                      <span>About</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Careers</span>
+                      <span>Advertise</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                    <p>Content Policy • Privacy Policy</p>
+                    <p className="mt-1">© 2025 LinkDAO</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Enhanced Center Feed */}
+            {/* Reddit-style Center Feed */}
             <div className="col-span-12 lg:col-span-6">
-              {/* Quick Filter Chips - Sticky */}
-              <div className="sticky top-20 z-10 bg-white dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
-                <QuickFilterChips
-                  activeFilters={activeQuickFilters}
-                  onFilterToggle={handleQuickFilterToggle}
-                  className="py-2"
-                />
+              {/* Sort Tabs - Reddit Style */}
+              <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-gray-200 dark:border-gray-700 border-b-0">
+                <div className="flex items-center justify-between p-3">
+                  <div className="flex space-x-1">
+                    {(['hot', 'new', 'top', 'rising'] as FeedSortType[]).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setSortBy(tab)}
+                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          sortBy === tab
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {tab === 'hot' && <Flame className="w-3.5 h-3.5" />}
+                        {tab === 'new' && <Clock className="w-3.5 h-3.5" />}
+                        {tab === 'top' && <TrendingUp className="w-3.5 h-3.5" />}
+                        {tab === 'rising' && <Star className="w-3.5 h-3.5" />}
+                        <span className="capitalize">{tab}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value as any)}
+                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${
+                      sortBy !== 'top' ? 'hidden' : ''
+                    }`}
+                  >
+                    <option value="hour">Past Hour</option>
+                    <option value="day">Past Day</option>
+                    <option value="week">Past Week</option>
+                    <option value="month">Past Month</option>
+                    <option value="year">Past Year</option>
+                    <option value="all">All Time</option>
+                  </select>
+                </div>
               </div>
               
-              {/* Live Post Updates */}
-              <div className="mb-6">
-                <LivePostUpdates
-                  postIds={filteredPosts.map(p => p.id)}
-                  className="bg-white rounded-lg shadow-sm border"
-                  showAnimations={true}
-                  maxUpdatesPerPost={3}
-                />
+              {/* Create Post Card - Reddit Style */}
+              <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm border border-t-0 border-gray-200 dark:border-gray-700 mb-4">
+                <div className="p-3">
+                  <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      {walletConnected ? 'U' : '+'}
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        onClick={handleCreatePost}
+                        className="w-full text-left text-gray-500 dark:text-gray-400 text-sm placeholder-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                      >
+                        Create Post
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Show user's recently visited communities */}
               {!loading && joinedCommunities.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Your Communities</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 5).map(c => (
+                <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+                  <h2 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
+                    Top Communities
+                  </h2>
+                  <div className="flex flex-wrap gap-1">
+                    {communityList.filter(c => joinedCommunities.includes(c.id)).slice(0, 6).map(c => (
                       <button
                         key={c.id}
                         onClick={() => handleCommunitySelect(c)}
-                        className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                       >
                         r/{c.name}
                       </button>
@@ -848,7 +900,7 @@ const CommunitiesPage: React.FC = () => {
                 />
               )}
 
-              <div className="space-y-4">
+              <div className="space-y-0">
                 {filteredPosts.map(post => {
                   const community = communityList.find(c => c.id === post.communityId);
                   const stakingInfo = stakingData[post.communityId];
@@ -865,7 +917,7 @@ const CommunitiesPage: React.FC = () => {
                       userBalance={userBalance}
                     >
                       <div 
-                        onClick={() => router.push(`/dao/${community?.name || post.communityId}?post=${post.id}`)}
+                        onClick={() => router.push(`/communities/${community?.name || post.communityId}?post=${post.id}`)}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
                           const timeout = setTimeout(() => {
@@ -883,21 +935,21 @@ const CommunitiesPage: React.FC = () => {
                             setHoverPosition({ x: e.clientX, y: e.clientY });
                           }
                         }}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all cursor-pointer overflow-hidden group"
+                        className="bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b group"
                       >
                         <div className="flex">
-                          {/* Enhanced Voting Section */}
-                          <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
+                          {/* Reddit-style Vote Section */}
+                          <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'up', 1);
                               }}
-                              className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
+                              className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
                             >
                               <ArrowUp className="w-5 h-5" />
                             </button>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white py-1">
+                            <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
                               {post.upvotes - post.downvotes}
                             </span>
                             <button
@@ -905,140 +957,91 @@ const CommunitiesPage: React.FC = () => {
                                 e.stopPropagation();
                                 handleVote(post.id, 'down', 1);
                               }}
-                              className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                              className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
                             >
                               <ArrowDown className="w-5 h-5" />
                             </button>
                             
                             {/* Staking Indicator */}
-                            {stakingInfo && (
-                              <div className="mt-2">
-                                <StakingIndicator
-                                  stakingInfo={stakingInfo}
-                                  token={{ 
-                                    symbol: 'LDAO',
-                                    address: '0x1234567890123456789012345678901234567890',
-                                    decimals: 18,
-                                    name: 'LinkDAO Token'
-                                  }}
-                                  size="sm"
-                                  showTooltip={true}
-                                />
+                            {post.isStaked && (
+                              <div className="mt-1">
+                                <div className="w-2 h-2 bg-green-500 rounded-full" title="On-chain verified" />
                               </div>
                             )}
                           </div>
 
-                          <div className="flex-1 p-4">
-                            {/* Simplified Post Header */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                                <span className="text-gray-600 dark:text-gray-300 font-medium">
-                                  r/{community?.name || post.communityId}
-                                </span>
-                                <span>•</span>
-                                <span>u/{post.authorName}</span>
-                                <span>•</span>
-                                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                              </div>
-                              
-                              {/* Consolidated Web3 Status */}
+                          <div className="flex-1 p-3">
+                            {/* Post Header - Reddit Style */}
+                            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                r/{community?.name || post.communityId}
+                              </span>
+                              <span>•</span>
+                              <span>Posted by u/{post.authorName}</span>
+                              <span>•</span>
+                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                               {post.isStaked && (
-                                <div className="flex items-center space-x-1 text-xs">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full" title="On-chain verified" />
-                                  <span className="text-green-600 dark:text-green-400 font-medium">
-                                    {post.stakedTokens} staked
+                                <>
+                                  <span>•</span>
+                                  <span className="text-green-600 dark:text-green-400">
+                                    {post.stakedTokens} 🪙
                                   </span>
-                                </div>
+                                </>
                               )}
                             </div>
 
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
+                            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
                               {post.title}
                             </h3>
 
-                            <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-3">
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
                               {post.content}
                             </p>
 
-                            {/* Simplified Tags - Show only first 3 */}
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {post.tags.slice(0, 3).map(tag => (
+                            {/* Tags - Reddit Style */}
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {post.tags.slice(0, 4).map(tag => (
                                 <span
                                   key={tag}
-                                  className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+                                  className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                                 >
-                                  #{tag}
+                                  {tag}
                                 </span>
                               ))}
-                              {post.tags.length > 3 && (
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                  +{post.tags.length - 3} more
-                                </span>
-                              )}
                             </div>
 
-                            {/* Streamlined Interaction Bar */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                            {/* Action Bar - Reddit Style */}
+                            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                              <button 
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                <span>{post.commentCount}</span>
+                              </button>
+                              <button 
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                              >
+                                <Share className="w-4 h-4" />
+                                <span>Share</span>
+                              </button>
+                              <button 
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                              >
+                                <Bookmark className="w-4 h-4" />
+                                <span>Save</span>
+                              </button>
+                              {walletConnected && (
                                 <button 
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                  className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all"
                                 >
-                                  <MessageCircle className="w-4 h-4" />
-                                  <span>{post.commentCount}</span>
+                                  <Coins className="w-3 h-3" />
+                                  <span>Web3</span>
                                 </button>
-                                
-                                <button 
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                                >
-                                  <Share className="w-4 h-4" />
-                                  <span>Share</span>
-                                </button>
-                                
-                                <button 
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-                                >
-                                  <Bookmark className="w-4 h-4" />
-                                </button>
-                              </div>
-
-                              {/* Consolidated Web3 Actions */}
-                              <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
-                                {walletConnected && (
-                                  <div className="relative group">
-                                    <button className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
-                                      <Coins className="w-3 h-3" />
-                                      <span>Web3</span>
-                                    </button>
-                                    
-                                    {/* Dropdown Menu */}
-                                    <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                                      <button
-                                        onClick={() => handleTip(post.id)}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
-                                      >
-                                        💰 Tip Author
-                                      </button>
-                                      <button
-                                        onClick={() => handleBoost(post.id, 10)}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                      >
-                                        🚀 Boost Post
-                                      </button>
-                                      {post.isStaked && (
-                                        <button
-                                          onClick={() => handleViewTransaction(`0x${Math.random().toString(16).substr(2, 64)}`)}
-                                          className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
-                                        >
-                                          🔗 View TX
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1068,14 +1071,90 @@ const CommunitiesPage: React.FC = () => {
               )}
             </div>
 
-            {/* Community-Focused Right Sidebar */}
+            {/* Reddit-style Right Sidebar */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="sticky top-24">
-                <CommunityRightSidebar
-                  communities={communityList}
-                  joinedCommunityIds={joinedCommunities}
-                  onCommunitySelect={handleCommunitySelect}
-                />
+              <div className="sticky top-24 space-y-4">
+                {/* Create Post Button */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <button
+                    onClick={handleCreatePost}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Post</span>
+                  </button>
+                </div>
+                
+                {/* Reddit Info Panel */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
+                    Welcome to LinkDAO Communities
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    Join communities to discuss topics you're interested in.
+                  </p>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                      <Users className="w-4 h-4" />
+                      <span>{communityList.length} communities</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Active discussions</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Trending Today */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                      Trending Today
+                    </h3>
+                  </div>
+                  <div className="p-2">
+                    {[
+                      { id: '1', title: 'Ethereum Merge Anniversary', community: 'ethereum' },
+                      { id: '2', title: 'New DeFi Protocols', community: 'defi' },
+                      { id: '3', title: 'NFT Market Update', community: 'nft' },
+                      { id: '4', title: 'Web3 Development Tips', community: 'development' }
+                    ].map((item, index) => (
+                      <div key={item.id} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
+                        <div className="flex items-start space-x-2">
+                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-0.5">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <div className="text-sm text-gray-900 dark:text-white font-medium">
+                              {item.title}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              r/{item.community}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Footer Links */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="hover:underline cursor-pointer">Help</span>
+                      <span className="hover:underline cursor-pointer">Reddit Coins</span>
+                      <span className="hover:underline cursor-pointer">Reddit Premium</span>
+                      <span className="hover:underline cursor-pointer">About</span>
+                      <span className="hover:underline cursor-pointer">Careers</span>
+                      <span className="hover:underline cursor-pointer">Advertise</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center">
+                    <p>Content Policy • Privacy Policy</p>
+                    <p className="mt-1">© 2025 LinkDAO</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

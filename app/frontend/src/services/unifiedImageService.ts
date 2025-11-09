@@ -98,7 +98,8 @@ export class UnifiedImageService {
   private apiBaseUrl: string;
 
   constructor() {
-    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    // Use the same backend URL as other services for consistency
+    this.apiBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   }
 
   /**
@@ -346,6 +347,7 @@ export class UnifiedImageService {
       quality: image.quality,
     }));
 
+    // Get authentication token from localStorage (supporting multiple storage keys)
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
     
     const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/upload`, {
@@ -493,8 +495,9 @@ export class UnifiedImageService {
    * Delete image from storage
    * Requirements: 5.4
    */
-  async deleteImage(imageId: string, context: string): Promise<boolean> {
+  private async deleteImage(imageId: string, context: string): Promise<boolean> {
     try {
+      // Get authentication token from localStorage (supporting multiple storage keys)
       const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
       
       const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/${imageId}`, {

@@ -17,9 +17,14 @@ import {
   Flame,
   Clock,
   TrendingUp,
-  Star
+  Star,
+  Settings
 } from 'lucide-react';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import { CommunityService } from '@/services/communityService';
+import { useWeb3 } from '@/context/Web3Context';
+import { Community } from '@/models/Community';
+import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
 
 interface CommunityViewProps {
   communityId: string;
@@ -27,81 +32,120 @@ interface CommunityViewProps {
   className?: string;
 }
 
-// Mock data for the community
-const mockCommunityData = {
-  id: 'ethereum-builders',
-  name: 'ethereum-builders',
-  displayName: 'Ethereum Builders',
-  description: 'Building the future of Ethereum ecosystem',
-  memberCount: 12400,
-  onlineCount: 234,
-  avatar: '🔷',
-  banner: 'https://placehold.co/800x200/667eea/ffffff?text=Ethereum+Builders',
-  category: 'Development',
-  createdAt: new Date('2023-01-15'),
-  rules: [
-    'Be respectful to all community members',
-    'No spam or self-promotion without permission',
-    'Share quality content and meaningful discussions',
-    'Use appropriate flairs for your posts',
-    'Follow Ethereum community guidelines'
-  ],
-  moderators: [
-    { username: 'vitalik.eth', role: 'Founder' },
-    { username: 'ethereum_dev', role: 'Moderator' },
-    { username: 'community_lead', role: 'Moderator' }
-  ]
-};
-
-const mockPosts = [
-  {
-    id: '1',
-    title: 'New EIP-4844 Implementation Guide',
-    author: 'vitalik.eth',
-    content: 'Just published a comprehensive guide on implementing EIP-4844 proto-danksharding. This will significantly reduce transaction costs for L2 solutions...',
-    upvotes: 245,
-    downvotes: 12,
-    commentCount: 67,
-    createdAt: new Date(Date.now() - 3600000),
-    flair: 'Technical',
-    isStaked: true,
-    stakedTokens: 150
-  },
-  {
-    id: '2',
-    title: 'Ethereum Merge Anniversary: What We\'ve Learned',
-    author: 'ethereum_researcher',
-    content: 'It\'s been over a year since the Ethereum Merge. Let\'s discuss the key improvements and lessons learned from this historic transition...',
-    upvotes: 189,
-    downvotes: 8,
-    commentCount: 45,
-    createdAt: new Date(Date.now() - 7200000),
-    flair: 'Discussion',
-    isStaked: false,
-    stakedTokens: 0
-  },
-  {
-    id: '3',
-    title: 'Building a DeFi Protocol: Lessons from the Trenches',
-    author: 'defi_builder',
-    content: 'After 2 years of building our DeFi protocol, here are the key technical and business lessons we\'ve learned. AMA!',
-    upvotes: 156,
-    downvotes: 23,
-    commentCount: 89,
-    createdAt: new Date(Date.now() - 10800000),
-    flair: 'AMA',
-    isStaked: true,
-    stakedTokens: 75
-  }
-];
-
 export default function CommunityView({ communityId, highlightedPostId, className = '' }: CommunityViewProps) {
   const { isMobile } = useMobileOptimization();
   const router = useRouter();
-  const [posts, setPosts] = useState(mockPosts);
+  const { address, isConnected } = useWeb3();
+  const [communityData, setCommunityData] = useState<Community | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [isJoined, setIsJoined] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  
+  // Mock posts data - in a real implementation these would be loaded separately
+  const mockPosts = [
+    {
+      id: '1',
+      title: 'New EIP-4844 Implementation Guide',
+      author: 'vitalik.eth',
+      content: 'Just published a comprehensive guide on implementing EIP-4844 proto-danksharding. This will significantly reduce transaction costs for L2 solutions...',
+      upvotes: 245,
+      downvotes: 12,
+      commentCount: 67,
+      createdAt: new Date(Date.now() - 3600000),
+      flair: 'Technical',
+      isStaked: true,
+      stakedTokens: 150
+    },
+    {
+      id: '2',
+      title: 'Ethereum Merge Anniversary: What We've Learned',
+      author: 'ethereum_researcher',
+      content: 'It's been over a year since the Ethereum Merge. Let's discuss the key improvements and lessons learned from this historic transition...',
+      upvotes: 189,
+      downvotes: 8,
+      commentCount: 45,
+      createdAt: new Date(Date.now() - 7200000),
+      flair: 'Discussion',
+      isStaked: false,
+      stakedTokens: 0
+    },
+    {
+      id: '3',
+      title: 'Building a DeFi Protocol: Lessons from the Trenches',
+      author: 'defi_builder',
+      content: 'After 2 years of building our DeFi protocol, here are the key technical and business lessons we've learned. AMA!',
+      upvotes: 156,
+      downvotes: 23,
+      commentCount: 89,
+      createdAt: new Date(Date.now() - 10800000),
+      flair: 'AMA',
+      isStaked: true,
+      stakedTokens: 75
+    }
+  ];
+
+  // Mock user membership state for demonstration purposes
+  const memberRole = (communityData?.moderators || []).includes(address || '') ? 'admin' : 'member';
+  const canEditCommunity = isConnected && address && memberRole === 'admin';
+
+  useEffect(() => {
+    const fetchCommunityData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // In a real implementation, this would call the API
+        // const data = await CommunityService.getCommunityById(communityId);
+        
+        // For now using mock data structure to match Community type
+        const mockCommunity: Community = {
+          id: communityId,
+          name: communityId,
+          displayName: communityId.replace(/-/g, ' '),
+          description: `Welcome to the ${communityId.replace(/-/g, ' ')} community! This is a place for enthusiasts to discuss and share knowledge.`,
+          rules: [
+            'Be respectful to all members',
+            'No spam or promotional content',
+            'Stay on topic',
+            'Share quality content'
+          ],
+          memberCount: Math.floor(Math.random() * 10000) + 1000,
+          createdAt: new Date(Date.now() - Math.floor(Math.random() * 31536000000)), // Up to 1 year ago
+          updatedAt: new Date(),
+          avatar: ['🏛️', '🔷', '💰', '🎨', '🚀', '⚡'][Math.floor(Math.random() * 6)],
+          banner: `https://placehold.co/800x200/667eea/ffffff?text=${communityId.replace(/-/g, '+')}`,
+          category: ['Development', 'Finance', 'Art', 'Governance', 'Social'][Math.floor(Math.random() * 5)],
+          tags: ['ethereum', 'blockchain', 'web3'].slice(0, Math.floor(Math.random() * 4)),
+          isPublic: true,
+          moderators: [address || '0x1234567890123456789012345678901234567890'],
+          treasuryAddress: `0x${Math.random().toString(16).substr(2, 40)}`,
+          governanceToken: 'LDAO',
+          settings: {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: []
+          }
+        };
+
+        setCommunityData(mockCommunity);
+        setPosts(mockPosts);
+      } catch (err) {
+        console.error('Error fetching community data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load community');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (communityId) {
+      fetchCommunityData();
+    }
+  }, [communityId, address, isConnected]);
 
   const handleVote = (postId: string, type: 'up' | 'down') => {
     setPosts(prev => prev.map(post => {
@@ -116,6 +160,32 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading community...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !communityData) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            {error || 'Community Not Found'}
+          </h1>
+          <Link href="/communities" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+            ← Back to Communities
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`grid grid-cols-12 gap-6 max-w-7xl mx-auto ${className}`}>
       {/* Left Sidebar - Navigation */}
@@ -124,7 +194,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           {/* Community Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
-              r/{mockCommunityData.name}
+              r/{communityData.name}
             </h3>
             <Link 
               href="/communities"
@@ -163,78 +233,84 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
 
       {/* Center Column - Community Feed */}
       <div className={`col-span-12 ${isMobile ? '' : 'lg:col-span-6'}`}>
-        {/* Community Header */}
+        {/* Reddit-style Community Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
           <div
             className="h-32 bg-gradient-to-r from-blue-500 to-purple-600"
             style={{
-              backgroundImage: mockCommunityData.banner ? `url(${mockCommunityData.banner})` : undefined,
+              backgroundImage: communityData.banner ? `url(${communityData.banner})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
           />
-          <div className="p-6">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-4xl">{mockCommunityData.avatar}</div>
-                <div>
+              <div className="flex items-center space-x-4 -mt-12">
+                <div className="text-5xl bg-white dark:bg-gray-800 rounded-full p-2 border-4 border-white dark:border-gray-800">
+                  {communityData.avatar}
+                </div>
+                <div className="mt-8">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    r/{mockCommunityData.name}
+                    r/{communityData.name}
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    {mockCommunityData.description}
-                  </p>
-                  <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                     <span className="flex items-center space-x-1">
                       <Users className="w-4 h-4" />
-                      <span>{mockCommunityData.memberCount.toLocaleString()} members</span>
+                      <span>{communityData.memberCount.toLocaleString()} members</span>
                     </span>
                     <span>•</span>
-                    <span>{mockCommunityData.onlineCount} online</span>
+                    <span>{Math.floor(Math.random() * 1000) + 100} online</span>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setIsJoined(!isJoined)}
-                className={`px-6 py-2 rounded-full font-medium transition-colors ${isJoined
-                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-              >
-                {isJoined ? 'Joined' : 'Join'}
-              </button>
+              <div className="flex items-center space-x-2 mt-8">
+                <button
+                  onClick={() => setIsJoined(!isJoined)}
+                  className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${isJoined
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                >
+                  {isJoined ? 'Joined' : 'Join'}
+                </button>
+                {/* Show edit button if user is admin */}
+                {canEditCommunity && (
+                  <button
+                    onClick={() => setShowSettingsModal(true)}
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    title="Edit Community Settings"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
             </div>
+          </div>
+          <div className="p-4">
+            <p className="text-gray-700 dark:text-gray-300 text-sm">
+              {communityData.description}
+            </p>
           </div>
         </div>
 
-        {/* Post Creation & Sorting */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-          {/* Create Post Section */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-              <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              </div>
-              <span className="text-gray-500 dark:text-gray-400">Create a post</span>
-            </div>
-          </div>
-          
+        {/* Reddit-style Post Creation & Sorting */}
+        <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-gray-200 dark:border-gray-700 border-b-0">
           {/* Sorting Tabs */}
-          <div className="flex items-center justify-between p-4">
+          <div className="flex items-center justify-between p-3">
             <div className="flex space-x-1">
               {(['hot', 'new', 'top', 'rising'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setSortBy(tab)}
-                  className={`flex items-center space-x-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${sortBy === tab
+                  className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sortBy === tab
                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                     }`}
                 >
-                  {tab === 'hot' && <Flame className="w-4 h-4" />}
-                  {tab === 'new' && <Clock className="w-4 h-4" />}
-                  {tab === 'top' && <TrendingUp className="w-4 h-4" />}
-                  {tab === 'rising' && <Star className="w-4 h-4" />}
+                  {tab === 'hot' && <Flame className="w-3.5 h-3.5" />}
+                  {tab === 'new' && <Clock className="w-3.5 h-3.5" />}
+                  {tab === 'top' && <TrendingUp className="w-3.5 h-3.5" />}
+                  {tab === 'rising' && <Star className="w-3.5 h-3.5" />}
                   <span className="capitalize">{tab}</span>
                 </button>
               ))}
@@ -243,7 +319,9 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value as any)}
-                className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${
+                  sortBy !== 'top' ? 'hidden' : ''
+                }`}
               >
                 <option value="hour">Past Hour</option>
                 <option value="day">Past Day</option>
@@ -255,41 +333,62 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
             )}
           </div>
         </div>
+        
+        {/* Create Post Card - Reddit Style */}
+        <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm border border-t-0 border-gray-200 dark:border-gray-700 mb-4">
+          <div className="p-3">
+            <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                {isConnected ? 'U' : '+'}
+              </div>
+              <div className="flex-1">
+                <button
+                  onClick={handleCreatePost}
+                  className="w-full text-left text-gray-500 dark:text-gray-400 text-sm placeholder-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  Create a post in r/{communityData.name}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {/* Posts Feed */}
-        <div className="space-y-2">
+        {/* Reddit-style Posts Feed */}
+        <div className="space-y-0">
           {posts.map(post => (
             <div 
               key={post.id} 
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors ${
+              className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${
                 highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
               }`}
             >
               <div className="flex">
-                {/* Vote Column */}
-                <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
+                {/* Reddit-style Vote Column */}
+                <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
                   <button
                     onClick={() => handleVote(post.id, 'up')}
-                    className="p-1 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
+                    className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
                   >
                     <ArrowUp className="w-5 h-5" />
                   </button>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white py-1">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
                     {post.upvotes - post.downvotes}
                   </span>
                   <button
                     onClick={() => handleVote(post.id, 'down')}
-                    className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                    className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
                   >
                     <ArrowDown className="w-5 h-5" />
                   </button>
                 </div>
 
                 {/* Post Content */}
-                <div className="flex-1 p-4">
-                  {/* Post Metadata */}
-                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    <span className="text-gray-600 dark:text-gray-300">r/{mockCommunityData.name}</span>
+                <div className="flex-1 p-3">
+                  {/* Post Metadata - Reddit Style */}
+                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      r/{communityData.name}
+                    </span>
                     <span>•</span>
                     <span>Posted by u/{post.author}</span>
                     <span>•</span>
@@ -297,33 +396,32 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                     {post.isStaked && (
                       <>
                         <span>•</span>
-                        <span className="flex items-center space-x-1 text-yellow-600">
-                          <Coins className="w-3 h-3" />
-                          <span>{post.stakedTokens} staked</span>
+                        <span className="text-green-600 dark:text-green-400">
+                          {post.stakedTokens} 🪙
                         </span>
                       </>
                     )}
                   </div>
 
-                  {/* Post Title */}
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+                  {/* Post Title - Reddit Style */}
+                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
                     {post.title}
                   </h3>
 
-                  {/* Post Content */}
-                  <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm">
+                  {/* Post Content - Reddit Style */}
+                  <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
                     {post.content}
                   </p>
 
-                  {/* Flair */}
-                  <div className="mb-3">
-                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+                  {/* Flair - Reddit Style */}
+                  <div className="mb-2">
+                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
                       {post.flair}
                     </span>
                   </div>
 
-                  {/* Action Bar */}
-                  <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                  {/* Action Bar - Reddit Style */}
+                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                     <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
                       <MessageCircle className="w-4 h-4" />
                       <span>{post.commentCount} Comments</span>
@@ -347,40 +445,40 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
       {/* Right Sidebar - Community Info */}
       <div className={`col-span-12 ${isMobile ? 'order-2 mb-6' : 'lg:col-span-3'}`}>
         <div className="sticky top-6 space-y-4">
-          {/* About Community */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
+          {/* Reddit-style About Community */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm uppercase tracking-wide">
               About Community
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {mockCommunityData.description}
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+              {communityData.description}
             </p>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Members</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {mockCommunityData.memberCount.toLocaleString()}
+                  {communityData.memberCount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Online</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {mockCommunityData.onlineCount}
+                  {Math.floor(Math.random() * 1000) + 100}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Created</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {mockCommunityData.createdAt.toLocaleDateString()}
+                  {communityData.createdAt.toLocaleDateString()}
                 </span>
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm">Community Rules</h4>
-              <div className="space-y-2">
-                {mockCommunityData.rules.map((rule, index) => (
-                  <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-xs uppercase tracking-wide">Community Rules</h4>
+              <div className="space-y-1">
+                {communityData.rules.map((rule, index) => (
+                  <div key={index} className="text-xs text-gray-600 dark:text-gray-400">
                     <span className="font-medium">{index + 1}.</span> {rule}
                   </div>
                 ))}
@@ -389,28 +487,28 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           </div>
 
           {/* Moderators */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm flex items-center space-x-2">
-              <Shield className="w-4 h-4" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center space-x-1 uppercase tracking-wide">
+              <Shield className="w-3 h-3" />
               <span>Moderators</span>
             </h3>
-            <div className="space-y-2">
-              {mockCommunityData.moderators.map((mod, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-900 dark:text-white">u/{mod.username}</span>
-                  <span className="text-gray-500 dark:text-gray-400 text-xs">{mod.role}</span>
+            <div className="space-y-1">
+              {communityData.moderators.map((mod, index) => (
+                <div key={index} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-900 dark:text-white">u/{mod}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Moderator</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* User Stats */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm flex items-center space-x-2">
-              <Trophy className="w-4 h-4" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center space-x-1 uppercase tracking-wide">
+              <Trophy className="w-3 h-3" />
               <span>Your Stats</span>
             </h3>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Reputation</span>
                 <span className="font-medium text-gray-900 dark:text-white">1,247</span>
@@ -427,6 +525,19 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           </div>
         </div>
       </div>
+
+      {/* Community Settings Modal */}
+      {showSettingsModal && communityData && (
+        <CommunitySettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          community={communityData}
+          onUpdate={(updatedCommunity) => {
+            setCommunityData(updatedCommunity);
+            setShowSettingsModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
