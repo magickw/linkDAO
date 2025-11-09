@@ -4,9 +4,8 @@ import { createHash } from 'crypto';
 import { performance } from 'perf_hooks';
 import { db } from '../db/index';
 import { imageStorage } from '../db/schema';
-import ipfsService from './ipfsService';
-import { CDNIntegrationService } from './cdnIntegrationService';
 import { eq, and } from 'drizzle-orm';
+import { v2 as cloudinary } from 'cloudinary';
 
 // File validation constants
 const ALLOWED_MIME_TYPES = [
@@ -71,32 +70,24 @@ export interface ThumbnailResult {
 }
 
 class ImageStorageService {
-  private cdnService: CDNIntegrationService | null = null;
-
   constructor() {
-    // Initialize CDN service if configuration is available
-    this.initializeCDN();
-  }
-
-  private initializeCDN(): void {
-    try {
-      const cdnConfig = {
-        distributionId: process.env.CLOUDFRONT_DISTRIBUTION_ID || '',
-        bucketName: process.env.S3_BUCKET_NAME || '',
-        region: process.env.AWS_REGION || 'us-east-1',
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-        cloudFrontDomain: process.env.CLOUDFRONT_DOMAIN || ''
-      };
-
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-      if (cdnConfig.distributionId && cdnConfig.bucketName) {
-        this.cdnService = new CDNIntegrationService(cdnConfig, redisUrl);
-      }
-    } catch (error) {
-      safeLogger.warn('CDN service initialization failed:', error);
+    // Check if Cloudinary environment variables are set
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    
+    if (!cloudName || !apiKey || !apiSecret) {
+      safeLogger.error('Cloudinary configuration is missing. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+      throw new Error('Cloudinary configuration is missing');
     }
+    
+    // Initialize Cloudinary with configuration from environment variables
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+      secure: true
+    });
   }
 
   /**
@@ -313,7 +304,7 @@ class ImageStorageService {
   }
 
   /**
-   * Upload image with comprehensive processing
+   * Upload image to Cloudinary
    */
   async uploadImage(
     buffer: Buffer,
@@ -340,77 +331,103 @@ class ImageStorageService {
         });
       }
 
-      // Upload main image to IPFS
-      const mainUploadResult = await ipfsService.uploadFile(optimizedBuffer, filename);
-      
-      // Pin the content to ensure persistence
-      await ipfsService.pinContent(mainUploadResult.hash);
+      // Upload main image to Cloudinary
+      const uploadOptions: any = {
+        folder: `linkdao/${options.usageType}/${options.userId}`,
+        public_id: this.generatePublicId(filename),
+        overwrite: false,
+        resource_type: 'image',
+        timeout: 60000 // 60 seconds timeout
+      };
+
+      // Add usage reference if provided
+      if (options.usageReferenceId) {
+        uploadOptions.context = `usage=${options.usageType}|reference=${options.usageReferenceId}`;
+      }
+
+      const mainUploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          uploadOptions,
+          (error, result) => {
+            if (error) {
+              reject(new Error(`Cloudinary upload failed: ${error.message}`));
+            } else {
+              resolve(result);
+            }
+          }
+        ).end(optimizedBuffer);
+      });
 
       // Generate and upload thumbnails
       const thumbnailUrls: Record<string, string> = {};
-      const backupUrls: string[] = [mainUploadResult.url];
+      const backupUrls: string[] = [mainUploadResult.secure_url];
 
       if (options.generateThumbnails !== false) {
         const thumbnails = await this.generateThumbnails(optimizedBuffer);
         
         for (const thumbnail of thumbnails) {
-          const thumbnailFilename = this.generateThumbnailFilename(filename, thumbnail.name);
-          const thumbnailUpload = await ipfsService.uploadFile(thumbnail.buffer, thumbnailFilename);
-          await ipfsService.pinContent(thumbnailUpload.hash);
-          
-          thumbnailUrls[thumbnail.name] = thumbnailUpload.url;
-          backupUrls.push(thumbnailUpload.url);
+          const thumbnailUploadOptions = {
+            ...uploadOptions,
+            folder: `${uploadOptions.folder}/thumbnails`,
+            public_id: `${uploadOptions.public_id}_${thumbnail.name}`,
+            width: thumbnail.width,
+            height: thumbnail.height,
+            crop: 'fill'
+          };
+
+          const thumbnailUploadResult = await new Promise<any>((resolve, reject) => {
+            cloudinary.uploader.upload_stream(
+              thumbnailUploadOptions,
+              (error, result) => {
+                if (error) {
+                  reject(new Error(`Cloudinary thumbnail upload failed: ${error.message}`));
+                } else {
+                  resolve(result);
+                }
+              }
+            ).end(thumbnail.buffer);
+          });
+
+          thumbnailUrls[thumbnail.name] = thumbnailUploadResult.secure_url;
+          backupUrls.push(thumbnailUploadResult.secure_url);
         }
       }
 
-      // Upload to CDN if available
-      let cdnUrl = mainUploadResult.url;
-      if (this.cdnService) {
-        try {
-          const cdnKey = `images/${mainUploadResult.hash}/${filename}`;
-          await this.cdnService.uploadAsset(cdnKey, optimizedBuffer, metadata.format === 'png' ? 'image/png' : 'image/jpeg');
-          cdnUrl = this.cdnService.generateCDNUrl(cdnKey);
-        } catch (cdnError) {
-          safeLogger.warn('CDN upload failed, using IPFS URL:', cdnError);
-        }
-      }
-
-      // Store metadata in database
+      // Save to database
       const imageRecord = await db.insert(imageStorage).values({
-        ipfsHash: mainUploadResult.hash,
-        cdnUrl,
-        originalFilename: filename,
-        contentType: metadata.format === 'png' ? 'image/png' : 'image/jpeg',
-        fileSize: optimizedBuffer.length,
-        width: metadata.width,
-        height: metadata.height,
-        thumbnails: JSON.stringify(thumbnailUrls),
-        ownerId: options.userId,
+        id: mainUploadResult.public_id,
+        userId: options.userId,
         usageType: options.usageType,
         usageReferenceId: options.usageReferenceId,
-        backupUrls: JSON.stringify(backupUrls),
-        accessCount: 0,
-        lastAccessed: null,
+        originalFilename: filename,
+        contentType: mainUploadResult.format,
+        fileSize: mainUploadResult.bytes,
+        width: mainUploadResult.width,
+        height: mainUploadResult.height,
+        ipfsHash: mainUploadResult.public_id, // Use public_id as identifier
+        cdnUrl: mainUploadResult.secure_url,
+        thumbnails: thumbnailUrls,
+        backupUrls: backupUrls,
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
 
       return {
-        id: imageRecord[0].id,
-        ipfsHash: mainUploadResult.hash,
-        cdnUrl,
+        id: mainUploadResult.public_id,
+        ipfsHash: mainUploadResult.public_id,
+        cdnUrl: mainUploadResult.secure_url,
         originalFilename: filename,
-        contentType: imageRecord[0].contentType,
-        fileSize: optimizedBuffer.length,
-        width: metadata.width,
-        height: metadata.height,
+        contentType: mainUploadResult.format,
+        fileSize: mainUploadResult.bytes,
+        width: mainUploadResult.width,
+        height: mainUploadResult.height,
         thumbnails: thumbnailUrls,
-        backupUrls
+        backupUrls: backupUrls
       };
 
     } catch (error) {
-      safeLogger.error('Image upload error:', error);
-      throw error;
+      safeLogger.error('Image upload failed:', error);
+      throw new Error(`Image upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -471,7 +488,7 @@ class ImageStorageService {
         .from(imageStorage)
         .where(and(
           eq(imageStorage.id, imageId),
-          eq(imageStorage.ownerId, userId)
+          eq(imageStorage.userId, userId) // Changed from ownerId to userId
         ))
         .limit(1);
 
@@ -481,21 +498,11 @@ class ImageStorageService {
 
       const record = records[0];
 
-      // Unpin from IPFS
+      // Delete from Cloudinary
       try {
-        await ipfsService.unpinContent(record.ipfsHash);
-      } catch (unpinError) {
-        safeLogger.warn('Failed to unpin from IPFS:', unpinError);
-      }
-
-      // Delete from CDN
-      if (this.cdnService && record.cdnUrl) {
-        try {
-          const cdnKey = `images/${record.ipfsHash}/${record.originalFilename}`;
-          await this.cdnService.deleteAsset(cdnKey);
-        } catch (cdnError) {
-          safeLogger.warn('Failed to delete from CDN:', cdnError);
-        }
+        await cloudinary.uploader.destroy(imageId);
+      } catch (cloudinaryError) {
+        safeLogger.warn('Failed to delete from Cloudinary:', cloudinaryError);
       }
 
       // Delete from database

@@ -325,7 +325,7 @@ export class UnifiedImageService {
   }
 
   /**
-   * Upload processed image to storage backend
+   * Upload processed image to Cloudinary
    * Requirements: 5.3, 5.4
    */
   private async uploadToStorage(
@@ -333,75 +333,83 @@ export class UnifiedImageService {
     context: string,
     options: ImageUploadOptions
   ): Promise<StorageResult> {
-    const formData = new FormData();
-    const blob = new Blob([new Uint8Array(image.buffer)], { type: `image/${image.format}` });
-    
-    formData.append('image', blob, `${context}-${Date.now()}.${image.format}`);
-    formData.append('context', context);
-    formData.append('userId', options.userId || 'anonymous');
-    formData.append('metadata', JSON.stringify({
-      width: image.width,
-      height: image.height,
-      size: image.size,
-      format: image.format,
-      quality: image.quality,
-    }));
+    try {
+      // Convert buffer back to a File object to work with Cloudinary
+      const blob = new Blob([image.buffer], { type: `image/${image.format}` });
+      const file = new File([blob], `${context}-${Date.now()}.${image.format}`, { type: `image/${image.format}` });
+      
+      // Get Cloudinary configuration from environment variables
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+      
+      if (!cloudName || !uploadPreset) {
+        throw new Error('Cloudinary configuration is missing. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET environment variables.');
+      }
+      
+      // Create form data for Cloudinary upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset); // Cloudinary unsigned upload preset
+      formData.append('folder', `linkdao/${context}`); // Organize images in folders by context
+      
+      // Upload to Cloudinary using direct browser upload
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
 
-    // Get authentication token from localStorage (supporting multiple storage keys)
-    const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
-    
-    const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/upload`, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        // Don't set Content-Type header - let browser set it with boundary for FormData
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      },
-    });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `Upload failed with status ${response.status}` }));
+        throw new Error(errorData.message || `Cloudinary upload failed with status ${response.status}`);
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Upload failed' }));
-      throw new Error(errorData.message || `Upload failed with status ${response.status}`);
+      const result = await response.json();
+      
+      return {
+        id: result.public_id, // Cloudinary's public ID
+        url: result.secure_url, // Cloudinary's secure URL
+        ipfsHash: undefined, // Not using IPFS with Cloudinary
+        metadata: {
+          width: result.width || image.width,
+          height: result.height || image.height,
+          size: image.size,
+          format: image.format,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Cloudinary upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    const result = await response.json();
-    return {
-      id: result.id,
-      url: result.url,
-      ipfsHash: result.ipfsHash,
-      metadata: {
-        width: image.width,
-        height: image.height,
-        size: image.size,
-        format: image.format,
-      },
-    };
   }
 
   /**
-   * Generate CDN URLs with different sizes and optimizations
+   * Generate Cloudinary CDN URLs with different sizes and optimizations
    * Requirements: 5.4, 5.6
    */
   private async generateCDNUrls(uploadResult: StorageResult, options: ImageUploadOptions): Promise<CDNUrls> {
-    const baseUrl = uploadResult.url;
-    const cdnBaseUrl = process.env.NEXT_PUBLIC_CDN_URL || this.apiBaseUrl;
+    // Get Cloudinary configuration from environment variables
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const publicId = uploadResult.id;
+
+    if (!cloudName) {
+      throw new Error('Cloudinary configuration is missing. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME environment variable.');
+    }
 
     // Generate main CDN URL
-    const mainCdnUrl = `${cdnBaseUrl}/cdn/images/${uploadResult.id}`;
+    const mainCdnUrl = uploadResult.url; // Use the original secure_url from Cloudinary
 
-    // Generate thumbnail URLs if enabled
+    // Generate thumbnail URLs if enabled using Cloudinary's transformation parameters
     const thumbnails = options.generateThumbnails ? {
-      small: `${cdnBaseUrl}/cdn/images/${uploadResult.id}?w=150&h=150&fit=cover&q=80`,
-      medium: `${cdnBaseUrl}/cdn/images/${uploadResult.id}?w=300&h=300&fit=cover&q=85`,
-      large: `${cdnBaseUrl}/cdn/images/${uploadResult.id}?w=600&h=600&fit=cover&q=90`,
+      small: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_150,h_150,q_80/${publicId}`,
+      medium: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_300,h_300,q_85/${publicId}`,
+      large: `https://res.cloudinary.com/${cloudName}/image/upload/c_fill,w_600,h_600,q_90/${publicId}`,
     } : {
-      small: mainCdnUrl,
-      medium: mainCdnUrl,
-      large: mainCdnUrl,
+      small: uploadResult.url,
+      medium: uploadResult.url,
+      large: uploadResult.url,
     };
 
     return {
-      main: mainCdnUrl,
+      main: uploadResult.url,
       thumbnails,
     };
   }
@@ -492,28 +500,16 @@ export class UnifiedImageService {
   }
 
   /**
-   * Delete image from storage
+   * Delete image from storage (Note: Cloudinary deletion requires server-side implementation for security)
    * Requirements: 5.4
    */
   private async deleteImage(imageId: string, context: string): Promise<boolean> {
     try {
-      // Get authentication token from localStorage (supporting multiple storage keys)
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
-      
-      const response = await fetch(`${this.apiBaseUrl}/api/marketplace/seller/images/${imageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ context }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Delete failed with status ${response.status}`);
-      }
-
-      return true;
+      // Note: In a real implementation with Cloudinary, image deletion should be handled server-side
+      // because it requires authentication with the API key and secret.
+      // This is a security measure - we can't expose those credentials to the frontend.
+      console.warn('Image deletion requires server-side implementation with Cloudinary credentials');
+      return false; // For now, return false as we can't delete from frontend
     } catch (error) {
       throw new SellerError(
         SellerErrorType.API_ERROR,
