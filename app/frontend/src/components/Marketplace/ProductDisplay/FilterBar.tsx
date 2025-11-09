@@ -12,6 +12,7 @@ import { Button } from '@/design-system/components/Button';
 
 export interface FilterOptions {
   category?: string;
+  mainCategory?: 'physical' | 'digital' | 'nft' | 'service' | 'defi';
   priceRange?: { min?: number; max?: number };
   condition?: 'new' | 'used' | 'refurbished';
   verified?: boolean;
@@ -20,6 +21,13 @@ export interface FilterOptions {
   freeShipping?: boolean;
   inStock?: boolean;
   minRating?: number;
+  // DeFi specific filters
+  defiProtocol?: string;
+  defiAssetType?: 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION';
+  apyRange?: { min?: number; max?: number };
+  riskLevel?: 'low' | 'medium' | 'high';
+  lockPeriod?: { min?: number; max?: number };
+  hasInsurance?: boolean;
 }
 
 interface FilterBarProps {
@@ -44,6 +52,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         key: 'category',
         label: `Category: ${filters.category}`,
         value: filters.category,
+      });
+    }
+
+    if (filters.mainCategory) {
+      active.push({
+        key: 'mainCategory',
+        label: `Type: ${filters.mainCategory}`,
+        value: filters.mainCategory,
       });
     }
 
@@ -91,6 +107,54 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         label: `Rating: ${filters.minRating}+ ⭐`,
         value: filters.minRating,
       });
+    }
+
+    if (filters.defiProtocol) {
+      active.push({
+        key: 'defiProtocol',
+        label: `Protocol: ${filters.defiProtocol}`,
+        value: filters.defiProtocol,
+      });
+    }
+
+    if (filters.defiAssetType) {
+      active.push({
+        key: 'defiAssetType',
+        label: `Asset: ${filters.defiAssetType.replace('_', ' ')}`,
+        value: filters.defiAssetType,
+      });
+    }
+
+    if (filters.apyRange?.min || filters.apyRange?.max) {
+      const min = filters.apyRange.min || 0;
+      const max = filters.apyRange.max || '∞';
+      active.push({
+        key: 'apyRange',
+        label: `APY: ${min}% - ${max}%`,
+        value: filters.apyRange,
+      });
+    }
+
+    if (filters.riskLevel) {
+      active.push({
+        key: 'riskLevel',
+        label: `Risk: ${filters.riskLevel}`,
+        value: filters.riskLevel,
+      });
+    }
+
+    if (filters.lockPeriod?.min || filters.lockPeriod?.max) {
+      const min = filters.lockPeriod.min || 0;
+      const max = filters.lockPeriod.max || '∞';
+      active.push({
+        key: 'lockPeriod',
+        label: `Lock: ${min}d - ${max}d`,
+        value: filters.lockPeriod,
+      });
+    }
+
+    if (filters.hasInsurance) {
+      active.push({ key: 'hasInsurance', label: 'Insured', value: true });
     }
 
     return active;
@@ -200,6 +264,30 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
                 {/* Filter Options */}
                 <div className="space-y-6">
+                  {/* Main Category */}
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      Item Type
+                    </label>
+                    <select
+                      value={filters.mainCategory || ''}
+                      onChange={(e) =>
+                        onFiltersChange({
+                          ...filters,
+                          mainCategory: e.target.value as 'nft' | 'defi' | 'service' | 'physical' | 'digital' | undefined || undefined,
+                        })
+                      }
+                      className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                    >
+                      <option value="">All Types</option>
+                      <option value="physical">Physical Goods</option>
+                      <option value="digital">Digital Goods</option>
+                      <option value="nft">NFTs</option>
+                      <option value="service">Services</option>
+                      <option value="defi">DeFi Collectibles</option>
+                    </select>
+                  </div>
+
                   {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">
@@ -357,6 +445,190 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                       </label>
                     </div>
                   </div>
+
+                  {/* DeFi Filters - Only show when DeFi category is selected */}
+                  {filters.mainCategory === 'defi' && (
+                    <>
+                      {/* DeFi Protocol */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          DeFi Protocol
+                        </label>
+                        <select
+                          value={filters.defiProtocol || ''}
+                          onChange={(e) =>
+                            onFiltersChange({
+                              ...filters,
+                              defiProtocol: e.target.value || undefined,
+                            })
+                          }
+                          className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                        >
+                          <option value="">All Protocols</option>
+                          <option value="uniswap">Uniswap</option>
+                          <option value="compound">Compound</option>
+                          <option value="aave">Aave</option>
+                          <option value="curve">Curve</option>
+                          <option value="balancer">Balancer</option>
+                          <option value="yearn">Yearn Finance</option>
+                          <option value="lido">Lido</option>
+                          <option value="rocketpool">Rocket Pool</option>
+                        </select>
+                      </div>
+
+                      {/* DeFi Asset Type */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Asset Type
+                        </label>
+                        <select
+                          value={filters.defiAssetType || ''}
+                          onChange={(e) =>
+                            onFiltersChange({
+                              ...filters,
+                              defiAssetType: (e.target.value as 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION') || undefined,
+                            })
+                          }
+                          className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                        >
+                          <option value="">All Asset Types</option>
+                          <option value="LP_POSITION">LP Position</option>
+                          <option value="YIELD_TOKEN">Yield Token</option>
+                          <option value="VAULT_SHARE">Vault Share</option>
+                          <option value="GOVERNANCE_POSITION">Governance Position</option>
+                        </select>
+                      </div>
+
+                      {/* APY Range */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          APY Range (%)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Min %"
+                            value={filters.apyRange?.min || ''}
+                            onChange={(e) =>
+                              onFiltersChange({
+                                ...filters,
+                                apyRange: {
+                                  ...filters.apyRange,
+                                  min: e.target.value ? parseFloat(e.target.value) : undefined,
+                                },
+                              })
+                            }
+                            className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Max %"
+                            value={filters.apyRange?.max || ''}
+                            onChange={(e) =>
+                              onFiltersChange({
+                                ...filters,
+                                apyRange: {
+                                  ...filters.apyRange,
+                                  max: e.target.value ? parseFloat(e.target.value) : undefined,
+                                },
+                              })
+                            }
+                            className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Risk Level */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Risk Level
+                        </label>
+                        <div className="space-y-2">
+                          {['low', 'medium', 'high'].map((risk) => (
+                            <label key={risk} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="riskLevel"
+                                checked={filters.riskLevel === risk}
+                                onChange={() =>
+                                  onFiltersChange({
+                                    ...filters,
+                                    riskLevel: risk as any,
+                                  })
+                                }
+                                className="rounded"
+                              />
+                              <span className="text-sm text-white capitalize">
+                                {risk === 'low' && '🟢 '}
+                                {risk === 'medium' && '🟡 '}
+                                {risk === 'high' && '🔴 '}
+                                {risk} Risk
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Lock Period */}
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">
+                          Lock Period (days)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Min days"
+                            value={filters.lockPeriod?.min || ''}
+                            onChange={(e) =>
+                              onFiltersChange({
+                                ...filters,
+                                lockPeriod: {
+                                  ...filters.lockPeriod,
+                                  min: e.target.value ? parseInt(e.target.value) : undefined,
+                                },
+                              })
+                            }
+                            className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Max days"
+                            value={filters.lockPeriod?.max || ''}
+                            onChange={(e) =>
+                              onFiltersChange({
+                                ...filters,
+                                lockPeriod: {
+                                  ...filters.lockPeriod,
+                                  max: e.target.value ? parseInt(e.target.value) : undefined,
+                                },
+                              })
+                            }
+                            className="w-full p-2 rounded text-white bg-white/10 border border-white/20"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Insurance */}
+                      <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={filters.hasInsurance}
+                            onChange={(e) =>
+                              onFiltersChange({
+                                ...filters,
+                                hasInsurance: e.target.checked || undefined,
+                              })
+                            }
+                            className="rounded"
+                          />
+                          <span className="text-sm text-white">
+                            🛡️ Has Insurance Coverage
+                          </span>
+                        </label>
+                      </div>
+                    </>
+                  )}
 
                   {/* Rating */}
                   <div>

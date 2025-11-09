@@ -23,16 +23,42 @@ export const marketplaceProducts = pgTable("marketplace_products", {
   sellerId: uuid("seller_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   title: varchar("title", { length: 500 }).notNull(),
   description: text("description"),
-  category: varchar("category", { length: 100 }),
+  // Enhanced category system
+  mainCategory: varchar("main_category", { length: 50 }).notNull(), // 'physical' | 'digital' | 'nft' | 'service' | 'defi'
+  subCategory: varchar("sub_category", { length: 100 }),
+  tags: jsonb("tags"), // Array of tags
   priceCrypto: numeric("price_crypto", { precision: 20, scale: 8 }).notNull(),
   priceFiat: numeric("price_fiat", { precision: 20, scale: 2 }), // optional display price
   currency: varchar("currency", { length: 10 }).default("USDC"),
   metadataUri: text("metadata_uri"), // e.g. IPFS hash for digital goods
   isPhysical: boolean("is_physical").default(false),
   stock: integer("stock").default(1),
+  // DeFi specific fields
+  defiProtocol: varchar("defi_protocol", { length: 100 }), // Protocol name
+  defiAssetType: varchar("defi_asset_type", { length: 50 }), // 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION'
+  underlyingAssets: jsonb("underlying_assets"), // Array of { address, symbol, weight }
+  currentApy: numeric("current_apy", { precision: 5, scale: 2 }), // Current yield percentage
+  lockPeriod: integer("lock_period"), // Lock period in days
+  maturityDate: timestamp("maturity_date"), // For time-locked positions
+  riskLevel: varchar("risk_level", { length: 20 }).default("medium"), // 'low' | 'medium' | 'high'
+  // Physical goods specific fields
+  weight: numeric("weight", { precision: 10, scale: 3 }), // Weight in kg
+  dimensions: jsonb("dimensions"), // { length, width, height } in cm
+  condition: varchar("condition", { length: 20 }).default("new"), // 'new' | 'used' | 'refurbished'
+  // Service specific fields
+  serviceDuration: integer("service_duration"), // Duration in hours
+  deliveryMethod: varchar("delivery_method", { length: 20 }), // 'online' | 'in-person' | 'hybrid'
   status: varchar("status", { length: 20 }).default("active"), // 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    mainCategoryIdx: index("marketplace_products_main_category_idx").on(table.mainCategory),
+    subCategoryIdx: index("marketplace_products_sub_category_idx").on(table.subCategory),
+    defiProtocolIdx: index("marketplace_products_defi_protocol_idx").on(table.defiProtocol),
+    defiAssetTypeIdx: index("marketplace_products_defi_asset_type_idx").on(table.defiAssetType),
+    riskLevelIdx: index("marketplace_products_risk_level_idx").on(table.riskLevel),
+  };
 });
 
 // Orders (escrow-based transactions)

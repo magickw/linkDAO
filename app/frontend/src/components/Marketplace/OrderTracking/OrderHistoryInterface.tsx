@@ -56,13 +56,13 @@ const transformOrderData = (serviceOrder: any, walletAddress?: string): Order =>
     currency: serviceOrder.currency,
     product: serviceOrder.product || {
       id: serviceOrder.id || '1',
-      title: serviceOrder.product?.title || serviceOrder.title || `Order #${serviceOrder.id}`,
-      description: serviceOrder.product?.description || serviceOrder.description || '',
-      image: serviceOrder.product?.image || serviceOrder.image || '/api/placeholder/400/400',
-      category: serviceOrder.product?.category || serviceOrder.category || '',
-      quantity: serviceOrder.product?.quantity || serviceOrder.quantity || 1,
-      unitPrice: serviceOrder.product?.unitPrice || serviceOrder.unitPrice || serviceOrder.totalAmount || 0,
-      totalPrice: serviceOrder.product?.totalPrice || serviceOrder.totalPrice || serviceOrder.totalAmount || 0
+      title: serviceOrder.product?.title || `Order #${serviceOrder.id}`,
+      description: serviceOrder.product?.description || '',
+      image: serviceOrder.product?.image || '/api/placeholder/400/400',
+      category: serviceOrder.product?.category || '',
+      quantity: serviceOrder.product?.quantity || 1,
+      unitPrice: serviceOrder.product?.unitPrice || serviceOrder.totalAmount || 0,
+      totalPrice: serviceOrder.product?.totalPrice || serviceOrder.totalAmount || 0
     },
     shippingAddress: serviceOrder.shippingAddress,
     billingAddress: serviceOrder.billingAddress,

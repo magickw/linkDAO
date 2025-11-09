@@ -40,10 +40,30 @@ const getMockSuggestions = (query: string): SearchSuggestion[] => {
     'mechanical keyboard',
   ];
 
+  // DeFi specific queries
+  const defiQueries = [
+    'uniswap lp position',
+    'compound yield token',
+    'aave liquidity pool',
+    'curve stablecoin pool',
+    'yearn vault shares',
+    'lido staked eth',
+    'governance token',
+    'high apy defi',
+    'low risk defi',
+    'insured defi position',
+  ];
+
   popularQueries
     .filter((q) => q.includes(lowerQuery))
     .forEach((q) => {
       suggestions.push({ text: q, type: 'query' });
+    });
+
+  defiQueries
+    .filter((q) => q.includes(lowerQuery))
+    .forEach((q) => {
+      suggestions.push({ text: q, type: 'query', category: 'DeFi' });
     });
 
   // Categories
@@ -54,6 +74,10 @@ const getMockSuggestions = (query: string): SearchSuggestion[] => {
     'Sports',
     'Books',
     'Toys',
+    'DeFi',
+    'NFTs',
+    'Services',
+    'Digital Goods',
   ];
 
   categories
@@ -62,8 +86,26 @@ const getMockSuggestions = (query: string): SearchSuggestion[] => {
       suggestions.push({ text: c, category: c, type: 'category' });
     });
 
-  // Limit to 6 suggestions
-  return suggestions.slice(0, 6);
+  // DeFi protocols
+  const defiProtocols = [
+    'Uniswap',
+    'Compound',
+    'Aave',
+    'Curve',
+    'Balancer',
+    'Yearn Finance',
+    'Lido',
+    'Rocket Pool',
+  ];
+
+  defiProtocols
+    .filter((p) => p.toLowerCase().includes(lowerQuery))
+    .forEach((p) => {
+      suggestions.push({ text: p, category: 'DeFi Protocol', type: 'category' });
+    });
+
+  // Limit to 8 suggestions
+  return suggestions.slice(0, 8);
 };
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -228,7 +270,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                     </span>
                   )}
                   {suggestion.type === 'category' && (
-                    <span className="text-xs text-blue-300">Category</span>
+                    <span className="text-xs text-blue-300">
+                      {suggestion.category === 'DeFi Protocol' ? 'Protocol' : 'Category'}
+                    </span>
+                  )}
+                  {suggestion.category === 'DeFi' && (
+                    <span className="text-xs text-purple-300">DeFi</span>
                   )}
                 </button>
               ))}

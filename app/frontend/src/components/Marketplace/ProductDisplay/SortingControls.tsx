@@ -7,7 +7,7 @@ import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 
-export type SortField = 'relevance' | 'price' | 'date' | 'rating' | 'popularity';
+export type SortField = 'relevance' | 'price' | 'date' | 'rating' | 'popularity' | 'apy' | 'risk' | 'liquidity';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortOption {
@@ -30,6 +30,11 @@ const sortOptions: SortOption[] = [
   { field: 'date', direction: 'asc', label: 'Oldest' },
   { field: 'rating', direction: 'desc', label: 'Highest Rated' },
   { field: 'popularity', direction: 'desc', label: 'Most Popular' },
+  { field: 'apy', direction: 'desc', label: 'Highest APY' },
+  { field: 'apy', direction: 'asc', label: 'Lowest APY' },
+  { field: 'risk', direction: 'asc', label: 'Lowest Risk' },
+  { field: 'risk', direction: 'desc', label: 'Highest Risk' },
+  { field: 'liquidity', direction: 'desc', label: 'Highest Liquidity' },
 ];
 
 export const SortingControls: React.FC<SortingControlsProps> = ({

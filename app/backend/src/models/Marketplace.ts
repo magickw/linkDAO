@@ -4,13 +4,21 @@ export interface CreateListingInput {
   tokenAddress: string;
   price: string; // Stored as string to handle big numbers
   quantity: number;
-  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE' | 'DEFI_COLLECTIBLE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration?: number; // For auctions
   metadataURI: string;
   // NFT specific fields
   nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
   tokenId?: string; // Only for NFT items
+  // DeFi collectible specific fields
+  defiProtocol?: string; // e.g., 'uniswap', 'compound', 'aave'
+  defiAssetType?: 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION';
+  underlyingAssets?: Array<{ address: string; symbol: string; weight: number }>;
+  currentApy?: number;
+  lockPeriod?: number;
+  maturityDate?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
   // Auction specific fields
   reservePrice?: string; // For auctions
   minIncrement?: string; // For auctions
@@ -37,7 +45,7 @@ export interface MarketplaceListing {
   tokenAddress: string;
   price: string;
   quantity: number;
-  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE' | 'DEFI_COLLECTIBLE';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   status: 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED';
   startTime: string;
@@ -49,6 +57,14 @@ export interface MarketplaceListing {
   // NFT specific fields
   nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
   tokenId?: string; // Only for NFT items
+  // DeFi collectible specific fields
+  defiProtocol?: string;
+  defiAssetType?: 'LP_POSITION' | 'YIELD_TOKEN' | 'VAULT_SHARE' | 'GOVERNANCE_POSITION';
+  underlyingAssets?: Array<{ address: string; symbol: string; weight: number }>;
+  currentApy?: number;
+  lockPeriod?: number;
+  maturityDate?: string;
+  riskLevel?: 'low' | 'medium' | 'high';
   // Auction specific fields
   reservePrice?: string; // For auctions
   minIncrement?: string; // For auctions
