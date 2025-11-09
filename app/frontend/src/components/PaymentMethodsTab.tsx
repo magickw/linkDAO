@@ -11,7 +11,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { paymentMethodService, PaymentMethod, CreatePaymentMethodInput } from '@/services/paymentMethodService';
 
 export const PaymentMethodsTab: React.FC = () => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,23 +23,42 @@ export const PaymentMethodsTab: React.FC = () => {
   });
 
   useEffect(() => {
-    if (address) {
-      loadPaymentMethods();
-    }
-  }, [address]);
+    const fetchPaymentMethods = async () => {
+      if (walletAddress) {
+        try {
+          setIsLoading(true);
+          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+          setPaymentMethods(methods);
+        } catch (err) {
+          setError('Failed to load payment methods');
+          console.error('Error fetching payment methods:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  const loadPaymentMethods = async () => {
-    try {
-      setLoading(true);
-      const methods = await paymentMethodService.getPaymentMethods(address!);
-      setPaymentMethods(methods);
-    } catch (error) {
-      console.error('Failed to load payment methods:', error);
-      addToast('Failed to load payment methods', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchPaymentMethods();
+  }, [walletAddress]);
+
+  const addPaymentMethod = async (formData: any) => {
+        if (!walletAddress) return;
+        
+        try {
+          setIsAdding(true);
+          await paymentMethodService.addPaymentMethod(walletAddress!, formData);
+          // Refresh the list
+          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+          setPaymentMethods(methods);
+          setIsAdding(false);
+          return true;
+        } catch (err) {
+          setError('Failed to add payment method');
+          console.error('Error adding payment method:', err);
+          setIsAdding(false);
+          return false;
+        }
+      };
 
   const handleAddPaymentMethod = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,15 +74,19 @@ export const PaymentMethodsTab: React.FC = () => {
     }
   };
 
-  const handleSetDefault = async (paymentMethodId: string) => {
-    try {
-      await paymentMethodService.setDefaultPaymentMethod(address!, paymentMethodId);
-      addToast('Default payment method updated', 'success');
-      loadPaymentMethods();
-    } catch (error) {
-      addToast('Failed to update default payment method', 'error');
-    }
-  };
+        const setDefault = async (paymentMethodId: string) => {
+        if (!walletAddress) return;
+        
+        try {
+          await paymentMethodService.setDefaultPaymentMethod(walletAddress!, paymentMethodId);
+          // Refresh the list
+          const methods = await paymentMethodService.getPaymentMethods(walletAddress!);
+          setPaymentMethods(methods);
+        } catch (err) {
+          setError('Failed to set default payment method');
+          console.error('Error setting default payment method:', err);
+        }
+      };
 
   const handleDelete = async (paymentMethodId: string) => {
     if (!confirm('Are you sure you want to delete this payment method?')) return;

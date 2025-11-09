@@ -390,6 +390,12 @@ export class EnhancedWebSocketService {
     }
   }
 
+  public sendToUser(walletAddress: string, event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium') {
+    // For now, we'll just use broadcastToUser since we don't have priority handling in socket.io
+    // In a more advanced implementation, you could use different rooms or channels based on priority
+    return this.broadcastToUser(walletAddress, event, data);
+  }
+
   public broadcastToCommunity(communityId: string, event: string, data: any) {
     try {
       this.io.to(`community:${communityId}`).emit(event, {

@@ -7,11 +7,10 @@ interface RealTimeNotificationsProps {
 }
 
 export default function RealTimeNotifications({ children }: RealTimeNotificationsProps) {
-  const { address } = useWeb3();
+  const { address: walletAddress } = useWeb3();
   const [isConnected, setIsConnected] = useState(false);
 
-  useEffect(() => {
-    if (!address) return;
+  if (!walletAddress) return;
 
     // Simulate real-time notifications
     const interval = setInterval(() => {
@@ -19,26 +18,14 @@ export default function RealTimeNotifications({ children }: RealTimeNotification
       if (process.env.NODE_ENV === 'development') {
         // Randomly generate notifications (10% chance every 5 seconds)
         if (Math.random() < 0.1) {
-          console.log('Simulated notification received');
+          // Add a notification
+          console.log('Generated real-time notification for', walletAddress);
         }
       }
     }, 5000);
 
-    // Simulate connection status changes
-    const connectionInterval = setInterval(() => {
-      setIsConnected(prev => {
-        // 95% chance to stay connected
-        if (Math.random() < 0.95) return prev;
-        return !prev;
-      });
-    }, 10000);
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(connectionInterval);
-      setIsConnected(false);
-    };
-  }, [address]);
+    return () => clearInterval(interval);
+  }, [walletAddress]);
 
   // Show connection status indicator
   const showConnectionStatus = process.env.NODE_ENV === 'development';
@@ -46,22 +33,14 @@ export default function RealTimeNotifications({ children }: RealTimeNotification
   return (
     <>
       {children}
-      {showConnectionStatus && address && (
-        <div className="fixed bottom-4 left-4 z-40">
-          <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm ${
-            isConnected 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500' : 'bg-red-500'
-            } ${isConnected ? 'animate-pulse' : ''}`}></div>
-            <span>
-              {isConnected ? 'Real-time connected' : 'Reconnecting...'}
-            </span>
-          </div>
-        </div>
-      )}
+                {showConnectionStatus && walletAddress && (
+            <div className="mb-2 p-3 bg-green-600/20 border border-green-500/30 rounded-lg">
+              <span className="text-green-400 text-sm flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                Connected as {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+              </span>
+            </div>
+          )}
     </>
   );
 }

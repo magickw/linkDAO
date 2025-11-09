@@ -71,7 +71,7 @@ interface ListingDetailPageProps {
 
 const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   
   const [listing, setListing] = useState<ListingData | null>(null);
   const [loading, setLoading] = useState(true);

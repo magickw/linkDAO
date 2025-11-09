@@ -49,7 +49,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
   timeframe = 'month',
   className = ''
 }) => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const [analytics, setAnalytics] = useState<PaymentMethodAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>(timeframe);
@@ -66,7 +66,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
     setLoading(true);
     try {
       // Using getOrdersByUser instead of getPaymentMethodAnalytics
-      const orders = await orderService.getOrdersByUser(address);
+      const orders = await orderService.getOrdersByUser(walletAddress);
       
       // Derive analytics data from orders
       const analyticsData: PaymentMethodAnalytics = {

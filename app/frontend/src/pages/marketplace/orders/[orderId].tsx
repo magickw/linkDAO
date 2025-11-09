@@ -66,7 +66,7 @@ const loadFallbackOrder = (orderId: string): Order | null => {
 const OrderDetailPage: React.FC = () => {
   const router = useRouter();
   const { orderId } = router.query;
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -80,7 +80,7 @@ const OrderDetailPage: React.FC = () => {
     const convertedOrder: Order = {
       id: serviceOrder.id,
       listingId: serviceOrder.id, // Using order.id as listingId since it's not available
-      buyerAddress: address || '', // Using current user's address as buyer
+      buyerAddress: walletAddress || '', // Using current user's address as buyer
       sellerAddress: serviceOrder.seller?.id || '', // Using seller id as address
       status: serviceOrder.status,
       amount: serviceOrder.total.toString(),
@@ -356,7 +356,7 @@ const OrderDetailPage: React.FC = () => {
                 className="w-full"
                 onClick={async () => {
                   try {
-                    if (!address) {
+                    if (!walletAddress) {
                       addToast('Connect your wallet to export receipts.', 'info');
                       return;
                     }

@@ -1,41 +1,62 @@
-/**
- * Advanced Analytics Routes
- * API routes for marketplace analytics and insights
- */
+import express from 'express';
+import { AdvancedAnalyticsController } from '../controllers/advancedAnalyticsController';
+import { authMiddleware } from '../middleware/authMiddleware';
 
-import { Router } from 'express';
-import { csrfProtection } from '../middleware/csrfProtection';
-import {
-  getMarketplaceAnalytics,
-  getTimeSeriesData,
-  getAnalyticsInsights,
-  getRealTimeMetrics,
-  getUserBehaviorAnalytics,
-  getSellerPerformanceAnalytics,
-  exportAnalyticsData,
-  configureAnalyticsAlerts,
-  getDashboardData
-} from '../controllers/advancedAnalyticsController';
+const router = express.Router();
+const advancedAnalyticsController = new AdvancedAnalyticsController();
 
-const router = Router();
+// Get comprehensive marketplace analytics
+router.get('/marketplace', 
+  authMiddleware, 
+  advancedAnalyticsController.getMarketplaceAnalytics.bind(advancedAnalyticsController)
+);
 
-// Main analytics endpoints
-router.get('/overview', getMarketplaceAnalytics);
-router.get('/dashboard', getDashboardData);
-router.get('/realtime', getRealTimeMetrics);
-router.get('/insights', getAnalyticsInsights);
+// Get time series data for a specific metric
+router.get('/timeseries', 
+  authMiddleware, 
+  advancedAnalyticsController.getTimeSeriesData.bind(advancedAnalyticsController)
+);
 
-// Time series data
-router.get('/metrics/:metric/timeseries', getTimeSeriesData);
+// Generate AI-powered insights
+router.get('/insights', 
+  authMiddleware, 
+  advancedAnalyticsController.generateInsights.bind(advancedAnalyticsController)
+);
 
-// Specific analytics types
-router.get('/user-behavior', getUserBehaviorAnalytics);
-router.get('/seller-performance', getSellerPerformanceAnalytics);
+// Get real-time metrics
+router.get('/realtime', 
+  authMiddleware, 
+  advancedAnalyticsController.getRealTimeMetrics.bind(advancedAnalyticsController)
+);
 
-// Data export
-router.get('/export', exportAnalyticsData);
+// Get user behavior analytics
+router.get('/user-behavior', 
+  authMiddleware, 
+  advancedAnalyticsController.getUserBehaviorAnalytics.bind(advancedAnalyticsController)
+);
 
-// Configuration
-router.post('/alerts/configure', csrfProtection,  configureAnalyticsAlerts);
+// Get seller performance analytics
+router.get('/seller-performance/:sellerId?', 
+  authMiddleware, 
+  advancedAnalyticsController.getSellerPerformanceAnalytics.bind(advancedAnalyticsController)
+);
+
+// Get all seller performance analytics (aggregated)
+router.get('/seller-performance', 
+  authMiddleware, 
+  advancedAnalyticsController.getAllSellerPerformanceAnalytics.bind(advancedAnalyticsController)
+);
+
+// Export analytics data
+router.get('/export', 
+  authMiddleware, 
+  advancedAnalyticsController.exportAnalyticsData.bind(advancedAnalyticsController)
+);
+
+// Configure analytics alerts
+router.post('/alerts', 
+  authMiddleware, 
+  advancedAnalyticsController.configureAlerts.bind(advancedAnalyticsController)
+);
 
 export { router as advancedAnalyticsRouter };

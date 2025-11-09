@@ -3,9 +3,10 @@
  * Provides comprehensive marketplace analytics and insights
  */
 
-import { eq, and, desc, sql, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, sql, gte, lte, count, sum, avg, max } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db';
+import { db } from '../db/connection';
+import { orders, users, sellers, products } from '../db/schema';
 
 export interface AnalyticsTimeRange {
   start: Date;
@@ -75,39 +76,97 @@ export class AdvancedAnalyticsService {
    */
   async getMarketplaceAnalytics(timeRange: AnalyticsTimeRange): Promise<MarketplaceAnalytics> {
     try {
-      // In a real implementation, this would query the database
-      // For now, return comprehensive mock data
+      const { start, end } = timeRange;
+      const dateFilter = and(gte(orders.createdAt, start), lte(orders.createdAt, end));
       
-      const mockAnalytics: MarketplaceAnalytics = {
+      // Get current period data
+      const [
+        currentOrders,
+        currentUsers,
+        currentSellers
+      ] = await Promise.all([
+        db.select({
+          totalRevenue: sum(orders.amount),
+          totalTransactions: count(),
+          averageOrderValue: avg(orders.amount)
+        }).from(orders).where(dateFilter),
+        db.select({ count: count() }).from(users),
+        db.select({ count: count() }).from(sellers)
+      ]);
+      
+      // Get previous period data for growth calculations
+      const previousStart = new Date(start);
+      const previousEnd = new Date(end);
+      const timeDiff = end.getTime() - start.getTime();
+      
+      previousStart.setTime(previousStart.getTime() - timeDiff);
+      previousEnd.setTime(previousEnd.getTime() - timeDiff);
+      
+      const previousDateFilter = and(gte(orders.createdAt, previousStart), lte(orders.createdAt, previousEnd));
+      
+      const [
+        previousOrders,
+        previousUsers
+      ] = await Promise.all([
+        db.select({
+          totalRevenue: sum(orders.amount),
+          totalTransactions: count(),
+          averageOrderValue: avg(orders.amount)
+        }).from(orders).where(previousDateFilter),
+        db.select({ count: count() }).from(users).where(gte(users.createdAt, previousStart))
+      ]);
+      
+      // Calculate growth rates
+      const currentOrderData = currentOrders[0] || { totalRevenue: '0', totalTransactions: '0', averageOrderValue: '0' };
+      const previousOrderData = previousOrders[0] || { totalRevenue: '0', totalTransactions: '0', averageOrderValue: '0' };
+      
+      const revenueGrowth = previousOrderData.totalRevenue !== '0' 
+        ? ((parseFloat(currentOrderData.totalRevenue) - parseFloat(previousOrderData.totalRevenue)) / parseFloat(previousOrderData.totalRevenue)) * 100
+        : 0;
+        
+      const transactionGrowth = previousOrderData.totalTransactions !== '0'
+        ? ((parseInt(currentOrderData.totalTransactions) - parseInt(previousOrderData.totalTransactions)) / parseInt(previousOrderData.totalTransactions)) * 100
+        : 0;
+        
+      const userGrowth = previousUsers[0]?.count !== 0
+        ? ((currentUsers[0].count - previousUsers[0].count) / previousUsers[0].count) * 100
+        : 0;
+      
+      // Geographic and category data (mocked for now as we don't have this data in schema)
+      const geographicData = {
+        'North America': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.42, users: Math.floor(currentUsers[0].count * 0.42), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.42) },
+        'Europe': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.35, users: Math.floor(currentUsers[0].count * 0.35), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.35) },
+        'Asia': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.18, users: Math.floor(currentUsers[0].count * 0.18), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.18) },
+        'Other': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.05, users: Math.floor(currentUsers[0].count * 0.05), transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.05) }
+      };
+      
+      const categories = {
+        'NFTs': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.45, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.45), growth: 12.5 },
+        'Digital Goods': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.28, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.28), growth: 8.3 },
+        'Physical Items': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.18, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.18), growth: 5.7 },
+        'Services': { revenue: parseFloat(currentOrderData.totalRevenue) * 0.09, transactions: Math.floor(parseInt(currentOrderData.totalTransactions) * 0.09), growth: 3.2 }
+      };
+      
+      const analytics: MarketplaceAnalytics = {
         overview: {
-          totalRevenue: 245.8,
-          totalTransactions: 1247,
-          activeUsers: 5892,
-          averageOrderValue: 0.197,
-          customerSatisfaction: 4.7,
-          disputeRate: 1.2
+          totalRevenue: parseFloat(currentOrderData.totalRevenue),
+          totalTransactions: parseInt(currentOrderData.totalTransactions),
+          activeUsers: currentUsers[0].count,
+          averageOrderValue: parseFloat(currentOrderData.averageOrderValue),
+          customerSatisfaction: 4.7, // Mocked for now
+          disputeRate: 1.2 // Mocked for now
         },
         growth: {
-          revenueGrowth: 12.5,
-          userGrowth: -2.1,
-          transactionGrowth: 8.3
+          revenueGrowth: parseFloat(revenueGrowth.toFixed(2)),
+          userGrowth: parseFloat(userGrowth.toFixed(2)),
+          transactionGrowth: parseFloat(transactionGrowth.toFixed(2))
         },
-        geographic: {
-          'North America': { revenue: 103.2, users: 2475, transactions: 524 },
-          'Europe': { revenue: 86.0, users: 2062, transactions: 436 },
-          'Asia': { revenue: 44.3, users: 1060, transactions: 225 },
-          'Other': { revenue: 12.3, users: 295, transactions: 62 }
-        },
-        categories: {
-          'NFTs': { revenue: 110.6, transactions: 328, growth: 25.3 },
-          'Digital Goods': { revenue: 68.8, transactions: 412, growth: 15.7 },
-          'Physical Items': { revenue: 44.2, transactions: 356, growth: 8.9 },
-          'Services': { revenue: 22.1, transactions: 151, growth: -3.2 }
-        },
+        geographic: geographicData,
+        categories,
         timeRange
       };
 
-      return mockAnalytics;
+      return analytics;
     } catch (error) {
       safeLogger.error('Error getting marketplace analytics:', error);
       throw error;
@@ -123,74 +182,184 @@ export class AdvancedAnalyticsService {
     granularity: 'hour' | 'day' | 'week' | 'month' = 'day'
   ): Promise<TimeSeriesPoint[]> {
     try {
-      // Generate mock time series data
-      const points: TimeSeriesPoint[] = [];
       const { start, end } = timeRange;
-      const totalMs = end.getTime() - start.getTime();
+      const points: TimeSeriesPoint[] = [];
       
-      let intervalMs: number;
-      let pointCount: number;
-      
+      // Generate time series data based on granularity
       switch (granularity) {
         case 'hour':
-          intervalMs = 60 * 60 * 1000; // 1 hour
-          pointCount = Math.min(Math.floor(totalMs / intervalMs), 168); // Max 7 days of hourly data
-          break;
-        case 'day':
-          intervalMs = 24 * 60 * 60 * 1000; // 1 day
-          pointCount = Math.min(Math.floor(totalMs / intervalMs), 90); // Max 90 days
-          break;
-        case 'week':
-          intervalMs = 7 * 24 * 60 * 60 * 1000; // 1 week
-          pointCount = Math.min(Math.floor(totalMs / intervalMs), 52); // Max 1 year
-          break;
-        case 'month':
-          intervalMs = 30 * 24 * 60 * 60 * 1000; // ~1 month
-          pointCount = Math.min(Math.floor(totalMs / intervalMs), 24); // Max 2 years
-          break;
-      }
-      
-      // Generate realistic data based on metric type
-      const getBaseValue = (metric: string): number => {
-        switch (metric) {
-          case 'revenue': return 8.2;
-          case 'transactions': return 42;
-          case 'users': return 195;
-          case 'gas_savings': return 0.6;
-          case 'dispute_rate': return 1.2;
-          default: return 100;
-        }
-      };
-      
-      const getVariance = (metric: string): number => {
-        switch (metric) {
-          case 'revenue': return 3.5;
-          case 'transactions': return 15;
-          case 'users': return 50;
-          case 'gas_savings': return 0.3;
-          case 'dispute_rate': return 0.4;
-          default: return 20;
-        }
-      };
-      
-      const baseValue = getBaseValue(metric);
-      const variance = getVariance(metric);
-      
-      for (let i = 0; i < pointCount; i++) {
-        const timestamp = new Date(start.getTime() + i * intervalMs);
-        const randomFactor = (Math.random() - 0.5) * 2; // -1 to 1
-        const trendFactor = i / pointCount * 0.2; // Slight upward trend
-        const value = Math.max(0, baseValue + (randomFactor * variance) + (trendFactor * baseValue));
-        
-        points.push({
-          timestamp,
-          value: parseFloat(value.toFixed(4)),
-          metadata: {
-            granularity,
-            period: i
+          // Hourly data for last 24-48 hours
+          for (let i = 0; i < 48; i++) {
+            const timestamp = new Date(end.getTime() - i * 60 * 60 * 1000);
+            // Get data for this hour
+            const hourStart = new Date(timestamp);
+            hourStart.setMinutes(0, 0, 0);
+            const hourEnd = new Date(hourStart);
+            hourEnd.setHours(hourStart.getHours() + 1);
+            
+            const dateFilter = and(gte(orders.createdAt, hourStart), lte(orders.createdAt, hourEnd));
+            
+            let value = 0;
+            switch (metric) {
+              case 'revenue':
+                const revenueResult = await db.select({ total: sum(orders.amount) }).from(orders).where(dateFilter);
+                value = parseFloat(revenueResult[0]?.total || '0');
+                break;
+              case 'transactions':
+                const transactionResult = await db.select({ count: count() }).from(orders).where(dateFilter);
+                value = transactionResult[0]?.count || 0;
+                break;
+              case 'users':
+                const userResult = await db.select({ count: count() }).from(users).where(gte(users.createdAt, hourStart));
+                value = userResult[0]?.count || 0;
+                break;
+              default:
+                value = Math.random() * 100;
+            }
+            
+            points.push({
+              timestamp: hourStart,
+              value: parseFloat(value.toFixed(4)),
+              metadata: {
+                granularity,
+                period: i
+              }
+            });
           }
-        });
+          break;
+          
+        case 'day':
+          // Daily data for the selected time range
+          const totalDays = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+          const maxDays = Math.min(totalDays, 90); // Limit to 90 days max
+          
+          for (let i = 0; i < maxDays; i++) {
+            const timestamp = new Date(end.getTime() - i * 24 * 60 * 60 * 1000);
+            // Get data for this day
+            const dayStart = new Date(timestamp);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(dayStart);
+            dayEnd.setDate(dayStart.getDate() + 1);
+            
+            const dateFilter = and(gte(orders.createdAt, dayStart), lte(orders.createdAt, dayEnd));
+            
+            let value = 0;
+            switch (metric) {
+              case 'revenue':
+                const revenueResult = await db.select({ total: sum(orders.amount) }).from(orders).where(dateFilter);
+                value = parseFloat(revenueResult[0]?.total || '0');
+                break;
+              case 'transactions':
+                const transactionResult = await db.select({ count: count() }).from(orders).where(dateFilter);
+                value = transactionResult[0]?.count || 0;
+                break;
+              case 'users':
+                const userResult = await db.select({ count: count() }).from(users).where(gte(users.createdAt, dayStart));
+                value = userResult[0]?.count || 0;
+                break;
+              default:
+                value = Math.random() * 1000;
+            }
+            
+            points.push({
+              timestamp: dayStart,
+              value: parseFloat(value.toFixed(4)),
+              metadata: {
+                granularity,
+                period: i
+              }
+            });
+          }
+          break;
+          
+        case 'week':
+          // Weekly data
+          for (let i = 0; i < 52; i++) {
+            const timestamp = new Date(end.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+            // Get data for this week
+            const weekStart = new Date(timestamp);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 7);
+            
+            const dateFilter = and(gte(orders.createdAt, weekStart), lte(orders.createdAt, weekEnd));
+            
+            let value = 0;
+            switch (metric) {
+              case 'revenue':
+                const revenueResult = await db.select({ total: sum(orders.amount) }).from(orders).where(dateFilter);
+                value = parseFloat(revenueResult[0]?.total || '0');
+                break;
+              case 'transactions':
+                const transactionResult = await db.select({ count: count() }).from(orders).where(dateFilter);
+                value = transactionResult[0]?.count || 0;
+                break;
+              case 'users':
+                const userResult = await db.select({ count: count() }).from(users).where(gte(users.createdAt, weekStart));
+                value = userResult[0]?.count || 0;
+                break;
+              default:
+                value = Math.random() * 5000;
+            }
+            
+            points.push({
+              timestamp: weekStart,
+              value: parseFloat(value.toFixed(4)),
+              metadata: {
+                granularity,
+                period: i
+              }
+            });
+          }
+          break;
+          
+        case 'month':
+          // Monthly data
+          for (let i = 0; i < 24; i++) {
+            const timestamp = new Date(end);
+            timestamp.setMonth(timestamp.getMonth() - i);
+            // Get data for this month
+            const monthStart = new Date(timestamp);
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
+            const monthEnd = new Date(monthStart);
+            monthEnd.setMonth(monthStart.getMonth() + 1);
+            
+            const dateFilter = and(gte(orders.createdAt, monthStart), lte(orders.createdAt, monthEnd));
+            
+            let value = 0;
+            switch (metric) {
+              case 'revenue':
+                const revenueResult = await db.select({ total: sum(orders.amount) }).from(orders).where(dateFilter);
+                value = parseFloat(revenueResult[0]?.total || '0');
+                break;
+              case 'transactions':
+                const transactionResult = await db.select({ count: count() }).from(orders).where(dateFilter);
+                value = transactionResult[0]?.count || 0;
+                break;
+              case 'users':
+                const userResult = await db.select({ count: count() }).from(users).where(gte(users.createdAt, monthStart));
+                value = userResult[0]?.count || 0;
+                break;
+              default:
+                value = Math.random() * 20000;
+            }
+            
+            points.push({
+              timestamp: monthStart,
+              value: parseFloat(value.toFixed(4)),
+              metadata: {
+                granularity,
+                period: i
+              }
+            });
+          }
+          break;
       }
+      
+      // Sort points by timestamp
+      points.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
       
       return points;
     } catch (error) {
@@ -359,10 +528,16 @@ export class AdvancedAnalyticsService {
     escrowVolume: number;
   }> {
     try {
-      // Simulate real-time data
+      // Get real-time data from database
+      const [userCount, orderCount] = await Promise.all([
+        db.select({ count: count() }).from(users),
+        db.select({ count: count() }).from(orders)
+      ]);
+      
+      // Simulate some real-time data
       return {
-        activeUsers: Math.floor(Math.random() * 50) + 150,
-        liveTransactions: Math.floor(Math.random() * 10) + 5,
+        activeUsers: userCount[0].count,
+        liveTransactions: orderCount[0].count,
         gasPrice: parseFloat((Math.random() * 50 + 20).toFixed(1)),
         networkLoad: Math.floor(Math.random() * 30) + 70,
         pendingDisputes: Math.floor(Math.random() * 5) + 1,
@@ -385,6 +560,9 @@ export class AdvancedAnalyticsService {
     userJourney: Array<{ step: string; dropoffRate: number; }>;
   }> {
     try {
+      // In a real implementation, this would query user behavior data from analytics tables
+      // For now, return realistic mock data based on typical marketplace behavior
+      
       return {
         sessionDuration: 8.5, // minutes
         bounceRate: 32.1, // percentage
@@ -432,19 +610,77 @@ export class AdvancedAnalyticsService {
     };
   }> {
     try {
+      // If a specific seller is requested, get their data
+      if (sellerId) {
+        // Get seller-specific data
+        const sellerData = await db.select().from(sellers).where(eq(sellers.id, sellerId));
+        const sellerOrders = await db.select({
+          totalRevenue: sum(orders.amount),
+          totalOrders: count(),
+          averageOrderValue: avg(orders.amount)
+        }).from(orders).where(eq(orders.sellerId, sellerId));
+        
+        if (sellerData.length === 0) {
+          throw new Error('Seller not found');
+        }
+        
+        const orderData = sellerOrders[0] || { totalRevenue: '0', totalOrders: '0', averageOrderValue: '0' };
+        
+        return {
+          topSellers: [
+            {
+              id: sellerData[0].id,
+              name: sellerData[0].name || `Seller ${sellerData[0].id.slice(0, 8)}`,
+              revenue: parseFloat(orderData.totalRevenue),
+              orders: parseInt(orderData.totalOrders),
+              rating: 4.5, // Mocked for now
+              growth: 12.5 // Mocked for now
+            }
+          ],
+          averageMetrics: {
+            orderValue: parseFloat(orderData.averageOrderValue),
+            responseTime: 2.3, // hours - mocked for now
+            fulfillmentTime: 18.5, // hours - mocked for now
+            customerSatisfaction: 4.6 // mocked for now
+          }
+        };
+      }
+      
+      // Get top sellers data
+      const topSellersQuery = await db.select({
+        sellerId: orders.sellerId,
+        totalRevenue: sum(orders.amount),
+        totalOrders: count(),
+      })
+      .from(orders)
+      .groupBy(orders.sellerId)
+      .orderBy(desc(sum(orders.amount)))
+      .limit(10);
+      
+      const topSellers = await Promise.all(topSellersQuery.map(async (sellerData) => {
+        const sellerInfo = await db.select().from(sellers).where(eq(sellers.id, sellerData.sellerId));
+        return {
+          id: sellerData.sellerId,
+          name: sellerInfo[0]?.name || `Seller ${sellerData.sellerId.slice(0, 8)}`,
+          revenue: parseFloat(sellerData.totalRevenue),
+          orders: parseInt(sellerData.totalOrders),
+          rating: 4.5, // Mocked for now
+          growth: 12.5 // Mocked for now
+        };
+      }));
+      
+      // Calculate average metrics
+      const totalRevenue = topSellers.reduce((sum, seller) => sum + seller.revenue, 0);
+      const totalOrders = topSellers.reduce((sum, seller) => sum + seller.orders, 0);
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
       return {
-        topSellers: [
-          { id: 'seller_1', name: 'CryptoArt Studio', revenue: 42.8, orders: 156, rating: 4.9, growth: 23.4 },
-          { id: 'seller_2', name: 'Digital Goods Pro', revenue: 38.5, orders: 203, rating: 4.7, growth: 18.9 },
-          { id: 'seller_3', name: 'NFT Masterworks', revenue: 31.2, orders: 89, rating: 4.8, growth: 15.6 },
-          { id: 'seller_4', name: 'Tech Gadgets Hub', revenue: 27.9, orders: 167, rating: 4.6, growth: 12.3 },
-          { id: 'seller_5', name: 'Artisan Crafts', revenue: 24.1, orders: 134, rating: 4.5, growth: 8.7 }
-        ],
+        topSellers,
         averageMetrics: {
-          orderValue: 0.197,
-          responseTime: 2.3, // hours
-          fulfillmentTime: 18.5, // hours
-          customerSatisfaction: 4.6
+          orderValue: averageOrderValue,
+          responseTime: 2.3, // hours - mocked for now
+          fulfillmentTime: 18.5, // hours - mocked for now
+          customerSatisfaction: 4.6 // mocked for now
         }
       };
     } catch (error) {

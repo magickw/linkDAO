@@ -48,7 +48,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onClose, 
   onUpdate 
 }) => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [timeline, setTimeline] = useState<OrderEvent[]>([]);
@@ -220,7 +220,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             try {
               // If order has escrow, open dispute on escrow
               if (currentOrder.escrowId) {
-                await marketplaceService.openDispute(currentOrder.escrowId, address!, reason);
+                await marketplaceService.openDispute(currentOrder.escrowId, walletAddress!, reason);
                 addToast('Dispute opened successfully', 'success');
               } else {
                 addToast('This order does not have escrow protection', 'warning');

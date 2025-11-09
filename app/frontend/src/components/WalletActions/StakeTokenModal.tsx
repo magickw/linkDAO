@@ -13,7 +13,7 @@ interface StakeTokenModalProps {
 
 export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: StakeTokenModalProps) {
   const { addToast } = useToast();
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const [selectedPool, setSelectedPool] = useState<StakingPool | null>(null);
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +35,8 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
         setStakingPools(pools);
         
         // If we have user address, fetch user staking info
-        if (address) {
-          const userInfo = await stakingService.getUserStakingInfo(address);
+        if (walletAddress) {
+          const userInfo = await stakingService.getUserStakingInfo(walletAddress);
           setUserStakingInfo(userInfo);
         }
       } catch (err) {
@@ -48,7 +48,7 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen, address]);
+  }, [isOpen, walletAddress]);
 
   const getRiskColor = (risk: string) => {
     switch (risk) {

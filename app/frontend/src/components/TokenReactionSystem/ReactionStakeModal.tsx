@@ -20,7 +20,7 @@ const ReactionStakeModal: React.FC<ReactionStakeModalProps> = ({
   onClose,
   isLoading = false
 }) => {
-  const { address } = useWeb3();
+  const { address: walletAddress } = useWeb3();
   const [stakeAmount, setStakeAmount] = useState('');
   const [userBalance, setUserBalance] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);

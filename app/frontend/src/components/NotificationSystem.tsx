@@ -4,7 +4,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useRouter } from 'next/router';
 
 export default function NotificationSystem() {
-  const { address } = useWeb3();
+  const { address: walletAddress } = useWeb3();
   const [visible, setVisible] = useState(false);
   const router = useRouter();
   
@@ -33,9 +33,7 @@ export default function NotificationSystem() {
     setVisible(false);
   };
 
-  if (!address) {
-    return null;
-  }
+  if (!walletAddress) return;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

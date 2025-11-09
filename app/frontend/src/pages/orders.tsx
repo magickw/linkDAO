@@ -30,7 +30,7 @@ type OrderSort = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
 
 const OrdersPage: React.FC = () => {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -49,7 +49,7 @@ const OrdersPage: React.FC = () => {
     
     setLoading(true);
     try {
-      const userOrders = await orderService.getOrdersByUser(address);
+      const userOrders = await orderService.getOrdersByUser(walletAddress);
       setOrders(userOrders);
     } catch (error) {
       console.error('Failed to load orders:', error);

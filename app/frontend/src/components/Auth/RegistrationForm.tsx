@@ -45,7 +45,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { register } = useAuth();
 
   const validateForm = (): boolean => {
@@ -69,43 +69,17 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!address) {
-      onError?.('Please connect your wallet first');
+  if (!walletAddress) {
+      setErrors({ ...errors, submit: 'Wallet not connected. Please connect your wallet first.' });
       return;
     }
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    try {
-      setIsSubmitting(true);
-      
-      const result = await register({
-        address,
-        handle: formData.handle,
-        ens: formData.ens || undefined,
-        email: formData.email || undefined,
-        preferences: formData.preferences,
-        privacySettings: formData.privacySettings
-      });
-      
-      if (result.success) {
-        onSuccess?.();
-      } else {
-        onError?.(result.error || 'Registration failed');
-      }
-    } catch (error: any) {
-      console.error('Registration failed:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      onError?.(errorMessage || 'Registration failed');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
+    // Call the registration function with the form data and connected wallet address
+    register({
+      ...formData,
+      address: walletAddress,
+      profileCid: JSON.stringify(profileData)
+    });
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({

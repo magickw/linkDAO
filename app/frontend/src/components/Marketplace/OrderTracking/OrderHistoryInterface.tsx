@@ -50,7 +50,7 @@ const OrderHistoryInterface: React.FC<OrderHistoryInterfaceProps> = ({
   userType,
   className = ''
 }) => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
 
   // State management
@@ -92,86 +92,18 @@ const OrderHistoryInterface: React.FC<OrderHistoryInterfaceProps> = ({
     }
   }, [address, userType, currentPage, sortBy, sortOrder, filters]);
 
-  const loadOrders = async () => {
-    if (!address) return;
-    
-    setLoading(true);
-    try {
-      const result = await orderService.getOrdersByUser(address);
-      // Transform the service Order type to the types/order.ts Order type
-      const transformedOrders = result.map(order => {
-        // Create a minimal Order object that matches the types/order.ts interface
-        const transformedOrder: Order = {
-          id: order.id,
-          listingId: order.id, // Using order.id as listingId since it's not available
-          buyerAddress: address || '', // Using current user's address as buyer
-          sellerAddress: order.seller.id, // Using seller id as address
-          status: order.status,
-          amount: order.total.toString(),
-          paymentToken: order.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
-          paymentMethod: order.paymentMethod,
-          totalAmount: order.total,
-          currency: order.currency,
-          product: {
-            id: order.items[0]?.id || '1',
-            title: order.items[0]?.title || `Order #${order.id}`,
-            description: '',
-            image: order.items[0]?.image || '/api/placeholder/400/400',
-            category: '',
-            quantity: order.items[0]?.quantity || 1,
-            unitPrice: order.items[0]?.unitPrice || order.total,
-            totalPrice: order.items[0]?.totalPrice || order.total
-          },
-          shippingAddress: undefined,
-          billingAddress: undefined,
-          trackingNumber: order.trackingNumber,
-          trackingCarrier: undefined,
-          estimatedDelivery: order.estimatedDelivery?.toISOString(),
-          actualDelivery: undefined,
-          deliveryConfirmation: undefined,
-          orderNotes: undefined,
-          orderMetadata: undefined,
-          createdAt: order.createdAt.toISOString(),
-          updatedAt: order.createdAt.toISOString(),
-          timeline: [],
-          trackingInfo: undefined,
-          disputeId: undefined,
-          canConfirmDelivery: false,
-          canOpenDispute: false,
-          canCancel: false,
-          canRefund: false,
-          isEscrowProtected: false,
-          daysUntilAutoComplete: 0
-        };
-        return transformedOrder;
-      });
+  try {
+      setLoading(true);
+      setError(null);
       
-      const paginatedResult: PaginatedOrders = {
-        orders: transformedOrders,
-        total: transformedOrders.length,
-        page: 1,
-        limit: displayPreferences.itemsPerPage,
-        totalPages: Math.ceil(transformedOrders.length / displayPreferences.itemsPerPage)
-      };
-      setOrders(paginatedResult);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      addToast('Failed to load orders', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Fetch orders for the current user
+      const orders = await orderService.getOrdersByUser(walletAddress);
 
-  const handleSearch = async (query: OrderSearchQuery) => {
-    if (!address) return;
-    
-    setLoading(true);
-    setSearchQuery(query);
-    setCurrentPage(1);
-    
-    try {
-      // Using getOrdersByUser as searchOrders doesn't exist
-      const result = await orderService.getOrdersByUser(address);
+  try {
+      setIsRefreshing(true);
+      
+      // Fetch fresh orders for the current user
+      const result = await orderService.getOrdersByUser(walletAddress);
       // Transform the service Order type to the types/order.ts Order type
       const transformedOrders = result.map(order => {
         // Create a minimal Order object that matches the types/order.ts interface

@@ -113,7 +113,7 @@ const filterConfig: Array<{ key: FilterKey; label: string }> = [
 ];
 
 const OrdersPage: React.FC = () => {
-  const { address } = useAccount();
+  const { address: walletAddress } = useAccount();
   const router = useRouter();
   const { addToast } = useToast();
 
@@ -127,7 +127,7 @@ const OrdersPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     const loadOrders = async () => {
-      if (!address) {
+      if (!walletAddress) {
         const localOrders = sessionStorage.getItem(RECENT_ORDERS_KEY);
         setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
         setStats(null);
@@ -137,7 +137,7 @@ const OrdersPage: React.FC = () => {
       setLoading(true);
       try {
         // Use getOrdersByUser instead of getOrderHistory since it doesn't exist
-        const orders = await orderService.getOrdersByUser(address);
+        const orders = await orderService.getOrdersByUser(walletAddress);
         
         // Mock statistics since getOrderStatistics doesn't exist
         const statusBreakdown: Record<OrderStatus, number> = {
@@ -270,7 +270,7 @@ const OrdersPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [address, addToast]);
+  }, [walletAddress, addToast]);
 
   const filteredOrders = useMemo(() => {
     switch (filter) {

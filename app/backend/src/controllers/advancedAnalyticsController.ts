@@ -1,279 +1,287 @@
-/**
- * Advanced Analytics Controller
- * Handles API endpoints for marketplace analytics and insights
- */
-
 import { Request, Response } from 'express';
-import { sanitizeWalletAddress, sanitizeString, sanitizeNumber } from '../utils/inputSanitization';
 import { safeLogger } from '../utils/safeLogger';
-import { AdvancedAnalyticsService, AnalyticsTimeRange } from '../services/advancedAnalyticsService';
+import { AdvancedAnalyticsService } from '../services/advancedAnalyticsService';
 
 const advancedAnalyticsService = new AdvancedAnalyticsService();
 
-/**
- * Parse time range from query parameters
- */
-function parseTimeRange(timeframe: string): AnalyticsTimeRange {
-  const end = new Date();
-  let start: Date;
-  let period: AnalyticsTimeRange['period'];
-  
-  switch (timeframe) {
-    case '24h':
-      start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-      period = '24h';
-      break;
-    case '7d':
-      start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
-      period = '7d';
-      break;
-    case '30d':
-      start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
-      period = '30d';
-      break;
-    case '90d':
-      start = new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000);
-      period = '90d';
-      break;
-    case '1y':
-      start = new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000);
-      period = '1y';
-      break;
-    default:
-      start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
-      period = '7d';
+export class AdvancedAnalyticsController {
+  /**
+   * Get comprehensive marketplace analytics
+   */
+  async getMarketplaceAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const { start, end, period } = req.query;
+      
+      if (!start || !end || !period) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameters: start, end, period'
+        });
+        return;
+      }
+
+      const timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string),
+        period: period as any
+      };
+
+      const analytics = await advancedAnalyticsService.getMarketplaceAnalytics(timeRange);
+      
+      res.json({
+        success: true,
+        data: analytics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting marketplace analytics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve marketplace analytics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
-  
-  return { start, end, period };
+
+  /**
+   * Get time series data for a specific metric
+   */
+  async getTimeSeriesData(req: Request, res: Response): Promise<void> {
+    try {
+      const { metric, start, end, granularity } = req.query;
+      
+      if (!metric || !start || !end) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameters: metric, start, end'
+        });
+        return;
+      }
+
+      const timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string),
+        period: '7d' // Default period
+      };
+
+      const data = await advancedAnalyticsService.getTimeSeriesData(
+        metric as string,
+        timeRange,
+        granularity as any
+      );
+      
+      res.json({
+        success: true,
+        data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting time series data:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve time series data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Generate AI-powered insights
+   */
+  async generateInsights(req: Request, res: Response): Promise<void> {
+    try {
+      const { start, end } = req.query;
+      
+      if (!start || !end) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameters: start, end'
+        });
+        return;
+      }
+
+      const timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string),
+        period: '7d' // Default period
+      };
+
+      const insights = await advancedAnalyticsService.generateInsights(timeRange);
+      
+      res.json({
+        success: true,
+        data: insights,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error generating insights:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to generate insights',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get real-time metrics
+   */
+  async getRealTimeMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const metrics = await advancedAnalyticsService.getRealTimeMetrics();
+      
+      res.json({
+        success: true,
+        data: metrics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting real-time metrics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve real-time metrics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get user behavior analytics
+   */
+  async getUserBehaviorAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const { start, end } = req.query;
+      
+      const timeRange = {
+        start: start ? new Date(start as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        end: end ? new Date(end as string) : new Date(),
+        period: '7d'
+      };
+
+      const analytics = await advancedAnalyticsService.getUserBehaviorAnalytics(timeRange);
+      
+      res.json({
+        success: true,
+        data: analytics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting user behavior analytics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve user behavior analytics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get seller performance analytics
+   */
+  async getSellerPerformanceAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const { sellerId } = req.params;
+      
+      const analytics = await advancedAnalyticsService.getSellerPerformanceAnalytics(sellerId);
+      
+      res.json({
+        success: true,
+        data: analytics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting seller performance analytics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve seller performance analytics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get all seller performance analytics (aggregated)
+   */
+  async getAllSellerPerformanceAnalytics(req: Request, res: Response): Promise<void> {
+    try {
+      const analytics = await advancedAnalyticsService.getSellerPerformanceAnalytics();
+      
+      res.json({
+        success: true,
+        data: analytics,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error getting all seller performance analytics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve seller performance analytics',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Export analytics data
+   */
+  async exportAnalyticsData(req: Request, res: Response): Promise<void> {
+    try {
+      const { start, end, format } = req.query;
+      
+      if (!start || !end) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameters: start, end'
+        });
+        return;
+      }
+
+      const timeRange = {
+        start: new Date(start as string),
+        end: new Date(end as string),
+        period: '7d'
+      };
+
+      const exportData = await advancedAnalyticsService.exportAnalyticsData(
+        timeRange,
+        format as any
+      );
+      
+      res.json({
+        success: true,
+        data: exportData,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      safeLogger.error('Error exporting analytics data:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to export analytics data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Configure analytics alerts
+   */
+  async configureAlerts(req: Request, res: Response): Promise<void> {
+    try {
+      const config = req.body;
+      
+      await advancedAnalyticsService.configureAlerts(config);
+      
+      res.json({
+        success: true,
+        message: 'Alerts configured successfully'
+      });
+    } catch (error) {
+      safeLogger.error('Error configuring alerts:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to configure alerts',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
 }
-
-/**
- * Get marketplace analytics overview
- */
-export const getMarketplaceAnalytics = async (req: Request, res: Response) => {
-  try {
-    const { timeframe = '7d' } = req.query;
-    const timeRange = parseTimeRange(timeframe as string);
-    
-    const analytics = await advancedAnalyticsService.getMarketplaceAnalytics(timeRange);
-    
-    res.json({
-      success: true,
-      data: analytics,
-      message: 'Marketplace analytics retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting marketplace analytics:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve marketplace analytics'
-    });
-  }
-};
-
-/**
- * Get time series data for a specific metric
- */
-export const getTimeSeriesData = async (req: Request, res: Response) => {
-  try {
-    const { metric } = req.params;
-    const { timeframe = '7d', interval = 'day' } = req.query;
-    const timeRange = parseTimeRange(timeframe as string);
-    
-    const timeSeriesData = await advancedAnalyticsService.getTimeSeriesData(
-      metric,
-      timeRange,
-      interval as 'hour' | 'day' | 'week' | 'month'
-    );
-    
-    res.json({
-      success: true,
-      data: timeSeriesData,
-      message: 'Time series data retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting time series data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve time series data'
-    });
-  }
-};
-
-/**
- * Get analytics insights and recommendations
- */
-export const getAnalyticsInsights = async (req: Request, res: Response) => {
-  try {
-    const { timeframe = '7d' } = req.query;
-    const timeRange = parseTimeRange(timeframe as string);
-    
-    const insights = await advancedAnalyticsService.generateInsights(timeRange);
-    
-    res.json({
-      success: true,
-      data: insights,
-      message: 'Analytics insights retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting analytics insights:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve analytics insights'
-    });
-  }
-};
-
-/**
- * Get real-time metrics
- */
-export const getRealTimeMetrics = async (req: Request, res: Response) => {
-  try {
-    const realTimeMetrics = await advancedAnalyticsService.getRealTimeMetrics();
-    
-    res.json({
-      success: true,
-      data: realTimeMetrics,
-      message: 'Real-time metrics retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting real-time metrics:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve real-time metrics'
-    });
-  }
-};
-
-/**
- * Get user behavior analytics
- */
-export const getUserBehaviorAnalytics = async (req: Request, res: Response) => {
-  try {
-    const { timeframe = '7d' } = req.query;
-    const timeRange = parseTimeRange(timeframe as string);
-    
-    const behaviorAnalytics = await advancedAnalyticsService.getUserBehaviorAnalytics(timeRange);
-    
-    res.json({
-      success: true,
-      data: behaviorAnalytics,
-      message: 'User behavior analytics retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting user behavior analytics:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve user behavior analytics'
-    });
-  }
-};
-
-/**
- * Get seller performance analytics
- */
-export const getSellerPerformanceAnalytics = async (req: Request, res: Response) => {
-  try {
-    const { sellerId } = req.query;
-    
-    const sellerAnalytics = await advancedAnalyticsService.getSellerPerformanceAnalytics(sellerId as string);
-    
-    res.json({
-      success: true,
-      data: sellerAnalytics,
-      message: 'Seller performance analytics retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting seller performance analytics:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve seller performance analytics'
-    });
-  }
-};
-
-/**
- * Export analytics data
- */
-export const exportAnalyticsData = async (req: Request, res: Response) => {
-  try {
-    const { format = 'json', timeframe = '7d' } = req.query;
-    const timeRange = parseTimeRange(timeframe as string);
-    
-    const exportData = await advancedAnalyticsService.exportAnalyticsData(
-      timeRange,
-      format as 'csv' | 'json' | 'xlsx'
-    );
-    
-    res.json({
-      success: true,
-      data: exportData,
-      message: 'Analytics data export initiated successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error exporting analytics data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to export analytics data'
-    });
-  }
-};
-
-/**
- * Configure analytics alerts
- */
-export const configureAnalyticsAlerts = async (req: Request, res: Response) => {
-  try {
-    const { config } = req.body;
-    
-    await advancedAnalyticsService.configureAlerts(config);
-    
-    res.json({
-      success: true,
-      message: 'Analytics alerts configured successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error configuring analytics alerts:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to configure analytics alerts'
-    });
-  }
-};
-
-/**
- * Get dashboard data
- */
-export const getDashboardData = async (req: Request, res: Response) => {
-  try {
-    // Combine multiple analytics into a dashboard view
-    const [analytics, insights, realTimeMetrics] = await Promise.all([
-      advancedAnalyticsService.getMarketplaceAnalytics(parseTimeRange('7d')),
-      advancedAnalyticsService.generateInsights(parseTimeRange('7d')),
-      advancedAnalyticsService.getRealTimeMetrics()
-    ]);
-    
-    const dashboardData = {
-      overview: analytics.overview,
-      growth: analytics.growth,
-      realTime: realTimeMetrics,
-      insights: insights.slice(0, 5), // Top 5 insights
-      topCategories: Object.entries(analytics.categories)
-        .sort(([,a], [,b]) => b.revenue - a.revenue)
-        .slice(0, 5)
-        .map(([name, data]) => ({ name, ...data }))
-    };
-    
-    res.json({
-      success: true,
-      data: dashboardData,
-      message: 'Dashboard data retrieved successfully'
-    });
-  } catch (error) {
-    safeLogger.error('Error getting dashboard data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve dashboard data'
-    });
-  }
-};
