@@ -268,10 +268,13 @@ const EnhancedPostCard = React.memo(({
         className="focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-2xl"
       >
         <RippleEffect className="rounded-2xl">
-          <EnhancedPostCardGlass
-            trending={trendingLevel !== null}
-            pinned={post.pinnedUntil && new Date(post.pinnedUntil) > new Date()}
-            onClick={onExpand}
+          <EnhancedPostCardGlass
+            trending={trendingLevel !== null}
+            pinned={post.pinnedUntil && new Date(post.pinnedUntil) > new Date()}
+            onClick={() => {
+              if (onExpand) onExpand();
+              else setExpanded(!expanded);
+            }}
             className={`${categoryStyle} ${className}`}
           >
           {/* Header with improved visual hierarchy */}
@@ -473,53 +476,58 @@ const EnhancedPostCard = React.memo(({
             )}
 
             {/* Enhanced Interactions */}
-            <PostInteractionBar
-              post={{
-                id: post.id,
-                title: post.title,
-                contentCid: post.content,
-                author: post.author,
-                dao: post.communityName || 'general',
-                commentCount: post.comments,
-                stakedValue: post.reactions.reduce((sum, r) => sum + r.totalStaked, 0)
-              }}
-              postType="enhanced"
-              onComment={() => setExpanded(true)}
-              onReaction={onReaction}
-              onTip={onTip}
-              onShare={async (postId, shareType, message) => {
-                console.log('Sharing post:', postId, shareType, message);
-                addToast(`Post shared via ${shareType}!`, 'success');
-                
-                // Track share event
-                analyticsService.trackUserEvent('post_share', {
-                  postId,
-                  shareType,
-                  message,
-                  timestamp: new Date()
-                });
-              }}
+            <PostInteractionBar
+              post={{
+                id: post.id,
+                title: post.title,
+                contentCid: post.content,
+                author: post.author,
+                dao: post.communityName || 'general',
+                commentCount: post.comments,
+                stakedValue: post.reactions.reduce((sum, r) => sum + r.totalStaked, 0)
+              }}
+              postType="enhanced"
+              onComment={() => {
+                // Expand the post to show comments
+                setExpanded(true);
+                // If there's an onExpand handler provided, also call it
+                if (onExpand) onExpand();
+              }}
+              onReaction={onReaction}
+              onTip={onTip}
+              onShare={async (postId, shareType, message) => {
+                console.log('Sharing post:', postId, shareType, message);
+                addToast(`Post shared via ${shareType}!`, 'success');
+                
+                // Track share event
+                analyticsService.trackUserEvent('post_share', {
+                  postId,
+                  shareType,
+                  message,
+                  timestamp: new Date()
+                });
+              }}
             />
 
-            {/* Comment System - Show when expanded */}
-            {expanded && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <EnhancedCommentSystem
-                  postId={post.id}
-                  postType="enhanced"
-                  onCommentAdded={(comment) => {
-                    console.log('New comment added:', comment);
-                    addToast('Comment posted!', 'success');
-                    
-                    // Track comment event
-                    analyticsService.trackUserEvent('post_comment_added', {
-                      postId: post.id,
-                      timestamp: new Date()
-                    });
-                  }}
-                  className="mt-4"
-                />
-              </div>
+            {/* Comment System - Show when expanded */}
+            {expanded && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <EnhancedCommentSystem
+                  postId={post.id}
+                  postType="enhanced"
+                  onCommentAdded={(comment) => {
+                    console.log('New comment added:', comment);
+                    addToast('Comment posted!', 'success');
+                    
+                    // Track comment event
+                    analyticsService.trackUserEvent('post_comment_added', {
+                      postId: post.id,
+                      timestamp: new Date()
+                    });
+                  }}
+                  className="mt-4"
+                />
+              </div>
             )}
           </div>
           </EnhancedPostCardGlass>

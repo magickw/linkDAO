@@ -53,64 +53,215 @@ const OrderHistoryInterface: React.FC<OrderHistoryInterfaceProps> = ({
   const { address: walletAddress } = useAccount();
   const { addToast } = useToast();
 
-  // State management
-  const [orders, setOrders] = useState<PaginatedOrders>({
-    orders: [],
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 0
-  });
-  const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [searchQuery, setSearchQuery] = useState<OrderSearchQuery>({});
-  const [filters, setFilters] = useState<OrderFilters>({});
-  const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'amount' | 'status'>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [displayPreferences, setDisplayPreferences] = useState<OrderDisplayPreferences>({
-    itemsPerPage: 20,
-    defaultSort: { field: 'createdAt', order: 'desc' },
-    showColumns: {
-      orderId: true,
-      product: true,
-      amount: true,
-      status: true,
-      date: true,
-      tracking: true,
-      actions: true
-    },
-    groupBy: 'none',
-    compactView: false
-  });
-
-  // Load orders
-  useEffect(() => {
-    if (address) {
-      loadOrders();
-    }
-  }, [address, userType, currentPage, sortBy, sortOrder, filters]);
-
-  try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch orders for the current user
-      const orders = await orderService.getOrdersByUser(walletAddress);
-
-  try {
-      setIsRefreshing(true);
+  // State management
+  const [orders, setOrders] = useState<PaginatedOrders>({
+    orders: [],
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [searchQuery, setSearchQuery] = useState<OrderSearchQuery>({});
+  const [filters, setFilters] = useState<OrderFilters>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'amount' | 'status'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [displayPreferences, setDisplayPreferences] = useState<OrderDisplayPreferences>({
+    itemsPerPage: 20,
+    defaultSort: { field: 'createdAt', order: 'desc' },
+    showColumns: {
+      orderId: true,
+      product: true,
+      amount: true,
+      status: true,
+      date: true,
+      tracking: true,
+      actions: true
+    },
+    groupBy: 'none',
+    compactView: false
+  });
+
+  // Load orders
+  useEffect(() => {
+    if (walletAddress) {
+      loadOrders();
+    }
+  }, [walletAddress, userType, currentPage, sortBy, sortOrder, filters]);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch orders for the current user
+      const result = await orderService.getOrdersByUser(walletAddress);
+      
+      // Transform the service Order type to the types/order.ts Order type
+      const transformedOrders = result.map(order => {
+        // Create a minimal Order object that matches the types/order.ts interface
+        const transformedOrder: Order = {
+          id: order.id,
+          listingId: order.id, // Using order.id as listingId since it's not available
+          buyerAddress: walletAddress || '', // Using current user's address as buyer
+          sellerAddress: order.seller.id, // Using seller id as address
+          status: order.status,
+          amount: order.total.toString(),
+          paymentToken: order.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
+          paymentMethod: order.paymentMethod,
+          totalAmount: order.total,
+          currency: order.currency,
+          product: {
+            id: order.items[0]?.id || '1',
+            title: order.items[0]?.title || `Order #${order.id}`,
+            description: '',
+            image: order.items[0]?.image || '/api/placeholder/400/400',
+            category: '',
+            quantity: order.items[0]?.quantity || 1,
+            unitPrice: order.items[0]?.unitPrice || order.total,
+            totalPrice: order.items[0]?.totalPrice || order.total
+          },
+          shippingAddress: undefined,
+          billingAddress: undefined,
+          trackingNumber: order.trackingNumber,
+          trackingCarrier: undefined,
+          estimatedDelivery: order.estimatedDelivery?.toISOString(),
+          actualDelivery: undefined,
+          deliveryConfirmation: undefined,
+          orderNotes: undefined,
+          orderMetadata: undefined,
+          createdAt: order.createdAt.toISOString(),
+          updatedAt: order.createdAt.toISOString(),
+          timeline: [],
+          trackingInfo: undefined,
+          disputeId: undefined,
+          canConfirmDelivery: false,
+          canOpenDispute: false,
+          canCancel: false,
+          canRefund: false,
+          isEscrowProtected: false,
+          daysUntilAutoComplete: 0
+        };
+        return transformedOrder;
+      });
+      
+      const paginatedResult: PaginatedOrders = {
+        orders: transformedOrders,
+        total: transformedOrders.length,
+        page: currentPage,
+        limit: displayPreferences.itemsPerPage,
+        totalPages: Math.ceil(transformedOrders.length / displayPreferences.itemsPerPage)
+      };
+      setOrders(paginatedResult);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load orders');
+      addToast('Failed to load orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
       
       // Fetch fresh orders for the current user
       const result = await orderService.getOrdersByUser(walletAddress);
+      const handleFilterChange = (newFilters: OrderFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
+  const handleSearch = async (query: OrderSearchQuery) => {
+    try {
+      setLoading(true);
+      
+      // Fetch orders for the current user
+      const result = await orderService.getOrdersByUser(walletAddress);
+      
+      // Transform the service Order type to the types/order.ts Order type
+      const transformedOrders = result.map(order => {
+        // Create a minimal Order object that matches the types/order.ts interface
+        const transformedOrder: Order = {
+          id: order.id,
+          listingId: order.id, // Using order.id as listingId since it's not available
+          buyerAddress: walletAddress || '', // Using current user's address as buyer
+          sellerAddress: order.seller.id, // Using seller id as address
+          status: order.status,
+          amount: order.total.toString(),
+          paymentToken: order.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
+          paymentMethod: order.paymentMethod,
+          totalAmount: order.total,
+          currency: order.currency,
+          product: {
+            id: order.items[0]?.id || '1',
+            title: order.items[0]?.title || `Order #${order.id}`,
+            description: '',
+            image: order.items[0]?.image || '/api/placeholder/400/400',
+            category: '',
+            quantity: order.items[0]?.quantity || 1,
+            unitPrice: order.items[0]?.unitPrice || order.total,
+            totalPrice: order.items[0]?.totalPrice || order.total
+          },
+          shippingAddress: undefined,
+          billingAddress: undefined,
+          trackingNumber: order.trackingNumber,
+          trackingCarrier: undefined,
+          estimatedDelivery: order.estimatedDelivery?.toISOString(),
+          actualDelivery: undefined,
+          deliveryConfirmation: undefined,
+          orderNotes: undefined,
+          orderMetadata: undefined,
+          createdAt: order.createdAt.toISOString(),
+          updatedAt: order.createdAt.toISOString(),
+          timeline: [],
+          trackingInfo: undefined,
+          disputeId: undefined,
+          canConfirmDelivery: false,
+          canOpenDispute: false,
+          canCancel: false,
+          canRefund: false,
+          isEscrowProtected: false,
+          daysUntilAutoComplete: 0
+        };
+        return transformedOrder;
+      });
+      
+      // Apply local filtering based on search query
+      const filteredOrders = transformedOrders.filter(order => {
+        if (query.orderId && !order.id.includes(query.orderId)) return false;
+        if (query.productTitle && !order.product?.title.toLowerCase().includes(query.productTitle.toLowerCase())) return false;
+        if (query.trackingNumber && !order.trackingNumber?.includes(query.trackingNumber)) return false;
+        return true;
+      });
+      
+      const paginatedResult: PaginatedOrders = {
+        orders: filteredOrders,
+        total: filteredOrders.length,
+        page: 1,
+        limit: displayPreferences.itemsPerPage,
+        totalPages: Math.ceil(filteredOrders.length / displayPreferences.itemsPerPage)
+      };
+      setOrders(paginatedResult);
+    } catch (error) {
+      console.error('Error searching orders:', error);
+      addToast('Failed to search orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+      
+      // Fetch orders for the current user
+      const result = await orderService.getOrdersByUser(walletAddress);
+      
       // Transform the service Order type to the types/order.ts Order type
       const transformedOrders = result.map(order => {
         // Create a minimal Order object that matches the types/order.ts interface
         const transformedOrder: Order = {
           id: order.id,
           listingId: order.id, // Using order.id as listingId since it's not available
-          buyerAddress: address || '', // Using current user's address as buyer
+          buyerAddress: walletAddress || '', // Using current user's address as buyer
           sellerAddress: order.seller.id, // Using seller id as address
           status: order.status,
           amount: order.total.toString(),
@@ -160,63 +311,17 @@ const OrderHistoryInterface: React.FC<OrderHistoryInterfaceProps> = ({
         return true;
       });
       
-      const paginatedResult: PaginatedOrders = {
-        orders: filteredOrders,
-        total: filteredOrders.length,
-        page: 1,
-        limit: displayPreferences.itemsPerPage,
-        totalPages: Math.ceil(filteredOrders.length / displayPreferences.itemsPerPage)
-      };
-      setOrders(paginatedResult);
-    } catch (error) {
-      console.error('Error searching orders:', error);
-      addToast('Failed to search orders', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFilterChange = (newFilters: OrderFilters) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-  };
-
-  const handleExportOrders = async () => {
-    if (!address) return;
-    
-    try {
-      // Using getOrdersByUser as exportOrderHistory doesn't exist
-      const orders = await orderService.getOrdersByUser(address);
-      
-      // Create CSV content
-      const csvContent = [
-        ['Order ID', 'Status', 'Amount', 'Currency', 'Created At', 'Tracking Number'],
-        ...orders.map(order => [
-          order.id,
-          order.status,
-          order.total.toString(),
-          order.currency,
-          order.createdAt.toISOString(),
-          order.trackingNumber || ''
-        ])
-      ].map(row => row.join(',')).join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `orders-${userType}-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      addToast('Orders exported successfully', 'success');
-    } catch (error) {
-      console.error('Error exporting orders:', error);
-      addToast('Failed to export orders', 'error');
-    }
-  };
-
+      totalPages: Math.ceil(filteredOrders.length / displayPreferences.itemsPerPage)
+      };
+      setOrders(paginatedResult);
+    } catch (error) {
+      console.error('Error searching orders:', error);
+      addToast('Failed to search orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusIcon = (status: OrderStatus) => {
     const icons = {
       CREATED: Clock,
