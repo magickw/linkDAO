@@ -320,11 +320,12 @@ export class CommunityService {
           if (Array.isArray(response)) communities = response;
           else if (response && typeof response === 'object' && Array.isArray((response as any)?.data)) communities = (response as any).data;
           else if (response && typeof response === 'object' && Array.isArray((response as any)?.communities)) communities = (response as any).communities;
+          else if (response && typeof response === 'object' && (response as any)?.data && Array.isArray((response as any).data?.communities)) communities = (response as any).data.communities;
           else if (response && typeof response === 'object' && Array.isArray((response as any)?.results)) communities = (response as any).results;
           else if (response && typeof response === 'object' && Array.isArray((response as any)?.items)) communities = (response as any).items;
           else if (response && typeof response === 'object' && (response as any)?.data && typeof (response as any).data === 'object' && Array.isArray((response as any).data?.items)) communities = (response as any).data.items;
           else communities = [];
-          
+
           return communities;
         },
         120000 // 2 minute cache

@@ -13,14 +13,14 @@ router.use(authMiddleware);
  * @desc Create a new referral relationship
  * @access Private
  */
-router.post('/', csrfProtection,  referralController.createReferral.bind(referralController));
+router.post('/', csrfProtection, referralController.createReferral.bind(referralController));
 
 /**
  * @route POST /api/referrals/validate
  * @desc Validate a referral code
  * @access Private
  */
-router.post('/validate', csrfProtection,  referralController.validateReferralCode.bind(referralController));
+router.post('/validate', csrfProtection, referralController.validateReferralCode.bind(referralController));
 
 /**
  * @route GET /api/referrals/stats
@@ -55,7 +55,7 @@ router.get('/:referralId/rewards', referralController.getReferralRewards.bind(re
  * @desc Deactivate a referral
  * @access Private
  */
-router.post('/:referralId/deactivate', csrfProtection,  referralController.deactivateReferral.bind(referralController));
+router.post('/:referralId/deactivate', csrfProtection, referralController.deactivateReferral.bind(referralController));
 
 /**
  * @route GET /api/referrals/generate-code

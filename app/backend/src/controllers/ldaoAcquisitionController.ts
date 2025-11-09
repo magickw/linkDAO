@@ -160,7 +160,7 @@ export class LDAOAcquisitionController {
   // GET /api/ldao/history - Get transaction history
   public getTransactionHistory = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { userId, type, limit = '50', offset = '0' } = req.query;
+      const { userId, type, limit = '50', offset = '0', status, activityType, startDate, endDate } = req.query;
 
       if (!userId) {
         res.status(400).json({
@@ -181,27 +181,36 @@ export class LDAOAcquisitionController {
         return;
       }
 
-      let transactions = [];
-      let earnings = [];
+      const options = {
+        limit: limitNum,
+        offset: offsetNum,
+        status: status as string | undefined,
+        activityType: activityType as string | undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined
+      };
+
+      let transactions = { transactions: [], totalCount: 0 };
+      let earnings = { activities: [], totalCount: 0 };
 
       if (!type || type === 'purchase') {
-        transactions = await this.acquisitionService.getTransactionHistory(userId as string);
+        transactions = await this.acquisitionService.getTransactionHistory(userId as string, options);
       }
 
       if (!type || type === 'earning') {
-        earnings = await this.acquisitionService.getEarningHistory(userId as string);
+        earnings = await this.acquisitionService.getEarningHistory(userId as string, options);
       }
 
       res.status(200).json({
         success: true,
         data: {
-          transactions: transactions.slice(offsetNum, offsetNum + limitNum),
-          earnings: earnings.slice(offsetNum, offsetNum + limitNum),
+          transactions: transactions.transactions,
+          earnings: earnings.activities,
         },
         pagination: {
           limit: limitNum,
           offset: offsetNum,
-          total: transactions.length + earnings.length,
+          total: transactions.totalCount + earnings.totalCount,
         },
       });
     } catch (error) {

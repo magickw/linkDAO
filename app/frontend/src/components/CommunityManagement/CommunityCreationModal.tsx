@@ -305,16 +305,23 @@ export default function CommunityCreationModal({ isOpen, onClose, onSuccess }: C
                 </div>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-start space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <input
                   type="checkbox"
                   id="isPublic"
                   checked={formData.isPublic}
                   onChange={(e) => handleInputChange('isPublic', e.target.checked)}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isPublic" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Public community (anyone can join)
+                <label htmlFor="isPublic" className="flex-1">
+                  <div className="block text-sm font-medium text-gray-900 dark:text-white">
+                    Public Community (Recommended)
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    {formData.isPublic
+                      ? '✓ Your community will be visible on the communities page and anyone can join'
+                      : '⚠️ WARNING: Your community will be private and won\'t appear in public listings'}
+                  </p>
                 </label>
               </div>
             </div>

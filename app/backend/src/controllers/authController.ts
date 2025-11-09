@@ -11,6 +11,7 @@ import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { referralService } from './referralService';
 
 // Initialize database connection
 const connectionString = process.env.DATABASE_URL!;
@@ -21,6 +22,7 @@ interface WalletConnectRequest {
   walletAddress: string;
   signature: string;
   message: string;
+  referralCode?: string;
 }
 
 interface ProfileUpdateRequest {
@@ -43,7 +45,7 @@ class AuthController {
         return validationErrorResponse(res, errors.array());
       }
 
-      const { walletAddress, signature, message }: WalletConnectRequest = req.body;
+      const { walletAddress, signature, message, referralCode }: WalletConnectRequest & { referralCode?: string } = req.body;
 
       // Verify signature
       try {
@@ -64,7 +66,9 @@ class AuthController {
         .where(eq(users.walletAddress, walletAddress.toLowerCase()))
         .limit(1);
 
+      let isNewUser = false;
       if (user.length === 0) {
+        isNewUser = true;
         // Create new user
         const newUser = await db
           .insert(users)
@@ -78,6 +82,27 @@ class AuthController {
       }
 
       const userData = user[0];
+
+      // Handle referral code if provided and user is new
+      if (isNewUser && referralCode) {
+        try {
+          // Validate referral code
+          const referralValidation = await referralService.validateReferralCode(referralCode);
+          
+          if (referralValidation.valid && referralValidation.referrerId) {
+            // Create referral relationship
+            await referralService.createReferral({
+              referrerId: referralValidation.referrerId,
+              refereeId: userData.id,
+              tier: 1, // Default tier
+              bonusPercentage: 10 // Default bonus percentage
+            });
+          }
+        } catch (error) {
+          safeLogger.error('Error processing referral during signup:', error);
+          // Don't fail signup if referral processing fails
+        }
+      }
 
       // Generate JWT token
       const jwtSecret = process.env.JWT_SECRET;
@@ -103,7 +128,8 @@ class AuthController {
           handle: userData.handle,
           profileCid: userData.profileCid
         },
-        expiresIn: '24h'
+        expiresIn: '24h',
+        isNewUser
       }, 200);
 
     } catch (error) {

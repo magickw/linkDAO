@@ -15,7 +15,6 @@ export { Governance__factory } from "./Governance__factory";
 export { LDAOToken__factory } from "./LDAOToken__factory";
 export { LDAOTreasury__factory } from "./LDAOTreasury__factory";
 export { Marketplace__factory } from "./Marketplace__factory";
-export { MockERC20__factory } from "./MockERC20__factory";
 export { NFTMarketplace__factory } from "./NFTMarketplace__factory";
 export { PaymentRouter__factory } from "./PaymentRouter__factory";
 export { ProfileRegistry__factory } from "./ProfileRegistry__factory";

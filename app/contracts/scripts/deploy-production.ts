@@ -125,12 +125,6 @@ class ProductionDeployer {
 
     // Deploy LDAOToken
     const ldaoToken = await this.deployContract("LDAOToken", [this.config.treasury]);
-    
-    // Deploy MockERC20 for testing (only on testnet)
-    if (this.config.network !== "mainnet") {
-      await this.deployContract("MockERC20", ["Test USDC", "TUSDC", 6]);
-      await this.deployContract("MockERC20", ["Test USDT", "TUSDT", 6]);
-    }
 
     // Deploy Counter for basic testing
     await this.deployContract("Counter");

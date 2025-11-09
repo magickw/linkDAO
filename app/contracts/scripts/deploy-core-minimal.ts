@@ -27,16 +27,8 @@ async function main() {
     deployedContracts.Counter = counter.address;
     console.log("Counter deployed to:", counter.address);
 
-    // Deploy MockERC20 for testing
-    console.log("\n3. Deploying MockERC20...");
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    const mockToken = await MockERC20.deploy("Mock Token", "MOCK", 18);
-    await mockToken.deployed();
-    deployedContracts.MockERC20 = mockToken.address;
-    console.log("MockERC20 deployed to:", mockToken.address);
-
     // Deploy ReputationSystem
-    console.log("\n4. Deploying ReputationSystem...");
+    console.log("\n3. Deploying ReputationSystem...");
     const ReputationSystem = await ethers.getContractFactory("ReputationSystem");
     const reputationSystem = await ReputationSystem.deploy();
     await reputationSystem.deployed();
@@ -44,7 +36,7 @@ async function main() {
     console.log("ReputationSystem deployed to:", reputationSystem.address);
 
     // Deploy Governance
-    console.log("\n5. Deploying Governance...");
+    console.log("\n4. Deploying Governance...");
     const Governance = await ethers.getContractFactory("Governance");
     const governance = await Governance.deploy(ldaoToken.address);
     await governance.deployed();

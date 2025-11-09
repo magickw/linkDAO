@@ -251,7 +251,15 @@ export class ReferralController {
         return res.status(400).json({ error: 'Referral ID is required' });
       }
 
-      // TODO: Add authorization check to ensure user owns this referral
+      // Authorization check to ensure user owns this referral
+      const referral = await referralService.getReferralById(referralId);
+      if (!referral) {
+        return res.status(404).json({ error: 'Referral not found' });
+      }
+
+      if (referral.referrerId !== userId) {
+        return res.status(403).json({ error: 'Not authorized to deactivate this referral' });
+      }
 
       const result = await referralService.deactivateReferral(referralId, reason);
 
@@ -318,6 +326,9 @@ export class ReferralController {
 
       const stats = await referralService.getReferralStats(userId);
       const history = await referralService.getUserReferralHistory(userId, 100, 0);
+      
+      // Get monthly data for trend analysis
+      const monthlyData = await referralService.getReferralMonthlyData(userId);
 
       // Calculate conversion rates and other analytics
       const analytics = {
@@ -327,8 +338,9 @@ export class ReferralController {
         recentActivity: history.slice(0, 10),
         monthlyTrend: {
           thisMonth: stats.thisMonthEarned,
-          // TODO: Add previous months data for trend analysis
-        }
+          previousMonths: monthlyData
+        },
+        tierDistribution: stats.referralsByTier
       };
 
       res.json({

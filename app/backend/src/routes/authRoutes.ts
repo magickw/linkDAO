@@ -39,7 +39,12 @@ const walletConnectValidation = [
   body('message')
     .isString()
     .isLength({ min: 1 })
-    .withMessage('Message is required')
+    .withMessage('Message is required'),
+  body('referralCode')
+    .optional()
+    .isString()
+    .isLength({ min: 6, max: 12 })
+    .withMessage('Referral code must be 6-12 characters if provided')
 ];
 
 const profileUpdateValidation = [

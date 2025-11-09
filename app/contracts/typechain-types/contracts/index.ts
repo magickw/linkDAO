@@ -20,7 +20,6 @@ export type { Governance } from "./Governance";
 export type { LDAOToken } from "./LDAOToken";
 export type { LDAOTreasury } from "./LDAOTreasury";
 export type { Marketplace } from "./Marketplace";
-export type { MockERC20 } from "./MockERC20";
 export type { NFTMarketplace } from "./NFTMarketplace";
 export type { PaymentRouter } from "./PaymentRouter";
 export type { ProfileRegistry } from "./ProfileRegistry";

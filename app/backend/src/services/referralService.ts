@@ -9,6 +9,7 @@ import {
 import { earningActivityService } from './earningActivityService';
 import { earningNotificationService } from './earningNotificationService';
 import { nanoid } from 'nanoid';
+import { referralConfigService } from './referralConfigService';
 
 export interface ReferralData {
   referrerId: string;
@@ -45,7 +46,7 @@ class ReferralService {
    * Generate unique referral code
    */
   generateReferralCode(): string {
-    return nanoid(8).toUpperCase();
+    return nanoid(referralConfigService.getReferralCodeLength ? referralConfigService.getReferralCodeLength() : 8).toUpperCase();
   }
 
   /**
@@ -133,7 +134,8 @@ class ReferralService {
    */
   private async processSignupBonus(referralId: string, referrerId: string): Promise<void> {
     try {
-      const signupBonusAmount = 50; // Base signup bonus
+      // Get bonus tokens from config
+      const signupBonusAmount = await referralConfigService.getConfigValue('referral_bonus_tokens', 25) as number;
 
       // Create earning activity record instead of referral reward
       await db.insert(earningActivities).values({
@@ -284,17 +286,13 @@ class ReferralService {
     try {
       const stats = await this.getReferralStats(referrerId);
       
-      // Define milestone rewards
-      const milestones = [
-        { count: 5, reward: 100, title: '5 Referrals Milestone' },
-        { count: 10, reward: 250, title: '10 Referrals Milestone' },
-        { count: 25, reward: 500, title: '25 Referrals Milestone' },
-        { count: 50, reward: 1000, title: '50 Referrals Milestone' },
-        { count: 100, reward: 2500, title: '100 Referrals Milestone' }
-      ];
-
-      for (const milestone of milestones) {
-        if (stats.totalReferrals >= milestone.count) {
+      // Get milestone rewards from config
+      const milestoneRewards = await referralConfigService.getMilestoneRewards();
+      
+      // Process milestones based on config
+      for (const [countStr, reward] of Object.entries(milestoneRewards)) {
+        const count = parseInt(countStr);
+        if (stats.totalReferrals >= count) {
           // Check if milestone bonus already given
           const existingBonus = await db
             .select()
@@ -304,7 +302,7 @@ class ReferralService {
                 eq(earningActivities.activityType, 'referral'),
                 eq(earningActivities.metadata, JSON.stringify({
                   rewardType: 'milestone_bonus',
-                  milestone: milestone.title
+                  milestone: `Reached ${count} referrals`
                 }))
               )
             )
@@ -317,8 +315,8 @@ class ReferralService {
               activityType: 'referral',
               metadata: {
                 rewardType: 'milestone_bonus',
-                milestone: milestone.count,
-                bonusAmount: milestone.reward
+                milestone: count,
+                bonusAmount: reward
               }
             });
 
@@ -326,9 +324,9 @@ class ReferralService {
             // Send milestone notification
             await earningNotificationService.sendMilestoneNotification(referrerId, {
               type: 'referrals',
-              milestone: milestone.count,
+              milestone: count,
               currentValue: stats.totalReferrals,
-              reward: milestone.reward
+              reward: reward
             });
           }
         }
@@ -556,6 +554,25 @@ class ReferralService {
   }
 
   /**
+   * Get referral by ID
+   */
+  async getReferralById(referralId: string) {
+    try {
+      const [referral] = await db
+        .select()
+        .from(referralActivities)
+        .where(eq(referralActivities.id, referralId))
+        .limit(1);
+
+      return referral || null;
+
+    } catch (error) {
+      safeLogger.error('Error getting referral by ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get referral by code
    */
   async getReferralByCode(referralCode: string) {
@@ -615,6 +632,54 @@ class ReferralService {
         valid: false,
         message: 'Error validating referral code'
       };
+    }
+  }
+
+  /**
+   * Get monthly referral data for trend analysis
+   */
+  async getReferralMonthlyData(userId: string) {
+    try {
+      const now = new Date();
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+      // Get monthly referral earnings for the last 6 months
+      const monthlyEarnings = await db
+        .select({
+          month: sql<string>`DATE_TRUNC('month', ${earningActivities.createdAt})`,
+          total: sum(earningActivities.tokensEarned)
+        })
+        .from(earningActivities)
+        .where(
+          and(
+            eq(earningActivities.userId, userId),
+            eq(earningActivities.activityType, 'referral'),
+            gte(earningActivities.createdAt, sixMonthsAgo)
+          )
+        )
+        .groupBy(sql`DATE_TRUNC('month', ${earningActivities.createdAt}`));
+
+      // Generate all months in the range (including months with 0 activity)
+      const result: Array<{ month: string; amount: number }> = [];
+      const current = new Date(sixMonthsAgo);
+      
+      while (current <= now) {
+        const monthStr = current.toISOString().substring(0, 7); // YYYY-MM
+        const existing = monthlyEarnings.find(e => e.month.startsWith(monthStr));
+        
+        result.push({
+          month: monthStr,
+          amount: existing ? parseFloat(existing.total || '0') : 0
+        });
+        
+        current.setMonth(current.getMonth() + 1);
+      }
+
+      return result;
+    } catch (error) {
+      safeLogger.error('Error getting referral monthly data:', error);
+      return [];
     }
   }
 }

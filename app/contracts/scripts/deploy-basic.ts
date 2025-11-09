@@ -12,12 +12,6 @@ async function main() {
   await counter.deployed();
   console.log("Counter deployed to:", counter.address);
 
-  // Deploy MockERC20
-  const MockERC20 = await ethers.getContractFactory("MockERC20");
-  const mockToken = await MockERC20.deploy("Test Token", "TEST", 18);
-  await mockToken.deployed();
-  console.log("MockERC20 deployed to:", mockToken.address);
-
   console.log("Basic deployment complete!");
 }
 
