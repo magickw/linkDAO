@@ -20,7 +20,8 @@ const PLATFORM_FEES = {
   [PaymentMethodType.STABLECOIN_USDC]: 0.025, // 2.5%
   [PaymentMethodType.STABLECOIN_USDT]: 0.025, // 2.5%
   [PaymentMethodType.FIAT_STRIPE]: 0.029, // 2.9% + $0.30
-  [PaymentMethodType.NATIVE_ETH]: 0.025 // 2.5%
+  [PaymentMethodType.NATIVE_ETH]: 0.025, // 2.5%
+  [PaymentMethodType.X402]: 0.01 // 1% for x402 (reduced fees)
 };
 
 const STRIPE_FIXED_FEE = 0.30; // $0.30 fixed fee for Stripe
@@ -436,7 +437,8 @@ export class TransactionCostCalculator {
    * Check if payment method is crypto-based
    */
   private isCryptoPayment(paymentMethod: PaymentMethod): boolean {
-    return paymentMethod.type !== PaymentMethodType.FIAT_STRIPE;
+    return paymentMethod.type !== PaymentMethodType.FIAT_STRIPE && 
+           paymentMethod.type !== PaymentMethodType.X402;
   }
 
   /**
@@ -548,7 +550,12 @@ export class TransactionCostCalculator {
       platformFee += STRIPE_FIXED_FEE;
     }
 
-    const estimatedGasFee = this.isCryptoPayment(paymentMethod) ? 25 : 0; // $25 fallback
+    let estimatedGasFee = 0;
+    if (this.isCryptoPayment(paymentMethod)) {
+      estimatedGasFee = 25; // $25 fallback for crypto
+    } else if (paymentMethod.type === PaymentMethodType.X402) {
+      estimatedGasFee = 0.1; // Very low fee for x402
+    }
     const totalCost = amount + platformFee + estimatedGasFee;
 
     return {

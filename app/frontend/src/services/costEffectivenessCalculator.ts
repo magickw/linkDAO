@@ -70,8 +70,8 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         // X402 has minimal fees - most gas costs are covered by the protocol
         gasFee = 0.01; // Minimal network fee
         networkFee = 0;
-        platformFee = 0; // No platform fee for x402
-        estimatedTime = 5; // ~5 minutes
+        platformFee = baseCost * 0.01; // 1% platform fee for x402
+        estimatedTime = 1; // ~1 minute with x402
         confidence = 0.95; // High confidence
         break;
 
@@ -315,6 +315,10 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
       return true; // Recommend fiat if within 10% of cheapest
     }
 
+    if (method.type === PaymentMethodType.X402 && costEstimate.totalCost < cheapestCost * 1.05) {
+      return true; // Recommend x402 if within 5% of cheapest (usually cheaper)
+    }
+
     return false;
   }
 
@@ -333,6 +337,10 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
 
     if (method.type === PaymentMethodType.FIAT_STRIPE) {
       return 'No gas fees and familiar payment experience';
+    }
+
+    if (method.type === PaymentMethodType.X402) {
+      return 'Lowest fees with fast confirmation via x402 protocol';
     }
 
     if (costEstimate.estimatedTime < 2) {

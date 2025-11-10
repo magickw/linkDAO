@@ -10,6 +10,7 @@ import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
 import { tokenService } from '@/services/web3/tokenService';
 import { fiatPaymentService, FiatPaymentQuote } from '@/services/payment/fiatPaymentService';
 import { dexService, DexSwapQuote } from '@/services/web3/dexService';
+import { x402PaymentService } from '@/services/x402PaymentService';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { 
@@ -43,7 +44,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const [tokenInfo, setTokenInfo] = useState<LocalTokenInfo | null>(null);
   const [userBalance, setUserBalance] = useState<string>('0');
   const [amount, setAmount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'eth' | 'usdc' | 'fiat'>('eth');
+  const [paymentMethod, setPaymentMethod] = useState<'x402' | 'usdc' | 'fiat'>('x402');
   const [fiatQuotes, setFiatQuotes] = useState<FiatPaymentQuote[]>([]);
   const [dexQuotes, setDexQuotes] = useState<DexSwapQuote[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<FiatPaymentQuote | DexSwapQuote | null>(null);
@@ -113,9 +114,31 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         if (quotes.length > 0) {
           setSelectedQuote(quotes[0]);
         }
+      } else if (paymentMethod === 'x402') {
+        // For x402, we need to estimate costs differently - let's create mock quotes
+        const expectedAmount = parseFloat(amount); // User is buying LDAO tokens, so amount stays the same
+        const costUSD = expectedAmount * (tokenInfo?.priceUSD || 0.5);
+        const mockQuote: DexSwapQuote = {
+          dex: 'x402',
+          fromToken: 'USD',
+          toToken: 'LDAO',
+          fromAmount: costUSD.toString(),
+          toAmount: expectedAmount.toString(),
+          expectedAmount: expectedAmount.toString(),
+          fee: '0.01', // Very low fees for x402 - string format
+          priceImpact: 0.001,
+          slippage: 0.005,
+          estimatedCompletionTime: '1-2 minutes',
+          route: 'x402 Protocol',
+          gasEstimate: '0.001 ETH',
+          path: ['USD', 'LDAO'],
+          estimatedGas: '21000'
+        };
+        setDexQuotes([mockQuote]);
+        setSelectedQuote(mockQuote);
       } else {
-        // Fetch DEX quotes for swapping ETH/USDC to LDAO
-        const fromToken = paymentMethod === 'eth' ? 'ETH' : 'USDC';
+        // Fetch DEX quotes for swapping USDC to LDAO
+        const fromToken = 'USDC';
         const quotes = await dexService.getSwapQuotes(fromToken, 'LDAO', amount);
         setDexQuotes(quotes);
         if (quotes.length > 0) {
@@ -161,7 +184,12 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       return;
     }
 
-    if (paymentMethod !== 'fiat' && (!selectedQuote || !dexQuotes.length)) {
+    if (paymentMethod === 'x402' && (!selectedQuote || !dexQuotes.length)) {
+      setErrorMessage('Please select x402 payment option');
+      return;
+    }
+
+    if (paymentMethod !== 'fiat' && paymentMethod !== 'x402' && (!selectedQuote || !dexQuotes.length)) {
       setErrorMessage('Please select a DEX for crypto swap');
       return;
     }
@@ -194,10 +222,52 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             setTransactionStatus('idle');
           }, 2000);
         }, 2000);
+      } else if (paymentMethod === 'x402') {
+        // Process x402 payment
+        try {
+          // Create x402 payment request
+          const costUSD = parseFloat(amount) * (tokenInfo?.priceUSD || 0.5);
+          const x402Request = {
+            orderId: `ldao-purchase-${Date.now()}`,
+            amount: costUSD.toString(),
+            currency: 'USD',
+            buyerAddress: address,
+            sellerAddress: '0x0000000000000000000000000000000000000000', // Platform address
+            listingId: 'ldao-token-purchase'
+          };
+
+          // Process the x402 payment
+          const paymentResult = await x402PaymentService.processPayment(x402Request);
+          
+          if (paymentResult.success && paymentResult.paymentUrl) {
+            // Redirect to x402 payment page
+            window.open(paymentResult.paymentUrl, '_blank');
+            
+            // Simulate successful purchase
+            setTimeout(() => {
+              setTransactionStatus('success');
+              // Refresh user balance
+              loadUserBalance();
+              // Notify parent of success
+              if (onPurchaseSuccess) {
+                onPurchaseSuccess();
+              }
+              // Close modal after a delay
+              setTimeout(() => {
+                onClose();
+                setTransactionStatus('idle');
+              }, 2000);
+            }, 2000);
+          } else {
+            throw new Error(paymentResult.error || 'X402 payment failed');
+          }
+        } catch (error) {
+          throw new Error(`X402 payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       } else {
         // Execute DEX swap using the real DEX service
         const quote = selectedQuote as DexSwapQuote;
-        const fromToken = paymentMethod === 'eth' ? 'ETH' : 'USDC';
+        const fromToken = 'USDC';
         const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
         
         let result;
@@ -336,19 +406,19 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
               <div className="grid grid-cols-3 gap-3">
                 <button
                   onClick={() => {
-                    setPaymentMethod('eth');
+                    setPaymentMethod('x402');
                     if (amount && parseFloat(amount) > 0) {
                       fetchQuotes(amount);
                     }
                   }}
                   className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg border transition-colors ${
-                    paymentMethod === 'eth'
+                    paymentMethod === 'x402'
                       ? 'bg-purple-500/20 border-purple-500 text-white'
                       : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'
                   }`}
                 >
                   <Wallet size={18} />
-                  ETH
+                  x402
                 </button>
                 <button
                   onClick={() => {
@@ -403,55 +473,64 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 </div>
                 
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {(paymentMethod === 'fiat' ? fiatQuotes : dexQuotes).map((quote, index) => (
-                    <div 
-                      key={index}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedQuote === quote 
-                          ? 'bg-purple-500/20 border border-purple-500' 
-                          : 'bg-white/5 hover:bg-white/10'
-                      }`}
-                      onClick={() => setSelectedQuote(quote)}
-                    >
-                      <div>
-                        <div className="font-medium text-white">
-                          {paymentMethod === 'fiat' 
-                            ? (quote as FiatPaymentQuote).provider.toUpperCase()
-                            : (quote as DexSwapQuote).dex.toUpperCase()}
-                        </div>
-                        <div className="text-sm text-white/70">
-                          {paymentMethod === 'fiat' 
-                            ? `Fee: $${(quote as FiatPaymentQuote).fees.toFixed(2)}`
-                            : `Fee: ${(quote as DexSwapQuote).fee} ETH`}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-white">
-                          {paymentMethod === 'fiat' 
-                            ? `$${(quote as FiatPaymentQuote).totalCost.toFixed(2)}`
-                            : `${(quote as DexSwapQuote).expectedAmount} LDAO`}
-                        </div>
-                        <div className="text-sm text-white/70">
-                          {paymentMethod === 'fiat' 
-                            ? (quote as FiatPaymentQuote).estimatedCompletionTime
-                            : 'Instant'}
-                        </div>
-                      </div>
+                  (paymentMethod === 'fiat' ? fiatQuotes : dexQuotes).map((quote, index) => (
+                <div 
+                  key={index}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedQuote === quote 
+                      ? 'bg-purple-500/20 border border-purple-500' 
+                      : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                  onClick={() => setSelectedQuote(quote)}
+                >
+                  <div>
+                    <div className="font-medium text-white">
+                      {paymentMethod === 'fiat' 
+                        ? (quote as FiatPaymentQuote).provider.toUpperCase()
+                        : paymentMethod === 'x402'
+                        ? 'x402 Protocol'
+                        : (quote as DexSwapQuote).dex.toUpperCase()}
                     </div>
-                  ))}
+                    <div className="text-sm text-white/70">
+                      {paymentMethod === 'fiat' 
+                        ? `Fee: ${(quote as FiatPaymentQuote).fees.toFixed(2)}`
+                        : paymentMethod === 'x402'
+                        ? 'Minimal fees'
+                        : `Fee: ${(quote as DexSwapQuote).fee} ETH`}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium text-white">
+                      {paymentMethod === 'fiat' 
+                        ? `${(quote as FiatPaymentQuote).totalCost.toFixed(2)}`
+                        : `${(quote as DexSwapQuote).expectedAmount} LDAO`}
+                    </div>
+                    <div className="text-sm text-white/70">
+                      {paymentMethod === 'fiat' 
+                        ? (quote as FiatPaymentQuote).estimatedCompletionTime
+                        : paymentMethod === 'x402'
+                        ? '1-2 minutes'
+                        : 'Instant'}
+                    </div>
+                  </div>
+                </div>
+              ))}
                 </div>
               </div>
             )}
 
             {/* No Quotes Available Message */}
-            {((paymentMethod !== 'fiat' && dexQuotes.length === 0) || 
-              (paymentMethod === 'fiat' && fiatQuotes.length === 0)) && 
+            {((paymentMethod !== 'fiat' && paymentMethod !== 'x402' && dexQuotes.length === 0) || 
+              (paymentMethod === 'fiat' && fiatQuotes.length === 0) ||
+              (paymentMethod === 'x402' && dexQuotes.length === 0)) && 
              !isLoadingQuotes && amount && parseFloat(amount) > 0 && (
               <div className="bg-white/10 rounded-lg p-4 text-center">
                 <AlertCircle size={24} className="mx-auto text-white/50 mb-2" />
                 <p className="text-white/70 text-sm">
                   {paymentMethod === 'fiat' 
                     ? 'No fiat payment providers available at the moment. Please try another payment method.' 
+                    : paymentMethod === 'x402'
+                    ? 'x402 payment option not available. Please try another payment method.'
                     : 'No DEX quotes available. Showing estimated rates based on current market prices.'}
                 </p>
               </div>
@@ -480,7 +559,23 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     </div>
                   </>
                 )}
-                {selectedQuote && paymentMethod !== 'fiat' && (
+                {selectedQuote && paymentMethod === 'x402' && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/70">Payment Method</span>
+                      <span className="text-white">x402 Protocol</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/70">Fees</span>
+                      <span className="text-white">$0.01</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/70">Network</span>
+                      <span className="text-white">Ethereum</span>
+                    </div>
+                  </>
+                )}
+                {selectedQuote && paymentMethod !== 'fiat' && paymentMethod !== 'x402' && (
                   <>
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">DEX</span>
@@ -496,7 +591,9 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <span className="text-white">Total</span>
                   <span className="text-white">
                     {selectedQuote && paymentMethod === 'fiat' 
-                      ? `$${(selectedQuote as FiatPaymentQuote).totalCost.toFixed(2)} USD`
+                      ? `${(selectedQuote as FiatPaymentQuote).totalCost.toFixed(2)} USD`
+                      : paymentMethod === 'x402'
+                      ? `${(parseFloat(amount) * (tokenInfo?.priceUSD || 0.5)).toFixed(2)} USD`
                       : `${amount || '0'} LDAO`}
                   </span>
                 </div>

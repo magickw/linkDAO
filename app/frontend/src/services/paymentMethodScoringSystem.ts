@@ -54,7 +54,7 @@ export class PaymentMethodScoringSystem {
     const config = this.getMethodConfig(method.type);
     
     // Calculate individual scoring components
-    const costScore = this.calculateCostScore(costEstimate, context.transactionAmount);
+    const costScore = this.calculateCostScoreWithAdjustments(costEstimate, context.transactionAmount, method.type);
     const preferenceScore = this.calculatePreferenceScore(method, context.userContext.preferences);
     const availabilityScore = this.calculateAvailabilityScore(method, context, costEstimate);
     const stablecoinBonus = this.calculateStablecoinBonus(method, costEstimate);
@@ -111,6 +111,25 @@ export class PaymentMethodScoringSystem {
   }
 
   /**
+   * Calculate cost effectiveness score with method-specific adjustments
+   */
+  private calculateCostScoreWithAdjustments(costEstimate: CostEstimate, transactionAmount: number, methodType: PaymentMethodType): number {
+    const baseScore = this.calculateCostScore(costEstimate, transactionAmount);
+    
+    // Apply method-specific adjustments
+    switch (methodType) {
+      case PaymentMethodType.X402:
+        // Boost x402 score since it has lower fees and better user experience
+        return Math.min(1.0, baseScore + 0.1); // 10% bonus
+      case PaymentMethodType.FIAT_STRIPE:
+        // Slight boost for fiat due to no gas fees concerns
+        return Math.min(1.0, baseScore + 0.05); // 5% bonus
+      default:
+        return baseScore;
+    }
+  }
+
+  /**
    * Calculate user preference score based on historical usage
    */
   private calculatePreferenceScore(method: PaymentMethod, preferences: UserPreferences): number {
@@ -142,6 +161,10 @@ export class PaymentMethodScoringSystem {
       return preferences.preferFiat ? 0.9 : 0.7;
     }
 
+    if (method.type === PaymentMethodType.X402) {
+      return 0.9; // Always give x402 a high preference score
+    }
+
     // Default neutral score for other methods
     return 0.5;
   }
@@ -154,8 +177,8 @@ export class PaymentMethodScoringSystem {
     context: PrioritizationContext,
     costEstimate: CostEstimate
   ): number {
-    // Fiat payments are always available
-    if (method.type === PaymentMethodType.FIAT_STRIPE) {
+    // Fiat and x402 payments are always available
+    if (method.type === PaymentMethodType.FIAT_STRIPE || method.type === PaymentMethodType.X402) {
       return 1.0;
     }
 
@@ -200,12 +223,15 @@ export class PaymentMethodScoringSystem {
    */
   private calculateStablecoinBonus(method: PaymentMethod, costEstimate: CostEstimate): number {
     if (method.type !== PaymentMethodType.STABLECOIN_USDC && 
-        method.type !== PaymentMethodType.STABLECOIN_USDT) {
+        method.type !== PaymentMethodType.STABLECOIN_USDT &&
+        method.type !== PaymentMethodType.X402) {
       return 0;
     }
 
-    // Base stablecoin bonus
-    let bonus = this.STABLECOIN_BONUS_MULTIPLIER;
+    // Base bonus for x402 or stablecoins
+    let bonus = method.type === PaymentMethodType.X402 
+      ? this.STABLECOIN_BONUS_MULTIPLIER * 1.2  // 20% higher bonus for x402
+      : this.STABLECOIN_BONUS_MULTIPLIER;
 
     // Additional bonus for low gas fees
     if (costEstimate.gasFee < 5) {
@@ -227,8 +253,8 @@ export class PaymentMethodScoringSystem {
     method: PaymentMethod,
     context: PrioritizationContext
   ): number {
-    if (method.type === PaymentMethodType.FIAT_STRIPE) {
-      return 1.0; // Fiat doesn't depend on network conditions
+    if (method.type === PaymentMethodType.FIAT_STRIPE || method.type === PaymentMethodType.X402) {
+      return 1.0; // Fiat and x402 don't depend on network conditions
     }
 
     const networkCondition = context.marketConditions.gasConditions.find(
