@@ -71,32 +71,49 @@ const profileUpdateValidation = [
 
 /**
  * @route GET /api/auth/nonce
+ * @route POST /api/auth/nonce
  * @desc Generate nonce for wallet authentication
  * @access Public
  */
-router.get('/nonce', authRateLimit, (req, res) => {
-  // Generate a simple random nonce
-  const crypto = require('crypto');
-  const nonce = crypto.randomBytes(32).toString('hex');
-  const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+router.route('/nonce')
+  .get(authRateLimit, (req, res) => {
+    // Generate a simple random nonce
+    const crypto = require('crypto');
+    const nonce = crypto.randomBytes(32).toString('hex');
+    const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
 
-  res.json({
-    success: true,
-    data: {
-      nonce,
-      message,
-      expiresIn: 600 // 10 minutes
-    }
+    res.json({
+      success: true,
+      data: {
+        nonce,
+        message,
+        expiresIn: 600 // 10 minutes
+      }
+    });
+  })
+  .post(authRateLimit, (req, res) => {
+    // Generate a simple random nonce
+    const crypto = require('crypto');
+    const nonce = crypto.randomBytes(32).toString('hex');
+    const message = `Sign this message to authenticate with LinkDAO.\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`;
+
+    res.json({
+      success: true,
+      data: {
+        nonce,
+        message,
+        expiresIn: 600 // 10 minutes
+      }
+    });
   });
-});
 
 /**
  * @route POST /api/auth/wallet
  * @desc Simple wallet authentication (development-friendly)
  * @access Public
  */
-router.post('/wallet', authRateLimit, (req, res) => {
-  const { walletAddress, signature, nonce } = req.body;
+router.post('/wallet', authRateLimit, ...walletConnectValidation, (req, res) => {
+  const { walletAddress, signature, nonce, message } = req.body;
   
   if (!walletAddress) {
     return res.status(400).json({

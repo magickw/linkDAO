@@ -41,11 +41,12 @@ class AuthService {
    */
   async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/nonce/${address}`, {
-        method: 'GET',
+      const response = await fetch(`${this.baseUrl}/api/auth/nonce`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ walletAddress: address })
       });
       const data = await response.json();
 
