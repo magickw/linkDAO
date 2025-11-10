@@ -1308,8 +1308,31 @@ function checkRateLimit(requestKey, now) {
     return true;
   }
   
-  // Skip rate limiting for geolocation services to allow fallback attempts
+  // Apply rate limiting to geolocation services to prevent excessive requests
+  // but allow reasonable fallback attempts between different providers
   if (url.hostname.includes('ip-api.com') || url.hostname.includes('ipify.org') || url.hostname.includes('ipinfo.io')) {
+    // Apply a more conservative rate limit specific to geolocation
+    const geolocationMaxRequests = 30; // 30 requests per minute instead of 100
+    const geolocationCountKey = `rate_limit:geolocation`;
+    let geolocationInfo = requestCounts.get(geolocationCountKey);
+
+    if (!geolocationInfo) {
+      geolocationInfo = { count: 0, windowStart: now };
+      requestCounts.set(geolocationCountKey, geolocationInfo);
+    }
+
+    // Reset window if expired
+    if (now - geolocationInfo.windowStart > RATE_LIMIT_WINDOW) {
+      geolocationInfo.count = 0;
+      geolocationInfo.windowStart = now;
+    }
+
+    // Check if under geolocation-specific limit
+    if (geolocationInfo.count >= geolocationMaxRequests) {
+      return false;
+    }
+
+    geolocationInfo.count += 1;
     return true;
   }
 

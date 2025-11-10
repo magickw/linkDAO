@@ -1,57 +1,65 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ProfileService } from '../services/profileService';
-import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
+import { useState, useEffect, useCallback } from 'react';
+import { UserProfile, UpdateUserProfileInput } from '@/models/UserProfile';
+import { ProfileService } from '@/services/profileService';
 
-/**
- * Custom hook to fetch a profile by wallet address using React Query
- * @param address - Wallet address to fetch profile for
- * @returns Object containing profile data, loading state, and error
- */
-export const useProfile = (address: string | undefined) => {
-  return useQuery<UserProfile | null, Error>({
-    queryKey: ['profile', address],
-    queryFn: async () => {
-      if (!address) return null;
-      return ProfileService.getProfileByAddress(address);
-    },
-    enabled: !!address, // Only run query if address is available
-    staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // Data stays in cache for 10 minutes
-    retry: 3, // Retry failed queries 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000), // Exponential backoff
-  });
-};
+interface UseProfileReturn {
+  profile: UserProfile | null;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
+  updateProfile: (data: UpdateUserProfileInput) => Promise<void>;
+}
 
-/**
- * Custom hook to create a new profile using React Query Mutations
- * @returns Object containing mutate function, loading state, and error
- */
-export const useCreateProfile = () => {
-  const queryClient = useQueryClient();
-  return useMutation<UserProfile, Error, CreateUserProfileInput>({
-    mutationFn: (data: CreateUserProfileInput) => ProfileService.createProfile(data),
-    onSuccess: (newProfile) => {
-      // Invalidate and refetch the profile query for the new address
-      queryClient.invalidateQueries({ queryKey: ['profile', newProfile.walletAddress] });
-      // Optionally, set the new profile data directly in the cache
-      queryClient.setQueryData(['profile', newProfile.walletAddress], newProfile);
-    },
-  });
-};
+export function useProfile(walletAddress?: string): UseProfileReturn {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-/**
- * Custom hook to update an existing profile using React Query Mutations
- * @returns Object containing mutate function, loading state, and error
- */
-export const useUpdateProfile = () => {
-  const queryClient = useQueryClient();
-  return useMutation<UserProfile, Error, { id: string; data: UpdateUserProfileInput }>({
-    mutationFn: ({ id, data }) => ProfileService.updateProfile(id, data),
-    onSuccess: (updatedProfile) => {
-      // Invalidate and refetch the profile query for the updated address
-      queryClient.invalidateQueries({ queryKey: ['profile', updatedProfile.walletAddress] });
-      // Optionally, set the updated profile data directly in the cache
-      queryClient.setQueryData(['profile', updatedProfile.walletAddress], updatedProfile);
-    },
-  });
-};
+  const fetchProfile = useCallback(async () => {
+    if (!walletAddress) {
+      setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const userProfile = await ProfileService.getProfileByAddress(walletAddress);
+      setProfile(userProfile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch profile');
+      setProfile(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletAddress]);
+
+  const updateProfile = useCallback(async (data: UpdateUserProfileInput) => {
+    if (!profile) {
+      throw new Error('No profile to update');
+    }
+
+    try {
+      setError(null);
+      const updatedProfile = await ProfileService.updateProfile(profile.id, data);
+      setProfile(updatedProfile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      throw err;
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  return {
+    profile,
+    isLoading,
+    error,
+    refetch: fetchProfile,
+    updateProfile
+  };
+}
