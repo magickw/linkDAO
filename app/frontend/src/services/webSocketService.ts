@@ -169,8 +169,6 @@ class WebSocketService {
           forceNew: true,
           upgrade: !this.fallbackToPolling,
           rememberUpgrade: false,
-          // Ensure path is properly set from URL
-          path: this.getPathFromUrl(this.config.url!),
           // Add CORS bypass options
           withCredentials: true,
           extraHeaders: {
@@ -192,7 +190,8 @@ class WebSocketService {
       const parsedUrl = new URL(url);
       // If the URL already includes the socket.io path, use it as is
       if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
-        return parsedUrl.pathname;
+        // Ensure we don't duplicate the path
+        return parsedUrl.pathname.endsWith('/') ? parsedUrl.pathname : parsedUrl.pathname + '/';
       }
       // Otherwise return the default socket.io path
       return '/socket.io/';
@@ -235,7 +234,9 @@ class WebSocketService {
     this.socket.on('connect_error', (error) => {
       // Only log first error to reduce console spam
       if (this.connectionState.reconnectAttempts === 0) {
-        console.warn('WebSocket unavailable, using polling fallback');
+        console.warn('WebSocket connection error:', error.message);
+        console.warn('WebSocket URL:', this.config.url);
+        console.warn('WebSocket transport:', this.socket?.io?.opts?.transports);
       }
       this.handleConnectionError(error);
       reject?.(error);
@@ -324,6 +325,7 @@ class WebSocketService {
     if (this.connectionState.reconnectAttempts > 3 && !this.fallbackToPolling) {
       // Silently switch to polling
       this.fallbackToPolling = true;
+      console.log('Switching to polling mode after multiple WebSocket failures');
     }
   }
 

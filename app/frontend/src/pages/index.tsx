@@ -842,7 +842,7 @@ export default function Home() {
                     <CommunityView communitySlug={navigationState.activeCommunity} />
                   ) : (
                     <EnhancedFeedView
-                      key={feedRefreshKey}
+                      externalRefreshKey={feedRefreshKey}
                       communityId={navigationState.activeCommunity}
                       showCommunityMetrics={false}
                       className=""

@@ -370,7 +370,7 @@ export class SearchService {
     
     try {
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/trending?timeRange=${timeRange}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}/api/search/trending?timeRange=${timeRange}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -415,7 +415,7 @@ export class SearchService {
     
     try {
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/trending/hashtags?timeRange=${timeRange}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}/api/search/trending/hashtags?timeRange=${timeRange}&limit=${limit}`,
         {
           method: 'GET',
           headers: {

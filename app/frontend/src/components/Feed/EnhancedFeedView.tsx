@@ -60,13 +60,15 @@ interface EnhancedFeedViewProps {
   initialFilter?: Partial<FeedFilter>;
   showCommunityMetrics?: boolean;
   className?: string;
+  externalRefreshKey?: number; // Add externalRefreshKey prop to force refresh
 }
 
 const EnhancedFeedView = React.memo(({
   communityId,
   initialFilter = {},
   showCommunityMetrics = false,
-  className = ''
+  className = '',
+  externalRefreshKey = 0
 }: EnhancedFeedViewProps) => {
   const { addToast } = useToast();
   const { isMobile } = useMobileOptimization();
@@ -140,6 +142,15 @@ const EnhancedFeedView = React.memo(({
       userAddress: address || '' // Update user address when it changes
     }));
   }, [currentSort, currentTimeRange, address]);
+
+  // Handle external refresh key changes - trigger a refresh when externalRefreshKey prop changes
+  useEffect(() => {
+    // Only trigger refresh if externalRefreshKey is a positive number (not undefined, null, or 0)
+    if (typeof externalRefreshKey === 'number' && externalRefreshKey > 0) {
+      // Trigger a refresh by updating the internal refreshKey state
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [externalRefreshKey]);
 
   // Auto-refresh functionality - memoized
   useEffect(() => {
@@ -488,6 +499,7 @@ const areEqual = (prevProps: EnhancedFeedViewProps, nextProps: EnhancedFeedViewP
     prevProps.communityId === nextProps.communityId &&
     prevProps.showCommunityMetrics === nextProps.showCommunityMetrics &&
     prevProps.className === nextProps.className &&
+    (prevProps.externalRefreshKey ?? 0) === (nextProps.externalRefreshKey ?? 0) &&
     JSON.stringify(prevProps.initialFilter) === JSON.stringify(nextProps.initialFilter)
   );
 };

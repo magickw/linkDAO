@@ -356,18 +356,7 @@ const CommunitiesPage: React.FC = () => {
     setSelectedFilters(filters);
   };
 
-  const handleQuickAction = (action: string, communityId?: string) => {
-    switch (action) {
-      case 'view-governance-notifications':
-        router.push('/governance');
-        break;
-      case 'create-post':
-        router.push('/create-post');
-        break;
-      default:
-        console.log('Quick action:', action, communityId);
-    }
-  };
+  
 
   const handleCreateCommunity = async (communityData: any) => {
     setIsCreatingCommunity(true);
@@ -602,16 +591,7 @@ const CommunitiesPage: React.FC = () => {
               />
             </div>
 
-            {/* Mobile Create Post Button - Reddit Style */}
-            <div className="px-4 mb-4">
-              <button
-                onClick={handleCreatePost}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Create Post</span>
-              </button>
-            </div>
+            
 
             {/* Collapsible Sidebar */}
             <div className="px-4 mb-4">
@@ -793,26 +773,7 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                {/* Quick Actions Card */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">Quick Actions</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleCreateCommunityClick}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full hover:from-green-600 hover:to-teal-700 transition-all text-sm font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Create Community</span>
-                    </button>
-                    <button
-                      onClick={handleCreatePost}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all text-sm font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Create Post</span>
-                    </button>
-                  </div>
-                </div>
+                
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard

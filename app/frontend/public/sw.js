@@ -315,7 +315,44 @@ async function networkFirst(request, cacheName) {
     }
   }
   
-  // Create promise for this request
+  // Special handling for geolocation requests - try fallback services
+  const url = new URL(request.url);
+  if (url.hostname.includes('ip-api.com') || 
+      url.hostname.includes('ipify.org') || 
+      url.hostname.includes('ipapi.co') ||
+      url.hostname.includes('ipinfo.io')) {
+    
+    // Create promise for this request with fallback
+    const requestPromise = (async () => {
+      try {
+        const networkResponse = await fetch(request);
+        if (networkResponse.ok) {
+          return networkResponse;
+        } else {
+          // Try alternative geolocation services
+          console.warn('Geolocation service failed, trying alternatives:', networkResponse.status, requestKey);
+          return await tryAlternativeGeolocationServices(request);
+        }
+      } catch (error) {
+        // Try alternative geolocation services
+        console.warn('Geolocation service network error, trying alternatives:', error.message, requestKey);
+        return await tryAlternativeGeolocationServices(request);
+      }
+    })();
+    
+    pendingRequests.set(requestKey, requestPromise);
+    
+    try {
+      const result = await requestPromise;
+      pendingRequests.delete(requestKey);
+      return result;
+    } catch (error) {
+      pendingRequests.delete(requestKey);
+      throw error;
+    }
+  }
+  
+  // Create promise for this request (normal handling)
   const requestPromise = performNetworkRequestWithCircuitBreaker(request, cacheName, requestKey, cacheConfig, serviceKey);
   pendingRequests.set(requestKey, requestPromise);
   
@@ -1615,3 +1652,109 @@ self.addEventListener('offline', () => {
 })();
 
 console.log('Service Worker loaded with enhanced caching, offline support, and action queue');
+```
+
+```
+// Function to try alternative geolocation services
+async function tryAlternativeGeolocationServices(originalRequest) {
+  const geolocationServices = [
+    {
+      name: 'ip-api.com',
+      url: 'https://ip-api.com/json/',
+      parser: (data) => ({
+        country: data.country,
+        region: data.regionName,
+        city: data.city,
+        lat: data.lat,
+        lon: data.lon,
+        timezone: data.timezone,
+        isp: data.isp
+      })
+    },
+    {
+      name: 'ipify.org',
+      url: 'https://api.ipify.org?format=json',
+      parser: async (data) => {
+        // For ipify, we only get IP, so we need to get location data from ipinfo
+        const ipData = data;
+        try {
+          const ipInfoResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=`, {
+            signal: AbortSignal.timeout(5000)
+          });
+          if (ipInfoResponse.ok) {
+            const ipInfoData = await ipInfoResponse.json();
+            const [lat, lon] = ipInfoData.loc.split(',').map(Number);
+            return {
+              country: ipInfoData.country,
+              region: ipInfoData.region,
+              city: ipInfoData.city,
+              lat,
+              lon,
+              timezone: ipInfoData.timezone,
+              isp: ipInfoData.org
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to get location data from ipinfo:', error);
+        }
+        return {};
+      }
+    },
+    {
+      name: 'ipapi.co',
+      url: 'https://ipapi.co/json/',
+      parser: (data) => ({
+        country: data.country_name,
+        region: data.region,
+        city: data.city,
+        lat: data.latitude,
+        lon: data.longitude,
+        timezone: data.timezone,
+        isp: data.org
+      })
+    }
+  ];
+
+  // Try each service in order
+  for (const service of geolocationServices) {
+    try {
+      // Skip the original service that failed
+      if (originalRequest.url.includes(service.name)) {
+        continue;
+      }
+
+      const response = await fetch(service.url, {
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        let parsedData;
+        
+        if (typeof service.parser === 'function') {
+          parsedData = await service.parser(data);
+        } else {
+          parsedData = data;
+        }
+
+        // Create a successful response with the geolocation data
+        return new Response(JSON.stringify(parsedData), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Geolocation-Source': service.name
+          }
+        });
+      }
+    } catch (error) {
+      console.warn(`Geolocation service ${service.name} failed:`, error.message);
+      // Continue to next service
+    }
+  }
+
+  // If all services fail, return a 503 error
+  return new Response(JSON.stringify({ error: 'All geolocation services unavailable' }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}

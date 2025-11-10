@@ -71,7 +71,6 @@ export class WebSocketClientService {
           timeout: 30000, // Increase timeout to 30 seconds
           reconnection: false, // We handle reconnection manually
           forceNew: true,
-          path: '/socket.io/', // Explicitly set the path
           withCredentials: true, // Enable credentials for better CORS handling
           extraHeaders: {
             'X-Client-Type': 'web',
@@ -107,6 +106,8 @@ export class WebSocketClientService {
 
         this.socket.on('connect_error', (error) => {
           console.warn('WebSocket connection error (will attempt polling fallback):', error.message);
+          console.warn('WebSocket URL:', this.config.url);
+          console.warn('WebSocket transport options:', this.socket?.io?.opts?.transports);
           
           // Emit a warning but don't reject immediately to allow polling fallback
           this.connectionState = {
@@ -293,15 +294,23 @@ export class WebSocketClientService {
     this.connectionState.reconnectAttempts++;
     this.emit('connection_state_changed', this.connectionState);
 
-    const delay = this.config.reconnectDelay * Math.pow(2, this.connectionState.reconnectAttempts - 1);
-    
+    // Exponential backoff with jitter
+    const baseDelay = this.config.reconnectDelay;
+    const maxDelay = 30000; // Maximum 30 seconds
+    const backoffFactor = 2;
+    const delay = Math.min(baseDelay * Math.pow(backoffFactor, this.connectionState.reconnectAttempts - 1), maxDelay);
+    const jitter = Math.random() * 0.5 * delay; // Add up to 50% jitter
+    const finalDelay = delay + jitter;
+
+    console.log(`Attempting WebSocket reconnection (${this.connectionState.reconnectAttempts}/${this.config.reconnectAttempts}) in ${Math.round(finalDelay)}ms`);
+
     this.reconnectTimeout = setTimeout(() => {
       console.log(`Attempting reconnection (${this.connectionState.reconnectAttempts}/${this.config.reconnectAttempts})`);
       this.connect().catch((error) => {
         console.error('Reconnection failed:', error);
         this.attemptReconnection();
       });
-    }, delay);
+    }, finalDelay);
   }
 
   // Subscription Management
