@@ -137,11 +137,11 @@ class AuthService {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Get nonce and message
-      const { nonce, message } = await this.getNonce(address);
+      const nonceInfo = await this.getNonce(address);
 
       // Validate message
-      if (!message || typeof message !== 'string') {
-        console.error('Invalid message received from getNonce:', message);
+      if (!nonceInfo.message || typeof nonceInfo.message !== 'string') {
+        console.error('Invalid message received from getNonce:', nonceInfo.message);
         return { success: false, error: 'Failed to generate authentication message' };
       }
 
@@ -162,7 +162,7 @@ class AuthService {
         // Using wagmi/core signMessage with proper error handling
         signature = await signMessage(config, {
           account: address as `0x${string}`,
-          message: message as string
+          message: nonceInfo.message as string
         });
 
         if (!signature) {
@@ -204,7 +204,8 @@ class AuthService {
           body: JSON.stringify({
             walletAddress: address,
             signature,
-            nonce,
+            nonce: nonceInfo.nonce,
+            message: nonceInfo.message,
           }),
         });
         

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Shield, AlertTriangle, Lock, Key, UserCheck, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { Button, GlassPanel } from '@/design-system';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,11 +40,48 @@ const AdminLoginPage: NextPage = () => {
   // Handle wallet connection completion
   useEffect(() => {
     if (isConnected && address && loginMethod === 'wallet') {
-      // Wallet is connected, check for admin role
-      // The auth context should update automatically
+      // Wallet is connected, now authenticate with backend
       console.log('Wallet connected:', address);
+      authenticateWithBackend();
     }
   }, [isConnected, address, loginMethod]);
+
+  // Function to authenticate with backend
+  const authenticateWithBackend = async () => {
+    if (!address) return;
+    
+    setIsSubmitting(true);
+    setError('');
+    
+    try {
+      // Find the connected connector or use the first available one
+      const connectedConnector = connectors.find(c => c.ready) || connectors[0];
+      const result = await authService.authenticateWallet(address, connectedConnector, 'connected');
+      
+      if (result.success && result.user) {
+        // Refresh user context to get updated role
+        await refreshUser();
+        setSuccessMessage('Authentication successful! Checking admin privileges...');
+        
+        // Check if user has admin role
+        const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(result.user.role);
+        if (isAdminUser) {
+          setTimeout(() => {
+            const redirectTo = (router.query.redirect as string) || '/admin';
+            router.push(redirectTo);
+          }, 1500);
+        } else {
+          setError('Your account does not have administrative privileges. Please contact your system administrator.');
+        }
+      } else {
+        setError(result.error || 'Authentication failed. Please try again.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,18 +291,55 @@ const AdminLoginPage: NextPage = () => {
               <div className="space-y-4">
                 {isConnected && address ? (
                   <div className="text-center space-y-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto flex items-center justify-center">
-                      <UserCheck className="w-8 h-8 text-white" />
+                    <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center ${
+                      isSubmitting 
+                        ? 'bg-yellow-500 animate-pulse' 
+                        : user && ['admin', 'super_admin', 'moderator'].includes(user.role)
+                        ? 'bg-gradient-to-r from-green-500 to-blue-500'
+                        : 'bg-gradient-to-r from-red-500 to-orange-500'
+                    }`}>
+                      {isSubmitting ? (
+                        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <UserCheck className="w-8 h-8 text-white" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">Wallet Connected</h3>
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        {isSubmitting ? 'Authenticating...' : 'Wallet Connected'}
+                      </h3>
                       <div className="bg-gray-800 rounded-lg p-3 mb-4">
                         <p className="text-sm text-gray-400 mb-1">Connected Address:</p>
                         <p className="text-white font-mono text-sm break-all">{address}</p>
                       </div>
-                      <p className="text-gray-400 text-sm mb-4">
-                        Verifying admin privileges...
-                      </p>
+                      {isSubmitting && (
+                        <p className="text-yellow-400 text-sm mb-4">
+                          Signing message to verify admin privileges...
+                        </p>
+                      )}
+                      {!isSubmitting && user && (
+                        <div className="mb-4">
+                          {['admin', 'super_admin', 'moderator'].includes(user.role) ? (
+                            <p className="text-green-400 text-sm">
+                              ✅ Admin privileges confirmed. Redirecting...
+                            </p>
+                          ) : (
+                            <div>
+                              <p className="text-red-400 text-sm mb-2">
+                                ❌ Your account does not have admin privileges
+                              </p>
+                              <Button 
+                                onClick={() => disconnect()} 
+                                variant="outline" 
+                                size="small"
+                                className="mt-2"
+                              >
+                                Disconnect & Try Again
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Button onClick={() => disconnect()} variant="outline" size="small">
                       Disconnect Wallet
@@ -275,26 +350,89 @@ const AdminLoginPage: NextPage = () => {
                     <p className="text-gray-400 text-sm mb-4">
                       Connect your admin wallet to sign in securely using Web3 authentication.
                     </p>
-                    {connectors.map((connector) => (
+                    {connectors.map((connector, index) => {
+                      const isUnsupported = !connector.ready;
+                      return (
                       <Button
-                        key={connector.id}
-                        onClick={() => connect({ connector })}
-                        variant="primary"
+                        key={`${connector.id}-${index}`}
+                        onClick={() => {
+                          if (isUnsupported) {
+                            // Show installation instructions for unsupported wallets
+                            const walletUrls: Record<string, string> = {
+                              'MetaMask': 'https://metamask.io/download/',
+                              'WalletConnect': 'https://walletconnect.com/',
+                              'Rainbow': 'https://rainbow.me/',
+                              'Safe': 'https://apps.gnosis-safe.io/',
+                              'Base Account': 'https://www.base.org/',
+                            };
+                            const url = walletUrls[connector.name];
+                            if (url) {
+                              window.open(url, '_blank');
+                            }
+                          } else {
+                            connect({ connector });
+                          }
+                        }}
+                        variant={isUnsupported ? 'outline' : 'primary'}
                         className="w-full justify-between"
-                        disabled={!connector.ready || isPending}
+                        disabled={isPending}
                       >
                         <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mr-3 flex items-center justify-center">
+                          <div className={`w-8 h-8 rounded-full mr-3 flex items-center justify-center ${
+                            isUnsupported 
+                              ? 'bg-gray-600' 
+                              : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                          }`}>
                             <Shield className="w-4 h-4 text-white" />
                           </div>
                           <span>{connector.name}</span>
-                          {!connector.ready && ' (unsupported)'}
+                          {isUnsupported && (
+                            <span className="text-xs text-gray-400 ml-2">
+                              (Click to install)
+                            </span>
+                          )}
                         </div>
                         {isPending && (
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         )}
                       </Button>
-                    ))}
+                      );
+                    })}
+                    
+                    {/* Add the same ConnectButton as the main site */}
+                    <div className="mt-4 pt-4 border-t border-gray-700">
+                      <p className="text-gray-400 text-sm mb-3">Or use the standard wallet connection:</p>
+                      <ConnectButton.Custom>
+                        {({ openConnectModal, authenticationStatus, mounted }) => {
+                          const ready = mounted && authenticationStatus !== 'loading';
+                          return (
+                            <Button
+                              onClick={() => {
+                                openConnectModal();
+                                // Set up a listener to detect when wallet connects
+                                const checkInterval = setInterval(() => {
+                                  if (isConnected && address) {
+                                    clearInterval(checkInterval);
+                                    // Trigger authentication after wallet connects
+                                    authenticateWithBackend();
+                                  }
+                                }, 500);
+                                // Clear interval after 30 seconds to prevent memory leak
+                                setTimeout(() => clearInterval(checkInterval), 30000);
+                              }}
+                              disabled={!ready}
+                              variant="outline"
+                              className="w-full"
+                            >
+                              <div className="flex items-center justify-center">
+                                <Shield className="w-4 h-4 mr-2" />
+                                Connect Wallet (Standard)
+                              </div>
+                            </Button>
+                          );
+                        }}
+                      </ConnectButton.Custom>
+                    </div>
                   </div>
                 )}
               </div>

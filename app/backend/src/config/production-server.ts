@@ -123,7 +123,7 @@ class ProductionServerManager {
       // Import marketplace API routes
       const { default: sellerRoutes } = await import('../routes/sellerProfileRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
-      const { default: authRoutes } = await import('../routes/authenticationRoutes');
+      const { default: authRoutes } = await import('../routes/authRoutes'); // Changed from authenticationRoutes to authRoutes
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
       const { default: healthRoutes } = await import('../routes/healthRoutes');
 

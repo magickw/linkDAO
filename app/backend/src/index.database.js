@@ -69,6 +69,21 @@ async function initializeDatabase() {
 // In-memory nonce storage (in production, use Redis or database)
 const nonceStorage = {};
 
+// Clean up expired nonces every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [address, data] of Object.entries(nonceStorage)) {
+    if (now > data.expires) {
+      delete nonceStorage[address];
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`Cleaned up ${cleaned} expired nonces`);
+  }
+}, 5 * 60 * 1000); // Every 5 minutes
+
 // Helper function to generate random nonce
 function generateNonce() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -338,11 +353,11 @@ app.get('/api/auth/nonce/:address', (req, res) => {
     const nonce = generateNonce();
     const message = createAuthMessage(address, nonce);
     
-    // Store nonce temporarily (expires in 5 minutes)
+    // Store nonce temporarily (expires in 30 minutes)
     nonceStorage[address] = {
       nonce,
       timestamp: Date.now(),
-      expires: Date.now() + 5 * 60 * 1000 // 5 minutes
+      expires: Date.now() + 30 * 60 * 1000 // 30 minutes
     };
     
     res.json({
@@ -361,44 +376,70 @@ app.get('/api/auth/nonce/:address', (req, res) => {
 
 app.post('/api/auth/wallet', async (req, res) => {
   try {
-    const { address, signature, message, nonce } = req.body;
+    const { walletAddress, signature, message, nonce } = req.body;
     
-    if (!address || !signature || !message || !nonce) {
+    if (!walletAddress || !signature || !message || !nonce) {
       return res.status(400).json({
         success: false,
-        error: 'Address, signature, message, and nonce are required'
+        error: 'Wallet address, signature, message, and nonce are required'
       });
     }
     
     // Verify nonce
-    const storedNonce = nonceStorage[address];
-    if (!storedNonce || storedNonce.nonce !== nonce || Date.now() > storedNonce.expires) {
+    const storedNonce = nonceStorage[walletAddress];
+    console.log('Checking nonce for address:', walletAddress);
+    console.log('Stored nonce:', storedNonce);
+    console.log('Received nonce:', nonce);
+    console.log('Current time:', Date.now());
+    console.log('Nonce expires:', storedNonce ? storedNonce.expires : 'N/A');
+    
+    if (!storedNonce) {
+      console.log('No nonce stored for address:', walletAddress);
       return res.status(400).json({
         success: false,
-        error: 'Invalid or expired nonce'
+        error: 'No nonce found. Please request a new nonce.'
+      });
+    }
+    
+    if (storedNonce.nonce !== nonce) {
+      console.log('Nonce mismatch. Stored:', storedNonce.nonce, 'Received:', nonce);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid nonce. Please request a new nonce.'
+      });
+    }
+    
+    if (Date.now() > storedNonce.expires) {
+      console.log('Nonce expired. Current time:', Date.now(), 'Expires:', storedNonce.expires);
+      // Clean up expired nonce
+      delete nonceStorage[walletAddress];
+      return res.status(400).json({
+        success: false,
+        error: 'Nonce expired. Please request a new nonce.'
       });
     }
     
     // Clean up used nonce
-    delete nonceStorage[address];
+    delete nonceStorage[walletAddress];
     
     // For now, we'll skip signature verification and just create/get the user
     // In production, you would verify the signature using ethers.js or similar
-    console.log('Authenticating wallet:', address);
+    console.log('Authenticating wallet:', walletAddress);
     
     // Get or create user
-    let userResult = await getUserByAddress(address);
+    let userResult = await getUserByAddress(walletAddress);
+    
     if (userResult.rows.length === 0) {
       // Create new user
-      userResult = await createOrUpdateUser(address, null, {});
+      userResult = await createOrUpdateUser(walletAddress, null, {});
     }
     
     const user = userResult.rows[0];
     
     // Generate simple session token (in production, use JWT)
-    const token = `token_${address}_${Date.now()}`;
+    const token = `token_${walletAddress}_${Date.now()}`;
     sessionStorage[token] = {
-      address,
+      address: walletAddress,
       userId: user.id,
       createdAt: Date.now()
     };
