@@ -163,7 +163,7 @@ export class HealthMonitoringService {
         let cacheService;
         try {
           const cacheModule = await import('./cacheService');
-          cacheService = cacheModule.cacheService || cacheModule.default;
+          cacheService = cacheModule.cacheService;
         } catch (importError) {
           // If we can't import the cache service, it's not configured
           return {

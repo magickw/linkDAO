@@ -119,7 +119,7 @@ const EnhancedFeedView = React.memo(({
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
-    feedSource: 'following', // Always default to following feed
+    feedSource: 'all', // Default to 'all' to ensure users see their own posts
     userAddress: address || '', // Add user address for personalized feed
     ...initialFilter
   });
@@ -138,7 +138,8 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      feedSource: 'following', // Always keep it as following
+      // Only use 'following' feed if user is following someone, otherwise use 'all'
+      feedSource: 'all', // Always show all posts to ensure user sees their own posts
       userAddress: address || '' // Update user address when it changes
     }));
   }, [currentSort, currentTimeRange, address]);
@@ -456,18 +457,18 @@ const EnhancedFeedView = React.memo(({
         {/* Trending Content Detector - Hidden, runs in background */}
         {trendingDetector}
 
-        {/* Simplified Header - Just show that it's the following feed */}
+        {/* Simplified Header - Show that it's showing all posts */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 p-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Feed</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Posts from accounts you follow and your own posts
+                All posts from the LinkDAO community
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
-                Following + Yours
+                All Posts
               </span>
             </div>
           </div>

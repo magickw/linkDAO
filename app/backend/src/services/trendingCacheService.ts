@@ -32,7 +32,7 @@ class TrendingCacheService {
 
   private async initializeClient() {
     try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       
       // Handle placeholder values
       if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {

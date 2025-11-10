@@ -64,7 +64,7 @@ interface CommentData {
 export class FeedService {
   // Get enhanced personalized feed
   async getEnhancedFeed(options: FeedOptions) {
-    // Default to following feed and newest posts if not specified
+    // Default to all feed and newest posts if not specified
     const { 
       userAddress, 
       page, 
@@ -72,7 +72,7 @@ export class FeedService {
       sort = 'new', // Default to newest
       communities: filterCommunities, 
       timeRange = 'all', // Default to all time
-      feedSource = 'following' // Default to following feed
+      feedSource = 'all' // Default to all feed to ensure users see their own posts
     } = options;
     
     const offset = (page - 1) * limit;
@@ -116,10 +116,26 @@ export class FeedService {
           followingFilter = eq(posts.authorId, userId);
         }
       } else {
-        // User doesn't exist, return empty result
-        followingFilter = sql`1=0`;
+        // User doesn't exist in database, but let's still try to show their posts
+        // Get or create user first
+        const [userRecord] = await db.insert(users)
+          .values({
+            walletAddress: normalizedAddress,
+            createdAt: new Date()
+          })
+          .onConflictDoNothing()
+          .returning();
+        
+        // If user was created or already exists, show their posts
+        if (userRecord) {
+          followingFilter = eq(posts.authorId, userRecord.id);
+        } else {
+          // Fallback - user doesn't exist, return empty result
+          followingFilter = sql`1=0`;
+        }
       }
     }
+    // For 'all' feedSource, no additional filtering is needed - show all posts
 
     // Build sort order - default to newest posts
     const sortOrder = this.buildSortOrder(sort);

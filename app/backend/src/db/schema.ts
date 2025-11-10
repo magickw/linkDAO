@@ -71,6 +71,7 @@ export const posts = pgTable("posts", {
   moderationWarning: text("moderation_warning"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   authorFk: foreignKey({
     columns: [t.authorId],

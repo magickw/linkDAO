@@ -19,7 +19,7 @@ export class FeedController {
         sort = 'new', // Default to newest posts
         communities = [],
         timeRange = 'all', // Default to all time
-        feedSource = 'following' // Default to following feed
+        feedSource = 'all' // Default to all feed to ensure users see their own posts
       } = req.query;
 
       // If user is not authenticated and requests 'following' feed, return empty result

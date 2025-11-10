@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { safeLogger } from '../utils/safeLogger';
 import * as schema from "../db/schema";
-import { eq, and, or, ilike, desc, lt, sql } from "drizzle-orm";
+import { eq, and, or, ilike, desc, lt, gte, lte, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
@@ -116,7 +116,8 @@ export class DatabaseService {
         mediaCids: mediaCids ? JSON.stringify(mediaCids) : null,
         tags: tags ? JSON.stringify(tags) : null,
         onchainRef: onchainRef || null,
-        isTokenGated: false
+        isTokenGated: false,
+        updatedAt: new Date()
       }).returning();
       
       return result[0];
@@ -128,17 +129,99 @@ export class DatabaseService {
 
   async getPostsByAuthor(authorId: string) {
     try {
-      return await this.db.select().from(schema.posts).where(eq(schema.posts.authorId, authorId));
+      return await this.db
+        .select({
+          id: schema.posts.id,
+          authorId: schema.posts.authorId,
+          title: schema.posts.title,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          stakedValue: schema.posts.stakedValue,
+          reputationScore: schema.posts.reputationScore,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          pollId: schema.posts.pollId,
+          isTokenGated: schema.posts.isTokenGated,
+          gatedContentPreview: schema.posts.gatedContentPreview,
+          moderationStatus: schema.posts.moderationStatus,
+          moderationWarning: schema.posts.moderationWarning,
+          riskScore: schema.posts.riskScore,
+          createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
+        })
+        .from(schema.posts)
+        .where(eq(schema.posts.authorId, authorId))
+        .orderBy(desc(schema.posts.createdAt));
     } catch (error) {
       safeLogger.error("Error getting posts by author:", error);
       throw error;
     }
   }
 
+  async getPostById(id: number) {
+    try {
+      const result = await this.db
+        .select({
+          id: schema.posts.id,
+          authorId: schema.posts.authorId,
+          title: schema.posts.title,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          stakedValue: schema.posts.stakedValue,
+          reputationScore: schema.posts.reputationScore,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          pollId: schema.posts.pollId,
+          isTokenGated: schema.posts.isTokenGated,
+          gatedContentPreview: schema.posts.gatedContentPreview,
+          moderationStatus: schema.posts.moderationStatus,
+          moderationWarning: schema.posts.moderationWarning,
+          riskScore: schema.posts.riskScore,
+          createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
+        })
+        .from(schema.posts)
+        .where(eq(schema.posts.id, id));
+      return result[0] || null;
+    } catch (error) {
+      safeLogger.error("Error getting post by ID:", error);
+      throw error;
+    }
+  }
+    }
+  }
+
   async getAllPosts() {
     try {
       safeLogger.info("Getting all posts from database");
-      const result = await this.db.select().from(schema.posts);
+      const result = await this.db
+        .select({
+          id: schema.posts.id,
+          authorId: schema.posts.authorId,
+          title: schema.posts.title,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          stakedValue: schema.posts.stakedValue,
+          reputationScore: schema.posts.reputationScore,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          pollId: schema.posts.pollId,
+          isTokenGated: schema.posts.isTokenGated,
+          gatedContentPreview: schema.posts.gatedContentPreview,
+          moderationStatus: schema.posts.moderationStatus,
+          moderationWarning: schema.posts.moderationWarning,
+          riskScore: schema.posts.riskScore,
+          createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
+        })
+        .from(schema.posts)
+        .orderBy(desc(schema.posts.createdAt));
       safeLogger.info(`Retrieved ${result.length} posts from database`);
       return result;
     } catch (error) {
@@ -169,6 +252,7 @@ export class DatabaseService {
           mediaCids: schema.posts.mediaCids,
           tags: schema.posts.tags,
           createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
           dao: schema.posts.dao,
           communityId: schema.posts.communityId,
           stakedValue: schema.posts.stakedValue

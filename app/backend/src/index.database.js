@@ -413,6 +413,8 @@ app.post('/api/auth/wallet', async (req, res) => {
         ens: user.ens || '',
         email: '',
         kycStatus: 'none',
+        role: user.role || 'user',
+        permissions: user.permissions || [],
         createdAt: user.created_at
       }
     });
@@ -457,6 +459,8 @@ app.get('/api/auth/user', async (req, res) => {
         ens: user.ens || '',
         email: '',
         kycStatus: 'none',
+        role: user.role || 'user',
+        permissions: user.permissions || [],
         createdAt: user.created_at
       }
     });

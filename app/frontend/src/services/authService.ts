@@ -41,14 +41,11 @@ class AuthService {
    */
   async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/nonce`, {
-        method: 'POST',
+      const response = await fetch(`${this.baseUrl}/api/auth/nonce/${address}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          walletAddress: address
-        }),
       });
       const data = await response.json();
 
@@ -56,8 +53,8 @@ class AuthService {
         throw new Error(data.error || 'Failed to get nonce');
       }
 
-      // Backend returns data in a nested 'data' property
-      const nonceData = data.data || data;
+      // Backend returns data directly for database.js version
+      const nonceData = data;
       return { nonce: nonceData.nonce, message: nonceData.message };
     } catch (error) {
       // If backend is unavailable, return mock nonce
