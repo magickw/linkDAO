@@ -116,17 +116,14 @@ export function PWAInstallPrompt({
     onDismiss?.();
     
     // Don't show again for this session
-    sessionStorage.setItem('pwa-prompt-dismissed', 'true');
-  };
-
-  const handleManualShow = () => {
-    if (canInstall && !isInstalled) {
-      setShowPrompt(true);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem('pwa-prompt-dismissed', 'true');
     }
   };
 
   // Don't show if already installed or dismissed this session
-  if (isInstalled || sessionStorage.getItem('pwa-prompt-dismissed')) {
+  const isDismissed = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('pwa-prompt-dismissed') : false;
+  if (isInstalled || isDismissed) {
     return null;
   }
 

@@ -128,7 +128,7 @@ const OrdersPage: React.FC = () => {
     let cancelled = false;
     const loadOrders = async () => {
       if (!walletAddress) {
-        const localOrders = sessionStorage.getItem(RECENT_ORDERS_KEY);
+        const localOrders = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem(RECENT_ORDERS_KEY) : null;
         setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
         setStats(null);
         return;
@@ -242,7 +242,7 @@ const OrdersPage: React.FC = () => {
             }));
             setOrders(normalized);
           } else {
-            const localOrders = sessionStorage.getItem(RECENT_ORDERS_KEY);
+            const localOrders = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem(RECENT_ORDERS_KEY) : null;
             setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
           }
 
@@ -256,7 +256,7 @@ const OrdersPage: React.FC = () => {
           errorToastShownRef.current = true;
         }
         if (!cancelled) {
-          const localOrders = sessionStorage.getItem(RECENT_ORDERS_KEY);
+          const localOrders = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem(RECENT_ORDERS_KEY) : null;
           setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
         }
       } finally {

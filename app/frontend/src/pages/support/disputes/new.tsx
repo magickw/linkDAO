@@ -193,16 +193,7 @@ const NewDisputePage: React.FC = () => {
       const disputeId = `DIS-${Date.now()}`;
       
       // Store in session for demo
-      if (typeof window !== 'undefined') {
-        const disputeData = {
-          id: disputeId,
-          orderId: orderIdInput,
-          category,
-          description,
-          evidenceCount: evidence.length,
-          status: 'filed',
-          createdAt: new Date().toISOString(),
-        };
+      if (typeof window !== 'undefined' && window.sessionStorage) {
         sessionStorage.setItem(`dispute_${disputeId}`, JSON.stringify(disputeData));
       }
 

@@ -83,11 +83,11 @@ export default function LegacyFunctionalityPreserver() {
       }
 
       // Migrate old feed settings from multiple sources
-      const oldFeedSettings = localStorage.getItem('feed-settings');
-      const oldSocialFeedSettings = localStorage.getItem('social-feed-settings');
-      const legacyFeedState = sessionStorage.getItem('legacy-feed-state');
+      const oldFeedSettings = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('feed-settings') : null;
+      const oldSocialFeedSettings = typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('social-feed-settings') : null;
+      const legacyFeedState = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('legacy-feed-state') : null;
       
-      if ((oldFeedSettings || oldSocialFeedSettings || legacyFeedState) && !localStorage.getItem('dashboard-feed-settings')) {
+      if ((oldFeedSettings || oldSocialFeedSettings || legacyFeedState) && typeof window !== 'undefined' && window.localStorage && !localStorage.getItem('dashboard-feed-settings')) {
         try {
           const feedSettings = oldFeedSettings ? JSON.parse(oldFeedSettings) : {};
           const socialFeedSettings = oldSocialFeedSettings ? JSON.parse(oldSocialFeedSettings) : {};
@@ -102,10 +102,12 @@ export default function LegacyFunctionalityPreserver() {
             migrationDate: new Date().toISOString()
           };
           
-          localStorage.setItem('dashboard-feed-settings', JSON.stringify(mergedSettings));
+          if (typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem('dashboard-feed-settings', JSON.stringify(mergedSettings));
+          }
           
           // Clean up session storage
-          if (legacyFeedState) {
+          if (legacyFeedState && typeof window !== 'undefined' && window.sessionStorage) {
             sessionStorage.removeItem('legacy-feed-state');
           }
         } catch (error) {
@@ -187,6 +189,8 @@ export default function LegacyFunctionalityPreserver() {
   // Preserve scroll position for better UX during migration
   useEffect(() => {
     const preserveScrollPosition = () => {
+      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      
       const savedPosition = sessionStorage.getItem('legacy-scroll-position');
       if (savedPosition && router.pathname === '/dashboard') {
         try {
@@ -201,6 +205,8 @@ export default function LegacyFunctionalityPreserver() {
 
     // Save scroll position before navigation
     const handleBeforeUnload = () => {
+      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      
       sessionStorage.setItem('legacy-scroll-position', JSON.stringify({
         x: window.scrollX,
         y: window.scrollY
@@ -208,10 +214,14 @@ export default function LegacyFunctionalityPreserver() {
     };
 
     preserveScrollPosition();
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
 
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      }
     };
   }, [router.pathname]);
 

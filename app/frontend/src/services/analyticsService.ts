@@ -111,8 +111,10 @@ class AnalyticsService {
     // Use port 10000 based on the start-services.sh script
     this.baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
 
-    // Try to restore cached geolocation from sessionStorage
-    this.restoreGeoCache();
+    // Try to restore cached geolocation from sessionStorage (only in browser)
+    if (typeof window !== 'undefined') {
+      this.restoreGeoCache();
+    }
   }
 
   /**
@@ -324,6 +326,11 @@ class AnalyticsService {
     }
   ): Promise<void> {
     try {
+      // Don't track events during server-side rendering
+      if (typeof window === 'undefined') {
+        return;
+      }
+      
       // Get user and session info from context/storage
       const userId = this.getCurrentUserId();
       const sessionId = this.getSessionId();
@@ -351,9 +358,9 @@ class AnalyticsService {
           eventType,
           eventData,
           metadata: {
-            pageUrl: window.location.href,
-            userAgent: navigator.userAgent,
-            referrer: document.referrer,
+            pageUrl: typeof window !== 'undefined' ? window.location.href : 'unknown',
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+            referrer: typeof document !== 'undefined' ? document.referrer : 'unknown',
             deviceType: this.getDeviceType(),
             browser: this.getBrowserName(),
             ...geoData,
@@ -456,12 +463,27 @@ class AnalyticsService {
 
   // Utility methods for tracking
   private getCurrentUserId(): string {
+    // Check if we're in a browser environment before accessing localStorage
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return 'anonymous';
+    }
+    
     // Get from auth context or localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.id || 'anonymous';
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      return user.id || 'anonymous';
+    } catch (error) {
+      console.debug('Failed to get user from localStorage:', error);
+      return 'anonymous';
+    }
   }
 
   private getSessionId(): string {
+    // Check if we're in a browser environment before accessing sessionStorage
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+    
     // Get or create session ID
     let sessionId = sessionStorage.getItem('sessionId');
     if (!sessionId) {
@@ -472,6 +494,11 @@ class AnalyticsService {
   }
 
   private getDeviceType(): string {
+    // Check if we're in a browser environment before accessing navigator
+    if (typeof window === 'undefined' || !window.navigator) {
+      return 'unknown';
+    }
+    
     const userAgent = navigator.userAgent;
     if (/tablet|ipad|playbook|silk/i.test(userAgent)) {
       return 'tablet';
@@ -483,6 +510,11 @@ class AnalyticsService {
   }
 
   private getBrowserName(): string {
+    // Check if we're in a browser environment before accessing navigator
+    if (typeof window === 'undefined' || !window.navigator) {
+      return 'unknown';
+    }
+    
     const userAgent = navigator.userAgent;
     if (userAgent.includes('Chrome')) return 'Chrome';
     if (userAgent.includes('Firefox')) return 'Firefox';
@@ -582,37 +614,6 @@ class AnalyticsService {
   }
 
   /**
-   * Restore geolocation cache from sessionStorage
-   */
-  private restoreGeoCache(): void {
-    try {
-      const cached = sessionStorage.getItem('geoCache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        // Only restore if cache is still valid
-        if (Date.now() - parsed.timestamp < this.GEO_CACHE_TTL) {
-          this.geoCache = parsed;
-        }
-      }
-    } catch (error) {
-      console.debug('Failed to restore geo cache:', error);
-    }
-  }
-
-  /**
-   * Save geolocation cache to sessionStorage
-   */
-  private saveGeoCache(): void {
-    try {
-      if (this.geoCache) {
-        sessionStorage.setItem('geoCache', JSON.stringify(this.geoCache));
-      }
-    } catch (error) {
-      console.debug('Failed to save geo cache:', error);
-    }
-  }
-
-  /**
    * Get client IP and location using multiple geolocation services
    * Now with better error handling and timeouts
    */
@@ -660,6 +661,47 @@ class AnalyticsService {
     return {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     };
+  }
+
+  /**
+   * Restore geolocation cache from sessionStorage
+   */
+  private restoreGeoCache(): void {
+    // Check if we're in a browser environment before accessing sessionStorage
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return;
+    }
+    
+    try {
+      const cached = sessionStorage.getItem('geoCache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Only restore if cache is still valid
+        if (Date.now() - parsed.timestamp < this.GEO_CACHE_TTL) {
+          this.geoCache = parsed;
+        }
+      }
+    } catch (error) {
+      console.debug('Failed to restore geo cache:', error);
+    }
+  }
+
+  /**
+   * Save geolocation cache to sessionStorage
+   */
+  private saveGeoCache(): void {
+    // Check if we're in a browser environment before accessing sessionStorage
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return;
+    }
+    
+    try {
+      if (this.geoCache) {
+        sessionStorage.setItem('geoCache', JSON.stringify(this.geoCache));
+      }
+    } catch (error) {
+      console.debug('Failed to save geo cache:', error);
+    }
   }
 
   /**
@@ -805,10 +847,15 @@ class AnalyticsService {
    * Automatically track page views
    */
   trackPageView(pageName?: string): void {
+    // Don't track events during server-side rendering
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     try {
       this.trackUserEvent('page_view', {
-        page: pageName || window.location.pathname,
-        title: document.title,
+        page: pageName || (typeof window !== 'undefined' ? window.location.pathname : 'unknown'),
+        title: typeof document !== 'undefined' ? document.title : 'unknown',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
