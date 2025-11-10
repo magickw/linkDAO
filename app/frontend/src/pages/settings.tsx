@@ -1,13 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import Layout from '@/components/Layout';
 import NotificationPreferences from '@/components/NotificationPreferences';
 import Link from 'next/link';
+import { ProfileService } from '@/services/profileService';
+import { UserProfile } from '@/models/UserProfile';
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState('profile');
   const [showNotificationPreferences, setShowNotificationPreferences] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+
+  // Fetch user profile when component mounts or address changes
+  useEffect(() => {
+    if (address) {
+      fetchUserProfile();
+    }
+  }, [address]);
+
+  const fetchUserProfile = async () => {
+    if (!address) return;
+    try {
+      const profile = await ProfileService.getProfileByAddress(address);
+      setUserProfile(profile);
+      setEmail(profile?.email || '');
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailUpdate = async () => {
+    setEmailError('');
+    setEmailSuccess('');
+
+    // Validate email format
+    if (email && !validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    if (!userProfile) {
+      setEmailError('Profile not found. Please try again.');
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+
+    try {
+      await ProfileService.updateProfile(userProfile.id, { email });
+      setEmailSuccess('Email updated successfully!');
+      setTimeout(() => setEmailSuccess(''), 3000);
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Failed to update email');
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: '👤' },
@@ -228,9 +287,48 @@ export default function Settings() {
                     <span className="text-2xl mr-3">⚙️</span>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Preferences</h2>
                   </div>
-                  
+
                   <div className="space-y-6">
                     <div>
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Communication</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                            Email Address
+                          </label>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                            Provide your email so the platform can communicate with you about important updates, notifications, and announcements.
+                          </p>
+                          <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="your.email@example.com"
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          />
+                          {emailError && (
+                            <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+                              {emailError}
+                            </p>
+                          )}
+                          {emailSuccess && (
+                            <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                              {emailSuccess}
+                            </p>
+                          )}
+                          <button
+                            onClick={handleEmailUpdate}
+                            disabled={isUpdatingEmail}
+                            className="mt-3 px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                          >
+                            {isUpdatingEmail ? 'Saving...' : 'Save Email'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Appearance</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">

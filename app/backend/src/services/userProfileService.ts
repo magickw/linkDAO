@@ -125,6 +125,7 @@ export class UserProfileService {
       ens: additionalData.ens || '',
       avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
+      email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
       createdAt,
       updatedAt
@@ -165,6 +166,7 @@ export class UserProfileService {
       ens: additionalData.ens || '',
       avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
+      email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
       createdAt,
       updatedAt

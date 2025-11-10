@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { ProfileService } from '@/services/profileService';
 import { UserProfile, UpdateUserProfileInput } from '@/models/UserProfile';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/context/ToastContext';
 import { ProfileUpdateSuccess } from '@/components/UserFeedback';
 
 const ProfilePage: React.FC = () => {
@@ -43,7 +43,6 @@ const ProfilePage: React.FC = () => {
           ens: userProfile.ens,
           avatarCid: userProfile.avatarCid,
           bioCid: userProfile.bioCid,
-          email: userProfile.email,
           billingFirstName: userProfile.billingFirstName,
           billingLastName: userProfile.billingLastName,
           billingCompany: userProfile.billingCompany,
@@ -68,11 +67,7 @@ const ProfilePage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to load profile data'
-      });
+      addToast('Failed to load profile data', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +78,6 @@ const ProfilePage: React.FC = () => {
     
     if (!formData.handle || formData.handle.trim().length < 3) {
       newErrors.handle = 'Handle must be at least 3 characters';
-    }
-    
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
     }
     
     setErrors(newErrors);
@@ -105,22 +96,14 @@ const ProfilePage: React.FC = () => {
       setProfile(updatedProfile);
       
       setShowSuccess(true);
-      addToast({
-        type: 'success',
-        title: 'Profile Updated',
-        message: 'Your profile has been updated successfully'
-      });
+      addToast('Your profile has been updated successfully', 'success');
       
       // Hide success message after 3 seconds
       setTimeout(() => setShowSuccess(false), 3000);
       
     } catch (error) {
       console.error('Failed to update profile:', error);
-      addToast({
-        type: 'error',
-        title: 'Update Failed',
-        message: error instanceof Error ? error.message : 'Failed to update profile'
-      });
+      addToast(error instanceof Error ? error.message : 'Failed to update profile', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -128,10 +111,14 @@ const ProfilePage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Only update fields that exist in UpdateUserProfileInput
+    if (name !== 'email') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
     
     // Clear error for this field
     if (errors[name]) {
@@ -175,7 +162,14 @@ const ProfilePage: React.FC = () => {
           <p className="text-blue-100 mt-1">Update your profile information</p>
         </div>
 
-        {showSuccess && <ProfileUpdateSuccess />}
+        {showSuccess && (
+          <ProfileUpdateSuccess
+            isVisible={showSuccess}
+            onClose={() => setShowSuccess(false)}
+            onViewProfile={() => router.push(`/profile/${profile?.id}`)}
+            onCreateListing={() => router.push('/marketplace/seller/listings/create')}
+          />
+        )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Basic Information */}
@@ -217,23 +211,7 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email || ''}
-                onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="your.email@example.com"
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
+            
 
             <div>
               <label htmlFor="avatarCid" className="block text-sm font-medium text-gray-700 mb-1">

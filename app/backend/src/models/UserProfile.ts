@@ -5,6 +5,7 @@ export interface UserProfile {
   ens: string;
   avatarCid: string;
   bioCid: string;
+  email?: string;
   physicalAddress?: PhysicalAddress;
   createdAt: Date;
   updatedAt: Date;
@@ -34,5 +35,6 @@ export interface UpdateUserProfileInput {
   ens?: string;
   avatarCid?: string;
   bioCid?: string;
+  email?: string;
   physicalAddress?: PhysicalAddress;
 }

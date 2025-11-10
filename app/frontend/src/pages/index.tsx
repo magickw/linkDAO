@@ -137,8 +137,10 @@ export default function Home() {
       const newPost = await createPost({ ...postData, author: address });
       addToast('Post created successfully!', 'success');
       closeModal('postCreation');
-      // Refresh the feed to show the new post
+      // Force feed refresh to show the new post
       setFeedRefreshKey(prev => prev + 1);
+      // Set hasNewPosts to trigger the refresh banner
+      setHasNewPosts(true);
     } catch (error) {
       console.error('Error creating post:', error);
       addToast('Failed to create post', 'error');

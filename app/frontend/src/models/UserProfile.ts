@@ -67,6 +67,7 @@ export interface UpdateUserProfileInput {
   ens?: string;
   avatarCid?: string;
   bioCid?: string;
+  email?: string;
   // Billing Address
   billingFirstName?: string;
   billingLastName?: string;
