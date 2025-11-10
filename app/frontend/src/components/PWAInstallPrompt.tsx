@@ -42,14 +42,18 @@ export function PWAInstallPrompt({
   useEffect(() => {
     // Check if app is already installed
     const checkInstallation = () => {
-      // Check if running in standalone mode
+      // Only run in browser environment
+      if (typeof window === 'undefined') return;
+      
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      // Check if running as PWA
       const isPWA = window.navigator.standalone === true || isStandalone;
       setIsInstalled(isPWA);
     };
 
     checkInstallation();
+
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -79,6 +83,7 @@ export function PWAInstallPrompt({
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      if (typeof window === 'undefined') return;
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -118,6 +123,12 @@ export function PWAInstallPrompt({
     // Don't show again for this session
     if (typeof window !== 'undefined' && window.sessionStorage) {
       sessionStorage.setItem('pwa-prompt-dismissed', 'true');
+    }
+  };
+
+  const handleManualShow = () => {
+    if (canInstall && !isInstalled) {
+      setShowPrompt(true);
     }
   };
 
@@ -268,12 +279,18 @@ export function usePWAInstall() {
 
   useEffect(() => {
     const checkInstallation = () => {
+      // Only run in browser environment
+      if (typeof window === 'undefined') return;
+      
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       const isPWA = window.navigator.standalone === true || isStandalone;
       setIsInstalled(isPWA);
     };
 
     checkInstallation();
+
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -292,6 +309,7 @@ export function usePWAInstall() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      if (typeof window === 'undefined') return;
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };

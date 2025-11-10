@@ -129,7 +129,7 @@ async function initializeServices() {
   if (!cacheService) {
     try {
       // Explicitly import the TypeScript version
-      const cacheModule: any = await import('./services/cacheService.ts');
+      const cacheModule: any = await import('./services/cacheService');
       if (cacheModule.default) {
         // If it's a class, we need to create an instance
         if (typeof cacheModule.default === 'function') {
