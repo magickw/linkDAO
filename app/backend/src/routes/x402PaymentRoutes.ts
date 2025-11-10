@@ -2,6 +2,7 @@ import express from 'express';
 import { x402PaymentService } from '../services/x402PaymentService';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  * Process an x402 payment
  * POST /api/x402/payment
  */
-router.post('/payment', csrfProtection, async (req, res) => {
+router.post('/payment', authMiddleware, csrfProtection, async (req, res) => {
   try {
     const { orderId, amount, currency, buyerAddress, sellerAddress, listingId } = req.body;
 
@@ -167,7 +168,7 @@ router.get('/payment/:transactionId', async (req, res) => {
  * Refund an x402 payment
  * POST /api/x402/payment/:transactionId/refund
  */
-router.post('/payment/:transactionId/refund', csrfProtection, async (req, res) => {
+router.post('/payment/:transactionId/refund', authMiddleware, csrfProtection, async (req, res) => {
   try {
     const { transactionId } = req.params;
 

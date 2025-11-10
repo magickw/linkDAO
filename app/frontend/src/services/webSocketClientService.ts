@@ -54,7 +54,7 @@ export class WebSocketClientService {
   // Connection Management
   async connect(): Promise<void> {
     if (this.socket?.connected) {
-      return;
+      return Promise.resolve();
     }
 
     return new Promise((resolve, reject) => {
@@ -62,11 +62,24 @@ export class WebSocketClientService {
         this.connectionState.status = 'connecting';
         this.emit('connection_state_changed', this.connectionState);
 
+        // Store the resolve/reject references for later use
+        const originalResolve = resolve;
+        let resolved = false;
+
         this.socket = io(this.config.url, {
-          transports: ['websocket', 'polling'],
-          timeout: 20000,
+          transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
+          timeout: 30000, // Increase timeout to 30 seconds
           reconnection: false, // We handle reconnection manually
-          forceNew: true
+          forceNew: true,
+          path: '/socket.io/', // Explicitly set the path
+          withCredentials: true, // Enable credentials for better CORS handling
+          extraHeaders: {
+            'X-Client-Type': 'web',
+            'X-Client-Version': '1.0.0'
+          },
+          // Adjust ping settings for better connection stability
+          pingInterval: 25000,
+          pingTimeout: 60000
         });
 
         this.setupSocketEventHandlers();
@@ -89,18 +102,33 @@ export class WebSocketClientService {
           // Process queued messages
           this.processMessageQueue();
           
-          resolve();
+          if (!resolved) {
+            resolved = true;
+            originalResolve();
+          }
         });
 
         this.socket.on('connect_error', (error) => {
-          console.error('WebSocket connection error:', error);
+          console.warn('WebSocket connection error (will attempt polling fallback):', error.message);
+          
+          // Emit a warning but don't reject immediately to allow polling fallback
           this.connectionState = {
             status: 'error',
             reconnectAttempts: this.connectionState.reconnectAttempts,
             error: error.message
           };
           this.emit('connection_state_changed', this.connectionState);
-          reject(error);
+          
+          // Don't reject immediately, let Socket.IO handle the transport fallback
+          // The connect event will fire if polling works
+        });
+
+        // Handle case where connection fails completely after all transports
+        this.socket.on('reconnect_failed', () => {
+          if (!resolved) {
+            resolved = true;
+            reject(new Error('All connection attempts failed'));
+          }
         });
 
       } catch (error) {

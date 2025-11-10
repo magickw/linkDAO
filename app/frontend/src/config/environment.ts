@@ -4,8 +4,11 @@ export const ENV_CONFIG = {
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   
-  // WebSocket URL - derived from backend URL
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000').replace(/^http/, 'ws'),
+  // WebSocket URL - derived from backend URL with proper path
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 
+    (process.env.NEXT_PUBLIC_BACKEND_URL 
+      ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/socket.io/`
+      : 'ws://localhost:10000/socket.io/'),
   
   // WalletConnect
   WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b',
@@ -31,6 +34,11 @@ export const getApiEndpoint = (path: string): string => {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   
   return `${baseUrl}${cleanPath}`;
+};
+
+// Helper function to get the correct WebSocket endpoint
+export const getWebSocketEndpoint = (): string => {
+  return ENV_CONFIG.WS_URL;
 };
 
 // Helper function to check if we're in development mode

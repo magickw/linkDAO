@@ -36,12 +36,36 @@ export class X402PaymentService {
         throw new Error('Missing required fields in x402 payment request');
       }
 
-      // Call the backend x402 payment API
+      // Get CSRF token if needed
+      let csrfToken: string | null = null;
+      try {
+        const tokenResponse = await fetch(`${this.API_BASE_URL}/api/csrf-token`, {
+          method: 'GET',
+          credentials: 'include' // Include session cookies
+        });
+        
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json();
+          csrfToken = tokenData.data?.csrfToken;
+        }
+      } catch (tokenError) {
+        console.warn('Could not fetch CSRF token:', tokenError);
+      }
+
+      // Call the backend x402 payment API with proper authentication
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Include CSRF token if available
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+
       const response = await fetch(`${this.API_BASE_URL}/api/x402/payment`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
+        credentials: 'include', // Include session cookies for authentication
         body: JSON.stringify(request)
       });
 
@@ -87,12 +111,36 @@ export class X402PaymentService {
         throw new Error('Transaction ID is required to check payment status');
       }
 
+      // Get CSRF token if needed
+      let csrfToken: string | null = null;
+      try {
+        const tokenResponse = await fetch(`${this.API_BASE_URL}/api/csrf-token`, {
+          method: 'GET',
+          credentials: 'include' // Include session cookies
+        });
+        
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json();
+          csrfToken = tokenData.data?.csrfToken;
+        }
+      } catch (tokenError) {
+        console.warn('Could not fetch CSRF token:', tokenError);
+      }
+
       // Call the backend x402 payment status API
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Include CSRF token if available
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+
       const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers,
+        credentials: 'include' // Include session cookies for authentication
       });
 
       if (!response.ok) {
@@ -136,12 +184,36 @@ export class X402PaymentService {
         throw new Error('Transaction ID is required to process refund');
       }
 
-      // Call the backend x402 refund API
+      // Get CSRF token if needed
+      let csrfToken: string | null = null;
+      try {
+        const tokenResponse = await fetch(`${this.API_BASE_URL}/api/csrf-token`, {
+          method: 'GET',
+          credentials: 'include' // Include session cookies
+        });
+        
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json();
+          csrfToken = tokenData.data?.csrfToken;
+        }
+      } catch (tokenError) {
+        console.warn('Could not fetch CSRF token:', tokenError);
+      }
+
+      // Call the backend x402 refund API with proper authentication
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Include CSRF token if available
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+
       const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}/refund`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers,
+        credentials: 'include' // Include session cookies for authentication
       });
 
       if (!response.ok) {
@@ -165,6 +237,7 @@ export class X402PaymentService {
         transactionId: result.data.transactionId,
         status: result.data.status,
       };
+    } catch (error) {
     } catch (error) {
       console.error('X402 payment refund failed:', error);
       return {

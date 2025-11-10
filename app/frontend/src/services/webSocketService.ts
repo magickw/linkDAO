@@ -1,7 +1,8 @@
 import { io, Socket } from 'socket.io-client';
+import ENV_CONFIG from '@/config/environment';
 
-// Get the WebSocket URL from environment variables, fallback to backend URL
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+// Use the centralized environment configuration for WebSocket URL
+const WS_URL = ENV_CONFIG.WS_URL;
 
 interface WebSocketConfig {
   url?: string;
@@ -167,7 +168,13 @@ class WebSocketService {
           timeout: this.config.connectionTimeout,
           forceNew: true,
           upgrade: !this.fallbackToPolling,
-          rememberUpgrade: false
+          rememberUpgrade: false,
+          path: '/socket.io/', // Explicitly set path
+          // Add CORS bypass options
+          withCredentials: true,
+          extraHeaders: {
+            'X-Client-Type': 'web'
+          }
         });
 
         this.setupSocketEventHandlers(resolve, reject);
