@@ -118,7 +118,7 @@ export const PaymentMethodsTab: React.FC = () => {
           <Shield className="text-green-400" size={20} />
           <div>
             <h4 className="font-medium text-green-400">Secure Payment Storage</h4>
-            <p className="text-white/70 text-sm">
+            <p className="text-gray-200 text-sm dark:text-gray-300">
               All payment information is encrypted and tokenized. We never store raw payment data.
             </p>
           </div>
@@ -136,7 +136,7 @@ export const PaymentMethodsTab: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-white">{method.nickname}</h4>
+                    <h4 className="font-medium text-gray-100 dark:text-white">{method.nickname}</h4>
                     {method.isDefault && (
                       <span className="flex items-center gap-1 text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full">
                         <Star size={12} />
@@ -144,11 +144,11 @@ export const PaymentMethodsTab: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-white/70">
-                    <span>{method.brand}</span>
-                    <span>•••• {method.lastFour}</span>
+                  <div className="flex items-center gap-2 text-sm text-gray-300 dark:text-gray-400">
+                    <span className="text-gray-400 dark:text-gray-300">{method.brand}</span>
+                    <span className="font-mono">•••• {method.lastFour}</span>
                     {method.expiryMonth && method.expiryYear && (
-                      <span>• {method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear}</span>
+                      <span className="text-gray-400 dark:text-gray-300">• {method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear}</span>
                     )}
                   </div>
                 </div>
@@ -180,9 +180,9 @@ export const PaymentMethodsTab: React.FC = () => {
 
         {paymentMethods.length === 0 && (
           <GlassPanel variant="primary" className="text-center py-12">
-            <CreditCard className="mx-auto h-12 w-12 text-white/60 mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">No Payment Methods</h3>
-            <p className="text-white/70 mb-6">Add a payment method to make purchases easier</p>
+            <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Payment Methods</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">Add a payment method to make purchases easier</p>
           </GlassPanel>
         )}
       </div>
@@ -205,15 +205,15 @@ export const PaymentMethodsTab: React.FC = () => {
           <form onSubmit={handleAddPaymentMethod} className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Lock className="text-blue-400" size={16} />
-              <h3 className="font-medium text-white">Add New Payment Method</h3>
+              <h3 className="font-medium text-gray-900 dark:text-white">Add New Payment Method</h3>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Payment Type</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Payment Type</label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="card">Credit/Debit Card</option>
                 <option value="bank">Bank Account</option>
@@ -222,12 +222,12 @@ export const PaymentMethodsTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Nickname</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Nickname</label>
               <input
                 type="text"
                 value={formData.nickname}
                 onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
-                className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g., My Visa Card"
                 required
               />
@@ -236,11 +236,11 @@ export const PaymentMethodsTab: React.FC = () => {
             {formData.type === 'card' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">Card Number</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Card Number</label>
                   <input
                     type="text"
                     onChange={(e) => setFormData(prev => ({ ...prev, cardNumber: e.target.value }))}
-                    className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="1234 5678 9012 3456"
                     maxLength={19}
                     required
@@ -248,10 +248,10 @@ export const PaymentMethodsTab: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Expiry Month</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Expiry Month</label>
                     <select
                       onChange={(e) => setFormData(prev => ({ ...prev, expiryMonth: parseInt(e.target.value) }))}
-                      className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     >
                       <option value="">Month</option>
@@ -261,10 +261,10 @@ export const PaymentMethodsTab: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Expiry Year</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Expiry Year</label>
                     <select
                       onChange={(e) => setFormData(prev => ({ ...prev, expiryYear: parseInt(e.target.value) }))}
-                      className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     >
                       <option value="">Year</option>
@@ -276,11 +276,11 @@ export const PaymentMethodsTab: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">CVV</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">CVV</label>
                   <input
                     type="text"
                     onChange={(e) => setFormData(prev => ({ ...prev, cvv: e.target.value }))}
-                    className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-3 rounded-lg bg-white/20 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="123"
                     maxLength={4}
                     required
@@ -295,9 +295,9 @@ export const PaymentMethodsTab: React.FC = () => {
                 id="isDefault"
                 checked={formData.isDefault}
                 onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <label htmlFor="isDefault" className="text-sm text-white">
+              <label htmlFor="isDefault" className="text-sm text-gray-700 dark:text-gray-200">
                 Set as default payment method
               </label>
             </div>
@@ -314,7 +314,7 @@ export const PaymentMethodsTab: React.FC = () => {
                 type="button"
                 variant="outline"
                 onClick={() => setShowAddForm(false)}
-                className="flex-1 border-white/30 text-white/80 hover:bg-white/10"
+                className="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Cancel
               </Button>

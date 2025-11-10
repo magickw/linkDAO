@@ -656,6 +656,7 @@ export default function Profile() {
                   </svg>
                   Following
                 </button>
+                {isEditing && (
                 <button
                   onClick={() => setActiveTab('addresses')}
                   className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
@@ -672,6 +673,8 @@ export default function Profile() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </button>
+                )}
+                {isEditing && (
                 <button
                   onClick={() => setActiveTab('payments')}
                   className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
@@ -687,6 +690,7 @@ export default function Profile() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </button>
+                )}
               </nav>
             </div>
           )}
@@ -1048,7 +1052,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'addresses' && (
+              {activeTab === 'addresses' && isEditing && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Address Information</h3>
                   
@@ -1410,7 +1414,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'payments' && (
+              {activeTab === 'payments' && isEditing && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Payment Methods</h3>
                   <PaymentMethodsTab />

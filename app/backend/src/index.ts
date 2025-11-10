@@ -411,7 +411,17 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/health', healthRoutes);
 
 // Add root-level health endpoint for frontend compatibility
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  // Get Redis status
+  let redisStatus = { enabled: false, connected: false };
+  try {
+    const { redisService } = await import('./services/redisService');
+    redisStatus = redisService.getRedisStatus();
+  } catch (error) {
+    // Redis service not available
+    console.warn('Redis service not available for health check:', error.message);
+  }
+  
   res.status(200).json({
     success: true,
     status: 'healthy',
@@ -420,8 +430,38 @@ app.get('/health', (req, res) => {
     memory: {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
-    }
+    },
+    redis: redisStatus
   });
+});
+
+// Add Redis-specific health check endpoint
+app.get('/health/redis', async (req, res) => {
+  try {
+    const { redisService } = await import('./services/redisService');
+    const status = redisService.getRedisStatus();
+    const testResult = await redisService.testConnection();
+    
+    res.status(200).json({
+      success: true,
+      status: 'Redis health check completed',
+      redis: {
+        ...status,
+        testResult
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'Redis health check failed',
+      error: {
+        message: error.message,
+        name: error.name
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Use session routes
