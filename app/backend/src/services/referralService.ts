@@ -658,7 +658,7 @@ class ReferralService {
             gte(earningActivities.createdAt, sixMonthsAgo)
           )
         )
-        .groupBy(sql`DATE_TRUNC('month', ${earningActivities.createdAt}`));
+        .groupBy(sql`DATE_TRUNC('month', ${earningActivities.createdAt})`);
 
       // Generate all months in the range (including months with 0 activity)
       const result: Array<{ month: string; amount: number }> = [];

@@ -192,13 +192,12 @@ export class DatabaseService {
       throw error;
     }
   }
-    }
-  }
 
-  async getAllPosts() {
+  async getPostsByTag(tag: string) {
     try {
-      safeLogger.info("Getting all posts from database");
+      safeLogger.info(`Getting posts by tag: ${tag}`);
       const result = await this.db
+
         .select({
           id: schema.posts.id,
           authorId: schema.posts.authorId,
