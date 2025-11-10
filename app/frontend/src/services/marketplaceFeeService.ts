@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { webSocketService } from './webSocketService';
-import { subDAOService } from './subDAOService';
+import { SubDAOService } from './subDAOService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
@@ -246,9 +246,9 @@ export class MarketplaceFeeService {
       if (discount.applicableFees.includes('listing')) {
         discounts.push(discount);
         if (discount.type === 'percentage') {
-          fee = (parseFloat(fee) * (1 - discount.value / 100)).toString();
+          fee = (parseFloat(fee) * (1 - Number(discount.value) / 100)).toString();
         } else if (discount.type === 'fixed') {
-          fee = Math.max(0, parseFloat(fee) - parseFloat(discount.value.toString())).toString();
+          fee = Math.max(0, parseFloat(fee) - parseFloat(String(discount.value))).toString();
         }
       }
     }
@@ -286,9 +286,9 @@ export class MarketplaceFeeService {
     for (const discount of buyerDiscounts) {
       if (discount.applicableFees.includes('sale_buyer')) {
         if (discount.type === 'percentage') {
-          buyerFeeAmount = (parseFloat(buyerFeeAmount) * (1 - discount.value / 100)).toString();
+          buyerFeeAmount = (parseFloat(buyerFeeAmount) * (1 - Number(discount.value) / 100)).toString();
         } else if (discount.type === 'fixed') {
-          buyerFeeAmount = Math.max(0, parseFloat(buyerFeeAmount) - parseFloat(discount.value.toString())).toString();
+          buyerFeeAmount = Math.max(0, parseFloat(buyerFeeAmount) - parseFloat(String(discount.value))).toString();
         }
       }
     }
@@ -298,9 +298,9 @@ export class MarketplaceFeeService {
     for (const discount of sellerDiscounts) {
       if (discount.applicableFees.includes('sale_seller')) {
         if (discount.type === 'percentage') {
-          sellerFeeAmount = (parseFloat(sellerFeeAmount) * (1 - discount.value / 100)).toString();
+          sellerFeeAmount = (parseFloat(sellerFeeAmount) * (1 - Number(discount.value) / 100)).toString();
         } else if (discount.type === 'fixed') {
-          sellerFeeAmount = Math.max(0, parseFloat(sellerFeeAmount) - parseFloat(discount.value.toString())).toString();
+          sellerFeeAmount = Math.max(0, parseFloat(sellerFeeAmount) - parseFloat(String(discount.value))).toString();
         }
       }
     }
@@ -367,7 +367,7 @@ export class MarketplaceFeeService {
 
       // Distribute to community pool if applicable
       if (feeData.communityId && feeData.subDAOId) {
-        await subDAOService.distributeRevenue({
+        await SubDAOService.distributeRevenue({
           subDAOId: feeData.subDAOId,
           amount: feeRecord.distributions?.communityPool || '0',
           currency: feeData.currency,

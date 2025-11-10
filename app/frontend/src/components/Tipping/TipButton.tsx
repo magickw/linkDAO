@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { Heart, Coins, Gift, Award } from 'lucide-react';
-import { tipService, Award as AwardType, Tip } from '../../services/tipService';
-import { useWeb3 } from '../../hooks/useWeb3';
+import { useAccount, useSignMessage } from 'wagmi';
+import { TipService, AWARDS, Award as AwardType, Tip } from '../../services/tipService';
+import { useWalletAuth } from '../../hooks/useWalletAuth';
 
 interface TipButtonProps {
   toAddress: string;
@@ -25,7 +26,9 @@ const TipButton: React.FC<TipButtonProps> = ({
   showCount = true,
   initialTipCount = 0
 }) => {
-  const { account, provider } = useWeb3();
+  const { address: account } = useAccount();
+  const { data: signer } = useSignMessage();
+  const provider = signer ? new ethers.providers.Web3Provider(window.ethereum) : null;
   const [isOpen, setIsOpen] = useState(false);
   const [tipAmount, setTipAmount] = useState('1');
   const [selectedCurrency, setSelectedCurrency] = useState<'LDAO' | 'USDC'>('LDAO');
@@ -58,7 +61,7 @@ const TipButton: React.FC<TipButtonProps> = ({
     if (!account || !provider) return;
 
     try {
-      const balance = await tipService.getLdaoBalance();
+      const balance = await TipService.getLdaoBalance();
       setLdaoBalance(parseFloat(balance).toFixed(2));
     } catch (error) {
       console.error('Error fetching LDAO balance:', error);
@@ -72,9 +75,9 @@ const TipButton: React.FC<TipButtonProps> = ({
 
     setIsProcessing(true);
     try {
-      await tipService.initialize(provider);
+      await TipService.initialize(provider);
       
-      const tip = await tipService.createTip(
+      const tip = await TipService.createTip(
         postId || '',
         toAddress,
         tipAmount,
@@ -107,9 +110,9 @@ const TipButton: React.FC<TipButtonProps> = ({
 
     setIsProcessing(true);
     try {
-      await tipService.initialize(provider);
+      await TipService.initialize(provider);
       
-      const tip = await tipService.sendAward({
+      const tip = await TipService.sendAward({
         toAddress,
         postId,
         commentId,
@@ -151,7 +154,7 @@ const TipButton: React.FC<TipButtonProps> = ({
           <div className="absolute bottom-full right-0 mb-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Send an Award</h3>
             <div className="space-y-2">
-              {tipService.AWARDS.map((award) => (
+              {AWARDS.map((award) => (
                 <button
                   key={award.id}
                   onClick={() => handleAward(award.type)}

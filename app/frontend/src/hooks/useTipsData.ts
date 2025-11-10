@@ -46,23 +46,35 @@ export function useTipsData({
         {
           id: '1',
           from: 'Connected to Real Services',
+          to: '0x1234567890123456789012345678901234567890',
           amount: '50',
+          currency: 'LDAO',
           message: 'Great content!',
           timestamp: new Date(Date.now() - 3600000),
+          isPublic: true,
+          status: 'confirmed'
         },
         {
           id: '2',
           from: 'Connected to Real Services',
+          to: '0x1234567890123456789012345678901234567890',
           amount: '100',
+          currency: 'LDAO',
           message: 'Thanks for sharing',
           timestamp: new Date(Date.now() - 7200000),
+          isPublic: true,
+          status: 'confirmed'
         },
         {
           id: '3',
           from: 'Connected to Real Services',
+          to: '0x1234567890123456789012345678901234567890',
           amount: '25',
+          currency: 'LDAO',
           message: 'Keep it up!',
           timestamp: new Date(Date.now() - 10800000),
+          isPublic: true,
+          status: 'confirmed'
         },
       ];
 

@@ -187,24 +187,70 @@ export default function InfiniteScrollContainer({
     }
   }, [enableVirtualScrolling, itemHeight, items.length, scrollKey, restoreScrollPosition]);
 
+  // Helper function to safely access sessionStorage
+  const getSessionStorage = () => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      return window.sessionStorage;
+    }
+    return null;
+  };
+
+  // Save scroll position
+  useEffect(() => {
+    if (!enableVirtualScrolling || !scrollKey) return;
+    
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      
+      const scrollTop = containerRef.current.scrollTop;
+      
+      // Debounce scroll events
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      scrollTimeoutRef.current = setTimeout(() => {
+        const sessionStorage = getSessionStorage();
+        if (sessionStorage) {
+          sessionStorage.setItem(
+            `${SCROLL_POSITION_KEY}_${scrollKey}`,
+            JSON.stringify({
+              scrollTop,
+              timestamp: Date.now()
+            })
+          );
+        }
+      }, 200);
+    };
+    
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [enableVirtualScrolling, itemHeight, items.length, scrollKey, restoreScrollPosition]);
+
   // Restore scroll position
   useLayoutEffect(() => {
     if (!restoreScrollPosition || !scrollKey || hasRestoredScrollRef.current) {
       return;
     }
 
-    const savedPosition = sessionStorage.getItem(`${SCROLL_POSITION_KEY}_${scrollKey}`);
-    if (savedPosition && containerRef.current) {
-      try {
-        const { scrollTop, timestamp } = JSON.parse(savedPosition);
-        
-        // Only restore if saved within last 30 minutes
-        if (Date.now() - timestamp < 30 * 60 * 1000) {
-          containerRef.current.scrollTop = scrollTop;
-          hasRestoredScrollRef.current = true;
+    const sessionStorage = getSessionStorage();
+    if (sessionStorage) {
+      const savedPosition = sessionStorage.getItem(`${SCROLL_POSITION_KEY}_${scrollKey}`);
+      if (savedPosition && containerRef.current) {
+        try {
+          const { scrollTop, timestamp } = JSON.parse(savedPosition);
+          
+          // Only restore if saved within last 30 minutes
+          if (Date.now() - timestamp < 30 * 60 * 1000) {
+            containerRef.current.scrollTop = scrollTop;
+            hasRestoredScrollRef.current = true;
+          }
+        } catch (error) {
+          console.warn('Failed to restore scroll position:', error);
         }
-      } catch (error) {
-        console.warn('Failed to restore scroll position:', error);
       }
     }
   }, [restoreScrollPosition, scrollKey, items.length]);
