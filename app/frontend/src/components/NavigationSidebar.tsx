@@ -14,7 +14,6 @@ import {
 } from '@/components/Navigation';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
-import { AICommunityRecommendations } from '@/components/Community'; // Add this import
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
 import { useQuery } from '@tanstack/react-query';
@@ -37,12 +36,6 @@ interface SidebarCommunity {
     trendingScore: number;
     memberGrowthPercentage: number;
   };
-}
-
-// Add AI recommendation interface
-interface AIRecommendation extends SidebarCommunity {
-  reason?: string;
-  confidence?: number;
 }
 
 import { CommunityService } from '../services/communityService';
@@ -151,59 +144,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   // Add state for trending communities
   const [trendingCommunities, setTrendingCommunities] = useState<SidebarCommunity[]>([]);
 
-  // Add state for AI recommendations
-  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
-  const [loadingAiRecommendations, setLoadingAiRecommendations] = useState(false);
-  
-  // Fetch AI-powered community recommendations
-  const fetchAIRecommendations = useCallback(async () => {
-    if (!address || communities.length === 0) return;
-    
-    setLoadingAiRecommendations(true);
-    try {
-      const response = await fetch('/api/admin/ai/insights/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: 'community_recommendations',
-          context: {
-            userId: address,
-            joinedCommunities: communities.map(c => c.id),
-            interests: [], // Would be populated from user profile
-          }
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Transform AI recommendations to SidebarCommunity format
-        const recommendations = data.data?.insights?.recommendedCommunities || [];
-        const aiRecs = recommendations.map((rec: any) => ({
-          id: rec.id,
-          name: rec.name,
-          displayName: rec.displayName,
-          memberCount: rec.memberCount,
-          avatar: rec.avatar,
-          icon: rec.icon,
-          isJoined: communities.some(c => c.id === rec.id),
-          reason: rec.reason,
-          confidence: rec.confidence,
-          growthMetrics: {
-            trendingScore: rec.trendingScore || 0,
-            memberGrowthPercentage: rec.growthRate || 0
-          }
-        }));
-        setAiRecommendations(aiRecs);
-      }
-    } catch (error) {
-      console.error('Failed to fetch AI recommendations:', error);
-    } finally {
-      setLoadingAiRecommendations(false);
-    }
-  }, [address, communities]);
-
   // Fetch trending communities
   useEffect(() => {
     const fetchTrendingCommunities = async () => {
@@ -232,9 +172,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
     if (communities.length > 0) {
       fetchTrendingCommunities();
-      fetchAIRecommendations(); // Also fetch AI recommendations
     }
-  }, [communities, fetchAIRecommendations]);
+  }, [communities]);
 
   // Handle community selection with navigation context
   const handleCommunitySelectWithContext = (communityId: string) => {
@@ -533,14 +472,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   onCommunitySelect={handleCommunitySelectWithContext}
                   favoriteCommunities={userPreferences.favoriteCommunities}
                   onToggleFavorite={toggleFavoriteCommunity}
-                />
-
-                {/* AI-Powered Community Recommendations */}
-                <AICommunityRecommendations
-                  joinedCommunities={communities.map(c => c.id)}
-                  allCommunities={communities}
-                  onJoinCommunity={handleCommunitySelectWithContext}
-                  className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                 />
 
                 {/* Trending Communities Section */}

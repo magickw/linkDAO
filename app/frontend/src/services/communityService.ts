@@ -314,29 +314,42 @@ export class CommunityService {
             url += `?${searchParams.toString()}`;
           }
           
-          const response = await requestManager.request(url, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }, {
-            timeout: 15000,
-            retries: 2,
-            deduplicate: true
-          });
-          
-          // Normalize payload to an array regardless of envelope shape
-          let communities: Community[] = [];
-          if (Array.isArray(response)) communities = response;
-          else if (response && typeof response === 'object' && Array.isArray((response as any)?.data)) communities = (response as any).data;
-          else if (response && typeof response === 'object' && Array.isArray((response as any)?.communities)) communities = (response as any).communities;
-          else if (response && typeof response === 'object' && (response as any)?.data && Array.isArray((response as any).data?.communities)) communities = (response as any).data.communities;
-          else if (response && typeof response === 'object' && Array.isArray((response as any)?.results)) communities = (response as any).results;
-          else if (response && typeof response === 'object' && Array.isArray((response as any)?.items)) communities = (response as any).items;
-          else if (response && typeof response === 'object' && (response as any)?.data && typeof (response as any).data === 'object' && Array.isArray((response as any).data?.items)) communities = (response as any).data.items;
-          else communities = [];
+          try {
+            const response = await requestManager.request(url, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }, {
+              timeout: 15000,
+              retries: 2,
+              deduplicate: true
+            });
+            
+            // Normalize payload to an array regardless of envelope shape
+            let communities: Community[] = [];
+            if (Array.isArray(response)) communities = response;
+            else if (response && typeof response === 'object' && Array.isArray((response as any)?.data)) communities = (response as any).data;
+            else if (response && typeof response === 'object' && Array.isArray((response as any)?.communities)) communities = (response as any).communities;
+            else if (response && typeof response === 'object' && (response as any)?.data && Array.isArray((response as any).data?.communities)) communities = (response as any).data.communities;
+            else if (response && typeof response === 'object' && Array.isArray((response as any)?.results)) communities = (response as any).results;
+            else if (response && typeof response === 'object' && Array.isArray((response as any)?.items)) communities = (response as any).items;
+            else if (response && typeof response === 'object' && (response as any)?.data && typeof (response as any).data === 'object' && Array.isArray((response as any).data?.items)) communities = (response as any).data.items;
+            else communities = [];
 
-          return communities;
+            return communities;
+          } catch (error) {
+            // Handle specific error cases with better fallbacks
+            console.error('Error fetching communities:', error);
+            
+            // Try to get from offline cache - we'll use fallback data since there's no method to get all communities
+            console.warn('Network error, but no cached communities available');
+            return [];
+            
+            // Return empty array instead of throwing to prevent UI crashes
+            console.warn('Returning empty communities array due to persistent errors');
+            return [];
+          }
         },
         120000 // 2 minute cache
       ),

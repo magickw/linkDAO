@@ -203,17 +203,11 @@ const CommunitiesPage: React.FC = () => {
         setError(null);
         
         // Load communities with fallback for 503 errors
-        let communitiesData = [];
-        try {
-          communitiesData = await CommunityService.getAllCommunities({
-            isPublic: true,
-            limit: 50
-          });
-        } catch (err) {
-          console.error('Backend unavailable:', err);
-          // Instead of using mock data, show empty array
-          communitiesData = [];
-        }
+        const communitiesData = await CommunityService.getAllCommunities({
+          isPublic: true,
+          limit: 50
+        });
+        
         setCommunities(communitiesData);
 
         // Load enhanced Web3 data
@@ -222,7 +216,7 @@ const CommunitiesPage: React.FC = () => {
       } catch (err) {
         console.error('Error loading communities:', err);
         setError(err instanceof Error ? err.message : 'Failed to load communities');
-        // Instead of using mock data, show empty array
+        // Show empty array instead of crashing
         setCommunities([]);
         await loadWeb3EnhancedData([]);
       } finally {
@@ -248,7 +242,8 @@ const CommunitiesPage: React.FC = () => {
         feedSource: 'all'
       }, pageNum, 20);
       
-      const newPosts = response.posts || [];
+      // Handle the case where response is not properly structured
+      const newPosts = Array.isArray(response) ? response : (response?.posts || []);
       
       if (append) {
         setPosts(prev => [...prev, ...newPosts]);
@@ -262,7 +257,10 @@ const CommunitiesPage: React.FC = () => {
       console.error('Failed to fetch posts:', error);
       if (!append) setPosts([]);
     } finally {
-      setLoading(false);
+      // Only set loading to false if this was the initial load
+      if (pageNum === 1) {
+        setLoading(false);
+      }
       setLoadingMore(false);
     }
   };
@@ -509,27 +507,40 @@ const CommunitiesPage: React.FC = () => {
 
 
   // Show posts from followed communities and recently visited communities
-  const filteredPosts = posts.filter(post => 
-    joinedCommunities.includes(post.communityId) || // Posts from joined communities
-    post.upvotes > 100 || // Popular posts (suggested)
-    post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) // Interest-based suggestions
-  );
+  // Defensive programming to handle cases where post data might be malformed
+  const filteredPosts = posts.filter(post => {
+    // Ensure post is a valid object
+    if (!post || typeof post !== 'object') return false;
+    
+    // Posts from joined communities
+    if (joinedCommunities.includes(post.communityId)) return true;
+    
+    // Popular posts (suggested) - ensure upvotes property exists
+    if (typeof post.upvotes === 'number' && post.upvotes > 100) return true;
+    
+    // Interest-based suggestions - ensure tags property exists and is an array
+    if (Array.isArray(post.tags) && post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag))) return true;
+    
+    return false;
+  });
 
-  // Defensive: normalize communities to array for rendering
-  const communityList: Community[] = Array.isArray(communities) ? communities : [];
+  // Defensive: normalize communities to array for rendering and filter out invalid entries
+  const communityList: Community[] = Array.isArray(communities) 
+    ? communities.filter(community => community && typeof community === 'object' && community.id)
+    : [];
 
-  // Mobile Web3 community data
+  // Mobile Web3 community data with defensive checks
   const communityData = communityList.map(community => ({
-    id: community.id,
-    name: community.displayName,
+    id: community.id || `community-${Math.random()}`,
+    name: community.displayName || community.name || 'Unnamed Community',
     avatar: community.avatar || '🏛️',
-    memberCount: community.memberCount,
+    memberCount: typeof community.memberCount === 'number' ? community.memberCount : 0,
     isActive: joinedCommunities.includes(community.id),
     userRole: 'member' as const,
     tokenBalance: Math.floor(Math.random() * 100),
     governanceNotifications: Math.floor(Math.random() * 5),
     stakingRewards: Math.floor(Math.random() * 20)
-  }));
+  })).filter(community => community.id); // Filter out any communities without valid IDs
 
   if (isMobile) {
     return (
@@ -666,45 +677,60 @@ const CommunitiesPage: React.FC = () => {
               )}
 
               {filteredPosts.map(post => {
+                // Defensive checks for post data
+                if (!post || typeof post !== 'object') return null;
+                
                 const community = communityList.find(c => c.id === post.communityId);
-                const stakingInfo = stakingData[post.communityId];
+                
+                // Ensure required post properties exist
+                const postId = post.id || `post-${Math.random()}`;
+                const postTitle = post.title || 'Untitled Post';
+                const postContent = post.content || '';
+                const postAuthorName = post.authorName || 'Unknown Author';
+                const postAuthor = post.author || '';
+                const postUpvotes = typeof post.upvotes === 'number' ? post.upvotes : 0;
+                const postCommentCount = typeof post.commentCount === 'number' ? post.commentCount : 0;
+                const postStakedTokens = typeof post.stakedTokens === 'number' ? post.stakedTokens : 0;
+                const postCreatedAt = post.createdAt || new Date().toISOString();
+                const postType = post.type || 'text';
+                const postIsStaked = !!post.isStaked;
                 
                 return (
                   <CompactWeb3PostCard
-                    key={post.id}
+                    key={postId}
                     post={{
-                      id: post.id,
-                      title: post.title,
-                      content: post.content,
+                      id: postId,
+                      title: postTitle,
+                      content: postContent,
                       author: {
-                        name: post.authorName,
+                        name: postAuthorName,
                         avatar: '👤',
-                        address: post.author
+                        address: postAuthor
                       },
                       community: {
                         name: community?.displayName || 'Unknown',
                         avatar: community?.avatar || '🏛️'
                       },
                       metrics: {
-                        upvotes: post.upvotes,
-                        comments: post.commentCount,
+                        upvotes: postUpvotes,
+                        comments: postCommentCount,
                         views: Math.floor(Math.random() * 1000),
-                        stakingAmount: post.stakedTokens,
+                        stakingAmount: postStakedTokens,
                         stakerCount: Math.floor(Math.random() * 50)
                       },
-                      timestamp: new Date(post.createdAt).toLocaleDateString(),
+                      timestamp: new Date(postCreatedAt).toLocaleDateString(),
                       isUpvoted: false,
                       isSaved: false,
-                      postType: post.type as any,
-                      onChainProof: post.isStaked
+                      postType: postType as any,
+                      onChainProof: postIsStaked
                     }}
-                    onUpvote={() => handleUpvote(post.id)}
-                    onComment={() => handleComment(post.id)}
-                    onShare={() => handleShare(post.id)}
-                    onSave={() => handleSave(post.id)}
-                    onTip={(amount?: number) => handleTip(post.id, amount)}
-                    onStake={() => handleStake(post.id)}
-                    onViewPost={() => handleViewPost(post.id)}
+                    onUpvote={() => handleUpvote(postId)}
+                    onComment={() => handleComment(postId)}
+                    onShare={() => handleShare(postId)}
+                    onSave={() => handleSave(postId)}
+                    onTip={(amount?: number) => handleTip(postId, amount)}
+                    onStake={() => handleStake(postId)}
+                    onViewPost={() => handleViewPost(postId)}
                     walletConnected={walletConnected}
                   />
                 );
@@ -957,22 +983,41 @@ const CommunitiesPage: React.FC = () => {
 
               <div className="space-y-0">
                 {filteredPosts.map(post => {
+                  // Defensive checks for post data
+                  if (!post || typeof post !== 'object') return null;
+                  
                   const community = communityList.find(c => c.id === post.communityId);
                   const stakingInfo = stakingData[post.communityId];
                   
+                  // Ensure required post properties exist
+                  const postId = post.id || `post-${Math.random()}`;
+                  const postTitle = post.title || 'Untitled Post';
+                  const postContent = post.content || '';
+                  const postAuthor = post.authorName || 'Unknown Author';
+                  const postUpvotes = typeof post.upvotes === 'number' ? post.upvotes : 0;
+                  const postDownvotes = typeof post.downvotes === 'number' ? post.downvotes : 0;
+                  const postComments = typeof post.commentCount === 'number' ? post.commentCount : 0;
+                  const postTags = Array.isArray(post.tags) ? post.tags : [];
+                  const postCreatedAt = post.createdAt || new Date().toISOString();
+                  const postIsStaked = !!post.isStaked;
+                  const postStakedTokens = typeof post.stakedTokens === 'number' ? post.stakedTokens : 0;
+                  
                   return (
                     <Web3SwipeGestureHandler
-                      key={post.id}
-                      postId={post.id}
-                      onUpvote={() => handleUpvote(post.id)}
-                      onSave={() => handleSave(post.id)}
-                      onTip={() => handleTip(post.id)}
-                      onStake={() => handleStake(post.id)}
+                      key={postId}
+                      postId={postId}
+                      onUpvote={() => handleUpvote(postId)}
+                      onSave={() => handleSave(postId)}
+                      onTip={() => handleTip(postId)}
+                      onStake={() => handleStake(postId)}
                       walletConnected={walletConnected}
                       userBalance={userBalance}
                     >
                       <div 
-                        onClick={() => router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${post.id}`)}
+                        onClick={() => {
+                          const communityId = community?.slug || community?.name || post.communityId || 'unknown';
+                          router.push(`/communities/${communityId}?post=${postId}`);
+                        }}
                         onMouseEnter={(e) => {
                           if (hoverTimeout) clearTimeout(hoverTimeout);
                           const timeout = setTimeout(() => {
@@ -986,7 +1031,7 @@ const CommunitiesPage: React.FC = () => {
                           setHoveredPost(null);
                         }}
                         onMouseMove={(e) => {
-                          if (hoveredPost?.id === post.id) {
+                          if (hoveredPost?.id === postId) {
                             setHoverPosition({ x: e.clientX, y: e.clientY });
                           }
                         }}
@@ -998,19 +1043,19 @@ const CommunitiesPage: React.FC = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleVote(post.id, 'up', 1);
+                                handleVote(postId, 'up', 1);
                               }}
                               className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
                             >
                               <ArrowUp className="w-5 h-5" />
                             </button>
                             <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
-                              {post.upvotes - post.downvotes}
+                              {postUpvotes - postDownvotes}
                             </span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleVote(post.id, 'down', 1);
+                                handleVote(postId, 'down', 1);
                               }}
                               className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
                             >
@@ -1018,7 +1063,7 @@ const CommunitiesPage: React.FC = () => {
                             </button>
                             
                             {/* Staking Indicator */}
-                            {post.isStaked && (
+                            {postIsStaked && (
                               <div className="mt-1">
                                 <div className="w-2 h-2 bg-green-500 rounded-full" title="On-chain verified" />
                               </div>
@@ -1029,33 +1074,33 @@ const CommunitiesPage: React.FC = () => {
                             {/* Post Header - Reddit Style */}
                             <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
                               <span className="font-semibold text-gray-900 dark:text-white">
-                                {community?.name || post.communityId}
+                                {community?.name || post.communityId || 'Unknown Community'}
                               </span>
                               <span>•</span>
-                              <span>Posted by u/{post.authorName}</span>
+                              <span>Posted by u/{postAuthor}</span>
                               <span>•</span>
-                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                              {post.isStaked && (
+                              <span>{new Date(postCreatedAt).toLocaleDateString()}</span>
+                              {postIsStaked && (
                                 <>
                                   <span>•</span>
                                   <span className="text-green-600 dark:text-green-400">
-                                    {post.stakedTokens} 🪙
+                                    {postStakedTokens} 🪙
                                   </span>
                                 </>
                               )}
                             </div>
 
                             <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
-                              {post.title}
+                              {postTitle}
                             </h3>
 
                             <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
-                              {post.content}
+                              {postContent}
                             </p>
 
                             {/* Tags - Reddit Style */}
                             <div className="flex flex-wrap gap-1 mb-2">
-                              {post.tags.slice(0, 4).map(tag => (
+                              {postTags.slice(0, 4).map(tag => (
                                 <span
                                   key={tag}
                                   className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
@@ -1072,7 +1117,7 @@ const CommunitiesPage: React.FC = () => {
                                 className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                               >
                                 <MessageCircle className="w-4 h-4" />
-                                <span>{post.commentCount}</span>
+                                <span>{postComments}</span>
                               </button>
                               <button 
                                 onClick={(e) => e.stopPropagation()}
@@ -1129,8 +1174,19 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Right Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                
-                
+                {/* Community Info Card - Reddit Style */}
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
+                  <h3 className="font-semibold text-sm mb-1">Join LinkDAO Communities</h3>
+                  <p className="text-xs opacity-90 mb-3">
+                    Connect with like-minded individuals and participate in governance
+                  </p>
+                  <button
+                    onClick={handleCreateCommunityClick}
+                    className="w-full py-2 bg-white text-blue-600 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors"
+                  >
+                    Create Community
+                  </button>
+                </div>
                 
                 {/* Trending Today */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -1165,7 +1221,20 @@ const CommunitiesPage: React.FC = () => {
                   </div>
                 </div>
                 
-                
+                {/* Governance Activity */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                      Governance Activity
+                    </h3>
+                  </div>
+                  <div className="p-2">
+                    <GovernanceActivityPulse 
+                      activeProposals={governanceProposals.length}
+                      showLabel={true}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

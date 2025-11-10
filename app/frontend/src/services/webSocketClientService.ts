@@ -76,10 +76,7 @@ export class WebSocketClientService {
           extraHeaders: {
             'X-Client-Type': 'web',
             'X-Client-Version': '1.0.0'
-          },
-          // Adjust ping settings for better connection stability
-          pingInterval: 25000,
-          pingTimeout: 60000
+          }
         });
 
         this.setupSocketEventHandlers();

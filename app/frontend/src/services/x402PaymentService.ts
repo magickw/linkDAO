@@ -238,7 +238,6 @@ export class X402PaymentService {
         status: result.data.status,
       };
     } catch (error) {
-    } catch (error) {
       console.error('X402 payment refund failed:', error);
       return {
         success: false,

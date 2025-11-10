@@ -169,7 +169,8 @@ class WebSocketService {
           forceNew: true,
           upgrade: !this.fallbackToPolling,
           rememberUpgrade: false,
-          path: '/socket.io/', // Explicitly set path
+          // Ensure path is properly set from URL
+          path: this.getPathFromUrl(this.config.url!),
           // Add CORS bypass options
           withCredentials: true,
           extraHeaders: {
@@ -184,6 +185,21 @@ class WebSocketService {
         reject(error);
       }
     });
+  }
+
+  private getPathFromUrl(url: string): string {
+    try {
+      const parsedUrl = new URL(url);
+      // If the URL already includes the socket.io path, use it as is
+      if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
+        return parsedUrl.pathname;
+      }
+      // Otherwise return the default socket.io path
+      return '/socket.io/';
+    } catch (error) {
+      // If URL parsing fails, return the default path
+      return '/socket.io/';
+    }
   }
 
   private setupSocketEventHandlers(resolve?: () => void, reject?: (error: Error) => void): void {
