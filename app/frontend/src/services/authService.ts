@@ -336,7 +336,7 @@ class AuthService {
     privacySettings?: any;
   }): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/register`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -464,7 +464,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/preferences`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/preferences`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -490,7 +490,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/privacy`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/privacy`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -516,7 +516,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/kyc/initiate`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/kyc/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -594,7 +594,7 @@ class AuthService {
     }
     
     try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/refresh`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.token}`,
@@ -736,7 +736,7 @@ class AuthService {
    */
   async adminLogin(email: string, password: string): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/admin/login`, {
+      const response = await fetch(`${this.baseUrl}/api/auth/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
