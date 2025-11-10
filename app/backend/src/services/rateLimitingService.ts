@@ -64,12 +64,57 @@ export class RateLimitingService {
    * Initialize Redis connection for rate limiting
    */
   static initialize(): void {
+    // Check if Redis is disabled
+    if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0') {
+      safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable for rate limiting');
+      this.store = undefined as any; // Will use default memory store
+      return;
+    }
+    
     try {
-      this.redis = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
-        db: parseInt(process.env.REDIS_RATE_LIMIT_DB || '1')
+      // Use Redis URL if provided (for cloud services like Render)
+      if (process.env.REDIS_URL) {
+        this.redis = new Redis(process.env.REDIS_URL, {
+          maxRetriesPerRequest: 3,
+          connectTimeout: 10000,
+          retryStrategy: (times) => {
+            // Stop retrying after 3 attempts to prevent infinite loops
+            if (times > 3) {
+              safeLogger.warn('Max Redis retry attempts reached for rate limiting, using memory store');
+              return null;
+            }
+            const delay = Math.min(times * 1000, 30000); // Exponential backoff up to 30s
+            safeLogger.warn(`Redis reconnection attempt ${times}/3 for rate limiting, next attempt in ${delay}ms`);
+            return delay;
+          }
+        });
+      } else {
+        this.redis = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD,
+          db: parseInt(process.env.REDIS_RATE_LIMIT_DB || '1'),
+          maxRetriesPerRequest: 3,
+          connectTimeout: 10000,
+          retryStrategy: (times) => {
+            if (times > 3) {
+              safeLogger.warn('Max Redis retry attempts reached for rate limiting, using memory store');
+              return null;
+            }
+            const delay = Math.min(times * 1000, 30000); // Exponential backoff up to 30s
+            safeLogger.warn(`Redis reconnection attempt ${times}/3 for rate limiting, next attempt in ${delay}ms`);
+            return delay;
+          }
+        });
+      }
+
+      // Set up event handlers to prevent unhandled errors
+      this.redis.on('error', (error) => {
+        safeLogger.error('Redis error in rate limiting service:', {
+          message: error.message,
+          name: error.name,
+          code: (error as any).code
+        });
       });
 
       // Comment out the RedisStore configuration as it's causing issues
@@ -79,7 +124,17 @@ export class RateLimitingService {
 
       safeLogger.info('Rate limiting service initialized with Redis store');
     } catch (error) {
-      safeLogger.warn('Redis not available for rate limiting, using memory store:', error);
+      safeLogger.warn('Redis not available for rate limiting, using memory store:', {
+        error: {
+          name: error.name,
+          message: error.message,
+          code: (error as any).code,
+          errno: (error as any).errno,
+          syscall: (error as any).syscall,
+          address: (error as any).address,
+          port: (error as any).port
+        }
+      });
       this.store = undefined as any; // Will use default memory store
     }
   }
@@ -108,7 +163,7 @@ export class RateLimitingService {
     return rateLimit({
       ...defaultConfig,
       ...config,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       handler: (req: Request, res: Response) => {
         safeLogger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
           ip: req.ip,
@@ -137,7 +192,7 @@ export class RateLimitingService {
       }),
       standardHeaders: true,
       legacyHeaders: false,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       keyGenerator: (req: Request) => `auth:${req.ip}`,
       skipSuccessfulRequests: true,
       handler: (req: Request, res: Response) => {
@@ -168,7 +223,7 @@ export class RateLimitingService {
       }),
       standardHeaders: true,
       legacyHeaders: false,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       keyGenerator: (req: Request) => {
         const userId = (req as any).user?.id;
         if (!userId) {
@@ -210,7 +265,7 @@ export class RateLimitingService {
       },
       standardHeaders: true,
       legacyHeaders: false,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       keyGenerator: (req: Request) => `ip:${req.ip}:${limitType}`,
       handler: (req: Request, res: Response) => {
         safeLogger.warn(`IP rate limit exceeded for ${limitType}`, {
@@ -252,7 +307,7 @@ export class RateLimitingService {
       },
       standardHeaders: true,
       legacyHeaders: false,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       keyGenerator: (req: Request) => {
         const userId = (req as any).user?.id;
         return userId ? `reputation:${userId}:${action}` : `ip:${req.ip}:${action}`;
@@ -341,7 +396,7 @@ export class RateLimitingService {
   static createSmartRateLimit(config: RateLimitConfig) {
     return rateLimit({
       ...config,
-      store: this.store,
+      store: this.store || undefined, // Use memory store if Redis is not available
       skip: (req: Request) => {
         // Skip if whitelisted
         if (this.isWhitelisted(req.ip)) {
@@ -479,6 +534,13 @@ export class RateLimitingService {
       safeLogger.error('Error during rate limit cleanup:', error);
       return 0;
     }
+  }
+  
+  /**
+   * Check if Redis is enabled for rate limiting
+   */
+  static isRedisEnabled(): boolean {
+    return !!this.store;
   }
 }
 

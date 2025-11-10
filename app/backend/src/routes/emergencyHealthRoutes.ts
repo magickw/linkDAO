@@ -58,16 +58,29 @@ router.get('/emergency-health', async (req, res) => {
 
     // Emergency mode check
     try {
-      const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-      const emergencyMode = await redis.get('emergency_mode');
-      const fixesApplied = await redis.get('emergency:applied_at');
-      
-      health.emergency = {
-        mode: emergencyMode === 'true',
-        fixes_applied: !!fixesApplied
-      };
-      
-      await redis.quit();
+      // Check if Redis is enabled before attempting connection
+      if (process.env.REDIS_ENABLED !== 'false' && process.env.REDIS_ENABLED !== '0') {
+        const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+        
+        // Handle placeholder values
+        if (redisUrl !== 'your_redis_url' && redisUrl !== 'redis://your_redis_url') {
+          const redis = new Redis(redisUrl, {
+            maxRetriesPerRequest: 1,
+            connectTimeout: 5000,
+            retryStrategy: () => null // Don't retry on health check
+          });
+          
+          const emergencyMode = await redis.get('emergency_mode');
+          const fixesApplied = await redis.get('emergency:applied_at');
+          
+          health.emergency = {
+            mode: emergencyMode === 'true',
+            fixes_applied: !!fixesApplied
+          };
+          
+          await redis.quit();
+        }
+      }
     } catch (error) {
       // Redis unavailable - assume emergency mode
       health.emergency.mode = true;

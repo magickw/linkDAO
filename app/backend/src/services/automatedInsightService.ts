@@ -81,8 +81,80 @@ export class AutomatedInsightService {
   private readonly CACHE_TTL = 1800; // 30 minutes
   private readonly INSIGHT_HISTORY_DAYS = 90;
 
+  /**
+   * Check if Redis is enabled for this service
+   */
+  isRedisEnabled(): boolean {
+    return !!this.redis;
+  }
+
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    // Check if Redis is disabled
+    if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0') {
+      safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable for automated insights');
+      return;
+    }
+    
+    try {
+      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+      
+      // Handle placeholder values
+      if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {
+        redisUrl = 'redis://localhost:6379';
+      }
+      
+      safeLogger.info('🔗 Attempting Redis connection for automated insights to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+      
+      this.redis = new Redis(redisUrl, {
+        maxRetriesPerRequest: 3,
+        connectTimeout: 10000,
+        retryStrategy: (times) => {
+          if (times > 3) {
+            safeLogger.warn('Redis max reconnection attempts reached for automated insights, disabling Redis functionality');
+            return null; // Stop reconnecting
+          }
+          const delay = Math.min(times * 1000, 30000); // Exponential backoff up to 30s
+          safeLogger.warn(`Redis reconnection attempt ${times}/3 for automated insights, next attempt in ${delay}ms`);
+          return delay;
+        }
+      });
+
+      this.redis.on('error', (error) => {
+        safeLogger.error('Redis connection error for automated insights:', {
+          message: error.message,
+          name: error.name,
+          code: error.code,
+          errno: error.errno,
+          syscall: error.syscall
+        });
+      });
+
+      this.redis.on('node error', (error) => {
+        safeLogger.error('Redis node error for automated insights:', {
+          message: error.message,
+          name: error.name,
+          code: error.code
+        });
+      });
+
+      this.redis.on('connect', () => {
+        safeLogger.info('✅ Redis connected successfully for automated insights');
+      });
+
+      this.redis.on('reconnecting', () => {
+        safeLogger.info('🔄 Redis reconnecting for automated insights...');
+      });
+    } catch (error) {
+      safeLogger.error('Failed to initialize Redis for automated insights:', {
+        error: {
+          name: error.name,
+          message: error.message,
+          code: error.code,
+          errno: error.errno,
+          syscall: error.syscall
+        }
+      });
+    }
   }
 
   /**
@@ -92,11 +164,14 @@ export class AutomatedInsightService {
     timeframe: 'hourly' | 'daily' | 'weekly' | 'monthly' = 'daily'
   ): Promise<AIInsight[]> {
     try {
-      const cacheKey = `insights:generated:${timeframe}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+      // Check if Redis is available before using it
+      if (this.redis) {
+        const cacheKey = `insights:generated:${timeframe}`;
+        const cached = await this.redis.get(cacheKey);
+        
+        if (cached) {
+          return JSON.parse(cached);
+        }
       }
 
       const insights: AIInsight[] = [];
@@ -135,10 +210,24 @@ export class AutomatedInsightService {
         await this.storeInsight(insight);
       }
 
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(prioritizedInsights));
+      // Cache insights if Redis is available
+      if (this.redis) {
+        await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(prioritizedInsights));
+      }
       return prioritizedInsights;
     } catch (error) {
-      safeLogger.error('Error generating insights:', error);
+      safeLogger.error('Error generating insights:', {
+        message: error.message,
+        name: error.name,
+        code: (error as any).code
+      });
+      
+      // If it's a Redis error, disable Redis functionality
+      if ((error as any).code && (error as any).code.startsWith('E')) {
+        safeLogger.warn('Disabling Redis functionality for automated insights due to error');
+        this.redis = null;
+      }
+      
       throw new Error('Failed to generate AI insights');
     }
   }

@@ -153,37 +153,56 @@ export class RedisWalletRateLimiter {
         };
       }
 
-      // Remove old requests outside the window
-      await redisClient.zremrangebyscore(key, 0, windowStart);
+      try {
+        // Remove old requests outside the window
+        await redisClient.zremrangebyscore(key, 0, windowStart);
 
-      // Count requests in current window
-      const requestCount = await redisClient.zcard(key);
+        // Count requests in current window
+        const requestCount = await redisClient.zcard(key);
 
-      if (requestCount >= maxRequests) {
-        // Get the oldest request timestamp to calculate reset time
-        const oldestRequest = await redisClient.zrange(key, 0, 0, 'WITHSCORES');
-        const resetAt = oldestRequest.length > 1
-          ? new Date((parseInt(oldestRequest[1]) + windowSeconds) * 1000)
-          : new Date(Date.now() + windowSeconds * 1000);
+        if (requestCount >= maxRequests) {
+          // Get the oldest request timestamp to calculate reset time
+          const oldestRequest = await redisClient.zrange(key, 0, 0, 'WITHSCORES');
+          const resetAt = oldestRequest.length > 1
+            ? new Date((parseInt(oldestRequest[1]) + windowSeconds) * 1000)
+            : new Date(Date.now() + windowSeconds * 1000);
+
+          return {
+            allowed: false,
+            remaining: 0,
+            resetAt
+          };
+        }
+
+        // Add current request to the sorted set
+        await redisClient.zadd(key, now, `${now}:${Math.random()}`);
+        
+        // Set expiration to clean up old keys
+        await redisClient.expire(key, windowSeconds);
 
         return {
-          allowed: false,
-          remaining: 0,
-          resetAt
+          allowed: true,
+          remaining: maxRequests - requestCount - 1,
+          resetAt: new Date(Date.now() + windowSeconds * 1000)
+        };
+      } catch (error) {
+        safeLogger.error('Redis error in wallet rate limiting, falling back to allow:', {
+          error: {
+            message: error.message,
+            name: error.name,
+            code: (error as any).code
+          },
+          key,
+          walletAddress
+        });
+        
+        // Fallback to allowing if Redis operation fails
+        return {
+          allowed: true,
+          remaining: maxRequests,
+          resetAt: new Date(Date.now() + windowSeconds * 1000)
         };
       }
-
-      // Add current request
-      await redisClient.zadd(key, now, `${now}:${Math.random()}`);
-
-      // Set expiration on the key
-      await redisClient.expire(key, windowSeconds);
-
-      return {
-        allowed: true,
-        remaining: maxRequests - requestCount - 1,
-        resetAt: new Date(Date.now() + windowSeconds * 1000)
-      };
 
     } catch (error) {
       safeLogger.error('Redis rate limiter error:', error);

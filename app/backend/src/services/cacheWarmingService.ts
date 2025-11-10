@@ -203,7 +203,7 @@ export class CacheWarmingService {
       
       // Use dynamic import to avoid circular dependencies
       // Explicitly import the JavaScript version
-      const cacheModule: any = await import('./cacheService.js');
+      const cacheModule: any = await import('./cacheService'); // Updated to use TypeScript version
       let cacheService;
       if (cacheModule.default) {
         // If it's a class, create an instance

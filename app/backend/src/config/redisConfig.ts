@@ -4,48 +4,88 @@
  */
 
 import Redis from 'ioredis';
+import { safeLogger } from '../utils/safeLogger';
 
 let redisClient: Redis | null = null;
 
-// Use try-catch with better error handling
-try {
-  if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
-    // Only create Redis client if URL is not the default localhost
-    redisClient = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: false, // Don't wait for ready on startup
-      lazyConnect: true, // Don't connect immediately
-      retryStrategy(times) {
-        if (times > 3) {
-          // Stop retrying and fail gracefully
-          console.warn('Redis connection failed after 3 attempts, falling back to in-memory');
-          return null;
+// Check if Redis is disabled via environment variable
+if (process.env.REDIS_ENABLED !== 'false' && process.env.REDIS_ENABLED !== '0') {
+  // Use try-catch with better error handling
+  try {
+    if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379' && process.env.REDIS_URL !== 'your_redis_url') {
+      // Only create Redis client if URL is not the default localhost
+      redisClient = new Redis(process.env.REDIS_URL, {
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: false, // Don't wait for ready on startup
+        lazyConnect: true, // Don't connect immediately
+        retryStrategy(times) {
+          if (times > 3) {
+            // Stop retrying and fail gracefully
+            safeLogger.warn('Redis connection failed after 3 attempts, falling back to in-memory');
+            return null;
+          }
+          const delay = Math.min(times * 1000, 30000); // Exponential backoff up to 30s
+          safeLogger.warn(`Redis reconnection attempt ${times}/3, next attempt in ${delay}ms`);
+          return delay;
         }
-        return Math.min(times * 100, 2000);
+      });
+
+      // Add comprehensive error handling
+      redisClient.on('error', (error) => {
+        // Log but don't throw
+        safeLogger.error('Redis connection error (will use fallback):', {
+          message: error.message,
+          name: error.name,
+          code: (error as any).code
+        });
+      });
+
+      redisClient.on('node error', (error) => {
+        // Handle cluster node errors
+        safeLogger.error('Redis node error (will use fallback):', {
+          message: error.message,
+          name: error.name,
+          code: (error as any).code
+        });
+      });
+
+      redisClient.on('connect', () => {
+        safeLogger.info('Redis connected successfully');
+      });
+
+      redisClient.on('reconnecting', (delay) => {
+        safeLogger.info(`Redis reconnecting in ${delay}ms...`);
+      });
+
+      // Attempt connection but don't wait for it
+      redisClient.connect().catch(err => {
+        safeLogger.warn('Redis connection failed, using in-memory fallback:', {
+          message: err.message,
+          name: err.name,
+          code: (err as any).code
+        });
+        redisClient = null;
+      });
+
+    } else {
+      safeLogger.info('Redis not configured or using localhost, rate limiting will use in-memory fallback');
+    }
+  } catch (error) {
+    safeLogger.warn('Redis initialization error, using fallback:', {
+      error: {
+        name: error.name,
+        message: error.message,
+        code: (error as any).code,
+        errno: (error as any).errno,
+        syscall: (error as any).syscall,
+        address: (error as any).address,
+        port: (error as any).port
       }
     });
-
-    redisClient.on('error', (error) => {
-      // Log but don't throw
-      console.warn('Redis connection error (will use fallback):', error.message);
-    });
-
-    redisClient.on('connect', () => {
-      console.log('Redis connected successfully');
-    });
-
-    // Attempt connection but don't wait for it
-    redisClient.connect().catch(err => {
-      console.warn('Redis connection failed, using in-memory fallback:', err.message);
-      redisClient = null;
-    });
-
-  } else {
-    console.log('Redis not configured or using localhost, rate limiting will use in-memory fallback');
+    redisClient = null;
   }
-} catch (error) {
-  console.warn('Redis initialization error, using fallback:', error);
-  redisClient = null;
+} else {
+  safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
 }
 
 export { redisClient };
