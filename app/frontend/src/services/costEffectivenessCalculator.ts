@@ -66,6 +66,15 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         confidence = 0.95; // High confidence for fiat
         break;
 
+      case PaymentMethodType.X402:
+        // X402 has minimal fees - most gas costs are covered by the protocol
+        gasFee = 0.01; // Minimal network fee
+        networkFee = 0;
+        platformFee = 0; // No platform fee for x402
+        estimatedTime = 5; // ~5 minutes
+        confidence = 0.95; // High confidence
+        break;
+
       case PaymentMethodType.NATIVE_ETH:
         gasFee = await this.calculateGasFee(paymentMethod, networkConditions);
         estimatedTime = this.estimateConfirmationTime(networkConditions);
@@ -73,7 +82,12 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
         break;
 
       default:
-        throw new Error(`Unsupported payment method type: ${paymentMethod.type}`);
+        // For unknown payment types, use minimal cost estimate
+        console.warn(`Unknown payment method type: ${paymentMethod.type}, using minimal cost estimate`);
+        gasFee = 0;
+        networkFee = 0;
+        estimatedTime = 5;
+        confidence = 0.7;
     }
 
     const totalCost = baseCost + gasFee + networkFee + platformFee;

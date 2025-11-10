@@ -36,7 +36,7 @@ export interface PrioritizedCheckoutRequest extends UnifiedCheckoutRequest {
 }
 
 export interface CheckoutRecommendation {
-  recommendedPath: 'crypto' | 'fiat';
+  recommendedPath: 'crypto' | 'fiat' | 'x402';
   reason: string;
   cryptoOption: {
     available: boolean;
@@ -54,12 +54,19 @@ export interface CheckoutRecommendation {
     benefits: string[];
     requirements: string[];
   };
+  x402Option?: {
+    available: boolean;
+    fees: number;
+    estimatedTime: string;
+    benefits: string[];
+    requirements: string[];
+  };
 }
 
 export interface UnifiedCheckoutResult {
   orderId: string;
-  paymentPath: 'crypto' | 'fiat';
-  escrowType: 'smart_contract' | 'stripe_connect';
+  paymentPath: 'crypto' | 'fiat' | 'x402';
+  escrowType: 'smart_contract' | 'stripe_connect' | 'x402_protocol';
   transactionId: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   nextSteps: string[];
@@ -234,7 +241,7 @@ export class UnifiedCheckoutService {
    */
   private async processX402Payment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     try {
-      // Prepare x402 payment request
+      // Prepare x402 payment request with additional validation
       const x402Request: X402PaymentRequest = {
         orderId: request.orderId,
         amount: request.amount.toString(),
@@ -244,6 +251,11 @@ export class UnifiedCheckoutService {
         listingId: request.listingId,
       };
 
+      // Validate the request before processing
+      if (!this.isValidX402Request(x402Request)) {
+        throw new Error('Invalid x402 payment request data');
+      }
+
       // Process the x402 payment
       const paymentResult = await x402PaymentService.processPayment(x402Request);
 
@@ -251,25 +263,30 @@ export class UnifiedCheckoutService {
         throw new Error(paymentResult.error || 'X402 payment failed');
       }
 
+      // Validate the response
+      if (!paymentResult.paymentUrl) {
+        throw new Error('X402 payment processed but no payment URL returned');
+      }
+
       // Return result based on payment status
       return {
         orderId: request.orderId,
-        paymentPath: 'crypto',
-        escrowType: 'smart_contract',
+        paymentPath: 'x402',
+        escrowType: 'x402_protocol',
         transactionId: paymentResult.transactionId || 'pending',
         status: paymentResult.status,
-        nextSteps: paymentResult.paymentUrl 
-          ? [`Complete payment at: ${paymentResult.paymentUrl}`] 
+        nextSteps: paymentResult.paymentUrl
+          ? [`Complete payment at: ${paymentResult.paymentUrl}`]
           : ['Payment processed successfully'],
         estimatedCompletionTime: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
         prioritizationMetadata: {
           selectedMethod: request.selectedPaymentMethod.method,
           priority: request.selectedPaymentMethod.priority,
-          recommendationReason: 'X402 protocol with reduced fees',
+          recommendationReason: 'X402 protocol with minimal fees - most cost-effective option',
           costEstimate: {
-            totalFees: 0, // x402 covers gas fees
+            totalFees: 0.01, // x402 covers most gas fees, minimal cost
             processingFee: 0,
-            networkFee: 0,
+            networkFee: 0.01, // Minimal network fee
           },
           alternativeMethods: []
         }
@@ -284,10 +301,16 @@ export class UnifiedCheckoutService {
     try {
       const { selectedPaymentMethod, paymentDetails } = request;
 
+      // Validate that this is a crypto payment method with a token
+      if (!selectedPaymentMethod.method.token) {
+        throw new Error('Escrow payment requires a crypto payment method with a token');
+      }
+
       // Prepare crypto payment request
+      const decimals = selectedPaymentMethod.method.token.decimals || 18;
       const cryptoRequest = {
         orderId: request.orderId,
-        amount: BigInt(Math.floor(request.amount * 10**selectedPaymentMethod.method.token.decimals)),
+        amount: BigInt(Math.floor(request.amount * 10**decimals)),
         token: selectedPaymentMethod.method.token,
         recipient: request.sellerAddress,
         chainId: selectedPaymentMethod.method.chainId,
@@ -833,5 +856,49 @@ export class UnifiedCheckoutService {
   private async getConnectedAddress(): Promise<string> {
     // In a real implementation, get from wallet connection
     return '0x1234567890123456789012345678901234567890';
+  }
+
+  /**
+   * Validate x402 payment request data
+   */
+  private isValidX402Request(request: X402PaymentRequest): boolean {
+    // Validate required fields exist
+    if (!request.orderId || !request.amount || !request.currency || 
+        !request.buyerAddress || !request.sellerAddress || !request.listingId) {
+      return false;
+    }
+
+    // Validate amount is a positive number
+    const amountNum = parseFloat(request.amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return false;
+    }
+
+    // Validate Ethereum addresses (basic format check)
+    const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    if (!ethereumAddressRegex.test(request.buyerAddress) || 
+        !ethereumAddressRegex.test(request.sellerAddress)) {
+      return false;
+    }
+
+    // Validate currency
+    if (!['USD', 'EUR', 'GBP'].includes(request.currency)) {
+      // Allow other currencies as well
+      if (request.currency.length < 2 || request.currency.length > 4) {
+        return false;
+      }
+    }
+
+    // Validate order ID format
+    if (typeof request.orderId !== 'string' || request.orderId.length < 5) {
+      return false;
+    }
+
+    // Validate listing ID format
+    if (typeof request.listingId !== 'string' || request.listingId.length < 5) {
+      return false;
+    }
+
+    return true;
   }
 }

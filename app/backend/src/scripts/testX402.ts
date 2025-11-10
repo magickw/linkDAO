@@ -1,22 +1,26 @@
-import dotenv from 'dotenv';
-import { safeLogger } from '../utils/safeLogger';
+#!/usr/bin/env node
+
+/**
+ * Test script for x402 Payment Service
+ * This script tests the x402 payment service functionality
+ */
+
 import { X402PaymentService } from '../services/x402PaymentService';
 
-// Load environment variables
-dotenv.config();
-
-async function testX402() {
-  safeLogger.info('CDP_API_KEY_ID:', process.env.CDP_API_KEY_ID ? 'Loaded' : 'Not found');
-  safeLogger.info('CDP_API_KEY_SECRET:', process.env.CDP_API_KEY_SECRET ? 'Loaded' : 'Not found');
+async function testX402Service() {
+  console.log('🧪 Testing x402 Payment Service...\n');
   
   const x402Service = new X402PaymentService();
   
-  safeLogger.info('Testing x402 Payment Service...');
+  // Test service status
+  const status = x402Service.getStatus();
+  console.log('📊 Service Status:', status);
   
-  // Test processPayment
+  // Test payment processing
+  console.log('\n💳 Testing Payment Processing...');
   const paymentRequest = {
     orderId: 'test_order_123',
-    amount: '100',
+    amount: '99.99',
     currency: 'USD',
     buyerAddress: '0x1234567890123456789012345678901234567890',
     sellerAddress: '0x0987654321098765432109876543210987654321',
@@ -24,30 +28,30 @@ async function testX402() {
   };
   
   try {
-    safeLogger.info('Processing payment...');
     const paymentResult = await x402Service.processPayment(paymentRequest);
-    safeLogger.info('Payment Result:', paymentResult);
+    console.log('✅ Payment Processing Result:', paymentResult);
     
-    if (paymentResult.success) {
-      safeLogger.info('Payment processed successfully!');
-      safeLogger.info('Payment URL:', paymentResult.paymentUrl);
-      safeLogger.info('Transaction ID:', paymentResult.transactionId);
+    if (paymentResult.success && paymentResult.transactionId) {
+      // Test payment status check
+      console.log('\n🔍 Testing Payment Status Check...');
+      const statusResult = await x402Service.checkPaymentStatus(paymentResult.transactionId);
+      console.log('✅ Payment Status Result:', statusResult);
       
-      // Test checkPaymentStatus
-      safeLogger.info('Checking payment status...');
-      const statusResult = await x402Service.checkPaymentStatus(paymentResult.transactionId!);
-      safeLogger.info('Status Result:', statusResult);
-      
-      // Test refundPayment
-      safeLogger.info('Processing refund...');
-      const refundResult = await x402Service.refundPayment(paymentResult.transactionId!);
-      safeLogger.info('Refund Result:', refundResult);
-    } else {
-      safeLogger.info('Payment processing failed:', paymentResult.error);
+      // Test refund processing
+      console.log('\n💰 Testing Refund Processing...');
+      const refundResult = await x402Service.refundPayment(paymentResult.transactionId);
+      console.log('✅ Refund Processing Result:', refundResult);
     }
   } catch (error) {
-    safeLogger.error('Error testing x402 payment service:', error);
+    console.error('❌ Error during testing:', error);
   }
+  
+  console.log('\n🏁 x402 Payment Service test completed.');
 }
 
-testX402();
+// Run the test if this script is executed directly
+if (require.main === module) {
+  testX402Service().catch(console.error);
+}
+
+export { testX402Service };

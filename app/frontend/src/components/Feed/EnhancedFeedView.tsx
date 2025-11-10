@@ -118,6 +118,7 @@ const EnhancedFeedView = React.memo(({
     sortBy: currentSort,
     timeRange: currentTimeRange,
     feedSource: 'following', // Always default to following feed
+    userAddress: address || '', // Add user address for personalized feed
     ...initialFilter
   });
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
@@ -135,9 +136,10 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      feedSource: 'following' // Always keep it as following
+      feedSource: 'following', // Always keep it as following
+      userAddress: address || '' // Update user address when it changes
     }));
-  }, [currentSort, currentTimeRange]);
+  }, [currentSort, currentTimeRange, address]);
 
   // Auto-refresh functionality - memoized
   useEffect(() => {

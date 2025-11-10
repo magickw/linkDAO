@@ -16,8 +16,13 @@ export interface X402PaymentResult {
 }
 
 export class X402PaymentService {
+  private readonly API_BASE_URL: string;
+  
   constructor() {
-    // Initialize service
+    // Initialize with proper API base URL
+    this.API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 
+                        process.env.NEXT_PUBLIC_API_URL || 
+                        'http://localhost:10000';
   }
 
   /**
@@ -25,8 +30,14 @@ export class X402PaymentService {
    */
   async processPayment(request: X402PaymentRequest): Promise<X402PaymentResult> {
     try {
+      // Validate required fields
+      if (!request.orderId || !request.amount || !request.currency || 
+          !request.buyerAddress || !request.sellerAddress || !request.listingId) {
+        throw new Error('Missing required fields in x402 payment request');
+      }
+
       // Call the backend x402 payment API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/x402/payment`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,13 +46,19 @@ export class X402PaymentService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process x402 payment');
+        const errorText = await response.text();
+        throw new Error(`Failed to process x402 payment: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to process x402 payment');
+      }
+
+      // Validate response data
+      if (!result.data) {
+        throw new Error('Invalid response from x402 payment service');
       }
 
       return {
@@ -55,7 +72,7 @@ export class X402PaymentService {
       return {
         success: false,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error occurred during x402 payment processing',
       };
     }
   }
@@ -65,8 +82,13 @@ export class X402PaymentService {
    */
   async checkPaymentStatus(transactionId: string): Promise<X402PaymentResult> {
     try {
+      // Validate transaction ID
+      if (!transactionId) {
+        throw new Error('Transaction ID is required to check payment status');
+      }
+
       // Call the backend x402 payment status API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/x402/payment/${transactionId}`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -74,13 +96,19 @@ export class X402PaymentService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to check x402 payment status');
+        const errorText = await response.text();
+        throw new Error(`Failed to check x402 payment status: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to check x402 payment status');
+      }
+
+      // Validate response data
+      if (!result.data) {
+        throw new Error('Invalid response from x402 payment status service');
       }
 
       return {
@@ -93,7 +121,7 @@ export class X402PaymentService {
       return {
         success: false,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error occurred while checking x402 payment status',
       };
     }
   }
@@ -103,8 +131,13 @@ export class X402PaymentService {
    */
   async refundPayment(transactionId: string): Promise<X402PaymentResult> {
     try {
+      // Validate transaction ID
+      if (!transactionId) {
+        throw new Error('Transaction ID is required to process refund');
+      }
+
       // Call the backend x402 refund API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/x402/payment/${transactionId}/refund`, {
+      const response = await fetch(`${this.API_BASE_URL}/api/x402/payment/${encodeURIComponent(transactionId)}/refund`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,13 +145,19 @@ export class X402PaymentService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process x402 refund');
+        const errorText = await response.text();
+        throw new Error(`Failed to process x402 refund: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to process x402 refund');
+      }
+
+      // Validate response data
+      if (!result.data) {
+        throw new Error('Invalid response from x402 refund service');
       }
 
       return {
@@ -131,7 +170,7 @@ export class X402PaymentService {
       return {
         success: false,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error occurred during x402 refund processing',
       };
     }
   }

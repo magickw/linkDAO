@@ -59,6 +59,7 @@ import {
   Trophy
 } from 'lucide-react';
 import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
+import MyCommunitiesCard from '@/components/Community/MyCommunitiesCard';
 import { CommunityService } from '@/services/communityService';
 import { Community } from '@/models/Community';
 import { FeedSortType } from '@/types/feed';
@@ -786,7 +787,14 @@ const CommunitiesPage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                
+
+                {/* My Communities Card */}
+                <MyCommunitiesCard
+                  communities={communityList.filter(c => joinedCommunities.includes(c.id))}
+                  maxDisplay={10}
+                  onManageClick={() => router.push('/communities/manage')}
+                />
+
                 {/* Popular Communities - Reddit Style */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -814,7 +822,7 @@ const CommunitiesPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Sidebar Footer - Reddit Style */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-xs text-gray-500 dark:text-gray-400">
                   <div className="space-y-2">

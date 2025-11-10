@@ -25,6 +25,7 @@ export interface FeedFilter {
   tags?: string[];
   author?: string;
   feedSource?: 'following' | 'all';
+  userAddress?: string;
   postTypes?: string[];
   web3Sort?: Web3SortType;
   web3SortDirection?: 'asc' | 'desc';

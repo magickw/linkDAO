@@ -89,10 +89,30 @@ export interface RealTimeStats {
 
 class AnalyticsService {
   private baseUrl: string;
+  private geoCache: {
+    data: {
+      ipAddress?: string;
+      country?: string;
+      city?: string;
+      timezone?: string;
+      latitude?: number;
+      longitude?: number;
+    } | null;
+    timestamp: number;
+  } | null = null;
+  private readonly GEO_CACHE_TTL = 3600000; // 1 hour in milliseconds
+  private geoRequestInProgress: Promise<any> | null = null;
+  private lastGeoRequestTime = 0;
+  private readonly MIN_GEO_REQUEST_INTERVAL = 60000; // 1 minute minimum between requests
+  private geoRequestFailureCount = 0;
+  private readonly MAX_GEO_FAILURES = 3; // Stop trying after 3 failures
 
   constructor() {
     // Use port 10000 based on the start-services.sh script
     this.baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
+
+    // Try to restore cached geolocation from sessionStorage
+    this.restoreGeoCache();
   }
 
   /**
@@ -287,6 +307,7 @@ class AnalyticsService {
 
   /**
    * Track user events for analytics with enhanced geolocation
+   * Now non-blocking with cached geolocation data
    */
   async trackUserEvent(
     eventType: string,
@@ -307,8 +328,17 @@ class AnalyticsService {
       const userId = this.getCurrentUserId();
       const sessionId = this.getSessionId();
 
-      // Get accurate IP address and geolocation
-      const geoData = await this.getAccurateGeolocation();
+      // Use cached geolocation data if available, or fetch in background
+      // Don't block event tracking on geolocation requests
+      let geoData = this.geoCache?.data || {};
+
+      // If cache is stale, trigger a background fetch but don't wait for it
+      if (!this.geoCache || Date.now() - this.geoCache.timestamp >= this.GEO_CACHE_TTL) {
+        // Fire and forget - update cache in background
+        this.getAccurateGeolocation().catch(() => {
+          // Silently fail - we already have fallback data
+        });
+      }
 
       await requestManager.request(`${this.baseUrl}/track/event`, {
         method: 'POST',
@@ -333,7 +363,7 @@ class AnalyticsService {
       });
     } catch (error) {
       // Silently fail for tracking events to avoid disrupting user experience
-      console.warn('Failed to track user event:', eventType, error);
+      console.debug('Failed to track user event:', eventType);
     }
   }
 
@@ -464,6 +494,7 @@ class AnalyticsService {
 
   /**
    * Get accurate geolocation data using multiple methods
+   * Now with caching and rate limiting
    */
   private async getAccurateGeolocation(): Promise<{
     ipAddress?: string;
@@ -473,18 +504,117 @@ class AnalyticsService {
     latitude?: number;
     longitude?: number;
   }> {
+    // Check if we've exceeded max failures - if so, return cached data or empty
+    if (this.geoRequestFailureCount >= this.MAX_GEO_FAILURES) {
+      console.warn('Geolocation requests disabled due to repeated failures');
+      return this.geoCache?.data || { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    }
+
+    // Return cached data if still valid
+    if (this.geoCache && Date.now() - this.geoCache.timestamp < this.GEO_CACHE_TTL) {
+      return this.geoCache.data || {};
+    }
+
+    // Check if we're rate-limiting requests
+    const timeSinceLastRequest = Date.now() - this.lastGeoRequestTime;
+    if (timeSinceLastRequest < this.MIN_GEO_REQUEST_INTERVAL) {
+      console.debug('Geolocation request throttled, using cached data');
+      return this.geoCache?.data || { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    }
+
+    // If a request is already in progress, wait for it
+    if (this.geoRequestInProgress) {
+      try {
+        return await this.geoRequestInProgress;
+      } catch (error) {
+        return this.geoCache?.data || {};
+      }
+    }
+
+    // Create new request with proper error handling
+    this.geoRequestInProgress = this.fetchGeolocationData();
+    this.lastGeoRequestTime = Date.now();
+
     try {
-      // Try to get user's IP and location from a reliable service
-      const geoData = await this.getClientIPAndLocation();
+      const geoData = await this.geoRequestInProgress;
+
+      // Cache successful result
+      this.geoCache = {
+        data: geoData,
+        timestamp: Date.now()
+      };
+
+      // Store in sessionStorage for persistence
+      this.saveGeoCache();
+
+      // Reset failure count on success
+      this.geoRequestFailureCount = 0;
+
       return geoData;
     } catch (error) {
       console.warn('Failed to get accurate geolocation:', error);
-      return {};
+      this.geoRequestFailureCount++;
+
+      // Return cached data or fallback
+      return this.geoCache?.data || { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+    } finally {
+      this.geoRequestInProgress = null;
+    }
+  }
+
+  /**
+   * Fetch geolocation data from external services
+   */
+  private async fetchGeolocationData(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+    timezone?: string;
+    latitude?: number;
+    longitude?: number;
+  }> {
+    try {
+      const geoData = await this.getClientIPAndLocation();
+      return geoData;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Restore geolocation cache from sessionStorage
+   */
+  private restoreGeoCache(): void {
+    try {
+      const cached = sessionStorage.getItem('geoCache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Only restore if cache is still valid
+        if (Date.now() - parsed.timestamp < this.GEO_CACHE_TTL) {
+          this.geoCache = parsed;
+        }
+      }
+    } catch (error) {
+      console.debug('Failed to restore geo cache:', error);
+    }
+  }
+
+  /**
+   * Save geolocation cache to sessionStorage
+   */
+  private saveGeoCache(): void {
+    try {
+      if (this.geoCache) {
+        sessionStorage.setItem('geoCache', JSON.stringify(this.geoCache));
+      }
+    } catch (error) {
+      console.debug('Failed to save geo cache:', error);
     }
   }
 
   /**
    * Get client IP and location using multiple geolocation services
+   * Now with better error handling and timeouts
    */
   private async getClientIPAndLocation(): Promise<{
     ipAddress?: string;
@@ -495,24 +625,38 @@ class AnalyticsService {
     longitude?: number;
   }> {
     const geoServices = [
-      () => this.getLocationFromIPAPI(),
-      () => this.getLocationFromIPify(),
-      () => this.getLocationFromCloudflare()
+      { name: 'IP-API', fn: () => this.getLocationFromIPAPI() },
+      { name: 'IPify', fn: () => this.getLocationFromIPify() },
+      { name: 'Cloudflare', fn: () => this.getLocationFromCloudflare() }
     ];
 
     for (const service of geoServices) {
       try {
-        const result = await service();
+        // Add a timeout to each service request
+        const result = await Promise.race([
+          service.fn(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Request timeout')), 5000)
+          )
+        ]);
+
         if (result.ipAddress) {
+          console.debug(`Geolocation data obtained from ${service.name}`);
           return result;
         }
-      } catch (error) {
-        console.warn('Geolocation service failed, trying next:', error);
+      } catch (error: any) {
+        // Don't log 503 errors as errors - these are expected when rate limited
+        if (error.message?.includes('503')) {
+          console.debug(`${service.name} rate limited, trying next service`);
+        } else {
+          console.debug(`${service.name} failed, trying next:`, error.message);
+        }
         continue;
       }
     }
 
     // Fallback: try to get timezone at least
+    console.debug('All geolocation services failed, using timezone fallback');
     return {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     };
@@ -529,26 +673,36 @@ class AnalyticsService {
     latitude?: number;
     longitude?: number;
   }> {
-    const response = await fetch('https://ip-api.com/json/');
+    try {
+      const response = await fetch('https://ip-api.com/json/', {
+        signal: AbortSignal.timeout(5000)
+      });
 
-    if (!response.ok) {
-      throw new Error(`IP-API request failed with status ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`IP-API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        return {
+          ipAddress: data.query,
+          country: data.country,
+          city: data.city,
+          timezone: data.timezone,
+          latitude: data.lat,
+          longitude: data.lon
+        };
+      }
+
+      throw new Error('IP-API request failed');
+    } catch (error: any) {
+      // Re-throw with status for better error handling upstream
+      if (error.name === 'AbortError') {
+        throw new Error('IP-API request timeout');
+      }
+      throw error;
     }
-
-    const data = await response.json();
-
-    if (data.status === 'success') {
-      return {
-        ipAddress: data.query,
-        country: data.country,
-        city: data.city,
-        timezone: data.timezone,
-        latitude: data.lat,
-        longitude: data.lon
-      };
-    }
-
-    throw new Error('IP-API request failed');
   }
 
   /**
@@ -562,43 +716,54 @@ class AnalyticsService {
     latitude?: number;
     longitude?: number;
   }> {
-    // First get IP
-    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    try {
+      // First get IP with timeout
+      const ipResponse = await fetch('https://api.ipify.org?format=json', {
+        signal: AbortSignal.timeout(5000)
+      });
 
-    if (!ipResponse.ok) {
-      throw new Error(`IPify request failed with status ${ipResponse.status}`);
-    }
-
-    const ipData = await ipResponse.json();
-
-    if (!ipData.ip) {
-      throw new Error('Failed to get IP from Ipify');
-    }
-
-    // Then get location (requires API key for detailed info)
-    const apiKey = process.env.NEXT_PUBLIC_IPINFO_API_KEY;
-    if (apiKey) {
-      const locationResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=${apiKey}`);
-
-      if (!locationResponse.ok) {
-        throw new Error(`IPinfo request failed with status ${locationResponse.status}`);
+      if (!ipResponse.ok) {
+        throw new Error(`IPify request failed with status ${ipResponse.status}`);
       }
 
-      const locationData = await locationResponse.json();
+      const ipData = await ipResponse.json();
 
-      const [lat, lon] = (locationData.loc || '').split(',');
+      if (!ipData.ip) {
+        throw new Error('Failed to get IP from Ipify');
+      }
 
-      return {
-        ipAddress: ipData.ip,
-        country: locationData.country,
-        city: locationData.city,
-        timezone: locationData.timezone,
-        latitude: lat ? parseFloat(lat) : undefined,
-        longitude: lon ? parseFloat(lon) : undefined
-      };
+      // Then get location (requires API key for detailed info)
+      const apiKey = process.env.NEXT_PUBLIC_IPINFO_API_KEY;
+      if (apiKey) {
+        const locationResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=${apiKey}`, {
+          signal: AbortSignal.timeout(5000)
+        });
+
+        if (!locationResponse.ok) {
+          throw new Error(`IPinfo request failed with status ${locationResponse.status}`);
+        }
+
+        const locationData = await locationResponse.json();
+
+        const [lat, lon] = (locationData.loc || '').split(',');
+
+        return {
+          ipAddress: ipData.ip,
+          country: locationData.country,
+          city: locationData.city,
+          timezone: locationData.timezone,
+          latitude: lat ? parseFloat(lat) : undefined,
+          longitude: lon ? parseFloat(lon) : undefined
+        };
+      }
+
+      return { ipAddress: ipData.ip };
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('IPify request timeout');
+      }
+      throw error;
     }
-
-    return { ipAddress: ipData.ip };
   }
 
   /**
@@ -609,16 +774,30 @@ class AnalyticsService {
     country?: string;
     city?: string;
   }> {
-    // Cloudflare provides geolocation headers when behind their service
-    // This would need to be implemented on the server side
-    const response = await fetch('/api/client-info');
-    const data = await response.json();
+    try {
+      // Cloudflare provides geolocation headers when behind their service
+      // This would need to be implemented on the server side
+      const response = await fetch('/api/client-info', {
+        signal: AbortSignal.timeout(5000)
+      });
 
-    return {
-      ipAddress: data.ip,
-      country: data.country,
-      city: data.city
-    };
+      if (!response.ok) {
+        throw new Error(`Cloudflare client-info failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        ipAddress: data.ip,
+        country: data.country,
+        city: data.city
+      };
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Cloudflare request timeout');
+      }
+      throw error;
+    }
   }
 
   // Auto-tracking methods

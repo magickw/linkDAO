@@ -9,17 +9,58 @@ const router = express.Router();
  * Process an x402 payment
  * POST /api/x402/payment
  */
-router.post('/payment', csrfProtection,  async (req, res) => {
+router.post('/payment', csrfProtection, async (req, res) => {
   try {
     const { orderId, amount, currency, buyerAddress, sellerAddress, listingId } = req.body;
 
     // Validate required fields
     if (!orderId || !amount || !currency || !buyerAddress || !sellerAddress || !listingId) {
+      safeLogger.warn('Missing required fields in x402 payment request', { 
+        missingFields: {
+          orderId: !orderId,
+          amount: !amount,
+          currency: !currency,
+          buyerAddress: !buyerAddress,
+          sellerAddress: !sellerAddress,
+          listingId: !listingId
+        }
+      });
+      
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: orderId, amount, currency, buyerAddress, sellerAddress, listingId'
       });
     }
+
+    // Additional validation
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      safeLogger.warn('Invalid amount in x402 payment request', { amount });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount: must be a positive number'
+      });
+    }
+
+    // Validate Ethereum addresses
+    const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    if (!ethereumAddressRegex.test(buyerAddress)) {
+      safeLogger.warn('Invalid buyer address in x402 payment request', { buyerAddress });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid buyer address: must be a valid Ethereum address'
+      });
+    }
+
+    if (!ethereumAddressRegex.test(sellerAddress)) {
+      safeLogger.warn('Invalid seller address in x402 payment request', { sellerAddress });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid seller address: must be a valid Ethereum address'
+      });
+    }
+
+    safeLogger.info('Processing x402 payment request', { orderId, amount, currency });
 
     // Process the x402 payment
     const paymentResult = await x402PaymentService.processPayment({
@@ -32,11 +73,22 @@ router.post('/payment', csrfProtection,  async (req, res) => {
     });
 
     if (!paymentResult.success) {
+      safeLogger.error('X402 payment processing failed', { 
+        orderId, 
+        error: paymentResult.error 
+      });
+      
       return res.status(400).json({
         success: false,
         error: paymentResult.error || 'Failed to process x402 payment'
       });
     }
+
+    safeLogger.info('X402 payment processed successfully', { 
+      orderId, 
+      transactionId: paymentResult.transactionId,
+      status: paymentResult.status
+    });
 
     res.status(200).json({
       success: true,
@@ -46,7 +98,7 @@ router.post('/payment', csrfProtection,  async (req, res) => {
     safeLogger.error('Error processing x402 payment:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error during x402 payment processing'
     });
   }
 });
@@ -60,14 +112,43 @@ router.get('/payment/:transactionId', async (req, res) => {
     const { transactionId } = req.params;
 
     if (!transactionId) {
+      safeLogger.warn('Missing transactionId parameter in x402 payment status request');
       return res.status(400).json({
         success: false,
         error: 'Missing transactionId parameter'
       });
     }
 
+    // Validate transaction ID format (basic validation)
+    if (transactionId.length < 10 || transactionId.length > 100) {
+      safeLogger.warn('Invalid transactionId format in x402 payment status request', { transactionId });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transactionId format'
+      });
+    }
+
+    safeLogger.info('Checking x402 payment status', { transactionId });
+
     // Check the payment status
     const paymentResult = await x402PaymentService.checkPaymentStatus(transactionId);
+
+    if (!paymentResult.success) {
+      safeLogger.error('X402 payment status check failed', { 
+        transactionId, 
+        error: paymentResult.error 
+      });
+      
+      return res.status(400).json({
+        success: false,
+        error: paymentResult.error || 'Failed to check x402 payment status'
+      });
+    }
+
+    safeLogger.info('X402 payment status checked successfully', { 
+      transactionId, 
+      status: paymentResult.status
+    });
 
     res.status(200).json({
       success: true,
@@ -77,7 +158,7 @@ router.get('/payment/:transactionId', async (req, res) => {
     safeLogger.error('Error checking x402 payment status:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error during x402 payment status check'
     });
   }
 });
@@ -86,26 +167,49 @@ router.get('/payment/:transactionId', async (req, res) => {
  * Refund an x402 payment
  * POST /api/x402/payment/:transactionId/refund
  */
-router.post('/payment/:transactionId/refund', csrfProtection,  async (req, res) => {
+router.post('/payment/:transactionId/refund', csrfProtection, async (req, res) => {
   try {
     const { transactionId } = req.params;
 
     if (!transactionId) {
+      safeLogger.warn('Missing transactionId parameter in x402 refund request');
       return res.status(400).json({
         success: false,
         error: 'Missing transactionId parameter'
       });
     }
 
+    // Validate transaction ID format (basic validation)
+    if (transactionId.length < 10 || transactionId.length > 100) {
+      safeLogger.warn('Invalid transactionId format in x402 refund request', { transactionId });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transactionId format'
+      });
+    }
+
+    safeLogger.info('Processing x402 refund request', { transactionId });
+
     // Process the refund
     const refundResult = await x402PaymentService.refundPayment(transactionId);
 
     if (!refundResult.success) {
+      safeLogger.error('X402 refund processing failed', { 
+        transactionId, 
+        error: refundResult.error 
+      });
+      
       return res.status(400).json({
         success: false,
         error: refundResult.error || 'Failed to process refund'
       });
     }
+
+    safeLogger.info('X402 refund processed successfully', { 
+      transactionId, 
+      refundId: refundResult.transactionId,
+      status: refundResult.status
+    });
 
     res.status(200).json({
       success: true,
@@ -115,7 +219,28 @@ router.post('/payment/:transactionId/refund', csrfProtection,  async (req, res) 
     safeLogger.error('Error processing x402 refund:', error);
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error during x402 refund processing'
+    });
+  }
+});
+
+// Health check endpoint for x402 service
+router.get('/health', async (req, res) => {
+  try {
+    const status = x402PaymentService.getStatus();
+    res.status(200).json({
+      success: true,
+      data: {
+        service: 'x402-payment',
+        status,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    safeLogger.error('Error checking x402 service health:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during health check'
     });
   }
 });

@@ -56,8 +56,46 @@ describe('X402PaymentService', () => {
       // Mock failed response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 500
+        status: 500,
+        text: jest.fn().mockResolvedValueOnce('Internal server error')
       });
+
+      const result = await x402PaymentService.processPayment(request);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.error).toBeDefined();
+    });
+
+    it('should validate required fields in payment request', async () => {
+      const invalidRequest = {
+        orderId: '', // Missing required field
+        amount: '100',
+        currency: 'USD',
+        buyerAddress: '0x1234567890123456789012345678901234567890',
+        sellerAddress: '0x0987654321098765432109876543210987654321',
+        listingId: 'listing_123'
+      };
+
+      const result = await x402PaymentService.processPayment(invalidRequest as any);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.error).toContain('Missing required fields');
+    });
+
+    it('should handle network errors gracefully', async () => {
+      const request = {
+        orderId: 'order_123',
+        amount: '100',
+        currency: 'USD',
+        buyerAddress: '0x1234567890123456789012345678901234567890',
+        sellerAddress: '0x0987654321098765432109876543210987654321',
+        listingId: 'listing_123'
+      };
+
+      // Mock network error
+      (fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
       const result = await x402PaymentService.processPayment(request);
 
@@ -96,7 +134,8 @@ describe('X402PaymentService', () => {
       // Mock failed response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 500
+        status: 500,
+        text: jest.fn().mockResolvedValueOnce('Internal server error')
       });
 
       const result = await x402PaymentService.checkPaymentStatus(transactionId);
@@ -104,6 +143,14 @@ describe('X402PaymentService', () => {
       expect(result.success).toBe(false);
       expect(result.status).toBe('failed');
       expect(result.error).toBeDefined();
+    });
+
+    it('should validate transaction ID', async () => {
+      const result = await x402PaymentService.checkPaymentStatus('');
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.error).toContain('Transaction ID is required');
     });
   });
 
@@ -136,7 +183,8 @@ describe('X402PaymentService', () => {
       // Mock failed response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        status: 500
+        status: 500,
+        text: jest.fn().mockResolvedValueOnce('Internal server error')
       });
 
       const result = await x402PaymentService.refundPayment(transactionId);
@@ -144,6 +192,14 @@ describe('X402PaymentService', () => {
       expect(result.success).toBe(false);
       expect(result.status).toBe('failed');
       expect(result.error).toBeDefined();
+    });
+
+    it('should validate transaction ID for refund', async () => {
+      const result = await x402PaymentService.refundPayment('');
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe('failed');
+      expect(result.error).toContain('Transaction ID is required');
     });
   });
 });

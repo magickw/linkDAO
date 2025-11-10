@@ -33,7 +33,7 @@ export interface CheckoutSession {
     platformFee: number;
     total: number;
   };
-  paymentMethod?: 'crypto' | 'fiat';
+  paymentMethod?: 'crypto' | 'fiat' | 'x402';
   recommendation?: CheckoutRecommendation;
   prioritizationResult?: PrioritizationResult;
   expiresAt: Date;
@@ -42,7 +42,7 @@ export interface CheckoutSession {
 export interface CheckoutResult {
   success: boolean;
   orderId: string;
-  paymentPath: 'crypto' | 'fiat';
+  paymentPath: 'crypto' | 'fiat' | 'x402';
   transactionId: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   redirectUrl?: string;

@@ -7,7 +7,7 @@ import {
 export interface OrderTrackingStatus {
   orderId: string;
   status: string;
-  paymentPath: 'crypto' | 'fiat';
+  paymentPath: 'crypto' | 'fiat' | 'x402';
   progress: {
     step: number;
     totalSteps: number;
