@@ -119,7 +119,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         const expectedAmount = parseFloat(amount); // User is buying LDAO tokens, so amount stays the same
         const costUSD = expectedAmount * (tokenInfo?.priceUSD || 0.5);
         const mockQuote: DexSwapQuote = {
-          dex: 'x402',
+          dex: 'uniswap', // Using uniswap since x402 is not a DEX
           fromToken: 'USD',
           toToken: 'LDAO',
           fromAmount: costUSD.toString(),
@@ -128,9 +128,6 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           fee: '0.01', // Very low fees for x402 - string format
           priceImpact: 0.001,
           slippage: 0.005,
-          estimatedCompletionTime: '1-2 minutes',
-          route: 'x402 Protocol',
-          gasEstimate: '0.001 ETH',
           path: ['USD', 'LDAO'],
           estimatedGas: '21000'
         };
@@ -473,7 +470,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                 </div>
                 
                 <div className="space-y-2 max-h-40 overflow-y-auto">
-                  (paymentMethod === 'fiat' ? fiatQuotes : dexQuotes).map((quote, index) => (
+                  {(paymentMethod === 'fiat' ? fiatQuotes : dexQuotes).map((quote, index) => (
                 <div 
                   key={index}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
@@ -523,7 +520,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             {((paymentMethod !== 'fiat' && paymentMethod !== 'x402' && dexQuotes.length === 0) || 
               (paymentMethod === 'fiat' && fiatQuotes.length === 0) ||
               (paymentMethod === 'x402' && dexQuotes.length === 0)) && 
-             !isLoadingQuotes && amount && parseFloat(amount) > 0 && (
+             !isLoadingQuotes && amount && parseFloat(amount) > 0 ? (
               <div className="bg-white/10 rounded-lg p-4 text-center">
                 <AlertCircle size={24} className="mx-auto text-white/50 mb-2" />
                 <p className="text-white/70 text-sm">
@@ -534,7 +531,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     : 'No DEX quotes available. Showing estimated rates based on current market prices.'}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Summary */}
             <GlassPanel variant="secondary" className="p-4">
