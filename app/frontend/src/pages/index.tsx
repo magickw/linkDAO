@@ -60,7 +60,7 @@ export default function Home() {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
-  const { data: profile } = useProfile(address);
+  const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
   
   const [mounted, setMounted] = useState(false);

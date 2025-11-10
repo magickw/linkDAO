@@ -55,7 +55,7 @@ interface NavigationSidebarProps {
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
   const { isMobile } = useMobileOptimization();
-  const { data: profile } = useProfile(address);
+  const { profile } = useProfile(address);
   const { 
     walletData,
     isLoading: isWalletLoading

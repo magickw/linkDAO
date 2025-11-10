@@ -47,7 +47,7 @@ export default function Web3SocialPostCard({
     return post?.author && typeof post.author === 'object' ? post.author : null;
   }, [post?.author]);
   
-  const { data: fetchedProfile, isLoading: isProfileLoading } = useProfile(
+  const { profile: fetchedProfile, isLoading: isProfileLoading } = useProfile(
     authorProfile ? undefined : (post?.author?.address || post?.author)
   );
   

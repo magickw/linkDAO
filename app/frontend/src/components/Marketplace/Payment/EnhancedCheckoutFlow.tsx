@@ -57,7 +57,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { data: balance } = useBalance({ address });
-  const { data: userProfile } = useProfile(address);
+  const { profile: userProfile } = useProfile(address);
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => 
