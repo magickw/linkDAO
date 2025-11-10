@@ -6,6 +6,14 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     walletAddress: string;
     sessionId: string;
+    role?: string;
+    permissions?: string[];
+    userId?: string;
+    handle?: string;
+    email?: string;
+    kycStatus?: string;
+    isActiveUser?: boolean;
+    isSuspended?: boolean;
   };
 }
 
@@ -50,6 +58,14 @@ export class AuthenticationMiddleware {
       req.user = {
         walletAddress: sessionInfo.walletAddress,
         sessionId: sessionInfo.id,
+        role: sessionInfo.role,
+        permissions: sessionInfo.permissions,
+        userId: sessionInfo.userId,
+        handle: sessionInfo.handle,
+        email: sessionInfo.email,
+        kycStatus: sessionInfo.kycStatus,
+        isActiveUser: sessionInfo.isActiveUser,
+        isSuspended: sessionInfo.isSuspended,
       };
 
       next();
@@ -80,6 +96,14 @@ export class AuthenticationMiddleware {
           req.user = {
             walletAddress: sessionInfo.walletAddress,
             sessionId: sessionInfo.id,
+            role: sessionInfo.role,
+            permissions: sessionInfo.permissions,
+            userId: sessionInfo.userId,
+            handle: sessionInfo.handle,
+            email: sessionInfo.email,
+            kycStatus: sessionInfo.kycStatus,
+            isActiveUser: sessionInfo.isActiveUser,
+            isSuspended: sessionInfo.isSuspended,
           };
         }
       }

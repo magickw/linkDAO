@@ -242,6 +242,8 @@ export class AuthenticationController {
         authenticated: true,
         walletAddress: req.user.walletAddress,
         sessionId: req.user.sessionId,
+        role: req.user.role,
+        permissions: req.user.permissions,
       };
 
       res.json({
@@ -277,18 +279,18 @@ export class AuthenticationController {
         });
       }
 
-      // Return user profile information
+      // Return user profile information from database
       const userProfile = {
-        id: req.user.sessionId,
+        id: req.user.userId || req.user.sessionId,
         address: req.user.walletAddress,
-        handle: `user_${req.user.walletAddress.slice(0, 6)}`,
+        handle: req.user.handle || `user_${req.user.walletAddress.slice(0, 6)}`,
         ens: undefined,
-        email: undefined,
-        kycStatus: 'none',
-        role: 'user',
-        permissions: [],
-        isActive: true,
-        isSuspended: false,
+        email: req.user.email,
+        kycStatus: req.user.kycStatus || 'none',
+        role: req.user.role || 'user',
+        permissions: req.user.permissions || [],
+        isActive: req.user.isActiveUser ?? true,
+        isSuspended: req.user.isSuspended ?? false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

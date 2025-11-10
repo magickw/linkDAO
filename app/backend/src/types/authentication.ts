@@ -36,6 +36,8 @@ export interface SessionStatusResponse {
   walletAddress?: string;
   expiresAt?: string;
   sessionId?: string;
+  role?: string;
+  permissions?: string[];
 }
 
 export interface LogoutResponse {

@@ -408,7 +408,7 @@ class AuthService {
           ens: data.data.ens,
           email: data.data.email,
           kycStatus: data.data.kycStatus || 'none',
-          role: data.data.role || 'user' as UserRole,
+          role: (data.data.role || 'user') as UserRole,
           permissions: data.data.permissions || [],
           isActive: data.data.isActive ?? true,
           isSuspended: data.data.isSuspended ?? false,

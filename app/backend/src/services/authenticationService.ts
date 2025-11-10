@@ -5,7 +5,7 @@ import { eq, and, gt, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
-import { authSessions, walletAuthAttempts, walletNonces } from '../db/schema';
+import { authSessions, walletAuthAttempts, walletNonces, users } from '../db/schema';
 
 export interface AuthResult {
   success: boolean;
@@ -28,6 +28,14 @@ export interface SessionInfo {
   expiresAt: Date;
   isActive: boolean;
   lastUsedAt: Date;
+  role?: string;
+  permissions?: string[];
+  userId?: string;
+  handle?: string;
+  email?: string;
+  kycStatus?: string;
+  isActiveUser?: boolean;
+  isSuspended?: boolean;
 }
 
 export interface NonceInfo {
@@ -183,7 +191,7 @@ export class AuthenticationService {
   }
 
   /**
-   * Validate session token and return session info
+   * Validate session token and return session info with user data
    */
   async validateSession(sessionToken: string): Promise<SessionInfo | null> {
     try {
@@ -205,6 +213,15 @@ export class AuthenticationService {
 
       const session = sessions[0];
 
+      // Fetch user information including role
+      const userRecords = await this.db
+        .select()
+        .from(users)
+        .where(eq(users.walletAddress, session.walletAddress))
+        .limit(1);
+
+      const user = userRecords[0] || null;
+
       // Update last used timestamp
       await this.db
         .update(authSessions)
@@ -218,6 +235,14 @@ export class AuthenticationService {
         expiresAt: session.expiresAt,
         isActive: session.isActive,
         lastUsedAt: new Date(),
+        role: user?.role || 'user',
+        permissions: user?.permissions || [],
+        userId: user?.id,
+        handle: user?.handle,
+        email: user?.email,
+        kycStatus: (user as any)?.kycStatus || 'none',
+        isActive: user?.isActive ?? true,
+        isSuspended: user?.isSuspended ?? false,
       };
     } catch (error) {
       safeLogger.error('Error validating session:', error);
