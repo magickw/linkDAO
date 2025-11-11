@@ -26,7 +26,6 @@ services:
           name: linkdao-redis
           property: connectionString
       - key: JWT_SECRET
-        value: 'a_very_secure_temporary_secret_key_that_should_be_replaced_1234567890'
       - key: FRONTEND_URL
         value: 'https://www.linkdao.io,https://linkdao.io,https://linkdao.vercel.app'
       - key: CORS_ORIGIN
@@ -35,6 +34,8 @@ services:
         value: 'true'
       - key: RENDER_SERVICE_TYPE
         value: 'standard'
+      - key: RENDER
+        value: 'true'
     autoDeploy: true
   - type: redis
     name: linkdao-redis
