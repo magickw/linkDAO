@@ -4,7 +4,7 @@ import {
   useReadCharityGovernanceGetProposal,
   useReadCharityVerificationSystemIsCharityVerified,
   useReadProofOfDonationNftDonations,
-  useWriteCharityGovernanceProposeCharityDonation,
+  useWriteBaseSubDaoCreateCharityProposal,
   useWriteCharityVerificationSystemAddCharity,
   useWriteProofOfDonationNftRecordDonation
 } from '../generated';
@@ -38,7 +38,7 @@ const CharityDashboard = () => {
   });
 
   // Write contract functions
-  const { writeContract: proposeCharityDonation } = useWriteCharityGovernanceProposeCharityDonation();
+  const { writeContract: proposeCharityDonation } = useWriteBaseSubDaoCreateCharityProposal();
   const { writeContract: addCharity } = useWriteCharityVerificationSystemAddCharity();
   const { writeContract: recordDonation } = useWriteProofOfDonationNftRecordDonation();
 
