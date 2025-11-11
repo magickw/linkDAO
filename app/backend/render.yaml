@@ -4,8 +4,8 @@ services:
     env: node
     plan: standard
     rootDir: app/backend
-    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --include=optional && npm run build
-    startCommand: npm start
+    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --include=optional && chmod +x scripts/build-production-optimized.sh && ./scripts/build-production-optimized.sh
+    startCommand: npm run start:production
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
@@ -36,14 +36,22 @@ services:
         value: 'standard'
       - key: RENDER
         value: 'true'
+      - key: RENDER_PRO
+        value: 'false'
+      - key: MEMORY_LIMIT
+        value: '2048'
+      - key: RENDER_SERVICE_PLAN
+        value: 'standard'
+      - key: DEBUG_RENDER_CONFIG
+        value: 'true'
     autoDeploy: true
   - type: redis
     name: linkdao-redis
-    plan: free
+    plan: standard
     maxmemoryPolicy: allkeys-lru
 
 databases:
   - name: linkdao
     databaseName: linkdao
     user: neondb_owner
-    plan: free
+    plan: standard

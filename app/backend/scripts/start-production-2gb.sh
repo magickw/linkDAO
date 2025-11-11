@@ -50,6 +50,13 @@ echo "🔄 Stopping existing processes..."
 pkill -f "node.*index" 2>/dev/null || echo "No existing processes found"
 sleep 2
 
+# Debug Render configuration
+if [ "$DEBUG_RENDER_CONFIG" = "true" ]; then
+    echo ""
+    echo "🔍 Debugging Render configuration..."
+    node scripts/debug-render-env.js
+fi
+
 # Start the application
 echo ""
 echo "🚀 Starting production backend..."

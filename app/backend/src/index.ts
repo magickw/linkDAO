@@ -185,6 +185,20 @@ const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
 const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
 const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
 
+// Debug Render configuration
+if (process.env.DEBUG_RENDER_CONFIG === 'true') {
+  console.log('🔍 RENDER ENVIRONMENT DEBUG:');
+  console.log('   RENDER:', process.env.RENDER);
+  console.log('   RENDER_SERVICE_TYPE:', process.env.RENDER_SERVICE_TYPE);
+  console.log('   RENDER_SERVICE_PLAN:', process.env.RENDER_SERVICE_PLAN);
+  console.log('   RENDER_PRO:', process.env.RENDER_PRO);
+  console.log('   MEMORY_LIMIT:', process.env.MEMORY_LIMIT);
+  console.log('   isRenderFree:', isRenderFree);
+  console.log('   isRenderPro:', isRenderPro);
+  console.log('   isRenderStandard:', isRenderStandard);
+  console.log('   isResourceConstrained:', isResourceConstrained);
+}
+
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
 // Increase connection pool sizes for Render Standard (2GB RAM)
@@ -283,25 +297,8 @@ if (process.env.RENDER || isResourceConstrained) {
     console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
   }
   
-  // Add more aggressive memory monitoring for Standard tier
-  if (isRenderStandard) {
-    setInterval(() => {
-      const usage = process.memoryUsage();
-      const heapUsedMB = usage.heapUsed / 1024 / 1024;
-      const heapTotalMB = usage.heapTotal / 1024 / 1024;
-      
-      // Log memory usage if it's high
-      if (heapUsedMB > 800) { // 800MB threshold for 2GB plan
-        console.warn(`⚠️ HIGH MEMORY USAGE: ${heapUsedMB.toFixed(1)}MB / ${heapTotalMB.toFixed(1)}MB`);
-      }
-      
-      // Trigger garbage collection if available and memory is very high
-      if (heapUsedMB > 1200 && global.gc) { // 1.2GB threshold
-        console.log('🗑️ Triggering garbage collection due to high memory usage');
-        global.gc();
-      }
-    }, 30000); // Check every 30 seconds
-  }
+  // The memoryMonitoringService handles all memory monitoring and GC operations
+  // No additional monitoring needed here
 }
 
 // Initialize performance optimization
