@@ -1,4 +1,28 @@
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available:', error.message);
+  console.log('ℹ️ Image optimization features will be disabled');
+  // Define a fallback object with methods that return errors or skip processing
+  sharp = {
+    metadata: () => Promise.reject(new Error('Sharp not available')),
+    jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+    png: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+    webp: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+    resize: () => ({
+      jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      png: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      webp: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) })
+    })
+  };
+}
+
 import { safeLogger } from '../utils/safeLogger';
 import { createHash } from 'crypto';
 import { performance } from 'perf_hooks';
@@ -104,6 +128,16 @@ class ImageStorageService {
 
       if (buffer.length < MIN_FILE_SIZE) {
         errors.push(`File size is below minimum limit of ${MIN_FILE_SIZE} bytes`);
+      }
+
+      // If sharp is not available, perform basic validation
+      if (!sharpAvailable) {
+        // Perform basic validation without sharp
+        const basicResult = await this.basicImageValidation(buffer, filename);
+        return {
+          isValid: basicResult.isValid && errors.length === 0,
+          errors: [...errors, ...basicResult.errors]
+        };
       }
 
       // Detect file type using Sharp
@@ -260,6 +294,12 @@ class ImageStorageService {
    */
   async generateThumbnails(buffer: Buffer): Promise<ThumbnailResult[]> {
     const startTime = performance.now();
+    
+    // If sharp is not available, return empty array of thumbnails
+    if (!sharpAvailable) {
+      safeLogger.warn('Sharp not available, skipping thumbnail generation');
+      return [];
+    }
     
     try {
       // Process thumbnails in parallel for better performance
@@ -665,6 +705,39 @@ class ImageStorageService {
         byUsageType: {}
       };
     }
+  }
+  
+  /**
+   * Basic image validation when Sharp is not available
+   */
+  private async basicImageValidation(buffer: Buffer, filename: string): Promise<ImageValidationResult> {
+    const errors: string[] = [];
+    
+    // Basic file signature checks for common image formats
+    if (buffer.length >= 4) {
+      const header = buffer.subarray(0, 4);
+      const hexHeader = header.toString('hex').toLowerCase();
+      
+      // Check for common image file signatures
+      const validSignatures = [
+        'ffd8ffe0', // JPEG
+        '89504e47', // PNG
+        '47494638', // GIF
+        '52494646', // WebP
+      ];
+      
+      const isValidImage = validSignatures.some(sig => hexHeader.startsWith(sig.substring(0, 4)));
+      
+      if (!isValidImage) {
+        errors.push('File signature does not match known image formats');
+      }
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      metadata: undefined
+    };
   }
 }
 

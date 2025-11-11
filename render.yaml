@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter
     rootDir: app/backend
-    buildCommand: npm install --no-audit --prefer-offline && npm run build
+    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --include=optional && npm run build
     startCommand: npm start
     healthCheckPath: /health
     envVars:

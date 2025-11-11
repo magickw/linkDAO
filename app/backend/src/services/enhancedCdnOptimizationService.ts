@@ -3,7 +3,25 @@ import { safeLogger } from '../utils/safeLogger';
 import { createHash } from 'crypto';
 import { Redis } from 'ioredis';
 import { performance } from 'perf_hooks';
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully in enhancedCdnOptimizationService');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available in enhancedCdnOptimizationService:', error.message);
+  sharp = {
+    resize: () => ({ 
+      jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      png: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      webp: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) })
+    }),
+    metadata: () => Promise.reject(new Error('Sharp not available'))
+  };
+}
 
 interface CDNConfig {
   distributionId: string;

@@ -4,7 +4,7 @@
   "description": "LinkDao Web3 Marketplace Backend",
   "main": "src/index.production.js",
   "scripts": {
-    "postinstall": "npm run build",
+    "postinstall": "npm run build && (node -e \"try { require('sharp'); console.log('✅ Sharp module loaded successfully'); } catch(e) { console.log('⚠️ Sharp not available, installing for platform:', process.platform, process.arch); }\" || npm rebuild sharp)",
     "build": "bash scripts/build-production.sh",
     "build:tsc": "tsc --project tsconfig.production.json --noEmitOnError false || echo 'TypeScript compilation had errors but continuing'",
     "build:memory-optimized": "NODE_OPTIONS='--max-old-space-size=1400 --optimize-for-size' npx tsc --project tsconfig.production.json",

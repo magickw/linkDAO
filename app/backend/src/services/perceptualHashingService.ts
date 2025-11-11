@@ -1,6 +1,20 @@
 import crypto from 'crypto';
 import { safeLogger } from '../utils/safeLogger';
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully in perceptualHashingService');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available in perceptualHashingService:', error.message);
+  sharp = {
+    resize: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+    metadata: () => Promise.reject(new Error('Sharp not available'))
+  };
+}
 
 export interface PerceptualHashResult {
   hash: string;

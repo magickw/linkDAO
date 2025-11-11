@@ -5,7 +5,27 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
  */
 
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully in sellerImageService');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available in sellerImageService:', error.message);
+  // Define a fallback object with methods that return errors or skip processing
+  sharp = {
+    metadata: () => Promise.reject(new Error('Sharp not available')),
+    jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+    resize: () => ({ 
+      jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      png: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) }),
+      webp: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) })
+    })
+  };
+}
 import { v4 as uuidv4 } from 'uuid';
 import imageStorageService from './imageStorageService';
 import { cdnService } from './cdnService';

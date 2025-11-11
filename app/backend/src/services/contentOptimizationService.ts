@@ -1,5 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully in contentOptimizationService');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available in contentOptimizationService:', error.message);
+  sharp = {
+    resize: () => ({ 
+      jpeg: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) })
+    })
+  };
+}
 import ffmpeg from 'fluent-ffmpeg';
 import { createHash } from 'crypto';
 import { Redis } from 'ioredis';

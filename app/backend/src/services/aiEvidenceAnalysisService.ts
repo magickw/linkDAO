@@ -1,7 +1,20 @@
 import { OpenAI } from 'openai';
 import { safeLogger } from '../utils/safeLogger';
 import * as tf from '@tensorflow/tfjs-node';
-import sharp from 'sharp';
+let sharp;
+let sharpAvailable = false;
+
+// Dynamically import sharp with error handling
+try {
+  sharp = require('sharp');
+  sharpAvailable = true;
+  console.log('✅ Sharp module loaded successfully in aiEvidenceAnalysisService');
+} catch (error) {
+  console.warn('⚠️ Sharp module not available in aiEvidenceAnalysisService:', error.message);
+  sharp = {
+    resize: () => ({ toBuffer: () => Promise.reject(new Error('Sharp not available')) })
+  };
+}
 import crypto from 'crypto';
 import { db } from '../db';
 import { marketplaceDisputes as disputeEvidence, disputes } from '../db/schema';
