@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 // to accommodate multiple auth attempts and service worker retries
 const authRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60, // Increased from 20 to 60 requests per minute
+  max: 200, // Increased from 60 to 200 requests per minute for development
   message: {
     success: false,
     error: {
@@ -34,7 +34,7 @@ const walletConnectValidation = [
     .withMessage('Valid Ethereum wallet address is required'),
   body('signature')
     .isString()
-    .isLength({ min: 130, max: 132 })
+    .isLength({ min: 128, max: 134 })
     .withMessage('Valid signature is required'),
   body('message')
     .isString()
@@ -166,7 +166,7 @@ router.get('/profile', authMiddleware, authController.getProfile);
  * @desc Check authentication status
  * @access Public
  */
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
@@ -184,13 +184,48 @@ router.get('/status', (req, res) => {
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
     
+    // Get user role from database
+    let userRole = 'user';
+    let userEmail = null;
+    let userPermissions = [];
+    
+    if (decoded.userId) {
+      try {
+        const { drizzle } = require('drizzle-orm/postgres-js');
+        const postgres = require('postgres');
+        const { eq } = require('drizzle-orm');
+        const { users } = require('../db/schema');
+        
+        const connectionString = process.env.DATABASE_URL!;
+        const sql = postgres(connectionString, { ssl: 'require' });
+        const db = drizzle(sql);
+        
+        const userResult = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, decoded.userId))
+          .limit(1);
+          
+        if (userResult.length > 0) {
+          userRole = userResult[0].role || 'user';
+          userEmail = userResult[0].email;
+          userPermissions = userResult[0].permissions || [];
+        }
+      } catch (dbError) {
+        console.error('Database error when fetching user role:', dbError);
+      }
+    }
+    
     return res.json({
       success: true,
       data: {
         authenticated: true,
         walletAddress: decoded.walletAddress || decoded.address,
         sessionId: decoded.userId || decoded.id,
-        expiresAt: new Date(decoded.exp * 1000)
+        expiresAt: new Date(decoded.exp * 1000),
+        role: userRole,
+        email: userEmail,
+        permissions: userPermissions
       }
     });
   } catch (error) {

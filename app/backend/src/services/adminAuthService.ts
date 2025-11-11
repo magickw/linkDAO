@@ -264,7 +264,7 @@ export class AdminAuthService {
 
         return {
           success: false,
-          message: 'Insufficient permissions for admin access',
+          message: 'Your account does not have administrative privileges. Please contact your system administrator.',
         };
       }
 

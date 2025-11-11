@@ -649,8 +649,9 @@ import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 // process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
 
 // Legacy authentication routes
-app.use('/api/auth', createDefaultAuthRoutes());
-
+// app.use('/api/auth', createDefaultAuthRoutes());
+// Use the enhanced auth routes instead
+app.use('/api/auth', require('./routes/authRoutes').default);
 // Security routes
 app.use('/api/security', securityRoutes);
 
@@ -1053,7 +1054,7 @@ process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+  console.log(`MakeRange Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
 
   // Initialize services asynchronously without blocking

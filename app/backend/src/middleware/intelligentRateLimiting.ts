@@ -243,7 +243,7 @@ export class IntelligentRateLimiter {
 
   public authRateLimit = this.createRateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 10,
+    maxRequests: 50, // Increased from 10 to 50 for development
     keyGenerator: (req) => `auth:${this.getKeyFromRequest(req)}`
   });
 

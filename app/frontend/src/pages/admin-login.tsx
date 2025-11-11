@@ -32,6 +32,7 @@ const AdminLoginPage: NextPage = () => {
         const redirectTo = (router.query.redirect as string) || '/admin';
         router.push(redirectTo);
       } else {
+        // User is authenticated but doesn't have admin privileges
         setError('Your account does not have administrative privileges. Please contact your system administrator.');
       }
     }
@@ -56,7 +57,9 @@ const AdminLoginPage: NextPage = () => {
     try {
       // Find the connected connector or use the first available one
       const connectedConnector = connectors.find(c => c.ready) || connectors[0];
+      console.log('Attempting authentication for address:', address);
       const result = await authService.authenticateWallet(address, connectedConnector, 'connected');
+      console.log('Authentication result:', result);
       
       if (result.success && result.user) {
         // Refresh user context to get updated role
@@ -65,6 +68,7 @@ const AdminLoginPage: NextPage = () => {
         
         // Check if user has admin role
         const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(result.user.role);
+        console.log('User role:', result.user.role, 'Is admin:', isAdminUser);
         if (isAdminUser) {
           setTimeout(() => {
             const redirectTo = (router.query.redirect as string) || '/admin';
@@ -74,10 +78,17 @@ const AdminLoginPage: NextPage = () => {
           setError('Your account does not have administrative privileges. Please contact your system administrator.');
         }
       } else {
-        setError(result.error || 'Authentication failed. Please try again.');
+        console.log('Authentication failed with error:', result.error);
+        // Provide more specific error messages based on the error type
+        if (result.error && result.error.includes('administrative privileges')) {
+          setError(result.error);
+        } else {
+          setError(result.error || 'Authentication failed. Please try connecting your wallet again.');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please try again.');
+      console.error('Authentication error:', err);
+      setError(err.message || 'Authentication failed. Please try connecting your wallet again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +119,12 @@ const AdminLoginPage: NextPage = () => {
           }
         }, 1500);
       } else {
-        setError(result.error || 'Invalid credentials. Please try again.');
+        // Provide more specific error messages for credentials login
+        if (result.error && result.error.includes('administrative privileges')) {
+          setError(result.error);
+        } else {
+          setError(result.error || 'Invalid credentials. Please try again.');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
@@ -350,89 +366,37 @@ const AdminLoginPage: NextPage = () => {
                     <p className="text-gray-400 text-sm mb-4">
                       Connect your admin wallet to sign in securely using Web3 authentication.
                     </p>
-                    {connectors.map((connector, index) => {
-                      const isUnsupported = !connector.ready;
-                      return (
-                      <Button
-                        key={`${connector.id}-${index}`}
-                        onClick={() => {
-                          if (isUnsupported) {
-                            // Show installation instructions for unsupported wallets
-                            const walletUrls: Record<string, string> = {
-                              'MetaMask': 'https://metamask.io/download/',
-                              'WalletConnect': 'https://walletconnect.com/',
-                              'Rainbow': 'https://rainbow.me/',
-                              'Safe': 'https://apps.gnosis-safe.io/',
-                              'Base Account': 'https://www.base.org/',
-                            };
-                            const url = walletUrls[connector.name];
-                            if (url) {
-                              window.open(url, '_blank');
-                            }
-                          } else {
-                            connect({ connector });
-                          }
-                        }}
-                        variant={isUnsupported ? 'outline' : 'primary'}
-                        className="w-full justify-between"
-                        disabled={isPending}
-                      >
-                        <div className="flex items-center">
-                          <div className={`w-8 h-8 rounded-full mr-3 flex items-center justify-center ${
-                            isUnsupported 
-                              ? 'bg-gray-600' 
-                              : 'bg-gradient-to-r from-purple-500 to-blue-500'
-                          }`}>
-                            <Shield className="w-4 h-4 text-white" />
-                          </div>
-                          <span>{connector.name}</span>
-                          {isUnsupported && (
-                            <span className="text-xs text-gray-400 ml-2">
-                              (Click to install)
-                            </span>
-                          )}
-                        </div>
-                        {isPending && (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        )}
-                      </Button>
-                      );
-                    })}
-                    
-                    {/* Add the same ConnectButton as the main site */}
-                    <div className="mt-4 pt-4 border-t border-gray-700">
-                      <p className="text-gray-400 text-sm mb-3">Or use the standard wallet connection:</p>
-                      <ConnectButton.Custom>
-                        {({ openConnectModal, authenticationStatus, mounted }) => {
-                          const ready = mounted && authenticationStatus !== 'loading';
-                          return (
-                            <Button
-                              onClick={() => {
-                                openConnectModal();
-                                // Set up a listener to detect when wallet connects
-                                const checkInterval = setInterval(() => {
-                                  if (isConnected && address) {
-                                    clearInterval(checkInterval);
-                                    // Trigger authentication after wallet connects
-                                    authenticateWithBackend();
-                                  }
-                                }, 500);
-                                // Clear interval after 30 seconds to prevent memory leak
-                                setTimeout(() => clearInterval(checkInterval), 30000);
-                              }}
-                              disabled={!ready}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              <div className="flex items-center justify-center">
-                                <Shield className="w-4 h-4 mr-2" />
-                                Connect Wallet (Standard)
-                              </div>
-                            </Button>
-                          );
-                        }}
-                      </ConnectButton.Custom>
-                    </div>
+                    {/* Add the standard ConnectButton as the main wallet connection option */}
+                    <ConnectButton.Custom>
+                      {({ openConnectModal, authenticationStatus, mounted }) => {
+                        const ready = mounted && authenticationStatus !== 'loading';
+                        return (
+                          <Button
+                            onClick={() => {
+                              openConnectModal();
+                              // Set up a listener to detect when wallet connects
+                              const checkInterval = setInterval(() => {
+                                if (isConnected && address) {
+                                  clearInterval(checkInterval);
+                                  // Trigger authentication after wallet connects
+                                  authenticateWithBackend();
+                                }
+                              }, 500);
+                              // Clear interval after 30 seconds to prevent memory leak
+                              setTimeout(() => clearInterval(checkInterval), 30000);
+                            }}
+                            disabled={!ready}
+                            variant="primary"
+                            className="w-full"
+                          >
+                            <div className="flex items-center justify-center">
+                              <Shield className="w-4 h-4 mr-2" />
+                              Connect Wallet
+                            </div>
+                          </Button>
+                        );
+                      }}
+                    </ConnectButton.Custom>
                   </div>
                 )}
               </div>

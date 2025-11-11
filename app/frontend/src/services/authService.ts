@@ -54,8 +54,8 @@ class AuthService {
         throw new Error(data.error || 'Failed to get nonce');
       }
 
-      // Backend returns data directly for database.js version
-      const nonceData = data;
+      // Backend returns data wrapped in data object
+      const nonceData = data.data || data;
       return { nonce: nonceData.nonce, message: nonceData.message };
     } catch (error) {
       // If backend is unavailable, return mock nonce
@@ -78,6 +78,14 @@ class AuthService {
           const currentUser = await this.getCurrentUser();
           if (currentUser && currentUser.address === address) {
             console.log('✅ Reusing existing valid session for address:', address);
+            // Check if user has admin role before returning success
+            const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(currentUser.role);
+            if (!isAdminUser) {
+              return { 
+                success: false, 
+                error: 'Your account does not have administrative privileges. Please contact your system administrator.' 
+              };
+            }
             return {
               success: true,
               token: this.token,
@@ -104,8 +112,22 @@ class AuthService {
           if (now - timestamp < TOKEN_EXPIRY_TIME) {
             try {
               const userData = JSON.parse(storedUserData);
+              // Check if user has admin role before restoring session
+              const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(userData.role);
+              if (!isAdminUser) {
+                console.log('Stored session found but user lacks admin privileges, clearing session');
+                // Clear non-admin session
+                localStorage.removeItem('linkdao_access_token');
+                localStorage.removeItem('linkdao_wallet_address');
+                localStorage.removeItem('linkdao_signature_timestamp');
+                localStorage.removeItem('linkdao_user_data');
+                return { 
+                  success: false, 
+                  error: 'Your account does not have administrative privileges. Please contact your system administrator.' 
+                };
+              }
               this.setToken(storedToken);
-              console.log('✅ Restored session from localStorage for address:', address);
+              console.log('✅ Restored admin session from localStorage for address:', address);
               return {
                 success: true,
                 token: storedToken,
@@ -400,7 +422,7 @@ class AuthService {
       
       if (data.success && data.data.authenticated) {
         // Convert session data to AuthUser format, use role and permissions from backend if available
-        return {
+        const user: AuthUser = {
           id: data.data.sessionId || `user_${data.data.walletAddress}`,
           address: data.data.walletAddress,
           handle: data.data.handle || `user_${data.data.walletAddress.slice(0, 6)}`,
@@ -419,6 +441,11 @@ class AuthService {
           preferences: data.data.preferences,
           privacySettings: data.data.privacySettings,
         };
+        
+        // Log user role for debugging
+        console.log('Current user role:', user.role);
+        
+        return user;
       }
       
       // Token might be invalid, clear it

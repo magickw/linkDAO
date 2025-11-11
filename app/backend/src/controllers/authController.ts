@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
-import { referralService } from './referralService';
+import { referralService } from '../services/referralService';
 
 // Initialize database connection
 const connectionString = process.env.DATABASE_URL!;
@@ -82,6 +82,14 @@ class AuthController {
       }
 
       const userData = user[0];
+      
+      // Check if user has admin role for admin login attempts
+      const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(userData.role || '');
+      safeLogger.info('Wallet authentication attempt', {
+        walletAddress,
+        hasAdminRole: isAdminUser,
+        userRole: userData.role
+      });
 
       // Handle referral code if provided and user is new
       if (isNewUser && referralCode) {
@@ -126,7 +134,10 @@ class AuthController {
           id: userData.id,
           walletAddress: userData.walletAddress,
           handle: userData.handle,
-          profileCid: userData.profileCid
+          profileCid: userData.profileCid,
+          role: userData.role, // Include role in response
+          email: userData.email, // Include email in response
+          permissions: userData.permissions // Include permissions in response
         },
         expiresIn: '24h',
         isNewUser
@@ -166,6 +177,9 @@ class AuthController {
         walletAddress: userData.walletAddress,
         handle: userData.handle,
         profileCid: userData.profileCid,
+        role: userData.role, // Include role in the response
+        email: userData.email, // Include email in the response
+        permissions: userData.permissions, // Include permissions in the response
         billingAddress: {
           firstName: userData.billingFirstName,
           lastName: userData.billingLastName,
@@ -240,6 +254,9 @@ class AuthController {
         walletAddress: userData.walletAddress,
         handle: userData.handle,
         profileCid: userData.profileCid,
+        role: userData.role, // Include role in the response
+        email: userData.email, // Include email in the response
+        permissions: userData.permissions, // Include permissions in the response
         message: 'Profile updated successfully'
       });
 
