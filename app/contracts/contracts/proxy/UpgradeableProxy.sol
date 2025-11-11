@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 /**
  * @title UpgradeableProxy
@@ -77,7 +78,7 @@ abstract contract UpgradeableProxy is
      * @dev Initialize the upgradeable contract
      */
     function __UpgradeableProxy_init(address initialOwner, uint256 _upgradeTimelock) internal onlyInitializing {
-        __Ownable_init();
+        __Ownable_init(initialOwner);
         __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -126,9 +127,9 @@ abstract contract UpgradeableProxy is
     function executeUpgrade() external onlyOwner onlyValidUpgrade {
         address newImplementation = currentUpgradeProposal.newImplementation;
         currentUpgradeProposal.executed = true;
-        
-        _upgradeToAndCall(newImplementation, "", false);
-        
+
+        upgradeToAndCall(newImplementation, "");
+
         emit UpgradeExecuted(newImplementation);
     }
 
@@ -216,7 +217,7 @@ abstract contract UpgradeableProxy is
      * @dev Get current implementation address
      */
     function getImplementation() external view returns (address) {
-        return _getImplementation();
+        return ERC1967Utils.getImplementation();
     }
 
     /**

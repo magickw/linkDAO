@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./LDAOToken.sol";
@@ -162,7 +162,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
         _;
     }
 
-    constructor(address _ldaoToken) {
+    constructor(address _ldaoToken) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
     }
 
@@ -478,16 +478,16 @@ contract Marketplace is ReentrancyGuard, Ownable {
      */
     function acceptOffer(uint256 offerId) external nonReentrant {
         // Find the offer
-        Offer storage offer;
-        bool found = false;
+        Offer memory offerMem;
         uint256 listingId;
         
         // Search for the offer in all listings (inefficient but simple)
+        bool found = false;
         for (uint256 i = 1; i < nextListingId; i++) {
             Offer[] storage offers = listingOffers[i];
             for (uint256 j = 0; j < offers.length; j++) {
                 if (offers[j].id == offerId) {
-                    offer = offers[j];
+                    offerMem = offers[j];
                     listingId = i;
                     found = true;
                     break;
@@ -497,13 +497,13 @@ contract Marketplace is ReentrancyGuard, Ownable {
         }
         
         require(found, "Offer not found");
-        require(!offer.accepted, "Offer already accepted");
+        require(!offerMem.accepted, "Offer already accepted");
         
         Listing storage listing = listings[listingId];
         require(listing.status == ListingStatus.ACTIVE, "Listing not active");
         require(listing.seller == msg.sender, "Only seller can accept offer");
         
-        uint256 amount = offer.amount;
+        uint256 amount = offerMem.amount;
         uint256 feeAmount = (amount * platformFeePercentage) / 10000;
         uint256 sellerAmount = amount - feeAmount;
         
@@ -517,13 +517,19 @@ contract Marketplace is ReentrancyGuard, Ownable {
             require(sentToOwner, "Failed to send ETH to owner");
         } else {
             // ERC20 token payment
-            IERC20(listing.tokenAddress).transferFrom(offer.buyer, address(this), amount);
+            IERC20(listing.tokenAddress).transferFrom(offerMem.buyer, address(this), amount);
             IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
             IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
         }
         
         // Update offer and listing
-        offer.accepted = true;
+        Offer[] storage offers = listingOffers[listingId];
+        for (uint256 j = 0; j < offers.length; j++) {
+            if (offers[j].id == offerId) {
+                offers[j].accepted = true;
+                break;
+            }
+        }
         listing.status = ListingStatus.SOLD;
         
         // Create order
@@ -531,7 +537,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
         Order storage order = orders[orderId];
         order.id = orderId;
         order.listingId = listingId;
-        order.buyer = offer.buyer;
+        order.buyer = offerMem.buyer;
         order.seller = listing.seller;
         order.amount = amount;
         order.paymentToken = listing.tokenAddress;
@@ -539,10 +545,10 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.createdAt = block.timestamp;
         order.updatedAt = block.timestamp;
         
-        userOrders[offer.buyer].push(orderId);
+        userOrders[offerMem.buyer].push(orderId);
         
         emit OfferAccepted(offerId, listingId);
-        emit OrderCreated(orderId, listingId, offer.buyer);
+        emit OrderCreated(orderId, listingId, offerMem.buyer);
     }
 
     // View functions

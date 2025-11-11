@@ -499,7 +499,7 @@ export interface NFTCollection extends BaseContract {
       tokenId: PromiseOrValue<BigNumberish>,
       salePrice: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber]>;
+    ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
     "safeTransferFrom(address,address,uint256)"(
       from: PromiseOrValue<string>,
@@ -638,7 +638,7 @@ export interface NFTCollection extends BaseContract {
     tokenId: PromiseOrValue<BigNumberish>,
     salePrice: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
-  ): Promise<[string, BigNumber]>;
+  ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
   "safeTransferFrom(address,address,uint256)"(
     from: PromiseOrValue<string>,
@@ -775,7 +775,7 @@ export interface NFTCollection extends BaseContract {
       tokenId: PromiseOrValue<BigNumberish>,
       salePrice: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber]>;
+    ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
     "safeTransferFrom(address,address,uint256)"(
       from: PromiseOrValue<string>,

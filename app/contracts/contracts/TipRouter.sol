@@ -12,7 +12,7 @@ contract TipRouter is Ownable {
 
     event Tipped(bytes32 indexed postId, address indexed from, address indexed to, uint256 amount, uint256 fee);
 
-    constructor(address _ldao, address _rewardPool) {
+    constructor(address _ldao, address _rewardPool) Ownable(msg.sender) {
         ldao = IERC20(_ldao);
         rewardPool = _rewardPool;
     }

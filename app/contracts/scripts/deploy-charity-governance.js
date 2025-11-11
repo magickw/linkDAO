@@ -1,10 +1,6 @@
-import { ethers } from 'hardhat';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { ethers } = require('hardhat');
+const fs = require('fs');
+const path = require('path');
 
 async function main() {
   console.log("=".repeat(60));
@@ -17,8 +13,8 @@ async function main() {
   console.log("Network:", network.name);
   console.log("Chain ID:", network.chainId);
   console.log("Deploying with account:", deployer.address);
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("Account balance:", ethers.formatEther(balance), "ETH");
+  // const balance = await ethers.provider.getBalance(deployer.address);
+  // console.log("Account balance:", ethers.formatUnits(balance, 18), "ETH");
 
   const deploymentAddresses = {};
 
@@ -70,16 +66,24 @@ async function main() {
   console.log("✅ Using USDC/MockERC20 at:", usdcTokenAddress);
   deploymentAddresses.usdcToken = usdcTokenAddress;
 
-  // Deploy or use existing MultiSigWallet
-  console.log("\n🔄 Checking for MultiSigWallet...");
+  // Get MultiSigWallet address
+  console.log("\n🔄 Locating MultiSigWallet...");
   let multiSigWalletAddress = process.env.MULTISIG_WALLET_ADDRESS || "";
+
+  if (!multiSigWalletAddress) {
+    const deployedAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
+    if (fs.existsSync(deployedAddressesPath)) {
+      const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
+      multiSigWalletAddress = deployedAddresses.contracts?.MultiSigWallet?.address || deployedAddresses.MULTISIG_WALLET_ADDRESS;
+    }
+  }
 
   if (!multiSigWalletAddress) {
     console.log("⚠️  MultiSigWallet not found, deploying new one...");
     const MultiSigWallet = await ethers.getContractFactory("MultiSigWallet");
-    const multiSig = await MultiSigWallet.deploy([deployer.address], 1);
-    await multiSig.waitForDeployment();
-    multiSigWalletAddress = await multiSig.getAddress();
+  const multiSig = await MultiSigWallet.deploy([deployer.address], 1);
+  await multiSig.deployed();
+  multiSigWalletAddress = multiSig.address;
     console.log("✅ Deployed MultiSigWallet at:", multiSigWalletAddress);
   } else {
     console.log("✅ Using existing MultiSigWallet at:", multiSigWalletAddress);
@@ -99,8 +103,8 @@ async function main() {
     usdcTokenAddress,
     multiSigWalletAddress
   );
-  await treasury.waitForDeployment();
-  const treasuryAddress = await treasury.getAddress();
+  await treasury.deployed();
+  const treasuryAddress = treasury.address;
   deploymentAddresses.enhancedLDAOTreasury = treasuryAddress;
   console.log("✅ EnhancedLDAOTreasury deployed to:", treasuryAddress);
 
@@ -117,8 +121,8 @@ async function main() {
     treasuryAddress,
     deployer.address
   );
-  await charityVerification.waitForDeployment();
-  const charityVerificationAddress = await charityVerification.getAddress();
+  await charityVerification.deployed();
+  const charityVerificationAddress = charityVerification.address;
   deploymentAddresses.charityVerificationSystem = charityVerificationAddress;
   console.log("✅ CharityVerificationSystem deployed to:", charityVerificationAddress);
 
@@ -134,8 +138,8 @@ async function main() {
     ldaoTokenAddress,
     treasuryAddress
   );
-  await charityProposal.waitForDeployment();
-  const charityProposalAddress = await charityProposal.getAddress();
+  await charityProposal.deployed();
+  const charityProposalAddress = charityProposal.address;
   deploymentAddresses.charityProposal = charityProposalAddress;
   console.log("✅ CharityProposal deployed to:", charityProposalAddress);
 
@@ -151,8 +155,8 @@ async function main() {
     ldaoTokenAddress,
     treasuryAddress
   );
-  await charityGovernance.waitForDeployment();
-  const charityGovernanceAddress = await charityGovernance.getAddress();
+  await charityGovernance.deployed();
+  const charityGovernanceAddress = charityGovernance.address;
   deploymentAddresses.charityGovernance = charityGovernanceAddress;
   console.log("✅ CharityGovernance deployed to:", charityGovernanceAddress);
 
@@ -180,8 +184,8 @@ async function main() {
     ldaoTokenAddress,
     charityGovernanceAddress
   );
-  await proofNFT.waitForDeployment();
-  const proofNFTAddress = await proofNFT.getAddress();
+  await proofNFT.deployed();
+  const proofNFTAddress = proofNFT.address;
   deploymentAddresses.proofOfDonationNFT = proofNFTAddress;
   console.log("✅ ProofOfDonationNFT deployed to:", proofNFTAddress);
 
@@ -200,8 +204,8 @@ async function main() {
     treasuryAddress,
     defaultCharityRecipient
   );
-  await burnToDonate.waitForDeployment();
-  const burnToDonateAddress = await burnToDonate.getAddress();
+  await burnToDonate.deployed();
+  const burnToDonateAddress = burnToDonate.address;
   deploymentAddresses.burnToDonate = burnToDonateAddress;
   console.log("✅ BurnToDonate deployed to:", burnToDonateAddress);
 
@@ -214,8 +218,8 @@ async function main() {
   console.log("\n🔄 Deploying BaseSubDAO implementation...");
 
   const baseSubDAO = await BaseSubDAO.deploy();
-  await baseSubDAO.waitForDeployment();
-  const baseSubDAOAddress = await baseSubDAO.getAddress();
+  await baseSubDAO.deployed();
+  const baseSubDAOAddress = baseSubDAO.address;
   deploymentAddresses.baseSubDAOImplementation = baseSubDAOAddress;
   console.log("✅ BaseSubDAO implementation deployed to:", baseSubDAOAddress);
 
@@ -223,8 +227,8 @@ async function main() {
   console.log("\n🔄 Deploying CharitySubDAOFactory...");
 
   const subDAOFactory = await CharitySubDAOFactory.deploy(baseSubDAOAddress);
-  await subDAOFactory.waitForDeployment();
-  const subDAOFactoryAddress = await subDAOFactory.getAddress();
+  await subDAOFactory.deployed();
+  const subDAOFactoryAddress = subDAOFactory.address;
   deploymentAddresses.charitySubDAOFactory = subDAOFactoryAddress;
   console.log("✅ CharitySubDAOFactory deployed to:", subDAOFactoryAddress);
 

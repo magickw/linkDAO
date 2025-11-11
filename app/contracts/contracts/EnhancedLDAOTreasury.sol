@@ -3,9 +3,8 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./LDAOToken.sol";
 import "./security/MultiSigWallet.sol";
 
@@ -14,7 +13,6 @@ import "./security/MultiSigWallet.sol";
  * @notice Enhanced Treasury contract for LDAO token sales with charity disbursement functionality
  */
 contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
-    using SafeMath for uint256;
 
     // State variables
     LDAOToken public immutable ldaoToken;
@@ -129,7 +127,7 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         address _ldaoToken,
         address _usdcToken,
         address payable _multiSigWallet
-    ) {
+    ) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
         usdcToken = IERC20(_usdcToken);
         multiSigWallet = MultiSigWallet(_multiSigWallet);
@@ -186,8 +184,8 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         );
         
         // Update charity fund stats
-        charityFund.totalDisbursed = charityFund.totalDisbursed.add(amount);
-        charityFund.availableBalance = charityFund.availableBalance.sub(amount);
+        charityFund.totalDisbursed = charityFund.totalDisbursed + amount;
+        charityFund.availableBalance = charityFund.availableBalance - amount;
         
         // Update recipient's donation history
         charityDonationsHistory[recipient].push(donationId);
@@ -228,7 +226,7 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         verifiedCharities[charityAddress] = verify;
         if (verify) {
-            charityFund.charityCount = charityFund.charityCount.add(1);
+            charityFund.charityCount = charityFund.charityCount + 1;
         }
         
         emit CharityVerified(charityAddress, verify);
@@ -256,11 +254,11 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         // Calculate USD value and apply discounts
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        uint256 usdAmount = ldaoAmount.mul(finalPrice).div(1e18);
+        uint256 usdAmount = (ldaoAmount * finalPrice) / 1e18;
         
         // Get ETH price from oracle (simplified - use Chainlink in production)
         uint256 ethPriceInUSD = _getETHPrice();
-        uint256 requiredETH = usdAmount.mul(1e18).div(ethPriceInUSD);
+        uint256 requiredETH = (usdAmount * 1e18) / ethPriceInUSD;
         
         require(msg.value >= requiredETH, "Insufficient ETH sent");
         
@@ -271,13 +269,13 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         );
         
         // Update statistics
-        totalSold = totalSold.add(ldaoAmount);
-        totalRevenue = totalRevenue.add(usdAmount);
-        purchaseHistory[msg.sender] = purchaseHistory[msg.sender].add(ldaoAmount);
+        totalSold += ldaoAmount;
+        totalRevenue += usdAmount;
+        purchaseHistory[msg.sender] += ldaoAmount;
         
         // Refund excess ETH
         if (msg.value > requiredETH) {
-            payable(msg.sender).transfer(msg.value.sub(requiredETH));
+            payable(msg.sender).transfer(msg.value - requiredETH);
         }
         
         emit LDAOPurchased(msg.sender, ldaoAmount, usdAmount, requiredETH, "ETH");
@@ -305,10 +303,10 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         // Calculate USD value and apply discounts
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        uint256 usdAmount = ldaoAmount.mul(finalPrice).div(1e18);
+        uint256 usdAmount = (ldaoAmount * finalPrice) / 1e18;
         
         // Convert to USDC amount (6 decimals)
-        uint256 usdcAmount = usdAmount.div(1e12);
+        uint256 usdcAmount = usdAmount / 1e12;
         
         // Transfer USDC from buyer
         require(
@@ -323,9 +321,9 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         );
         
         // Update statistics
-        totalSold = totalSold.add(ldaoAmount);
-        totalRevenue = totalRevenue.add(usdAmount);
-        purchaseHistory[msg.sender] = purchaseHistory[msg.sender].add(ldaoAmount);
+        totalSold += ldaoAmount;
+        totalRevenue += usdAmount;
+        purchaseHistory[msg.sender] += ldaoAmount;
         
         emit LDAOPurchased(msg.sender, ldaoAmount, usdAmount, 0, "USDC");
     }
@@ -345,16 +343,16 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         uint256 discount
     ) {
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        usdAmount = ldaoAmount.mul(finalPrice).div(1e18);
+        usdAmount = (ldaoAmount * finalPrice) / 1e18;
         
         uint256 ethPriceInUSD = _getETHPrice();
-        ethAmount = usdAmount.mul(1e18).div(ethPriceInUSD);
-        usdcAmount = usdAmount.div(1e12);
+        ethAmount = (usdAmount * 1e18) / ethPriceInUSD;
+        usdcAmount = usdAmount / 1e12;
         
         // Calculate discount percentage
-        uint256 basePrice = ldaoAmount.mul(ldaoPriceInUSD).div(1e18);
+        uint256 basePrice = (ldaoAmount * ldaoPriceInUSD) / 1e18;
         if (basePrice > usdAmount) {
-            discount = basePrice.sub(usdAmount).mul(10000).div(basePrice); // In basis points
+            discount = ((basePrice - usdAmount) * 10000) / basePrice; // In basis points
         }
     }
 
@@ -567,16 +565,16 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         uint256 discount = _getVolumeDiscount(ldaoAmount);
         
         if (discount > 0) {
-            uint256 discountAmount = dynamicPrice.mul(discount).div(10000);
-            return dynamicPrice.sub(discountAmount);
+            uint256 discountAmount = (dynamicPrice * discount) / 10000;
+            return dynamicPrice - discountAmount;
         }
         
         return dynamicPrice;
     }
     
     function _getDynamicPrice() internal view returns (uint256) {
-        uint256 adjustedPrice = basePriceInUSD.mul(demandMultiplier).div(1e18);
-        uint256 maxPrice = basePriceInUSD.mul(maxPriceMultiplier).div(1e18);
+        uint256 adjustedPrice = (basePriceInUSD * demandMultiplier) / 1e18;
+        uint256 maxPrice = (basePriceInUSD * maxPriceMultiplier) / 1e18;
         
         return adjustedPrice > maxPrice ? maxPrice : adjustedPrice;
     }
@@ -585,20 +583,20 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         if (block.timestamp >= lastPriceUpdate + priceUpdateInterval) {
             // Calculate demand based on recent sales volume
             uint256 recentVolume = currentDayPurchases;
-            uint256 targetVolume = dailyPurchaseLimit.div(10); // 10% of daily limit as target
+            uint256 targetVolume = dailyPurchaseLimit / 10; // 10% of daily limit as target
             
             if (recentVolume > targetVolume) {
                 // Increase price due to high demand
-                uint256 demandRatio = recentVolume.mul(1e18).div(targetVolume);
-                demandMultiplier = demandMultiplier.mul(demandRatio).div(1e18);
+                uint256 demandRatio = (recentVolume * 1e18) / targetVolume;
+        demandMultiplier = (demandMultiplier * demandRatio) / 1e18;
                 
                 // Cap the multiplier
                 if (demandMultiplier > maxPriceMultiplier) {
                     demandMultiplier = maxPriceMultiplier;
                 }
-            } else if (recentVolume < targetVolume.div(2)) {
+            } else if (recentVolume < targetVolume / 2) {
                 // Decrease price due to low demand
-                demandMultiplier = demandMultiplier.mul(95).div(100); // 5% decrease
+                demandMultiplier = (demandMultiplier * 95) / 100; // 5% decrease
                 
                 // Floor at 1.0
                 if (demandMultiplier < 1e18) {
@@ -615,12 +613,12 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     
     function _checkCircuitBreaker(uint256 ldaoAmount) internal view {
         // Check if purchase would exceed emergency threshold
-        if (currentDayPurchases.add(ldaoAmount) > emergencyStopThreshold) {
+        if (currentDayPurchases + ldaoAmount > emergencyStopThreshold) {
             revert("Emergency threshold exceeded");
         }
         
         // Check daily purchase limit
-        if (currentDayPurchases.add(ldaoAmount) > dailyPurchaseLimit) {
+        if (currentDayPurchases + ldaoAmount > dailyPurchaseLimit) {
             revert("Daily purchase limit exceeded");
         }
     }
@@ -641,8 +639,8 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         }
         
         // Update counters
-        currentDayPurchases = currentDayPurchases.add(ldaoAmount);
-        dailyPurchases[buyer] = dailyPurchases[buyer].add(ldaoAmount);
+        currentDayPurchases = currentDayPurchases + ldaoAmount;
+        dailyPurchases[buyer] = dailyPurchases[buyer] + ldaoAmount;
         
         // Trigger circuit breaker if threshold reached
         if (currentDayPurchases >= emergencyStopThreshold) {
@@ -737,7 +735,7 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
             currentVolume = currentDayPurchases;
         }
         
-        nearEmergencyThreshold = currentVolume >= emergencyThreshold.mul(80).div(100); // 80% of threshold
+        nearEmergencyThreshold = currentVolume >= (emergencyThreshold * 80) / 100; // 80% of threshold
     }
 
     function getPricingTier(uint256 tierId) external view returns (

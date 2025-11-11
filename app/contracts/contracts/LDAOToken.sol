@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title LDAOToken
@@ -61,10 +61,10 @@ contract LDAOToken is ERC20Permit, Ownable, ReentrancyGuard {
     event ActivityRewardClaimed(address indexed user, uint256 amount);
     event VotingPowerUpdated(address indexed user, uint256 newVotingPower);
     
-    constructor(address treasury) 
-        ERC20("LinkDAO Token", "LDAO") 
+    constructor(address treasury)
+        ERC20("LinkDAO Token", "LDAO")
         ERC20Permit("LinkDAO Token")
-        Ownable()
+        Ownable(treasury)
     {
         _mint(treasury, INITIAL_SUPPLY);
         
@@ -408,7 +408,7 @@ contract LDAOToken is ERC20Permit, Ownable, ReentrancyGuard {
     function _updateDiscountTier(address user) internal {
         uint256 stakedAmount = totalStaked[user];
         uint256 newTier = 0;
-        
+
         if (stakedAmount >= 10000 * 10**18) {
             newTier = 3; // 15% discount
         } else if (stakedAmount >= 5000 * 10**18) {
@@ -416,21 +416,7 @@ contract LDAOToken is ERC20Permit, Ownable, ReentrancyGuard {
         } else if (stakedAmount >= 1000 * 10**18) {
             newTier = 1; // 5% discount
         }
-        
+
         discountTier[user] = newTier;
-    }
-    
-    /**
-     * @notice Override transfer to update voting power
-     */
-    function _afterTokenTransfer(address from, address to, uint256 amount) internal override {
-        super._afterTokenTransfer(from, to, amount);
-        
-        if (from != address(0)) {
-            _updateVotingPower(from);
-        }
-        if (to != address(0)) {
-            _updateVotingPower(to);
-        }
     }
 }

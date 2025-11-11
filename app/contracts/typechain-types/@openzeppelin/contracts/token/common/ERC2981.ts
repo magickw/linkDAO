@@ -83,7 +83,7 @@ export interface ERC2981 extends BaseContract {
       tokenId: PromiseOrValue<BigNumberish>,
       salePrice: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber]>;
+    ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,
@@ -95,7 +95,7 @@ export interface ERC2981 extends BaseContract {
     tokenId: PromiseOrValue<BigNumberish>,
     salePrice: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
-  ): Promise<[string, BigNumber]>;
+  ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
   supportsInterface(
     interfaceId: PromiseOrValue<BytesLike>,
@@ -107,7 +107,7 @@ export interface ERC2981 extends BaseContract {
       tokenId: PromiseOrValue<BigNumberish>,
       salePrice: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<[string, BigNumber]>;
+    ): Promise<[string, BigNumber] & { receiver: string; amount: BigNumber }>;
 
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,

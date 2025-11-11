@@ -70,14 +70,12 @@ export interface LDAOTokenInterface extends utils.Interface {
     "claimStakeRewards(uint256)": FunctionFragment;
     "createStakingTier(uint256,uint256,uint256)": FunctionFragment;
     "decimals()": FunctionFragment;
-    "decreaseAllowance(address,uint256)": FunctionFragment;
     "discountTier(address)": FunctionFragment;
     "eip712Domain()": FunctionFragment;
     "getDiscountTier(address)": FunctionFragment;
     "getTotalStakeRewards(address)": FunctionFragment;
     "getUserStakes(address)": FunctionFragment;
     "hasPremiumMembership(address)": FunctionFragment;
-    "increaseAllowance(address,uint256)": FunctionFragment;
     "lastActivityReward(address)": FunctionFragment;
     "name()": FunctionFragment;
     "nextTierId()": FunctionFragment;
@@ -118,14 +116,12 @@ export interface LDAOTokenInterface extends utils.Interface {
       | "claimStakeRewards"
       | "createStakingTier"
       | "decimals"
-      | "decreaseAllowance"
       | "discountTier"
       | "eip712Domain"
       | "getDiscountTier"
       | "getTotalStakeRewards"
       | "getUserStakes"
       | "hasPremiumMembership"
-      | "increaseAllowance"
       | "lastActivityReward"
       | "name"
       | "nextTierId"
@@ -208,10 +204,6 @@ export interface LDAOTokenInterface extends utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "decreaseAllowance",
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "discountTier",
     values: [PromiseOrValue<string>]
   ): string;
@@ -234,10 +226,6 @@ export interface LDAOTokenInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "hasPremiumMembership",
     values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "increaseAllowance",
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "lastActivityReward",
@@ -382,10 +370,6 @@ export interface LDAOTokenInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "decreaseAllowance",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "discountTier",
     data: BytesLike
   ): Result;
@@ -407,10 +391,6 @@ export interface LDAOTokenInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "hasPremiumMembership",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "increaseAllowance",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -690,7 +670,7 @@ export interface LDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -720,12 +700,6 @@ export interface LDAOToken extends BaseContract {
     ): Promise<ContractTransaction>;
 
     decimals(overrides?: CallOverrides): Promise<[number]>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
@@ -765,12 +739,6 @@ export interface LDAOToken extends BaseContract {
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
 
     lastActivityReward(
       arg0: PromiseOrValue<string>,
@@ -841,14 +809,14 @@ export interface LDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -915,7 +883,7 @@ export interface LDAOToken extends BaseContract {
 
   approve(
     spender: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -945,12 +913,6 @@ export interface LDAOToken extends BaseContract {
   ): Promise<ContractTransaction>;
 
   decimals(overrides?: CallOverrides): Promise<number>;
-
-  decreaseAllowance(
-    spender: PromiseOrValue<string>,
-    subtractedValue: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
 
   discountTier(
     arg0: PromiseOrValue<string>,
@@ -990,12 +952,6 @@ export interface LDAOToken extends BaseContract {
     user: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<boolean>;
-
-  increaseAllowance(
-    spender: PromiseOrValue<string>,
-    addedValue: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
 
   lastActivityReward(
     arg0: PromiseOrValue<string>,
@@ -1066,14 +1022,14 @@ export interface LDAOToken extends BaseContract {
 
   transfer(
     to: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   transferFrom(
     from: PromiseOrValue<string>,
     to: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -1140,7 +1096,7 @@ export interface LDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -1166,12 +1122,6 @@ export interface LDAOToken extends BaseContract {
     ): Promise<void>;
 
     decimals(overrides?: CallOverrides): Promise<number>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
@@ -1209,12 +1159,6 @@ export interface LDAOToken extends BaseContract {
 
     hasPremiumMembership(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -1285,14 +1229,14 @@ export interface LDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -1472,7 +1416,7 @@ export interface LDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -1503,12 +1447,6 @@ export interface LDAOToken extends BaseContract {
 
     decimals(overrides?: CallOverrides): Promise<BigNumber>;
 
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
     discountTier(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1534,12 +1472,6 @@ export interface LDAOToken extends BaseContract {
     hasPremiumMembership(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     lastActivityReward(
@@ -1604,14 +1536,14 @@ export interface LDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -1674,7 +1606,7 @@ export interface LDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -1705,12 +1637,6 @@ export interface LDAOToken extends BaseContract {
 
     decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
     discountTier(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1736,12 +1662,6 @@ export interface LDAOToken extends BaseContract {
     hasPremiumMembership(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     lastActivityReward(
@@ -1806,14 +1726,14 @@ export interface LDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

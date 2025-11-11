@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
  * @dev Gas-optimized marketplace contract with packed structs and batch operations
  */
 contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
-    
+
     // Packed struct to minimize storage slots
     struct PackedListing {
         address seller;          // 20 bytes
@@ -25,7 +25,7 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
         bool isActive;          // 1 byte
         // Total: 49 bytes (2 storage slots instead of 8+)
     }
-    
+
     // Packed contract state
     struct ContractState {
         uint128 totalListings;   // 16 bytes
@@ -36,14 +36,14 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
         bool emergencyMode;      // 1 byte
         // Total: 32 bytes (1 storage slot)
     }
-    
+
     ContractState private _state;
-    
+
     // Mappings
     mapping(uint256 => PackedListing) private _listings;
     mapping(address => uint256[]) private _userListings;
     mapping(address => bool) private _supportedTokens;
-    
+
     // Events with indexed parameters for efficient filtering
     event ListingCreated(
         uint256 indexed listingId,
@@ -52,7 +52,7 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
         uint256 price,
         uint256 quantity
     );
-    
+
     event ItemPurchased(
         uint256 indexed listingId,
         address indexed buyer,
@@ -60,13 +60,13 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
         uint256 quantity,
         uint256 totalPrice
     );
-    
+
     event BatchListingsCreated(
         address indexed seller,
         uint256 indexed startId,
         uint256 count
     );
-    
+
     // Custom errors for gas efficiency
     error InvalidPrice();
     error InvalidQuantity();
@@ -76,8 +76,8 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
     error UnsupportedToken();
     error ArrayLengthMismatch();
     error MaxListingsExceeded();
-    
-    constructor(uint32 _feeBasisPoints) {
+
+    constructor(uint32 _feeBasisPoints) Ownable(msg.sender) {
         _state.feeBasisPoints = _feeBasisPoints;
         _state.nextListingId = 1;
         _state.maxListingsPerUser = 1000;

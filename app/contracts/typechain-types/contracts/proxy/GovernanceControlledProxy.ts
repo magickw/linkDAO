@@ -32,6 +32,7 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
   functions: {
     "MAX_TIMELOCK()": FunctionFragment;
     "MIN_TIMELOCK()": FunctionFragment;
+    "UPGRADE_INTERFACE_VERSION()": FunctionFragment;
     "canExecuteUpgrade()": FunctionFragment;
     "cancelUpgrade()": FunctionFragment;
     "cancelUpgradeVote(uint256)": FunctionFragment;
@@ -62,7 +63,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
     "unpause()": FunctionFragment;
     "updateVotingParameters(uint256,uint256)": FunctionFragment;
     "upgradeTimelock()": FunctionFragment;
-    "upgradeTo(address)": FunctionFragment;
     "upgradeToAndCall(address,bytes)": FunctionFragment;
     "upgradeVotes(uint256)": FunctionFragment;
     "votingPeriod()": FunctionFragment;
@@ -72,6 +72,7 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
     nameOrSignatureOrTopic:
       | "MAX_TIMELOCK"
       | "MIN_TIMELOCK"
+      | "UPGRADE_INTERFACE_VERSION"
       | "canExecuteUpgrade"
       | "cancelUpgrade"
       | "cancelUpgradeVote"
@@ -102,7 +103,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
       | "unpause"
       | "updateVotingParameters"
       | "upgradeTimelock"
-      | "upgradeTo"
       | "upgradeToAndCall"
       | "upgradeVotes"
       | "votingPeriod"
@@ -114,6 +114,10 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "MIN_TIMELOCK",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "UPGRADE_INTERFACE_VERSION",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -228,10 +232,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "upgradeTo",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "upgradeToAndCall",
     values: [PromiseOrValue<string>, PromiseOrValue<BytesLike>]
   ): string;
@@ -250,6 +250,10 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "MIN_TIMELOCK",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "UPGRADE_INTERFACE_VERSION",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -357,7 +361,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
     functionFragment: "upgradeTimelock",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "upgradeTo", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "upgradeToAndCall",
     data: BytesLike
@@ -372,10 +375,8 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
   ): Result;
 
   events: {
-    "AdminChanged(address,address)": EventFragment;
-    "BeaconUpgraded(address)": EventFragment;
     "GovernanceChanged(address,address)": EventFragment;
-    "Initialized(uint8)": EventFragment;
+    "Initialized(uint64)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address)": EventFragment;
     "Unpaused(address)": EventFragment;
@@ -389,8 +390,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
     "VoteCast(uint256,address,bool,uint256)": EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "AdminChanged"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "BeaconUpgraded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "GovernanceChanged"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
@@ -406,27 +405,6 @@ export interface GovernanceControlledProxyInterface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "VoteCast"): EventFragment;
 }
 
-export interface AdminChangedEventObject {
-  previousAdmin: string;
-  newAdmin: string;
-}
-export type AdminChangedEvent = TypedEvent<
-  [string, string],
-  AdminChangedEventObject
->;
-
-export type AdminChangedEventFilter = TypedEventFilter<AdminChangedEvent>;
-
-export interface BeaconUpgradedEventObject {
-  beacon: string;
-}
-export type BeaconUpgradedEvent = TypedEvent<
-  [string],
-  BeaconUpgradedEventObject
->;
-
-export type BeaconUpgradedEventFilter = TypedEventFilter<BeaconUpgradedEvent>;
-
 export interface GovernanceChangedEventObject {
   oldGovernance: string;
   newGovernance: string;
@@ -440,9 +418,9 @@ export type GovernanceChangedEventFilter =
   TypedEventFilter<GovernanceChangedEvent>;
 
 export interface InitializedEventObject {
-  version: number;
+  version: BigNumber;
 }
-export type InitializedEvent = TypedEvent<[number], InitializedEventObject>;
+export type InitializedEvent = TypedEvent<[BigNumber], InitializedEventObject>;
 
 export type InitializedEventFilter = TypedEventFilter<InitializedEvent>;
 
@@ -591,6 +569,8 @@ export interface GovernanceControlledProxy extends BaseContract {
     MAX_TIMELOCK(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     MIN_TIMELOCK(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    UPGRADE_INTERFACE_VERSION(overrides?: CallOverrides): Promise<[string]>;
 
     canExecuteUpgrade(overrides?: CallOverrides): Promise<[boolean]>;
 
@@ -751,11 +731,6 @@ export interface GovernanceControlledProxy extends BaseContract {
 
     upgradeTimelock(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    upgradeTo(
-      newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
     upgradeToAndCall(
       newImplementation: PromiseOrValue<string>,
       data: PromiseOrValue<BytesLike>,
@@ -797,6 +772,8 @@ export interface GovernanceControlledProxy extends BaseContract {
   MAX_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
 
   MIN_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
+
+  UPGRADE_INTERFACE_VERSION(overrides?: CallOverrides): Promise<string>;
 
   canExecuteUpgrade(overrides?: CallOverrides): Promise<boolean>;
 
@@ -957,11 +934,6 @@ export interface GovernanceControlledProxy extends BaseContract {
 
   upgradeTimelock(overrides?: CallOverrides): Promise<BigNumber>;
 
-  upgradeTo(
-    newImplementation: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
   upgradeToAndCall(
     newImplementation: PromiseOrValue<string>,
     data: PromiseOrValue<BytesLike>,
@@ -1003,6 +975,8 @@ export interface GovernanceControlledProxy extends BaseContract {
     MAX_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
 
     MIN_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
+
+    UPGRADE_INTERFACE_VERSION(overrides?: CallOverrides): Promise<string>;
 
     canExecuteUpgrade(overrides?: CallOverrides): Promise<boolean>;
 
@@ -1153,11 +1127,6 @@ export interface GovernanceControlledProxy extends BaseContract {
 
     upgradeTimelock(overrides?: CallOverrides): Promise<BigNumber>;
 
-    upgradeTo(
-      newImplementation: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     upgradeToAndCall(
       newImplementation: PromiseOrValue<string>,
       data: PromiseOrValue<BytesLike>,
@@ -1197,22 +1166,6 @@ export interface GovernanceControlledProxy extends BaseContract {
   };
 
   filters: {
-    "AdminChanged(address,address)"(
-      previousAdmin?: null,
-      newAdmin?: null
-    ): AdminChangedEventFilter;
-    AdminChanged(
-      previousAdmin?: null,
-      newAdmin?: null
-    ): AdminChangedEventFilter;
-
-    "BeaconUpgraded(address)"(
-      beacon?: PromiseOrValue<string> | null
-    ): BeaconUpgradedEventFilter;
-    BeaconUpgraded(
-      beacon?: PromiseOrValue<string> | null
-    ): BeaconUpgradedEventFilter;
-
     "GovernanceChanged(address,address)"(
       oldGovernance?: PromiseOrValue<string> | null,
       newGovernance?: PromiseOrValue<string> | null
@@ -1222,7 +1175,7 @@ export interface GovernanceControlledProxy extends BaseContract {
       newGovernance?: PromiseOrValue<string> | null
     ): GovernanceChangedEventFilter;
 
-    "Initialized(uint8)"(version?: null): InitializedEventFilter;
+    "Initialized(uint64)"(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
     "OwnershipTransferred(address,address)"(
@@ -1317,6 +1270,8 @@ export interface GovernanceControlledProxy extends BaseContract {
     MAX_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
 
     MIN_TIMELOCK(overrides?: CallOverrides): Promise<BigNumber>;
+
+    UPGRADE_INTERFACE_VERSION(overrides?: CallOverrides): Promise<BigNumber>;
 
     canExecuteUpgrade(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1433,11 +1388,6 @@ export interface GovernanceControlledProxy extends BaseContract {
 
     upgradeTimelock(overrides?: CallOverrides): Promise<BigNumber>;
 
-    upgradeTo(
-      newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
     upgradeToAndCall(
       newImplementation: PromiseOrValue<string>,
       data: PromiseOrValue<BytesLike>,
@@ -1456,6 +1406,10 @@ export interface GovernanceControlledProxy extends BaseContract {
     MAX_TIMELOCK(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     MIN_TIMELOCK(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    UPGRADE_INTERFACE_VERSION(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     canExecuteUpgrade(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1575,11 +1529,6 @@ export interface GovernanceControlledProxy extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     upgradeTimelock(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    upgradeTo(
-      newImplementation: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
 
     upgradeToAndCall(
       newImplementation: PromiseOrValue<string>,

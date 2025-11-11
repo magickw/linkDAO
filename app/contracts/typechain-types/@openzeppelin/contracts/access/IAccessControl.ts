@@ -171,7 +171,7 @@ export interface IAccessControl extends BaseContract {
 
     renounceRole(
       role: PromiseOrValue<BytesLike>,
-      account: PromiseOrValue<string>,
+      callerConfirmation: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -201,7 +201,7 @@ export interface IAccessControl extends BaseContract {
 
   renounceRole(
     role: PromiseOrValue<BytesLike>,
-    account: PromiseOrValue<string>,
+    callerConfirmation: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -231,7 +231,7 @@ export interface IAccessControl extends BaseContract {
 
     renounceRole(
       role: PromiseOrValue<BytesLike>,
-      account: PromiseOrValue<string>,
+      callerConfirmation: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -297,7 +297,7 @@ export interface IAccessControl extends BaseContract {
 
     renounceRole(
       role: PromiseOrValue<BytesLike>,
-      account: PromiseOrValue<string>,
+      callerConfirmation: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -328,7 +328,7 @@ export interface IAccessControl extends BaseContract {
 
     renounceRole(
       role: PromiseOrValue<BytesLike>,
-      account: PromiseOrValue<string>,
+      callerConfirmation: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

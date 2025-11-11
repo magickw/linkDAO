@@ -39,14 +39,15 @@
     "validate:localhost": "hardhat run scripts/pre-mainnet-validation.ts --network localhost"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.0",
-    "@openzeppelin/contracts-upgradeable": "^5.0.0"
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
     "@nomicfoundation/hardhat-ethers": "^4.0.3",
     "@nomicfoundation/hardhat-network-helpers": "^1.1.0",
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@typechain/ethers-v5": "^10.2.1",
     "@typechain/hardhat": "^6.1.6",
     "@types/chai": "^4.3.20",
@@ -54,7 +55,7 @@
     "chai": "^4.5.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.15.0",
-    "hardhat": "^3.0.9",
+    "hardhat": "^2.27.0",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.9",
     "prettier": "^2.8.8",
@@ -62,6 +63,5 @@
     "solhint": "^3.4.1",
     "solidity-coverage": "^0.8.16",
     "typechain": "^8.3.2"
-  },
-  "type": "module"
+  }
 }

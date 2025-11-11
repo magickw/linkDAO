@@ -3,8 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./Governance.sol";
 import "./ReputationSystem.sol";
 
@@ -13,7 +12,6 @@ import "./ReputationSystem.sol";
  * @notice Community reward system with epoch-based funding and automatic distribution
  */
 contract EnhancedRewardPool is Ownable, ReentrancyGuard {
-    using SafeMath for uint256;
 
     // Structs
     struct Epoch {
@@ -106,7 +104,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         address _ldaoToken,
         address _governance,
         address _reputationSystem
-    ) {
+    ) Ownable(msg.sender) {
         ldaoToken = IERC20(_ldaoToken);
         governance = Governance(_governance);
         reputationSystem = ReputationSystem(_reputationSystem);
@@ -131,8 +129,8 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
             "Token transfer failed"
         );
         
-        epochs[currentEpoch].totalFunding = epochs[currentEpoch].totalFunding.add(amount);
-        totalPoolBalance = totalPoolBalance.add(amount);
+        epochs[currentEpoch].totalFunding = epochs[currentEpoch].totalFunding+(amount);
+        totalPoolBalance = totalPoolBalance+(amount);
         
         emit Funded(currentEpoch, msg.sender, amount);
     }
@@ -156,21 +154,21 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         // Apply reputation multiplier
         uint256 reputationScore = reputationSystem.getReputationScore(user).totalPoints;
         uint256 multiplier = _calculateReputationMultiplier(reputationScore);
-        uint256 finalAmount = baseAmount.mul(multiplier).div(100);
+        uint256 finalAmount = baseAmount * (multiplier) / (100);
         
         // Apply category weight
         uint256 categoryWeight = rewardCategories[category].weight;
-        finalAmount = finalAmount.mul(categoryWeight).div(10000);
+        finalAmount = finalAmount * (categoryWeight) / (10000);
         
         // Update epoch data
-        epochs[epochId].userRewards[user] = epochs[epochId].userRewards[user].add(finalAmount);
-        epochs[epochId].totalRewards = epochs[epochId].totalRewards.add(finalAmount);
+        epochs[epochId].userRewards[user] = epochs[epochId].userRewards[user]+(finalAmount);
+        epochs[epochId].totalRewards = epochs[epochId].totalRewards+(finalAmount);
         
         // Update category stats
-        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed.add(finalAmount);
+        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed+(finalAmount);
         
         // Update user stats
-        userStats[user].totalEarned = userStats[user].totalEarned.add(finalAmount);
+        userStats[user].totalEarned = userStats[user].totalEarned+(finalAmount);
         userStats[user].reputationBonus = multiplier;
         
         emit RewardCalculated(epochId, user, finalAmount, category);
@@ -197,18 +195,18 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
                 // Apply reputation multiplier
                 uint256 reputationScore = reputationSystem.getReputationScore(users[i]).totalPoints;
                 uint256 multiplier = _calculateReputationMultiplier(reputationScore);
-                uint256 finalAmount = baseAmounts[i].mul(multiplier).div(100);
+                uint256 finalAmount = baseAmounts[i] * (multiplier) / (100);
                 
                 // Apply category weight
                 uint256 categoryWeight = rewardCategories[category].weight;
-                finalAmount = finalAmount.mul(categoryWeight).div(10000);
+                finalAmount = finalAmount * (categoryWeight) / (10000);
                 
                 // Update epoch data
-                epochs[epochId].userRewards[users[i]] = epochs[epochId].userRewards[users[i]].add(finalAmount);
-                epochs[epochId].totalRewards = epochs[epochId].totalRewards.add(finalAmount);
+                epochs[epochId].userRewards[users[i]] = epochs[epochId].userRewards[users[i]]+(finalAmount);
+                epochs[epochId].totalRewards = epochs[epochId].totalRewards+(finalAmount);
                 
                 // Update user stats
-                userStats[users[i]].totalEarned = userStats[users[i]].totalEarned.add(finalAmount);
+                userStats[users[i]].totalEarned = userStats[users[i]].totalEarned+(finalAmount);
                 userStats[users[i]].reputationBonus = multiplier;
                 
                 emit RewardCalculated(epochId, users[i], finalAmount, category);
@@ -218,9 +216,9 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         // Update category stats
         uint256 totalCategoryRewards = 0;
         for (uint256 i = 0; i < baseAmounts.length; i++) {
-            totalCategoryRewards = totalCategoryRewards.add(baseAmounts[i]);
+            totalCategoryRewards = totalCategoryRewards+(baseAmounts[i]);
         }
-        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed.add(totalCategoryRewards);
+        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed+(totalCategoryRewards);
     }
 
     /**
@@ -235,9 +233,9 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         require(totalPoolBalance >= rewardAmount, "Insufficient pool balance");
         
         epochs[epochId].hasClaimed[msg.sender] = true;
-        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed.add(rewardAmount);
+        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed+(rewardAmount);
         userStats[msg.sender].lastClaimEpoch = epochId;
-        totalPoolBalance = totalPoolBalance.sub(rewardAmount);
+        totalPoolBalance = totalPoolBalance- (rewardAmount);
         
         require(ldaoToken.transfer(msg.sender, rewardAmount), "Token transfer failed");
         
@@ -262,7 +260,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
             uint256 rewardAmount = epochs[epochId].userRewards[msg.sender];
             if (rewardAmount > 0) {
                 epochs[epochId].hasClaimed[msg.sender] = true;
-                totalClaimAmount = totalClaimAmount.add(rewardAmount);
+                totalClaimAmount = totalClaimAmount+(rewardAmount);
                 emit RewardClaimed(msg.sender, epochId, rewardAmount);
             }
         }
@@ -270,9 +268,9 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         require(totalClaimAmount > 0, "No rewards to claim");
         require(totalPoolBalance >= totalClaimAmount, "Insufficient pool balance");
         
-        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed.add(totalClaimAmount);
+        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed+(totalClaimAmount);
         userStats[msg.sender].lastClaimEpoch = epochIds[epochIds.length - 1];
-        totalPoolBalance = totalPoolBalance.sub(totalClaimAmount);
+        totalPoolBalance = totalPoolBalance- (totalClaimAmount);
         
         require(ldaoToken.transfer(msg.sender, totalClaimAmount), "Token transfer failed");
     }
@@ -452,7 +450,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
      */
     function emergencyWithdraw(uint256 amount) external onlyGovernance {
         require(amount <= totalPoolBalance, "Insufficient balance");
-        totalPoolBalance = totalPoolBalance.sub(amount);
+        totalPoolBalance = totalPoolBalance- (amount);
         require(ldaoToken.transfer(owner(), amount), "Transfer failed");
     }
 
@@ -460,7 +458,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
     function _startNewEpoch() internal {
         uint256 epochId = nextEpochId++;
         uint256 startTime = block.timestamp;
-        uint256 endTime = startTime.add(epochDuration);
+        uint256 endTime = startTime+(epochDuration);
         
         epochs[epochId].id = epochId;
         epochs[epochId].startTime = startTime;

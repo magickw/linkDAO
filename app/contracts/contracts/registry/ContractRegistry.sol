@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title ContractRegistry
@@ -59,7 +59,7 @@ contract ContractRegistry is Ownable, Pausable {
     error ContractInactive(bytes32 name);
     error CategoryNotFound(bytes32 category);
     
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
     
     /**
      * @dev Register a new contract

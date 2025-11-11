@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./LDAOToken.sol";
 import "./EnhancedLDAOTreasury.sol";
@@ -61,7 +61,7 @@ contract CharitySubDAOFactory is Ownable, ReentrancyGuard {
     event MinCreationStakeUpdated(uint256 oldStake, uint256 newStake);
     event SubDAOFeeUpdated(uint256 oldFee, uint256 newFee);
     
-    constructor(address _subDAOImplementation) {
+    constructor(address _subDAOImplementation) Ownable(msg.sender) {
         require(_subDAOImplementation != address(0), "Invalid SubDAO implementation address");
         subDAOImplementation = _subDAOImplementation;
     }

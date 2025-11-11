@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "../LDAOToken.sol";
 import "../governance/CharityGovernance.sol";
@@ -14,8 +13,7 @@ import "../governance/CharityGovernance.sol";
  * @notice NFT contract for minting proof-of-donation tokens to participants in charity campaigns
  */
 contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
-    using Counters for Counters.Counter;
-    Counters.Counter private _tokenIdCounter;
+    uint256 private _tokenIdCounter;
     
     LDAOToken public governanceToken;
     CharityGovernance public charityGovernance;
@@ -60,7 +58,7 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
         string memory symbol,
         address _governanceToken,
         address _charityGovernance
-    ) ERC721(name, symbol) {
+    ) ERC721(name, symbol) Ownable(msg.sender) {
         require(_governanceToken != address(0), "Invalid governance token address");
         require(_charityGovernance != address(0), "Invalid charity governance address");
         
@@ -95,16 +93,15 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
         string memory charityName,
         string memory impactMetrics,
         bool soulbound
-    ) external onlyOwner returns (uint256) {
+    ) public onlyOwner returns (uint256) {
         require(recipient != address(0), "Invalid recipient address");
         require(charityRecipient != address(0), "Invalid charity address");
         require(donationAmount > 0, "Donation amount must be greater than 0");
         require(bytes(charityName).length > 0, "Charity name is required");
         require(!hasReceivedNFT[recipient][proposalId], "Recipient already received NFT for this proposal");
-        
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        
+
+        uint256 tokenId = _tokenIdCounter++;
+
         // Mint the NFT
         _safeMint(recipient, tokenId);
         
@@ -224,7 +221,7 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
      * @return Whether the token is soulbound
      */
     function isSoulbound(uint256 tokenId) public view returns (bool) {
-        require(_exists(tokenId), "Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
         return donationRecords[tokenId].isSoulbound;
     }
     
@@ -232,20 +229,20 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
      * @notice Override transfer functions to prevent transfers of soulbound NFTs
      */
     function _update(
-        address from,
         address to,
-        uint256 tokenId
-    ) internal override returns (address) {
+        uint256 tokenId,
+        address auth
+    ) internal virtual override returns (address) {
         // Check if this is a soulbound token
         if (isSoulbound(tokenId)) {
             // Only allow transfers to the zero address (burning)
             require(
-                to == address(0) || from == address(0),
+                to == address(0) || auth == address(0),
                 "Soulbound NFT cannot be transferred"
             );
         }
         
-        return super._update(from, to, tokenId);
+        return super._update(to, tokenId, auth);
     }
     
     /**
@@ -254,7 +251,7 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
      * @return Donation record
      */
     function getDonationRecord(uint256 tokenId) external view returns (DonationRecord memory) {
-        require(_exists(tokenId), "Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
         return donationRecords[tokenId];
     }
     
@@ -311,11 +308,6 @@ contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
         return string(result);
     }
     
-    // The following functions are overrides required by Solidity.
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
-    }
-
     function tokenURI(uint256 tokenId)
         public
         view

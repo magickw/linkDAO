@@ -37,7 +37,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
     "batchTransfer(address[],uint256[])": FunctionFragment;
     "claimRewards()": FunctionFragment;
     "decimals()": FunctionFragment;
-    "decreaseAllowance(address,uint256)": FunctionFragment;
     "eip712Domain()": FunctionFragment;
     "emergencyWithdraw(address,uint256)": FunctionFragment;
     "estimateStakingGas(uint8)": FunctionFragment;
@@ -45,7 +44,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
     "getStakeInfo(address)": FunctionFragment;
     "getStakingTier(uint8)": FunctionFragment;
     "getVotingPower(address)": FunctionFragment;
-    "increaseAllowance(address,uint256)": FunctionFragment;
     "isPremiumMember(address)": FunctionFragment;
     "name()": FunctionFragment;
     "nonces(address)": FunctionFragment;
@@ -74,7 +72,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
       | "batchTransfer"
       | "claimRewards"
       | "decimals"
-      | "decreaseAllowance"
       | "eip712Domain"
       | "emergencyWithdraw"
       | "estimateStakingGas"
@@ -82,7 +79,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
       | "getStakeInfo"
       | "getStakingTier"
       | "getVotingPower"
-      | "increaseAllowance"
       | "isPremiumMember"
       | "name"
       | "nonces"
@@ -131,10 +127,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "decimals", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "decreaseAllowance",
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "eip712Domain",
     values?: undefined
   ): string;
@@ -161,10 +153,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "getVotingPower",
     values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "increaseAllowance",
-    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "isPremiumMember",
@@ -257,10 +245,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "decreaseAllowance",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "eip712Domain",
     data: BytesLike
   ): Result;
@@ -286,10 +270,6 @@ export interface OptimizedLDAOTokenInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getVotingPower",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "increaseAllowance",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -486,7 +466,7 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -512,12 +492,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     ): Promise<ContractTransaction>;
 
     decimals(overrides?: CallOverrides): Promise<[number]>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
 
     eip712Domain(
       overrides?: CallOverrides
@@ -598,12 +572,6 @@ export interface OptimizedLDAOToken extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
     isPremiumMember(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -655,14 +623,14 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -697,7 +665,7 @@ export interface OptimizedLDAOToken extends BaseContract {
 
   approve(
     spender: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -723,12 +691,6 @@ export interface OptimizedLDAOToken extends BaseContract {
   ): Promise<ContractTransaction>;
 
   decimals(overrides?: CallOverrides): Promise<number>;
-
-  decreaseAllowance(
-    spender: PromiseOrValue<string>,
-    subtractedValue: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
 
   eip712Domain(
     overrides?: CallOverrides
@@ -801,12 +763,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  increaseAllowance(
-    spender: PromiseOrValue<string>,
-    addedValue: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
   isPremiumMember(
     user: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -858,14 +814,14 @@ export interface OptimizedLDAOToken extends BaseContract {
 
   transfer(
     to: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   transferFrom(
     from: PromiseOrValue<string>,
     to: PromiseOrValue<string>,
-    amount: PromiseOrValue<BigNumberish>,
+    value: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -900,7 +856,7 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -924,12 +880,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     claimRewards(overrides?: CallOverrides): Promise<void>;
 
     decimals(overrides?: CallOverrides): Promise<number>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
 
     eip712Domain(
       overrides?: CallOverrides
@@ -1010,12 +960,6 @@ export interface OptimizedLDAOToken extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
     isPremiumMember(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1065,14 +1009,14 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -1188,7 +1132,7 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -1214,12 +1158,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     ): Promise<BigNumber>;
 
     decimals(overrides?: CallOverrides): Promise<BigNumber>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
 
     eip712Domain(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1249,12 +1187,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     getVotingPower(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     isPremiumMember(
@@ -1308,14 +1240,14 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -1351,7 +1283,7 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     approve(
       spender: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -1377,12 +1309,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    decreaseAllowance(
-      spender: PromiseOrValue<string>,
-      subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
 
     eip712Domain(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1412,12 +1338,6 @@ export interface OptimizedLDAOToken extends BaseContract {
     getVotingPower(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    increaseAllowance(
-      spender: PromiseOrValue<string>,
-      addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     isPremiumMember(
@@ -1471,14 +1391,14 @@ export interface OptimizedLDAOToken extends BaseContract {
 
     transfer(
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
-      amount: PromiseOrValue<BigNumberish>,
+      value: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

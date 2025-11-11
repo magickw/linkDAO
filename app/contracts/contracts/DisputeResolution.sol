@@ -2,8 +2,9 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "./Governance.sol";
 import "./ReputationSystem.sol";
 
@@ -212,7 +213,7 @@ contract DisputeResolution is Ownable, ReentrancyGuard {
     constructor(
         address _governance,
         address _reputationSystem
-    ) {
+    ) Ownable(msg.sender) {
         governance = Governance(_governance);
         reputationSystem = ReputationSystem(_reputationSystem);
     }

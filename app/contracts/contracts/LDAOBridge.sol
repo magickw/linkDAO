@@ -4,8 +4,8 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -17,7 +17,6 @@ import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
-    using MessageHashUtils for bytes32;
 
     // Supported chains
     enum ChainId {
@@ -124,12 +123,11 @@ contract LDAOBridge is Ownable, ReentrancyGuard, Pausable {
     constructor(
         address _ldaoToken,
         address _owner
-    ) Ownable() {
+    ) Ownable(_owner) {
         require(_ldaoToken != address(0), "Invalid token address");
         require(_owner != address(0), "Invalid owner address");
-        
+
         ldaoToken = IERC20(_ldaoToken);
-        _transferOwnership(_owner);
         
         // Initialize chain configurations
         _initializeChainConfigs();

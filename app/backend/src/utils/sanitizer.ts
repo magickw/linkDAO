@@ -1,4 +1,4 @@
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 import { Request, Response, NextFunction } from 'express';
 
 // Sanitization configuration interface
@@ -123,17 +123,20 @@ export class InputSanitizer {
       warnings.push(`Content truncated to ${config.maxLength} characters`);
     }
 
-    // Apply DOMPurify sanitization
-    const purifyConfig = {
-      ALLOWED_TAGS: config.allowedTags || [],
-      ALLOWED_ATTR: config.allowedAttributes || [],
-      ALLOW_DATA_ATTR: false,
-      ALLOW_UNKNOWN_PROTOCOLS: false,
-      SANITIZE_DOM: true,
-      KEEP_CONTENT: true
+    // Apply sanitize-html sanitization
+    const sanitizeConfig: sanitizeHtml.IOptions = {
+      allowedTags: config.allowedTags || [],
+      allowedAttributes: config.allowedAttributes ?
+        config.allowedAttributes.reduce((acc, attr) => {
+          acc['*'] = acc['*'] || [];
+          if (!acc['*'].includes(attr)) acc['*'].push(attr);
+          return acc;
+        }, {} as Record<string, string[]>) : {},
+      allowProtocolRelative: false,
+      disallowedTagsMode: 'discard',
     };
 
-    sanitized = DOMPurify.sanitize(sanitized, purifyConfig);
+    sanitized = sanitizeHtml(sanitized, sanitizeConfig);
 
     // Check for excessive repetition
     const repetitionPattern = /(.{3,})\1{3,}/g;

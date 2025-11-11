@@ -5,17 +5,15 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title NFTMarketplace
  * @notice A comprehensive NFT marketplace with minting, trading, and royalty distribution
  */
 contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, ReentrancyGuard {
-    using Counters for Counters.Counter;
     
-    Counters.Counter private _tokenIdCounter;
+    uint256 private _tokenIdCounter;
     
     // Struct for NFT metadata
     struct NFTMetadata {
@@ -141,7 +139,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         uint256 amount
     );
     
-    constructor() ERC721("Web3Marketplace NFT", "W3MNFT") {
+    constructor() ERC721("Web3Marketplace NFT", "W3MNFT") Ownable(msg.sender) {
         platformFeeRecipient = msg.sender;
     }
     
@@ -163,8 +161,8 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         require(!usedHashes[contentHash], "Content already exists");
         require(bytes(_tokenURI).length > 0, "Token URI required");
         
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
+        uint256 tokenId = _tokenIdCounter;
+        _tokenIdCounter++;
         
         // Mark content hash as used
         usedHashes[contentHash] = true;
@@ -392,7 +390,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     function makeOffer(uint256 tokenId, uint256 duration) external payable {
         require(msg.value > 0, "Offer must be greater than 0");
         require(duration > 0, "Duration must be greater than 0");
-        require(_exists(tokenId), "Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
         
         offers[tokenId].push(Offer({
             tokenId: tokenId,
@@ -462,7 +460,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      * @param tokenId The NFT token ID
      */
     function getNFTMetadata(uint256 tokenId) external view returns (NFTMetadata memory) {
-        require(_exists(tokenId), "Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
         return nftMetadata[tokenId];
     }
     
@@ -508,7 +506,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      * @param tokenId The NFT token ID
      */
     function verifyNFT(uint256 tokenId) external onlyOwner {
-        require(_exists(tokenId), "Token does not exist");
+        require(_ownerOf(tokenId) != address(0), "Token does not exist");
         nftMetadata[tokenId].isVerified = true;
     }
     
@@ -528,11 +526,6 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     function setPlatformFeeRecipient(address _recipient) external onlyOwner {
         require(_recipient != address(0), "Invalid address");
         platformFeeRecipient = _recipient;
-    }
-    
-    // Override functions for multiple inheritance
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage, ERC721Royalty) {
-        super._burn(tokenId);
     }
     
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {

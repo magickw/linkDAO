@@ -3,7 +3,7 @@
  * Comprehensive content sanitization with XSS prevention and file validation
  */
 
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 import { marked } from 'marked';
 import validator from 'validator';
 import crypto from 'crypto';
@@ -156,18 +156,15 @@ export class ContentSanitizationService {
         }
       }
 
-      // Sanitize with DOMPurify
+      // Sanitize with sanitize-html
       const allowedAttributes = options.allowedAttributes ? 
         options.allowedAttributes : 
         Object.values(this.ALLOWED_ATTRIBUTES).flat();
       
-      const sanitized = DOMPurify.sanitize(processedContent, {
-        ALLOWED_TAGS: allowedTags,
-        ALLOWED_ATTR: allowedAttributes as string[],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false,
-        SANITIZE_DOM: true,
-        KEEP_CONTENT: true
+      const sanitized = sanitizeHtml(processedContent, {
+        allowedTags: allowedTags,
+        allowedAttributes: allowedAttributes,
+        allowProtocolRelative: false,
       });
 
       // Additional content analysis

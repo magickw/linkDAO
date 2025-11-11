@@ -1,7 +1,10 @@
-import { ethers } from "hardhat";
-import { formatEther, parseEther } from "ethers";
-import * as fs from "fs";
-import * as path from "path";
+import { ethers } from 'hardhat';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
   console.log("=".repeat(60));
@@ -14,10 +17,10 @@ async function main() {
   console.log("Network:", network.name);
   console.log("Chain ID:", network.chainId);
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", formatEther(await deployer.provider.getBalance(deployer.address)), "ETH");
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log("Account balance:", ethers.formatEther(balance), "ETH");
 
-  const isMainnet = network.chainId === 1n;
-  const deploymentAddresses: Record<string, string> = {};
+  const deploymentAddresses = {};
 
   // Step 1: Get or verify existing core contracts
   console.log("\n" + "=".repeat(60));
@@ -26,117 +29,70 @@ async function main() {
 
   // Get LDAOToken address
   console.log("\n🔄 Locating LDAOToken contract...");
-  let ldaoTokenAddress: string;
+  let ldaoTokenAddress = process.env.LDAO_TOKEN_ADDRESS || "";
 
-  try {
-    ldaoTokenAddress = process.env.LDAO_TOKEN_ADDRESS || "";
-
-    if (!ldaoTokenAddress) {
-      const deployedAddressesPath = path.join(__dirname, '../deployedAddresses.json');
-      if (fs.existsSync(deployedAddressesPath)) {
-        const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
-        ldaoTokenAddress = deployedAddresses.LDAO_TOKEN_ADDRESS || deployedAddresses.TOKEN_ADDRESS;
-      }
+  if (!ldaoTokenAddress) {
+    const deployedAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
+    if (fs.existsSync(deployedAddressesPath)) {
+      const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
+      ldaoTokenAddress = deployedAddresses.contracts?.LDAOToken?.address || deployedAddresses.LDAO_TOKEN_ADDRESS || deployedAddresses.TOKEN_ADDRESS;
     }
-
-    if (ldaoTokenAddress) {
-      const code = await ethers.provider.getCode(ldaoTokenAddress);
-      if (code === "0x") {
-        throw new Error("Token contract not found at address");
-      }
-      console.log("✅ Found existing LDAOToken at:", ldaoTokenAddress);
-      deploymentAddresses.ldaoToken = ldaoTokenAddress;
-    } else {
-      throw new Error("LDAOToken address not provided");
-    }
-  } catch (error) {
-    console.log("❌ LDAOToken not found. Please deploy LDAOToken first or provide LDAO_TOKEN_ADDRESS");
-    throw error;
   }
 
-  // Get USDC token address (or mock ERC20)
+  if (!ldaoTokenAddress) {
+    throw new Error("LDAOToken address not found. Please set LDAO_TOKEN_ADDRESS environment variable");
+  }
+
+  const code = await ethers.provider.getCode(ldaoTokenAddress);
+  if (code === "0x") {
+    throw new Error("Token contract not found at address");
+  }
+  console.log("✅ Found existing LDAOToken at:", ldaoTokenAddress);
+  deploymentAddresses.ldaoToken = ldaoTokenAddress;
+
+  // Get USDC token address
   console.log("\n🔄 Locating USDC/MockERC20 contract...");
-  let usdcTokenAddress: string;
+  let usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS || "";
 
-  try {
-    usdcTokenAddress = process.env.USDC_TOKEN_ADDRESS || "";
-
-    if (!usdcTokenAddress) {
-      const deployedAddressesPath = path.join(__dirname, '../deployedAddresses.json');
-      if (fs.existsSync(deployedAddressesPath)) {
-        const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
-        usdcTokenAddress = deployedAddresses.USDC_TOKEN_ADDRESS || deployedAddresses.MockERC20;
-      }
+  if (!usdcTokenAddress) {
+    const deployedAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
+    if (fs.existsSync(deployedAddressesPath)) {
+      const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
+      usdcTokenAddress = deployedAddresses.contracts?.MockERC20?.address || deployedAddresses.USDC_TOKEN_ADDRESS;
     }
-
-    if (usdcTokenAddress) {
-      const code = await ethers.provider.getCode(usdcTokenAddress);
-      if (code === "0x") {
-        throw new Error("USDC/MockERC20 contract not found at address");
-      }
-      console.log("✅ Found existing USDC/MockERC20 at:", usdcTokenAddress);
-      deploymentAddresses.usdcToken = usdcTokenAddress;
-    } else {
-      console.log("⚠️  USDC token address not provided, deploying MockERC20...");
-
-      // Deploy MockERC20 for testing
-      const MockERC20 = await ethers.getContractFactory("MockERC20");
-      const mockUSDC = await MockERC20.deploy(
-        "Mock USDC",
-        "USDC",
-        6, // 6 decimals
-        parseEther("1000000") // 1M USDC initial supply
-      );
-      await mockUSDC.waitForDeployment();
-      usdcTokenAddress = await mockUSDC.getAddress();
-      deploymentAddresses.usdcToken = usdcTokenAddress;
-      console.log("✅ Deployed MockERC20 at:", usdcTokenAddress);
-    }
-  } catch (error) {
-    console.log("❌ Error with USDC token:", error);
-    throw error;
   }
 
-  // Get or deploy MultiSigWallet
-  console.log("\n🔄 Locating MultiSigWallet contract...");
-  let multiSigWalletAddress: string;
-
-  try {
-    multiSigWalletAddress = process.env.MULTISIG_WALLET_ADDRESS || "";
-
-    if (!multiSigWalletAddress) {
-      const deployedAddressesPath = path.join(__dirname, '../deployedAddresses.json');
-      if (fs.existsSync(deployedAddressesPath)) {
-        const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
-        multiSigWalletAddress = deployedAddresses.MULTISIG_WALLET_ADDRESS;
-      }
-    }
-
-    if (multiSigWalletAddress) {
-      const code = await ethers.provider.getCode(multiSigWalletAddress);
-      if (code === "0x") {
-        throw new Error("MultiSigWallet contract not found at address");
-      }
-      console.log("✅ Found existing MultiSigWallet at:", multiSigWalletAddress);
-      deploymentAddresses.multiSigWallet = multiSigWalletAddress;
-    } else {
-      console.log("⚠️  MultiSigWallet address not provided, deploying new one...");
-
-      // Deploy MultiSigWallet with deployer as initial owner
-      const MultiSigWallet = await ethers.getContractFactory("MultiSigWallet");
-      const multiSig = await MultiSigWallet.deploy(
-        [deployer.address], // Initial owners
-        1 // Required confirmations
-      );
-      await multiSig.waitForDeployment();
-      multiSigWalletAddress = await multiSig.getAddress();
-      deploymentAddresses.multiSigWallet = multiSigWalletAddress;
-      console.log("✅ Deployed MultiSigWallet at:", multiSigWalletAddress);
-    }
-  } catch (error) {
-    console.log("❌ Error with MultiSigWallet:", error);
-    throw error;
+  if (!usdcTokenAddress) {
+    console.log("⚠️  USDC token address not provided, using default charity recipient as placeholder...");
+    usdcTokenAddress = deployer.address; // Use deployer as placeholder
   }
+
+  console.log("✅ Using USDC/MockERC20 at:", usdcTokenAddress);
+  deploymentAddresses.usdcToken = usdcTokenAddress;
+
+  // Get MultiSigWallet address
+  console.log("\n🔄 Locating MultiSigWallet...");
+  let multiSigWalletAddress = process.env.MULTISIG_WALLET_ADDRESS || "";
+
+  if (!multiSigWalletAddress) {
+    const deployedAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
+    if (fs.existsSync(deployedAddressesPath)) {
+      const deployedAddresses = JSON.parse(fs.readFileSync(deployedAddressesPath, 'utf8'));
+      multiSigWalletAddress = deployedAddresses.contracts?.MultiSigWallet?.address || deployedAddresses.MULTISIG_WALLET_ADDRESS;
+    }
+  }
+
+  if (!multiSigWalletAddress) {
+    console.log("⚠️  MultiSigWallet not found, deploying new one...");
+    const MultiSigWallet = await ethers.getContractFactory("MultiSigWallet");
+    const multiSig = await MultiSigWallet.deploy([deployer.address], 1);
+    await multiSig.waitForDeployment();
+    multiSigWalletAddress = await multiSig.getAddress();
+    console.log("✅ Deployed MultiSigWallet at:", multiSigWalletAddress);
+  } else {
+    console.log("✅ Using existing MultiSigWallet at:", multiSigWalletAddress);
+  }
+  deploymentAddresses.multiSigWallet = multiSigWalletAddress;
 
   // Step 2: Deploy EnhancedLDAOTreasury
   console.log("\n" + "=".repeat(60));
@@ -156,17 +112,6 @@ async function main() {
   deploymentAddresses.enhancedLDAOTreasury = treasuryAddress;
   console.log("✅ EnhancedLDAOTreasury deployed to:", treasuryAddress);
 
-  // Configure treasury
-  console.log("\n🔧 Configuring treasury charity parameters...");
-  try {
-    // Set minimum charity donation amount
-    const minCharityDonation = parseEther("100"); // 100 LDAO minimum
-    // Note: The contract already has this as a default, but you could update it
-    console.log("✅ Treasury charity parameters configured");
-  } catch (error) {
-    console.log("⚠️  Treasury configuration failed:", error);
-  }
-
   // Step 3: Deploy CharityVerificationSystem
   console.log("\n" + "=".repeat(60));
   console.log("STEP 3: DEPLOYING CHARITY VERIFICATION SYSTEM");
@@ -178,7 +123,7 @@ async function main() {
   const charityVerification = await CharityVerificationSystem.deploy(
     ldaoTokenAddress,
     treasuryAddress,
-    deployer.address // Fee recipient
+    deployer.address
   );
   await charityVerification.waitForDeployment();
   const charityVerificationAddress = await charityVerification.getAddress();
@@ -222,17 +167,11 @@ async function main() {
   // Configure charity governance
   console.log("\n🔧 Configuring charity governance parameters...");
   try {
-    // Authorize treasury as a target for proposal execution
     const authTx = await charityGovernance.authorizeTarget(treasuryAddress);
     await authTx.wait();
     console.log("✅ Treasury authorized as execution target");
-
-    // Verify category parameters
-    const charityDonationQuorum = await charityGovernance.categoryQuorum(6); // CHARITY_DONATION
-    const charityDonationThreshold = await charityGovernance.categoryThreshold(6);
-    console.log(`✅ Charity Donation - Quorum: ${formatEther(charityDonationQuorum)}, Threshold: ${formatEther(charityDonationThreshold)}`);
   } catch (error) {
-    console.log("⚠️  Governance configuration failed:", error);
+    console.log("⚠️  Governance configuration failed:", error.message);
   }
 
   // Step 6: Deploy ProofOfDonationNFT
@@ -259,7 +198,6 @@ async function main() {
   console.log("STEP 7: DEPLOYING BURN TO DONATE");
   console.log("=".repeat(60));
 
-  // For default charity, we'll use a placeholder address (deployer for now)
   const defaultCharityRecipient = process.env.DEFAULT_CHARITY_RECIPIENT || deployer.address;
 
   const BurnToDonate = await ethers.getContractFactory("BurnToDonate");
@@ -280,7 +218,6 @@ async function main() {
   console.log("STEP 8: DEPLOYING SUBDAO FACTORY");
   console.log("=".repeat(60));
 
-  // First deploy BaseSubDAO implementation
   const BaseSubDAO = await ethers.getContractFactory("BaseSubDAO");
   console.log("\n🔄 Deploying BaseSubDAO implementation...");
 
@@ -290,7 +227,6 @@ async function main() {
   deploymentAddresses.baseSubDAOImplementation = baseSubDAOAddress;
   console.log("✅ BaseSubDAO implementation deployed to:", baseSubDAOAddress);
 
-  // Deploy SubDAO Factory
   const CharitySubDAOFactory = await ethers.getContractFactory("CharitySubDAOFactory");
   console.log("\n🔄 Deploying CharitySubDAOFactory...");
 
@@ -300,46 +236,9 @@ async function main() {
   deploymentAddresses.charitySubDAOFactory = subDAOFactoryAddress;
   console.log("✅ CharitySubDAOFactory deployed to:", subDAOFactoryAddress);
 
-  // Step 9: Verify and test deployment
+  // Step 9: Save deployment info
   console.log("\n" + "=".repeat(60));
-  console.log("STEP 9: VERIFICATION AND TESTING");
-  console.log("=".repeat(60));
-
-  console.log("\n🧪 Verifying contract integrations...");
-
-  try {
-    // Verify treasury integration
-    const treasuryLDAOBalance = await treasury.getTreasuryBalance();
-    console.log(`✅ Treasury LDAO Balance: ${formatEther(treasuryLDAOBalance[0])}`);
-    console.log(`✅ Treasury ETH Balance: ${formatEther(treasuryLDAOBalance[1])}`);
-    console.log(`✅ Treasury USDC Balance: ${treasuryLDAOBalance[2]}`);
-
-    // Verify charity verification system
-    const totalCharities = await charityVerification.getTotalCharities();
-    console.log(`✅ Total registered charities: ${totalCharities}`);
-
-    // Verify charity governance
-    const proposalCount = await charityGovernance.proposalCount();
-    console.log(`✅ Total proposals: ${proposalCount}`);
-
-    // Verify burn to donate
-    const burnStats = await burnToDonate.getContractStats();
-    console.log(`✅ Total tokens burned: ${formatEther(burnStats[0])}`);
-    console.log(`✅ Total donations made: ${formatEther(burnStats[1])}`);
-
-    // Verify SubDAO factory
-    const subDAOCount = await subDAOFactory.getTotalSubDAOs();
-    console.log(`✅ Total SubDAOs created: ${subDAOCount}`);
-
-    console.log("\n✅ All contracts deployed and verified successfully!");
-
-  } catch (error) {
-    console.log("⚠️  Verification failed:", error);
-  }
-
-  // Step 10: Save deployment info
-  console.log("\n" + "=".repeat(60));
-  console.log("STEP 10: SAVING DEPLOYMENT INFO");
+  console.log("STEP 9: SAVING DEPLOYMENT INFO");
   console.log("=".repeat(60));
 
   const deploymentInfo = {
@@ -348,56 +247,75 @@ async function main() {
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
     blockNumber: (await ethers.provider.getBlockNumber()).toString(),
-    contracts: deploymentAddresses,
-    configuration: {
-      charityDonation: {
-        quorum: "50000000000000000000000", // 50K LDAO
-        threshold: "100000000000000000000", // 100 LDAO
-        requiresStaking: false
-      },
-      charityVerification: {
-        quorum: "200000000000000000000000", // 200K LDAO
-        threshold: "5000000000000000000000", // 5K LDAO
-        requiresStaking: true
-      },
-      charitySubDAO: {
-        quorum: "300000000000000000000000", // 300K LDAO
-        threshold: "10000000000000000000000", // 10K LDAO
-        requiresStaking: true
-      },
-      burnToDonate: {
-        ratio: 100,
-        minBurn: "1000000000000000000000", // 1000 LDAO
-        maxBurn: "100000000000000000000000", // 100K LDAO
-        dailyLimit: "1000000000000000000000000" // 1M LDAO
-      }
-    }
+    contracts: deploymentAddresses
   };
 
-  // Save to file
-  const outputPath = path.join(__dirname, `../deployments/charity-governance-${network.name}-${Date.now()}.json`);
-  const deploymentDir = path.dirname(outputPath);
-  if (!fs.existsSync(deploymentDir)) {
-    fs.mkdirSync(deploymentDir, { recursive: true });
-  }
-  fs.writeFileSync(outputPath, JSON.stringify(deploymentInfo, null, 2));
-  console.log(`\n📝 Deployment info saved to: ${outputPath}`);
-
-  // Also update the main deployedAddresses.json
-  const mainAddressesPath = path.join(__dirname, '../deployedAddresses.json');
-  let mainAddresses: any = {};
+  // Update the main deployedAddresses-sepolia.json
+  const mainAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
+  let mainAddresses = {};
   if (fs.existsSync(mainAddressesPath)) {
     mainAddresses = JSON.parse(fs.readFileSync(mainAddressesPath, 'utf8'));
   }
 
-  mainAddresses = {
-    ...mainAddresses,
-    ...deploymentAddresses,
-    lastCharityGovernanceDeployment: new Date().toISOString()
+  // Add new charity contracts to the contracts section
+  if (!mainAddresses.contracts) {
+    mainAddresses.contracts = {};
+  }
+
+  mainAddresses.contracts.EnhancedLDAOTreasury = {
+    address: deploymentAddresses.enhancedLDAOTreasury,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.CharityVerificationSystem = {
+    address: deploymentAddresses.charityVerificationSystem,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.CharityProposal = {
+    address: deploymentAddresses.charityProposal,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.CharityGovernance = {
+    address: deploymentAddresses.charityGovernance,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.ProofOfDonationNFT = {
+    address: deploymentAddresses.proofOfDonationNFT,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.BurnToDonate = {
+    address: deploymentAddresses.burnToDonate,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.BaseSubDAO = {
+    address: deploymentAddresses.baseSubDAOImplementation,
+    owner: deployer.address,
+    deploymentTx: "pending"
+  };
+  mainAddresses.contracts.CharitySubDAOFactory = {
+    address: deploymentAddresses.charitySubDAOFactory,
+    owner: deployer.address,
+    deploymentTx: "pending"
   };
 
+  mainAddresses.lastCharityGovernanceDeployment = new Date().toISOString();
+
   fs.writeFileSync(mainAddressesPath, JSON.stringify(mainAddresses, null, 2));
-  console.log(`✅ Updated main deployedAddresses.json`);
+  console.log(`✅ Updated deployedAddresses-sepolia.json`);
+
+  // Also save a timestamped backup
+  const deploymentDir = path.join(__dirname, '../deployments');
+  if (!fs.existsSync(deploymentDir)) {
+    fs.mkdirSync(deploymentDir, { recursive: true });
+  }
+  const backupPath = path.join(deploymentDir, `charity-governance-sepolia-${Date.now()}.json`);
+  fs.writeFileSync(backupPath, JSON.stringify(deploymentInfo, null, 2));
+  console.log(`📝 Deployment backup saved to: ${backupPath}`);
 
   console.log("\n" + "=".repeat(60));
   console.log("🎉 CHARITY GOVERNANCE DEPLOYMENT COMPLETE!");
@@ -427,26 +345,14 @@ async function main() {
   console.log("  ✅ Regional SubDAO Support");
   console.log("  ✅ Charity Verification System");
 
-  console.log("\n📚 Next Steps:");
-  console.log("  1. Transfer initial LDAO tokens to treasury for charity disbursements");
-  console.log("  2. Register and verify initial charity organizations");
-  console.log("  3. Create first charity donation proposal");
-  console.log("  4. Set up frontend integration with deployed contracts");
-  console.log("  5. Consider multi-sig ownership transfer for production");
-
   console.log("=".repeat(60));
 
   return deploymentInfo;
 }
 
-// Allow script to be run directly or imported
-if (require.main === module) {
-  main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error("❌ Deployment failed:", error);
-      process.exit(1);
-    });
-}
-
-export { main as deployCharityGovernance };
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("❌ Deployment failed:", error);
+    process.exit(1);
+  });

@@ -185,10 +185,10 @@ abstract contract GovernanceControlledProxy is UpgradeableProxy {
         }
 
         vote.executed = true;
-        
+
         // Execute the upgrade
-        _upgradeToAndCall(vote.proposedImplementation, "", false);
-        
+        upgradeToAndCall(vote.proposedImplementation, "");
+
         emit UpgradeVoteExecuted(voteId, vote.proposedImplementation);
     }
 

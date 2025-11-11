@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title OptimizedLDAOToken
@@ -89,7 +89,7 @@ contract OptimizedLDAOToken is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
     error ArrayLengthMismatch();
     error RewardsDisabled();
     
-    constructor(address treasury) 
+    constructor(address treasury) Ownable(treasury) 
         ERC20("LinkDAO Token", "LDAO") 
         ERC20Permit("LinkDAO Token") 
     {

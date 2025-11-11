@@ -5,16 +5,14 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 /**
  * @title NFTCollection
  * @notice Individual NFT collection contract
  */
 contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
-    using Counters for Counters.Counter;
-    
-    Counters.Counter private _tokenIdCounter;
+
+    uint256 private _tokenIdCounter;
     
     struct CollectionInfo {
         string description;
@@ -39,7 +37,7 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
         string memory symbol,
         CollectionInfo memory _collectionInfo,
         uint256 royalty
-    ) ERC721(name, symbol) {
+    ) ERC721(name, symbol) Ownable(msg.sender) {
         collectionInfo = _collectionInfo;
         collectionInfo.creator = msg.sender;
         collectionInfo.createdAt = block.timestamp;
@@ -57,22 +55,21 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
             "Not authorized to mint"
         );
         require(
-            collectionInfo.maxSupply == 0 || _tokenIdCounter.current() < collectionInfo.maxSupply,
+            collectionInfo.maxSupply == 0 || _tokenIdCounter < collectionInfo.maxSupply,
             "Max supply reached"
         );
         require(msg.value >= collectionInfo.mintPrice, "Insufficient payment");
-        
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        
+
+        uint256 tokenId = _tokenIdCounter++;
+
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, _tokenURI);
-        
+
         // Send payment to creator
         if (msg.value > 0) {
             payable(collectionInfo.creator).transfer(msg.value);
         }
-        
+
         emit NFTMinted(tokenId, to, _tokenURI);
         return tokenId;
     }
@@ -91,12 +88,7 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
     }
     
     function totalSupply() external view returns (uint256) {
-        return _tokenIdCounter.current();
-    }
-    
-    // Override functions
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage, ERC721Royalty) {
-        super._burn(tokenId);
+        return _tokenIdCounter;
     }
     
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
@@ -138,7 +130,7 @@ contract NFTCollectionFactory is Ownable {
     
     event CollectionVerified(address indexed collectionAddress);
     
-    constructor() {
+    constructor() Ownable(msg.sender) {
         feeRecipient = msg.sender;
     }
     

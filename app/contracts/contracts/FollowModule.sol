@@ -6,16 +6,18 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract FollowModule is Ownable {
     // Mapping from user to their followers
     mapping(address => mapping(address => bool)) public follows;
-    
+
     // Mapping from user to follower count
     mapping(address => uint256) public followerCount;
-    
+
     // Mapping from user to following count
     mapping(address => uint256) public followingCount;
-    
+
     event Followed(address indexed follower, address indexed following);
     event Unfollowed(address indexed follower, address indexed following);
-    
+
+    constructor() Ownable(msg.sender) {}
+
     /**
      * @dev Follow a user
      * @param target The address to follow

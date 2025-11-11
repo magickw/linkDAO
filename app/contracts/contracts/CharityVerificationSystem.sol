@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./LDAOToken.sol";
 import "./EnhancedLDAOTreasury.sol";
 import "./governance/CharityProposal.sol";
@@ -113,7 +113,7 @@ contract CharityVerificationSystem is Ownable, ReentrancyGuard {
         address _governanceToken,
         address _treasury,
         address _feeRecipient
-    ) {
+    ) Ownable(msg.sender) {
         require(_governanceToken != address(0), "Invalid governance token");
         require(_treasury != address(0), "Invalid treasury");
         require(_feeRecipient != address(0), "Invalid fee recipient");
@@ -512,7 +512,7 @@ contract CharityVerificationSystem is Ownable, ReentrancyGuard {
      * @param charityId ID of the charity
      * @return Whether the charity is verified
      */
-    function isCharityVerified(uint256 charityId) external view returns (bool) {
+    function isCharityVerified(uint256 charityId) public view returns (bool) {
         return charities[charityId].status == VerificationStatus.VERIFIED;
     }
     
@@ -546,7 +546,7 @@ contract CharityVerificationSystem is Ownable, ReentrancyGuard {
      * @notice Get all verified charities
      * @return Array of verified charity IDs
      */
-    function getVerifiedCharities() external view returns (uint256[] memory) {
+    function getVerifiedCharities() public view returns (uint256[] memory) {
         uint256[] memory verifiedIds = new uint256[](charityCount);
         uint256 count = 0;
         

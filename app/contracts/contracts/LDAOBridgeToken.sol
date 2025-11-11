@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title LDAOBridgeToken
@@ -34,16 +34,15 @@ contract LDAOBridgeToken is ERC20, ERC20Permit, Ownable, Pausable {
         string memory symbol,
         address _bridge,
         address _owner
-    ) 
-        ERC20(name, symbol) 
+    )
+        ERC20(name, symbol)
         ERC20Permit(name)
-        Ownable()
+        Ownable(_owner)
     {
         require(_bridge != address(0), "Invalid bridge address");
         require(_owner != address(0), "Invalid owner address");
-        
+
         bridge = _bridge;
-        _transferOwnership(_owner);
     }
     
     /**
@@ -104,23 +103,11 @@ contract LDAOBridgeToken is ERC20, ERC20Permit, Ownable, Pausable {
     function pause() external onlyOwner {
         _pause();
     }
-    
+
     /**
      * @notice Unpause token operations
      */
     function unpause() external onlyOwner {
         _unpause();
-    }
-    
-    /**
-     * @notice Override transfer to check pause status
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override {
-        super._beforeTokenTransfer(from, to, amount);
-        require(!paused(), "Token transfers are paused");
     }
 }

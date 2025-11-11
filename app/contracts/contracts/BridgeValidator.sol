@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -64,9 +64,8 @@ contract BridgeValidator is Ownable, ReentrancyGuard {
     event ReputationUpdated(address indexed validator, uint256 oldReputation, uint256 newReputation);
     event ThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
-    constructor(address _owner) Ownable() {
+    constructor(address _owner) Ownable(_owner) {
         require(_owner != address(0), "Invalid owner address");
-        _transferOwnership(_owner);
     }
 
     /**

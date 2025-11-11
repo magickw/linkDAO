@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 import validator from 'validator';
 import rateLimit from 'express-rate-limit';
 
@@ -237,12 +237,13 @@ export class InputValidator {
         }
       }
 
-      // Sanitize with DOMPurify
-      const sanitized = DOMPurify.sanitize(content, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'code', 'pre'],
-        ALLOWED_ATTR: ['href', 'title'],
-        ALLOW_DATA_ATTR: false,
-        ALLOW_UNKNOWN_PROTOCOLS: false
+      // Sanitize with sanitize-html
+      const sanitized = sanitizeHtml(content, {
+        allowedTags: ['p', 'br', 'strong', 'em', 'u', 'a', 'code', 'pre'],
+        allowedAttributes: {
+          'a': ['href', 'title']
+        },
+        allowProtocolRelative: false,
       });
 
       // Check for excessive repetition

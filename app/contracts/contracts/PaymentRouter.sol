@@ -30,7 +30,7 @@ contract PaymentRouter is Ownable {
     event FeeUpdated(uint256 oldFee, uint256 newFee);
     event FeeCollectorUpdated(address oldCollector, address newCollector);
     
-    constructor(uint256 _feeBasisPoints, address _feeCollector) {
+    constructor(uint256 _feeBasisPoints, address _feeCollector) Ownable(msg.sender) {
         require(_feeCollector != address(0), "Invalid fee collector");
         feeBasisPoints = _feeBasisPoints;
         feeCollector = _feeCollector;

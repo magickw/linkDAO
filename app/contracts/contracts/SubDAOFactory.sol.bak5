@@ -1,0 +1,464 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./LDAOToken.sol";
+import "./EnhancedLDAOTreasury.sol";
+import "./governance/CharityGovernance.sol";
+
+/**
+ * @title CharitySubDAOFactory
+ * @notice Factory contract for creating regional charity SubDAOs
+ */
+contract CharitySubDAOFactory is Ownable, ReentrancyGuard {
+    // Struct for SubDAO information
+    struct SubDAOInfo {
+        uint256 id;
+        address subDAOAddress;
+        string name;
+        string region;
+        string description;
+        address creator;
+        uint256 creationTimestamp;
+        bool isActive;
+        uint256 totalMembers;
+        uint256 totalProposals;
+        uint256 totalDonations;
+        address governanceToken;
+        address treasury;
+    }
+    
+    // Implementation contract for SubDAOs
+    address public subDAOImplementation;
+    
+    // Mapping of SubDAOs by ID
+    mapping(uint256 => SubDAOInfo) public subDAOs;
+    
+    // Mapping of SubDAOs by address
+    mapping(address => uint256) public subDAOIdByAddress;
+    
+    // Counters
+    uint256 public subDAOCount;
+    
+    // Configuration
+    uint256 public minCreationStake = 10000 * 1e18; // 10,000 LDAO minimum stake to create SubDAO
+    uint256 public subDAOFee = 1000 * 1e18; // 1,000 LDAO fee for creating SubDAO
+    
+    // Events
+    event SubDAOCreated(
+        uint256 indexed subDAOId,
+        address indexed subDAOAddress,
+        string name,
+        string region,
+        address indexed creator
+    );
+    
+    event SubDAOActivated(uint256 indexed subDAOId, address indexed subDAOAddress);
+    event SubDAODeactivated(uint256 indexed subDAOId, address indexed subDAOAddress);
+    event SubDAOImplementationUpdated(address indexed oldImplementation, address indexed newImplementation);
+    event MinCreationStakeUpdated(uint256 oldStake, uint256 newStake);
+    event SubDAOFeeUpdated(uint256 oldFee, uint256 newFee);
+    
+    constructor(address _subDAOImplementation) {
+        require(_subDAOImplementation != address(0), "Invalid SubDAO implementation address");
+        subDAOImplementation = _subDAOImplementation;
+    }
+    
+    /**
+     * @notice Create a new regional charity SubDAO
+     * @param name Name of the SubDAO
+     * @param region Geographic region of the SubDAO
+     * @param description Description of the SubDAO's focus
+     * @param initialMembers Array of initial member addresses
+     * @param initialStake Amount of tokens to stake (optional)
+     * @return subDAOId ID of the created SubDAO
+     */
+    function createSubDAO(
+        string memory name,
+        string memory region,
+        string memory description,
+        address[] memory initialMembers,
+        uint256 initialStake
+    ) external nonReentrant returns (uint256) {
+        require(bytes(name).length > 0, "Name is required");
+        require(bytes(region).length > 0, "Region is required");
+        require(initialStake >= minCreationStake, "Insufficient creation stake");
+        
+        // Create the clone
+        address subDAOAddress = Clones.clone(subDAOImplementation);
+        
+        // Initialize the clone
+        ISubDAO(subDAOAddress).initialize(
+            name,
+            region,
+            description,
+            msg.sender,
+            initialMembers
+        );
+        
+        // Transfer fee to treasury or burn it
+        // For now, we'll just emit an event since we don't have a specific fee mechanism
+        
+        // Create SubDAO info
+        uint256 subDAOId = ++subDAOCount;
+        SubDAOInfo storage newSubDAO = subDAOs[subDAOId];
+        newSubDAO.id = subDAOId;
+        newSubDAO.subDAOAddress = subDAOAddress;
+        newSubDAO.name = name;
+        newSubDAO.region = region;
+        newSubDAO.description = description;
+        newSubDAO.creator = msg.sender;
+        newSubDAO.creationTimestamp = block.timestamp;
+        newSubDAO.isActive = true;
+        newSubDAO.totalMembers = initialMembers.length;
+        newSubDAO.totalProposals = 0;
+        newSubDAO.totalDonations = 0;
+        
+        // Update mappings
+        subDAOIdByAddress[subDAOAddress] = subDAOId;
+        
+        emit SubDAOCreated(subDAOId, subDAOAddress, name, region, msg.sender);
+        emit SubDAOActivated(subDAOId, subDAOAddress);
+        
+        return subDAOId;
+    }
+    
+    /**
+     * @notice Update the SubDAO implementation contract
+     * @param newImplementation New implementation address
+     */
+    function updateSubDAOImplementation(address newImplementation) external onlyOwner {
+        require(newImplementation != address(0), "Invalid implementation address");
+        
+        address oldImplementation = subDAOImplementation;
+        subDAOImplementation = newImplementation;
+        
+        emit SubDAOImplementationUpdated(oldImplementation, newImplementation);
+    }
+    
+    /**
+     * @notice Update the minimum creation stake
+     * @param newStake New minimum stake amount
+     */
+    function updateMinCreationStake(uint256 newStake) external onlyOwner {
+        uint256 oldStake = minCreationStake;
+        minCreationStake = newStake;
+        
+        emit MinCreationStakeUpdated(oldStake, newStake);
+    }
+    
+    /**
+     * @notice Update the SubDAO creation fee
+     * @param newFee New fee amount
+     */
+    function updateSubDAOFee(uint256 newFee) external onlyOwner {
+        uint256 oldFee = subDAOFee;
+        subDAOFee = newFee;
+        
+        emit SubDAOFeeUpdated(oldFee, newFee);
+    }
+    
+    /**
+     * @notice Activate a SubDAO
+     * @param subDAOId ID of the SubDAO to activate
+     */
+    function activateSubDAO(uint256 subDAOId) external onlyOwner {
+        SubDAOInfo storage subDAO = subDAOs[subDAOId];
+        require(subDAO.subDAOAddress != address(0), "SubDAO does not exist");
+        require(!subDAO.isActive, "SubDAO already active");
+        
+        subDAO.isActive = true;
+        
+        emit SubDAOActivated(subDAOId, subDAO.subDAOAddress);
+    }
+    
+    /**
+     * @notice Deactivate a SubDAO
+     * @param subDAOId ID of the SubDAO to deactivate
+     */
+    function deactivateSubDAO(uint256 subDAOId) external onlyOwner {
+        SubDAOInfo storage subDAO = subDAOs[subDAOId];
+        require(subDAO.subDAOAddress != address(0), "SubDAO does not exist");
+        require(subDAO.isActive, "SubDAO already inactive");
+        
+        subDAO.isActive = false;
+        
+        emit SubDAODeactivated(subDAOId, subDAO.subDAOAddress);
+    }
+    
+    /**
+     * @notice Get SubDAO information
+     * @param subDAOId ID of the SubDAO
+     * @return SubDAO information
+     */
+    function getSubDAOInfo(uint256 subDAOId) external view returns (SubDAOInfo memory) {
+        return subDAOs[subDAOId];
+    }
+    
+    /**
+     * @notice Get SubDAO ID by address
+     * @param subDAOAddress Address of the SubDAO
+     * @return SubDAO ID
+     */
+    function getSubDAOId(address subDAOAddress) external view returns (uint256) {
+        return subDAOIdByAddress[subDAOAddress];
+    }
+    
+    /**
+     * @notice Check if a SubDAO is active
+     * @param subDAOId ID of the SubDAO
+     * @return Whether the SubDAO is active
+     */
+    function isSubDAOActive(uint256 subDAOId) external view returns (bool) {
+        return subDAOs[subDAOId].isActive;
+    }
+    
+    /**
+     * @notice Get total number of SubDAOs
+     * @return Total count
+     */
+    function getTotalSubDAOs() external view returns (uint256) {
+        return subDAOCount;
+    }
+}
+
+/**
+ * @title ISubDAO
+ * @notice Interface for SubDAO contracts
+ */
+interface ISubDAO {
+    function initialize(
+        string memory name,
+        string memory region,
+        string memory description,
+        address creator,
+        address[] memory initialMembers
+    ) external;
+    
+    function getName() external view returns (string memory);
+    function getRegion() external view returns (string memory);
+    function getDescription() external view returns (string memory);
+    function getCreator() external view returns (address);
+    function isActive() external view returns (bool);
+}
+
+/**
+ * @title BaseSubDAO
+ * @notice Base implementation for charity SubDAOs
+ */
+contract BaseSubDAO is ISubDAO {
+    string public name;
+    string public region;
+    string public description;
+    address public creator;
+    bool public active;
+    
+    // Governance parameters for this SubDAO
+    address public governanceToken;
+    address public treasury;
+    CharityGovernance public mainGovernance;
+    
+    // Members and roles
+    mapping(address => bool) public members;
+    mapping(address => bool) public admins;
+    
+    // Proposal tracking
+    uint256 public totalProposals;
+    uint256 public totalDonations;
+    
+    modifier onlyActive() {
+        require(active, "SubDAO is not active");
+        _;
+    }
+    
+    modifier onlyMember() {
+        require(members[msg.sender], "Not a member");
+        _;
+    }
+    
+    modifier onlyAdmin() {
+        require(admins[msg.sender], "Not an admin");
+        _;
+    }
+    
+    constructor() {
+        // The initialize function must be called after deployment
+    }
+    
+    /**
+     * @notice Initialize the SubDAO
+     * @param _name Name of the SubDAO
+     * @param _region Geographic region of the SubDAO
+     * @param _description Description of the SubDAO's focus
+     * @param _creator Creator address
+     * @param initialMembers Array of initial member addresses
+     */
+    function initialize(
+        string memory _name,
+        string memory _region,
+        string memory _description,
+        address _creator,
+        address[] memory initialMembers
+    ) external {
+        require(bytes(name).length == 0, "Already initialized");
+        
+        name = _name;
+        region = _region;
+        description = _description;
+        creator = _creator;
+        active = true;
+        
+        // Add creator as admin
+        admins[_creator] = true;
+        members[_creator] = true;
+        
+        // Add initial members
+        for (uint256 i = 0; i < initialMembers.length; i++) {
+            members[initialMembers[i]] = true;
+        }
+        
+        totalProposals = 0;
+        totalDonations = 0;
+    }
+    
+    /**
+     * @notice Add a member to the SubDAO
+     * @param newMember Address of the new member
+     */
+    function addMember(address newMember) external onlyAdmin {
+        require(newMember != address(0), "Invalid member address");
+        members[newMember] = true;
+    }
+    
+    /**
+     * @notice Remove a member from the SubDAO
+     * @param memberToRemove Address of the member to remove
+     */
+    function removeMember(address memberToRemove) external onlyAdmin {
+        require(members[memberToRemove], "Not a member");
+        require(memberToRemove != creator, "Cannot remove creator");
+        members[memberToRemove] = false;
+    }
+    
+    /**
+     * @notice Add an admin to the SubDAO
+     * @param newAdmin Address of the new admin
+     */
+    function addAdmin(address newAdmin) external onlyAdmin {
+        require(members[newAdmin], "Admin must be a member");
+        admins[newAdmin] = true;
+    }
+    
+    /**
+     * @notice Remove an admin from the SubDAO
+     * @param adminToRemove Address of the admin to remove
+     */
+    function removeAdmin(address adminToRemove) external onlyAdmin {
+        require(admins[adminToRemove], "Not an admin");
+        require(adminToRemove != creator, "Cannot remove creator");
+        admins[adminToRemove] = false;
+    }
+    
+    /**
+     * @notice Create a proposal within this SubDAO
+     * @param title Proposal title
+     * @param description Proposal description
+     * @param charityRecipient Address of the charity recipient
+     * @param donationAmount Amount to donate
+     * @param charityName Name of the charity
+     * @param charityDescription Description of the charity
+     * @param proofOfVerification Verification proof
+     * @param impactMetrics Expected impact metrics
+     */
+    function createCharityProposal(
+        string memory title,
+        string memory description,
+        address charityRecipient,
+        uint256 donationAmount,
+        string memory charityName,
+        string memory charityDescription,
+        string memory proofOfVerification,
+        string memory impactMetrics
+    ) external onlyMember onlyActive returns (uint256) {
+        // This would interact with a charity governance contract or create a proposal internally
+        // For now, we'll just increment the counter and return a mock ID
+        totalProposals++;
+        
+        // In a real implementation, this would create a proposal in a governance contract
+        // and potentially call the main CharityGovernance contract for approval
+        
+        return totalProposals;
+    }
+    
+    /**
+     * @notice Update SubDAO configuration
+     * @param newName New name for the SubDAO
+     * @param newRegion New region for the SubDAO
+     * @param newDescription New description for the SubDAO
+     */
+    function updateConfig(
+        string memory newName,
+        string memory newRegion,
+        string memory newDescription
+    ) external onlyAdmin {
+        if (bytes(newName).length > 0) {
+            name = newName;
+        }
+        if (bytes(newRegion).length > 0) {
+            region = newRegion;
+        }
+        if (bytes(newDescription).length > 0) {
+            description = newDescription;
+        }
+    }
+    
+    /**
+     * @notice Deactivate this SubDAO
+     */
+    function deactivate() external onlyAdmin {
+        active = false;
+    }
+    
+    /**
+     * @notice Reactivate this SubDAO
+     */
+    function reactivate() external onlyAdmin {
+        active = true;
+    }
+    
+    // View functions
+    function getName() external view override returns (string memory) {
+        return name;
+    }
+    
+    function getRegion() external view override returns (string memory) {
+        return region;
+    }
+    
+    function getDescription() external view override returns (string memory) {
+        return description;
+    }
+    
+    function getCreator() external view override returns (address) {
+        return creator;
+    }
+    
+    function isActive() external view override returns (bool) {
+        return active;
+    }
+    
+    function getTotalMembers() external view returns (uint256) {
+        // Count members (this would need to be tracked differently in a real implementation)
+        return 0; // Placeholder
+    }
+    
+    function getTotalProposals() external view returns (uint256) {
+        return totalProposals;
+    }
+    
+    function getTotalDonations() external view returns (uint256) {
+        return totalDonations;
+    }
+}

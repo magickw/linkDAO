@@ -209,13 +209,13 @@ export interface MarketplaceInterface extends utils.Interface {
   functions: {
     "AUCTION_EXTENSION_TIME()": FunctionFragment;
     "MAX_PLATFORM_FEE()": FunctionFragment;
-    "acceptOffer(uint256,uint256)": FunctionFragment;
-    "buyItem(uint256,uint256)": FunctionFragment;
+    "acceptHighestBid(uint256)": FunctionFragment;
+    "acceptOffer(uint256)": FunctionFragment;
+    "buyFixedPriceItem(uint256,uint256)": FunctionFragment;
     "cancelListing(uint256)": FunctionFragment;
     "createListing(address,uint256,uint256,uint8,uint8,uint256,string)": FunctionFragment;
     "daoApprovedVendors(address)": FunctionFragment;
     "disputes(uint256)": FunctionFragment;
-    "endAuction(uint256)": FunctionFragment;
     "escrowContract()": FunctionFragment;
     "getActiveListings(uint256,uint256)": FunctionFragment;
     "getBids(uint256)": FunctionFragment;
@@ -254,13 +254,13 @@ export interface MarketplaceInterface extends utils.Interface {
     nameOrSignatureOrTopic:
       | "AUCTION_EXTENSION_TIME"
       | "MAX_PLATFORM_FEE"
+      | "acceptHighestBid"
       | "acceptOffer"
-      | "buyItem"
+      | "buyFixedPriceItem"
       | "cancelListing"
       | "createListing"
       | "daoApprovedVendors"
       | "disputes"
-      | "endAuction"
       | "escrowContract"
       | "getActiveListings"
       | "getBids"
@@ -304,11 +304,15 @@ export interface MarketplaceInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "acceptOffer",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+    functionFragment: "acceptHighestBid",
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
-    functionFragment: "buyItem",
+    functionFragment: "acceptOffer",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "buyFixedPriceItem",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
@@ -333,10 +337,6 @@ export interface MarketplaceInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "disputes",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "endAuction",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
@@ -471,10 +471,17 @@ export interface MarketplaceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "acceptHighestBid",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "acceptOffer",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "buyItem", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "buyFixedPriceItem",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "cancelListing",
     data: BytesLike
@@ -488,7 +495,6 @@ export interface MarketplaceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "disputes", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "endAuction", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "escrowContract",
     data: BytesLike
@@ -801,13 +807,17 @@ export interface Marketplace extends BaseContract {
 
     MAX_PLATFORM_FEE(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    acceptOffer(
+    acceptHighestBid(
       listingId: PromiseOrValue<BigNumberish>,
-      offerIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    buyItem(
+    acceptOffer(
+      offerId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    buyFixedPriceItem(
       listingId: PromiseOrValue<BigNumberish>,
       quantity: PromiseOrValue<BigNumberish>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -860,11 +870,6 @@ export interface Marketplace extends BaseContract {
         resolution: string;
       }
     >;
-
-    endAuction(
-      listingId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
 
     escrowContract(overrides?: CallOverrides): Promise<[string]>;
 
@@ -1095,13 +1100,17 @@ export interface Marketplace extends BaseContract {
 
   MAX_PLATFORM_FEE(overrides?: CallOverrides): Promise<BigNumber>;
 
-  acceptOffer(
+  acceptHighestBid(
     listingId: PromiseOrValue<BigNumberish>,
-    offerIndex: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  buyItem(
+  acceptOffer(
+    offerId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  buyFixedPriceItem(
     listingId: PromiseOrValue<BigNumberish>,
     quantity: PromiseOrValue<BigNumberish>,
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -1154,11 +1163,6 @@ export interface Marketplace extends BaseContract {
       resolution: string;
     }
   >;
-
-  endAuction(
-    listingId: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
 
   escrowContract(overrides?: CallOverrides): Promise<string>;
 
@@ -1389,13 +1393,17 @@ export interface Marketplace extends BaseContract {
 
     MAX_PLATFORM_FEE(overrides?: CallOverrides): Promise<BigNumber>;
 
-    acceptOffer(
+    acceptHighestBid(
       listingId: PromiseOrValue<BigNumberish>,
-      offerIndex: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    buyItem(
+    acceptOffer(
+      offerId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    buyFixedPriceItem(
       listingId: PromiseOrValue<BigNumberish>,
       quantity: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -1448,11 +1456,6 @@ export interface Marketplace extends BaseContract {
         resolution: string;
       }
     >;
-
-    endAuction(
-      listingId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     escrowContract(overrides?: CallOverrides): Promise<string>;
 
@@ -1815,13 +1818,17 @@ export interface Marketplace extends BaseContract {
 
     MAX_PLATFORM_FEE(overrides?: CallOverrides): Promise<BigNumber>;
 
-    acceptOffer(
+    acceptHighestBid(
       listingId: PromiseOrValue<BigNumberish>,
-      offerIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    buyItem(
+    acceptOffer(
+      offerId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    buyFixedPriceItem(
       listingId: PromiseOrValue<BigNumberish>,
       quantity: PromiseOrValue<BigNumberish>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -1851,11 +1858,6 @@ export interface Marketplace extends BaseContract {
     disputes(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    endAuction(
-      listingId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     escrowContract(overrides?: CallOverrides): Promise<BigNumber>;
@@ -2007,13 +2009,17 @@ export interface Marketplace extends BaseContract {
 
     MAX_PLATFORM_FEE(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    acceptOffer(
+    acceptHighestBid(
       listingId: PromiseOrValue<BigNumberish>,
-      offerIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    buyItem(
+    acceptOffer(
+      offerId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    buyFixedPriceItem(
       listingId: PromiseOrValue<BigNumberish>,
       quantity: PromiseOrValue<BigNumberish>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -2043,11 +2049,6 @@ export interface Marketplace extends BaseContract {
     disputes(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    endAuction(
-      listingId: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     escrowContract(overrides?: CallOverrides): Promise<PopulatedTransaction>;

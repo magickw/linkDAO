@@ -5,32 +5,31 @@
  * in messaging and marketplace features.
  */
 
-import DOMPurify from 'isomorphic-dompurify';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Sanitization configuration for different content types
  */
-const SANITIZE_CONFIG = {
+const SANITIZE_CONFIG: Record<string, sanitizeHtml.IOptions> = {
   // Strict mode: Remove all HTML tags, only allow plain text
   strict: {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
+    allowedTags: [],
+    allowedAttributes: {},
   },
 
   // Basic mode: Allow safe HTML formatting tags only
   basic: {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'span'],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
+    allowedTags: ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'span'],
+    allowedAttributes: {},
   },
 
   // Rich mode: Allow more formatting and links (for message templates)
   rich: {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'span', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
-    KEEP_CONTENT: true,
+    allowedTags: ['b', 'i', 'em', 'strong', 'u', 'br', 'p', 'span', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+    allowedAttributes: {
+      'a': ['href', 'target', 'rel']
+    },
+    allowedSchemes: ['https', 'mailto'],
   },
 };
 
@@ -58,7 +57,7 @@ export function sanitizeContent(content: string, mode: 'strict' | 'basic' | 'ric
   }
 
   const config = SANITIZE_CONFIG[mode];
-  return DOMPurify.sanitize(content, config);
+  return sanitizeHtml(content, config);
 }
 
 /**
