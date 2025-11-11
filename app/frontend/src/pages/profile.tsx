@@ -748,7 +748,7 @@ export default function Profile() {
             <div>
               {activeTab === 'posts' && (
                 <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${isEditing ? '' : 'hidden'}`}>
-                  <form onSubmit={handleSubmit}>
+                  <form onSubmit={saveProfile}>
                     <div className="mb-6">
                       <label htmlFor="handle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Handle
