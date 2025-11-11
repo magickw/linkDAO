@@ -128,7 +128,7 @@ router.post('/wallet', authRateLimit, ...walletConnectValidation, (req, res) => 
     
     return res.json({
       success: true,
-      sessionToken,
+      token: sessionToken, // Changed from sessionToken to token for frontend compatibility
       user: {
         id: `user_${walletAddress}`,
         address: walletAddress,

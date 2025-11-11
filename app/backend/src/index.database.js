@@ -568,6 +568,54 @@ app.get('/api/profiles/:address', async (req, res) => {
   }
 });
 
+app.put('/api/profiles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // First, get the current user by ID
+    const userQuery = 'SELECT * FROM users WHERE id = $1';
+    const userResult = await executeQuery(userQuery, [id], null);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const walletAddress = user.wallet_address;
+    
+    // Update the user profile
+    const updateQuery = `
+      UPDATE users 
+      SET handle = COALESCE($1, handle),
+          profile_cid = COALESCE($2, profile_cid),
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `;
+    
+    const result = await executeQuery(updateQuery, [
+      updateData.handle,
+      updateData.profileCid || updateData.profile_cid,
+      id
+    ], null);
+    
+    res.json({
+      success: true,
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Add the missing endpoint that matches the frontend expectation
 app.get('/api/profiles/address/:address', async (req, res) => {
   try {

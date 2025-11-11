@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 // import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
 import { useFollowCount } from '@/hooks/useFollow';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/context/ToastContext';
 import { countries } from '@/utils/countries';
 import { UpdateUserProfileInput } from '@/models/UserProfile';
@@ -19,6 +21,7 @@ import { useTipsData } from '@/hooks/useTipsData';
 export default function Profile() {
   const router = useRouter();
   const { address, isConnected } = useWeb3();
+  const { isAuthenticated, login } = useAuth();
   const { addToast } = useToast();
   // Backend profile loading with error handling
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, updateProfile: updateBackendProfile } = useProfile(address);
@@ -205,18 +208,23 @@ export default function Profile() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Save profile
+  const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validation
-    if (!profile.handle.trim()) {
-      addToast('Please enter a handle', 'error');
-      return;
-    }
-
+    
     if (!isConnected || !address) {
       addToast('Please connect your wallet first', 'error');
       return;
+    }
+
+    if (!isAuthenticated) {
+      addToast('Please authenticate with your wallet first', 'error');
+      // Try to authenticate
+      const result = await login(address, null, 'connected');
+      if (!result.success) {
+        addToast(result.error || 'Authentication failed', 'error');
+        return;
+      }
     }
 
     try {
@@ -276,6 +284,16 @@ export default function Profile() {
     if (!isConnected || !address) {
       addToast('Please connect your wallet first', 'error');
       return;
+    }
+
+    if (!isAuthenticated) {
+      addToast('Please authenticate with your wallet first', 'error');
+      // Try to authenticate
+      const result = await login(address, null, 'connected');
+      if (!result.success) {
+        addToast(result.error || 'Authentication failed', 'error');
+        return;
+      }
     }
 
     // Validate required fields for billing address
@@ -351,7 +369,10 @@ export default function Profile() {
         <div className="px-4 py-6 sm:px-0">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Profile</h1>
-            <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to view your profile.</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-8">Please connect your wallet to view your profile.</p>
+            <div className="flex justify-center">
+              <ConnectButton />
+            </div>
           </div>
         </div>
       </Layout>
@@ -437,6 +458,33 @@ export default function Profile() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Authentication Status */}
+          {isConnected && !isAuthenticated && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span className="text-yellow-800 dark:text-yellow-200">Wallet connected but not authenticated</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const result = await login(address, null, 'connected');
+                    if (result.success) {
+                      addToast('Authentication successful!', 'success');
+                    } else {
+                      addToast(result.error || 'Authentication failed', 'error');
+                    }
+                  }}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                  Authenticate Now
+                </button>
               </div>
             </div>
           )}

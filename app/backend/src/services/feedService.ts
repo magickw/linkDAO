@@ -540,13 +540,15 @@ export class FeedService {
     const { authorAddress, content, communityId, mediaUrls, tags } = data;
 
     try {
-      // First get or create user
-      let user = await db.select().from(users).where(eq(users.walletAddress, authorAddress)).limit(1);
+      // First get or create user - use case-insensitive matching for consistency
+      const normalizedAddress = authorAddress.toLowerCase();
+      let user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       let userId: string;
       
       if (user.length === 0) {
+        // Store wallet address in lowercase for consistency
         const newUser = await db.insert(users).values({
-          walletAddress: authorAddress,
+          walletAddress: normalizedAddress,
           createdAt: new Date()
         }).returning();
         userId = newUser[0].id;
@@ -613,9 +615,10 @@ export class FeedService {
 
     try {
       const postIdInt = parseInt(postId);
-      
-      // Get user ID
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+
+      // Get user ID - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         return null;
       }
@@ -675,9 +678,10 @@ export class FeedService {
 
     try {
       const postIdInt = parseInt(postId);
-      
-      // Get user ID
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+
+      // Get user ID - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         return false;
       }
@@ -718,8 +722,9 @@ export class FeedService {
     const { postId, userAddress, type, tokenAmount } = data;
 
     try {
-      // Get user ID first
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      // Get user ID first - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
@@ -778,8 +783,9 @@ export class FeedService {
     const { postId, fromAddress, amount, tokenType, message } = data;
 
     try {
-      // Get from user ID
-      const fromUser = await db.select().from(users).where(eq(users.walletAddress, fromAddress)).limit(1);
+      // Get from user ID - use case-insensitive matching
+      const normalizedAddress = fromAddress.toLowerCase();
+      const fromUser = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (fromUser.length === 0) {
         throw new Error('From user not found');
       }
@@ -910,8 +916,9 @@ export class FeedService {
         throw new Error('Post not found');
       }
 
-      // Get user
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      // Get user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
@@ -1040,13 +1047,15 @@ export class FeedService {
     const { postId, userAddress, content, parentCommentId } = data;
 
     try {
-      // Get or create user
-      let user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      // Get or create user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      let user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       let userId: string;
-      
+
       if (user.length === 0) {
+        // Store wallet address in lowercase for consistency
         const newUser = await db.insert(users).values({
-          walletAddress: userAddress,
+          walletAddress: normalizedAddress,
           createdAt: new Date()
         }).returning();
         userId = newUser[0].id;
@@ -1252,8 +1261,9 @@ export class FeedService {
     const { postId, userAddress, platform, message } = data;
 
     try {
-      // Get user
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      // Get user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
@@ -1288,8 +1298,9 @@ export class FeedService {
     const { postId, userAddress } = data;
 
     try {
-      // Get user
-      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      // Get user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
