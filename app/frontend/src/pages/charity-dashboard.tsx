@@ -8,6 +8,7 @@ import {
   useWriteProofOfDonationNftRecordDonation
 } from '../generated';
 import Link from 'next/link';
+import SEOHead from '@/components/SEO/SEOHead';
 
 const CharityDashboard = () => {
   const { address, isConnected } = useAccount();
@@ -69,6 +70,28 @@ const CharityDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEOHead
+        title="Charity Governance Dashboard - LinkDAO"
+        description="Manage charity proposals, verify organizations, and track donations. Participate in decentralized charity governance and make an impact with your LDAO tokens."
+        keywords="charity, governance, DAO, donations, NFT, proof of donation, Web3, blockchain, social impact"
+        url="https://linkdao.io/charity-dashboard"
+        type="website"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          'name': 'Charity Governance Dashboard - LinkDAO',
+          'description': 'Manage charity proposals, verify organizations, and track donations. Participate in decentralized charity governance and make an impact with your LDAO tokens.',
+          'url': 'https://linkdao.io/charity-dashboard',
+          'publisher': {
+            '@type': 'Organization',
+            'name': 'LinkDAO',
+            'logo': {
+              '@type': 'ImageObject',
+              'url': 'https://linkdao.io/logo.png'
+            }
+          }
+        }}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex justify-between items-center">

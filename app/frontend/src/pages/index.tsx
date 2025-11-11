@@ -21,6 +21,7 @@ const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStyleP
 const PostCreationModal = lazy(() => import('@/components/PostCreationModal'));
 const BottomSheet = lazy(() => import('@/components/BottomSheet'));
 const EnhancedFeedView = lazy(() => import('@/components/Feed/EnhancedFeedView'));
+import SEOHead from '@/components/SEO/SEOHead';
 
 // Loading skeleton components
 const FeedSkeleton = () => (
@@ -161,118 +162,49 @@ export default function Home() {
 
     return (
       <>
-        <Head>
-          {/* Primary Meta Tags */}
-          <title>LinkDAO - The Web3 Social Network | Decentralized Social Platform</title>
-          <meta name="title" content="LinkDAO - The Web3 Social Network | Decentralized Social Platform" />
-          <meta name="description" content="Join LinkDAO, the decentralized Web3 social network where you own your identity, data, and content. Connect, trade, govern, and earn in a censorship-resistant platform built on Ethereum." />
-          <meta name="keywords" content="Web3 social network, decentralized social media, blockchain social platform, DAO governance, crypto marketplace, NFT social, Ethereum social network, DeFi social, Web3 community, decentralized identity" />
-          <meta name="author" content="LinkDAO" />
-          <meta name="robots" content="index, follow" />
-          <meta name="language" content="English" />
-          <meta name="revisit-after" content="7 days" />
-          <link rel="canonical" href="https://linkdao.io" />
-
-          {/* Open Graph / Facebook */}
-          <meta property="og:type" content="website" />
-          <meta property="og:url" content="https://linkdao.io/" />
-          <meta property="og:title" content="LinkDAO - The Web3 Social Network | Own Your Digital Life" />
-          <meta property="og:description" content="Experience true digital ownership with LinkDAO. Post, trade, govern, and earn on the decentralized social platform built for Web3. No ads, no censorship, just community." />
-          <meta property="og:image" content="https://linkdao.io/og-image.png" />
-          <meta property="og:image:width" content="1200" />
-          <meta property="og:image:height" content="630" />
-          <meta property="og:site_name" content="LinkDAO" />
-          <meta property="og:locale" content="en_US" />
-
-          {/* Twitter */}
-          <meta property="twitter:card" content="summary_large_image" />
-          <meta property="twitter:url" content="https://linkdao.io/" />
-          <meta property="twitter:title" content="LinkDAO - The Web3 Social Network" />
-          <meta property="twitter:description" content="Join the decentralized social revolution. Own your identity, earn from your content, and shape the platform through DAO governance." />
-          <meta property="twitter:image" content="https://linkdao.io/twitter-image.png" />
-          <meta property="twitter:creator" content="@linkdao" />
-          <meta property="twitter:site" content="@linkdao" />
-
-          {/* Additional SEO Tags */}
-          <meta name="theme-color" content="#3B82F6" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-          <meta name="apple-mobile-web-app-title" content="LinkDAO" />
-          <meta name="application-name" content="LinkDAO" />
-          <meta name="msapplication-TileColor" content="#3B82F6" />
-          <meta name="msapplication-config" content="/browserconfig.xml" />
-
-          {/* Structured Data - Organization */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "Organization",
-                "name": "LinkDAO",
-                "url": "https://linkdao.io",
-                "logo": "https://linkdao.io/logo.png",
-                "description": "Decentralized Web3 social network with marketplace, governance, and wallet features",
-                "sameAs": [
-                  "https://twitter.com/linkdao",
-                  "https://discord.gg/linkdao",
-                  "https://t.me/linkdao_web3",
-                  "https://github.com/linkdao"
-                ],
-                "contactPoint": {
-                  "@type": "ContactPoint",
-                  "email": "support@linkdao.io",
-                  "contactType": "Customer Support",
-                  "availableLanguage": ["English"]
-                }
-              })
-            }}
-          />
-
-          {/* Structured Data - WebSite */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                "name": "LinkDAO",
-                "url": "https://linkdao.io",
-                "description": "The Web3 Social Network where Identity, Money, and Governance are Yours",
-                "potentialAction": {
-                  "@type": "SearchAction",
-                  "target": "https://linkdao.io/search?q={search_term_string}",
-                  "query-input": "required name=search_term_string"
-                }
-              })
-            }}
-          />
-
-          {/* Structured Data - SoftwareApplication */}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "SoftwareApplication",
-                "name": "LinkDAO",
-                "applicationCategory": "SocialNetworkingApplication",
-                "operatingSystem": "Web Browser",
-                "offers": {
-                  "@type": "Offer",
-                  "price": "0",
-                  "priceCurrency": "USD"
-                },
-                "aggregateRating": {
-                  "@type": "AggregateRating",
-                  "ratingValue": "4.8",
-                  "ratingCount": "1200"
-                },
-                "description": "Decentralized social network built on Ethereum with marketplace, governance, and wallet features"
-              })
-            }}
-          />
-        </Head>
+        <SEOHead
+          title="LinkDAO - The Web3 Social Network | Decentralized Social Platform"
+          description="Join LinkDAO, the decentralized Web3 social network where you own your identity, data, and content. Connect, trade, govern, and earn in a censorship-resistant platform built on Ethereum."
+          keywords="Web3 social network, decentralized social media, blockchain social platform, DAO governance, crypto marketplace, NFT social, Ethereum social network, DeFi social, Web3 community, decentralized identity"
+          url="https://linkdao.io"
+          image="https://linkdao.io/og-image.png"
+          type="website"
+          author="LinkDAO"
+          locale="en_US"
+          twitterCard="summary_large_image"
+          twitterSite="@linkdao"
+          twitterCreator="@linkdao"
+          ogSiteName="LinkDAO"
+          structuredData={{
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            'name': 'LinkDAO',
+            'url': 'https://linkdao.io',
+            'description': 'The Web3 Social Network where Identity, Money, and Governance are Yours',
+            'potentialAction': {
+              '@type': 'SearchAction',
+              'target': 'https://linkdao.io/search?q={search_term_string}',
+              'query-input': 'required name=search_term_string'
+            },
+            'publisher': {
+              '@type': 'Organization',
+              'name': 'LinkDAO',
+              'logo': {
+                '@type': 'ImageObject',
+                'url': 'https://linkdao.io/logo.png'
+              }
+            }
+          }}
+          additionalMeta={[
+            { name: 'theme-color', content: '#3B82F6' },
+            { name: 'apple-mobile-web-app-capable', content: 'yes' },
+            { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+            { name: 'apple-mobile-web-app-title', content: 'LinkDAO' },
+            { name: 'application-name', content: 'LinkDAO' },
+            { name: 'msapplication-TileColor', content: '#3B82F6' },
+            { name: 'msapplication-config', content: '/browserconfig.xml' }
+          ]}
+        />
         <Layout title="LinkDAO - The Web3 Social Network" fullWidth={true}>
         {/* Skip to content link for accessibility */}
         <a 
@@ -774,11 +706,14 @@ export default function Home() {
   // Connected user experience - Main Social Dashboard/Feed
   return (
     <>
-      <Head>
-        <title>Home Feed - LinkDAO</title>
-        <meta name="description" content="Your personalized Web3 social feed. Connect with communities, share content, and participate in decentralized governance." />
-        <meta name="robots" content="noindex, follow" />
-      </Head>
+      <SEOHead
+        title="Home Feed - LinkDAO"
+        description="Your personalized Web3 social feed. Connect with communities, share content, and participate in decentralized governance."
+        keywords="Web3 social feed, decentralized content, community posts, DAO governance, crypto social"
+        url="https://linkdao.io"
+        type="website"
+        noIndex={true}
+      />
       <Layout title="LinkDAO - Home">
       {/* Skip to content link for accessibility */}
       <a 

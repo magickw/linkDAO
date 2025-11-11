@@ -10,6 +10,7 @@ import { governanceService } from '@/services/governanceService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
 import type { CommunityMembership } from '@/models/CommunityMembership';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import SEOHead from '@/components/SEO/SEOHead';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -211,7 +212,19 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   }, [isMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <>
+      <SEOHead
+        title={title}
+        description="Join the future of social networking. Own your data, earn from your content, and shape the platform through decentralized governance."
+        keywords="Web3, social network, decentralized, blockchain, DAO, cryptocurrency, NFT, DeFi"
+        url={`https://linkdao.io${router.pathname}`}
+        type="website"
+        locale="en_US"
+        alternateLocales={['en_US', 'es_ES', 'fr_FR', 'de_DE', 'zh_CN']}
+        twitterSite="@linkdao"
+        ogSiteName="LinkDAO"
+      />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       
 
       <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
@@ -504,5 +517,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       
 
     </div>
+    </>
   );
 }

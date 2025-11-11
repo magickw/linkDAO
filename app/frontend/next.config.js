@@ -9,8 +9,10 @@ const nextConfig = {
 
   // Image optimization
   images: {
-    domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com'],
+    domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com', 'linkdao.io', 'localhost', '127.0.0.1'],
     formats: ['image/avif', 'image/webp'],
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; frame-src 'self' https:; worker-src 'self' blob:;",
   },
 
   // Webpack configuration with Workbox integration
@@ -52,6 +54,7 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
+          // Security headers
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on'
@@ -103,6 +106,15 @@ const nextConfig = {
               "upgrade-insecure-requests"
             ].join('; ')
           },
+          // Performance and SEO headers
+          {
+            key: 'X-Content-Duration',
+            value: '0'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          },
         ],
       },
       {
@@ -131,6 +143,24 @@ const nextConfig = {
           },
         ],
       },
+      // Add headers for API routes
+      {
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization'
+          }
+        ]
+      }
     ];
   },
 
@@ -142,8 +172,32 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      {
+        source: '/marketplace/:path*',
+        destination: '/marketplace',
+        permanent: true,
+      },
+      {
+        source: '/governance/:path*',
+        destination: '/governance',
+        permanent: true,
+      }
     ];
   },
+
+  // Add trailing slash for SEO consistency
+  trailingSlash: false,
+
+  // Optimize for faster builds
+  swcMinify: true,
+
+  // Enable experimental features that improve SEO
+  experimental: {
+    // Enable new JSX transform
+    newNextLinkBehavior: true,
+    // Optimize server-side rendering
+    optimizeServerReact: true,
+  }
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({

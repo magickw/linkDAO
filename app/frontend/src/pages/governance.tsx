@@ -13,6 +13,7 @@ import {
 } from '@/hooks/useGovernanceContract';
 import { ProposalCardSkeleton } from '@/components/LoadingSkeletons/GovernanceSkeleton';
 import DelegationPanel from '@/components/Governance/DelegationPanel';
+import SEOHead from '@/components/SEO/SEOHead';
 
 function GovernanceContent() {
   const { address, isConnected } = useAccount();
@@ -260,6 +261,28 @@ function GovernanceContent() {
 
   return (
     <Layout title="Governance - LinkDAO" fullWidth={true}>
+      <SEOHead
+        title="Governance - LinkDAO"
+        description="Participate in decentralized governance and shape the future of the platform. Create proposals, vote on decisions, and earn rewards through DAO participation."
+        keywords="Web3, governance, DAO, voting, proposals, decentralized, blockchain, cryptocurrency"
+        url="https://linkdao.io/governance"
+        type="website"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          'name': 'Governance - LinkDAO',
+          'description': 'Participate in decentralized governance and shape the future of the platform. Create proposals, vote on decisions, and earn rewards through DAO participation.',
+          'url': 'https://linkdao.io/governance',
+          'publisher': {
+            '@type': 'Organization',
+            'name': 'LinkDAO',
+            'logo': {
+              '@type': 'ImageObject',
+              'url': 'https://linkdao.io/logo.png'
+            }
+          }
+        }}
+      />
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">

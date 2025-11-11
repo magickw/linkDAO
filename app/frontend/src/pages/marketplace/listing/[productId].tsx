@@ -5,13 +5,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head';
 import ProductDetailPage from '@/components/Marketplace/ProductDisplay/ProductDetailPage';
 import { marketplaceService } from '@/services/marketplaceService';
 import { mockProducts } from '@/data/mockProducts';
 import { cartService } from '@/services/cartService';
 import { wishlistService } from '@/services/wishlistService';
 import Layout from '@/components/Layout';
+import SEOHead from '@/components/SEO/SEOHead';
 
 const ProductDetailPageRoute: React.FC = () => {
   const router = useRouter();
@@ -196,10 +196,30 @@ const ProductDetailPageRoute: React.FC = () => {
 
   return (
     <Layout title={`${product.title} | Marketplace`} fullWidth={true}>
-      <Head>
-        <title>{product.title} | Marketplace</title>
-        <meta name="description" content={product.description} />
-      </Head>
+      <SEOHead
+        title={`${product.title} | Marketplace`}
+        description={product.description}
+        type="product"
+        image={product.media[0]?.url}
+        url={`https://linkdao.io/marketplace/listing/${productId}`}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          'name': product.title,
+          'description': product.description,
+          'image': product.media[0]?.url,
+          'offers': {
+            '@type': 'Offer',
+            'priceCurrency': product.price.cryptoSymbol,
+            'price': product.price.crypto,
+            'availability': product.inventory > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+          },
+          'seller': {
+            '@type': 'Organization',
+            'name': product.seller.name
+          }
+        }}
+      />
       
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

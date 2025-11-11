@@ -3,20 +3,46 @@ services:
     name: linkdao-backend
     env: node
     plan: standard
-    buildCommand: npm install --no-audit --prefer-offline && npm run build
+    rootDir: app/backend
+    buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --include=optional && npm run build
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: 22.10.0
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: "--max-old-space-size=1536 --optimize-for-size"
-      - key: RENDER
-        value: "true"
-      - key: RENDER_SERVICE_TYPE
-        value: "standard"
+        value: '--max-old-space-size=1536 --expose-gc'
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: linkdao
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: linkdao-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: 'https://www.linkdao.io,https://linkdao.io,https://linkdao.vercel.app'
+      - key: CORS_ORIGIN
+        value: 'https://www.linkdao.io,https://linkdao.io,https://linkdao.vercel.app'
       - key: ENABLE_WEBSOCKETS
-        value: "true"
-    healthCheckPath: /health
+        value: 'true'
+      - key: RENDER_SERVICE_TYPE
+        value: 'standard'
     autoDeploy: true
-    branch: main
-    rootDir: app/backend
+  - type: redis
+    name: linkdao-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+databases:
+  - name: linkdao
+    databaseName: linkdao
+    user: neondb_owner
+    plan: free
