@@ -159,7 +159,7 @@
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/marked": "^6.0.0",
-    "@types/node": "^20.19.24",
+    "@types/node": "^22.10.0",
     "@types/pg": "^8.15.5",
     "@types/sharp": "^0.31.1",
     "@types/stripe": "^8.0.417",
@@ -173,6 +173,6 @@
     "ts-jest": "^29.1.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "22.10.0"
   }
 }

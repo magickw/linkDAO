@@ -211,21 +211,14 @@ export default function Profile() {
   // Save profile
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet first', 'error');
       return;
     }
 
-    if (!isAuthenticated) {
-      addToast('Please authenticate with your wallet first', 'error');
-      // Try to authenticate
-      const result = await login(address, null, 'connected');
-      if (!result.success) {
-        addToast(result.error || 'Authentication failed', 'error');
-        return;
-      }
-    }
+    // Authentication is optional for profile updates - the backend will handle it
+    // If the user is not authenticated, they will need to sign a message through the backend
 
     try {
       setIsUpdating(true);

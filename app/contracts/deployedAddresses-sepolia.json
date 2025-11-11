@@ -94,6 +94,49 @@
       "address": "0xeF85C8CcC03320dA32371940b315D563be2585e5",
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
       "deploymentTx": "0x57c6090b2760861c2f5efcedc6c669541edbdd8874e5c72adc890832cbec67be"
+    },
+    "EnhancedLDAOTreasury": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending",
+      "note": "Deploy using: npx hardhat run scripts/deploy-charity-governance.js --network sepolia"
+    },
+    "CharityVerificationSystem": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "CharityProposal": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "CharityGovernance": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "ProofOfDonationNFT": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "BurnToDonate": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "BaseSubDAO": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
+    },
+    "CharitySubDAOFactory": {
+      "address": "PENDING_DEPLOYMENT",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "pending"
     }
-  }
+  },
+  "lastCharityGovernanceDeployment": "PENDING",
+  "deploymentNotes": "Charity governance contracts pending deployment due to Hardhat 3.x compatibility issues. Fix hardhat.config and run deployment script."
 }

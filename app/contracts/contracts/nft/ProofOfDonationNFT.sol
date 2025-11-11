@@ -1,0 +1,336 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "../LDAOToken.sol";
+import "../governance/CharityGovernance.sol";
+
+/**
+ * @title ProofOfDonationNFT
+ * @notice NFT contract for minting proof-of-donation tokens to participants in charity campaigns
+ */
+contract ProofOfDonationNFT is ERC721, ERC721URIStorage, Ownable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIdCounter;
+    
+    LDAOToken public governanceToken;
+    CharityGovernance public charityGovernance;
+    
+    // Struct to store donation record
+    struct DonationRecord {
+        uint256 proposalId;
+        address donor;
+        address charityRecipient;
+        uint256 donationAmount;
+        uint256 timestamp;
+        string charityName;
+        string impactMetrics;
+        bool isSoulbound; // If true, NFT is non-transferable
+    }
+    
+    // Mapping of token ID to donation record
+    mapping(uint256 => DonationRecord) public donationRecords;
+    
+    // Mapping to track if an address has received an NFT for a specific proposal
+    mapping(address => mapping(uint256 => bool)) public hasReceivedNFT;
+    
+    // Base URI for metadata
+    string private _baseTokenURI;
+    
+    // Events
+    event ProofOfDonationMinted(
+        uint256 indexed tokenId,
+        address indexed donor,
+        uint256 proposalId,
+        address charityRecipient,
+        uint256 donationAmount
+    );
+    
+    event SoulboundNFTCreated(
+        uint256 indexed tokenId,
+        address indexed donor
+    );
+    
+    constructor(
+        string memory name,
+        string memory symbol,
+        address _governanceToken,
+        address _charityGovernance
+    ) ERC721(name, symbol) {
+        require(_governanceToken != address(0), "Invalid governance token address");
+        require(_charityGovernance != address(0), "Invalid charity governance address");
+        
+        governanceToken = LDAOToken(_governanceToken);
+        charityGovernance = CharityGovernance(_charityGovernance);
+    }
+    
+    /**
+     * @notice Set the base URI for token metadata
+     * @param baseURI Base URI to set
+     */
+    function setBaseURI(string calldata baseURI) external onlyOwner {
+        _baseTokenURI = baseURI;
+    }
+    
+    /**
+     * @notice Mint a proof-of-donation NFT to a participant
+     * @param recipient Address to mint the NFT to
+     * @param proposalId ID of the charity proposal
+     * @param charityRecipient Address of the charity that received the donation
+     * @param donationAmount Amount donated
+     * @param charityName Name of the charity
+     * @param impactMetrics Expected impact metrics
+     * @param soulbound Whether the NFT should be soulbound (non-transferable)
+     * @return tokenId ID of the minted NFT
+     */
+    function mintProofOfDonationNFT(
+        address recipient,
+        uint256 proposalId,
+        address charityRecipient,
+        uint256 donationAmount,
+        string memory charityName,
+        string memory impactMetrics,
+        bool soulbound
+    ) external onlyOwner returns (uint256) {
+        require(recipient != address(0), "Invalid recipient address");
+        require(charityRecipient != address(0), "Invalid charity address");
+        require(donationAmount > 0, "Donation amount must be greater than 0");
+        require(bytes(charityName).length > 0, "Charity name is required");
+        require(!hasReceivedNFT[recipient][proposalId], "Recipient already received NFT for this proposal");
+        
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        
+        // Mint the NFT
+        _safeMint(recipient, tokenId);
+        
+        // Store donation record
+        donationRecords[tokenId] = DonationRecord({
+            proposalId: proposalId,
+            donor: recipient,
+            charityRecipient: charityRecipient,
+            donationAmount: donationAmount,
+            timestamp: block.timestamp,
+            charityName: charityName,
+            impactMetrics: impactMetrics,
+            isSoulbound: soulbound
+        });
+        
+        // Mark that this recipient has received an NFT for this proposal
+        hasReceivedNFT[recipient][proposalId] = true;
+        
+        // If soulbound, store the URI with soulbound metadata
+        if (soulbound) {
+            string memory tokenURI = _buildTokenURI(tokenId, soulbound);
+            _setTokenURI(tokenId, tokenURI);
+            emit SoulboundNFTCreated(tokenId, recipient);
+        } else {
+            string memory tokenURI = _buildTokenURI(tokenId, soulbound);
+            _setTokenURI(tokenId, tokenURI);
+        }
+        
+        emit ProofOfDonationMinted(tokenId, recipient, proposalId, charityRecipient, donationAmount);
+        
+        return tokenId;
+    }
+    
+    /**
+     * @notice Mint NFTs for participants in a charity proposal
+     * @param recipients Array of addresses to mint NFTs to
+     * @param proposalId ID of the charity proposal
+     * @param charityRecipient Address of the charity that received the donation
+     * @param donationAmount Amount donated by each participant
+     * @param charityName Name of the charity
+     * @param impactMetrics Expected impact metrics
+     * @param soulbound Whether the NFTs should be soulbound (non-transferable)
+     */
+    function batchMintProofOfDonationNFTs(
+        address[] calldata recipients,
+        uint256 proposalId,
+        address charityRecipient,
+        uint256 donationAmount,
+        string memory charityName,
+        string memory impactMetrics,
+        bool soulbound
+    ) external onlyOwner {
+        for (uint256 i = 0; i < recipients.length; i++) {
+            if (!hasReceivedNFT[recipients[i]][proposalId]) {
+                mintProofOfDonationNFT(
+                    recipients[i],
+                    proposalId,
+                    charityRecipient,
+                    donationAmount,
+                    charityName,
+                    impactMetrics,
+                    soulbound
+                );
+            }
+        }
+    }
+    
+    /**
+     * @notice Build token URI with donation metadata
+     * @param tokenId ID of the token
+     * @param soulbound Whether the token is soulbound
+     * @return Token URI string
+     */
+    function _buildTokenURI(uint256 tokenId, bool soulbound) internal view returns (string memory) {
+        if (bytes(_baseTokenURI).length > 0) {
+            return string(abi.encodePacked(_baseTokenURI, Strings.toString(tokenId)));
+        }
+        
+        // Create a basic metadata structure
+        DonationRecord memory record = donationRecords[tokenId];
+        string memory name = string(abi.encodePacked("Proof of Donation #", Strings.toString(tokenId)));
+        string memory description = string(abi.encodePacked(
+            "Proof of donation to ",
+            record.charityName,
+            " for proposal #",
+            Strings.toString(record.proposalId)
+        ));
+        
+        // Create a simple metadata JSON
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                _base64(bytes(
+                    string(
+                        abi.encodePacked(
+                            '{"name":"', name, '","',
+                            'description":"', description, '","',
+                            'attributes":[',
+                                '{"trait_type":"Charity","value":"', record.charityName, '"},',
+                                '{"trait_type":"Donation Amount","value":', Strings.toString(record.donationAmount), '},',
+                                '{"trait_type":"Proposal ID","value":', Strings.toString(record.proposalId), '},',
+                                '{"trait_type":"Timestamp","value":', Strings.toString(record.timestamp), '},',
+                                '{"trait_type":"Soulbound","value":', soulbound ? '"Yes"' : '"No"', '}',
+                            '],',
+                            '"soulbound":', soulbound ? 'true' : 'false',
+                            '}'
+                        )
+                    )
+                ))
+            )
+        );
+    }
+    
+    /**
+     * @notice Check if an NFT is soulbound (non-transferable)
+     * @param tokenId ID of the token
+     * @return Whether the token is soulbound
+     */
+    function isSoulbound(uint256 tokenId) public view returns (bool) {
+        require(_exists(tokenId), "Token does not exist");
+        return donationRecords[tokenId].isSoulbound;
+    }
+    
+    /**
+     * @notice Override transfer functions to prevent transfers of soulbound NFTs
+     */
+    function _update(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override returns (address) {
+        // Check if this is a soulbound token
+        if (isSoulbound(tokenId)) {
+            // Only allow transfers to the zero address (burning)
+            require(
+                to == address(0) || from == address(0),
+                "Soulbound NFT cannot be transferred"
+            );
+        }
+        
+        return super._update(from, to, tokenId);
+    }
+    
+    /**
+     * @notice Get donation record for a token
+     * @param tokenId ID of the token
+     * @return Donation record
+     */
+    function getDonationRecord(uint256 tokenId) external view returns (DonationRecord memory) {
+        require(_exists(tokenId), "Token does not exist");
+        return donationRecords[tokenId];
+    }
+    
+    /**
+     * @notice Check if donor received NFT for a specific proposal
+     * @param donor Address of the donor
+     * @param proposalId ID of the proposal
+     * @return Whether donor received NFT for proposal
+     */
+    function hasDonorReceivedNFT(address donor, uint256 proposalId) external view returns (bool) {
+        return hasReceivedNFT[donor][proposalId];
+    }
+    
+    // Base64 encoding function
+    function _base64(bytes memory data) internal pure returns (string memory) {
+        if (data.length == 0) return "";
+        
+        // Fixed-length lookup table
+        bytes memory table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        
+        // Allocate the buffer
+        bytes memory result = new bytes(4 * ((data.length + 2) / 3));
+        
+        // Fill the result
+        assembly {
+            let tablePtr := add(table, 1)
+            let resultPtr := add(result, 32)
+            for {
+                let dataPtr := data
+                let endPtr := add(data, mload(data))
+            } lt(dataPtr, endPtr) {
+            
+            } {
+                dataPtr := add(dataPtr, 3)
+                let input := mload(dataPtr)
+                let out := mload(add(tablePtr, and(shr(18, input), 0x3F)))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(shr(12, input), 0x3F))))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(shr(6, input), 0x3F))))
+                out := shl(8, out)
+                out := add(out, mload(add(tablePtr, and(input, 0x3F))))
+                out := shl(224, out)
+                
+                mstore(resultPtr, out)
+                resultPtr := add(resultPtr, 4)
+            }
+            
+            switch mod(mload(data), 3)
+            case 1 { mstore(sub(resultPtr, 2), shl(240, 0x3d3d)) }
+            case 2 { mstore(sub(resultPtr, 1), shl(248, 0x3d)) }
+        }
+        
+        return string(result);
+    }
+    
+    // The following functions are overrides required by Solidity.
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+}

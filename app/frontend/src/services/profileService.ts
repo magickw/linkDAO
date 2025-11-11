@@ -16,40 +16,43 @@ export class ProfileService {
   static async createProfile(data: CreateUserProfileInput): Promise<UserProfile> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('authToken');
+      // Get auth token from localStorage - check multiple possible storage keys
+      const token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create profile');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -204,32 +207,35 @@ export class ProfileService {
   static async updateProfile(id: string, data: UpdateUserProfileInput): Promise<UserProfile> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('authToken');
+      // Get auth token from localStorage - check multiple possible storage keys
+      const token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/${id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(data),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update profile');
       }
-      
+
       const profile = await response.json();
       // Convert string dates to Date objects
       return {
@@ -239,11 +245,11 @@ export class ProfileService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -256,26 +262,29 @@ export class ProfileService {
   static async deleteProfile(id: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('authToken');
+      // Get auth token from localStorage - check multiple possible storage keys
+      const token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/${id}`, {
         method: 'DELETE',
         headers,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return false;
@@ -283,15 +292,15 @@ export class ProfileService {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete profile');
       }
-      
+
       return true;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
