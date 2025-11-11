@@ -183,7 +183,7 @@ app.set('trust proxy', 1);
 const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
 const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
 const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
-const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
+const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && process.env.RENDER_SERVICE_TYPE !== 'standard');
 
 // Debug Render configuration
 if (process.env.DEBUG_RENDER_CONFIG === 'true') {
@@ -397,6 +397,7 @@ import messagingRoutes from './routes/messagingRoutes';
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
 import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/securityRoutes';
+import searchRoutes from './routes/searchRoutes';
 
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
@@ -859,8 +860,9 @@ app.use('/api/marketplace', marketplaceRoutes);
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
 
-// Enhanced search routes
-app.use('/api/search', enhancedSearchRoutes);
+// Enhanced search routes (should be just before error handlers)
+app.use('/api/search', searchRoutes);
+app.use('/api/search/enhanced', enhancedSearchRoutes);
 
 // Content preview routes
 app.use('/api/preview', contentPreviewRoutes);
@@ -1067,14 +1069,15 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
     // }
 
-    // WebSocket services - disabled on resource-constrained environments
-    const enableWebSockets = !isResourceConstrained && !process.env.DISABLE_WEBSOCKETS;
+    // WebSocket services - enabled for standard tier and above
+    const enableWebSockets = (!isResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
     
     if (enableWebSockets) {
       try {
         const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
         console.log('✅ WebSocket service initialized');
         console.log(`🔌 WebSocket ready for real-time updates`);
+        console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
       } catch (error) {
         console.warn('⚠️ WebSocket service initialization failed:', error);
       }

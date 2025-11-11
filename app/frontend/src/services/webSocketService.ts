@@ -155,19 +155,33 @@ class WebSocketService {
       try {
         this.connectionState.isReconnecting = false;
         
-        // Determine transport method based on constraints
-        const transports = this.fallbackToPolling ? 
-          ['polling', 'websocket'] : 
-          ['websocket', 'polling'];
+        // Parse URL to determine if path is already included
+        let socketUrl = this.config.url!;
+        let socketPath = '/socket.io/';
+        
+        try {
+          const parsedUrl = new URL(this.config.url!);
+          // If the URL already includes the socket.io path, extract it
+          if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
+            socketPath = parsedUrl.pathname;
+            // Remove the path from the URL
+            parsedUrl.pathname = '';
+            socketUrl = parsedUrl.toString().replace(/\/$/, '');
+          }
+        } catch (error) {
+          // If URL parsing fails, use defaults
+          console.warn('Failed to parse WebSocket URL, using defaults');
+        }
 
         // Add additional options for better connection handling
-        this.socket = io(this.config.url!, {
-          transports,
+        this.socket = io(socketUrl, {
+          path: socketPath,
+          transports: ['websocket', 'polling'],
           reconnection: false, // We handle reconnection manually
           reconnectionAttempts: 0,
           timeout: this.config.connectionTimeout,
           forceNew: true,
-          upgrade: !this.fallbackToPolling,
+          upgrade: true,
           rememberUpgrade: false,
           // Add CORS bypass options
           withCredentials: true,
@@ -183,22 +197,6 @@ class WebSocketService {
         reject(error);
       }
     });
-  }
-
-  private getPathFromUrl(url: string): string {
-    try {
-      const parsedUrl = new URL(url);
-      // If the URL already includes the socket.io path, use it as is
-      if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
-        // Ensure we don't duplicate the path
-        return parsedUrl.pathname.endsWith('/') ? parsedUrl.pathname : parsedUrl.pathname + '/';
-      }
-      // Otherwise return the default socket.io path
-      return '/socket.io/';
-    } catch (error) {
-      // If URL parsing fails, return the default path
-      return '/socket.io/';
-    }
   }
 
   private setupSocketEventHandlers(resolve?: () => void, reject?: (error: Error) => void): void {
@@ -376,45 +374,9 @@ class WebSocketService {
 
   private updateConnectionQuality(): void {
     // Simple quality assessment based on response time
-    if (this.resourceConstraints.networkLatency < 100) {
-      this.connectionState.connectionQuality = 'excellent';
-    } else if (this.resourceConstraints.networkLatency < 300) {
-      this.connectionState.connectionQuality = 'good';
-    } else {
-      this.connectionState.connectionQuality = 'poor';
-    }
   }
 
-  disconnect() {
-    this.connectionState.isReconnecting = false;
-    
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
-
-    this.stopHeartbeat();
-
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
-
-    this.connectionState.isConnected = false;
-    this.emit('disconnected', { reason: 'manual_disconnect' });
-  }
-
-  register(address: string) {
-    if (this.socket?.connected) {
-      this.socket.emit('register', address);
-    } else if (this.config.enableFallback) {
-      // Queue the registration for when connection is restored
-      this.once('connected', () => {
-        this.socket?.emit('register', address);
-      });
-    }
-  }
-
+  // Public API methods
   on(event: string, callback: Function) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -482,45 +444,26 @@ class WebSocketService {
     return this.isOptional;
   }
 
-  // Force reconnection (useful for manual retry)
-  forceReconnect(): void {
-    if (this.socket?.connected) {
-      this.disconnect();
+  disconnect(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
-    this.connectionState.reconnectAttempts = 0;
-    this.connect();
+    
+    this.stopHeartbeat();
+    
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    
+    this.connectionState.isConnected = false;
+    this.emit('disconnected', { reason: 'manual_disconnect' });
   }
 
-  // Update configuration at runtime
-  updateConfig(newConfig: Partial<WebSocketConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-  }
-
-  // Get connection statistics
-  getStats() {
-    return {
-      isConnected: this.connectionState.isConnected,
-      isReconnecting: this.connectionState.isReconnecting,
-      reconnectAttempts: this.connectionState.reconnectAttempts,
-      lastConnected: this.connectionState.lastConnected,
-      connectionQuality: this.connectionState.connectionQuality,
-      isOptional: this.isOptional,
-      fallbackToPolling: this.fallbackToPolling,
-      resourceConstraints: this.resourceConstraints
-    };
+  getQueuedMessageCount(): number {
+    return 0; // Not implemented in this version
   }
 }
 
-// Export a singleton instance with resource-aware configuration
-export const webSocketService = new WebSocketService({
-  resourceAware: true,
-  enableFallback: true,
-  maxReconnectAttempts: 10,
-  reconnectDelay: 1000,
-  maxReconnectDelay: 30000,
-  backoffFactor: 2
-});
-
-// Export the class for custom instances
-export { WebSocketService };
-export type { WebSocketConfig, ConnectionState, ResourceConstraints };
+export default WebSocketService;

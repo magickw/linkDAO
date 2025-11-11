@@ -62,11 +62,30 @@ export class WebSocketClientService {
         this.connectionState.status = 'connecting';
         this.emit('connection_state_changed', this.connectionState);
 
+        // Parse URL to determine if path is already included
+        let socketUrl = this.config.url;
+        let socketPath = '/socket.io/';
+        
+        try {
+          const parsedUrl = new URL(this.config.url);
+          // If the URL already includes the socket.io path, extract it
+          if (parsedUrl.pathname && parsedUrl.pathname.includes('socket.io')) {
+            socketPath = parsedUrl.pathname;
+            // Remove the path from the URL
+            parsedUrl.pathname = '';
+            socketUrl = parsedUrl.toString().replace(/\/$/, '');
+          }
+        } catch (error) {
+          // If URL parsing fails, use defaults
+          console.warn('Failed to parse WebSocket URL, using defaults');
+        }
+
         // Store the resolve/reject references for later use
         const originalResolve = resolve;
         let resolved = false;
 
-        this.socket = io(this.config.url, {
+        this.socket = io(socketUrl, {
+          path: socketPath,
           transports: ['websocket', 'polling'], // Try WebSocket first, fallback to polling
           timeout: 30000, // Increase timeout to 30 seconds
           reconnection: false, // We handle reconnection manually
@@ -106,7 +125,8 @@ export class WebSocketClientService {
 
         this.socket.on('connect_error', (error) => {
           console.warn('WebSocket connection error (will attempt polling fallback):', error.message);
-          console.warn('WebSocket URL:', this.config.url);
+          console.warn('WebSocket URL:', socketUrl);
+          console.warn('WebSocket path:', socketPath);
           console.warn('WebSocket transport options:', this.socket?.io?.opts?.transports);
           
           // Emit a warning but don't reject immediately to allow polling fallback
@@ -199,127 +219,165 @@ export class WebSocketClientService {
       this.emit('subscription_error', error);
     });
 
-    // Real-time updates
-    this.socket.on('feed_update', (data) => {
-      this.emit('feed_update', data);
-    });
-
-    this.socket.on('community_post', (data) => {
-      this.emit('community_post', data);
-    });
-
-    this.socket.on('community_update', (data) => {
-      this.emit('community_update', data);
-    });
-
-    this.socket.on('new_message', (data) => {
-      this.emit('new_message', data);
-    });
-
-    this.socket.on('reaction_update', (data) => {
-      this.emit('reaction_update', data);
-    });
-
-    this.socket.on('tip_received', (data) => {
-      this.emit('tip_received', data);
-    });
-
-    this.socket.on('notification', (data) => {
-      this.emit('notification', data);
-    });
-
-    this.socket.on('user_status_update', (data) => {
-      this.emit('user_status_update', data);
-    });
-
-    // Typing indicators
-    this.socket.on('user_typing', (data) => {
-      this.emit('user_typing', data);
-    });
-
-    this.socket.on('user_stopped_typing', (data) => {
-      this.emit('user_stopped_typing', data);
-    });
-
-    // Connection health
-    this.socket.on('heartbeat_ack', (data) => {
-      this.emit('heartbeat_ack', data);
-    });
-
-    this.socket.on('connection_check', () => {
-      this.sendHeartbeat();
-    });
-
-    this.socket.on('server_shutdown', (data) => {
-      console.warn('Server shutting down:', data);
-      this.emit('server_shutdown', data);
-    });
-
-    // Disconnection handling
+    // Connection events
     this.socket.on('disconnect', (reason) => {
       console.log('WebSocket disconnected:', reason);
-      this.stopHeartbeat();
-      
-      this.connectionState = {
-        status: 'disconnected',
-        reconnectAttempts: this.connectionState.reconnectAttempts
-      };
-      this.emit('connection_state_changed', this.connectionState);
       this.emit('disconnected', { reason });
 
-      // Attempt reconnection if enabled and not manually disconnected
+      // Attempt reconnection if enabled
       if (this.config.autoReconnect && reason !== 'io client disconnect') {
-        this.attemptReconnection();
+        this.scheduleReconnect();
       }
     });
-  }
 
-  private authenticate(): void {
-    if (!this.socket?.connected) return;
+    this.socket.on('reconnect_attempt', (attemptNumber) => {
+      console.log('WebSocket reconnect attempt:', attemptNumber);
+      this.connectionState = {
+        status: 'reconnecting',
+        reconnectAttempts: attemptNumber
+      };
+      this.emit('connection_state_changed', this.connectionState);
+    });
 
-    this.socket.emit('authenticate', {
-      walletAddress: this.config.walletAddress,
-      reconnecting: this.isReconnecting
+    this.socket.on('reconnect', (attemptNumber) => {
+      console.log('WebSocket reconnected on attempt:', attemptNumber);
+      this.connectionState = {
+        status: 'connected',
+        lastConnected: new Date(),
+        reconnectAttempts: attemptNumber
+      };
+      this.emit('connection_state_changed', this.connectionState);
+      
+      // Re-authenticate after reconnection
+      this.authenticate();
+      
+      // Restore subscriptions
+      this.restoreSubscriptions();
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      console.error('WebSocket reconnection error:', error);
+      this.emit('reconnect_error', error);
+    });
+
+    // Listen for all custom events and emit them to local listeners
+    this.socket.onAny((event, ...args) => {
+      this.emit(event, ...args);
+    });
+
+    // Heartbeat responses
+    this.socket.on('pong', () => {
+      // Heartbeat response received
     });
   }
 
-  private attemptReconnection(): void {
-    if (this.isReconnecting || this.connectionState.reconnectAttempts >= this.config.reconnectAttempts) {
+  private scheduleReconnect(): void {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+
+    if (this.connectionState.reconnectAttempts >= this.config.reconnectAttempts) {
       console.log('Max reconnection attempts reached');
       return;
     }
 
-    this.isReconnecting = true;
-    this.connectionState.status = 'reconnecting';
     this.connectionState.reconnectAttempts++;
-    this.emit('connection_state_changed', this.connectionState);
-
-    // Exponential backoff with jitter
-    const baseDelay = this.config.reconnectDelay;
-    const maxDelay = 30000; // Maximum 30 seconds
-    const backoffFactor = 2;
-    const delay = Math.min(baseDelay * Math.pow(backoffFactor, this.connectionState.reconnectAttempts - 1), maxDelay);
-    const jitter = Math.random() * 0.5 * delay; // Add up to 50% jitter
-    const finalDelay = delay + jitter;
-
-    console.log(`Attempting WebSocket reconnection (${this.connectionState.reconnectAttempts}/${this.config.reconnectAttempts}) in ${Math.round(finalDelay)}ms`);
+    this.isReconnecting = true;
 
     this.reconnectTimeout = setTimeout(() => {
-      console.log(`Attempting reconnection (${this.connectionState.reconnectAttempts}/${this.config.reconnectAttempts})`);
       this.connect().catch((error) => {
         console.error('Reconnection failed:', error);
-        this.attemptReconnection();
+        this.scheduleReconnect(); // Try again
       });
-    }, finalDelay);
+    }, this.config.reconnectDelay * this.connectionState.reconnectAttempts); // Exponential backoff
   }
 
-  // Subscription Management
-  subscribe(type: 'feed' | 'community' | 'conversation' | 'user' | 'global', target: string, filters?: {
-    eventTypes?: string[];
-    priority?: ('low' | 'medium' | 'high' | 'urgent')[];
-  }): string {
-    const subscriptionId = `${type}_${target}_${Date.now()}`;
+  private authenticate(): void {
+    if (this.socket?.connected && this.config.walletAddress) {
+      this.socket.emit('authenticate', {
+        walletAddress: this.config.walletAddress,
+        reconnecting: this.isReconnecting
+      });
+    }
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
     
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket?.connected) {
+        this.socket.emit('ping');
+      }
+    }, 30000); // 30 seconds
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  private processMessageQueue(): void {
+    while (this.messageQueue.length > 0 && this.socket?.connected) {
+      const message = this.messageQueue.shift();
+      if (message) {
+        this.socket.emit(message.event, message.data);
+      }
+    }
+  }
+
+  private restoreSubscriptions(): void {
+    this.subscriptions.forEach((subscription) => {
+      this.socket?.emit('subscribe', {
+        type: subscription.type,
+        target: subscription.target,
+        filters: subscription.filters
+      });
+    });
+  }
+
+  // Event handling
+  private emit(event: string, ...args: any[]): void {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      listeners.forEach((callback) => {
+        try {
+          callback(...args);
+        } catch (error) {
+          console.error(`Error in WebSocket listener for event ${event}:`, error);
+        }
+      });
+    }
+  }
+
+  on(event: string, callback: Function): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)?.add(callback);
+  }
+
+  off(event: string, callback: Function): void {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      listeners.delete(callback);
+      if (listeners.size === 0) {
+        this.listeners.delete(event);
+      }
+    }
+  }
+
+  // Subscription management
+  subscribe(
+    type: 'feed' | 'community' | 'conversation' | 'user' | 'global',
+    target: string,
+    filters?: {
+      eventTypes?: string[];
+      priority?: ('low' | 'medium' | 'high' | 'urgent')[];
+    }
+  ): string {
+    const subscriptionId = `${type}_${target}_${Date.now()}`;
     const subscription: Subscription = {
       id: subscriptionId,
       type,
@@ -342,191 +400,86 @@ export class WebSocketClientService {
 
   unsubscribe(subscriptionId: string): void {
     const subscription = this.subscriptions.get(subscriptionId);
-    if (!subscription) return;
-
-    this.subscriptions.delete(subscriptionId);
-
-    if (this.socket?.connected) {
-      this.socket.emit('unsubscribe', { subscriptionId });
-    }
-  }
-
-  private restoreSubscriptions(): void {
-    this.subscriptions.forEach((subscription) => {
+    if (subscription) {
       if (this.socket?.connected) {
-        this.socket.emit('subscribe', {
-          type: subscription.type,
-          target: subscription.target,
-          filters: subscription.filters
+        this.socket.emit('unsubscribe', {
+          subscriptionId: subscription.id
         });
       }
-    });
+      this.subscriptions.delete(subscriptionId);
+    }
   }
 
-  // Legacy room management (for backward compatibility)
+  // Legacy room methods
   joinCommunity(communityId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('join_community', { communityId });
-    }
+    this.subscribe('community', communityId);
   }
 
   leaveCommunity(communityId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('leave_community', { communityId });
+    // Find subscription by community ID
+    const subscriptionId = Array.from(this.subscriptions.entries())
+      .find(([_, sub]) => sub.type === 'community' && sub.target === communityId)?.[0];
+    
+    if (subscriptionId) {
+      this.unsubscribe(subscriptionId);
     }
   }
 
   joinConversation(conversationId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('join_conversation', { conversationId });
-    }
+    this.subscribe('conversation', conversationId);
   }
 
   leaveConversation(conversationId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('leave_conversation', { conversationId });
+    // Find subscription by conversation ID
+    const subscriptionId = Array.from(this.subscriptions.entries())
+      .find(([_, sub]) => sub.type === 'conversation' && sub.target === conversationId)?.[0];
+    
+    if (subscriptionId) {
+      this.unsubscribe(subscriptionId);
     }
   }
 
   // Typing indicators
   startTyping(conversationId: string): void {
     if (this.socket?.connected) {
-      this.socket.emit('typing_start', { conversationId });
+      this.socket.emit('typing:start', {
+        conversationId,
+        userAddress: this.config.walletAddress
+      });
     }
   }
 
   stopTyping(conversationId: string): void {
     if (this.socket?.connected) {
-      this.socket.emit('typing_stop', { conversationId });
-    }
-  }
-
-  // Connection state management
-  updateConnectionState(state: 'stable' | 'unstable' | 'reconnecting'): void {
-    if (this.socket?.connected) {
-      this.socket.emit('connection_state', { state });
-    }
-  }
-
-  // Heartbeat system
-  private startHeartbeat(): void {
-    this.heartbeatInterval = setInterval(() => {
-      this.sendHeartbeat();
-    }, 30000); // Send heartbeat every 30 seconds
-  }
-
-  private stopHeartbeat(): void {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-  }
-
-  private sendHeartbeat(): void {
-    if (this.socket?.connected) {
-      this.socket.emit('heartbeat');
-    }
-  }
-
-  // Message queuing for offline scenarios
-  private queueMessage(event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): void {
-    this.messageQueue.push({
-      event,
-      data,
-      timestamp: new Date(),
-      priority
-    });
-
-    // Limit queue size
-    if (this.messageQueue.length > 100) {
-      this.messageQueue.shift();
-    }
-  }
-
-  private processMessageQueue(): void {
-    if (this.messageQueue.length === 0) return;
-
-    // Sort by priority and timestamp
-    this.messageQueue.sort((a, b) => {
-      const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-      if (priorityDiff !== 0) return priorityDiff;
-      return a.timestamp.getTime() - b.timestamp.getTime();
-    });
-
-    // Process queued messages
-    const messages = [...this.messageQueue];
-    this.messageQueue = [];
-
-    messages.forEach(message => {
-      if (this.socket?.connected) {
-        this.socket.emit(message.event, message.data);
-      }
-    });
-
-    console.log(`Processed ${messages.length} queued messages`);
-  }
-
-  // Event system
-  on(event: string, callback: Function): void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Set());
-    }
-    this.listeners.get(event)!.add(callback);
-  }
-
-  off(event: string, callback: Function): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.delete(callback);
-    }
-  }
-
-  private emit(event: string, data?: any): void {
-    const eventListeners = this.listeners.get(event);
-    if (eventListeners) {
-      eventListeners.forEach(callback => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error('Error in WebSocket event callback:', error);
-        }
+      this.socket.emit('typing:stop', {
+        conversationId,
+        userAddress: this.config.walletAddress
       });
     }
   }
 
+  // Message sending with queuing
+  send(event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): void {
+    const message: QueuedMessage = {
+      event,
+      data,
+      timestamp: new Date(),
+      priority
+    };
+
+    if (this.socket?.connected) {
+      this.socket.emit(event, data);
+    } else {
+      // Queue message for when connection is restored
+      this.messageQueue.push(message);
+      // Keep queue size reasonable
+      if (this.messageQueue.length > 100) {
+        this.messageQueue.shift();
+      }
+    }
+  }
+
   // Utility methods
-  private setupEventListeners(): void {
-    if (typeof window === 'undefined') return;
-
-    // Handle online/offline events
-    window.addEventListener('online', () => {
-      if (!this.socket?.connected && this.config.autoReconnect) {
-        this.connect().catch(console.error);
-      }
-    });
-
-    window.addEventListener('offline', () => {
-      this.updateConnectionState('unstable');
-    });
-
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && this.socket?.connected) {
-        this.sendHeartbeat();
-      }
-    });
-  }
-
-  // Public API
-  getConnectionState(): ConnectionState {
-    return { ...this.connectionState };
-  }
-
-  getSubscriptions(): Subscription[] {
-    return Array.from(this.subscriptions.values());
-  }
-
   isConnected(): boolean {
     return this.socket?.connected || false;
   }
@@ -544,12 +497,8 @@ export class WebSocketClientService {
   }
 
   // Send custom message (for extensibility)
-  send(event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): void {
-    if (this.socket?.connected) {
-      this.socket.emit(event, data);
-    } else {
-      this.queueMessage(event, data, priority);
-    }
+  sendCustomMessage(event: string, data: any, priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): void {
+    this.send(event, data, priority);
   }
 }
 
@@ -569,7 +518,7 @@ export const getWebSocketClient = (): WebSocketClientService | null => {
   return webSocketClientService;
 };
 
-export const shutdownWebSocketClient = (): void => {
+export const shutdownWebSocketClient = (): void {
   if (webSocketClientService) {
     webSocketClientService.disconnect();
     webSocketClientService = null;

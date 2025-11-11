@@ -1221,12 +1221,89 @@ export class SearchService {
     return { users: [], total: 0 };
   }
 
-  async getTrendingContent(limit: number = 20, timeframe: string = '24h'): Promise<any> {
-    return { content: [], total: 0 };
+  async getTrendingContent(limit: number = 20, timeframe: string = 'day'): Promise<any> {
+    try {
+      // Dynamically import RecommendationService to avoid circular dependencies
+      const { RecommendationService } = await import('./recommendationService');
+      const recommendationService = new RecommendationService();
+      
+      // Map timeframe to the format expected by recommendation service
+      const timeFrameMap: Record<string, 'hourly' | 'daily' | 'weekly'> = {
+        'hour': 'hourly',
+        'day': 'daily',
+        'week': 'weekly',
+        '24h': 'daily',
+        '7d': 'weekly'
+      };
+      
+      const mappedTimeframe = timeFrameMap[timeframe] || 'daily';
+      
+      // Get trending content from recommendation service
+      const trendingItems = await recommendationService.getTrendingContent(mappedTimeframe, limit);
+      
+      // Transform the data into the expected format
+      const posts = trendingItems.filter(item => item.type === 'post').map(item => ({
+        id: item.id,
+        title: item.title,
+        score: item.score,
+        metadata: item.metadata
+      }));
+      
+      const communities = trendingItems.filter(item => item.type === 'community').map(item => ({
+        id: item.id,
+        name: item.title,
+        score: item.score,
+        metadata: item.metadata
+      }));
+      
+      const users = trendingItems.filter(item => item.type === 'user').map(item => ({
+        id: item.id,
+        handle: item.title,
+        score: item.score,
+        metadata: item.metadata
+      }));
+      
+      const topics = trendingItems.filter(item => item.type === 'topic').map(item => ({
+        id: item.id,
+        name: item.title,
+        score: item.score,
+        metadata: item.metadata
+      }));
+      
+      return {
+        posts,
+        communities,
+        users,
+        topics,
+        total: trendingItems.length
+      };
+    } catch (error) {
+      safeLogger.error('Error getting trending content:', error);
+      return { 
+        posts: [], 
+        communities: [], 
+        users: [], 
+        topics: [],
+        total: 0 
+      };
+    }
   }
 
   async getTrendingHashtags(limit: number = 20, timeframe: string = '24h'): Promise<any> {
-    return { hashtags: [], total: 0 };
+    try {
+      // For now, return empty array as placeholder
+      // In a real implementation, this would query the database for trending hashtags
+      return { 
+        hashtags: [], 
+        total: 0 
+      };
+    } catch (error) {
+      safeLogger.error('Error getting trending hashtags:', error);
+      return { 
+        hashtags: [], 
+        total: 0 
+      };
+    }
   }
 
   async getPostsByHashtag(hashtag: string, limit: number = 20, offset: number = 0): Promise<any> {

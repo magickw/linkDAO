@@ -46,6 +46,12 @@ export const getApiEndpoint = (path: string): string => {
 
 // Helper function to get the correct WebSocket endpoint
 export const getWebSocketEndpoint = (): string => {
+  // If NEXT_PUBLIC_WS_URL is set and includes the full path, use it as is
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL;
+  }
+  
+  // Otherwise derive from backend URL
   return ENV_CONFIG.WS_URL;
 };
 

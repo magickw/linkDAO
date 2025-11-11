@@ -987,17 +987,20 @@ export type { WebSocketServiceConfig };
 export const initializeWebSocket = (httpServer: HttpServer, config?: WebSocketServiceConfig): WebSocketService => {
   if (!webSocketService) {
     // Detect resource constraints from environment
-    const isResourceConstrained = process.env.RENDER_SERVICE_TYPE === 'free' || 
+    const isRenderFree = process.env.RENDER_SERVICE_TYPE === 'free' || 
+                        process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
+    const isRenderStandard = process.env.RENDER_SERVICE_TYPE === 'standard';
+    const isResourceConstrained = isRenderFree || 
                                  process.env.DISABLE_WEBSOCKET_FEATURES === 'true' ||
                                  process.env.NODE_ENV === 'production' && !process.env.RENDER_SERVICE_TYPE;
 
     const defaultConfig: WebSocketServiceConfig = {
       resourceAware: true,
-      maxConnections: isResourceConstrained ? 50 : 1000,
-      memoryThreshold: isResourceConstrained ? 200 : 400,
+      maxConnections: isRenderFree ? 50 : (isRenderStandard ? 200 : 1000),
+      memoryThreshold: isRenderFree ? 200 : (isRenderStandard ? 600 : 400),
       enableHeartbeat: !isResourceConstrained,
-      heartbeatInterval: isResourceConstrained ? 60000 : 30000,
-      messageQueueLimit: isResourceConstrained ? 20 : 100,
+      heartbeatInterval: isRenderFree ? 60000 : (isRenderStandard ? 45000 : 30000),
+      messageQueueLimit: isRenderFree ? 20 : (isRenderStandard ? 50 : 100),
       connectionTimeout: 60000,
       ...config
     };
@@ -1020,7 +1023,10 @@ export const initializeWebSocket = (httpServer: HttpServer, config?: WebSocketSe
     }, cleanupIntervalMs);
     
     safeLogger.info('WebSocket service initialized with resource-aware configuration', {
-      resourceConstrained: isResourceConstrained,
+      renderServiceType: process.env.RENDER_SERVICE_TYPE,
+      isRenderFree,
+      isRenderStandard,
+      isResourceConstrained,
       config: defaultConfig
     });
   }
