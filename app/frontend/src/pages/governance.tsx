@@ -21,7 +21,7 @@ function GovernanceContent() {
   const { proposalIds, isLoading: isProposalsLoading } = useContractProposals();
   const { votingPower, isLoading: isVotingPowerLoading } = useVotingPower(address);
   
-  const [activeTab, setActiveTab] = useState<'active' | 'ended' | 'create' | 'delegation'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'ended' | 'create' | 'delegation' | 'charity'>('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [proposalAnalyses, setProposalAnalyses] = useState<Record<string, AIProposalAnalysis>>({});
@@ -334,6 +334,16 @@ function GovernanceContent() {
               >
                 Delegation
               </button>
+              <button
+                onClick={() => setActiveTab('charity')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'charity'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                Charity Governance
+              </button>
             </nav>
           </div>
           
@@ -363,6 +373,90 @@ function GovernanceContent() {
                 userVotingPower={votingPower ? parseFloat(votingPower) : 0}
                 onDelegationChange={fetchProposals}
               />
+            </div>
+          )}
+          
+          {activeTab === 'charity' && (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Charity Governance</h2>
+                <button 
+                  onClick={() => window.location.href = '/charity-dashboard'}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+                >
+                  Go to Charity Dashboard
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Charity Proposals</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">View and participate in charity-related proposals</p>
+                  <button 
+                    onClick={() => window.location.href = '/charity-dashboard#proposals'}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
+                  >
+                    View Proposals →
+                  </button>
+                </div>
+                
+                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Verified Charities</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">Explore verified charitable organizations</p>
+                  <button 
+                    onClick={() => window.location.href = '/charity-dashboard#charities'}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
+                  >
+                    View Charities →
+                  </button>
+                </div>
+                
+                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Donation Records</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">Track donation history and impact</p>
+                  <button 
+                    onClick={() => window.location.href = '/charity-dashboard#donations'}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm"
+                  >
+                    View Donations →
+                  </button>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Recent Charity Activity</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-gray-800 dark:text-white">Local Food Bank Support</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Proposal to donate 10,000 LDAO tokens</p>
+                    </div>
+                    <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm">
+                      Executed
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-gray-800 dark:text-white">Community Education Fund</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Proposal to allocate funds for local schools</p>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm">
+                      Active
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-gray-800 dark:text-white">Environmental Conservation</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Proposal to support reforestation project</p>
+                    </div>
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-sm">
+                      Pending
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           
