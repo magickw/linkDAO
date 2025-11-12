@@ -51,7 +51,9 @@ const SERVICE_ENDPOINTS = {
     'wss://realtime.linkdao.io/socket.io/'
   ],
   geolocation: [
-    'https://ip-api.com/json/',
+    // Removed ip-api.com due to rate limiting (403 errors)
+    // Using more reliable alternatives
+    'https://ipapi.co/json/',
     'https://api.ipify.org/?format=json',
     'https://ipinfo.io/json'
   ]
@@ -321,8 +323,13 @@ async function networkFirst(request, cacheName) {
   
   // Special handling for geolocation requests - try fallback services
   const url = new URL(request.url);
-  if (url.hostname.includes('ip-api.com') || 
-      url.hostname.includes('ipify.org') || 
+  // Skip ip-api.com due to rate limiting - use alternatives directly
+  if (url.hostname.includes('ip-api.com')) {
+    console.warn('Skipping ip-api.com (rate limited), using alternatives');
+    return await tryAlternativeGeolocationServices(request);
+  }
+
+  if (url.hostname.includes('ipify.org') ||
       url.hostname.includes('ipapi.co') ||
       url.hostname.includes('ipinfo.io')) {
     
@@ -1696,23 +1703,22 @@ self.addEventListener('offline', () => {
 })();
 
 console.log('Service Worker loaded with enhanced caching, offline support, and action queue');
-```
 
-```
 // Function to try alternative geolocation services
 async function tryAlternativeGeolocationServices(originalRequest) {
+  // Prioritize services without rate limiting issues
   const geolocationServices = [
     {
-      name: 'ip-api.com',
-      url: 'https://ip-api.com/json/',
+      name: 'ipapi.co',
+      url: 'https://ipapi.co/json/',
       parser: (data) => ({
-        country: data.country,
-        region: data.regionName,
+        country: data.country_name || data.country,
+        region: data.region,
         city: data.city,
-        lat: data.lat,
-        lon: data.lon,
+        lat: data.latitude,
+        lon: data.longitude,
         timezone: data.timezone,
-        isp: data.isp
+        isp: data.org
       })
     },
     {
@@ -1722,41 +1728,31 @@ async function tryAlternativeGeolocationServices(originalRequest) {
         // For ipify, we only get IP, so we need to get location data from ipinfo
         const ipData = data;
         try {
-          const ipInfoResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=`, {
+          const ipInfoResponse = await fetch(`https://ipinfo.io/${ipData.ip}`, {
             signal: AbortSignal.timeout(5000)
           });
           if (ipInfoResponse.ok) {
             const ipInfoData = await ipInfoResponse.json();
-            const [lat, lon] = ipInfoData.loc.split(',').map(Number);
-            return {
-              country: ipInfoData.country,
-              region: ipInfoData.region,
-              city: ipInfoData.city,
-              lat,
-              lon,
-              timezone: ipInfoData.timezone,
-              isp: ipInfoData.org
-            };
+            if (ipInfoData.loc) {
+              const [lat, lon] = ipInfoData.loc.split(',').map(Number);
+              return {
+                country: ipInfoData.country,
+                region: ipInfoData.region,
+                city: ipInfoData.city,
+                lat,
+                lon,
+                timezone: ipInfoData.timezone,
+                isp: ipInfoData.org
+              };
+            }
           }
         } catch (error) {
-          console.warn('Failed to get location data from ipinfo:', error);
+          // Silent fail, return empty object
         }
         return {};
       }
-    },
-    {
-      name: 'ipapi.co',
-      url: 'https://ipapi.co/json/',
-      parser: (data) => ({
-        country: data.country_name,
-        region: data.region,
-        city: data.city,
-        lat: data.latitude,
-        lon: data.longitude,
-        timezone: data.timezone,
-        isp: data.org
-      })
     }
+    // Removed ip-api.com due to persistent 403 rate limiting errors
   ];
 
   // Try each service in order

@@ -23,7 +23,7 @@ class LiveChatService {
   connect(token: string): Promise<string> {
     return new Promise((resolve, reject) => {
       // Use the same environment variable as the rest of the application
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
       // Assuming the socket.io server is on the same base URL
       const url = baseUrl.replace(/^http/, 'ws');
       
