@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { webSocketService } from './webSocketService';
+import WebSocketService from './webSocketService';
 import { SubDAOService } from './subDAOService';
 import { MarketplaceFeeService } from './marketplaceFeeService';
 import { GovernanceRewardsService } from './governanceRewardsService';
@@ -7,6 +7,9 @@ import { APIAccessService } from './apiAccessService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+
+// Create an instance of the WebSocket service
+const webSocketService = new WebSocketService();
 
 export interface RevenueSource {
   id: string;

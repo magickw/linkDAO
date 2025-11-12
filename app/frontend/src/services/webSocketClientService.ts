@@ -48,7 +48,7 @@ export class WebSocketClientService {
 
   constructor(config: WebSocketClientConfig) {
     this.config = config;
-    this.setupEventListeners();
+    this.setupSocketEventHandlers();
   }
 
   // Connection Management
@@ -518,7 +518,7 @@ export const getWebSocketClient = (): WebSocketClientService | null => {
   return webSocketClientService;
 };
 
-export const shutdownWebSocketClient = (): void {
+export const shutdownWebSocketClient = (): void => {
   if (webSocketClientService) {
     webSocketClientService.disconnect();
     webSocketClientService = null;

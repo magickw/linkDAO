@@ -5,9 +5,14 @@
  * when WebSocket connections fail or are unavailable due to resource constraints.
  */
 
-import { webSocketService, WebSocketService } from './webSocketService';
+import { EventEmitter } from 'events';
+import WebSocketService from './webSocketService';
 import { requestManager } from './requestManager';
 
+// Create an instance of the WebSocket service
+const webSocketService = new WebSocketService();
+
+// Fallback configuration
 interface FallbackConfig {
   enabled: boolean;
   pollingInterval: number;
@@ -305,7 +310,7 @@ export class WebSocketConnectionManager {
     return {
       ...this.state,
       stats: {
-        webSocketStats: this.webSocketService.getStats(),
+        webSocketStats: this.webSocketService.getConnectionState(),
         pollingActive: !!this.pollingInterval,
         lastPollingData: Object.fromEntries(this.lastPollingData)
       }
@@ -320,7 +325,11 @@ export class WebSocketConnectionManager {
       this.state.resourceConstrained = false;
     }
     
-    this.webSocketService.forceReconnect();
+    // Since there's no forceReconnect method, we'll disconnect and reconnect
+    this.webSocketService.disconnect();
+    this.webSocketService.connect().catch(error => {
+      console.error('Force reconnection failed:', error);
+    });
   }
 
   // Update fallback configuration

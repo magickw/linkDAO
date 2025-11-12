@@ -3,7 +3,7 @@
  * Extends existing WebSocket service for community enhancements
  */
 
-import { webSocketService } from './webSocketService';
+import WebSocketService from './webSocketService';
 import { cacheInvalidationService } from './communityCache';
 import { 
   EnhancedPost, 
@@ -11,6 +11,9 @@ import {
   WalletActivity,
   ActivityEvent 
 } from '../types/communityEnhancements';
+
+// Create an instance of the WebSocket service
+const webSocketService = new WebSocketService();
 
 // Real-time event types
 export interface CommunityRealTimeEvents {

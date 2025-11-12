@@ -20,6 +20,12 @@ export interface MessageAttachment {
   mimeType: string;
 }
 
+// Add the missing MessageStatus type
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+// Add the missing MessagePriority type
+export type MessagePriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface Conversation {
   id: string;
   participants: string[];
@@ -67,7 +73,8 @@ export interface ChatHistoryResponse {
   prevCursor?: string;
 }
 
-export interface TypingStatus {
+// Add the missing TypingIndicator type
+export interface TypingIndicator {
   conversationId: string;
   userId: string;
   isTyping: boolean;

@@ -3,9 +3,21 @@
  * Provides instant chat, encryption, multi-device support, and message management
  */
 
-import { webSocketService } from './webSocketService';
 import { ethers } from 'ethers';
 import { OfflineMessageQueueService } from './offlineMessageQueueService';
+import { io, Socket } from 'socket.io-client';
+import { v4 as uuidv4 } from 'uuid';
+import WebSocketService from './webSocketService';
+import { 
+  Message, 
+  Conversation, 
+  MessageStatus, 
+  TypingIndicator,
+  MessagePriority
+} from '../types/messaging';
+
+// Create an instance of the WebSocket service
+const webSocketService = new WebSocketService();
 
 export interface ChatMessage {
   id: string;
@@ -169,9 +181,9 @@ class MessagingService {
       // Generate or retrieve encryption key
       await this.initializeEncryption();
 
-      // Connect to WebSocket and register
-      webSocketService.connect();
-      webSocketService.register(this.currentAddress);
+      // Connect to WebSocket and authenticate
+      await webSocketService.connect();
+      webSocketService.send('authenticate', { walletAddress: this.currentAddress });
 
       // Load existing data
       await this.loadConversations();
