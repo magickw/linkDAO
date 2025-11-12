@@ -398,6 +398,14 @@ import notificationPreferencesRoutes from './routes/notificationPreferencesRoute
 import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/securityRoutes';
 import searchRoutes from './routes/searchRoutes';
+// Import reputation routes
+import { reputationRoutes } from './routes/reputationRoutes';
+
+// Reputation routes
+app.use('/marketplace/reputation', reputationRoutes);
+
+// Add API reputation routes for frontend compatibility
+app.use('/api/reputation', reputationRoutes);
 
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
@@ -507,10 +515,16 @@ app.use('/api/communities', communityCommentRoutes);
 // Use messaging routes
 app.use('/api/messaging', messagingRoutes);
 
+// Reputation routes
+
+
 // Use notification preferences routes
 // DISABLED: Heavy routes (saves ~200MB memory)
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
 app.use('/api/mobile', mobileRoutes);
+
+// User profile API routes
+app.use('/api/profiles', userProfileRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
@@ -725,9 +739,6 @@ app.use('/api/marketplace', sellerVerificationRoutes);
 // ENS validation routes
 app.use('/api/marketplace', ensValidationRoutes);
 
-// User profile API routes
-app.use('/api/profiles', userProfileRoutes);
-
 // Add the missing endpoint that matches the frontend expectation
 app.get('/api/profiles/address/:address', async (req, res) => {
   try {
@@ -928,12 +939,6 @@ app.use('/api/marketplace/search', marketplaceSearchRoutes);
 
 // Price oracle routes
 app.use('/api/price-oracle', priceOracleRoutes);
-
-// Reputation routes
-app.use('/marketplace/reputation', reputationRoutes);
-
-// Add API reputation routes for frontend compatibility
-app.use('/api/reputation', reputationRoutes);
 
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
