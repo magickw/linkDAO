@@ -78,14 +78,6 @@ class AuthService {
           const currentUser = await this.getCurrentUser();
           if (currentUser && currentUser.address === address) {
             console.log('✅ Reusing existing valid session for address:', address);
-            // Check if user has admin role before returning success
-            const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(currentUser.role);
-            if (!isAdminUser) {
-              return { 
-                success: false, 
-                error: 'Your account does not have administrative privileges. Please contact your system administrator.' 
-              };
-            }
             return {
               success: true,
               token: this.token,
@@ -112,22 +104,8 @@ class AuthService {
           if (now - timestamp < TOKEN_EXPIRY_TIME) {
             try {
               const userData = JSON.parse(storedUserData);
-              // Check if user has admin role before restoring session
-              const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(userData.role);
-              if (!isAdminUser) {
-                console.log('Stored session found but user lacks admin privileges, clearing session');
-                // Clear non-admin session
-                localStorage.removeItem('linkdao_access_token');
-                localStorage.removeItem('linkdao_wallet_address');
-                localStorage.removeItem('linkdao_signature_timestamp');
-                localStorage.removeItem('linkdao_user_data');
-                return { 
-                  success: false, 
-                  error: 'Your account does not have administrative privileges. Please contact your system administrator.' 
-                };
-              }
               this.setToken(storedToken);
-              console.log('✅ Restored admin session from localStorage for address:', address);
+              console.log('✅ Restored session from localStorage for address:', address);
               return {
                 success: true,
                 token: storedToken,
@@ -599,19 +577,14 @@ class AuthService {
             tier: 'none'
           };
         }
-        // For other errors, still try to parse the response
+        
+        throw new Error(`KYC status request failed (${response.status})`);
       }
       
       const data = await response.json();
-      
-      if (data.success) {
-        return data;
-      }
-      
-      return null;
+      return data.data || data;
     } catch (error) {
       console.error('Failed to get KYC status:', error);
-      // Return null instead of throwing to prevent app crashes
       return null;
     }
   }

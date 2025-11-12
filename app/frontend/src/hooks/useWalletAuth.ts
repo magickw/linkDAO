@@ -1,15 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useState, useEffect, useRef } from 'react';
+import { useAccount } from 'wagmi';
+import { useSignMessage } from '@/hooks/useSignMessage';
 import { useAuth } from '@/context/AuthContext';
-import { authService } from '@/services/authService';
-import { enhancedAuthService } from '@/services/enhancedAuthService';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
-
-interface WalletInfo {
-  isBaseWallet: boolean;
-  chainId?: number;
-  connector?: string;
-}
+import { WalletInfo } from '@/types/wallet';
 
 interface UseWalletAuthReturn {
   isAuthenticating: boolean;
@@ -162,5 +156,3 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
     error,
   };
 };
-
-export default useWalletAuth;
