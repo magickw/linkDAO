@@ -189,12 +189,11 @@ const nextConfig = {
   trailingSlash: false,
 
   // Optimize for faster builds
-  swcMinify: true,
-
+  // swcMinify is now enabled by default in Next.js 13+
+  
   // Enable experimental features that improve SEO
   experimental: {
-    // Enable new JSX transform
-    newNextLinkBehavior: true,
+    // newNextLinkBehavior is now the default behavior
     // Optimize server-side rendering
     optimizeServerReact: true,
   }

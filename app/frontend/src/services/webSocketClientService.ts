@@ -101,10 +101,9 @@ export class WebSocketClientService {
           // Additional options to improve connection reliability
           upgrade: true,
           rememberUpgrade: true,
-          randomizationFactor: 0.5,
-          backoff: true,
-          backoffFactor: 1.5,
-          backoffMax: 10000
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          randomizationFactor: 0.5
         });
 
         this.setupSocketEventHandlers();
