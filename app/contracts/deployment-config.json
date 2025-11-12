@@ -28,6 +28,30 @@
       "confirmations": 2,
       "timeout": 300000
     },
+    "base": {
+      "chainId": 8453,
+      "name": "Base Mainnet",
+      "rpcUrl": "${BASE_MAINNET_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "1000000000",
+        "maxFeePerGas": "10000000000"
+      },
+      "confirmations": 2,
+      "timeout": 300000
+    },
+    "baseSepolia": {
+      "chainId": 84532,
+      "name": "Base Sepolia Testnet",
+      "rpcUrl": "${BASE_SEPOLIA_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "1000000000",
+        "maxFeePerGas": "10000000000"
+      },
+      "confirmations": 1,
+      "timeout": 150000
+    },
     "localhost": {
       "chainId": 31337,
       "name": "Hardhat Local",

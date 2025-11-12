@@ -184,5 +184,7 @@ export type { CharitySubDAOFactory } from "./contracts/SubDAOFactory.sol/Charity
 export { CharitySubDAOFactory__factory } from "./factories/contracts/SubDAOFactory.sol/CharitySubDAOFactory__factory";
 export type { ISubDAO } from "./contracts/SubDAOFactory.sol/ISubDAO";
 export { ISubDAO__factory } from "./factories/contracts/SubDAOFactory.sol/ISubDAO__factory";
+export type { MockUSDC } from "./contracts/test/MockUSDC";
+export { MockUSDC__factory } from "./factories/contracts/test/MockUSDC__factory";
 export type { TipRouter } from "./contracts/TipRouter";
 export { TipRouter__factory } from "./factories/contracts/TipRouter__factory";

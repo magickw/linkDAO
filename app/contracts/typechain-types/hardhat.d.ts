@@ -369,6 +369,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ISubDAO__factory>;
     getContractFactory(
+      name: "MockUSDC",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockUSDC__factory>;
+    getContractFactory(
       name: "TipRouter",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TipRouter__factory>;
@@ -818,6 +822,11 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.ISubDAO>;
+    getContractAt(
+      name: "MockUSDC",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockUSDC>;
     getContractAt(
       name: "TipRouter",
       address: string,

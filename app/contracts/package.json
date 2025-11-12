@@ -9,6 +9,8 @@
     "deploy:localhost": "hardhat run scripts/deploy-and-claim-ownership.ts --network localhost",
     "deploy:sepolia": "hardhat run scripts/deploy-and-claim-ownership.ts --network sepolia",
     "deploy:mainnet": "hardhat run scripts/deploy-and-claim-ownership.ts --network mainnet",
+    "deploy:base": "hardhat run scripts/deploy-and-claim-ownership.ts --network base",
+    "deploy:base-sepolia": "hardhat run scripts/deploy-and-claim-ownership.ts --network baseSepolia",
     "deploy:polygon": "hardhat run scripts/deploy-and-claim-ownership.ts --network polygon",
     "deploy:mumbai": "hardhat run scripts/deploy-and-claim-ownership.ts --network mumbai",
     "check:deployment": "hardhat run scripts/check-deployment-status.ts",
