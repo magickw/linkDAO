@@ -139,3 +139,9 @@ export interface NetworkInfo {
   gasPrice: number;
   isTestnet: boolean;
 }
+
+export interface WalletInfo {
+  isBaseWallet: boolean;
+  chainId?: number;
+  connector?: string;
+}

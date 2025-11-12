@@ -53,7 +53,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       // 5. Recently attempted authentication (within 30 seconds)
       // 6. Already attempted for this address
       // 7. Valid session already exists
-      
+
       if (!isConnected || !address || isAuthenticating) {
         return false;
       }
@@ -85,16 +85,16 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
         // Mark this address as attempted
         authAttemptRef.current = address;
         lastAuthTimeRef.current = Date.now();
-        
+
         // Add a delay to ensure wallet is fully connected
         const timeoutId = setTimeout(() => {
           authenticate();
         }, 500);
-        
+
         return () => clearTimeout(timeoutId);
       }
     });
-  }, [isConnected, address, isAuthenticated, isAuthenticating, user?.address, validateSession]);
+  }, [isConnected, address, isAuthenticated, isAuthenticating, user?.address]);
 
   const authenticate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!address || !isConnected) {
@@ -126,11 +126,10 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
     try {
       // Use the login method from AuthContext which handles the full flow
       const loginResult = await login(address, connector, 'connected');
-      
+
       if (loginResult.success) {
         console.log('Wallet authentication successful');
-        // Reset attempt tracking on success
-        authAttemptRef.current = null;
+        // Keep authAttemptRef set to prevent re-prompting on page refresh
         return { success: true };
       } else {
         const errorMsg = loginResult.error || 'Authentication failed';
