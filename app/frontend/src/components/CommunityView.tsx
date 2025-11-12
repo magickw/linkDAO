@@ -66,14 +66,29 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           return;
         }
 
-        setCommunityData(data);
+        // Ensure community data has all required properties with defaults
+        const processedCommunityData = {
+          ...data,
+          displayName: data.displayName || data.name || 'Unnamed Community',
+          description: data.description || 'No description available',
+          memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
+          avatar: data.avatar || '🏛️',
+          rules: Array.isArray(data.rules) ? data.rules : [],
+          moderators: Array.isArray(data.moderators) ? data.moderators : [],
+          createdAt: data.createdAt || new Date(),
+          onlineMemberCount: typeof data.onlineMemberCount === 'number' ? data.onlineMemberCount : 0
+        };
+
+        setCommunityData(processedCommunityData);
 
         // Fetch real posts for the community
         const communityPosts = await PostService.getPostsByCommunity(data.id);
-        setPosts(communityPosts);
+        setPosts(communityPosts || []); // Ensure posts is always an array
       } catch (err) {
         console.error('Error fetching community data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load community');
+        setCommunityData(null);
+        setPosts([]);
       } finally {
         setLoading(false);
       }
@@ -188,19 +203,21 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-4 -mt-12">
                 <div className="text-5xl bg-white dark:bg-gray-800 rounded-full p-2 border-4 border-white dark:border-gray-800">
-                  {communityData.avatar}
+                  {communityData?.avatar || '🏛️'}
                 </div>
                 <div className="mt-8">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {communityData.displayName || communityData.name}
+                    {communityData?.displayName || communityData?.name || 'Unnamed Community'}
                   </h1>
                   <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
                     <span className="flex items-center space-x-1">
                       <Users className="w-4 h-4" />
-                      <span>{communityData.memberCount.toLocaleString()} members</span>
+                      <span>
+                        {(typeof communityData?.memberCount === 'number' ? communityData.memberCount : 0).toLocaleString()} members
+                      </span>
                     </span>
                     <span>•</span>
-                    <span>{communityData.onlineMemberCount || 0} online</span>
+                    <span>{typeof communityData?.onlineMemberCount === 'number' ? communityData.onlineMemberCount : 0} online</span>
                   </div>
                 </div>
               </div>
@@ -229,7 +246,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
           </div>
           <div className="p-4">
             <p className="text-gray-700 dark:text-gray-300 text-sm">
-              {communityData.description}
+              {communityData?.description || 'No description available'}
             </p>
           </div>
         </div>
@@ -296,90 +313,108 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
 
         {/* Reddit-style Posts Feed */}
         <div className="space-y-0">
-          {posts.map(post => (
-            <div 
-              key={post.id} 
-              className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${
-                highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
-              }`}
-            >
-              <div className="flex">
-                {/* Reddit-style Vote Column */}
-                <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
-                  <button
-                    onClick={() => handleVote(post.id, 'up')}
-                    className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
-                  >
-                    <ArrowUp className="w-5 h-5" />
-                  </button>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
-                    {post.upvotes - post.downvotes}
-                  </span>
-                  <button
-                    onClick={() => handleVote(post.id, 'down')}
-                    className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
-                  >
-                    <ArrowDown className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Post Content */}
-                <div className="flex-1 p-3">
-                  {/* Post Metadata - Reddit Style */}
-                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {communityData.displayName || communityData.name}
+          {Array.isArray(posts) && posts.length > 0 ? (
+            posts.map(post => (
+              <div 
+                key={post.id} 
+                className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${
+                  highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
+                }`}
+              >
+                <div className="flex">
+                  {/* Reddit-style Vote Column */}
+                  <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
+                    <button
+                      onClick={() => handleVote(post.id, 'up')}
+                      className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
+                    >
+                      <ArrowUp className="w-5 h-5" />
+                    </button>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
+                      {(typeof post.upvotes === 'number' ? post.upvotes : 0) - (typeof post.downvotes === 'number' ? post.downvotes : 0)}
                     </span>
-                    <span>•</span>
-                    <span>Posted by u/{post.author}</span>
-                    <span>•</span>
-                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                    {post.stakedValue && (
-                      <>
-                        <span>•</span>
-                        <span className="text-green-600 dark:text-green-400">
-                          {post.stakedValue} 🪙
+                    <button
+                      onClick={() => handleVote(post.id, 'down')}
+                      className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
+                    >
+                      <ArrowDown className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Post Content */}
+                  <div className="flex-1 p-3">
+                    {/* Post Metadata - Reddit Style */}
+                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {communityData?.displayName || communityData?.name || 'Community'}
+                      </span>
+                      <span>•</span>
+                      <span>Posted by u/{post.author || 'Unknown'}</span>
+                      <span>•</span>
+                      <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Unknown date'}</span>
+                      {typeof post.stakedValue === 'number' && post.stakedValue > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-green-600 dark:text-green-400">
+                            {post.stakedValue} 🪙
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Post Title - Reddit Style */}
+                    <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+                      {post.title || 'Untitled Post'}
+                    </h3>
+
+                    {/* Post Content - Reddit Style */}
+                    <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
+                      {post.content || 'No content available'}
+                    </p>
+
+                    {/* Flair - Reddit Style */}
+                    <div className="mb-2">
+                      {post.flair && (
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
+                          {post.flair}
                         </span>
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* Post Title - Reddit Style */}
-                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
-                    {post.title}
-                  </h3>
-
-                  {/* Post Content - Reddit Style */}
-                  <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
-                    {post.content}
-                  </p>
-
-                  {/* Flair - Reddit Style */}
-                  <div className="mb-2">
-                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
-                      {post.flair}
-                    </span>
-                  </div>
-
-                  {/* Action Bar - Reddit Style */}
-                  <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>{post.commentCount} Comments</span>
-                    </button>
-                    <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                      <Share className="w-4 h-4" />
-                      <span>Share</span>
-                    </button>
-                    <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                      <Bookmark className="w-4 h-4" />
-                      <span>Save</span>
-                    </button>
+                    {/* Action Bar - Reddit Style */}
+                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>{typeof post.commentCount === 'number' ? post.commentCount : 0} Comments</span>
+                      </button>
+                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                        <Share className="w-4 h-4" />
+                        <span>Share</span>
+                      </button>
+                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                        <Bookmark className="w-4 h-4" />
+                        <span>Save</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No posts yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                Be the first to start a discussion in this community!
+              </p>
+              <button 
+                onClick={handleCreatePost}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              >
+                Create First Post
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -392,25 +427,25 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               About Community
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-              {communityData.description}
+              {communityData?.description || 'No description available'}
             </p>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Members</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {communityData.memberCount.toLocaleString()}
+                  {(typeof communityData?.memberCount === 'number' ? communityData.memberCount : 0).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Online</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {communityData.onlineMemberCount || 0}
+                  {typeof communityData?.onlineMemberCount === 'number' ? communityData.onlineMemberCount : 0}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Created</span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {communityData.createdAt.toLocaleDateString()}
+                  {communityData?.createdAt ? new Date(communityData.createdAt).toLocaleDateString() : 'Unknown'}
                 </span>
               </div>
             </div>
@@ -418,11 +453,15 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-xs uppercase tracking-wide">Community Rules</h4>
               <div className="space-y-1">
-                {communityData.rules.map((rule, index) => (
+                {Array.isArray(communityData?.rules) ? communityData.rules.map((rule, index) => (
                   <div key={index} className="text-xs text-gray-600 dark:text-gray-400">
                     <span className="font-medium">{index + 1}.</span> {rule}
                   </div>
-                ))}
+                )) : (
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    No rules defined
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -496,12 +535,18 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               <span>Moderators</span>
             </h3>
             <div className="space-y-1">
-              {communityData.moderators.map((mod, index) => (
-                <div key={index} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-900 dark:text-white">u/{mod}</span>
-                  <span className="text-gray-500 dark:text-gray-400">Moderator</span>
+              {Array.isArray(communityData?.moderators) && communityData.moderators.length > 0 ? (
+                communityData.moderators.map((mod, index) => (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <span className="text-gray-900 dark:text-white">u/{mod}</span>
+                    <span className="text-gray-500 dark:text-gray-400">Moderator</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  No moderators assigned
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

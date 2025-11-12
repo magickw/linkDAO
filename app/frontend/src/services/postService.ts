@@ -468,7 +468,19 @@ export class PostService {
         throw new Error(error.error || 'Failed to fetch posts');
       }
       
-      return response.json();
+      const data = await response.json();
+      
+      // Handle different response structures
+      if (Array.isArray(data)) {
+        return data;
+      } else if (data && typeof data === 'object' && Array.isArray(data.posts)) {
+        return data.posts;
+      } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
+        return data.data;
+      } else {
+        console.warn('Unexpected response structure for getPostsByCommunity:', data);
+        return [];
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -476,7 +488,9 @@ export class PostService {
         throw new Error('Request timeout');
       }
       
-      throw error;
+      // Return empty array instead of throwing to prevent UI crashes
+      console.error('Error fetching posts by community:', error);
+      return [];
     }
   }
 }

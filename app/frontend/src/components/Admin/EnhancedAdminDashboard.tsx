@@ -31,9 +31,10 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
-  EyeOff
+  EyeOff,
+  LogOut
 } from 'lucide-react';
-import { usePermissions } from '@/hooks/useAuth';
+import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
 import { Button, GlassPanel } from '@/design-system';
 import { ModerationQueue } from './ModerationQueue';
@@ -72,6 +73,7 @@ interface FavoriteTab {
 export function EnhancedAdminDashboard() {
   const router = useRouter();
   const { isAdmin, hasPermission, user } = usePermissions();
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -407,6 +409,14 @@ export function EnhancedAdminDashboard() {
                   {notificationCount}
                 </span>
               )}
+            </button>
+            
+            <button
+              onClick={logout}
+              className="flex items-center text-gray-400 hover:text-white text-sm"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              Logout
             </button>
             
             <div className="flex items-center">

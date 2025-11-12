@@ -252,6 +252,17 @@ export class CommunityService {
       
       const data = await response.json();
       
+      // Handle different response structures
+      if (!data.success && !data.data && !Array.isArray(data) && typeof data === 'object') {
+        // If data is already a community object, return it
+        if (data.id && data.name) {
+          // Cache the community for offline support
+          await this.offlineCacheService.cacheCommunity(data);
+          return data;
+        }
+        return null;
+      }
+      
       if (!data.success || !data.data) {
         return null;
       }

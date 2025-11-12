@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import { useWeb3 } from '@/context/Web3Context';
 
 // Web3-Native Community Enhancement Components
 import { LivePostUpdates } from '@/components/RealTimeUpdates/LivePostUpdates';
@@ -145,11 +146,13 @@ const mockCommunities = [
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
+  const { address, isConnected } = useWeb3();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
+  const [userAdminRoles, setUserAdminRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -225,7 +228,7 @@ const CommunitiesPage: React.FC = () => {
     };
 
     loadEnhancedCommunities();
-  }, []);
+  }, [address, isConnected]);
 
   // Load posts from backend API with pagination
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
@@ -287,12 +290,19 @@ const CommunitiesPage: React.FC = () => {
     try {
       // Initialize with empty data instead of mock data
       const userRoles: Record<string, string> = {};
+      const userAdminRoles: Record<string, string> = {};
       const tokenBalances: Record<string, number> = {};
       const liveTokenPrices: Record<string, number> = {};
       const stakingData: Record<string, any> = {};
 
       communitiesData.forEach(community => {
         userRoles[community.id] = 'visitor';
+        // Check if user is an admin/moderator of this community (based on moderators field)
+        if (community.moderators && Array.isArray(community.moderators) && 
+            address && community.moderators.includes(address)) {
+          userRoles[community.id] = 'admin';
+          userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
+        }
         tokenBalances[community.id] = 0;
         liveTokenPrices[community.id] = 0;
         stakingData[community.id] = {
@@ -304,6 +314,7 @@ const CommunitiesPage: React.FC = () => {
       });
 
       setUserRoles(userRoles);
+      setUserAdminRoles(userAdminRoles);
       setTokenBalances(tokenBalances);
       setLiveTokenPrices(liveTokenPrices);
       setStakingData(stakingData);
@@ -316,6 +327,7 @@ const CommunitiesPage: React.FC = () => {
       console.error('Error loading Web3 enhanced data:', err);
       // Provide empty data as fallback
       setUserRoles({});
+      setUserAdminRoles({});
       setTokenBalances({});
       setLiveTokenPrices({});
       setStakingData({});
@@ -372,6 +384,7 @@ const CommunitiesPage: React.FC = () => {
       // Add to joined communities
       setJoinedCommunities(prev => [...prev, newCommunity.id]);
       setUserRoles(prev => ({ ...prev, [newCommunity.id]: 'admin' }));
+      setUserAdminRoles(prev => ({ ...prev, [newCommunity.id]: 'admin' }));
 
       setShowCreateCommunityModal(false);
 
@@ -789,7 +802,7 @@ const CommunitiesPage: React.FC = () => {
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard
-                  communities={communityList.filter(c => joinedCommunities.includes(c.id))}
+                  communities={communityList.filter(c => joinedCommunities.includes(c.id) || userAdminRoles[c.id])}
                   maxDisplay={10}
                   onManageClick={() => router.push('/communities/manage')}
                 />

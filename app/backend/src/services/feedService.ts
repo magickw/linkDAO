@@ -118,13 +118,20 @@ export class FeedService {
       } else {
         // User doesn't exist in database, but let's still try to show their posts
         // Get or create user first
-        const [userRecord] = await db.insert(users)
+        let userRecord = (await db.insert(users)
           .values({
             walletAddress: normalizedAddress,
             createdAt: new Date()
           })
           .onConflictDoNothing()
-          .returning();
+          .returning())[0];
+        
+        // If onConflictDoNothing prevented insertion, we need to fetch the existing user
+        if (!userRecord) {
+          userRecord = (await db.select().from(users)
+            .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
+            .limit(1))[0];
+        }
         
         // If user was created or already exists, show their posts
         if (userRecord) {

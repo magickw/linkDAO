@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Layout from '@/components/Layout';
 import CommunityView from '@/components/CommunityView';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -101,10 +102,12 @@ export default function CommunityPage() {
         )}
       </Head>
       <div className="px-4 py-6 sm:px-0">
-        <CommunityView 
-          communitySlug={community as string} 
-          highlightedPostId={post as string}
-        />
+        <ErrorBoundary>
+          <CommunityView 
+            communitySlug={community as string} 
+            highlightedPostId={post as string}
+          />
+        </ErrorBoundary>
       </div>
     </Layout>
   );
