@@ -55,12 +55,19 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch real community data from API
         const data = await CommunityService.getCommunityBySlug(communitySlug);
-        
+
+        if (!data) {
+          setError('Community not found');
+          setCommunityData(null);
+          setPosts([]);
+          return;
+        }
+
         setCommunityData(data);
-        
+
         // Fetch real posts for the community
         const communityPosts = await PostService.getPostsByCommunity(data.id);
         setPosts(communityPosts);

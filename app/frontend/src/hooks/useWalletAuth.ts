@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAccount } from 'wagmi';
-import { useSignMessage } from '@/hooks/useSignMessage';
+import { useAccount, useSignMessage } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
 import { WalletInfo } from '@/types/wallet';

@@ -361,15 +361,22 @@ const CommunitiesPage: React.FC = () => {
   const handleCreateCommunity = async (communityData: any) => {
     setIsCreatingCommunity(true);
     try {
-      // TODO: Implement actual community creation with Web3 features
       console.log('Creating community:', communityData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
+      // Create community via API
+      const newCommunity = await CommunityService.createCommunity(communityData);
+
+      // Add the new community to the list
+      setCommunities(prev => [newCommunity, ...prev]);
+
+      // Add to joined communities
+      setJoinedCommunities(prev => [...prev, newCommunity.id]);
+      setUserRoles(prev => ({ ...prev, [newCommunity.id]: 'admin' }));
+
       setShowCreateCommunityModal(false);
-      // Navigate to the new community using the slug
-      router.push(`/communities/${communityData.slug}`);
+
+      // Navigate to the new community using the slug or name
+      router.push(`/communities/${newCommunity.slug || newCommunity.name || newCommunity.id}`);
     } catch (err) {
       console.error('Error creating community:', err);
       throw err;
