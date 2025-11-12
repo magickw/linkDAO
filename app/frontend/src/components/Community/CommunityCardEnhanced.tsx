@@ -196,7 +196,7 @@ export const CommunityCardEnhanced: React.FC<CommunityCardProps> = ({
           )}
 
           {/* Tags */}
-          {community.tags.length > 0 && (
+          {Array.isArray(community.tags) && community.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3" aria-label="Community tags">
               {community.tags.slice(0, compact ? 2 : 3).map((tag, index) => (
                 <span 

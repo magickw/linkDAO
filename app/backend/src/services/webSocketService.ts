@@ -154,7 +154,8 @@ export class WebSocketService {
       upgradeTimeout: 30000,
       httpCompression: !this.isResourceConstrained,
       perMessageDeflate: !this.isResourceConstrained,
-      wsEngine: 'ws', // Use native WebSocket engine
+      // wsEngine should be the actual ws module, not a string
+      // Removed wsEngine config - let Socket.IO use its default WebSocket engine
       // Ensure proper handling of HTTP requests
       serveClient: false,
       // Additional security and performance settings

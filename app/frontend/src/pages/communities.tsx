@@ -515,7 +515,12 @@ const CommunitiesPage: React.FC = () => {
 
   // Defensive: normalize communities to array for rendering and filter out invalid entries
   const communityList: Community[] = Array.isArray(communities) 
-    ? communities.filter(community => community && typeof community === 'object' && community.id)
+    ? communities
+        .filter(community => community && typeof community === 'object' && community.id)
+        .map(community => ({
+          ...community,
+          tags: Array.isArray(community.tags) ? community.tags : []
+        }))
     : [];
 
   // Mobile Web3 community data with defensive checks
