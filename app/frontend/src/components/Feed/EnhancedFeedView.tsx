@@ -119,7 +119,7 @@ const EnhancedFeedView = React.memo(({
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
-    feedSource: 'following', // Default to 'following' to ensure users see their own posts
+    feedSource: 'following', // Ensure 'following' feed to include user's own posts
     userAddress: address || '', // Add user address for personalized feed
     ...initialFilter
   });
@@ -138,7 +138,7 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      // Use 'following' feed to ensure users see their own posts
+      // Ensure feedSource is always 'following' to include user's own posts
       feedSource: 'following',
       userAddress: address || '' // Update user address when it changes
     }));

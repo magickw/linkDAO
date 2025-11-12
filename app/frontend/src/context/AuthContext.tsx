@@ -113,26 +113,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Initialize authentication state
+  // Initialize authentication state with comprehensive session checking
   useEffect(() => {
     const initAuth = async () => {
       setIsLoading(true);
       
+      // First check our internal session state
+      if (accessToken && user) {
+        console.log('✅ Using existing session from context state');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Then check stored session
       const hasValidSession = await checkStoredSession();
-      if (!hasValidSession) {
-        // Check if wallet is already connected
-        if (typeof window !== 'undefined' && window.ethereum) {
-          try {
-            const accounts = await window.ethereum.request({
-              method: 'eth_accounts',
-            });
-            if (accounts.length > 0) {
-              console.log('👛 Wallet already connected, checking session...');
-              // Wallet is connected but no valid session, user needs to sign again
+      if (hasValidSession) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Also check if authService has a valid session
+      if (authService.isAuthenticated()) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address) {
+            const token = authService.getToken();
+            if (token) {
+              setUser(currentUser);
+              setAccessToken(token);
+              // Store in localStorage to persist
+              storeSession(token, currentUser);
+              console.log('✅ Using existing valid session from authService');
+              setIsLoading(false);
+              return;
             }
-          } catch (error) {
-            console.error('Error checking wallet connection:', error);
           }
+        } catch (error) {
+          console.warn('Failed to validate existing authService session:', error);
+        }
+      }
+      
+      // Also check enhancedAuthService
+      const sessionStatus = enhancedAuthService.getSessionStatus();
+      if (sessionStatus.isAuthenticated && sessionStatus.address) {
+        try {
+          const currentUser = await enhancedAuthService.getCurrentUser();
+          if (currentUser && currentUser.address) {
+            setUser(currentUser);
+            setAccessToken(enhancedAuthService.getToken());
+            console.log('✅ Using existing valid session from enhancedAuthService');
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to validate existing enhancedAuthService session:', error);
+        }
+      }
+      
+      // Check if wallet is already connected but no valid session exists
+      if (typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({
+            method: 'eth_accounts',
+          });
+          if (accounts.length > 0) {
+            console.log('👛 Wallet already connected, no valid session found - will require signature when needed');
+          }
+        } catch (error) {
+          console.error('Error checking wallet connection:', error);
         }
       }
       
@@ -140,7 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initAuth();
-  }, [checkStoredSession]);
+  }, [checkStoredSession, storeSession, user, accessToken]);
 
   // Handle wallet connection changes
   useEffect(() => {
@@ -177,7 +225,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const walletAddress = accounts[0];
 
-      // Check if we already have a valid session for this address
+      // Check if we already have a valid session for this address in multiple places
+      // First check the stored session in localStorage
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+      if (storedToken && storedAddress === walletAddress && storedTimestamp && storedUserData) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          try {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(storedToken);
+            setIsLoading(false);
+            console.log('✅ Using existing valid session from localStorage');
+            return;
+          } catch (parseError) {
+            console.warn('Failed to parse stored user data, proceeding with new authentication');
+          }
+        } else {
+          console.log('⏰ Stored session expired, clearing and requesting new signature');
+          // Clear expired session
+          Object.values(STORAGE_KEYS).forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (error) {
+              console.warn(`Failed to remove ${key} from localStorage:`, error);
+            }
+          });
+        }
+      }
+
+      // Check if we already have a valid session using validateSession function
       const sessionValidation = await validateSession(walletAddress);
       if (sessionValidation.isValid && sessionValidation.token) {
         console.log('✅ Using existing valid session');
@@ -189,6 +273,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setAccessToken(sessionValidation.token);
           setIsLoading(false);
           return;
+        }
+      }
+
+      // Check if authService already has a token for this address
+      if (authService.isAuthenticated()) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address === walletAddress) {
+            const token = authService.getToken();
+            if (token) {
+              setUser(currentUser);
+              setAccessToken(token);
+              setIsLoading(false);
+              console.log('✅ Using existing valid session from authService');
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to validate existing authService session:', error);
         }
       }
 
@@ -228,7 +331,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: true };
       }
 
-      // Check if we have a valid session for this address
+      // First check the stored session in localStorage
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+      if (storedToken && storedAddress === walletAddress && storedTimestamp && storedUserData) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          try {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(storedToken);
+            await loadKYCStatus();
+            setIsLoading(false);
+            console.log('✅ Using existing valid session from localStorage');
+            return { success: true };
+          } catch (parseError) {
+            console.warn('Failed to parse stored user data, proceeding with new authentication');
+          }
+        } else {
+          console.log('⏰ Stored session expired, clearing and requesting new signature');
+          // Clear expired session
+          Object.values(STORAGE_KEYS).forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (error) {
+              console.warn(`Failed to remove ${key} from localStorage:`, error);
+            }
+          });
+        }
+      }
+
+      // Check if we have a valid session using validateSession function
       const sessionValidation = await validateSession(walletAddress);
       if (sessionValidation.isValid && sessionValidation.token) {
         console.log('✅ Using existing valid session');
@@ -240,6 +379,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setAccessToken(sessionValidation.token);
           await loadKYCStatus();
           return { success: true };
+        }
+      }
+
+      // Check if authService already has a token for this address
+      if (authService.isAuthenticated()) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address === walletAddress) {
+            const token = authService.getToken();
+            if (token) {
+              setUser(currentUser);
+              setAccessToken(token);
+              await loadKYCStatus();
+              setIsLoading(false);
+              console.log('✅ Using existing valid session from authService');
+              return { success: true };
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to validate existing authService session:', error);
         }
       }
       
@@ -463,6 +622,61 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const enhancedAuthenticate = useCallback(async (options: { forceRefresh?: boolean } = {}): Promise<{ success: boolean; error?: string }> => {
     if (!address || !isConnected || !connector) {
       return { success: false, error: 'Wallet not connected' };
+    }
+
+    // Check for existing valid session first to avoid unnecessary signature requests
+    if (!options.forceRefresh) {
+      // Check the stored session in localStorage
+      const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
+      const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
+      const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+      if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          try {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(storedToken);
+            await loadKYCStatus();
+            console.log('✅ Using existing valid session from localStorage');
+            return { success: true };
+          } catch (parseError) {
+            console.warn('Failed to parse stored user data, proceeding with new authentication');
+          }
+        } else {
+          console.log('⏰ Stored session expired, clearing and requesting new signature');
+          // Clear expired session
+          Object.values(STORAGE_KEYS).forEach(key => {
+            try {
+              localStorage.removeItem(key);
+            } catch (error) {
+              console.warn(`Failed to remove ${key} from localStorage:`, error);
+            }
+          });
+        }
+      }
+
+      // Check enhanced auth service session
+      const sessionStatus = enhancedAuthService.getSessionStatus();
+      if (sessionStatus.isAuthenticated && sessionStatus.address === address) {
+        try {
+          const currentUser = await enhancedAuthService.getCurrentUser();
+          if (currentUser && currentUser.address === address) {
+            setUser(currentUser);
+            setAccessToken(enhancedAuthService.getToken());
+            await loadKYCStatus();
+            console.log('✅ Using existing valid session from enhancedAuthService');
+            return { success: true };
+          }
+        } catch (error) {
+          console.warn('Failed to validate existing enhancedAuthService session:', error);
+        }
+      }
     }
 
     try {

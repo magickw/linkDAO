@@ -4,6 +4,7 @@ import { apiCircuitBreaker, communityCircuitBreaker, feedCircuitBreaker, marketp
 import { useRequestCoalescing } from './useRequestCoalescing';
 import { actionQueue } from '../services/actionQueueService';
 import { Community } from '../models/Community';
+import { authService } from '../services/authService'; // Add authService import
 
 interface UseResilientAPIOptions {
   cacheKey?: string;
@@ -332,7 +333,15 @@ export function useCommunities(params?: any) {
 export function useFeed(params?: any) {
   const url = '/api/feed/enhanced' + (params ? `?${new URLSearchParams(params).toString()}` : '');
   
-  return useResilientAPI(url, { method: 'GET' }, {
+  // Include auth headers to ensure user identification
+  const optionsWithAuth = {
+    method: 'GET',
+    headers: {
+      ...authService.getAuthHeaders()
+    }
+  };
+  
+  return useResilientAPI(url, optionsWithAuth, {
     cacheKey: `feed:${JSON.stringify(params || {})}`,
     cacheTTL: 30000, // 30 seconds
     staleTTL: 300000, // 5 minutes for stale data
