@@ -9,8 +9,11 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
     using Strings for uint256;
 
-    // Mapping from address to token ID
-    mapping(address => uint256) public addressToTokenId;
+    // Mapping from address to token IDs (supporting multiple profiles per address)
+    mapping(address => uint256[]) public addressToTokenIds;
+    
+    // Mapping from address to primary profile token ID
+    mapping(address => uint256) public primaryProfile;
     
     // Mapping from token ID to profile data
     mapping(uint256 => Profile) public profiles;
@@ -21,13 +24,26 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
     // Counter for token IDs
     uint256 private _tokenIds;
     
+    // Profile visibility settings
+    enum Visibility {
+        Public,
+        FollowersOnly,
+        Private
+    }
+    
     struct Profile {
         string handle;
         string ens;
         string avatarCid;
         string bioCid;
+        string[] socialLinks; // New: Social media links
         uint256 createdAt;
+        Visibility visibility; // New: Profile visibility
+        bool verified; // New: Verification status
     }
+    
+    // Social links mapping (token ID => platform => URL)
+    mapping(uint256 => mapping(string => string)) public socialLinks;
     
     event ProfileCreated(
         address indexed owner,
@@ -41,6 +57,16 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         string handle,
         string avatarCid,
         string bioCid
+    );
+    
+    event PrimaryProfileChanged(
+        address indexed owner,
+        uint256 indexed tokenId
+    );
+    
+    event ProfileVisibilityChanged(
+        uint256 indexed tokenId,
+        Visibility visibility
     );
     
     constructor() ERC721("LinkDAOProfile", "LDP") Ownable(msg.sender) {}
@@ -74,7 +100,6 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         string memory bioCid
     ) public returns (uint256) {
         require(bytes(handle).length > 0, "Handle is required");
-        require(addressToTokenId[msg.sender] == 0, "Profile already exists");
         require(handleToTokenId[handle] == 0, "Handle already taken");
         
         _tokenIds++;
@@ -82,7 +107,14 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         
         _safeMint(msg.sender, newTokenId);
         
-        addressToTokenId[msg.sender] = newTokenId;
+        // Add to user's profile list
+        addressToTokenIds[msg.sender].push(newTokenId);
+        
+        // Set as primary if it's the first profile
+        if (addressToTokenIds[msg.sender].length == 1) {
+            primaryProfile[msg.sender] = newTokenId;
+        }
+        
         handleToTokenId[handle] = newTokenId;
         
         profiles[newTokenId] = Profile({
@@ -90,12 +122,57 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
             ens: ens,
             avatarCid: avatarCid,
             bioCid: bioCid,
-            createdAt: block.timestamp
+            socialLinks: new string[](0),
+            createdAt: block.timestamp,
+            visibility: Visibility.Public,
+            verified: false
         });
         
         emit ProfileCreated(msg.sender, newTokenId, handle, block.timestamp);
         
         return newTokenId;
+    }
+    
+    /**
+     * @dev Sets a profile as the primary profile for an address
+     * @param tokenId The token ID of the profile to set as primary
+     */
+    function setPrimaryProfile(uint256 tokenId) public {
+        require(_ownerOf(tokenId) == msg.sender, "Not owner");
+        primaryProfile[msg.sender] = tokenId;
+        emit PrimaryProfileChanged(msg.sender, tokenId);
+    }
+    
+    /**
+     * @dev Updates profile visibility
+     * @param tokenId The token ID of the profile to update
+     * @param visibility The new visibility setting
+     */
+    function setProfileVisibility(uint256 tokenId, Visibility visibility) public {
+        require(_ownerOf(tokenId) == msg.sender, "Not owner");
+        profiles[tokenId].visibility = visibility;
+        emit ProfileVisibilityChanged(tokenId, visibility);
+    }
+    
+    /**
+     * @dev Adds or updates a social link for a profile
+     * @param tokenId The token ID of the profile
+     * @param platform The social platform (e.g., "twitter", "discord")
+     * @param url The URL to the profile
+     */
+    function setSocialLink(uint256 tokenId, string memory platform, string memory url) public {
+        require(_ownerOf(tokenId) == msg.sender, "Not owner");
+        socialLinks[tokenId][platform] = url;
+    }
+    
+    /**
+     * @dev Gets a social link for a profile
+     * @param tokenId The token ID of the profile
+     * @param platform The social platform
+     * @return The URL to the profile
+     */
+    function getSocialLink(uint256 tokenId, string memory platform) public view returns (string memory) {
+        return socialLinks[tokenId][platform];
     }
     
     /**
@@ -129,12 +206,28 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
     }
     
     /**
-     * @dev Gets profile data by address
+     * @dev Gets all profile token IDs for an address
+     * @param user The address of the user
+     * @return Array of token IDs
+     */
+    function getProfilesByAddress(address user) public view returns (uint256[] memory) {
+        return addressToTokenIds[user];
+    }
+    
+    /**
+     * @dev Gets profile data by address (primary profile)
      * @param user The address of the user
      * @return Profile struct
      */
     function getProfileByAddress(address user) public view returns (Profile memory) {
-        uint256 tokenId = addressToTokenId[user];
+        uint256 tokenId = primaryProfile[user];
+        if (tokenId == 0) {
+            // Fallback to first profile if no primary set
+            uint256[] memory tokens = addressToTokenIds[user];
+            if (tokens.length > 0) {
+                tokenId = tokens[0];
+            }
+        }
         return profiles[tokenId];
     }
     

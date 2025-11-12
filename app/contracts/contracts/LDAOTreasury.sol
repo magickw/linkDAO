@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./LDAOToken.sol";
 import "./security/MultiSigWallet.sol";
+import "./Governance.sol";
 
 /**
  * @title LDAOTreasury
@@ -18,6 +19,7 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     LDAOToken public immutable ldaoToken;
     IERC20 public immutable usdcToken;
     MultiSigWallet public multiSigWallet;
+    Governance public governance; // Governance contract for decentralized control
     
     uint256 public ldaoPriceInUSD = 1e16; // $0.01 in 18 decimals (1e16 = 0.01 * 1e18)
     uint256 public totalSold;
@@ -80,15 +82,19 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     event EmergencyStop(string reason, uint256 timestamp);
     event CircuitBreakerTriggered(uint256 dailyVolume, uint256 threshold);
     event MultiSigWalletUpdated(address indexed oldWallet, address indexed newWallet);
+    event GovernanceUpdated(address indexed newGovernance);
+    event GovernanceOperationExecuted(address indexed target, uint256 value, bytes data);
 
     constructor(
         address _ldaoToken,
         address _usdcToken,
-        address payable _multiSigWallet
+        address payable _multiSigWallet,
+        address _governance
     ) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
         usdcToken = IERC20(_usdcToken);
         multiSigWallet = MultiSigWallet(_multiSigWallet);
+        governance = Governance(_governance);
         
         // Initialize timestamps
         lastResetDay = block.timestamp / 1 days;
@@ -296,6 +302,63 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         multiSigWallet = MultiSigWallet(newMultiSigWallet);
         
         emit MultiSigWalletUpdated(oldWallet, newMultiSigWallet);
+    }
+    
+    /**
+     * @notice Update governance contract address (only owner)
+     * @param newGovernance New governance contract address
+     */
+    function updateGovernance(address newGovernance) external onlyOwner {
+        require(newGovernance != address(0), "Invalid governance address");
+        governance = Governance(newGovernance);
+        emit GovernanceUpdated(address(governance));
+    }
+    
+    /**
+     * @notice Execute treasury operation via governance proposal (only governance contract can call)
+     * @param target Target address for the operation
+     * @param value Value to send with the operation
+     * @param data Calldata for the operation
+     * @return success Whether the operation was successful
+     */
+    function executeGovernanceOperation(
+        address target,
+        uint256 value,
+        bytes calldata data
+    ) external returns (bool success) {
+        // Check if this call is coming from the governance contract
+        require(msg.sender == address(governance), "Only governance can execute treasury operations");
+        
+        // Execute the operation
+        (success, ) = target.call{value: value}(data);
+        require(success, "Governance operation failed");
+        
+        emit GovernanceOperationExecuted(target, value, data);
+        return success;
+    }
+    
+    /**
+     * @notice Emergency withdrawal to governance (only governance can call)
+     * @param token Token address to withdraw
+     * @param amount Amount to withdraw
+     * @param recipient Recipient address
+     */
+    function governanceWithdraw(
+        address token,
+        uint256 amount,
+        address recipient
+    ) external {
+        require(msg.sender == address(governance), "Only governance can call this function");
+        require(token != address(ldaoToken), "Cannot withdraw LDAO via governance");
+        
+        if (token == address(0)) {
+            // Withdrawing ETH
+            payable(recipient).transfer(amount);
+        } else {
+            IERC20(token).transfer(recipient, amount);
+        }
+        
+        emit FundsWithdrawn(token, amount, recipient);
     }
 
     /**

@@ -300,15 +300,19 @@ async function networkFirst(request, cacheName) {
   }
   
   // Check if request is already pending (request coalescing)
-  if (pendingRequests.has(requestKey)) {
+  // Only coalesce non-critical requests to avoid blocking important operations
+  if (pendingRequests.has(requestKey) && !isCriticalRequest(request)) {
     console.log('Request already pending, coalescing:', requestKey);
     try {
       const sharedResponse = await pendingRequests.get(requestKey);
+      // Check if response body has been consumed
       if (sharedResponse.bodyUsed) {
         console.warn('Shared response body already consumed, falling back to cache');
         return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
       }
-      return sharedResponse.clone();
+      // Clone the response to avoid bodyUsed issues
+      const responseClone = sharedResponse.clone();
+      return responseClone;
     } catch (error) {
       console.warn('Failed to clone shared response, falling back to cache:', error);
       return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
@@ -342,8 +346,16 @@ async function networkFirst(request, cacheName) {
     
     pendingRequests.set(requestKey, requestPromise);
     
+    // Add timeout to prevent hanging requests
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        pendingRequests.delete(requestKey);
+        reject(new Error('Geolocation request timeout'));
+      }, 30000); // 30 second timeout
+    });
+    
     try {
-      const result = await requestPromise;
+      const result = await Promise.race([requestPromise, timeoutPromise]);
       pendingRequests.delete(requestKey);
       return result;
     } catch (error) {
@@ -356,8 +368,16 @@ async function networkFirst(request, cacheName) {
   const requestPromise = performNetworkRequestWithCircuitBreaker(request, cacheName, requestKey, cacheConfig, serviceKey);
   pendingRequests.set(requestKey, requestPromise);
   
+  // Add timeout to prevent hanging requests
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      pendingRequests.delete(requestKey);
+      reject(new Error('Request timeout'));
+    }, 30000); // 30 second timeout
+  });
+  
   try {
-    const result = await requestPromise;
+    const result = await Promise.race([requestPromise, timeoutPromise]);
     pendingRequests.delete(requestKey);
     return result;
   } catch (error) {
@@ -875,6 +895,25 @@ function isStaticAsset(request) {
   return url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/);
 }
 
+function isCriticalRequest(request) {
+  const url = new URL(request.url);
+  
+  // Consider WebSocket, authentication, and profile requests as critical
+  // Also consider requests with unique parameters that shouldn't be coalesced
+  if (url.pathname.includes('socket.io') || 
+      url.pathname.startsWith('/api/auth') ||
+      url.pathname.startsWith('/api/profiles') ||
+      url.pathname.startsWith('/api/users') ||
+      url.pathname.includes('/feed/enhanced') ||
+      url.searchParams.has('timestamp') ||
+      url.searchParams.has('nonce') ||
+      url.searchParams.has('_t')) {
+    return true;
+  }
+  
+  return false;
+}
+
 function isImage(request) {
   const url = new URL(request.url);
   return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/);
@@ -1342,6 +1381,11 @@ function checkRateLimit(requestKey, now) {
   
   // Skip rate limiting for WebSocket endpoints
   if (url.pathname.includes('socket.io')) {
+    return true;
+  }
+  
+  // Skip rate limiting for critical endpoints (authentication, profiles, etc.)
+  if (isCriticalRequest({ url: url })) {
     return true;
   }
   

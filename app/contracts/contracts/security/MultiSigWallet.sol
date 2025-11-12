@@ -59,6 +59,12 @@ contract MultiSigWallet is ReentrancyGuard {
     event TransactionExecuted(uint256 indexed transactionId);
     event EmergencyModeToggled(bool enabled);
     event TimeDelayChanged(uint256 newDelay);
+    event GovernanceProposalCreated(
+        uint256 indexed transactionId,
+        address indexed treasury,
+        uint256 value,
+        string description
+    );
     
     // Custom errors
     error NotOwner();
@@ -426,6 +432,35 @@ contract MultiSigWallet is ReentrancyGuard {
     function emergencyExecute(uint256 transactionId) external onlyOwner {
         require(settings.emergencyMode, "Not in emergency mode");
         executeTransaction(transactionId);
+    }
+    
+    /**
+     * @dev Create a governance proposal for large treasury operations (only owners)
+     * @param governance Governance contract address
+     * @param treasury Treasury contract address
+     * @param value Amount of ETH to transfer
+     * @param data Calldata for the operation
+     * @param description Description of the proposal
+     */
+    function createGovernanceProposal(
+        address governance,
+        address treasury,
+        uint256 value,
+        bytes calldata data,
+        string calldata description
+    ) external onlyOwner returns (uint256 proposalId) {
+        require(governance != address(0), "Invalid governance address");
+        require(treasury != address(0), "Invalid treasury address");
+        require(value > 0 || data.length > 0, "No operation specified");
+        
+        // This function would interact with the governance contract to create a proposal
+        // In a real implementation, this would call the governance contract's propose function
+        // For now, we'll emit an event to indicate that a governance proposal should be created
+        emit GovernanceProposalCreated(transactionCount, treasury, value, description);
+        
+        // In a real implementation, this would return the proposal ID from the governance contract
+        // For now, we return the transaction ID as a placeholder
+        return transactionCount;
     }
     
     // Receive ETH

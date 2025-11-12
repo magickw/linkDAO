@@ -7,8 +7,8 @@ export const ENV_CONFIG = {
   // WebSocket URL - derived from backend URL (Socket.IO will append /socket.io/)
   WS_URL: process.env.NEXT_PUBLIC_WS_URL || 
     (process.env.NEXT_PUBLIC_BACKEND_URL 
-      ? process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^http/, 'ws').replace(/\/$/, '')
-      : 'ws://localhost:10000'),
+      ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/socket.io/`
+      : 'ws://localhost:10000/socket.io/'),
   
   // WalletConnect
   WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b',

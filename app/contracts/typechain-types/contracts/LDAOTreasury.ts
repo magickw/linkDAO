@@ -41,6 +41,7 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     "emergencyPause(string)": FunctionFragment;
     "emergencyStopThreshold()": FunctionFragment;
     "emergencyWithdrawLDAO(uint256,address)": FunctionFragment;
+    "executeGovernanceOperation(address,uint256,bytes)": FunctionFragment;
     "executedTransactions(bytes32)": FunctionFragment;
     "getCircuitBreakerStatus()": FunctionFragment;
     "getCurrentDayPurchases()": FunctionFragment;
@@ -50,6 +51,8 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     "getTreasuryBalance()": FunctionFragment;
     "getUserDailyPurchases(address)": FunctionFragment;
     "getUserPurchaseHistory(address)": FunctionFragment;
+    "governance()": FunctionFragment;
+    "governanceWithdraw(address,uint256,address)": FunctionFragment;
     "kycApproved(address)": FunctionFragment;
     "kycRequired()": FunctionFragment;
     "lastPriceUpdate()": FunctionFragment;
@@ -79,6 +82,7 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     "unpause()": FunctionFragment;
     "updateCircuitBreakerParams(uint256,uint256)": FunctionFragment;
     "updateDynamicPricingParams(uint256,uint256)": FunctionFragment;
+    "updateGovernance(address)": FunctionFragment;
     "updateKYCStatus(address,bool)": FunctionFragment;
     "updateLDAOPrice(uint256)": FunctionFragment;
     "updateMultiSigWallet(address)": FunctionFragment;
@@ -104,6 +108,7 @@ export interface LDAOTreasuryInterface extends utils.Interface {
       | "emergencyPause"
       | "emergencyStopThreshold"
       | "emergencyWithdrawLDAO"
+      | "executeGovernanceOperation"
       | "executedTransactions"
       | "getCircuitBreakerStatus"
       | "getCurrentDayPurchases"
@@ -113,6 +118,8 @@ export interface LDAOTreasuryInterface extends utils.Interface {
       | "getTreasuryBalance"
       | "getUserDailyPurchases"
       | "getUserPurchaseHistory"
+      | "governance"
+      | "governanceWithdraw"
       | "kycApproved"
       | "kycRequired"
       | "lastPriceUpdate"
@@ -142,6 +149,7 @@ export interface LDAOTreasuryInterface extends utils.Interface {
       | "unpause"
       | "updateCircuitBreakerParams"
       | "updateDynamicPricingParams"
+      | "updateGovernance"
       | "updateKYCStatus"
       | "updateLDAOPrice"
       | "updateMultiSigWallet"
@@ -199,6 +207,14 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
+    functionFragment: "executeGovernanceOperation",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "executedTransactions",
     values: [PromiseOrValue<BytesLike>]
   ): string;
@@ -233,6 +249,18 @@ export interface LDAOTreasuryInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "getUserPurchaseHistory",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "governance",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "governanceWithdraw",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "kycApproved",
@@ -336,6 +364,10 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "updateGovernance",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "updateKYCStatus",
     values: [PromiseOrValue<string>, PromiseOrValue<boolean>]
   ): string;
@@ -427,6 +459,10 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "executeGovernanceOperation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "executedTransactions",
     data: BytesLike
   ): Result;
@@ -457,6 +493,11 @@ export interface LDAOTreasuryInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUserPurchaseHistory",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "governance", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "governanceWithdraw",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -558,6 +599,10 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "updateGovernance",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "updateKYCStatus",
     data: BytesLike
   ): Result;
@@ -597,6 +642,8 @@ export interface LDAOTreasuryInterface extends utils.Interface {
     "DynamicPriceUpdated(uint256,uint256)": EventFragment;
     "EmergencyStop(string,uint256)": EventFragment;
     "FundsWithdrawn(address,uint256,address)": EventFragment;
+    "GovernanceOperationExecuted(address,uint256,bytes)": EventFragment;
+    "GovernanceUpdated(address)": EventFragment;
     "KYCStatusUpdated(address,bool)": EventFragment;
     "LDAOPurchased(address,uint256,uint256,uint256,string)": EventFragment;
     "MultiSigWalletUpdated(address,address)": EventFragment;
@@ -613,6 +660,10 @@ export interface LDAOTreasuryInterface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "DynamicPriceUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "EmergencyStop"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FundsWithdrawn"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "GovernanceOperationExecuted"
+  ): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "GovernanceUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "KYCStatusUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "LDAOPurchased"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "MultiSigWalletUpdated"): EventFragment;
@@ -671,6 +722,30 @@ export type FundsWithdrawnEvent = TypedEvent<
 >;
 
 export type FundsWithdrawnEventFilter = TypedEventFilter<FundsWithdrawnEvent>;
+
+export interface GovernanceOperationExecutedEventObject {
+  target: string;
+  value: BigNumber;
+  data: string;
+}
+export type GovernanceOperationExecutedEvent = TypedEvent<
+  [string, BigNumber, string],
+  GovernanceOperationExecutedEventObject
+>;
+
+export type GovernanceOperationExecutedEventFilter =
+  TypedEventFilter<GovernanceOperationExecutedEvent>;
+
+export interface GovernanceUpdatedEventObject {
+  newGovernance: string;
+}
+export type GovernanceUpdatedEvent = TypedEvent<
+  [string],
+  GovernanceUpdatedEventObject
+>;
+
+export type GovernanceUpdatedEventFilter =
+  TypedEventFilter<GovernanceUpdatedEvent>;
 
 export interface KYCStatusUpdatedEventObject {
   user: string;
@@ -850,6 +925,13 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    executeGovernanceOperation(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     executedTransactions(
       arg0: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
@@ -921,6 +1003,15 @@ export interface LDAOTreasury extends BaseContract {
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
+
+    governance(overrides?: CallOverrides): Promise<[string]>;
+
+    governanceWithdraw(
+      token: PromiseOrValue<string>,
+      amount: PromiseOrValue<BigNumberish>,
+      recipient: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
     kycApproved(
       arg0: PromiseOrValue<string>,
@@ -1025,6 +1116,11 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    updateGovernance(
+      newGovernance: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     updateKYCStatus(
       user: PromiseOrValue<string>,
       approved: PromiseOrValue<boolean>,
@@ -1122,6 +1218,13 @@ export interface LDAOTreasury extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  executeGovernanceOperation(
+    target: PromiseOrValue<string>,
+    value: PromiseOrValue<BigNumberish>,
+    data: PromiseOrValue<BytesLike>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   executedTransactions(
     arg0: PromiseOrValue<BytesLike>,
     overrides?: CallOverrides
@@ -1193,6 +1296,15 @@ export interface LDAOTreasury extends BaseContract {
     user: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
+
+  governance(overrides?: CallOverrides): Promise<string>;
+
+  governanceWithdraw(
+    token: PromiseOrValue<string>,
+    amount: PromiseOrValue<BigNumberish>,
+    recipient: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
 
   kycApproved(
     arg0: PromiseOrValue<string>,
@@ -1297,6 +1409,11 @@ export interface LDAOTreasury extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  updateGovernance(
+    newGovernance: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   updateKYCStatus(
     user: PromiseOrValue<string>,
     approved: PromiseOrValue<boolean>,
@@ -1394,6 +1511,13 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    executeGovernanceOperation(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
     executedTransactions(
       arg0: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
@@ -1465,6 +1589,15 @@ export interface LDAOTreasury extends BaseContract {
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    governance(overrides?: CallOverrides): Promise<string>;
+
+    governanceWithdraw(
+      token: PromiseOrValue<string>,
+      amount: PromiseOrValue<BigNumberish>,
+      recipient: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     kycApproved(
       arg0: PromiseOrValue<string>,
@@ -1565,6 +1698,11 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    updateGovernance(
+      newGovernance: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     updateKYCStatus(
       user: PromiseOrValue<string>,
       approved: PromiseOrValue<boolean>,
@@ -1657,6 +1795,24 @@ export interface LDAOTreasury extends BaseContract {
       amount?: null,
       recipient?: null
     ): FundsWithdrawnEventFilter;
+
+    "GovernanceOperationExecuted(address,uint256,bytes)"(
+      target?: PromiseOrValue<string> | null,
+      value?: null,
+      data?: null
+    ): GovernanceOperationExecutedEventFilter;
+    GovernanceOperationExecuted(
+      target?: PromiseOrValue<string> | null,
+      value?: null,
+      data?: null
+    ): GovernanceOperationExecutedEventFilter;
+
+    "GovernanceUpdated(address)"(
+      newGovernance?: PromiseOrValue<string> | null
+    ): GovernanceUpdatedEventFilter;
+    GovernanceUpdated(
+      newGovernance?: PromiseOrValue<string> | null
+    ): GovernanceUpdatedEventFilter;
 
     "KYCStatusUpdated(address,bool)"(
       user?: PromiseOrValue<string> | null,
@@ -1777,6 +1933,13 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    executeGovernanceOperation(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     executedTransactions(
       arg0: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
@@ -1808,6 +1971,15 @@ export interface LDAOTreasury extends BaseContract {
     getUserPurchaseHistory(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    governance(overrides?: CallOverrides): Promise<BigNumber>;
+
+    governanceWithdraw(
+      token: PromiseOrValue<string>,
+      amount: PromiseOrValue<BigNumberish>,
+      recipient: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     kycApproved(
@@ -1904,6 +2076,11 @@ export interface LDAOTreasury extends BaseContract {
     updateDynamicPricingParams(
       _maxPriceMultiplier: PromiseOrValue<BigNumberish>,
       _priceUpdateInterval: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    updateGovernance(
+      newGovernance: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -2013,6 +2190,13 @@ export interface LDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    executeGovernanceOperation(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     executedTransactions(
       arg0: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
@@ -2052,6 +2236,15 @@ export interface LDAOTreasury extends BaseContract {
     getUserPurchaseHistory(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    governance(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    governanceWithdraw(
+      token: PromiseOrValue<string>,
+      amount: PromiseOrValue<BigNumberish>,
+      recipient: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     kycApproved(
@@ -2152,6 +2345,11 @@ export interface LDAOTreasury extends BaseContract {
     updateDynamicPricingParams(
       _maxPriceMultiplier: PromiseOrValue<BigNumberish>,
       _priceUpdateInterval: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    updateGovernance(
+      newGovernance: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

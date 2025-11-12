@@ -24,7 +24,6 @@ export function Sidebar() {
   const mainLinks = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingBag },
-    { href: '/social', label: 'Social', icon: Users },
     { href: '/governance', label: 'Governance', icon: TrendingUp },
     { href: '/messages', label: 'Messages', icon: MessageSquare, requireAuth: true },
     { href: '/wallet', label: 'Wallet', icon: Wallet, requireAuth: true },

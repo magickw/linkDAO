@@ -74,10 +74,13 @@ export class WebSocketClientService {
             // Remove the path from the URL
             parsedUrl.pathname = '';
             socketUrl = parsedUrl.toString().replace(/\/$/, '');
+          } else {
+            // Ensure we have the correct path for Socket.IO
+            socketPath = '/socket.io/';
           }
         } catch (error) {
           // If URL parsing fails, use defaults
-          console.warn('Failed to parse WebSocket URL, using defaults');
+          console.warn('Failed to parse WebSocket URL, using defaults:', error);
         }
 
         // Store the resolve/reject references for later use
@@ -94,7 +97,14 @@ export class WebSocketClientService {
           extraHeaders: {
             'X-Client-Type': 'web',
             'X-Client-Version': '1.0.0'
-          }
+          },
+          // Additional options to improve connection reliability
+          upgrade: true,
+          rememberUpgrade: true,
+          randomizationFactor: 0.5,
+          backoff: true,
+          backoffFactor: 1.5,
+          backoffMax: 10000
         });
 
         this.setupSocketEventHandlers();

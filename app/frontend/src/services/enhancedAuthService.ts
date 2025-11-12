@@ -418,17 +418,23 @@ class EnhancedAuthService {
           throw new Error(response.error || 'Authentication failed');
         }
 
-        if (!response.sessionToken) {
+        // Handle both direct token response and nested data response
+        const sessionToken = response.sessionToken || (response.data && response.data.sessionToken) || response.token || (response.data && response.data.token);
+        const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
+        
+        if (!sessionToken) {
           throw new Error('No session token received');
         }
 
-        const userData: AuthUser = this.createUserData(address, response.user);
+        // Use user data from nested data field if available
+        const responseUserData = (response.data && response.data.user) || response.user || (response.data && response.data);
+        const userData: AuthUser = this.createUserData(address, responseUserData);
 
         return {
           success: true,
-          token: response.sessionToken,
+          token: sessionToken,
           user: userData,
-          refreshToken: response.refreshToken
+          refreshToken: refreshToken
         };
       },
       async () => {
@@ -569,12 +575,20 @@ class EnhancedAuthService {
             { timeout: 10000, retries: 2 }
           );
 
-          if (!response.success || !response.token) {
+          if (!response.success) {
             throw new Error(response.error || 'Token refresh failed');
           }
 
+          // Handle both direct token response and nested data response
+          const token = response.token || (response.data && response.data.token);
+          const refreshToken = response.refreshToken || (response.data && response.data.refreshToken) || undefined;
+          
+          if (!token) {
+            throw new Error('No token received in refresh response');
+          }
+
           // Update session with new token
-          this.storeSession(response.token, this.sessionData!.user, response.refreshToken);
+          this.storeSession(token, this.sessionData!.user, refreshToken);
 
           return {
             success: true,

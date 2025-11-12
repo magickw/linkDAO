@@ -128,7 +128,7 @@ export class WebSocketService {
           // Check if origin is in allowlist
           const isAllowed = allowedOrigins.some(allowedOrigin => 
             origin === allowedOrigin || 
-            origin.startsWith(allowedOrigin.replace(/\./g, '\\.').replace(/\*/g, '.*'))
+            origin.startsWith(allowedOrigin.replace(/\./g, '\\.'))
           );
           
           if (isAllowed) {
@@ -149,7 +149,20 @@ export class WebSocketService {
       connectTimeout: this.config.connectionTimeout,
       allowEIO3: true, // Allow older clients
       // Add path configuration for better compatibility
-      path: '/socket.io/'
+      path: '/socket.io/',
+      // Additional options to improve connection reliability
+      upgradeTimeout: 30000,
+      httpCompression: !this.isResourceConstrained,
+      perMessageDeflate: !this.isResourceConstrained,
+      wsEngine: 'ws', // Use native WebSocket engine
+      // Ensure proper handling of HTTP requests
+      serveClient: false,
+      // Additional security and performance settings
+      cookie: false,
+      allowRequest: (req, callback) => {
+        // Allow all requests but log them for debugging
+        callback(null, true);
+      }
     };
 
     // Disable compression on resource-constrained environments

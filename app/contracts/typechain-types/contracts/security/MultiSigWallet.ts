@@ -38,6 +38,7 @@ export interface MultiSigWalletInterface extends utils.Interface {
     "changeTimeDelay(uint256)": FunctionFragment;
     "confirmTransaction(uint256)": FunctionFragment;
     "confirmations(uint256,address)": FunctionFragment;
+    "createGovernanceProposal(address,address,uint256,bytes,string)": FunctionFragment;
     "emergencyExecute(uint256)": FunctionFragment;
     "executeTransaction(uint256)": FunctionFragment;
     "getConfirmations(uint256)": FunctionFragment;
@@ -68,6 +69,7 @@ export interface MultiSigWalletInterface extends utils.Interface {
       | "changeTimeDelay"
       | "confirmTransaction"
       | "confirmations"
+      | "createGovernanceProposal"
       | "emergencyExecute"
       | "executeTransaction"
       | "getConfirmations"
@@ -122,6 +124,16 @@ export interface MultiSigWalletInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "confirmations",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "createGovernanceProposal",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>,
+      PromiseOrValue<string>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "emergencyExecute",
@@ -222,6 +234,10 @@ export interface MultiSigWalletInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "createGovernanceProposal",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "emergencyExecute",
     data: BytesLike
   ): Result;
@@ -280,6 +296,7 @@ export interface MultiSigWalletInterface extends utils.Interface {
 
   events: {
     "EmergencyModeToggled(bool)": EventFragment;
+    "GovernanceProposalCreated(uint256,address,uint256,string)": EventFragment;
     "OwnerAdded(address)": EventFragment;
     "OwnerRemoved(address)": EventFragment;
     "RequiredConfirmationsChanged(uint256)": EventFragment;
@@ -291,6 +308,7 @@ export interface MultiSigWalletInterface extends utils.Interface {
   };
 
   getEvent(nameOrSignatureOrTopic: "EmergencyModeToggled"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "GovernanceProposalCreated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnerAdded"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnerRemoved"): EventFragment;
   getEvent(
@@ -313,6 +331,20 @@ export type EmergencyModeToggledEvent = TypedEvent<
 
 export type EmergencyModeToggledEventFilter =
   TypedEventFilter<EmergencyModeToggledEvent>;
+
+export interface GovernanceProposalCreatedEventObject {
+  transactionId: BigNumber;
+  treasury: string;
+  value: BigNumber;
+  description: string;
+}
+export type GovernanceProposalCreatedEvent = TypedEvent<
+  [BigNumber, string, BigNumber, string],
+  GovernanceProposalCreatedEventObject
+>;
+
+export type GovernanceProposalCreatedEventFilter =
+  TypedEventFilter<GovernanceProposalCreatedEvent>;
 
 export interface OwnerAddedEventObject {
   owner: string;
@@ -466,6 +498,15 @@ export interface MultiSigWallet extends BaseContract {
       arg1: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
+
+    createGovernanceProposal(
+      governance: PromiseOrValue<string>,
+      treasury: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
     emergencyExecute(
       transactionId: PromiseOrValue<BigNumberish>,
@@ -631,6 +672,15 @@ export interface MultiSigWallet extends BaseContract {
     overrides?: CallOverrides
   ): Promise<boolean>;
 
+  createGovernanceProposal(
+    governance: PromiseOrValue<string>,
+    treasury: PromiseOrValue<string>,
+    value: PromiseOrValue<BigNumberish>,
+    data: PromiseOrValue<BytesLike>,
+    description: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   emergencyExecute(
     transactionId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -793,6 +843,15 @@ export interface MultiSigWallet extends BaseContract {
       overrides?: CallOverrides
     ): Promise<boolean>;
 
+    createGovernanceProposal(
+      governance: PromiseOrValue<string>,
+      treasury: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     emergencyExecute(
       transactionId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -919,6 +978,19 @@ export interface MultiSigWallet extends BaseContract {
     ): EmergencyModeToggledEventFilter;
     EmergencyModeToggled(enabled?: null): EmergencyModeToggledEventFilter;
 
+    "GovernanceProposalCreated(uint256,address,uint256,string)"(
+      transactionId?: PromiseOrValue<BigNumberish> | null,
+      treasury?: PromiseOrValue<string> | null,
+      value?: null,
+      description?: null
+    ): GovernanceProposalCreatedEventFilter;
+    GovernanceProposalCreated(
+      transactionId?: PromiseOrValue<BigNumberish> | null,
+      treasury?: PromiseOrValue<string> | null,
+      value?: null,
+      description?: null
+    ): GovernanceProposalCreatedEventFilter;
+
     "OwnerAdded(address)"(
       owner?: PromiseOrValue<string> | null
     ): OwnerAddedEventFilter;
@@ -1021,6 +1093,15 @@ export interface MultiSigWallet extends BaseContract {
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
       overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    createGovernanceProposal(
+      governance: PromiseOrValue<string>,
+      treasury: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     emergencyExecute(
@@ -1135,6 +1216,15 @@ export interface MultiSigWallet extends BaseContract {
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    createGovernanceProposal(
+      governance: PromiseOrValue<string>,
+      treasury: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     emergencyExecute(

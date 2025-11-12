@@ -33,7 +33,10 @@ export declare namespace ProfileRegistry {
     ens: PromiseOrValue<string>;
     avatarCid: PromiseOrValue<string>;
     bioCid: PromiseOrValue<string>;
+    socialLinks: PromiseOrValue<string>[];
     createdAt: PromiseOrValue<BigNumberish>;
+    visibility: PromiseOrValue<BigNumberish>;
+    verified: PromiseOrValue<boolean>;
   };
 
   export type ProfileStructOutput = [
@@ -41,35 +44,48 @@ export declare namespace ProfileRegistry {
     string,
     string,
     string,
-    BigNumber
+    string[],
+    BigNumber,
+    number,
+    boolean
   ] & {
     handle: string;
     ens: string;
     avatarCid: string;
     bioCid: string;
+    socialLinks: string[];
     createdAt: BigNumber;
+    visibility: number;
+    verified: boolean;
   };
 }
 
 export interface ProfileRegistryInterface extends utils.Interface {
   functions: {
-    "addressToTokenId(address)": FunctionFragment;
+    "addressToTokenIds(address,uint256)": FunctionFragment;
     "approve(address,uint256)": FunctionFragment;
     "balanceOf(address)": FunctionFragment;
     "createProfile(string,string,string,string)": FunctionFragment;
     "getApproved(uint256)": FunctionFragment;
     "getProfileByAddress(address)": FunctionFragment;
     "getProfileByHandle(string)": FunctionFragment;
+    "getProfilesByAddress(address)": FunctionFragment;
+    "getSocialLink(uint256,string)": FunctionFragment;
     "handleToTokenId(string)": FunctionFragment;
     "isApprovedForAll(address,address)": FunctionFragment;
     "name()": FunctionFragment;
     "owner()": FunctionFragment;
     "ownerOf(uint256)": FunctionFragment;
+    "primaryProfile(address)": FunctionFragment;
     "profiles(uint256)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "safeTransferFrom(address,address,uint256)": FunctionFragment;
     "safeTransferFrom(address,address,uint256,bytes)": FunctionFragment;
     "setApprovalForAll(address,bool)": FunctionFragment;
+    "setPrimaryProfile(uint256)": FunctionFragment;
+    "setProfileVisibility(uint256,uint8)": FunctionFragment;
+    "setSocialLink(uint256,string,string)": FunctionFragment;
+    "socialLinks(uint256,string)": FunctionFragment;
     "supportsInterface(bytes4)": FunctionFragment;
     "symbol()": FunctionFragment;
     "tokenByIndex(uint256)": FunctionFragment;
@@ -84,23 +100,30 @@ export interface ProfileRegistryInterface extends utils.Interface {
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "addressToTokenId"
+      | "addressToTokenIds"
       | "approve"
       | "balanceOf"
       | "createProfile"
       | "getApproved"
       | "getProfileByAddress"
       | "getProfileByHandle"
+      | "getProfilesByAddress"
+      | "getSocialLink"
       | "handleToTokenId"
       | "isApprovedForAll"
       | "name"
       | "owner"
       | "ownerOf"
+      | "primaryProfile"
       | "profiles"
       | "renounceOwnership"
       | "safeTransferFrom(address,address,uint256)"
       | "safeTransferFrom(address,address,uint256,bytes)"
       | "setApprovalForAll"
+      | "setPrimaryProfile"
+      | "setProfileVisibility"
+      | "setSocialLink"
+      | "socialLinks"
       | "supportsInterface"
       | "symbol"
       | "tokenByIndex"
@@ -114,8 +137,8 @@ export interface ProfileRegistryInterface extends utils.Interface {
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "addressToTokenId",
-    values: [PromiseOrValue<string>]
+    functionFragment: "addressToTokenIds",
+    values: [PromiseOrValue<string>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "approve",
@@ -147,6 +170,14 @@ export interface ProfileRegistryInterface extends utils.Interface {
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
+    functionFragment: "getProfilesByAddress",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getSocialLink",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "handleToTokenId",
     values: [PromiseOrValue<string>]
   ): string;
@@ -159,6 +190,10 @@ export interface ProfileRegistryInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "ownerOf",
     values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "primaryProfile",
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "profiles",
@@ -188,6 +223,26 @@ export interface ProfileRegistryInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "setApprovalForAll",
     values: [PromiseOrValue<string>, PromiseOrValue<boolean>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setPrimaryProfile",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setProfileVisibility",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setSocialLink",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<string>,
+      PromiseOrValue<string>
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "socialLinks",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "supportsInterface",
@@ -236,7 +291,7 @@ export interface ProfileRegistryInterface extends utils.Interface {
   ): string;
 
   decodeFunctionResult(
-    functionFragment: "addressToTokenId",
+    functionFragment: "addressToTokenIds",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "approve", data: BytesLike): Result;
@@ -258,6 +313,14 @@ export interface ProfileRegistryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getProfilesByAddress",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getSocialLink",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "handleToTokenId",
     data: BytesLike
   ): Result;
@@ -268,6 +331,10 @@ export interface ProfileRegistryInterface extends utils.Interface {
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "ownerOf", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "primaryProfile",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "profiles", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
@@ -283,6 +350,22 @@ export interface ProfileRegistryInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setApprovalForAll",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setPrimaryProfile",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setProfileVisibility",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setSocialLink",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "socialLinks",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -321,16 +404,20 @@ export interface ProfileRegistryInterface extends utils.Interface {
     "Approval(address,address,uint256)": EventFragment;
     "ApprovalForAll(address,address,bool)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
+    "PrimaryProfileChanged(address,uint256)": EventFragment;
     "ProfileCreated(address,uint256,string,uint256)": EventFragment;
     "ProfileUpdated(uint256,string,string,string)": EventFragment;
+    "ProfileVisibilityChanged(uint256,uint8)": EventFragment;
     "Transfer(address,address,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Approval"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ApprovalForAll"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "PrimaryProfileChanged"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProfileCreated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProfileUpdated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "ProfileVisibilityChanged"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Transfer"): EventFragment;
 }
 
@@ -370,6 +457,18 @@ export type OwnershipTransferredEvent = TypedEvent<
 export type OwnershipTransferredEventFilter =
   TypedEventFilter<OwnershipTransferredEvent>;
 
+export interface PrimaryProfileChangedEventObject {
+  owner: string;
+  tokenId: BigNumber;
+}
+export type PrimaryProfileChangedEvent = TypedEvent<
+  [string, BigNumber],
+  PrimaryProfileChangedEventObject
+>;
+
+export type PrimaryProfileChangedEventFilter =
+  TypedEventFilter<PrimaryProfileChangedEvent>;
+
 export interface ProfileCreatedEventObject {
   owner: string;
   tokenId: BigNumber;
@@ -395,6 +494,18 @@ export type ProfileUpdatedEvent = TypedEvent<
 >;
 
 export type ProfileUpdatedEventFilter = TypedEventFilter<ProfileUpdatedEvent>;
+
+export interface ProfileVisibilityChangedEventObject {
+  tokenId: BigNumber;
+  visibility: number;
+}
+export type ProfileVisibilityChangedEvent = TypedEvent<
+  [BigNumber, number],
+  ProfileVisibilityChangedEventObject
+>;
+
+export type ProfileVisibilityChangedEventFilter =
+  TypedEventFilter<ProfileVisibilityChangedEvent>;
 
 export interface TransferEventObject {
   from: string;
@@ -435,8 +546,9 @@ export interface ProfileRegistry extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    addressToTokenId(
+    addressToTokenIds(
       arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
@@ -474,6 +586,17 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[ProfileRegistry.ProfileStructOutput]>;
 
+    getProfilesByAddress(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber[]]>;
+
+    getSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+
     handleToTokenId(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -494,16 +617,23 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
+    primaryProfile(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     profiles(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<
-      [string, string, string, string, BigNumber] & {
+      [string, string, string, string, BigNumber, number, boolean] & {
         handle: string;
         ens: string;
         avatarCid: string;
         bioCid: string;
         createdAt: BigNumber;
+        visibility: number;
+        verified: boolean;
       }
     >;
 
@@ -531,6 +661,30 @@ export interface ProfileRegistry extends BaseContract {
       approved: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    setPrimaryProfile(
+      tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setProfileVisibility(
+      tokenId: PromiseOrValue<BigNumberish>,
+      visibility: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      url: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    socialLinks(
+      arg0: PromiseOrValue<BigNumberish>,
+      arg1: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
 
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,
@@ -583,8 +737,9 @@ export interface ProfileRegistry extends BaseContract {
     ): Promise<ContractTransaction>;
   };
 
-  addressToTokenId(
+  addressToTokenIds(
     arg0: PromiseOrValue<string>,
+    arg1: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
@@ -622,6 +777,17 @@ export interface ProfileRegistry extends BaseContract {
     overrides?: CallOverrides
   ): Promise<ProfileRegistry.ProfileStructOutput>;
 
+  getProfilesByAddress(
+    user: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber[]>;
+
+  getSocialLink(
+    tokenId: PromiseOrValue<BigNumberish>,
+    platform: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<string>;
+
   handleToTokenId(
     arg0: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -642,16 +808,23 @@ export interface ProfileRegistry extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  primaryProfile(
+    arg0: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   profiles(
     arg0: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<
-    [string, string, string, string, BigNumber] & {
+    [string, string, string, string, BigNumber, number, boolean] & {
       handle: string;
       ens: string;
       avatarCid: string;
       bioCid: string;
       createdAt: BigNumber;
+      visibility: number;
+      verified: boolean;
     }
   >;
 
@@ -679,6 +852,30 @@ export interface ProfileRegistry extends BaseContract {
     approved: PromiseOrValue<boolean>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  setPrimaryProfile(
+    tokenId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setProfileVisibility(
+    tokenId: PromiseOrValue<BigNumberish>,
+    visibility: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setSocialLink(
+    tokenId: PromiseOrValue<BigNumberish>,
+    platform: PromiseOrValue<string>,
+    url: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  socialLinks(
+    arg0: PromiseOrValue<BigNumberish>,
+    arg1: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   supportsInterface(
     interfaceId: PromiseOrValue<BytesLike>,
@@ -731,8 +928,9 @@ export interface ProfileRegistry extends BaseContract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    addressToTokenId(
+    addressToTokenIds(
       arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -770,6 +968,17 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<ProfileRegistry.ProfileStructOutput>;
 
+    getProfilesByAddress(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber[]>;
+
+    getSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
     handleToTokenId(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -790,16 +999,23 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    primaryProfile(
+      arg0: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     profiles(
       arg0: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<
-      [string, string, string, string, BigNumber] & {
+      [string, string, string, string, BigNumber, number, boolean] & {
         handle: string;
         ens: string;
         avatarCid: string;
         bioCid: string;
         createdAt: BigNumber;
+        visibility: number;
+        verified: boolean;
       }
     >;
 
@@ -825,6 +1041,30 @@ export interface ProfileRegistry extends BaseContract {
       approved: PromiseOrValue<boolean>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    setPrimaryProfile(
+      tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setProfileVisibility(
+      tokenId: PromiseOrValue<BigNumberish>,
+      visibility: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      url: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    socialLinks(
+      arg0: PromiseOrValue<BigNumberish>,
+      arg1: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<string>;
 
     supportsInterface(
       interfaceId: PromiseOrValue<BytesLike>,
@@ -909,6 +1149,15 @@ export interface ProfileRegistry extends BaseContract {
       newOwner?: PromiseOrValue<string> | null
     ): OwnershipTransferredEventFilter;
 
+    "PrimaryProfileChanged(address,uint256)"(
+      owner?: PromiseOrValue<string> | null,
+      tokenId?: PromiseOrValue<BigNumberish> | null
+    ): PrimaryProfileChangedEventFilter;
+    PrimaryProfileChanged(
+      owner?: PromiseOrValue<string> | null,
+      tokenId?: PromiseOrValue<BigNumberish> | null
+    ): PrimaryProfileChangedEventFilter;
+
     "ProfileCreated(address,uint256,string,uint256)"(
       owner?: PromiseOrValue<string> | null,
       tokenId?: PromiseOrValue<BigNumberish> | null,
@@ -935,6 +1184,15 @@ export interface ProfileRegistry extends BaseContract {
       bioCid?: null
     ): ProfileUpdatedEventFilter;
 
+    "ProfileVisibilityChanged(uint256,uint8)"(
+      tokenId?: PromiseOrValue<BigNumberish> | null,
+      visibility?: null
+    ): ProfileVisibilityChangedEventFilter;
+    ProfileVisibilityChanged(
+      tokenId?: PromiseOrValue<BigNumberish> | null,
+      visibility?: null
+    ): ProfileVisibilityChangedEventFilter;
+
     "Transfer(address,address,uint256)"(
       from?: PromiseOrValue<string> | null,
       to?: PromiseOrValue<string> | null,
@@ -948,8 +1206,9 @@ export interface ProfileRegistry extends BaseContract {
   };
 
   estimateGas: {
-    addressToTokenId(
+    addressToTokenIds(
       arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -987,6 +1246,17 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getProfilesByAddress(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     handleToTokenId(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1004,6 +1274,11 @@ export interface ProfileRegistry extends BaseContract {
 
     ownerOf(
       tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    primaryProfile(
+      arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1035,6 +1310,30 @@ export interface ProfileRegistry extends BaseContract {
       operator: PromiseOrValue<string>,
       approved: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setPrimaryProfile(
+      tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setProfileVisibility(
+      tokenId: PromiseOrValue<BigNumberish>,
+      visibility: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      url: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    socialLinks(
+      arg0: PromiseOrValue<BigNumberish>,
+      arg1: PromiseOrValue<string>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     supportsInterface(
@@ -1089,8 +1388,9 @@ export interface ProfileRegistry extends BaseContract {
   };
 
   populateTransaction: {
-    addressToTokenId(
+    addressToTokenIds(
       arg0: PromiseOrValue<string>,
+      arg1: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1128,6 +1428,17 @@ export interface ProfileRegistry extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    getProfilesByAddress(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     handleToTokenId(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1145,6 +1456,11 @@ export interface ProfileRegistry extends BaseContract {
 
     ownerOf(
       tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    primaryProfile(
+      arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1176,6 +1492,30 @@ export interface ProfileRegistry extends BaseContract {
       operator: PromiseOrValue<string>,
       approved: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setPrimaryProfile(
+      tokenId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setProfileVisibility(
+      tokenId: PromiseOrValue<BigNumberish>,
+      visibility: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setSocialLink(
+      tokenId: PromiseOrValue<BigNumberish>,
+      platform: PromiseOrValue<string>,
+      url: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    socialLinks(
+      arg0: PromiseOrValue<BigNumberish>,
+      arg1: PromiseOrValue<string>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     supportsInterface(

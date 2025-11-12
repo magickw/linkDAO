@@ -253,6 +253,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FollowModule__factory>;
     getContractFactory(
+      name: "IProfileRegistry",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IProfileRegistry__factory>;
+    getContractFactory(
       name: "Governance",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Governance__factory>;
@@ -348,6 +352,10 @@ declare module "hardhat/types/runtime" {
       name: "SimpleProfileRegistry",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.SimpleProfileRegistry__factory>;
+    getContractFactory(
+      name: "SocialReputationToken",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SocialReputationToken__factory>;
     getContractFactory(
       name: "BaseSubDAO",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -666,6 +674,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.FollowModule>;
     getContractAt(
+      name: "IProfileRegistry",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IProfileRegistry>;
+    getContractAt(
       name: "Governance",
       address: string,
       signer?: ethers.Signer
@@ -785,6 +798,11 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.SimpleProfileRegistry>;
+    getContractAt(
+      name: "SocialReputationToken",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SocialReputationToken>;
     getContractAt(
       name: "BaseSubDAO",
       address: string,

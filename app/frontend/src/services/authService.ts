@@ -244,12 +244,15 @@ class AuthService {
         
         const data = await response.json();
         
-        if (data.success && data.sessionToken) {
-          this.setToken(data.sessionToken);
+        // Handle both direct token response and nested data response
+        const sessionToken = data.sessionToken || (data.data && data.data.sessionToken) || data.token || (data.data && data.data.token);
+        
+        if (data.success && sessionToken) {
+          this.setToken(sessionToken);
           console.log('✅ Authentication successful for address:', address);
           
           // Initialize CSRF service with session token as session ID
-          await csrfService.initialize(data.sessionToken);
+          await csrfService.initialize(sessionToken);
           
           // Use user data from backend response if available, otherwise create default user
           const responseUserData = data.data?.user || data.user;
@@ -278,7 +281,7 @@ class AuthService {
 
           // Store session data for persistence
           if (typeof window !== 'undefined') {
-            localStorage.setItem('linkdao_access_token', data.sessionToken);
+            localStorage.setItem('linkdao_access_token', sessionToken);
             localStorage.setItem('linkdao_wallet_address', address);
             localStorage.setItem('linkdao_signature_timestamp', Date.now().toString());
             localStorage.setItem('linkdao_user_data', JSON.stringify(userData));
@@ -287,11 +290,11 @@ class AuthService {
           // Return in expected format
           return {
             success: true,
-            token: data.sessionToken,
+            token: sessionToken,
             user: userData
           };
         } else {
-          throw new Error(data.error?.message || 'Authentication failed - no token received');
+          throw new Error(data.error?.message || data.error || 'Authentication failed - no token received');
         }
       } catch (fetchError: any) {
         // If fetch fails (network error, backend down), use mock authentication

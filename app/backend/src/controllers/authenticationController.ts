@@ -145,7 +145,16 @@ export class AuthenticationController {
         walletAddress: walletAddress.toLowerCase(),
       };
 
-      res.json(response);
+      // Send response in a format that the frontend expects
+      res.json({
+        ...response,
+        data: {
+          sessionToken: authResult.sessionToken,
+          refreshToken: authResult.refreshToken,
+          expiresAt: authResult.expiresAt?.toISOString(),
+          walletAddress: walletAddress.toLowerCase(),
+        }
+      });
     } catch (error) {
       safeLogger.error('Error authenticating wallet:', error);
       res.status(500).json({
@@ -160,10 +169,10 @@ export class AuthenticationController {
   };
 
   /**
-   * Refresh authentication session
+   * Refresh authentication token
    * POST /api/auth/refresh
    */
-  refreshSession = async (req: Request, res: Response) => {
+  refreshToken = async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -191,31 +200,43 @@ export class AuthenticationController {
         });
       }
 
-      const authResult = await this.authService.refreshSession(refreshToken, userAgent, ipAddress);
+      const refreshResult = await this.authService.refreshSession(
+        refreshToken,
+        userAgent,
+        ipAddress
+      );
 
-      if (!authResult.success) {
-        const statusCode = this.getStatusCodeForAuthError(authResult.error?.code);
+      if (!refreshResult.success) {
+        const statusCode = this.getStatusCodeForAuthError(refreshResult.error?.code);
         return res.status(statusCode).json({
           success: false,
-          error: authResult.error,
+          error: refreshResult.error,
         });
       }
 
       const response: AuthenticationResponse = {
         success: true,
-        sessionToken: authResult.sessionToken,
-        refreshToken: authResult.refreshToken,
-        expiresAt: authResult.expiresAt?.toISOString(),
+        sessionToken: refreshResult.sessionToken,
+        refreshToken: refreshResult.refreshToken,
+        expiresAt: refreshResult.expiresAt?.toISOString(),
       };
 
-      res.json(response);
+      // Send response in a format that the frontend expects
+      res.json({
+        ...response,
+        data: {
+          token: refreshResult.sessionToken,
+          refreshToken: refreshResult.refreshToken,
+          expiresAt: refreshResult.expiresAt?.toISOString(),
+        }
+      });
     } catch (error) {
-      safeLogger.error('Error refreshing session:', error);
+      safeLogger.error('Error refreshing token:', error);
       res.status(500).json({
         success: false,
         error: {
           code: 'REFRESH_ERROR',
-          message: 'Session refresh failed',
+          message: 'Token refresh failed',
           details: error.message,
         },
       });
@@ -318,23 +339,37 @@ export class AuthenticationController {
    */
   logout = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const authHeader = req.headers.authorization;
-      const userAgent = req.get('User-Agent');
-      const ipAddress = req.ip || req.socket.remoteAddress;
-
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        await this.authService.logout(token, ipAddress, userAgent);
+      const token = req.headers.authorization?.split(' ')[1];
+      
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'MISSING_TOKEN',
+            message: 'Authentication token is required',
+          },
+        });
       }
 
-      const response: LogoutResponse = {
-        success: true,
-        message: 'Successfully logged out',
-      };
+      // Logout from auth service
+      const logoutSuccess = await this.authService.logout(token);
 
-      res.json(response);
+      if (logoutSuccess) {
+        res.json({
+          success: true,
+          message: 'Successfully logged out',
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: {
+            code: 'LOGOUT_FAILED',
+            message: 'Logout failed',
+          },
+        });
+      }
     } catch (error) {
-      safeLogger.error('Error during logout:', error);
+      safeLogger.error('Error logging out:', error);
       res.status(500).json({
         success: false,
         error: {

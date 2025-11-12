@@ -36,11 +36,15 @@ export interface GovernanceInterface extends utils.Interface {
     "categoryQuorum(uint8)": FunctionFragment;
     "categoryRequiresStaking(uint8)": FunctionFragment;
     "categoryThreshold(uint8)": FunctionFragment;
+    "createMultisigTransaction(address,uint256,bytes,string)": FunctionFragment;
     "delegatedVotes(address)": FunctionFragment;
     "delegates(address)": FunctionFragment;
     "execute(uint256)": FunctionFragment;
+    "executeAsMultisig(uint256)": FunctionFragment;
     "executionDelay()": FunctionFragment;
+    "getVotingPower(address)": FunctionFragment;
     "governanceToken()": FunctionFragment;
+    "multiSigWallet()": FunctionFragment;
     "owner()": FunctionFragment;
     "proposalCount()": FunctionFragment;
     "proposalThreshold()": FunctionFragment;
@@ -50,11 +54,16 @@ export interface GovernanceInterface extends utils.Interface {
     "queue(uint256)": FunctionFragment;
     "quorumVotes()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
+    "reputationBonusMultiplier()": FunctionFragment;
+    "reputationSystem()": FunctionFragment;
+    "reputationVotingEnabled()": FunctionFragment;
     "revokeTarget(address)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
+    "treasury()": FunctionFragment;
+    "updateReputationVotingConfig(bool,uint256)": FunctionFragment;
+    "updateSystemIntegrations(address,address,address)": FunctionFragment;
     "votingDelay()": FunctionFragment;
     "votingPeriod()": FunctionFragment;
-    "votingPower(address)": FunctionFragment;
   };
 
   getFunction(
@@ -66,11 +75,15 @@ export interface GovernanceInterface extends utils.Interface {
       | "categoryQuorum"
       | "categoryRequiresStaking"
       | "categoryThreshold"
+      | "createMultisigTransaction"
       | "delegatedVotes"
       | "delegates"
       | "execute"
+      | "executeAsMultisig"
       | "executionDelay"
+      | "getVotingPower"
       | "governanceToken"
+      | "multiSigWallet"
       | "owner"
       | "proposalCount"
       | "proposalThreshold"
@@ -80,11 +93,16 @@ export interface GovernanceInterface extends utils.Interface {
       | "queue"
       | "quorumVotes"
       | "renounceOwnership"
+      | "reputationBonusMultiplier"
+      | "reputationSystem"
+      | "reputationVotingEnabled"
       | "revokeTarget"
       | "transferOwnership"
+      | "treasury"
+      | "updateReputationVotingConfig"
+      | "updateSystemIntegrations"
       | "votingDelay"
       | "votingPeriod"
-      | "votingPower"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -120,6 +138,15 @@ export interface GovernanceInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "createMultisigTransaction",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>,
+      PromiseOrValue<string>
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "delegatedVotes",
     values: [PromiseOrValue<string>]
   ): string;
@@ -132,11 +159,23 @@ export interface GovernanceInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "executeAsMultisig",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "executionDelay",
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getVotingPower",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "governanceToken",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "multiSigWallet",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
@@ -181,12 +220,37 @@ export interface GovernanceInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "reputationBonusMultiplier",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reputationSystem",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reputationVotingEnabled",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "revokeTarget",
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(functionFragment: "treasury", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "updateReputationVotingConfig",
+    values: [PromiseOrValue<boolean>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateSystemIntegrations",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<string>,
+      PromiseOrValue<string>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "votingDelay",
@@ -195,10 +259,6 @@ export interface GovernanceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "votingPeriod",
     values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "votingPower",
-    values: [PromiseOrValue<string>]
   ): string;
 
   decodeFunctionResult(
@@ -227,17 +287,33 @@ export interface GovernanceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "createMultisigTransaction",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "delegatedVotes",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "delegates", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "execute", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "executeAsMultisig",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "executionDelay",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getVotingPower",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "governanceToken",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "multiSigWallet",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
@@ -265,11 +341,32 @@ export interface GovernanceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "reputationBonusMultiplier",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "reputationSystem",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "reputationVotingEnabled",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "revokeTarget",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "treasury", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "updateReputationVotingConfig",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateSystemIntegrations",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -278,10 +375,6 @@ export interface GovernanceInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "votingPeriod",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "votingPower",
     data: BytesLike
   ): Result;
 
@@ -295,6 +388,8 @@ export interface GovernanceInterface extends utils.Interface {
     "ProposalCreated(uint256,address,string,string,uint256,uint256)": EventFragment;
     "ProposalExecuted(uint256)": EventFragment;
     "ProposalQueued(uint256,uint256)": EventFragment;
+    "ReputationVotingConfigUpdated(bool,uint256)": EventFragment;
+    "SystemIntegrationUpdated(address,address,address)": EventFragment;
     "TargetAuthorized(address)": EventFragment;
     "TargetRevoked(address)": EventFragment;
     "VoteCast(address,uint256,uint8,uint256,string)": EventFragment;
@@ -310,6 +405,10 @@ export interface GovernanceInterface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "ProposalCreated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalExecuted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalQueued"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "ReputationVotingConfigUpdated"
+  ): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SystemIntegrationUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "TargetAuthorized"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "TargetRevoked"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "VoteCast"): EventFragment;
@@ -428,6 +527,31 @@ export type ProposalQueuedEvent = TypedEvent<
 
 export type ProposalQueuedEventFilter = TypedEventFilter<ProposalQueuedEvent>;
 
+export interface ReputationVotingConfigUpdatedEventObject {
+  enabled: boolean;
+  multiplier: BigNumber;
+}
+export type ReputationVotingConfigUpdatedEvent = TypedEvent<
+  [boolean, BigNumber],
+  ReputationVotingConfigUpdatedEventObject
+>;
+
+export type ReputationVotingConfigUpdatedEventFilter =
+  TypedEventFilter<ReputationVotingConfigUpdatedEvent>;
+
+export interface SystemIntegrationUpdatedEventObject {
+  governanceToken: string;
+  reputationSystem: string;
+  treasury: string;
+}
+export type SystemIntegrationUpdatedEvent = TypedEvent<
+  [string, string, string],
+  SystemIntegrationUpdatedEventObject
+>;
+
+export type SystemIntegrationUpdatedEventFilter =
+  TypedEventFilter<SystemIntegrationUpdatedEvent>;
+
 export interface TargetAuthorizedEventObject {
   target: string;
 }
@@ -536,6 +660,14 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
+    createMultisigTransaction(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -551,9 +683,21 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    executeAsMultisig(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     executionDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
 
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     governanceToken(overrides?: CallOverrides): Promise<[string]>;
+
+    multiSigWallet(overrides?: CallOverrides): Promise<[string]>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
@@ -566,11 +710,12 @@ export interface Governance extends BaseContract {
       arg1: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<
-      [boolean, number, BigNumber, BigNumber] & {
+      [boolean, number, BigNumber, BigNumber, BigNumber] & {
         hasVoted: boolean;
         support: number;
         votes: BigNumber;
         stakingPower: BigNumber;
+        reputationBonus: BigNumber;
       }
     >;
 
@@ -637,6 +782,12 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    reputationBonusMultiplier(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    reputationSystem(overrides?: CallOverrides): Promise<[string]>;
+
+    reputationVotingEnabled(overrides?: CallOverrides): Promise<[boolean]>;
+
     revokeTarget(
       target: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -647,14 +798,24 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    treasury(overrides?: CallOverrides): Promise<[string]>;
+
+    updateReputationVotingConfig(
+      _enabled: PromiseOrValue<boolean>,
+      _multiplier: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    updateSystemIntegrations(
+      _reputationSystem: PromiseOrValue<string>,
+      _treasury: PromiseOrValue<string>,
+      _multiSigWallet: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     votingDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     votingPeriod(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    votingPower(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
   };
 
   authorizeTarget(
@@ -694,6 +855,14 @@ export interface Governance extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
+  createMultisigTransaction(
+    target: PromiseOrValue<string>,
+    value: PromiseOrValue<BigNumberish>,
+    data: PromiseOrValue<BytesLike>,
+    description: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   delegatedVotes(
     arg0: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -709,9 +878,21 @@ export interface Governance extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  executeAsMultisig(
+    proposalId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
+  getVotingPower(
+    account: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   governanceToken(overrides?: CallOverrides): Promise<string>;
+
+  multiSigWallet(overrides?: CallOverrides): Promise<string>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
@@ -724,11 +905,12 @@ export interface Governance extends BaseContract {
     arg1: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<
-    [boolean, number, BigNumber, BigNumber] & {
+    [boolean, number, BigNumber, BigNumber, BigNumber] & {
       hasVoted: boolean;
       support: number;
       votes: BigNumber;
       stakingPower: BigNumber;
+      reputationBonus: BigNumber;
     }
   >;
 
@@ -795,6 +977,12 @@ export interface Governance extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  reputationBonusMultiplier(overrides?: CallOverrides): Promise<BigNumber>;
+
+  reputationSystem(overrides?: CallOverrides): Promise<string>;
+
+  reputationVotingEnabled(overrides?: CallOverrides): Promise<boolean>;
+
   revokeTarget(
     target: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -805,14 +993,24 @@ export interface Governance extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  treasury(overrides?: CallOverrides): Promise<string>;
+
+  updateReputationVotingConfig(
+    _enabled: PromiseOrValue<boolean>,
+    _multiplier: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  updateSystemIntegrations(
+    _reputationSystem: PromiseOrValue<string>,
+    _treasury: PromiseOrValue<string>,
+    _multiSigWallet: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
   votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
-  votingPower(
-    arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
 
   callStatic: {
     authorizeTarget(
@@ -852,6 +1050,14 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    createMultisigTransaction(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -867,9 +1073,21 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    executeAsMultisig(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     governanceToken(overrides?: CallOverrides): Promise<string>;
+
+    multiSigWallet(overrides?: CallOverrides): Promise<string>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
@@ -882,11 +1100,12 @@ export interface Governance extends BaseContract {
       arg1: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<
-      [boolean, number, BigNumber, BigNumber] & {
+      [boolean, number, BigNumber, BigNumber, BigNumber] & {
         hasVoted: boolean;
         support: number;
         votes: BigNumber;
         stakingPower: BigNumber;
+        reputationBonus: BigNumber;
       }
     >;
 
@@ -951,6 +1170,12 @@ export interface Governance extends BaseContract {
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
+    reputationBonusMultiplier(overrides?: CallOverrides): Promise<BigNumber>;
+
+    reputationSystem(overrides?: CallOverrides): Promise<string>;
+
+    reputationVotingEnabled(overrides?: CallOverrides): Promise<boolean>;
+
     revokeTarget(
       target: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -961,14 +1186,24 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    treasury(overrides?: CallOverrides): Promise<string>;
+
+    updateReputationVotingConfig(
+      _enabled: PromiseOrValue<boolean>,
+      _multiplier: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    updateSystemIntegrations(
+      _reputationSystem: PromiseOrValue<string>,
+      _treasury: PromiseOrValue<string>,
+      _multiSigWallet: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
-    votingPower(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
   };
 
   filters: {
@@ -1056,6 +1291,26 @@ export interface Governance extends BaseContract {
     ): ProposalQueuedEventFilter;
     ProposalQueued(id?: null, executionTime?: null): ProposalQueuedEventFilter;
 
+    "ReputationVotingConfigUpdated(bool,uint256)"(
+      enabled?: null,
+      multiplier?: null
+    ): ReputationVotingConfigUpdatedEventFilter;
+    ReputationVotingConfigUpdated(
+      enabled?: null,
+      multiplier?: null
+    ): ReputationVotingConfigUpdatedEventFilter;
+
+    "SystemIntegrationUpdated(address,address,address)"(
+      governanceToken?: PromiseOrValue<string> | null,
+      reputationSystem?: PromiseOrValue<string> | null,
+      treasury?: PromiseOrValue<string> | null
+    ): SystemIntegrationUpdatedEventFilter;
+    SystemIntegrationUpdated(
+      governanceToken?: PromiseOrValue<string> | null,
+      reputationSystem?: PromiseOrValue<string> | null,
+      treasury?: PromiseOrValue<string> | null
+    ): SystemIntegrationUpdatedEventFilter;
+
     "TargetAuthorized(address)"(
       target?: PromiseOrValue<string> | null
     ): TargetAuthorizedEventFilter;
@@ -1133,6 +1388,14 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    createMultisigTransaction(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1148,9 +1411,21 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    executeAsMultisig(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     governanceToken(overrides?: CallOverrides): Promise<BigNumber>;
+
+    multiSigWallet(overrides?: CallOverrides): Promise<BigNumber>;
 
     owner(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1191,6 +1466,12 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    reputationBonusMultiplier(overrides?: CallOverrides): Promise<BigNumber>;
+
+    reputationSystem(overrides?: CallOverrides): Promise<BigNumber>;
+
+    reputationVotingEnabled(overrides?: CallOverrides): Promise<BigNumber>;
+
     revokeTarget(
       target: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -1201,14 +1482,24 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    treasury(overrides?: CallOverrides): Promise<BigNumber>;
+
+    updateReputationVotingConfig(
+      _enabled: PromiseOrValue<boolean>,
+      _multiplier: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    updateSystemIntegrations(
+      _reputationSystem: PromiseOrValue<string>,
+      _treasury: PromiseOrValue<string>,
+      _multiSigWallet: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
-
-    votingPower(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -1249,6 +1540,14 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    createMultisigTransaction(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      description: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1264,9 +1563,21 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    executeAsMultisig(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     executionDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     governanceToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    multiSigWallet(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1307,6 +1618,16 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    reputationBonusMultiplier(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    reputationSystem(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    reputationVotingEnabled(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     revokeTarget(
       target: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -1317,13 +1638,23 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    treasury(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    updateReputationVotingConfig(
+      _enabled: PromiseOrValue<boolean>,
+      _multiplier: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    updateSystemIntegrations(
+      _reputationSystem: PromiseOrValue<string>,
+      _treasury: PromiseOrValue<string>,
+      _multiSigWallet: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     votingDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     votingPeriod(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    votingPower(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
   };
 }
