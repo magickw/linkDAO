@@ -233,15 +233,15 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps with the updated object
-      await db
-        .update(sellers)
-        .set({
-          onboardingSteps: updatedSteps,
-          onboardingCompleted,
-          updatedAt: new Date(),
-        })
-        .where(eq(sellers.walletAddress, walletAddress));
+      // Update onboardingSteps using raw SQL with proper parameter binding
+      await db.execute(sql`
+        UPDATE sellers 
+        SET 
+          onboarding_steps = ${updatedSteps},
+          onboarding_completed = ${onboardingCompleted},
+          updated_at = NOW()
+        WHERE wallet_address = ${walletAddress}
+      `);
       
       safeLogger.info('SQL update result:', result);
 

@@ -14,6 +14,9 @@ interface WalletLoginBridgeProps {
   skipIfAuthenticated?: boolean;
 }
 
+// Global flag to prevent multiple WalletLoginBridge instances from running simultaneously
+let isGlobalAuthInProgress = false;
+
 export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   autoLogin = true,
   onLoginSuccess,
@@ -26,10 +29,14 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const lastAddressRef = useRef<string | undefined>();
   const hasTriedLoginRef = useRef(false);
+  const loginAttemptTimestampRef = useRef<number>(0);
 
   // Prevent page refresh loops by tracking failed attempts
   const [failedAttempts, setFailedAttempts] = useState(0);
   const maxFailedAttempts = 3;
+  
+  // Add a cooldown period to prevent rapid retries
+  const AUTH_COOLDOWN_MS = 2000;
 
   // Simple notification function (will be enhanced when ToastProvider is available)
   const notify = (message: string, type: 'info' | 'success' | 'warning' | 'error') => {
@@ -62,9 +69,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
-    // Skip if we already tried login for this address
-    if (hasTriedLoginRef.current && !addressChanged) {
-      console.log('📝 Skipping auto-login: already attempted for this address');
+    // Skip if we already tried login for this address recently (cooldown)
+    const now = Date.now();
+    if (!addressChanged && (now - loginAttemptTimestampRef.current < AUTH_COOLDOWN_MS)) {
+      console.log('📝 Skipping auto-login: cooldown period active');
       return;
     }
 
@@ -121,6 +129,9 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     try {
       setIsLoggingIn(true);
       hasTriedLoginRef.current = true;
+      
+      // Set the attempt timestamp to prevent rapid retries
+      loginAttemptTimestampRef.current = Date.now();
 
       console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
 
@@ -128,8 +139,9 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       const storedToken = localStorage.getItem('linkdao_access_token');
       const storedAddress = localStorage.getItem('linkdao_wallet_address');
       const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+      const storedUserData = localStorage.getItem('linkdao_user_data');
       
-      if (storedToken && storedAddress === address && storedTimestamp) {
+      if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
