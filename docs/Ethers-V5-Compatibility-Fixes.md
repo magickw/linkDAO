@@ -21,6 +21,17 @@ The components were written for ethers v6, but the project uses ethers v5.8.0.
 | `await provider.getSigner()` | `provider.getSigner()` |
 | `network.chainId` (BigNumber) | `network.chainId` (number) |
 | `receipt.hash` | `receipt.transactionHash` |
+| `bigint` type | `ethers.BigNumber` type |
+| `ethers.formatUnits()` | `ethers.utils.formatUnits()` |
+| `ethers.parseUnits()` | `ethers.utils.parseUnits()` |
+| `balance >= amount` | `balance.gte(amount)` |
+| `allowance < amount` | `allowance.lt(amount)` |
+
+**Key Changes:**
+- All `bigint` types changed to `ethers.BigNumber`
+- Comparison operators changed to BigNumber methods (`.gte()`, `.lt()`)
+- Format/parse functions moved to `ethers.utils` namespace
+- Used `ethers.BigNumber.from(0)` instead of `0n`
 
 ### 2. **BuyNFTModal.tsx** - Updated provider initialization
 

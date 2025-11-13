@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { ENV_CONFIG } from '@/config/environment';
 
 // Define types for LDAO dashboard data
 export interface LDAOStakingInfo {
@@ -77,52 +77,85 @@ export interface LDAODashboardData {
 }
 
 // API functions for LDAO benefits
+const baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
+
+const getAuthToken = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('linkdao_access_token') ||
+         localStorage.getItem('token') ||
+         localStorage.getItem('authToken') ||
+         localStorage.getItem('auth_token');
+};
+
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const token = getAuthToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${baseUrl}${url}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+
+  return response.json();
+};
+
 export const ldaoApi = {
   /**
    * Get comprehensive LDAO benefits dashboard data
    */
   async getDashboardData(): Promise<LDAODashboardData> {
-    const response = await apiClient.get('/api/ldao/benefits');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/benefits');
+    return response.data;
   },
 
   /**
    * Get user's staking information
    */
   async getStakingInfo(): Promise<LDAOStakingInfo> {
-    const response = await apiClient.get('/api/ldao/staking');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/staking');
+    return response.data;
   },
 
   /**
    * Get marketplace benefits
    */
   async getMarketplaceBenefits(): Promise<LDAOMarketplaceBenefits> {
-    const response = await apiClient.get('/api/ldao/marketplace');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/marketplace');
+    return response.data;
   },
 
   /**
    * Get staking tier details
    */
   async getStakingTierDetails() {
-    const response = await apiClient.get('/api/ldao/staking/tiers');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/staking/tiers');
+    return response.data;
   },
 
   /**
    * Get acquisition options
    */
   async getAcquisitionOptions() {
-    const response = await apiClient.get('/api/ldao/acquisition');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/acquisition');
+    return response.data;
   },
 
   /**
    * Get recent activity
    */
   async getRecentActivity(): Promise<LDAORecentActivity[]> {
-    const response = await apiClient.get('/api/ldao/activity');
-    return response.data.data;
+    const response = await fetchWithAuth('/api/ldao/activity');
+    return response.data;
   }
 };
