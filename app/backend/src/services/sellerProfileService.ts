@@ -219,10 +219,20 @@ export class SellerProfileService {
 
       const onboardingCompleted = this.calculateOnboardingCompletion(updatedSteps);
 
+      // Log the update for debugging
+      safeLogger.info('Updating onboarding steps:', {
+        walletAddress,
+        step,
+        completed,
+        updatedSteps,
+        onboardingCompleted
+      });
+
+      // Ensure onboardingSteps is properly serialized for JSONB
       await db
         .update(sellers)
         .set({
-          onboardingSteps: updatedSteps,
+          onboardingSteps: JSON.parse(JSON.stringify(updatedSteps)),
           onboardingCompleted,
           updatedAt: new Date(),
         })
@@ -230,7 +240,13 @@ export class SellerProfileService {
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {
-      safeLogger.error('Error updating onboarding step:', error);
+      safeLogger.error('Error updating onboarding step:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        walletAddress,
+        step,
+        completed
+      });
       throw error;
     }
   }

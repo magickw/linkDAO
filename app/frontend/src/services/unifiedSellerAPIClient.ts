@@ -183,12 +183,16 @@ export class UnifiedSellerAPIClient {
       // Get authentication token if available
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
+      // Get wallet address for authentication
+      const walletAddress = localStorage.getItem('linkdao_wallet_address');
+      
       const response = await fetch(endpoint, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(walletAddress ? { 'X-Wallet-Address': walletAddress } : {}),
           ...options?.headers,
         },
       });
@@ -253,6 +257,9 @@ export class UnifiedSellerAPIClient {
       // Get authentication token if available
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       
+      // Get wallet address for authentication
+      const walletAddress = localStorage.getItem('linkdao_wallet_address');
+      
       const response = await fetch(endpoint, {
         ...options,
         method: 'PUT',
@@ -260,6 +267,7 @@ export class UnifiedSellerAPIClient {
         headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(walletAddress ? { 'X-Wallet-Address': walletAddress } : {}),
           ...options?.headers,
         },
       });
@@ -378,9 +386,14 @@ export class UnifiedSellerAPIClient {
   }
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
+    // The backend expects { completed: true } in the request body
+    // We send the data as well for storage, but ensure completed is set to true
     await this.request<void>(this.endpoints.updateOnboardingStep(walletAddress, stepId), {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        completed: true,
+        data: data
+      }),
     });
   }
 

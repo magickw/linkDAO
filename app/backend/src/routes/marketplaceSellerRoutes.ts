@@ -21,11 +21,8 @@ const upload = multer({
   },
 });
 
-// Marketplace Seller Profile Routes
-// These routes are mapped to match the frontend expectations at /api/marketplace/seller/...
-router.get('/seller/:walletAddress', sellerController.getProfile.bind(sellerController));
-router.post('/seller/profile', csrfProtection, sellerController.createProfile.bind(sellerController));
-router.put('/seller/:walletAddress', csrfProtection, sellerController.updateProfile.bind(sellerController));
+// NOTE: Seller Profile routes are now handled by sellerProfileRoutes
+// This avoids conflicts and ensures proper onboarding flow support
 
 // Enhanced profile update with image support
 router.put(
@@ -44,29 +41,7 @@ router.post('/seller/profile/validate', csrfProtection, sellerController.validat
 // Seller statistics
 router.get('/seller/stats/:walletAddress', sellerController.getSellerStats.bind(sellerController));
 
-// Seller tier and progress
-router.get('/seller/:walletAddress/tier', async (req, res) => {
-  try {
-    const { walletAddress } = req.params;
-    const { sellerProfileService } = await import('../services/sellerProfileService');
-    
-    const tier = await sellerProfileService.getSellerTier(walletAddress);
-    
-    res.json({
-      success: true,
-      data: tier
-    });
-  } catch (error) {
-    console.error('Error fetching seller tier:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch seller tier',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-router.get('/seller/:walletAddress/tier/progress', async (req, res) => {
+// NOTE: Seller tier routes are now handled by sellerProfileRoutes
   try {
     const { walletAddress } = req.params;
     const { sellerProfileService } = await import('../services/sellerProfileService');

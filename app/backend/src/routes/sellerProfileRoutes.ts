@@ -254,7 +254,18 @@ router.get('/seller/onboarding/:walletAddress',
 router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (req: Request, res: Response) => {
   try {
     const { walletAddress, step } = req.params;
-    const { completed } = req.body;
+    
+    // Handle different request body formats
+    let completed: boolean;
+    if (typeof req.body.completed === 'boolean') {
+      completed = req.body.completed;
+    } else if (req.body.data && typeof req.body.data.completed === 'boolean') {
+      completed = req.body.data.completed;
+    } else {
+      return validationErrorResponse(res, [
+        { field: 'completed', message: 'Completed field is required and must be a boolean' }
+      ]);
+    }
 
     // Validate wallet address format
     if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
@@ -272,13 +283,6 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (re
     if (!validSteps.includes(normalizedStep)) {
       return validationErrorResponse(res, [
         { field: 'step', message: 'Invalid onboarding step. Valid steps: profile-setup, verification, payout-setup, first-listing' }
-      ]);
-    }
-
-    // Validate completed parameter
-    if (typeof completed !== 'boolean') {
-      return validationErrorResponse(res, [
-        { field: 'completed', message: 'Completed must be a boolean value' }
       ]);
     }
 
