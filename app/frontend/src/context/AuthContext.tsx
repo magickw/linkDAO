@@ -67,6 +67,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { disconnect } = useDisconnect();
   const { validateSession } = useSessionValidation();
 
+  // Store session data - must be defined before checkStoredSession
+  const storeSession = useCallback((token: string, userData: AuthUser) => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+      localStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, userData.address);
+      localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
+      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to store session:', error);
+    }
+  }, []);
+
+  // Clear stored session
+  const clearStoredSession = useCallback(() => {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove ${key} from localStorage:`, error);
+      }
+    });
+  }, []);
+
   // Check if we have a valid stored session
   const checkStoredSession = useCallback(async () => {
     try {
@@ -123,29 +146,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     return false;
   }, [address, validateSession, storeSession]);
-
-  // Clear stored session
-  const clearStoredSession = useCallback(() => {
-    Object.values(STORAGE_KEYS).forEach(key => {
-      try {
-        localStorage.removeItem(key);
-      } catch (error) {
-        console.warn(`Failed to remove ${key} from localStorage:`, error);
-      }
-    });
-  }, []);
-
-  // Store session data
-  const storeSession = useCallback((token: string, userData: AuthUser) => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
-      localStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, userData.address);
-      localStorage.setItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP, Date.now().toString());
-      localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
-    } catch (error) {
-      console.error('Failed to store session:', error);
-    }
-  }, []);
 
   // Initialize authentication state with comprehensive session checking
   // This should only run once on mount to avoid circular dependencies

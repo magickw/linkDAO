@@ -91,6 +91,9 @@ export class FeedService {
     if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
       const normalizedAddress = userAddress.toLowerCase();
+
+      console.log('🔍 [BACKEND FEED] Building following filter for user:', normalizedAddress);
+
       const user = await db.select({ id: users.id })
         .from(users)
         .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
@@ -98,15 +101,21 @@ export class FeedService {
 
       if (user.length > 0) {
         const userId = user[0].id;
+        console.log('✅ [BACKEND FEED] Found user ID:', userId);
+
         // Get list of users the current user is following
         const followingList = await db.select({ followingId: follows.followingId })
           .from(follows)
           .where(eq(follows.followerId, userId));
 
         const followingIds = followingList.map(f => f.followingId);
-        
+
+        console.log('📋 [BACKEND FEED] User is following:', followingIds.length, 'users');
+
         // Always include the user's own posts in the following feed
         followingIds.push(userId);
+
+        console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
 
         // Filter posts to show from followed users AND the user's own posts
         if (followingIds.length > 0) {
@@ -116,6 +125,7 @@ export class FeedService {
           followingFilter = eq(posts.authorId, userId);
         }
       } else {
+        console.log('⚠️ [BACKEND FEED] User not found in database, creating user...');
         // User doesn't exist in database, but let's still try to show their posts
         // Get or create user first
         let userRecord = (await db.insert(users)
@@ -254,6 +264,13 @@ export class FeedService {
           moderationFilter, // Include moderation filter in count
           isNull(posts.parentId) // Only count top-level posts
         ));
+
+      console.log('📊 [BACKEND FEED] Returning posts:', {
+        postsCount: postsWithMetrics.length,
+        totalInDB: totalCount[0]?.count || 0,
+        page,
+        limit
+      });
 
       return {
         posts: postsWithMetrics,

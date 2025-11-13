@@ -161,7 +161,16 @@ export class FeedService {
       }
 
       const url = `${BACKEND_API_BASE_URL}/api/feed/enhanced?${params}`;
-      
+
+      // Debug logging
+      console.log('🔍 [FEED DEBUG] Fetching feed with params:', {
+        feedSource: filter.feedSource,
+        userAddress: filter.userAddress,
+        page,
+        limit,
+        url
+      });
+
       // Track analytics event
       feedAnalytics.trackEvent({
         eventType: 'feed_load',
@@ -207,9 +216,16 @@ export class FeedService {
 
       const response_data: BackendFeedResponse = await response.json();
 
+      // Debug logging response
+      console.log('✅ [FEED DEBUG] Received response:', {
+        postsCount: response_data?.data?.posts?.length || 0,
+        hasMore: response_data?.data?.pagination?.totalPages > page,
+        totalPosts: response_data?.data?.pagination?.total
+      });
+
       // Validate response data structure
       if (!response_data || !response_data.data || !Array.isArray(response_data.data.posts)) {
-        console.warn('Invalid feed response structure:', response_data);
+        console.warn('❌ [FEED DEBUG] Invalid feed response structure:', response_data);
         return {
           posts: [],
           hasMore: false,
