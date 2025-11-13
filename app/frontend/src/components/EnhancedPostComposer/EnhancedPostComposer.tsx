@@ -215,7 +215,10 @@ export default function EnhancedPostComposer({
       };
 
       await onSubmit(richPostInput);
-      
+
+      // Dispatch event to notify other components that a post was created
+      window.dispatchEvent(new CustomEvent('postCreated'));
+
       // Clear form and draft on successful submission
       handleReset();
       addToast('Post created successfully!', 'success');

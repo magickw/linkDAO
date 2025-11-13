@@ -144,34 +144,39 @@ export const useCreatePost = () => {
 /**
  * Custom hook to fetch posts by author
  * @param author - Author address
- * @returns Object containing posts data, loading state, and error
+ * @returns Object containing posts data, loading state, error, and refetch function
  */
 export const usePostsByAuthor = (author: string) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
-  useEffect(() => {
+  const fetchPosts = useCallback(async () => {
     if (!author) {
       setPosts([]);
       return;
     }
 
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedPosts = await PostService.getPostsByAuthor(author);
-        setPosts(fetchedPosts);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPosts();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const fetchedPosts = await PostService.getPostsByAuthor(author);
+      setPosts(fetchedPosts);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+    } finally {
+      setIsLoading(false);
+    }
   }, [author]);
 
-  return { posts, isLoading, error };
+  useEffect(() => {
+    fetchPosts();
+  }, [author, refreshTrigger, fetchPosts]);
+
+  const refetch = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  return { posts, isLoading, error, refetch };
 };

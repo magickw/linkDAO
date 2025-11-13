@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions, communityGovernanceProposals, communityGovernanceVotes, communityModerationActions, communityDelegations, communityProxyVotes, communityMultiSigApprovals, communityAutomatedExecutions, communityTokenGatedContent, communityUserContentAccess, communitySubscriptionTiers, communityUserSubscriptions, communityTreasuryPools, communityCreatorRewards, communityStaking, communityStakingRewards, communityReferralPrograms, communityUserReferrals } from '../db/schema';
-import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull } from 'drizzle-orm';
+import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull, ne } from 'drizzle-orm';
 import { feedService } from './feedService';
 import { sanitizeInput, sanitizeObject, validateLength } from '../utils/sanitizer';
 
@@ -606,6 +606,7 @@ export class CommunityService {
         isPublic: data.isPublic,
         avatar: data.iconUrl || null,
         banner: data.bannerUrl || null,
+        creatorAddress: data.creatorAddress, // Store the creator's address
         moderators: JSON.stringify([data.creatorAddress]),
         treasuryAddress: data.governanceEnabled ? null : null, // Will be set later
         governanceToken: data.governanceEnabled ? null : null, // Will be set later
@@ -3443,6 +3444,275 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error executing treasury allocation:', error);
       return { success: false, message: 'Failed to allocate treasury funds' };
+    }
+  }
+
+  // Get communities created by a user
+  async getCommunitiesCreatedByUser(userAddress: string, page: number = 1, limit: number = 20) {
+    try {
+      const offset = (page - 1) * limit;
+
+      // Get communities created by the user
+      const userCommunities = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          creatorAddress: communities.creatorAddress
+        })
+        .from(communities)
+        .where(eq(communities.creatorAddress, userAddress))
+        .orderBy(desc(communities.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCount = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(communities)
+        .where(eq(communities.creatorAddress, userAddress));
+
+      return {
+        communities: userCommunities,
+        pagination: {
+          page,
+          limit,
+          total: totalCount[0]?.count || 0,
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting communities created by user:', error);
+      throw new Error('Failed to retrieve user communities');
+    }
+  }
+
+  // Get communities user is a member of (but didn't create)
+  async getCommunitiesUserIsMemberOf(userAddress: string, page: number = 1, limit: number = 20) {
+    try {
+      const offset = (page - 1) * limit;
+
+      // Get communities the user is a member of (excluding ones they created)
+      const memberCommunities = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          creatorAddress: communities.creatorAddress,
+          userRole: communityMembers.role,
+          joinedAt: communityMembers.joinedAt
+        })
+        .from(communities)
+        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(
+          and(
+            eq(communityMembers.userAddress, userAddress),
+            ne(communities.creatorAddress, userAddress) // Exclude communities they created
+          )
+        )
+        .orderBy(desc(communities.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCount = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(communities)
+        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(
+          and(
+            eq(communityMembers.userAddress, userAddress),
+            ne(communities.creatorAddress, userAddress) // Exclude communities they created
+          )
+        );
+
+      return {
+        communities: memberCommunities,
+        pagination: {
+          page,
+          limit,
+          total: totalCount[0]?.count || 0,
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting communities user is member of:', error);
+      throw new Error('Failed to retrieve member communities');
+    }
+  }
+
+  // Get all communities for "My Communities" (created + member of)
+  async getMyCommunities(userAddress: string, page: number = 1, limit: number = 20) {
+    try {
+      // Get communities created by user
+      const createdCommunities = await this.getCommunitiesCreatedByUser(userAddress, 1, 100);
+      
+      // Get communities user is member of
+      const memberCommunities = await this.getCommunitiesUserIsMemberOf(userAddress, 1, 100);
+      
+      // Combine and sort by creation date (newest first)
+      const allCommunities = [
+        ...createdCommunities.communities,
+        ...memberCommunities.communities
+      ].sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+      
+      // Apply pagination
+      const offset = (page - 1) * limit;
+      const paginatedCommunities = allCommunities.slice(offset, offset + limit);
+      
+      return {
+        communities: paginatedCommunities,
+        pagination: {
+          page,
+          limit,
+          total: allCommunities.length,
+          totalPages: Math.ceil(allCommunities.length / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting my communities:', error);
+      throw new Error('Failed to retrieve my communities');
+    }
+  }
+
+  // Get communities the user is a member of (following)
+  async getCommunitiesFollowedByUser(userAddress: string, page: number = 1, limit: number = 20) {
+    try {
+      const offset = (page - 1) * limit;
+
+      // Get communities the user is a member of
+      const followedCommunities = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          creatorAddress: communities.creatorAddress
+        })
+        .from(communities)
+        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(eq(communityMembers.userAddress, userAddress))
+        .orderBy(desc(communities.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCount = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(communities)
+        .innerJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(eq(communityMembers.userAddress, userAddress));
+
+      return {
+        communities: followedCommunities,
+        pagination: {
+          page,
+          limit,
+          total: totalCount[0]?.count || 0,
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting communities followed by user:', error);
+      throw new Error('Failed to retrieve followed communities');
+    }
+  }
+
+  // Get all communities for the user (both created and followed)
+  async getMyCommunities(userAddress: string, page: number = 1, limit: number = 20) {
+    try {
+      const offset = (page - 1) * limit;
+
+      // Get communities created by the user and communities the user is a member of
+      // Use UNION to combine both queries and remove duplicates
+      const myCommunities = await db
+        .selectDistinct({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          creatorAddress: communities.creatorAddress
+        })
+        .from(communities)
+        .leftJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(
+          or(
+            eq(communities.creatorAddress, userAddress),
+            eq(communityMembers.userAddress, userAddress)
+          )
+        )
+        .orderBy(desc(communities.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCount = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${communities.id})` })
+        .from(communities)
+        .leftJoin(communityMembers, eq(communities.id, communityMembers.communityId))
+        .where(
+          or(
+            eq(communities.creatorAddress, userAddress),
+            eq(communityMembers.userAddress, userAddress)
+          )
+        );
+
+      return {
+        communities: myCommunities,
+        pagination: {
+          page,
+          limit,
+          total: totalCount[0]?.count || 0,
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting my communities:', error);
+      throw new Error('Failed to retrieve my communities');
     }
   }
 

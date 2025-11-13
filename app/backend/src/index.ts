@@ -515,10 +515,18 @@ app.use('/api/communities', communityCommentRoutes);
 // Use messaging routes
 app.use('/api/messaging', messagingRoutes);
 
+// Add redirect routes for legacy/alternative chat endpoints that frontend might be trying to access
+app.use('/api/chat', messagingRoutes);
+app.use('/api/messages', messagingRoutes);
+app.use('/api/conversations', messagingRoutes);
+
 // Reputation routes
 
 
 // Use notification preferences routes
+// Import user profile API routes
+import userProfileRoutes from './routes/userProfileRoutes';
+
 // DISABLED: Heavy routes (saves ~200MB memory)
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
 app.use('/api/mobile', mobileRoutes);
@@ -578,8 +586,6 @@ import { sellerImageRoutes } from './routes/sellerImageRoutes';
 import sellerVerificationRoutes from './routes/sellerVerificationRoutes';
 // Import ENS validation routes
 import ensValidationRoutes from './routes/ensValidationRoutes';
-// Import user profile API routes
-import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import marketplace routes

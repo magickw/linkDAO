@@ -57,6 +57,9 @@ const CreatePostPage: React.FC = () => {
         tags
       });
 
+      // Dispatch event to notify other components that a post was created
+      window.dispatchEvent(new CustomEvent('postCreated'));
+
       router.push(`/communities/${selectedCommunity}`);
     } catch (error) {
       console.error('Error creating post:', error);

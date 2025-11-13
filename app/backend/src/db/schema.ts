@@ -978,6 +978,7 @@ export const communities = pgTable("communities", {
   tags: text("tags"), // JSON array of tags
   isPublic: boolean("is_public").default(true).notNull(),
   moderators: text("moderators"), // JSON array of moderator addresses
+  creatorAddress: varchar("creator_address", { length: 66 }), // Wallet address of the creator
   treasuryAddress: varchar("treasury_address", { length: 66 }),
   governanceToken: varchar("governance_token", { length: 66 }),
   settings: text("settings"), // JSON CommunitySettings object
@@ -990,6 +991,7 @@ export const communities = pgTable("communities", {
   isPublicIdx: index("idx_communities_is_public").on(t.isPublic),
   memberCountIdx: index("idx_communities_member_count").on(t.memberCount),
   createdAtIdx: index("idx_communities_created_at").on(t.createdAt),
+  creatorAddressIdx: index("idx_communities_creator_address").on(t.creatorAddress),
 }));
 
 // Community members

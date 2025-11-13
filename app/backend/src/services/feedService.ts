@@ -141,8 +141,31 @@ export class FeedService {
           followingFilter = sql`1=0`;
         }
       }
+    } else if (feedSource === 'all' && userAddress) {
+      // For 'all' feedSource but when user is authenticated, ensure they see their own posts
+      // This helps with user engagement - they can see what they just posted
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select({ id: users.id })
+        .from(users)
+        .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
+        .limit(1);
+
+      if (user.length > 0) {
+        const userId = user[0].id;
+        // Modify the followingFilter to include user's own posts in addition to all posts
+        // This ensures the user sees their own content even in 'all' feed
+        followingFilter = sql`(${followingFilter}) OR ${posts.authorId} = ${userId}`;
+      } else {
+        // If user doesn't exist in DB, create them so their future posts can be found
+        await db.insert(users)
+          .values({
+            walletAddress: normalizedAddress,
+            createdAt: new Date()
+          })
+          .onConflictDoNothing();
+      }
     }
-    // For 'all' feedSource, no additional filtering is needed - show all posts
+    // For 'all' feedSource with no user, no additional filtering is needed - show all posts
 
     // Build sort order - default to newest posts
     const sortOrder = this.buildSortOrder(sort);

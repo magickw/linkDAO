@@ -1228,6 +1228,33 @@ export class CommunityController {
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search authors'));
     }
   }
+
+  // Get communities created by user
+  async getMyCommunities(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const {
+        page = 1,
+        limit = 20
+      } = req.query;
+
+      const myCommunities = await communityService.getMyCommunities(
+        userAddress,
+        Number(page),
+        Number(limit)
+      );
+
+      res.json(createSuccessResponse(myCommunities, {}));
+    } catch (error) {
+      safeLogger.error('Error getting my communities:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve my communities'));
+    }
+  }
 }
 
 export const communityController = new CommunityController();

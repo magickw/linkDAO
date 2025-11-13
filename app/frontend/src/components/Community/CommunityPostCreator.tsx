@@ -111,7 +111,10 @@ export default function CommunityPostCreator({
       setTags([]);
       setMediaUrls([]);
       setPostType(allowedPostTypes.find(t => t.enabled)?.id || 'discussion');
-      
+
+      // Dispatch event to notify other components that a post was created
+      window.dispatchEvent(new CustomEvent('postCreated'));
+
       // Notify parent component
       if (onPostCreated) {
         onPostCreated({

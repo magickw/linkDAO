@@ -593,4 +593,16 @@ router.get('/search-authors',
   communityController.searchAuthors
 );
 
+// Get communities created by user (auth required)
+router.get('/my-communities',
+  authRequired,
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  communityController.getMyCommunities
+);
+
 export default router;

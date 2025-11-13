@@ -19,7 +19,7 @@ import { useReputationData } from '@/hooks/useReputationData';
 import { useTipsData } from '@/hooks/useTipsData';
 import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
-import Link from 'next/link';
+import EnhancedPostCard from '@/components/EnhancedPostCard';
 
 export default function Profile() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function Profile() {
   const { earnings, isLoading: isTipsLoading } = useTipsData({ userId: targetUserAddress || '' });
 
   // Posts data
-  const { posts, isLoading: isPostsLoading, error: postsError } = usePostsByAuthor(targetUserAddress || '');
+  const { posts, isLoading: isPostsLoading, error: postsError, refetch: refetchPosts } = usePostsByAuthor(targetUserAddress || '');
 
   // Smart contract profile data - temporarily disabled due to webpack issues
   const contractProfileData: any = null;
@@ -198,9 +198,9 @@ export default function Profile() {
     }
   };
 
-  // Check for edit query parameter (only for current user's profile)
+  // Check for edit query parameter
   useEffect(() => {
-    if (router.query.edit === 'true' && (!router.query.user || router.query.user === currentUserAddress)) {
+    if (router.query.edit === 'true') {
       setIsEditing(true);
       // Clean up the URL after entering edit mode
       const newQuery = { ...router.query };
@@ -210,7 +210,7 @@ export default function Profile() {
         query: newQuery
       }, undefined, { shallow: true });
     }
-  }, [router.query.edit, router.query.user, currentUserAddress, router]);
+  }, [router.query.edit, router]);
 
   // Listen for post creation events to refresh the posts list
   useEffect(() => {
@@ -666,56 +666,15 @@ export default function Profile() {
                   </div>
                 </div>
                 <div className="mt-6 lg:mt-0 flex flex-col sm:flex-row lg:flex-col gap-3">
-                  {/* Show Edit Profile button only for current user's profile */}
-                  {currentUserAddress && targetUserAddress === currentUserAddress && (
-                    <button
-                      onClick={() => setIsEditing(!isEditing)}
-                      className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
-                    >
-                      <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-                    </button>
-                  )}
-                  
-                  {/* Show Follow/Unfollow button when viewing another user's profile */}
-                  {currentUserAddress && targetUserAddress && targetUserAddress !== currentUserAddress && (
-                    <button
-                      onClick={isFollowing ? handleUnfollow : handleFollow}
-                      disabled={isFollowLoading || isFollowStatusLoading}
-                      className={`inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105 ${
-                        isFollowing
-                          ? 'text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-primary-500'
-                          : 'text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:ring-blue-500'
-                      }`}
-                    >
-                      {isFollowLoading || isFollowStatusLoading ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          {isFollowing ? 'Unfollowing...' : 'Following...'}
-                        </>
-                      ) : isFollowing ? (
-                        <>
-                          <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Following
-                        </>
-                      ) : (
-                        <>
-                          <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          Follow
-                        </>
-                      )}
-                    </button>
-                  )}
-                  
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
+                  >
+                    <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {isEditing ? 'Cancel Editing' : 'Edit Profile'}
+                  </button>
                   <button className="inline-flex items-center justify-center px-5 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-xl shadow-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105">
                     <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -879,7 +838,7 @@ export default function Profile() {
           {!isLoading && !hasError && (
             <div>
               {activeTab === 'posts' && (
-                <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${isEditing && currentUserAddress && targetUserAddress === currentUserAddress ? '' : 'hidden'}`}>
+                <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${isEditing ? '' : 'hidden'}`}>
                   <form onSubmit={saveProfile}>
                     <div className="mb-6">
                       <label htmlFor="handle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1004,32 +963,7 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={`/posts/${post.id}`}>
-                          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                              {post.title || 'Untitled Post'}
-                            </h4>
-                            <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
-                              {post.contentCid}
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                              <div className="flex items-center space-x-4">
-                                <span>{post.comments || 0} comments</span>
-                                <span>{post.views || 0} views</span>
-                              </div>
-                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            {post.tags && post.tags.length > 0 && (
-                              <div className="flex gap-2 mt-2 flex-wrap">
-                                {post.tags.map((tag, i) => (
-                                  <span key={i} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Link>
+                        <EnhancedPostCard key={post.id} post={post} />
                       ))}
                     </div>
                   )}
@@ -1270,7 +1204,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'addresses' && isEditing && currentUserAddress && targetUserAddress === currentUserAddress && (
+              {activeTab === 'addresses' && isEditing && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Address Information</h3>
                   
@@ -1628,11 +1562,11 @@ export default function Profile() {
               {activeTab === 'following' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h3>
-                  <FollowingList userAddress={targetUserAddress || ''} />
+                  <FollowingList userAddress={address || ''} />
                 </div>
               )}
 
-              {activeTab === 'payments' && isEditing && currentUserAddress && targetUserAddress === currentUserAddress && (
+              {activeTab === 'payments' && isEditing && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Payment Methods</h3>
                   <PaymentMethodsTab />
