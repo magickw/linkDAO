@@ -1,9 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { databaseService } from '../services/databaseService';
 import { sellers } from '../db/schema';
-import { eq, sql } from 'drizzle-orm';
 import { 
   SellerProfile, 
   CreateSellerProfileRequest, 
@@ -82,7 +81,7 @@ export class SellerProfileService {
           coverImageUrl: profileData.coverImageUrl,
           isVerified: false,
           onboardingCompleted: false,
-          onboardingSteps: defaultOnboardingSteps,
+          onboardingSteps: JSON.stringify(defaultOnboardingSteps),
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -141,7 +140,7 @@ export class SellerProfileService {
           socialLinks: updates.socialLinks ? JSON.stringify(updates.socialLinks) : undefined,
           storeDescription: updates.storeDescription,
           coverImageUrl: updates.coverImageUrl,
-          onboardingSteps: updatedOnboardingSteps,
+          onboardingSteps: JSON.stringify(updatedOnboardingSteps),
           onboardingCompleted: this.calculateOnboardingCompletion(updatedOnboardingSteps),
           updatedAt: new Date(),
         })
@@ -233,17 +232,17 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps using raw SQL with proper parameter binding
+      // Update onboardingSteps using raw SQL with proper JSON string serialization
       await db.execute(sql`
         UPDATE sellers 
         SET 
-          onboarding_steps = ${updatedSteps},
+          onboarding_steps = ${JSON.stringify(updatedSteps)},
           onboarding_completed = ${onboardingCompleted},
           updated_at = NOW()
         WHERE wallet_address = ${walletAddress}
       `);
       
-      safeLogger.info('SQL update result:', result);
+      safeLogger.info('Onboarding steps updated successfully:', { walletAddress, step, completed });
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {
@@ -256,9 +255,8 @@ export class SellerProfileService {
         completed
       });
       
-      // Create a more specific error
-      const newError = new Error(`Failed to update onboarding step: ${errorMessage}`);
-      throw newError;
+      // Create a simple error without circular references
+      throw new Error(`Failed to update onboarding step: ${errorMessage}`);
     }
   }
 

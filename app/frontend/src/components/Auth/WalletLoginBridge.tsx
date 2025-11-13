@@ -124,9 +124,16 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
   const handleAutoLogin = async () => {
+    // Check global auth flag to prevent duplicate authentication
+    if (isGlobalAuthInProgress) {
+      console.log('📝 Skipping auto-login: global authentication in progress');
+      return;
+    }
+    
     if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) return;
 
     try {
+      isGlobalAuthInProgress = true;
       setIsLoggingIn(true);
       hasTriedLoginRef.current = true;
       
@@ -164,7 +171,6 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
             }
           }
           
-          setIsLoggingIn(false);
           return;
         }
       }
@@ -213,6 +219,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       }
     } finally {
       setIsLoggingIn(false);
+      isGlobalAuthInProgress = false; // Reset the global flag
     }
   };
 
@@ -241,6 +248,15 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       hasTriedLoginRef.current = true; // Prevent further attempts
     }
   }, [failedAttempts]);
+
+  // Cleanup function to reset global flag when component unmounts
+  useEffect(() => {
+    return () => {
+      if (hasTriedLoginRef.current) {
+        isGlobalAuthInProgress = false;
+      }
+    };
+  }, []);
 
   // This component doesn't render anything visible
   return null;

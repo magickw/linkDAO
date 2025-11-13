@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { authService, KYCStatus } from '@/services/authService';
 import { enhancedAuthService } from '@/services/enhancedAuthService';
