@@ -240,13 +240,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - only run once on mount
 
-  // Handle wallet connection changes
+  // Handle wallet connection changes with enhanced session persistence
   useEffect(() => {
-    if (!isConnected && user) {
-      // Wallet disconnected, logout user
-      handleLogout();
-    }
-  }, [isConnected, user]);
+    const handleWalletConnectionChange = async () => {
+      if (!isConnected && user) {
+        // Wallet disconnected, logout user
+        handleLogout();
+      } else if (isConnected && address && !user && !isLoading) {
+        // Wallet connected but no user, try to restore session
+        console.log('🔗 Wallet connected, checking for existing session...');
+        const hasValidSession = await checkStoredSession();
+        if (hasValidSession) {
+          console.log('✅ Restored session without requiring signature');
+        } else {
+          console.log('🔐 No valid session found, signature will be required when needed');
+        }
+      }
+    };
+
+    handleWalletConnectionChange();
+  }, [isConnected, address, user, isLoading, checkStoredSession]);
 
   // Load KYC status
   const loadKYCStatus = async () => {
@@ -381,7 +394,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: true };
       }
 
-      // First check the stored session in localStorage
+      // First check the stored session in localStorage with proper validation
       const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
       const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
@@ -416,21 +429,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Check if we have a valid session using validateSession function
-      const sessionValidation = await validateSession(walletAddress);
-      if (sessionValidation.isValid && sessionValidation.token) {
-        console.log('✅ Using existing valid session');
-        // Try to get user data from storage
-        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (storedUserData) {
-          const userData = JSON.parse(storedUserData);
-          setUser(userData);
-          setAccessToken(sessionValidation.token);
-          await loadKYCStatus();
-          return { success: true };
-        }
-      }
-
       // Check if authService already has a token for this address
       if (authService.isAuthenticated()) {
         try {
@@ -440,6 +438,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (token) {
               setUser(currentUser);
               setAccessToken(token);
+              // Store in localStorage for persistence across page refreshes
+              storeSession(token, currentUser);
               await loadKYCStatus();
               console.log('✅ Using existing valid session from authService');
               return { success: true };
@@ -447,6 +447,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (error) {
           console.warn('Failed to validate existing authService session:', error);
+        }
+      }
+
+      // Check enhancedAuthService as fallback
+      const sessionStatus = enhancedAuthService.getSessionStatus();
+      if (sessionStatus.isAuthenticated && sessionStatus.address === walletAddress) {
+        try {
+          const currentUser = await enhancedAuthService.getCurrentUser();
+          if (currentUser && currentUser.address === walletAddress) {
+            const token = enhancedAuthService.getToken();
+            if (token) {
+              setUser(currentUser);
+              setAccessToken(token);
+              // Store in localStorage for persistence across page refreshes
+              storeSession(token, currentUser);
+              await loadKYCStatus();
+              console.log('✅ Using existing valid session from enhancedAuthService');
+              return { success: true };
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to validate existing enhancedAuthService session:', error);
         }
       }
       

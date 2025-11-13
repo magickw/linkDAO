@@ -14,6 +14,8 @@ import {
 } from '../models/Marketplace';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
+import { listings } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -78,7 +80,24 @@ export class BlockchainMarketplaceService {
   }
 
   async getListingById(id: string): Promise<MarketplaceListing | null> {
-    const dbListing = await databaseService.getListingById(parseInt(id));
+    // Handle both numeric and string IDs
+    const numericId = /^\d+$/.test(id) ? parseInt(id) : null;
+    
+    // If it's not a numeric ID, try to find by product_id
+    let dbListing;
+    if (numericId !== null) {
+      dbListing = await databaseService.getListingById(numericId);
+    } else {
+      // Try to find by product_id field
+      const db = databaseService.getDatabase();
+      const [listing] = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.productId, id))
+        .limit(1);
+      dbListing = listing;
+    }
+    
     if (!dbListing) return null;
     
     // Get seller address

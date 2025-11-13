@@ -390,6 +390,15 @@ class AuthService {
    * Get current user profile
    */
   async getCurrentUser(): Promise<AuthUser | null> {
+    // Ensure we have a token before proceeding
+    if (!this.token) {
+      this.token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('auth_token') ||
+                   '';
+    }
+    
     if (!this.token) {
       return null;
     }
@@ -692,6 +701,14 @@ class AuthService {
    * Get current token
    */
   getToken(): string | null {
+    // Check localStorage as fallback if token is not in memory
+    if (!this.token) {
+      this.token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('auth_token') ||
+                   '';
+    }
     return this.token;
   }
 

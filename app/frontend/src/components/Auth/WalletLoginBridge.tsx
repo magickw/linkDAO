@@ -72,16 +72,37 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     const storedToken = localStorage.getItem('linkdao_access_token');
     const storedAddress = localStorage.getItem('linkdao_wallet_address');
     const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+    const storedUserData = localStorage.getItem('linkdao_user_data');
     
-    if (storedToken && storedAddress === address && storedTimestamp) {
+    if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
       const timestamp = parseInt(storedTimestamp);
       const now = Date.now();
       const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
       
       if (now - timestamp < TOKEN_EXPIRY_TIME) {
-        console.log('✅ Valid session exists, skipping auto-login');
+        console.log('✅ Valid session exists, ensuring auth context is updated');
         hasTriedLoginRef.current = false;
+        // Ensure the auth context is updated with the stored session
+        if (!isAuthenticated && !isAuthLoading && !isLoggingIn) {
+          console.log('🔄 Updating auth context with stored session');
+          // Set a small delay to ensure auth context is ready to update
+          setTimeout(() => {
+            login(address, connector, status).catch(err => {
+              console.warn('Failed to update auth context with stored session:', err);
+            });
+          }, 100);
+        }
         return;
+      } else {
+        console.log('⏰ Stored session expired, clearing expired session');
+        // Clear expired session
+        const storageKeys = [
+          'linkdao_access_token',
+          'linkdao_wallet_address', 
+          'linkdao_signature_timestamp',
+          'linkdao_user_data'
+        ];
+        storageKeys.forEach(key => localStorage.removeItem(key));
       }
     }
 
@@ -192,13 +213,15 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
   // Monitor authentication status and reset login attempt when authenticated
   useEffect(() => {
-    if (isAuthenticated && hasTriedLoginRef.current) {
-      // User is now authenticated, reset the login attempt flag
+    if (isAuthenticated && user && user.address === address) {
+      // User is now authenticated for the current address, reset the login attempt flag
       // This prevents repeated login attempts for the same session
-      hasTriedLoginRef.current = false;
-      console.log('User authenticated successfully, resetting login attempt flag');
+      if (hasTriedLoginRef.current) {
+        hasTriedLoginRef.current = false;
+        console.log('User authenticated successfully, resetting login attempt flag');
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user, address]);
 
   useEffect(() => {
     if (failedAttempts >= maxFailedAttempts) {
