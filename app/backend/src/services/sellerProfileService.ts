@@ -233,20 +233,15 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps using raw SQL to avoid Drizzle JSON serialization issues
-      const result = await db.execute(sql`
-        UPDATE sellers 
-        SET 
-          onboarding_steps = jsonb_set(
-            onboarding_steps, 
-            ${step}, 
-            ${completed}
-          ),
-          onboarding_completed = ${onboardingCompleted},
-          updated_at = NOW()
-        WHERE wallet_address = ${walletAddress}
-        RETURNING onboarding_steps
-      `);
+      // Update onboardingSteps using standard Drizzle update
+      await db
+        .update(sellers)
+        .set({
+          onboardingSteps: sql`jsonb_set(onboarding_steps, ${step}, ${completed})`,
+          onboardingCompleted,
+          updatedAt: new Date(),
+        })
+        .where(eq(sellers.walletAddress, walletAddress));
       
       safeLogger.info('SQL update result:', result);
 
