@@ -228,15 +228,19 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Ensure onboardingSteps is properly serialized for JSONB
-      await db
-        .update(sellers)
-        .set({
-          onboardingSteps: JSON.parse(JSON.stringify(updatedSteps)),
-          onboardingCompleted,
-          updatedAt: new Date(),
-        })
-        .where(eq(sellers.walletAddress, walletAddress));
+      // Update onboardingSteps using raw SQL to avoid Drizzle JSON serialization issues
+      await db.execute(sql`
+        UPDATE sellers 
+        SET 
+          onboarding_steps = jsonb_set(
+            onboarding_steps, 
+            ${step}, 
+            ${completed}
+          ),
+          onboarding_completed = ${onboardingCompleted},
+          updated_at = NOW()
+        WHERE wallet_address = ${walletAddress}
+      `);
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {
