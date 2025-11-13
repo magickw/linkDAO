@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/context/ToastContext';
 import Link from 'next/link';
 import { marketplaceService, MockProduct } from '../../services/marketplaceService';
+import AuctionTimer from './AuctionTimer';
 
 interface RealTimeAuctionCardProps {
   auction: MockProduct;
@@ -25,20 +26,39 @@ export default function RealTimeAuctionCard({
   showBidding = true,
   className = ''
 }: RealTimeAuctionCardProps) {
+  const { addToast } = useToast();
   const [currentBid, setCurrentBid] = useState(parseFloat(auction.highestBid || auction.price));
   const [bidCount, setBidCount] = useState(auction.bidCount || 0);
-  const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [isWatched, setIsWatched] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [auctionStats, setAuctionStats] = useState<any>(null);
   const [recentBids, setRecentBids] = useState<any[]>([]);
+  const [timeRemaining, setTimeRemaining] = useState<any>(null);
   const [isEnded, setIsEnded] = useState(false);
-  const { addToast } = useToast();
 
   // Calculate time remaining
-  const calculateTimeRemaining = useCallback(() => {
-    if (!auction.auctionEndTime) return 'No end time';
+  const calculateTimeRemaining = () => {
+    if (!auction.auctionEndTime) return null;
+    const now = new Date();
+    const endTime = new Date(auction.auctionEndTime);
+    const diff = endTime.getTime() - now.getTime();
+    
+    if (diff <= 0) return null;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return { days, hours, minutes, seconds };
+  };
+
+  // Load auction data
+
+  // Check if auction has ended
+  useEffect(() => {
+    if (!auction.auctionEndTime) return;
     
     const endTime = new Date(auction.auctionEndTime);
     const now = new Date();
@@ -46,36 +66,8 @@ export default function RealTimeAuctionCard({
     
     if (diff <= 0) {
       setIsEnded(true);
-      return 'Auction Ended';
-    }
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
     }
   }, [auction.auctionEndTime]);
-
-  // Update time remaining every second
-  useEffect(() => {
-    const updateTime = () => {
-      setTimeRemaining(calculateTimeRemaining());
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-
-    return () => clearInterval(interval);
-  }, [calculateTimeRemaining]);
 
   // Load auction stats and recent bids
   useEffect(() => {
@@ -136,6 +128,18 @@ export default function RealTimeAuctionCard({
       }
     };
   }, [auction.id]);
+
+  // Update time remaining every second
+  useEffect(() => {
+    const updateTime = () => {
+      setTimeRemaining(calculateTimeRemaining());
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+
+    return () => clearInterval(interval);
+  }, [auction.auctionEndTime]);
 
   const handlePlaceBid = async () => {
     if (!userAddress || !bidAmount || isPlacingBid) return;
@@ -259,15 +263,17 @@ export default function RealTimeAuctionCard({
         {/* Time Remaining */}
         <div className="mt-2 flex justify-between items-center">
           <span className="text-sm text-gray-500 dark:text-gray-400">Time Remaining</span>
-          <span className={`text-sm font-medium ${
-            isEnded 
-              ? 'text-gray-500 dark:text-gray-400'
-              : timeRemaining.includes('s') && !timeRemaining.includes('m') && !timeRemaining.includes('h')
-                ? 'text-red-600 dark:text-red-400'
+          {auction.auctionEndTime ? (
+            <AuctionTimer endTime={auction.auctionEndTime} className="text-sm font-medium" />
+          ) : (
+            <span className={`text-sm font-medium ${
+              isEnded 
+                ? 'text-gray-500 dark:text-gray-400'
                 : 'text-gray-900 dark:text-white'
-          }`}>
-            {timeRemaining}
-          </span>
+            }`}>
+              No end time
+            </span>
+          )}
         </div>
 
         {/* Seller Info */}

@@ -213,6 +213,10 @@ const MarketplaceContent: React.FC = () => {
             isEscrowed: listing.isEscrowed || listing.is_escrowed || false,
             createdAt: listing.createdAt || listing.created_at || new Date().toISOString(),
             updatedAt: listing.updatedAt || listing.updated_at || new Date().toISOString(),
+            // Auction-specific fields
+            reservePrice: listing.reservePrice,
+            minIncrement: listing.minIncrement,
+            reserveMet: listing.reserveMet,
             // Enhanced fields for better display
             enhancedData: {
               title: enhancedData.title || 'Unnamed Item',
@@ -271,10 +275,10 @@ const MarketplaceContent: React.FC = () => {
         }
       } else {
         console.log('No listings returned from enhanced service, using fallback data');
-        // Enhanced fallback data that matches our backend structure
+        // Enhanced fallback data that matches our backend structure with UUID IDs
         setListings([
           {
-            id: 'prod_001',
+            id: '550e8400-e29b-41d4-a716-446655440001',
             sellerWalletAddress: '0x1234567890123456789012345678901234567890',
             tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
             price: '0.1245',
@@ -290,9 +294,9 @@ const MarketplaceContent: React.FC = () => {
             // enhancedData properties removed to match MarketplaceListing interface
           },
           {
-            id: 'prod_002',
-            sellerWalletAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
-            tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
+            id: '550e8400-e29b-41d4-a716-446655440002',
+            sellerWalletAddress: '0xE034b53D4cCb101b2a4faec27708be507197350',
+            tokenAddress: '0xE034b53D4cCb101b2a4faec27708be507197350',
             price: '2.5000',
             quantity: 1,
             itemType: 'NFT',
@@ -316,7 +320,7 @@ const MarketplaceContent: React.FC = () => {
       // Enhanced fallback data that matches our backend structure
       setListings([
         {
-          id: 'prod_001',
+          id: '550e8400-e29b-41d4-a716-446655440001',
           sellerWalletAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
           tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
           price: '0.00245',
@@ -332,7 +336,7 @@ const MarketplaceContent: React.FC = () => {
           // enhancedData properties removed to match MarketplaceListing interface
         },
         {
-          id: 'prod_002',
+          id: '550e8400-e29b-41d4-a716-446655440002',
           sellerWalletAddress: '0x2345678901234567890123456789012345678901',
           tokenAddress: '0x0000000000000000000000000000000000000000',
           price: '2.5000',
@@ -810,6 +814,11 @@ const MarketplaceContent: React.FC = () => {
                                 setSelectedListing(listing);
                                 setShowBidModal(true);
                               }}
+                              // Add auction-specific data
+                              isAuction={listing.listingType === 'AUCTION'}
+                              highestBid={listing.highestBid}
+                              endTime={listing.endTime}
+                              reservePrice={listing.reservePrice}
                             />
                           </motion.div>
                         );

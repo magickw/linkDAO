@@ -60,12 +60,12 @@ export class OrderService {
 
       // Create order in database
       const dbOrder = await databaseService.createOrder(
-        parseInt(input.listingId),
+        input.listingId,
         buyerUser.id,
         sellerUser.id,
         input.amount,
         input.paymentToken,
-        parseInt(escrowId)
+        escrowId
       );
 
       if (!dbOrder) {

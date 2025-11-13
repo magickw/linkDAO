@@ -413,7 +413,7 @@ export class DatabaseSeeder {
       const isAuction = Math.random() > 0.8;
       
       return {
-        id: faker.number.int({ min: 1, max: 999999 }),
+        id: faker.string.uuid(),
         sellerId: seller?.walletAddress || faker.string.uuid(),
         productId: product.id,
         tokenAddress: faker.finance.ethereumAddress(),
@@ -451,7 +451,7 @@ export class DatabaseSeeder {
       const orderTotal = faker.number.float({ min: 10, max: 500, fractionDigits: 2 });
       
       ordersData.push({
-        id: faker.number.int({ min: 1, max: 999999 }),
+        id: faker.string.uuid(),
         listingId: listing.id,
         buyerId: buyer.id,
         sellerId: listing.sellerId,

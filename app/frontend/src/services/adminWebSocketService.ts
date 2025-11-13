@@ -61,10 +61,13 @@ export class AdminWebSocketManager {
   private isAuthenticated = false;
   private connectionHealth: ConnectionHealth;
   private connectionListeners: Set<ConnectionCallback> = new Set();
+  private eventListeners: Map<string, Set<EventCallback>> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5; // Reduced from 10 to prevent resource exhaustion
   private reconnectDelay = 2000; // Increased delay to reduce rapid reconnection attempts
   private isConnecting = false;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private latencyCheckInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.connectionHealth = {

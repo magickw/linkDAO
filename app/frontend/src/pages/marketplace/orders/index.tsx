@@ -48,7 +48,7 @@ const FALLBACK_ORDERS: OrderSummary[] = [
   {
     id: 'ORDER_DEMO_001',
     product: {
-      id: 'prod_001',
+      id: '550e8400-e29b-41d4-a716-446655440001',
       title: 'Premium Wireless Headphones',
       description: 'Audiophile-grade headphones with ANC and 30h battery life.',
       image: '/api/placeholder/240/240',
@@ -69,7 +69,7 @@ const FALLBACK_ORDERS: OrderSummary[] = [
   {
     id: 'ORDER_DEMO_002',
     product: {
-      id: 'prod_002',
+      id: '550e8400-e29b-41d4-a716-446655440002',
       title: 'Limited Edition DAO Hoodie',
       description: 'Ultra-soft hoodie with DAO governance patch and NFC chip.',
       image: '/api/placeholder/240/240',

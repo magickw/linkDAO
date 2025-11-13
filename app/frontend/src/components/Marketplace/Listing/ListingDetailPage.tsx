@@ -138,20 +138,20 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
         
         // Fallback to mock data if API not successful
         const mockListings = {
-          'prod_001': {
+          '550e8400-e29b-41d4-a716-446655440001': {
             title: 'Premium Wireless Headphones',
             description: 'High-quality noise-canceling wireless headphones with 30-hour battery life.',
             category: 'Electronics',
             images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop']
           },
-          'prod_002': {
+          '550e8400-e29b-41d4-a716-446655440002': {
             title: 'Rare Digital Art NFT',
             description: 'Exclusive digital artwork from renowned crypto artist.',
             category: 'NFT',
             images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=600&h=600&fit=crop']
           }
         } as const;
-        const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['prod_001'];
+        const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['550e8400-e29b-41d4-a716-446655440001'];
 
         setListing({
           id: listingId,
@@ -187,20 +187,20 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
         // Already set fallback above for non-success; network errors also land here but state is set below as safety
         if (!listing) {
           const mockListings = {
-            'prod_001': {
+            '550e8400-e29b-41d4-a716-446655440001': {
               title: 'Premium Wireless Headphones',
               description: 'High-quality noise-canceling wireless headphones with 30-hour battery life.',
               category: 'Electronics',
               images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop']
             },
-            'prod_002': {
+            '550e8400-e29b-41d4-a716-446655440002': {
               title: 'Rare Digital Art NFT',
               description: 'Exclusive digital artwork from renowned crypto artist.',
               category: 'NFT',
               images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=600&h=600&fit=crop']
             }
           } as const;
-          const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['prod_001'];
+          const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['550e8400-e29b-41d4-a716-446655440001'];
           setListing({
             id: listingId,
             title: mockData.title,

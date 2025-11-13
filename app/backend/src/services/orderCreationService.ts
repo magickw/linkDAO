@@ -127,7 +127,7 @@ export class OrderCreationService {
 
       // 5. Create order record
       const order = await this.databaseService.createOrder(
-        parseInt(request.listingId),
+        request.listingId,
         request.buyerAddress,
         listing.sellerId, // sellerId
         orderTotals.total.toString(),

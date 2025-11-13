@@ -53,7 +53,7 @@ export class BlockchainMarketplaceService {
     
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
-      id: dbListing.id.toString(),
+      id: dbListing.id,
       sellerWalletAddress: input.sellerWalletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
@@ -115,7 +115,7 @@ export class BlockchainMarketplaceService {
     
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
-      id: dbListing.id.toString(),
+      id: dbListing.id,
       sellerWalletAddress: seller.walletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
@@ -151,7 +151,7 @@ export class BlockchainMarketplaceService {
     const listings: MarketplaceListing[] = [];
     for (const dbListing of dbListings) {
       const listing: MarketplaceListing = {
-        id: dbListing.id.toString(),
+        id: dbListing.id,
         sellerWalletAddress: sellerAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
@@ -190,7 +190,7 @@ export class BlockchainMarketplaceService {
       if (!seller) continue;
       
       const listing: MarketplaceListing = {
-        id: dbListing.id.toString(),
+        id: dbListing.id,
         sellerWalletAddress: seller.walletAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
@@ -229,7 +229,7 @@ export class BlockchainMarketplaceService {
       if (!seller) continue;
       
       const listing: MarketplaceListing = {
-        id: dbListing.id.toString(),
+        id: dbListing.id,
         sellerWalletAddress: seller.walletAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
@@ -271,7 +271,7 @@ export class BlockchainMarketplaceService {
     
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
-      id: dbListing.id.toString(),
+      id: dbListing.id,
       sellerWalletAddress: seller.walletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
@@ -317,7 +317,7 @@ export class BlockchainMarketplaceService {
     }
     
     const dbBid = await databaseService.placeBid(
-      parseInt(listingId),
+      listingId,
       bidderUser.id,
       input.amount
     );
@@ -336,7 +336,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
-    const dbBids = await databaseService.getBidsByListing(parseInt(listingId));
+    const dbBids = await databaseService.getBidsByListing(listingId);
     
     const bids: MarketplaceBid[] = [];
     for (const dbBid of dbBids) {
@@ -393,7 +393,7 @@ export class BlockchainMarketplaceService {
     }
     
     const dbOffer = await databaseService.makeOffer(
-      parseInt(listingId),
+      listingId,
       buyerUser.id,
       input.amount
     );
@@ -413,7 +413,7 @@ export class BlockchainMarketplaceService {
   }
 
   async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
-    const dbOffers = await databaseService.getOffersByListing(parseInt(listingId));
+    const dbOffers = await databaseService.getOffersByListing(listingId);
     
     const offers: MarketplaceOffer[] = [];
     for (const dbOffer of dbOffers) {
@@ -485,7 +485,7 @@ export class BlockchainMarketplaceService {
     if (!sellerUser) return null;
     
     const dbEscrow = await databaseService.createEscrow(
-      parseInt(listingId),
+      listingId,
       buyerUser.id,
       sellerUser.id,
       listing.price,
@@ -652,12 +652,12 @@ export class BlockchainMarketplaceService {
     }
     
     const dbOrder = await databaseService.createOrder(
-      parseInt(listingId),
+      listingId,
       buyerUser.id,
       sellerUser.id,
       amount,
       paymentToken,
-      escrowId ? parseInt(escrowId) : undefined
+      escrowId
     );
     
     if (!dbOrder) return null;

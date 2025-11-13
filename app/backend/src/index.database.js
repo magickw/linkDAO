@@ -268,7 +268,7 @@ async function getListingsBySeller(sellerAddress) {
     }
 
     return {
-      id: listing.id.toString(),
+      id: listing.id,
       sellerWalletAddress: listing.seller_address || sellerAddress,
       tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
       price: listing.price.toString(),
@@ -779,7 +779,7 @@ app.get('/marketplace/listings', async (req, res) => {
       }
       
       return {
-        id: listing.id.toString(),
+        id: listing.id,
         sellerWalletAddress: listing.seller_wallet_address || 'Unknown',
         tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
         price: listing.price || '0',

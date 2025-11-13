@@ -561,7 +561,7 @@ export class DatabaseService {
     }
   }
 
-  async placeBid(listingId: number, bidderId: string, amount: string) {
+  async placeBid(listingId: string, bidderId: string, amount: string) {
     try {
       const result = await this.db.insert(schema.bids).values({
         listingId,
@@ -576,7 +576,7 @@ export class DatabaseService {
     }
   }
 
-  async getBidsByListing(listingId: number) {
+  async getBidsByListing(listingId: string) {
     try {
       return await this.db.select().from(schema.bids).where(eq(schema.bids.listingId, listingId));
     } catch (error) {
@@ -594,7 +594,7 @@ export class DatabaseService {
     }
   }
 
-  async makeOffer(listingId: number, buyerId: string, amount: string) {
+  async makeOffer(listingId: string, buyerId: string, amount: string) {
     try {
       const result = await this.db.insert(schema.offers).values({
         listingId,
@@ -609,7 +609,7 @@ export class DatabaseService {
     }
   }
 
-  async getOffersByListing(listingId: number) {
+  async getOffersByListing(listingId: string) {
     try {
       return await this.db.select().from(schema.offers).where(eq(schema.offers.listingId, listingId));
     } catch (error) {
@@ -637,7 +637,7 @@ export class DatabaseService {
     }
   }
 
-  async createEscrow(listingId: number, buyerId: string, sellerId: string, amount: string, 
+  async createEscrow(listingId: string, buyerId: string, sellerId: string, amount: string, 
                      deliveryInfo?: string) {
     try {
       const result = await this.db.insert(schema.escrows).values({
@@ -700,8 +700,8 @@ export class DatabaseService {
     }
   }
 
-  async createOrder(listingId: number, buyerId: string, sellerId: string, amount: string, 
-                    paymentToken: string, escrowId?: number) {
+  async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string, 
+                    paymentToken: string, escrowId?: string) {
     try {
       const result = await this.db.insert(schema.orders).values({
         listingId,

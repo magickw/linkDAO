@@ -568,7 +568,7 @@ export const sellerTransactions = pgTable("seller_transactions", {
 
 // Marketplace listings (keeping for backward compatibility)
 export const listings = pgTable("listings", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   sellerId: uuid("seller_id").references(() => users.id),
   productId: uuid("product_id").references(() => products.id), // Link to products table
   tokenAddress: varchar("token_address", { length: 66 }).notNull(),
@@ -600,16 +600,16 @@ export const listings = pgTable("listings", {
 }));
 
 export const bids = pgTable("bids", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").references(() => listings.id),
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: uuid("listing_id").references(() => listings.id),
   bidderId: uuid("bidder_id").references(() => users.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
 export const offers = pgTable("offers", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").references(() => listings.id),
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: uuid("listing_id").references(() => listings.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision
   createdAt: timestamp("created_at").defaultNow(),
@@ -617,8 +617,8 @@ export const offers = pgTable("offers", {
 });
 
 export const escrows = pgTable("escrows", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").references(() => listings.id),
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: uuid("listing_id").references(() => listings.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   sellerId: uuid("seller_id").references(() => users.id),
   amount: numeric("amount").notNull(), // Using numeric for better precision
@@ -667,8 +667,8 @@ export const disputeEvidence = pgTable("dispute_evidence", {
 
 // Orders
 export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  listingId: integer("listing_id").references(() => listings.id),
+  id: uuid("id").defaultRandom().primaryKey(),
+  listingId: uuid("listing_id").references(() => listings.id),
   buyerId: uuid("buyer_id").references(() => users.id),
   sellerId: uuid("seller_id").references(() => users.id),
   escrowId: integer("escrow_id").references(() => escrows.id),
@@ -705,9 +705,9 @@ export const orders = pgTable("orders", {
 
 // AI Moderation table for marketplace listings
 export const aiModeration = pgTable("ai_moderation", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   objectType: varchar("object_type", { length: 32 }).notNull(), // "listing", "dispute"
-  objectId: integer("object_id").notNull(),
+  objectId: uuid("object_id").notNull(),
   status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'approved', 'rejected', 'flagged'
   aiAnalysis: text("ai_analysis"), // JSON of AI analysis results
   createdAt: timestamp("created_at").defaultNow(),

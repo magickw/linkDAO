@@ -51,12 +51,23 @@ const BidModal: React.FC<BidModalProps> = ({ listing, isOpen, onClose, onSuccess
       return;
     }
     
-    // For auctions, bid must be higher than current highest bid
+    // For auctions, bid must be higher than current highest bid and meet minimum increment
     if (listing.listingType === 'AUCTION') {
       const currentHighest = listing.highestBid ? parseFloat(listing.highestBid) : parseFloat(listing.price);
-      if (parseFloat(bidAmount) <= currentHighest) {
-        addToast(`Bid must be higher than current highest bid of ${currentHighest} ETH`, 'error');
+      const minIncrement = listing.minIncrement ? parseFloat(listing.minIncrement) : 0.001;
+      const minBid = currentHighest + minIncrement;
+      
+      if (parseFloat(bidAmount) < minBid) {
+        addToast(`Bid must be at least ${minBid.toFixed(4)} ETH (minimum increment: ${minIncrement.toFixed(4)} ETH)`, 'error');
         return;
+      }
+      
+      // Check if reserve price is met
+      if (listing.reservePrice) {
+        const reservePrice = parseFloat(listing.reservePrice);
+        if (parseFloat(bidAmount) < reservePrice) {
+          addToast(`Bid is below the reserve price of ${reservePrice} ETH`, 'warning');
+        }
       }
     }
     
@@ -113,6 +124,12 @@ const BidModal: React.FC<BidModalProps> = ({ listing, isOpen, onClose, onSuccess
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-white/80">Current Highest:</span>
                   <span className="text-white font-semibold">{listing.highestBid} ETH</span>
+                </div>
+              )}
+              {listing.reservePrice && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-white/80">Reserve Price:</span>
+                  <span className="text-white">{listing.reservePrice} ETH</span>
                 </div>
               )}
               <div className="flex justify-between items-center mt-2">

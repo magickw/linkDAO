@@ -77,7 +77,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
           buyerAddress: userType === 'buyer' ? walletAddress : '0x1234567890123456789012345678901234567890',
           sellerAddress: userType === 'seller' ? walletAddress : '0x2345678901234567890123456789012345678901',
           product: {
-            id: 'prod_001',
+            id: '550e8400-e29b-41d4-a716-446655440001',
             title: 'Premium Wireless Headphones',
             description: 'High-quality noise-canceling wireless headphones',
             image: '/images/placeholder.jpg',

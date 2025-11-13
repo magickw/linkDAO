@@ -54,7 +54,7 @@ describe('EnhancedEscrowService', () => {
 
   const mockEscrow = {
     id: 1,
-    listingId: parseInt(mockListingId),
+    listingId: mockListingId,
     buyerId: mockBuyerProfile.id,
     sellerId: mockSellerProfile.id,
     amount: mockAmount,
@@ -262,7 +262,7 @@ describe('EnhancedEscrowService', () => {
 
       expect(escrowId).toBe('1');
       expect(mockDatabaseService.createEscrow).toHaveBeenCalledWith(
-        parseInt(mockListingId),
+        mockListingId,
         mockBuyerProfile.id,
         mockSellerProfile.id,
         mockAmount

@@ -10,7 +10,7 @@ import { API_BASE_URL } from '../config/api';
 // Fallback data for offline/error scenarios
 const MOCK_PRODUCTS: Product[] = [
   {
-    id: 'prod_001',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     sellerId: 'seller_001',
     title: 'Premium Digital Art Collection',
     description: 'A curated collection of digital artworks',
@@ -258,6 +258,10 @@ export interface MarketplaceListing {
   tokenId?: string;
   createdAt: string;
   updatedAt: string;
+  // Auction-specific fields
+  reservePrice?: string;
+  minIncrement?: string;
+  reserveMet?: boolean;
   // Enhanced data for UI display (optional, added by frontend transformation)
   enhancedData?: {
     title: string;

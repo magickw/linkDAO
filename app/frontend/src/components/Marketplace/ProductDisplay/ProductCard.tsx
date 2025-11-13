@@ -3,7 +3,7 @@
  * Displays product information with trust indicators and dual pricing
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { DualPricing } from '../../../design-system/components/DualPricing';
@@ -22,6 +22,7 @@ import useMarketplaceErrorHandler from '../../../hooks/useMarketplaceErrorHandle
 import { usePrice } from '../../../hooks/useMarketplaceData';
 import { formatPrice, formatDualPrice } from '../../../utils/priceFormatter';
 import { validateProductID, validateSellerID, normalizeID } from '../../../utils/idValidator';
+import AuctionTimer from '../AuctionTimer';
 
 interface Product {
   id: string;
@@ -119,6 +120,10 @@ interface ProductCardProps {
   onAddToWishlist?: (productId: string) => void;
   onBidClick?: (productId: string) => void;
   className?: string;
+  isAuction?: boolean;
+  highestBid?: string;
+  endTime?: string;
+  reservePrice?: string;
 }
 
 interface OptimizedImageProps {
@@ -220,13 +225,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onSellerClick,
   onAddToCart,
   onAddToWishlist,
+  onBidClick,
   className = '',
+  isAuction = false,
+  highestBid,
+  endTime,
+  reservePrice,
 }) => {
   const router = useRouter();
   const { actions: cartActions } = useCart();
   const { addToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
 
   // Validate and normalize IDs for consistency
   const normalizedProductId = normalizeID(product.id, 'product');
@@ -238,6 +249,43 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   // Check if product is in cart
   const isInCart = cartActions.isInCart(normalizedProductId);
   const cartItem = cartActions.getItem(normalizedProductId);
+
+  // Calculate time remaining for auctions
+  useEffect(() => {
+    if (!isAuction || !endTime) return;
+
+    const calculateTimeRemaining = () => {
+      const end = new Date(endTime);
+      const now = new Date();
+      const diff = end.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        return 'Ended';
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (days > 0) {
+        return `${days}d ${hours}h`;
+      } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      } else {
+        return `${seconds}s`;
+      }
+    };
+
+    setTimeRemaining(calculateTimeRemaining());
+    const timer = setInterval(() => {
+      setTimeRemaining(calculateTimeRemaining());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isAuction, endTime]);
 
   const { handleError, showErrorToast } = useMarketplaceErrorHandler();
 
@@ -531,32 +579,69 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </div>
               )}
 
+              {/* Auction Badge for List View */}
+              {isAuction && (
+                <div className="mb-2">
+                  <AnimatedProductBadge variant="warning" size="sm">
+                    AUCTION
+                  </AnimatedProductBadge>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
-                <DualPricing
-                  cryptoPrice={priceDisplayData.crypto}
-                  cryptoSymbol={priceDisplayData.cryptoSymbol}
-                  fiatPrice={priceDisplayData.fiat}
-                  fiatSymbol={priceDisplayData.fiatSymbol}
-                  size="small"
-                  layout="horizontal"
-                />
+                {isAuction ? (
+                  <div className="flex flex-col">
+                    <span className="text-white font-bold">
+                      {highestBid ? `${highestBid} ETH` : `${product.price.amount} ETH`}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-white/70">Ends in:</span>
+                      {endTime ? (
+                        <AuctionTimer endTime={endTime} className="text-sm" />
+                      ) : (
+                        <span className="text-sm text-white/70">{timeRemaining}</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <DualPricing
+                    cryptoPrice={priceDisplayData.crypto}
+                    cryptoSymbol={priceDisplayData.cryptoSymbol}
+                    fiatPrice={priceDisplayData.fiat}
+                    fiatSymbol={priceDisplayData.fiatSymbol}
+                    size="small"
+                    layout="horizontal"
+                  />
+                )}
 
                 <div className="flex gap-2">
-                  <Button
-                    variant="primary"
-                    size="small"
-                    onClick={handleAddToCart}
-                    disabled={product.inventory === 0 || isAddingToCart}
-                  >
-                    {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    onClick={handleWishlistToggle}
-                  >
-                    {isWishlisted ? '❤️' : '🤍'}
-                  </Button>
+                  {isAuction ? (
+                    <Button
+                      variant="primary"
+                      size="small"
+                      onClick={() => onBidClick && onBidClick(product.id)}
+                    >
+                      Place Bid
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={handleAddToCart}
+                        disabled={product.inventory === 0 || isAddingToCart}
+                      >
+                        {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="small"
+                        onClick={handleWishlistToggle}
+                      >
+                        {isWishlisted ? '❤️' : '🤍'}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -761,26 +846,74 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             />
           </div>
 
+          {/* Auction Badge */}
+          {isAuction && (
+            <div className="mb-3">
+              <AnimatedProductBadge variant="warning" size="sm">
+                AUCTION
+              </AnimatedProductBadge>
+            </div>
+          )}
+
+          {/* Auction Info */}
+          {isAuction && (
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-white/70 text-sm">Current Bid</span>
+                <span className="text-white font-bold">
+                  {highestBid ? `${highestBid} ETH` : `${product.price.amount} ETH`}
+                </span>
+              </div>
+              {reservePrice && (
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white/70 text-sm">Reserve Price</span>
+                  <span className="text-white">{reservePrice} ETH</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-white/70 text-sm">Ends in</span>
+                {endTime ? (
+                  <AuctionTimer endTime={endTime} />
+                ) : (
+                  <span className="font-bold text-white">{timeRemaining}</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2">
-            <Button
-              variant="primary"
-              size="small"
-              onClick={handleProductClick}
-              className="flex-1"
-              disabled={product.inventory === 0}
-            >
-              {product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
-            </Button>
-            <Button
-              variant="outline"
-              size="small"
-              onClick={handleAddToCart}
-              className="flex-1"
-              disabled={product.inventory === 0 || isAddingToCart}
-            >
-              {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
-            </Button>
+            {isAuction ? (
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => onBidClick && onBidClick(product.id)}
+                className="flex-1"
+              >
+                Place Bid
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleProductClick}
+                  className="flex-1"
+                  disabled={product.inventory === 0}
+                >
+                  {product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="small"
+                  onClick={handleAddToCart}
+                  className="flex-1"
+                  disabled={product.inventory === 0 || isAddingToCart}
+                >
+                  {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </GlassPanel>

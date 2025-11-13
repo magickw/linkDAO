@@ -357,7 +357,7 @@ export class HybridPaymentOrchestrator {
 
       // Create order in database
       const orderData = {
-        listingId: parseInt(request.listingId),
+        listingId: request.listingId, // Keep as string since frontend now sends UUIDs
         buyerId: buyer?.id || 'unknown',
         sellerId: seller?.id || 'unknown',
         amount: request.amount.toString(),

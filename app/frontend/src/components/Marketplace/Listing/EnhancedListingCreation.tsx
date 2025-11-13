@@ -36,6 +36,11 @@ interface ListingFormData {
   shippingCost: string;
   estimatedDelivery: string;
   quantity: number;
+  // Auction-specific fields
+  listingType: 'FIXED_PRICE' | 'AUCTION';
+  auctionDuration?: number; // in hours
+  reservePrice?: string;
+  minIncrement?: string;
 }
 
 interface ImagePreview {
@@ -63,7 +68,11 @@ export const EnhancedListingCreation: React.FC = () => {
     escrowEnabled: true,
     shippingCost: '0',
     estimatedDelivery: '3-5 days',
-    quantity: 1
+    quantity: 1,
+    listingType: 'FIXED_PRICE',
+    auctionDuration: 72, // 3 days default
+    reservePrice: '',
+    minIncrement: '0.01'
   });
 
   const [images, setImages] = useState<ImagePreview[]>([]);
@@ -228,12 +237,23 @@ export const EnhancedListingCreation: React.FC = () => {
         price: formData.price,
         quantity: formData.quantity,
         itemType: 'DIGITAL', // Default to digital for now
-        listingType: 'FIXED_PRICE', // Default to fixed price for now
+        listingType: formData.listingType,
         metadataURI: formData.title,
         isEscrowed: formData.escrowEnabled,
         nftStandard: undefined,
         tokenId: undefined
       };
+
+      // Add auction-specific fields if it's an auction
+      if (formData.listingType === 'AUCTION') {
+        // Calculate end time based on duration
+        const endTime = new Date();
+        endTime.setHours(endTime.getHours() + (formData.auctionDuration || 72));
+        
+        listingData.endTime = endTime.toISOString();
+        listingData.reservePrice = formData.reservePrice || undefined;
+        listingData.minIncrement = formData.minIncrement || '0.001';
+      }
 
       const result = await marketplaceService.createListing(listingData);
       
@@ -315,6 +335,18 @@ export const EnhancedListingCreation: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
+          <label className="block text-white font-medium mb-2">Listing Type</label>
+          <select
+            value={formData.listingType}
+            onChange={(e) => handleInputChange('listingType', e.target.value as 'FIXED_PRICE' | 'AUCTION')}
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="FIXED_PRICE">Fixed Price</option>
+            <option value="AUCTION">Auction</option>
+          </select>
+        </div>
+
+        <div>
           <label className="block text-white font-medium mb-2">Category</label>
           <select
             value={formData.category}
@@ -328,21 +360,62 @@ export const EnhancedListingCreation: React.FC = () => {
             ))}
           </select>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-white font-medium mb-2">Condition</label>
-          <select
-            value={formData.condition}
-            onChange={(e) => handleInputChange('condition', e.target.value)}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {conditions.map(condition => (
-              <option key={condition.value} value={condition.value}>
-                {condition.label}
-              </option>
-            ))}
-          </select>
+      {/* Auction-specific fields */}
+      {formData.listingType === 'AUCTION' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <label className="block text-white font-medium mb-2">Auction Duration (hours)</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.auctionDuration}
+              onChange={(e) => handleInputChange('auctionDuration', parseInt(e.target.value) || 24)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="72"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white font-medium mb-2">Reserve Price (ETH)</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={formData.reservePrice}
+              onChange={(e) => handleInputChange('reservePrice', e.target.value)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.5"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white font-medium mb-2">Minimum Increment (ETH)</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={formData.minIncrement}
+              onChange={(e) => handleInputChange('minIncrement', e.target.value)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.01"
+            />
+          </div>
         </div>
+      )}
+
+      <div>
+        <label className="block text-white font-medium mb-2">Condition</label>
+        <select
+          value={formData.condition}
+          onChange={(e) => handleInputChange('condition', e.target.value)}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {conditions.map(condition => (
+            <option key={condition.value} value={condition.value}>
+              {condition.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

@@ -231,7 +231,7 @@ export class EnhancedEscrowService {
       }
 
       const dbEscrow = await databaseService.createEscrow(
-        parseInt(listingId),
+        listingId,
         buyer.id,
         seller.id,
         amount
