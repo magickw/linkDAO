@@ -247,12 +247,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Handle wallet connection changes with enhanced session persistence
   useEffect(() => {
     const handleWalletConnectionChange = async () => {
+      // Only logout if wallet is disconnected and we have a user
       if (!isConnected && user) {
-        // Wallet disconnected, logout user
         console.log('🔗 Wallet disconnected, logging out user');
         handleLogout();
-      } else if (isConnected && address && !user && !isLoading) {
-        // Wallet connected but no user, try to restore session
+        return;
+      }
+      
+      // If wallet is connected but no user, try to restore session
+      if (isConnected && address && !user && !isLoading) {
         console.log('🔗 Wallet connected, checking for existing session...');
         const hasValidSession = await checkStoredSession();
         if (hasValidSession) {
@@ -260,10 +263,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           console.log('🔐 No valid session found, signature will be required when needed');
         }
-      } else if (isConnected && address && user && user.address !== address) {
-        // Wallet address changed, logout old user and check for new session
-        console.log('🔗 Wallet address changed from', user.address, 'to', address, 'logging out old user');
-        handleLogout();
+        return;
+      }
+      
+      // Handle wallet address changes more carefully
+      if (isConnected && address && user) {
+        // Check if this is a real address change vs. initial connection
+        if (user.address && user.address !== address) {
+          console.log('🔗 Wallet address changed from', user.address, 'to', address, 'logging out old user');
+          handleLogout();
+        }
+        // If user.address is undefined or empty, it might be an initial connection, don't logout
       }
     };
 
@@ -680,10 +690,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length === 0) {
+          // No accounts - wallet disconnected
           handleLogout();
-        } else if (user && accounts[0] !== user.address) {
-          // Account changed, need to re-authenticate
+        } else if (user && user.address && accounts[0] !== user.address) {
+          // Account changed to a completely different one, need to re-authenticate
+          console.log(' purse Account changed, re-authenticating');
           handleLogout();
+        } else if (user && !user.address && accounts[0]) {
+          // First account connection, don't logout - just let the wallet connection effect handle it
+          console.log(' purse Account connected, will be handled by wallet connection effect');
         }
       };
 

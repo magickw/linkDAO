@@ -637,8 +637,6 @@ import tipRoutes from './routes/tipRoutes';
 import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
 // Import price oracle routes
 import priceOracleRoutes from './routes/priceOracleRoutes';
-// Import reputation routes
-import { reputationRoutes } from './routes/reputationRoutes';
 // Import monitoring routes
 import monitoringRoutes from './routes/monitoringRoutes';
 

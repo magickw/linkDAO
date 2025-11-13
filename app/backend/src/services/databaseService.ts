@@ -498,11 +498,11 @@ export class DatabaseService {
     }
   }
 
-  async getListingById(id: number) {
+  async getListingById(id: string) {
     try {
-      // Handle NaN case
-      if (isNaN(id)) {
-        safeLogger.warn("getListingById called with NaN, returning null");
+      // Handle invalid UUID case
+      if (!id || typeof id !== 'string') {
+        safeLogger.warn("getListingById called with invalid ID, returning null");
         return null;
       }
       

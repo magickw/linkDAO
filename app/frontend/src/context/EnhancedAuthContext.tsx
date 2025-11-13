@@ -97,19 +97,24 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
       // Update last address reference
       lastAddressRef.current = currentAddress || null;
 
+      // Handle disconnection
       if (!isConnected || !currentAddress) {
         // Wallet disconnected - only logout if this context's user matches the disconnected address
-        if (user && user.address?.toLowerCase() === lastAddress) {
+        if (user && user.address && lastAddress && user.address?.toLowerCase() === lastAddress) {
           console.log(' purse Wallet disconnected, logging out user from EnhancedAuthContext');
           await handleLogout();
         }
         return;
       }
 
-      // Check if address changed
-      if (lastAddress && lastAddress !== currentAddress) {
-        console.log(' purse Wallet address changed, clearing session from EnhancedAuthContext');
-        await handleLogout();
+      // Handle address change - be more careful about initial connections
+      if (lastAddress && lastAddress !== currentAddress && user && user.address) {
+        // Only logout if we have a real address change, not an initial connection
+        const userAddress = user.address.toLowerCase();
+        if (userAddress !== currentAddress && userAddress === lastAddress) {
+          console.log(' purse Wallet address changed from', userAddress, 'to', currentAddress, 'clearing session from EnhancedAuthContext');
+          await handleLogout();
+        }
         return;
       }
 
@@ -302,11 +307,15 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length === 0) {
+          // No accounts - wallet disconnected
           handleLogout();
-        } else if (user && accounts[0].toLowerCase() !== user.address.toLowerCase()) {
-          // Account changed, need to re-authenticate
-          console.log('👛 Account changed, re-authenticating');
+        } else if (user && user.address && accounts[0].toLowerCase() !== user.address.toLowerCase()) {
+          // Account changed to a completely different one, need to re-authenticate
+          console.log(' purse Account changed, re-authenticating');
           handleLogout();
+        } else if (user && !user.address && accounts[0]) {
+          // First account connection, don't logout - just let the useEffect handle it
+          console.log(' purse Account connected, will be handled by wallet connection effect');
         }
       };
 

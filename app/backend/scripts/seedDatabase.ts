@@ -38,7 +38,7 @@ interface SeedOptions {
   clean: boolean;
 }
 
-export class DatabaseSeeder {
+class DatabaseSeeder {
   private defaultOptions: SeedOptions = {
     users: 25,
     sellers: 12,
@@ -169,7 +169,7 @@ export class DatabaseSeeder {
       usersData.push({
         id: faker.string.uuid(),
         walletAddress: faker.finance.ethereumAddress(),
-        handle: faker.internet.userName({ firstName, lastName }).toLowerCase(),
+        handle: faker.internet.username({ firstName, lastName }).toLowerCase(),
         
         // Billing address
         billingFirstName: firstName,
@@ -223,9 +223,9 @@ export class DatabaseSeeder {
       
       // Social links
       websiteUrl: Math.random() > 0.6 ? faker.internet.url() : null,
-      twitterHandle: Math.random() > 0.5 ? faker.internet.userName() : null,
-      discordHandle: Math.random() > 0.7 ? faker.internet.userName() + '#' + faker.string.numeric(4) : null,
-      telegramHandle: Math.random() > 0.8 ? faker.internet.userName() : null,
+      twitterHandle: Math.random() > 0.5 ? faker.internet.username() : null,
+      discordHandle: Math.random() > 0.7 ? faker.internet.username() + '#' + faker.string.numeric(4) : null,
+      telegramHandle: Math.random() > 0.8 ? faker.internet.username() : null,
       
       // Performance metrics
       performanceMetrics: JSON.stringify({
@@ -247,7 +247,7 @@ export class DatabaseSeeder {
       }),
       
       // ENS (optional)
-      ensHandle: Math.random() > 0.8 ? faker.internet.userName().toLowerCase() + '.eth' : null,
+      ensHandle: Math.random() > 0.8 ? faker.internet.username().toLowerCase() + '.eth' : null,
       ensVerified: Math.random() > 0.9,
       ensLastVerified: Math.random() > 0.9 ? faker.date.recent() : null,
       
@@ -423,7 +423,7 @@ export class DatabaseSeeder {
         listingType: isAuction ? 'AUCTION' : 'FIXED_PRICE',
         status: faker.helpers.arrayElement(['active', 'inactive', 'sold', 'expired']),
         startTime: faker.date.past({ years: 1 }),
-        endTime: isAuction ? faker.date.future({ days: 7 }) : null,
+        endTime: isAuction ? faker.date.future({ years: 0, refDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }) : null,
         highestBid: isAuction ? faker.number.float({ min: 0, max: parseFloat(product.priceAmount), fractionDigits: 2 }).toString() : null,
         highestBidder: isAuction && Math.random() > 0.5 ? faker.finance.ethereumAddress() : null,
         metadataURI: `ipfs://${faker.string.alphanumeric(46)}`,
@@ -494,7 +494,7 @@ export class DatabaseSeeder {
         orderNotes: Math.random() > 0.7 ? faker.lorem.sentence() : null,
         trackingNumber: Math.random() > 0.5 ? faker.string.alphanumeric(12).toUpperCase() : null,
         trackingCarrier: Math.random() > 0.5 ? faker.helpers.arrayElement(['UPS', 'FedEx', 'USPS', 'DHL']) : null,
-        estimatedDelivery: faker.date.future({ days: 14 }),
+        estimatedDelivery: faker.date.future({ years: 0, refDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) }),
         actualDelivery: Math.random() > 0.6 ? faker.date.recent({ days: 7 }) : null,
         
         totalAmount: orderTotal.toString(),
@@ -721,11 +721,6 @@ async function main(): Promise<void> {
   } finally {
     process.exit(0);
   }
-}
-
-// Run if called directly
-if (require.main === module) {
-  main();
 }
 
 export { DatabaseSeeder };
