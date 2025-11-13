@@ -33,6 +33,17 @@ export class MarketplaceController {
 
       safeLogger.info('Fetching product by ID:', { id });
 
+      // Temporary workaround for product IDs (prod_001, prod_002, etc.)
+      if (id.startsWith('prod_')) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Product listing not found'
+          }
+        });
+      }
+
       // Fetch the listing from the marketplace service
       const listing = await marketplaceService.getListingById(id);
       
