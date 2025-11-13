@@ -247,14 +247,18 @@ export class SellerProfileService {
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       safeLogger.error('Error updating onboarding step:', {
-        error: error instanceof Error ? error.message : error,
+        error: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
         walletAddress,
         step,
         completed
       });
-      throw error;
+      
+      // Create a more specific error
+      const newError = new Error(`Failed to update onboarding step: ${errorMessage}`);
+      throw newError;
     }
   }
 

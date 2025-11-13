@@ -313,7 +313,12 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (re
       'ONBOARDING_UPDATE_ERROR',
       'Failed to update onboarding step',
       500,
-      { error: error instanceof Error ? error.message : 'Unknown error' }
+      { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        type: error instanceof Error ? error.name : 'Error',
+        walletAddress,
+        step
+      }
     );
   }
 });
