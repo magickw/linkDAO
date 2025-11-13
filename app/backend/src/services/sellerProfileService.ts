@@ -3,6 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db/connection';
 import { databaseService } from '../services/databaseService';
 import { sellers } from '../db/schema';
+import { eq, sql } from 'drizzle-orm';
 import { 
   SellerProfile, 
   CreateSellerProfileRequest, 
