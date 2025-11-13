@@ -2,6 +2,9 @@
  * Service Worker Config and Health Check Manager
  */
 
+// Import environment configuration
+import { ENV_CONFIG } from '@/config/environment';
+
 export const ServiceWorkerConfig = {
   // Cache names with versioning
   CACHE_NAMES: {
@@ -14,14 +17,22 @@ export const ServiceWorkerConfig = {
   // API endpoints and their fallbacks
   ENDPOINTS: {
     api: [
-      'https://api.linkdao.io',
-      'https://api-backup.linkdao.io',
-      'https://api-fallback.linkdao.io'
+      ENV_CONFIG.API_URL,
+      // Fallbacks for production
+      ...(ENV_CONFIG.IS_PRODUCTION ? [
+        'https://api.linkdao.io',
+        'https://api-backup.linkdao.io',
+        'https://api-fallback.linkdao.io'
+      ] : [])
     ],
     websocket: [
-      'wss://api.linkdao.io/socket.io',
-      'wss://ws.linkdao.io/socket.io',
-      'wss://realtime.linkdao.io/socket.io'
+      ENV_CONFIG.WS_URL,
+      // Fallbacks for production
+      ...(ENV_CONFIG.IS_PRODUCTION ? [
+        'wss://api.linkdao.io/socket.io',
+        'wss://ws.linkdao.io/socket.io',
+        'wss://realtime.linkdao.io/socket.io'
+      ] : [])
     ]
   },
 

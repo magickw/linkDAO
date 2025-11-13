@@ -654,6 +654,9 @@ import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 // Import content performance routes
 import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
+// Import LDAO benefits routes
+import ldaoBenefitsRoutes from './routes/ldaoBenefitsRoutes';
+
 // TEMPORARILY DISABLED: These routes cause crashes during module loading
 // TODO: Fix and re-enable after identifying the root cause
 // import dexTradingRoutes from './routes/dexTradingRoutes';
@@ -665,6 +668,9 @@ import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 // app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
 // process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
+
+// Use LDAO benefits routes
+app.use('/api/ldao', ldaoBenefitsRoutes);
 
 // Legacy authentication routes
 // app.use('/api/auth', createDefaultAuthRoutes());

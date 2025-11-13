@@ -71,24 +71,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkStoredSession = useCallback(async () => {
     try {
       if (!address) return false;
-      
+
       const sessionValidation = await validateSession(address);
       if (sessionValidation.isValid && sessionValidation.token) {
-        // Try to get user data from storage
+        // Try to get user data from storage first
         const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
         if (storedUserData) {
-          const userData = JSON.parse(storedUserData);
-          setUser(userData);
-          setAccessToken(sessionValidation.token);
-          console.log('✅ Restored wallet session from storage');
-          return true;
+          try {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(sessionValidation.token);
+            console.log('✅ Restored wallet session from storage');
+            return true;
+          } catch (error) {
+            console.warn('Failed to parse stored user data:', error);
+          }
+        }
+
+        // If no user data in storage, try to fetch from auth service
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address === address) {
+            setUser(currentUser);
+            setAccessToken(sessionValidation.token);
+            // Store for future use
+            storeSession(sessionValidation.token, currentUser);
+            console.log('✅ Restored wallet session from auth service');
+            return true;
+          }
+        } catch (error) {
+          console.warn('Failed to get user from auth service:', error);
+        }
+
+        // Also try enhanced auth service
+        try {
+          const currentUser = await enhancedAuthService.getCurrentUser();
+          if (currentUser && currentUser.address === address) {
+            setUser(currentUser);
+            setAccessToken(sessionValidation.token);
+            // Store for future use
+            storeSession(sessionValidation.token, currentUser);
+            console.log('✅ Restored wallet session from enhanced auth service');
+            return true;
+          }
+        } catch (error) {
+          console.warn('Failed to get user from enhanced auth service:', error);
         }
       }
     } catch (error) {
       console.error('Error checking stored session:', error);
     }
     return false;
-  }, [address, validateSession]);
+  }, [address, validateSession, storeSession]);
 
   // Clear stored session
   const clearStoredSession = useCallback(() => {
@@ -114,28 +148,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   // Initialize authentication state with comprehensive session checking
+  // This should only run once on mount to avoid circular dependencies
   useEffect(() => {
     const initAuth = async () => {
       setIsLoading(true);
-      
+
       // Add a small delay to ensure all services are initialized
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // First check our internal session state
-      if (accessToken && user) {
-        console.log('✅ Using existing session from context state');
-        setIsLoading(false);
-        return;
+      const currentAccessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      const currentUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+
+      if (currentAccessToken && currentUserData) {
+        try {
+          const userData = JSON.parse(currentUserData);
+          setUser(userData);
+          setAccessToken(currentAccessToken);
+          console.log('✅ Using existing session from localStorage');
+          setIsLoading(false);
+          return;
+        } catch (error) {
+          console.warn('Failed to parse stored user data:', error);
+        }
       }
-      
-      // Then check stored session
+
+      // Then check stored session with validation
       const hasValidSession = await checkStoredSession();
       if (hasValidSession) {
-        console.log('✅ Restored session from localStorage');
+        console.log('✅ Restored session from validateSession');
         setIsLoading(false);
         return;
       }
-      
+
       // Also check if authService has a valid session
       if (authService.isAuthenticated()) {
         try {
@@ -156,7 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Failed to validate existing authService session:', error);
         }
       }
-      
+
       // Also check enhancedAuthService
       const sessionStatus = enhancedAuthService.getSessionStatus();
       if (sessionStatus.isAuthenticated && sessionStatus.address) {
@@ -173,7 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Failed to validate existing enhancedAuthService session:', error);
         }
       }
-      
+
       // Check if wallet is already connected but no valid session exists
       if (typeof window !== 'undefined' && window.ethereum) {
         try {
@@ -187,12 +232,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.error('Error checking wallet connection:', error);
         }
       }
-      
+
       setIsLoading(false);
     };
 
     initAuth();
-  }, [checkStoredSession, storeSession, user, accessToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   // Handle wallet connection changes
   useEffect(() => {

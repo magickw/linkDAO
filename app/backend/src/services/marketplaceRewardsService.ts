@@ -119,6 +119,10 @@ class MarketplaceRewardsService {
         const buyerTier = await this.getUserVolumeTier(data.buyerId);
         buyerReward = baseReward * buyerTier.buyerMultiplier;
 
+        // Additional reward multiplier for LDAO stakers
+        const ldaoStakingMultiplier = await this.getLDAOStakingMultiplier(data.buyerId);
+        buyerReward = buyerReward * ldaoStakingMultiplier;
+
         const buyerResult = await earningActivityService.processEarningActivity({
           userId: data.buyerId,
           activityType: 'marketplace',
@@ -130,6 +134,7 @@ class MarketplaceRewardsService {
             transactionAmount: data.transactionAmount,
             tier: buyerTier.name,
             multiplier: buyerTier.buyerMultiplier,
+            ldaoMultiplier: ldaoStakingMultiplier,
             baseReward
           }
         });
@@ -144,6 +149,10 @@ class MarketplaceRewardsService {
         const sellerTier = await this.getUserVolumeTier(data.sellerId);
         sellerReward = baseReward * sellerTier.sellerMultiplier;
 
+        // Additional reward multiplier for LDAO stakers
+        const ldaoStakingMultiplier = await this.getLDAOStakingMultiplier(data.sellerId);
+        sellerReward = sellerReward * ldaoStakingMultiplier;
+
         const sellerResult = await earningActivityService.processEarningActivity({
           userId: data.sellerId,
           activityType: 'marketplace',
@@ -155,6 +164,7 @@ class MarketplaceRewardsService {
             transactionAmount: data.transactionAmount,
             tier: sellerTier.name,
             multiplier: sellerTier.sellerMultiplier,
+            ldaoMultiplier: ldaoStakingMultiplier,
             baseReward
           }
         });
@@ -594,6 +604,32 @@ class MarketplaceRewardsService {
    */
   getVolumeTiers(): VolumeBasedTier[] {
     return this.volumeTiers;
+  }
+
+  /**
+   * Get LDAO staking multiplier for additional rewards
+   * @param userId User ID to check staking status
+   * @returns Multiplier value (1.0 for no staking, up to 1.5 for highest tier)
+   */
+  private async getLDAOStakingMultiplier(userId: string): Promise<number> {
+    try {
+      // In a real implementation, this would check the user's LDAO staking status
+      // For now, we'll return a default multiplier
+      // This would typically integrate with the LDAO token contract or a staking service
+      
+      // Example implementation that would check actual staking:
+      // const stakingInfo = await ldaoStakingService.getUserStakingInfo(userId);
+      // if (stakingInfo.tier === 'premium') return 1.5;
+      // if (stakingInfo.tier === 'gold') return 1.3;
+      // if (stakingInfo.tier === 'silver') return 1.2;
+      // if (stakingInfo.tier === 'bronze') return 1.1;
+      
+      // For now, return default multiplier
+      return 1.0;
+    } catch (error) {
+      safeLogger.warn('Error getting LDAO staking multiplier:', error);
+      return 1.0; // Default multiplier
+    }
   }
 }
 

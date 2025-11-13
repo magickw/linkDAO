@@ -524,7 +524,8 @@ export class ConnectivityDiagnostics {
     async testDNSResolution() {
         const domains = [
             window.location.hostname,
-            'api.linkdao.io',
+            // Use environment-specific API host
+            process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).hostname : 'localhost',
             'localhost'
         ];
 

@@ -21,8 +21,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   skipIfAuthenticated = true
 }) => {
   const { address, isConnected, connector, status } = useAccount();
-  const { user, isAuthenticated, login } = useAuth();
-  
+  const { user, isAuthenticated, isLoading: isAuthLoading, login } = useAuth();
+
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const lastAddressRef = useRef<string | undefined>();
   const hasTriedLoginRef = useRef(false);
@@ -41,6 +41,13 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // Check if wallet connection has changed
     const addressChanged = lastAddressRef.current !== address;
     lastAddressRef.current = address;
+
+    // CRITICAL: Wait for auth initialization to complete before attempting login
+    // This prevents signature prompts when a valid session already exists
+    if (isAuthLoading) {
+      console.log('⏳ Waiting for auth initialization to complete...');
+      return;
+    }
 
     // Skip if conditions not met
     if (!autoLogin || !isConnected || !address || isLoggingIn || status !== 'connected' || !connector) {
@@ -61,15 +68,14 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
-    // Add a longer delay to ensure session restoration has time to complete
-    // This prevents the race condition with AuthContext session restoration
+    // Add a short delay to ensure all initialization is complete
     const timer = setTimeout(() => {
       console.log('🚀 Triggering auto-login for:', address);
       handleAutoLogin();
-    }, 2000); // Increased from 500ms to 2000ms
+    }, 500); // Reduced back to 500ms since we now properly wait for initialization
 
     return () => clearTimeout(timer);
-  }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
+  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
   const handleAutoLogin = async () => {
     if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) return;

@@ -260,6 +260,25 @@ contract LDAOToken is ERC20Permit, Ownable, ReentrancyGuard {
     }
     
     /**
+     * @notice Get user's exact discount percentage based on staking tier
+     * @param user Address of the user
+     * @return Discount percentage in basis points (e.g., 500 = 5%)
+     */
+    function getDiscountPercentage(address user) external view returns (uint256) {
+        uint256 tier = discountTier[user];
+        
+        if (tier == 1) {
+            return 500; // 5% discount
+        } else if (tier == 2) {
+            return 1000; // 10% discount
+        } else if (tier == 3) {
+            return 1500; // 15% discount
+        }
+        
+        return 0; // 0% discount for non-stakers
+    }
+    
+    /**
      * @notice Check if user has premium membership
      * @param user Address of the user
      * @return True if user has premium membership

@@ -136,6 +136,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
     event OfferMade(uint256 indexed offerId, uint256 indexed listingId, address indexed buyer, uint256 amount);
     event OfferAccepted(uint256 indexed offerId, uint256 indexed listingId);
     event OrderCreated(uint256 indexed orderId, uint256 indexed listingId, address indexed buyer);
+    event OrderCreatedWithDiscount(uint256 indexed orderId, uint256 indexed listingId, address indexed buyer, uint256 discountAmount, uint256 discountPercentage);
     event OrderStatusUpdated(uint256 indexed orderId, OrderStatus status);
     event DisputeCreated(uint256 indexed disputeId, uint256 indexed orderId, address indexed complainant);
     event DisputeResolved(uint256 indexed disputeId, string resolution);
@@ -259,11 +260,11 @@ contract Marketplace is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Buy a fixed price item
+     * @notice Purchase a listing
      * @param listingId ID of the listing
-     * @param quantity Quantity to buy
+     * @param quantity Quantity to purchase
      */
-    function buyFixedPriceItem(uint256 listingId, uint256 quantity) 
+    function purchaseListing(uint256 listingId, uint256 quantity) 
         external 
         payable 
         nonReentrant 
@@ -277,8 +278,51 @@ contract Marketplace is ReentrancyGuard, Ownable {
         require(listing.startTime <= block.timestamp, "Listing not started yet");
         
         uint256 totalPrice = listing.price * quantity;
-        uint256 feeAmount = (totalPrice * platformFeePercentage) / 10000;
-        uint256 sellerAmount = totalPrice - feeAmount;
+        
+        // Apply LDAO payment discount if paying with LDAO tokens
+        bool isLDAOPayment = (listing.tokenAddress == address(ldaoToken));
+        uint256 discountPercentage = 0;
+        
+        if (isLDAOPayment) {
+            // Get user's discount tier based on LDAO staking
+            uint256 userDiscountTier = ldaoToken.getDiscountTier(msg.sender);
+            
+            // Apply discount based on tier:
+            // Tier 0: 0% discount
+            // Tier 1: 5% discount
+            // Tier 2: 10% discount  
+            // Tier 3: 15% discount
+            if (userDiscountTier == 1) {
+                discountPercentage = 500; // 5% in basis points
+            } else if (userDiscountTier == 2) {
+                discountPercentage = 1000; // 10% in basis points
+            } else if (userDiscountTier == 3) {
+                discountPercentage = 1500; // 15% in basis points
+            }
+            
+            // Additional 2% discount for paying with LDAO tokens regardless of staking tier
+            discountPercentage += 200; // 2% in basis points
+        }
+        
+        // Apply discount to total price
+        uint256 discountAmount = (totalPrice * discountPercentage) / 10000;
+        uint256 discountedPrice = totalPrice - discountAmount;
+        
+        // Calculate platform fee with reduction based on user's staking tier
+        uint256 effectiveFeePercentage = platformFeePercentage;
+        
+        // Reduce platform fee based on user's staking tier
+        uint256 userDiscountTier = ldaoToken.getDiscountTier(msg.sender);
+        if (userDiscountTier == 1) {
+            effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+        } else if (userDiscountTier == 2) {
+            effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+        } else if (userDiscountTier == 3) {
+            effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+        }
+        
+        uint256 feeAmount = (discountedPrice * effectiveFeePercentage) / 10000;
+        uint256 sellerAmount = discountedPrice - feeAmount;
         
         if (listing.tokenAddress == address(0)) {
             // ETH payment
@@ -311,7 +355,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.listingId = listingId;
         order.buyer = msg.sender;
         order.seller = listing.seller;
-        order.amount = totalPrice;
+        order.amount = discountedPrice; // Store discounted amount
         order.paymentToken = listing.tokenAddress;
         order.status = OrderStatus.CONFIRMED;
         order.createdAt = block.timestamp;
@@ -319,7 +363,8 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         userOrders[msg.sender].push(orderId);
         
-        emit OrderCreated(orderId, listingId, msg.sender);
+        // Emit event with discount information
+        emit OrderCreatedWithDiscount(orderId, listingId, msg.sender, discountAmount, discountPercentage);
     }
 
     /**
@@ -343,8 +388,25 @@ contract Marketplace is ReentrancyGuard, Ownable {
             bidAmount = msg.value;
         } else {
             require(msg.value == 0, "ETH not accepted for token payments");
-            // For simplicity, assume bid amount is passed as parameter in real implementation
-            revert("Token bidding not implemented in this example");
+            // Get user's staking tier discount for LDAO token payments
+            uint256 discountPercentage = 0;
+            if (listing.tokenAddress == address(ldaoToken)) {
+                uint256 userDiscountTier = ldaoToken.getDiscountTier(msg.sender);
+                
+                // Apply bid discount based on staking tier
+                if (userDiscountTier == 1) {
+                    discountPercentage = 200; // 2% discount
+                } else if (userDiscountTier == 2) {
+                    discountPercentage = 300; // 3% discount
+                } else if (userDiscountTier == 3) {
+                    discountPercentage = 500; // 5% discount
+                }
+            }
+            
+            // Calculate bid amount after discount
+            uint256 totalBid = msg.value; // This is the total amount being bid
+            uint256 discountAmount = (totalBid * discountPercentage) / 10000;
+            bidAmount = totalBid - discountAmount;
         }
         
         require(bidAmount > listing.highestBid, "Bid too low");
@@ -392,7 +454,21 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         address bidder = listing.highestBidder;
         uint256 amount = listing.highestBid;
-        uint256 feeAmount = (amount * platformFeePercentage) / 10000;
+        
+        // Calculate platform fee with reduction based on seller's staking tier
+        uint256 effectiveFeePercentage = platformFeePercentage;
+        
+        // Reduce platform fee based on seller's staking tier
+        uint256 sellerDiscountTier = ldaoToken.getDiscountTier(listing.seller);
+        if (sellerDiscountTier == 1) {
+            effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+        } else if (sellerDiscountTier == 2) {
+            effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+        } else if (sellerDiscountTier == 3) {
+            effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+        }
+        
+        uint256 feeAmount = (amount * effectiveFeePercentage) / 10000;
         uint256 sellerAmount = amount - feeAmount;
         
         if (listing.tokenAddress == address(0)) {

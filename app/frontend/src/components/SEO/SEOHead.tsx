@@ -1,6 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 import { generateKeywordsFromContent } from '@/utils/seoUtils';
+import { ENV_CONFIG } from '@/config/environment';
 
 interface SEOHeadProps {
   title: string;
@@ -191,7 +192,8 @@ const SEOHead: React.FC<SEOHeadProps> = ({
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="//linkdao.io" />
-      <link rel="dns-prefetch" href="//api.linkdao.io" />
+      {/* Use environment-specific API URL for DNS prefetch */}
+      <link rel="dns-prefetch" href={ENV_CONFIG.IS_PRODUCTION ? "//api.linkdao.io" : `//${new URL(ENV_CONFIG.API_URL).hostname}`} />
     </Head>
   );
 };

@@ -29,10 +29,14 @@ class AuthService {
   constructor() {
     // Use centralized environment config to ensure correct backend port
     this.baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
-    
+
     // Load token from localStorage on initialization
+    // Check for the correct token keys used throughout the app
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+      this.token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('auth_token') || '';
     }
   }
 
