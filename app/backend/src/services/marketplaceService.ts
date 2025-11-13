@@ -87,6 +87,15 @@ export class BlockchainMarketplaceService {
     let dbListing;
     if (numericId !== null) {
       dbListing = await databaseService.getListingById(numericId);
+    } else if (id.startsWith('prod_')) {
+      // For product IDs (prod_001, prod_002, etc.), check the products table
+      const db = databaseService.getDatabase();
+      const [product] = await db
+        .select()
+        .from(listings)
+        .where(eq(listings.productId, id))
+        .limit(1);
+      dbListing = product;
     } else {
       // Try to find by product_id field
       const db = databaseService.getDatabase();
