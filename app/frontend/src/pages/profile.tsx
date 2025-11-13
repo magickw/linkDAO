@@ -44,7 +44,7 @@ export default function Profile() {
   const { earnings, isLoading: isTipsLoading } = useTipsData({ userId: targetUserAddress || '' });
 
   // Posts data
-  const { posts, isLoading: isPostsLoading, error: postsError } = usePostsByAuthor(targetUserAddress || '');
+  const { posts, isLoading: isPostsLoading, error: postsError, refetch: refetchPosts } = usePostsByAuthor(targetUserAddress || '');
 
   // Smart contract profile data - temporarily disabled due to webpack issues
   const contractProfileData: any = null;

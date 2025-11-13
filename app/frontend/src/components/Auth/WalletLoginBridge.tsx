@@ -50,6 +50,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     // Skip if user is already authenticated and we should skip
     if (skipIfAuthenticated && isAuthenticated) {
       console.log('📝 Skipping auto-login: user already authenticated');
+      // Reset the login attempt flag when user is authenticated
+      hasTriedLoginRef.current = false;
       return;
     }
 
@@ -59,11 +61,12 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
-    // Add delay to ensure connector is fully ready
+    // Add a longer delay to ensure session restoration has time to complete
+    // This prevents the race condition with AuthContext session restoration
     const timer = setTimeout(() => {
       console.log('🚀 Triggering auto-login for:', address);
       handleAutoLogin();
-    }, 500);
+    }, 2000); // Increased from 500ms to 2000ms
 
     return () => clearTimeout(timer);
   }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
@@ -76,6 +79,39 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       hasTriedLoginRef.current = true;
 
       console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
+
+      // First check if we already have a valid session to avoid unnecessary signature prompts
+      const storedToken = localStorage.getItem('linkdao_access_token');
+      const storedAddress = localStorage.getItem('linkdao_wallet_address');
+      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+      
+      if (storedToken && storedAddress === address && storedTimestamp) {
+        const timestamp = parseInt(storedTimestamp);
+        const now = Date.now();
+        const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (now - timestamp < TOKEN_EXPIRY_TIME) {
+          console.log('✅ Found valid stored session, skipping signature request');
+          // Reset failed attempts on successful session restoration
+          setFailedAttempts(0);
+          hasTriedLoginRef.current = false;
+          
+          // Still call login to ensure the AuthContext state is updated
+          const result = await login(address, connector, status);
+          
+          if (result.success) {
+            const walletName = connector?.name || 'Wallet';
+            console.log(`✅ Session restored successfully for ${walletName}!`);
+            
+            if (onLoginSuccess) {
+              onLoginSuccess({ address });
+            }
+          }
+          
+          setIsLoggingIn(false);
+          return;
+        }
+      }
 
       const result = await login(address, connector, status);
       console.log('🔍 Login result:', result);

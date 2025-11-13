@@ -118,6 +118,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initAuth = async () => {
       setIsLoading(true);
       
+      // Add a small delay to ensure all services are initialized
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // First check our internal session state
       if (accessToken && user) {
         console.log('✅ Using existing session from context state');
@@ -128,6 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Then check stored session
       const hasValidSession = await checkStoredSession();
       if (hasValidSession) {
+        console.log('✅ Restored session from localStorage');
         setIsLoading(false);
         return;
       }
@@ -326,7 +330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check if already authenticated for this address
-      if (user && user.address === walletAddress) {
+      if (user && user.address === walletAddress && accessToken) {
         console.log('Already authenticated for address:', walletAddress);
         return { success: true };
       }
@@ -348,7 +352,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(userData);
             setAccessToken(storedToken);
             await loadKYCStatus();
-            setIsLoading(false);
             console.log('✅ Using existing valid session from localStorage');
             return { success: true };
           } catch (parseError) {
@@ -392,7 +395,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setUser(currentUser);
               setAccessToken(token);
               await loadKYCStatus();
-              setIsLoading(false);
               console.log('✅ Using existing valid session from authService');
               return { success: true };
             }
@@ -401,6 +403,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Failed to validate existing authService session:', error);
         }
       }
+      
+      // Only proceed with wallet signature if no valid session exists
+      console.log('📝 No valid session found, requesting wallet signature...');
       
       setIsLoading(true);
       
