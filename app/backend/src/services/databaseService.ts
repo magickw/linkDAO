@@ -500,6 +500,12 @@ export class DatabaseService {
 
   async getListingById(id: number) {
     try {
+      // Handle NaN case
+      if (isNaN(id)) {
+        safeLogger.warn("getListingById called with NaN, returning null");
+        return null;
+      }
+      
       const result = await this.db.select().from(schema.listings).where(eq(schema.listings.id, id));
       return result[0] || null;
     } catch (error) {
