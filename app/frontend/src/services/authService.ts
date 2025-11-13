@@ -95,10 +95,16 @@ class AuthService {
 
       // Check localStorage for existing session with enhanced validation
       if (typeof window !== 'undefined') {
-        const storedToken = localStorage.getItem('linkdao_access_token');
-        const storedAddress = localStorage.getItem('linkdao_wallet_address');
-        const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
-        const storedUserData = localStorage.getItem('linkdao_user_data');
+        const storedToken = localStorage.getItem('linkdao_access_token') ||
+                           localStorage.getItem('token') ||
+                           localStorage.getItem('authToken') ||
+                           localStorage.getItem('auth_token');
+        const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
+                             localStorage.getItem('wallet_address');
+        const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
+                               localStorage.getItem('signature_timestamp');
+        const storedUserData = localStorage.getItem('linkdao_user_data') ||
+                               localStorage.getItem('user_data');
 
         if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
           const timestamp = parseInt(storedTimestamp);
@@ -125,6 +131,12 @@ class AuthService {
             localStorage.removeItem('linkdao_wallet_address');
             localStorage.removeItem('linkdao_signature_timestamp');
             localStorage.removeItem('linkdao_user_data');
+            localStorage.removeItem('token');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('wallet_address');
+            localStorage.removeItem('signature_timestamp');
+            localStorage.removeItem('user_data');
           }
         }
       }
@@ -261,12 +273,18 @@ class AuthService {
             };
           }
 
-          // Store session data for persistence
+          // Store session data for persistence with multiple keys for compatibility
           if (typeof window !== 'undefined') {
             localStorage.setItem('linkdao_access_token', sessionToken);
+            localStorage.setItem('token', sessionToken);
+            localStorage.setItem('authToken', sessionToken);
+            localStorage.setItem('auth_token', sessionToken);
             localStorage.setItem('linkdao_wallet_address', address);
+            localStorage.setItem('wallet_address', address);
             localStorage.setItem('linkdao_signature_timestamp', Date.now().toString());
+            localStorage.setItem('signature_timestamp', Date.now().toString());
             localStorage.setItem('linkdao_user_data', JSON.stringify(userData));
+            localStorage.setItem('user_data', JSON.stringify(userData));
           }
           
           // Return in expected format
@@ -630,14 +648,19 @@ class AuthService {
     const token = this.token;
     this.clearToken();
 
-    // Clear all stored session data
+    // Clear all stored session data with multiple keys
     if (typeof window !== 'undefined') {
       localStorage.removeItem('linkdao_access_token');
-      localStorage.removeItem('linkdao_wallet_address');
-      localStorage.removeItem('linkdao_signature_timestamp');
-      localStorage.removeItem('linkdao_user_data');
-      localStorage.removeItem('linkdao_refresh_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('linkdao_wallet_address');
+      localStorage.removeItem('wallet_address');
+      localStorage.removeItem('linkdao_signature_timestamp');
+      localStorage.removeItem('signature_timestamp');
+      localStorage.removeItem('linkdao_user_data');
+      localStorage.removeItem('user_data');
+      localStorage.removeItem('linkdao_refresh_token');
     }
 
     if (token) {

@@ -207,6 +207,8 @@ export class SellerProfileService {
    */
   async updateOnboardingStep(walletAddress: string, step: keyof OnboardingSteps, completed: boolean): Promise<OnboardingStatus> {
     try {
+      safeLogger.info('Starting updateOnboardingStep:', { walletAddress, step, completed });
+      
       const profile = await this.getProfile(walletAddress);
       if (!profile) {
         throw new Error('Seller profile not found');
@@ -222,14 +224,16 @@ export class SellerProfileService {
       // Log the update for debugging
       safeLogger.info('Updating onboarding steps:', {
         walletAddress,
-        step,
-        completed,
+        step: typeof step,
+        stepValue: step,
+        completed: typeof completed,
+        completedValue: completed,
         updatedSteps,
         onboardingCompleted
       });
 
       // Update onboardingSteps using raw SQL to avoid Drizzle JSON serialization issues
-      await db.execute(sql`
+      const result = await db.execute(sql`
         UPDATE sellers 
         SET 
           onboarding_steps = jsonb_set(
@@ -240,7 +244,10 @@ export class SellerProfileService {
           onboarding_completed = ${onboardingCompleted},
           updated_at = NOW()
         WHERE wallet_address = ${walletAddress}
+        RETURNING onboarding_steps
       `);
+      
+      safeLogger.info('SQL update result:', result);
 
       return this.getOnboardingStatus(walletAddress);
     } catch (error) {

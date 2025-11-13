@@ -412,6 +412,9 @@ export class PostService {
    * @returns Array of posts in the user's feed
    */
   static async getFeed(forUser?: string): Promise<Post[]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     try {
       let url = `${BACKEND_API_BASE_URL}/api/posts/feed`;
       if (forUser) {
@@ -420,17 +423,30 @@ export class PostService {
       
       console.log(`Fetching feed from: ${url}`);
       
-      return await requestManager.request<Post[]>(url, {
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-      }, {
-        timeout: 15000, // Increased timeout for feed requests
-        retries: 1, // Reduced retries for feed to prevent spam
-        deduplicate: true
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch feed');
+      }
+      
+      const result = await response.json();
+      return result.data || result;
     } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
       console.error(`Error fetching feed:`, error);
       console.log('Error properties:', { 
         isServiceUnavailable: error.isServiceUnavailable, 
