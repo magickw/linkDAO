@@ -38,8 +38,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
     createdAt: new Date(backendPost.createdAt || Date.now()),
     updatedAt: new Date(backendPost.updatedAt || backendPost.createdAt || Date.now()),
     onchainRef: backendPost.onchainRef || '',
-    stakedValue: parseFloat(backendPost.staked_value) || 0,
-    reputationScore: parseInt(backendPost.reputation_score) || 0,
+    stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
+    reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
     dao: backendPost.dao || '',
     
     // Engagement data (will be populated by services)
