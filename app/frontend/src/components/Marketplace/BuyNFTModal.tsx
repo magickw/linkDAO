@@ -95,7 +95,7 @@ export const BuyNFTModal: React.FC<BuyNFTModalProps> = ({
         priceBigInt
       );
 
-      setTxHash(receipt.hash);
+      setTxHash(receipt.transactionHash);
       setNeedsApproval(false);
       setStep(PurchaseStep.CONFIRM_PURCHASE);
     } catch (err: any) {
@@ -115,8 +115,8 @@ export const BuyNFTModal: React.FC<BuyNFTModalProps> = ({
       setError('');
       setStep(PurchaseStep.PROCESSING);
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+      const signer = provider.getSigner();
 
       // Get marketplace contract
       const marketplaceABI = [
@@ -135,7 +135,7 @@ export const BuyNFTModal: React.FC<BuyNFTModalProps> = ({
       }
 
       const receipt = await tx.wait();
-      setTxHash(receipt.hash);
+      setTxHash(receipt.transactionHash);
       setStep(PurchaseStep.SUCCESS);
 
       // Call success callback after a short delay

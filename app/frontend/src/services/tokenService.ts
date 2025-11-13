@@ -44,19 +44,19 @@ export const TOKEN_ADDRESSES: Record<number, { usdc: string; usdt: string }> = {
 };
 
 export class TokenService {
-  private provider: ethers.BrowserProvider | null = null;
+  private provider: ethers.providers.Web3Provider | null = null;
   private signer: ethers.Signer | null = null;
 
   /**
    * Initialize the token service with provider and signer
    */
   async initialize() {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    if (typeof window === 'undefined' || !(window as any).ethereum) {
       throw new Error('Ethereum provider not found');
     }
 
-    this.provider = new ethers.BrowserProvider(window.ethereum);
-    this.signer = await this.provider.getSigner();
+    this.provider = new ethers.providers.Web3Provider((window as any).ethereum);
+    this.signer = this.provider.getSigner();
   }
 
   /**
@@ -74,7 +74,7 @@ export class TokenService {
    */
   async getTokenAddress(paymentMethod: PaymentMethod): Promise<string> {
     if (paymentMethod === PaymentMethod.ETH) {
-      return ethers.ZeroAddress;
+      return ethers.constants.AddressZero;
     }
 
     if (!this.provider) {
@@ -82,7 +82,7 @@ export class TokenService {
     }
 
     const network = await this.provider!.getNetwork();
-    const chainId = Number(network.chainId);
+    const chainId = network.chainId;
 
     if (!TOKEN_ADDRESSES[chainId]) {
       throw new Error(`Token addresses not configured for chain ${chainId}`);
@@ -99,7 +99,7 @@ export class TokenService {
   async getTokenInfo(paymentMethod: PaymentMethod): Promise<TokenInfo> {
     if (paymentMethod === PaymentMethod.ETH) {
       return {
-        address: ethers.ZeroAddress,
+        address: ethers.constants.AddressZero,
         symbol: 'ETH',
         decimals: 18,
         name: 'Ethereum'
@@ -161,7 +161,7 @@ export class TokenService {
     spender: string
   ): Promise<bigint> {
     if (paymentMethod === PaymentMethod.ETH) {
-      return ethers.MaxUint256; // ETH doesn't need allowance
+      return ethers.constants.MaxUint256; // ETH doesn't need allowance
     }
 
     if (!this.signer) {
@@ -182,7 +182,7 @@ export class TokenService {
     paymentMethod: PaymentMethod,
     spender: string,
     amount: bigint
-  ): Promise<ethers.TransactionReceipt> {
+  ): Promise<ethers.ContractReceipt> {
     if (paymentMethod === PaymentMethod.ETH) {
       throw new Error('ETH does not require approval');
     }
@@ -204,8 +204,8 @@ export class TokenService {
   async approveUnlimited(
     paymentMethod: PaymentMethod,
     spender: string
-  ): Promise<ethers.TransactionReceipt> {
-    return await this.approveToken(paymentMethod, spender, ethers.MaxUint256);
+  ): Promise<ethers.ContractReceipt> {
+    return await this.approveToken(paymentMethod, spender, ethers.constants.MaxUint256);
   }
 
   /**
