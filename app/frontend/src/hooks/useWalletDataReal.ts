@@ -53,14 +53,17 @@ export function useWalletDataReal({
       // Fetch token balances
       const serviceBalances = await walletService.getTokenBalances(address as `0x${string}`);
 
+      // Ensure serviceBalances is an array
+      const balancesArray = Array.isArray(serviceBalances) ? serviceBalances : [];
+
       // Calculate portfolio value and change
-      const portfolioValue = serviceBalances.reduce((sum, b) => sum + (b.valueUSD || 0), 0);
-      const portfolioChange = serviceBalances.length > 0
-        ? serviceBalances.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (portfolioValue || 1))), 0)
+      const portfolioValue = balancesArray.reduce((sum, b) => sum + (b.valueUSD || 0), 0);
+      const portfolioChange = balancesArray.length > 0
+        ? balancesArray.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (portfolioValue || 1))), 0)
         : 0;
 
       // Transform service TokenBalance to types TokenBalance
-      const transformedBalances: TokenBalance[] = serviceBalances.map(balance => ({
+      const transformedBalances: TokenBalance[] = balancesArray.map(balance => ({
         symbol: balance.symbol,
         name: balance.name,
         balance: parseFloat(balance.balanceFormatted),
