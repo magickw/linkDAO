@@ -1,5 +1,6 @@
 import { cacheService } from './cacheService';
 import { safeLogger } from '../utils/safeLogger';
+import { eq } from 'drizzle-orm';
 
 import { sellerProfileService } from './sellerProfileService';
 import { marketplaceListingsService } from './marketplaceListingsService';
@@ -139,14 +140,30 @@ export class CacheWarmingService {
     await this.scheduleWarmup({
       key: 'categories:all',
       loader: async () => {
-        // This would fetch categories from the database
-        return [
-          { id: 'nft', name: 'NFTs', count: 0 },
-          { id: 'defi', name: 'DeFi', count: 0 },
-          { id: 'gaming', name: 'Gaming', count: 0 },
-          { id: 'art', name: 'Art', count: 0 },
-          { id: 'collectibles', name: 'Collectibles', count: 0 }
-        ];
+        try {
+          // Import database connection dynamically to avoid circular dependencies
+          const { db } = await import('../db/connection');
+          const { categories } = await import('../db/schema');
+          
+          // Fetch actual categories from database
+          const result = await db
+            .select({
+              id: categories.id,
+              name: categories.name,
+              slug: categories.slug,
+              description: categories.description,
+              isActive: categories.isActive
+            })
+            .from(categories)
+            .where(eq(categories.isActive, true))
+            .orderBy(categories.sortOrder);
+          
+          return result;
+        } catch (error) {
+          safeLogger.error('Error fetching categories:', error);
+          // Return empty array if database query fails
+          return [];
+        }
       },
       priority: 'high',
       ttl: 1800 // 30 minutes
@@ -287,26 +304,50 @@ export class CacheWarmingService {
     return await this.executeWarmup();
   }
 
-  // Get popular seller addresses (placeholder implementation)
+  // Get popular seller addresses from actual database
   private async getPopularSellerAddresses(limit: number): Promise<string[]> {
-    // This would typically query analytics data or database
-    // For now, return placeholder addresses
-    const addresses: string[] = [];
-    for (let i = 0; i < limit; i++) {
-      addresses.push(`0x${i.toString(16).padStart(40, '0')}`);
+    try {
+      // Import database connection dynamically to avoid circular dependencies
+      const { db } = await import('../db/connection');
+      const { sellers } = await import('../db/schema');
+      const { eq, desc } = await import('drizzle-orm');
+      
+      // Query actual sellers from database
+      const result = await db
+        .select({ walletAddress: sellers.walletAddress })
+        .from(sellers)
+        .where(eq(sellers.onboardingCompleted, true))
+        .limit(limit);
+      
+      return result.map(row => row.walletAddress);
+    } catch (error) {
+      safeLogger.error('Error fetching popular seller addresses:', error);
+      // Return empty array if database query fails
+      return [];
     }
-    return addresses;
   }
 
-  // Get active user addresses (placeholder implementation)
+  // Get active user addresses from actual database
   private async getActiveUserAddresses(limit: number): Promise<string[]> {
-    // This would typically query recent activity data
-    // For now, return placeholder addresses
-    const addresses: string[] = [];
-    for (let i = 0; i < limit; i++) {
-      addresses.push(`0x${(i + 1000).toString(16).padStart(40, '0')}`);
+    try {
+      // Import database connection dynamically to avoid circular dependencies
+      const { db } = await import('../db/connection');
+      const { users } = await import('../db/schema');
+      const { desc } = await import('drizzle-orm');
+      
+      // Query actual users from database based on recent activity
+      const result = await db
+        .select({ walletAddress: users.walletAddress })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(limit);
+      
+      return result.map(row => row.walletAddress);
+    } catch (error) {
+      safeLogger.error('Error fetching active user addresses:', error);
+      // Return empty array if database query fails
+      return [];
     }
-    return addresses;
   }
 
   // Generate filter hash for caching

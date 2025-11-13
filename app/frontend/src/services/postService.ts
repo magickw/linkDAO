@@ -1,5 +1,6 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { requestManager } from './requestManager';
+import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -423,10 +424,14 @@ export class PostService {
       
       console.log(`Fetching feed from: ${url}`);
       
+      // Get auth headers from authService to include JWT token
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders // Include auth headers with JWT token
         },
         signal: controller.signal,
       });

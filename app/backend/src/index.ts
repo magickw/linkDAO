@@ -541,6 +541,17 @@ import { storageRoutes } from './routes/storageRoutes';
 // Storage routes for self-hosted storage
 app.use('/api/storage', storageRoutes);
 
+// Root route for health checks
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    message: 'LinkDAO Marketplace API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
 // Proxy routes (should be after specific API routes)
 app.use('/', proxyRoutes);
 
