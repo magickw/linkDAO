@@ -8,6 +8,13 @@ if [ -f ".env.production" ]; then
     export $(cat .env.production | grep -v '^#' | xargs)
 fi
 
+# Explicitly set Render environment variables for Standard tier
+# This ensures the index.ts code detects the correct tier
+export RENDER_SERVICE_TYPE=standard
+export RENDER_SERVICE_PLAN=standard
+export RENDER_PRO=true
+export MEMORY_LIMIT=2048
+
 # Set optimized Node.js options for 2GB RAM
 export NODE_OPTIONS="--max-old-space-size=1536 --expose-gc"
 export NODE_ENV=production
