@@ -77,20 +77,21 @@ export class PostService {
         throw new Error(error.error || `Failed to create post (HTTP ${response.status})`);
       }
       
-      return response.json();
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       // If backend is unavailable, throw error instead of returning mock data
       if (error instanceof Error && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
         console.log('Backend unavailable for post creation');
         throw new Error('Service temporarily unavailable. Please try again later.');
       }
-      
+
       throw error;
     }
   }
@@ -136,15 +137,16 @@ export class PostService {
         const error = await response.json();
         throw new Error(error.error || `Failed to fetch post (HTTP ${response.status})`);
       }
-      
-      return response.json();
+
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -188,15 +190,16 @@ export class PostService {
         const error = await response.json();
         throw new Error(error.error || `Failed to fetch posts (HTTP ${response.status})`);
       }
-      
-      return response.json();
+
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -240,15 +243,16 @@ export class PostService {
         const error = await response.json();
         throw new Error(error.error || `Failed to fetch posts (HTTP ${response.status})`);
       }
-      
-      return response.json();
+
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -296,7 +300,8 @@ export class PostService {
         throw new Error(error.error || `Failed to update post (HTTP ${response.status})`);
       }
       
-      return response.json();
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -388,7 +393,8 @@ export class PostService {
         throw new Error(error.error || 'Failed to fetch posts');
       }
       
-      return response.json();
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
       clearTimeout(timeoutId);
       

@@ -68,6 +68,23 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
+    // Check for existing valid session BEFORE attempting login
+    const storedToken = localStorage.getItem('linkdao_access_token');
+    const storedAddress = localStorage.getItem('linkdao_wallet_address');
+    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+    
+    if (storedToken && storedAddress === address && storedTimestamp) {
+      const timestamp = parseInt(storedTimestamp);
+      const now = Date.now();
+      const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+      
+      if (now - timestamp < TOKEN_EXPIRY_TIME) {
+        console.log('✅ Valid session exists, skipping auto-login');
+        hasTriedLoginRef.current = false;
+        return;
+      }
+    }
+
     // Add a short delay to ensure all initialization is complete
     const timer = setTimeout(() => {
       console.log('🚀 Triggering auto-login for:', address);
