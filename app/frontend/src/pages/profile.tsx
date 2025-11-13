@@ -35,16 +35,19 @@ export default function Profile() {
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
 
   // Wallet data
-  const { portfolio, tokens, isLoading: isWalletLoading } = useWalletDataReal({ address: targetUserAddress });
+  const { portfolio, tokens: rawTokens, isLoading: isWalletLoading } = useWalletDataReal({ address: targetUserAddress });
+  const tokens = Array.isArray(rawTokens) ? rawTokens : [];
 
   // Reputation data
-  const { reputation, events: reputationEvents, isLoading: isReputationLoading } = useReputationData({ userId: targetUserAddress || '' });
+  const { reputation, events: rawReputationEvents, isLoading: isReputationLoading } = useReputationData({ userId: targetUserAddress || '' });
+  const reputationEvents = Array.isArray(rawReputationEvents) ? rawReputationEvents : [];
 
   // Tips data
   const { earnings, isLoading: isTipsLoading } = useTipsData({ userId: targetUserAddress || '' });
 
   // Posts data
-  const { posts, isLoading: isPostsLoading, error: postsError, refetch: refetchPosts } = usePostsByAuthor(targetUserAddress || '');
+  const { posts: rawPosts, isLoading: isPostsLoading, error: postsError, refetch: refetchPosts } = usePostsByAuthor(targetUserAddress || '');
+  const posts = Array.isArray(rawPosts) ? rawPosts : [];
 
   // Smart contract profile data - temporarily disabled due to webpack issues
   const contractProfileData: any = null;
@@ -1019,7 +1022,7 @@ export default function Profile() {
                               </div>
                               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                             </div>
-                            {post.tags && post.tags.length > 0 && (
+                            {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
                               <div className="flex gap-2 mt-2 flex-wrap">
                                 {post.tags.map((tag, i) => (
                                   <span key={i} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">
