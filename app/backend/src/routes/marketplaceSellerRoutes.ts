@@ -41,27 +41,6 @@ router.post('/seller/profile/validate', csrfProtection, sellerController.validat
 // Seller statistics
 router.get('/seller/stats/:walletAddress', sellerController.getSellerStats.bind(sellerController));
 
-// NOTE: Seller tier routes are now handled by sellerProfileRoutes
-  try {
-    const { walletAddress } = req.params;
-    const { sellerProfileService } = await import('../services/sellerProfileService');
-    
-    const progress = await sellerProfileService.getTierProgress(walletAddress);
-    
-    res.json({
-      success: true,
-      data: progress
-    });
-  } catch (error) {
-    console.error('Error fetching tier progress:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch tier progress',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
 // ENS validation routes
 router.post('/seller/ens/validate', csrfProtection,  sellerController.validateENS.bind(sellerController));
 router.post('/seller/ens/verify-ownership', csrfProtection,  sellerController.verifyENSOwnership.bind(sellerController));
