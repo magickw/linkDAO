@@ -233,11 +233,11 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps using standard Drizzle update
+      // Update onboardingSteps with the updated object
       await db
         .update(sellers)
         .set({
-          onboardingSteps: sql`jsonb_set(onboarding_steps, ${step}, ${completed})`,
+          onboardingSteps: updatedSteps,
           onboardingCompleted,
           updatedAt: new Date(),
         })
