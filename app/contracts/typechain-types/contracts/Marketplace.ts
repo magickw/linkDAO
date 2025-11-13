@@ -211,7 +211,6 @@ export interface MarketplaceInterface extends utils.Interface {
     "MAX_PLATFORM_FEE()": FunctionFragment;
     "acceptHighestBid(uint256)": FunctionFragment;
     "acceptOffer(uint256)": FunctionFragment;
-    "buyFixedPriceItem(uint256,uint256)": FunctionFragment;
     "cancelListing(uint256)": FunctionFragment;
     "createListing(address,uint256,uint256,uint8,uint8,uint256,string)": FunctionFragment;
     "daoApprovedVendors(address)": FunctionFragment;
@@ -236,6 +235,7 @@ export interface MarketplaceInterface extends utils.Interface {
     "owner()": FunctionFragment;
     "placeBid(uint256)": FunctionFragment;
     "platformFeePercentage()": FunctionFragment;
+    "purchaseListing(uint256,uint256)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "reputationScores(address)": FunctionFragment;
     "setAuctionExtensionTime(uint256)": FunctionFragment;
@@ -256,7 +256,6 @@ export interface MarketplaceInterface extends utils.Interface {
       | "MAX_PLATFORM_FEE"
       | "acceptHighestBid"
       | "acceptOffer"
-      | "buyFixedPriceItem"
       | "cancelListing"
       | "createListing"
       | "daoApprovedVendors"
@@ -281,6 +280,7 @@ export interface MarketplaceInterface extends utils.Interface {
       | "owner"
       | "placeBid"
       | "platformFeePercentage"
+      | "purchaseListing"
       | "renounceOwnership"
       | "reputationScores"
       | "setAuctionExtensionTime"
@@ -310,10 +310,6 @@ export interface MarketplaceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "acceptOffer",
     values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "buyFixedPriceItem",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "cancelListing",
@@ -414,6 +410,10 @@ export interface MarketplaceInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "purchaseListing",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
@@ -476,10 +476,6 @@ export interface MarketplaceInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "acceptOffer",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "buyFixedPriceItem",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -546,6 +542,10 @@ export interface MarketplaceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "purchaseListing",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
@@ -602,6 +602,7 @@ export interface MarketplaceInterface extends utils.Interface {
     "OfferAccepted(uint256,uint256)": EventFragment;
     "OfferMade(uint256,uint256,address,uint256)": EventFragment;
     "OrderCreated(uint256,uint256,address)": EventFragment;
+    "OrderCreatedWithDiscount(uint256,uint256,address,uint256,uint256)": EventFragment;
     "OrderStatusUpdated(uint256,uint8)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "ReputationUpdated(address,uint256)": EventFragment;
@@ -617,6 +618,7 @@ export interface MarketplaceInterface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "OfferAccepted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OfferMade"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OrderCreated"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OrderCreatedWithDiscount"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OrderStatusUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ReputationUpdated"): EventFragment;
@@ -740,6 +742,21 @@ export type OrderCreatedEvent = TypedEvent<
 
 export type OrderCreatedEventFilter = TypedEventFilter<OrderCreatedEvent>;
 
+export interface OrderCreatedWithDiscountEventObject {
+  orderId: BigNumber;
+  listingId: BigNumber;
+  buyer: string;
+  discountAmount: BigNumber;
+  discountPercentage: BigNumber;
+}
+export type OrderCreatedWithDiscountEvent = TypedEvent<
+  [BigNumber, BigNumber, string, BigNumber, BigNumber],
+  OrderCreatedWithDiscountEventObject
+>;
+
+export type OrderCreatedWithDiscountEventFilter =
+  TypedEventFilter<OrderCreatedWithDiscountEvent>;
+
 export interface OrderStatusUpdatedEventObject {
   orderId: BigNumber;
   status: number;
@@ -815,12 +832,6 @@ export interface Marketplace extends BaseContract {
     acceptOffer(
       offerId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
-    buyFixedPriceItem(
-      listingId: PromiseOrValue<BigNumberish>,
-      quantity: PromiseOrValue<BigNumberish>,
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     cancelListing(
@@ -1031,6 +1042,12 @@ export interface Marketplace extends BaseContract {
 
     platformFeePercentage(overrides?: CallOverrides): Promise<[BigNumber]>;
 
+    purchaseListing(
+      listingId: PromiseOrValue<BigNumberish>,
+      quantity: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
@@ -1108,12 +1125,6 @@ export interface Marketplace extends BaseContract {
   acceptOffer(
     offerId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
-  buyFixedPriceItem(
-    listingId: PromiseOrValue<BigNumberish>,
-    quantity: PromiseOrValue<BigNumberish>,
-    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   cancelListing(
@@ -1324,6 +1335,12 @@ export interface Marketplace extends BaseContract {
 
   platformFeePercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
+  purchaseListing(
+    listingId: PromiseOrValue<BigNumberish>,
+    quantity: PromiseOrValue<BigNumberish>,
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   renounceOwnership(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
@@ -1400,12 +1417,6 @@ export interface Marketplace extends BaseContract {
 
     acceptOffer(
       offerId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    buyFixedPriceItem(
-      listingId: PromiseOrValue<BigNumberish>,
-      quantity: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1617,6 +1628,12 @@ export interface Marketplace extends BaseContract {
 
     platformFeePercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
+    purchaseListing(
+      listingId: PromiseOrValue<BigNumberish>,
+      quantity: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
     reputationScores(
@@ -1785,6 +1802,21 @@ export interface Marketplace extends BaseContract {
       buyer?: PromiseOrValue<string> | null
     ): OrderCreatedEventFilter;
 
+    "OrderCreatedWithDiscount(uint256,uint256,address,uint256,uint256)"(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      listingId?: PromiseOrValue<BigNumberish> | null,
+      buyer?: PromiseOrValue<string> | null,
+      discountAmount?: null,
+      discountPercentage?: null
+    ): OrderCreatedWithDiscountEventFilter;
+    OrderCreatedWithDiscount(
+      orderId?: PromiseOrValue<BigNumberish> | null,
+      listingId?: PromiseOrValue<BigNumberish> | null,
+      buyer?: PromiseOrValue<string> | null,
+      discountAmount?: null,
+      discountPercentage?: null
+    ): OrderCreatedWithDiscountEventFilter;
+
     "OrderStatusUpdated(uint256,uint8)"(
       orderId?: PromiseOrValue<BigNumberish> | null,
       status?: null
@@ -1826,12 +1858,6 @@ export interface Marketplace extends BaseContract {
     acceptOffer(
       offerId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
-    buyFixedPriceItem(
-      listingId: PromiseOrValue<BigNumberish>,
-      quantity: PromiseOrValue<BigNumberish>,
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     cancelListing(
@@ -1937,6 +1963,12 @@ export interface Marketplace extends BaseContract {
 
     platformFeePercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
+    purchaseListing(
+      listingId: PromiseOrValue<BigNumberish>,
+      quantity: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
@@ -2017,12 +2049,6 @@ export interface Marketplace extends BaseContract {
     acceptOffer(
       offerId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
-    buyFixedPriceItem(
-      listingId: PromiseOrValue<BigNumberish>,
-      quantity: PromiseOrValue<BigNumberish>,
-      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     cancelListing(
@@ -2130,6 +2156,12 @@ export interface Marketplace extends BaseContract {
 
     platformFeePercentage(
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    purchaseListing(
+      listingId: PromiseOrValue<BigNumberish>,
+      quantity: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(

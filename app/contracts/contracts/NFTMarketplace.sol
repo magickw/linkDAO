@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Royalty.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -12,9 +13,20 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @notice A comprehensive NFT marketplace with minting, trading, and royalty distribution
  */
 contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, ReentrancyGuard {
-    
+
     uint256 private _tokenIdCounter;
-    
+
+    // Payment method enum
+    enum PaymentMethod {
+        ETH,
+        USDC,
+        USDT
+    }
+
+    // Supported payment tokens
+    IERC20 public usdcToken;
+    IERC20 public usdtToken;
+
     // Struct for NFT metadata
     struct NFTMetadata {
         string name;
@@ -36,6 +48,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         bool isActive;
         uint256 listedAt;
         uint256 expiresAt;
+        PaymentMethod paymentMethod;
     }
     
     // Struct for auction
@@ -49,6 +62,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         uint256 startTime;
         uint256 endTime;
         bool isActive;
+        PaymentMethod paymentMethod;
         mapping(address => uint256) bids;
         address[] bidders;
     }
@@ -60,6 +74,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         uint256 amount;
         uint256 expiresAt;
         bool isActive;
+        PaymentMethod paymentMethod;
     }
     
     // Mappings
@@ -89,48 +104,55 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         uint256 indexed tokenId,
         address indexed seller,
         uint256 price,
-        uint256 expiresAt
+        uint256 expiresAt,
+        PaymentMethod paymentMethod
     );
-    
+
     event NFTSold(
         uint256 indexed tokenId,
         address indexed seller,
         address indexed buyer,
-        uint256 price
+        uint256 price,
+        PaymentMethod paymentMethod
     );
-    
+
     event AuctionCreated(
         uint256 indexed tokenId,
         address indexed seller,
         uint256 startingPrice,
         uint256 reservePrice,
-        uint256 endTime
+        uint256 endTime,
+        PaymentMethod paymentMethod
     );
-    
+
     event BidPlaced(
         uint256 indexed tokenId,
         address indexed bidder,
-        uint256 amount
+        uint256 amount,
+        PaymentMethod paymentMethod
     );
-    
+
     event AuctionEnded(
         uint256 indexed tokenId,
         address indexed winner,
-        uint256 winningBid
+        uint256 winningBid,
+        PaymentMethod paymentMethod
     );
-    
+
     event OfferMade(
         uint256 indexed tokenId,
         address indexed buyer,
         uint256 amount,
-        uint256 expiresAt
+        uint256 expiresAt,
+        PaymentMethod paymentMethod
     );
-    
+
     event OfferAccepted(
         uint256 indexed tokenId,
         address indexed seller,
         address indexed buyer,
-        uint256 amount
+        uint256 amount,
+        PaymentMethod paymentMethod
     );
     
     event RoyaltyPaid(
@@ -138,9 +160,13 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         address indexed creator,
         uint256 amount
     );
-    
-    constructor() ERC721("Web3Marketplace NFT", "W3MNFT") Ownable(msg.sender) {
+
+    event PaymentTokensSet(address indexed usdc, address indexed usdt);
+
+    constructor(address _usdcToken, address _usdtToken) ERC721("Web3Marketplace NFT", "W3MNFT") Ownable(msg.sender) {
         platformFeeRecipient = msg.sender;
+        usdcToken = IERC20(_usdcToken);
+        usdtToken = IERC20(_usdtToken);
     }
     
     /**
@@ -194,22 +220,24 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     /**
      * @notice List an NFT for sale at a fixed price
      * @param tokenId The NFT token ID
-     * @param price Sale price in wei
+     * @param price Sale price (in wei for ETH, or token units for USDC/USDT)
      * @param duration Duration of the listing in seconds
+     * @param paymentMethod Payment method (ETH, USDC, or USDT)
      */
     function listNFT(
         uint256 tokenId,
         uint256 price,
-        uint256 duration
+        uint256 duration,
+        PaymentMethod paymentMethod
     ) external {
         require(ownerOf(tokenId) == msg.sender, "Not the owner");
         require(price > 0, "Price must be greater than 0");
         require(duration > 0, "Duration must be greater than 0");
         require(!listings[tokenId].isActive, "Already listed");
-        
+
         // Transfer NFT to contract
         _transfer(msg.sender, address(this), tokenId);
-        
+
         // Create listing
         listings[tokenId] = Listing({
             tokenId: tokenId,
@@ -217,10 +245,11 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             price: price,
             isActive: true,
             listedAt: block.timestamp,
-            expiresAt: block.timestamp + duration
+            expiresAt: block.timestamp + duration,
+            paymentMethod: paymentMethod
         });
-        
-        emit NFTListed(tokenId, msg.sender, price, block.timestamp + duration);
+
+        emit NFTListed(tokenId, msg.sender, price, block.timestamp + duration, paymentMethod);
     }
     
     /**
@@ -229,40 +258,75 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      */
     function buyNFT(uint256 tokenId) external payable nonReentrant {
         Listing storage listing = listings[tokenId];
-        
+
         require(listing.isActive, "NFT not for sale");
         require(block.timestamp <= listing.expiresAt, "Listing expired");
-        require(msg.value >= listing.price, "Insufficient payment");
-        
+
         address seller = listing.seller;
         uint256 price = listing.price;
-        
+        PaymentMethod paymentMethod = listing.paymentMethod;
+
         // Deactivate listing
         listing.isActive = false;
-        
+
         // Calculate fees and royalties
         (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, price);
         uint256 platformFeeAmount = (price * platformFee) / 10000;
         uint256 sellerAmount = price - royaltyAmount - platformFeeAmount;
-        
+
         // Transfer NFT to buyer
         _transfer(address(this), msg.sender, tokenId);
-        
-        // Distribute payments
-        if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
-            payable(royaltyRecipient).transfer(royaltyAmount);
-            emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+
+        // Handle payment based on payment method
+        if (paymentMethod == PaymentMethod.ETH) {
+            require(msg.value >= price, "Insufficient ETH payment");
+
+            // Distribute ETH payments
+            if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                payable(royaltyRecipient).transfer(royaltyAmount);
+                emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+            }
+
+            payable(platformFeeRecipient).transfer(platformFeeAmount);
+            payable(seller).transfer(sellerAmount);
+
+            // Refund excess payment
+            if (msg.value > price) {
+                payable(msg.sender).transfer(msg.value - price);
+            }
+        } else {
+            require(msg.value == 0, "ETH not accepted for token payments");
+
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(address(paymentToken) != address(0), "Payment token not set");
+
+            // Transfer tokens from buyer to contract first
+            require(
+                paymentToken.transferFrom(msg.sender, address(this), price),
+                "Token transfer from buyer failed"
+            );
+
+            // Distribute token payments
+            if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                require(
+                    paymentToken.transfer(royaltyRecipient, royaltyAmount),
+                    "Royalty payment failed"
+                );
+                emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+            }
+
+            require(
+                paymentToken.transfer(platformFeeRecipient, platformFeeAmount),
+                "Platform fee payment failed"
+            );
+
+            require(
+                paymentToken.transfer(seller, sellerAmount),
+                "Seller payment failed"
+            );
         }
-        
-        payable(platformFeeRecipient).transfer(platformFeeAmount);
-        payable(seller).transfer(sellerAmount);
-        
-        // Refund excess payment
-        if (msg.value > price) {
-            payable(msg.sender).transfer(msg.value - price);
-        }
-        
-        emit NFTSold(tokenId, seller, msg.sender, price);
+
+        emit NFTSold(tokenId, seller, msg.sender, price, paymentMethod);
     }
     
     /**
@@ -271,21 +335,23 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      * @param startingPrice Starting bid price
      * @param reservePrice Reserve price (minimum to sell)
      * @param duration Auction duration in seconds
+     * @param paymentMethod Payment method (ETH, USDC, or USDT)
      */
     function createAuction(
         uint256 tokenId,
         uint256 startingPrice,
         uint256 reservePrice,
-        uint256 duration
+        uint256 duration,
+        PaymentMethod paymentMethod
     ) external {
         require(ownerOf(tokenId) == msg.sender, "Not the owner");
         require(startingPrice > 0, "Starting price must be greater than 0");
         require(duration > 0, "Duration must be greater than 0");
         require(!auctions[tokenId].isActive, "Auction already active");
-        
+
         // Transfer NFT to contract
         _transfer(msg.sender, address(this), tokenId);
-        
+
         // Create auction
         Auction storage auction = auctions[tokenId];
         auction.tokenId = tokenId;
@@ -297,40 +363,71 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         auction.startTime = block.timestamp;
         auction.endTime = block.timestamp + duration;
         auction.isActive = true;
-        
-        emit AuctionCreated(tokenId, msg.sender, startingPrice, reservePrice, block.timestamp + duration);
+        auction.paymentMethod = paymentMethod;
+
+        emit AuctionCreated(tokenId, msg.sender, startingPrice, reservePrice, block.timestamp + duration, paymentMethod);
     }
     
     /**
-     * @notice Place a bid on an auction
+     * @notice Place a bid on an auction (ETH or ERC20 tokens)
      * @param tokenId The NFT token ID
+     * @param tokenAmount Amount of tokens to bid (only for ERC20 auctions, ignored for ETH)
      */
-    function placeBid(uint256 tokenId) external payable nonReentrant {
+    function placeBid(uint256 tokenId, uint256 tokenAmount) external payable nonReentrant {
         Auction storage auction = auctions[tokenId];
-        
+
         require(auction.isActive, "Auction not active");
         require(block.timestamp <= auction.endTime, "Auction ended");
-        require(msg.value >= auction.startingPrice, "Bid below starting price");
-        require(msg.value > auction.currentBid, "Bid too low");
         require(msg.sender != auction.seller, "Seller cannot bid");
-        
-        // Refund previous bidder
-        if (auction.currentBidder != address(0)) {
-            payable(auction.currentBidder).transfer(auction.currentBid);
+
+        uint256 bidAmount;
+        PaymentMethod paymentMethod = auction.paymentMethod;
+
+        if (paymentMethod == PaymentMethod.ETH) {
+            bidAmount = msg.value;
+            require(bidAmount >= auction.startingPrice, "Bid below starting price");
+            require(bidAmount > auction.currentBid, "Bid too low");
+
+            // Refund previous bidder in ETH
+            if (auction.currentBidder != address(0)) {
+                payable(auction.currentBidder).transfer(auction.currentBid);
+            }
+        } else {
+            require(msg.value == 0, "ETH not accepted for token auctions");
+            bidAmount = tokenAmount;
+            require(bidAmount >= auction.startingPrice, "Bid below starting price");
+            require(bidAmount > auction.currentBid, "Bid too low");
+
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(address(paymentToken) != address(0), "Payment token not set");
+
+            // Transfer new bid tokens from bidder to contract
+            require(
+                paymentToken.transferFrom(msg.sender, address(this), bidAmount),
+                "Token transfer failed"
+            );
+
+            // Refund previous bidder in tokens
+            if (auction.currentBidder != address(0)) {
+                require(
+                    paymentToken.transfer(auction.currentBidder, auction.currentBid),
+                    "Previous bidder refund failed"
+                );
+            }
         }
-        
+
         // Update auction
-        auction.currentBid = msg.value;
+        auction.currentBid = bidAmount;
         auction.currentBidder = msg.sender;
-        auction.bids[msg.sender] = msg.value;
+        auction.bids[msg.sender] = bidAmount;
         auction.bidders.push(msg.sender);
-        
+
         // Extend auction if bid placed in last 10 minutes
         if (auction.endTime - block.timestamp < 600) {
             auction.endTime = block.timestamp + 600;
         }
-        
-        emit BidPlaced(tokenId, msg.sender, msg.value);
+
+        emit BidPlaced(tokenId, msg.sender, bidAmount, paymentMethod);
     }
     
     /**
@@ -339,46 +436,79 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      */
     function endAuction(uint256 tokenId) external nonReentrant {
         Auction storage auction = auctions[tokenId];
-        
+
         require(auction.isActive, "Auction not active");
         require(block.timestamp > auction.endTime, "Auction still active");
-        
+
         auction.isActive = false;
-        
+        PaymentMethod paymentMethod = auction.paymentMethod;
+
         if (auction.currentBidder != address(0) && auction.currentBid >= auction.reservePrice) {
             // Auction successful
             address seller = auction.seller;
             address winner = auction.currentBidder;
             uint256 winningBid = auction.currentBid;
-            
+
             // Calculate fees and royalties
             (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, winningBid);
             uint256 platformFeeAmount = (winningBid * platformFee) / 10000;
             uint256 sellerAmount = winningBid - royaltyAmount - platformFeeAmount;
-            
+
             // Transfer NFT to winner
             _transfer(address(this), winner, tokenId);
-            
-            // Distribute payments
-            if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
-                payable(royaltyRecipient).transfer(royaltyAmount);
-                emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+
+            // Distribute payments based on payment method
+            if (paymentMethod == PaymentMethod.ETH) {
+                // Distribute ETH payments
+                if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                    payable(royaltyRecipient).transfer(royaltyAmount);
+                    emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+                }
+
+                payable(platformFeeRecipient).transfer(platformFeeAmount);
+                payable(seller).transfer(sellerAmount);
+            } else {
+                // Distribute token payments
+                IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+
+                if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                    require(
+                        paymentToken.transfer(royaltyRecipient, royaltyAmount),
+                        "Royalty payment failed"
+                    );
+                    emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+                }
+
+                require(
+                    paymentToken.transfer(platformFeeRecipient, platformFeeAmount),
+                    "Platform fee payment failed"
+                );
+
+                require(
+                    paymentToken.transfer(seller, sellerAmount),
+                    "Seller payment failed"
+                );
             }
-            
-            payable(platformFeeRecipient).transfer(platformFeeAmount);
-            payable(seller).transfer(sellerAmount);
-            
-            emit AuctionEnded(tokenId, winner, winningBid);
+
+            emit AuctionEnded(tokenId, winner, winningBid, paymentMethod);
         } else {
             // Auction failed - return NFT to seller
             _transfer(address(this), auction.seller, tokenId);
-            
+
             // Refund highest bidder if any
             if (auction.currentBidder != address(0)) {
-                payable(auction.currentBidder).transfer(auction.currentBid);
+                if (paymentMethod == PaymentMethod.ETH) {
+                    payable(auction.currentBidder).transfer(auction.currentBid);
+                } else {
+                    IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+                    require(
+                        paymentToken.transfer(auction.currentBidder, auction.currentBid),
+                        "Bidder refund failed"
+                    );
+                }
             }
-            
-            emit AuctionEnded(tokenId, address(0), 0);
+
+            emit AuctionEnded(tokenId, address(0), 0, paymentMethod);
         }
     }
     
@@ -386,21 +516,48 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
      * @notice Make an offer on an NFT
      * @param tokenId The NFT token ID
      * @param duration Offer duration in seconds
+     * @param paymentMethod Payment method (ETH, USDC, or USDT)
+     * @param tokenAmount Amount of tokens to offer (only for ERC20 offers, ignored for ETH)
      */
-    function makeOffer(uint256 tokenId, uint256 duration) external payable {
-        require(msg.value > 0, "Offer must be greater than 0");
+    function makeOffer(
+        uint256 tokenId,
+        uint256 duration,
+        PaymentMethod paymentMethod,
+        uint256 tokenAmount
+    ) external payable {
         require(duration > 0, "Duration must be greater than 0");
         require(_ownerOf(tokenId) != address(0), "Token does not exist");
-        
+
+        uint256 offerAmount;
+
+        if (paymentMethod == PaymentMethod.ETH) {
+            require(msg.value > 0, "Offer must be greater than 0");
+            offerAmount = msg.value;
+        } else {
+            require(msg.value == 0, "ETH not accepted for token offers");
+            require(tokenAmount > 0, "Token amount must be greater than 0");
+            offerAmount = tokenAmount;
+
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(address(paymentToken) != address(0), "Payment token not set");
+
+            // Transfer tokens from offerer to contract
+            require(
+                paymentToken.transferFrom(msg.sender, address(this), offerAmount),
+                "Token transfer failed"
+            );
+        }
+
         offers[tokenId].push(Offer({
             tokenId: tokenId,
             buyer: msg.sender,
-            amount: msg.value,
+            amount: offerAmount,
             expiresAt: block.timestamp + duration,
-            isActive: true
+            isActive: true,
+            paymentMethod: paymentMethod
         }));
-        
-        emit OfferMade(tokenId, msg.sender, msg.value, block.timestamp + duration);
+
+        emit OfferMade(tokenId, msg.sender, offerAmount, block.timestamp + duration, paymentMethod);
     }
     
     /**
@@ -411,35 +568,60 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     function acceptOffer(uint256 tokenId, uint256 offerIndex) external nonReentrant {
         require(ownerOf(tokenId) == msg.sender, "Not the owner");
         require(offerIndex < offers[tokenId].length, "Invalid offer index");
-        
+
         Offer storage offer = offers[tokenId][offerIndex];
         require(offer.isActive, "Offer not active");
         require(block.timestamp <= offer.expiresAt, "Offer expired");
-        
+
         address buyer = offer.buyer;
         uint256 amount = offer.amount;
-        
+        PaymentMethod paymentMethod = offer.paymentMethod;
+
         // Deactivate offer
         offer.isActive = false;
-        
+
         // Calculate fees and royalties
         (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, amount);
         uint256 platformFeeAmount = (amount * platformFee) / 10000;
         uint256 sellerAmount = amount - royaltyAmount - platformFeeAmount;
-        
+
         // Transfer NFT to buyer
         _transfer(msg.sender, buyer, tokenId);
-        
-        // Distribute payments
-        if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
-            payable(royaltyRecipient).transfer(royaltyAmount);
-            emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+
+        // Distribute payments based on payment method
+        if (paymentMethod == PaymentMethod.ETH) {
+            // Distribute ETH payments
+            if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                payable(royaltyRecipient).transfer(royaltyAmount);
+                emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+            }
+
+            payable(platformFeeRecipient).transfer(platformFeeAmount);
+            payable(msg.sender).transfer(sellerAmount);
+        } else {
+            // Distribute token payments
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+
+            if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
+                require(
+                    paymentToken.transfer(royaltyRecipient, royaltyAmount),
+                    "Royalty payment failed"
+                );
+                emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
+            }
+
+            require(
+                paymentToken.transfer(platformFeeRecipient, platformFeeAmount),
+                "Platform fee payment failed"
+            );
+
+            require(
+                paymentToken.transfer(msg.sender, sellerAmount),
+                "Seller payment failed"
+            );
         }
-        
-        payable(platformFeeRecipient).transfer(platformFeeAmount);
-        payable(msg.sender).transfer(sellerAmount);
-        
-        emit OfferAccepted(tokenId, msg.sender, buyer, amount);
+
+        emit OfferAccepted(tokenId, msg.sender, buyer, amount, paymentMethod);
     }
     
     /**
@@ -526,6 +708,80 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     function setPlatformFeeRecipient(address _recipient) external onlyOwner {
         require(_recipient != address(0), "Invalid address");
         platformFeeRecipient = _recipient;
+    }
+
+    /**
+     * @notice Set payment token addresses (owner only)
+     * @param _usdcToken USDC token address
+     * @param _usdtToken USDT token address
+     */
+    function setPaymentTokens(address _usdcToken, address _usdtToken) external onlyOwner {
+        require(_usdcToken != address(0), "Invalid USDC address");
+        require(_usdtToken != address(0), "Invalid USDT address");
+        usdcToken = IERC20(_usdcToken);
+        usdtToken = IERC20(_usdtToken);
+        emit PaymentTokensSet(_usdcToken, _usdtToken);
+    }
+
+    /**
+     * @notice Cancel an offer (offer creator only)
+     * @param tokenId The NFT token ID
+     * @param offerIndex Index of the offer to cancel
+     */
+    function cancelOffer(uint256 tokenId, uint256 offerIndex) external nonReentrant {
+        require(offerIndex < offers[tokenId].length, "Invalid offer index");
+
+        Offer storage offer = offers[tokenId][offerIndex];
+        require(offer.buyer == msg.sender, "Not the offer creator");
+        require(offer.isActive, "Offer not active");
+
+        uint256 amount = offer.amount;
+        PaymentMethod paymentMethod = offer.paymentMethod;
+
+        // Deactivate offer
+        offer.isActive = false;
+
+        // Refund the offer amount
+        if (paymentMethod == PaymentMethod.ETH) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(
+                paymentToken.transfer(msg.sender, amount),
+                "Refund failed"
+            );
+        }
+    }
+
+    /**
+     * @notice Withdraw expired offers (offer creator only)
+     * @param tokenId The NFT token ID
+     * @param offerIndex Index of the offer to withdraw
+     */
+    function withdrawExpiredOffer(uint256 tokenId, uint256 offerIndex) external nonReentrant {
+        require(offerIndex < offers[tokenId].length, "Invalid offer index");
+
+        Offer storage offer = offers[tokenId][offerIndex];
+        require(offer.buyer == msg.sender, "Not the offer creator");
+        require(offer.isActive, "Offer not active");
+        require(block.timestamp > offer.expiresAt, "Offer not expired");
+
+        uint256 amount = offer.amount;
+        PaymentMethod paymentMethod = offer.paymentMethod;
+
+        // Deactivate offer
+        offer.isActive = false;
+
+        // Refund the offer amount
+        if (paymentMethod == PaymentMethod.ETH) {
+            payable(msg.sender).transfer(amount);
+        } else {
+            IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(
+                paymentToken.transfer(msg.sender, amount),
+                "Refund failed"
+            );
+        }
     }
     
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {

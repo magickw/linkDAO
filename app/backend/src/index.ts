@@ -182,22 +182,20 @@ app.set('trust proxy', 1);
 // Optimize for Render deployment constraints
 const isRenderFree = process.env.RENDER && !process.env.RENDER_PRO;
 const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
-const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
-const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && process.env.RENDER_SERVICE_TYPE !== 'standard');
+const isRenderStandard = process.env.RENDER && (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_PLAN === 'standard');
+const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard);
 
 // Debug Render configuration
-if (process.env.DEBUG_RENDER_CONFIG === 'true') {
-  console.log('🔍 RENDER ENVIRONMENT DEBUG:');
-  console.log('   RENDER:', process.env.RENDER);
-  console.log('   RENDER_SERVICE_TYPE:', process.env.RENDER_SERVICE_TYPE);
-  console.log('   RENDER_SERVICE_PLAN:', process.env.RENDER_SERVICE_PLAN);
-  console.log('   RENDER_PRO:', process.env.RENDER_PRO);
-  console.log('   MEMORY_LIMIT:', process.env.MEMORY_LIMIT);
-  console.log('   isRenderFree:', isRenderFree);
-  console.log('   isRenderPro:', isRenderPro);
-  console.log('   isRenderStandard:', isRenderStandard);
-  console.log('   isResourceConstrained:', isResourceConstrained);
-}
+console.log('🔍 RENDER ENVIRONMENT DEBUG:');
+console.log('   RENDER:', process.env.RENDER);
+console.log('   RENDER_SERVICE_TYPE:', process.env.RENDER_SERVICE_TYPE);
+console.log('   RENDER_SERVICE_PLAN:', process.env.RENDER_SERVICE_PLAN);
+console.log('   RENDER_PRO:', process.env.RENDER_PRO);
+console.log('   MEMORY_LIMIT:', process.env.MEMORY_LIMIT);
+console.log('   isRenderFree:', isRenderFree);
+console.log('   isRenderPro:', isRenderPro);
+console.log('   isRenderStandard:', isRenderStandard);
+console.log('   isResourceConstrained:', isResourceConstrained);
 
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;

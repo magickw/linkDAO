@@ -72,6 +72,7 @@ export interface LDAOTokenInterface extends utils.Interface {
     "decimals()": FunctionFragment;
     "discountTier(address)": FunctionFragment;
     "eip712Domain()": FunctionFragment;
+    "getDiscountPercentage(address)": FunctionFragment;
     "getDiscountTier(address)": FunctionFragment;
     "getTotalStakeRewards(address)": FunctionFragment;
     "getUserStakes(address)": FunctionFragment;
@@ -118,6 +119,7 @@ export interface LDAOTokenInterface extends utils.Interface {
       | "decimals"
       | "discountTier"
       | "eip712Domain"
+      | "getDiscountPercentage"
       | "getDiscountTier"
       | "getTotalStakeRewards"
       | "getUserStakes"
@@ -210,6 +212,10 @@ export interface LDAOTokenInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "eip712Domain",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getDiscountPercentage",
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "getDiscountTier",
@@ -375,6 +381,10 @@ export interface LDAOTokenInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "eip712Domain",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getDiscountPercentage",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -720,6 +730,11 @@ export interface LDAOToken extends BaseContract {
       }
     >;
 
+    getDiscountPercentage(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     getDiscountTier(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -933,6 +948,11 @@ export interface LDAOToken extends BaseContract {
     }
   >;
 
+  getDiscountPercentage(
+    user: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   getDiscountTier(
     user: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -1141,6 +1161,11 @@ export interface LDAOToken extends BaseContract {
         extensions: BigNumber[];
       }
     >;
+
+    getDiscountPercentage(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
@@ -1454,6 +1479,11 @@ export interface LDAOToken extends BaseContract {
 
     eip712Domain(overrides?: CallOverrides): Promise<BigNumber>;
 
+    getDiscountPercentage(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getDiscountTier(
       user: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1643,6 +1673,11 @@ export interface LDAOToken extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     eip712Domain(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getDiscountPercentage(
+      user: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
