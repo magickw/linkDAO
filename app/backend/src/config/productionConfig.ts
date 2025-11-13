@@ -59,11 +59,11 @@ export const productionConfig = {
   // Memory management
   memory: {
     thresholdWarning: process.env.RENDER_SERVICE_TYPE === 'free' ? 300 : 
-                      (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1200 : 600), // MB
+                      (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1600 : 600), // MB - Standard tier has 2GB RAM
     thresholdCritical: process.env.RENDER_SERVICE_TYPE === 'free' ? 400 : 
-                       (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1400 : 800), // MB
+                       (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1800 : 800), // MB - Critical at 90% of 2GB
     gcThreshold: process.env.RENDER_SERVICE_TYPE === 'free' ? 250 : 
-                 (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1000 : 500) // MB
+                 (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1200 : 500) // MB - GC at 60% of 2GB
   },
   
   // External service timeouts

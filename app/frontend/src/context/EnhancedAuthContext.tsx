@@ -55,6 +55,7 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   /**
    * Initialize authentication state on mount
+   * Note: This should not conflict with main AuthContext
    */
   useEffect(() => {
     const initializeAuth = async () => {
@@ -66,12 +67,12 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
         if (currentUser) {
           setUser(currentUser);
           setAccessToken(enhancedAuthService.getToken());
-          console.log('✅ Authentication initialized from stored session');
+          console.log('✅ EnhancedAuthContext initialized from stored session');
         } else {
-          console.log('ℹ️ No valid stored session found');
+          console.log('ℹ️ No valid stored session found in EnhancedAuthContext');
         }
       } catch (error) {
-        console.error('Failed to initialize authentication:', error);
+        console.error('Failed to initialize EnhancedAuthContext:', error);
         setError('Failed to initialize authentication');
       } finally {
         setIsLoading(false);
@@ -83,6 +84,7 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   /**
    * Handle wallet connection changes
+   * Note: This should not conflict with main AuthContext - they should coordinate
    */
   useEffect(() => {
     const handleWalletChange = async () => {
@@ -96,9 +98,9 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
       lastAddressRef.current = currentAddress || null;
 
       if (!isConnected || !currentAddress) {
-        // Wallet disconnected
-        if (user) {
-          console.log('👛 Wallet disconnected, logging out');
+        // Wallet disconnected - only logout if this context's user matches the disconnected address
+        if (user && user.address?.toLowerCase() === lastAddress) {
+          console.log(' purse Wallet disconnected, logging out user from EnhancedAuthContext');
           await handleLogout();
         }
         return;
@@ -106,14 +108,15 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Check if address changed
       if (lastAddress && lastAddress !== currentAddress) {
-        console.log('👛 Wallet address changed, clearing session');
+        console.log(' purse Wallet address changed, clearing session from EnhancedAuthContext');
         await handleLogout();
         return;
       }
 
       // Auto-authenticate if wallet is connected but user is not authenticated
+      // Only proceed if we don't already have a user for a different address
       if (!user && currentAddress) {
-        console.log('👛 Wallet connected, attempting authentication');
+        console.log(' purse Wallet connected, attempting authentication in EnhancedAuthContext');
         await authenticateWallet({ forceRefresh: false });
       }
     };
@@ -326,7 +329,7 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user, handleLogout]);
 
   /**
-   * Periodic session validation
+   * Periodic session validation - only run in EnhancedAuthContext, not in parallel with main AuthContext
    */
   useEffect(() => {
     if (!user || !accessToken) return;
@@ -335,18 +338,19 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const currentUser = await enhancedAuthService.getCurrentUser();
         if (!currentUser) {
-          console.log('⚠️ Session validation failed, logging out');
-          await handleLogout();
+          console.log('⚠️ Session validation failed in EnhancedAuthContext');
+          // Don't logout here since main AuthContext handles logout
+          // This prevents competing logout calls between contexts
         }
       } catch (error) {
-        console.warn('Session validation error:', error);
+        console.warn('Session validation error in EnhancedAuthContext:', error);
       }
     };
 
     // Validate session every 5 minutes
     const interval = setInterval(validateSession, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [user, accessToken, handleLogout]);
+  }, [user, accessToken]);
 
   // Role-based access control
   const roleHierarchy: Record<UserRole, number> = {

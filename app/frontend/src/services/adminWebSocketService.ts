@@ -58,16 +58,13 @@ export class AdminWebSocketManager {
   private socket: Socket | null = null;
   private adminUser: AdminUser | null = null;
   private dashboardConfig: DashboardConfig | null = null;
+  private isAuthenticated = false;
   private connectionHealth: ConnectionHealth;
-  private eventListeners: Map<string, Set<EventCallback>> = new Map();
   private connectionListeners: Set<ConnectionCallback> = new Set();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
-  private reconnectDelay = 1000;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
-  private latencyCheckInterval: NodeJS.Timeout | null = null;
-  private isAuthenticated = false;
-  private authenticationPromise: Promise<void> | null = null;
+  private maxReconnectAttempts = 5; // Reduced from 10 to prevent resource exhaustion
+  private reconnectDelay = 2000; // Increased delay to reduce rapid reconnection attempts
+  private isConnecting = false;
 
   constructor() {
     this.connectionHealth = {
@@ -82,38 +79,56 @@ export class AdminWebSocketManager {
   private attemptReconnection(): void {
     if (!this.adminUser || this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.log('Reconnection attempts exhausted or no user to reconnect with');
+      this.connectionHealth.status = 'disconnected';
+      this.notifyConnectionListeners(false);
       return;
     }
 
-    // Calculate delay with exponential backoff
     const delay = Math.min(
       this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
-      30000 // Max 30 seconds
+      10000 // Max 10 seconds (reduced from 30)
     );
 
     console.log(`Attempting reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (!this.socket || this.socket.connected) {
         return; // Already connected
       }
 
       this.reconnectAttempts++;
       this.connectionHealth.status = 'connecting';
-      
-      // Try to reconnect
+
+      // Force disconnect before reconnecting to clean up resources
       if (this.socket) {
-        this.socket.connect();
+        this.socket.removeAllListeners();
+        this.socket.disconnect();
+      }
+
+      // Try to reconnect
+      try {
+        await this.connect(this.adminUser, this.dashboardConfig || undefined);
+      } catch (error) {
+        console.error('Reconnection failed:', error);
+        // Add extra delay before next attempt
+        setTimeout(() => this.attemptReconnection(), 2000);
       }
     }, delay);
   }
 
   // Connection management
   public async connect(adminUser: AdminUser, dashboardConfig?: DashboardConfig): Promise<void> {
+    if (this.isConnecting) {
+      console.log('Admin WebSocket connection already in progress');
+      return;
+    }
+
     if (this.socket?.connected) {
       console.log('Admin WebSocket already connected');
       return;
     }
+
+    this.isConnecting = true;
 
     this.adminUser = adminUser;
     this.dashboardConfig = dashboardConfig || this.getDefaultDashboardConfig();
@@ -145,23 +160,19 @@ export class AdminWebSocketManager {
       }, 15000);
 
       this.socket!.once('connect', () => {
-        clearTimeout(timeout);
-        console.log('Admin WebSocket connected');
-        this.connectionHealth.status = 'healthy';
-        this.reconnectAttempts = 0;
-        
-        // Now authenticate
-        this.authenticate()
-          .then(() => resolve())
-          .catch(reject);
-      });
+      console.log('Admin WebSocket connected');
+      this.connectionHealth.status = 'healthy';
+      this.reconnectAttempts = 0;
+      this.isConnecting = false;
+      this.notifyConnectionListeners(true);
+    });
 
-      this.socket!.once('connect_error', (error) => {
-        clearTimeout(timeout);
-        console.error('Admin WebSocket connection error:', error);
-        this.connectionHealth.status = 'unstable';
-        reject(new Error(`Connection failed: ${error.message}`));
-      });
+    this.socket!.once('connect_error', (error) => {
+      console.error('Admin WebSocket connection error:', error);
+      this.connectionHealth.status = 'unstable';
+      this.isConnecting = false;
+      reject(new Error(`Connection failed: ${error.message}`));
+    });
 
       // Manual connect
       this.socket!.connect();
@@ -170,14 +181,15 @@ export class AdminWebSocketManager {
 
   public disconnect(): void {
     if (this.socket) {
+      // Remove all listeners to prevent memory leaks
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
     }
-    
-    this.cleanup();
     this.isAuthenticated = false;
-    this.authenticationPromise = null;
-    
+    this.isConnecting = false;
+    this.reconnectAttempts = 0;
+    this.connectionHealth.status = 'disconnected';
     console.log('Admin WebSocket disconnected');
   }
 
@@ -633,27 +645,50 @@ export class AdminWebSocketManager {
 }
 
 // Singleton instance for global access
-let adminWebSocketManager: AdminWebSocketManager | null = null;
+let managerInstance: AdminWebSocketManager | null = null;
+let isInitializing = false;
 
 export const getAdminWebSocketManager = (): AdminWebSocketManager | null => {
-  return adminWebSocketManager;
+  return managerInstance;
 };
 
 export const initializeAdminWebSocketManager = async (
-  adminUser: AdminUser, 
+  adminUser: AdminUser,
   dashboardConfig?: DashboardConfig
 ): Promise<AdminWebSocketManager> => {
-  if (adminWebSocketManager) {
-    adminWebSocketManager.disconnect();
+  // Prevent multiple initializations
+  if (isInitializing) {
+    console.log('Admin WebSocket manager is already initializing...');
+    // Wait for initialization to complete
+    while (isInitializing) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (managerInstance) {
+      return managerInstance;
+    }
   }
+
+  if (managerInstance && managerInstance.isConnected) {
+    console.log('Admin WebSocket manager already connected, reusing existing connection');
+    return managerInstance;
+  }
+
+  isInitializing = true;
   
-  adminWebSocketManager = await AdminWebSocketManager.create(adminUser, dashboardConfig);
-  return adminWebSocketManager;
+  try {
+    if (!managerInstance) {
+      managerInstance = new AdminWebSocketManager();
+    }
+    await managerInstance.connect(adminUser, dashboardConfig);
+    return managerInstance;
+  } finally {
+    isInitializing = false;
+  }
 };
 
 export const shutdownAdminWebSocketManager = (): void => {
-  if (adminWebSocketManager) {
-    adminWebSocketManager.disconnect();
-    adminWebSocketManager = null;
+  if (managerInstance) {
+    managerInstance.disconnect();
+    managerInstance = null;
   }
 };

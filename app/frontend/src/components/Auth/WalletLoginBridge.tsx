@@ -17,6 +17,10 @@ interface WalletLoginBridgeProps {
 // Global flag to prevent multiple WalletLoginBridge instances from running simultaneously
 let isGlobalAuthInProgress = false;
 
+// Simple global state tracking to prevent conflicts with other auth systems
+let currentAuthAddress: string | null = null;
+let currentAuthInProgress = false;
+
 export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   autoLogin = true,
   onLoginSuccess,
@@ -130,10 +134,18 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
     
+    // Check if another auth system is already processing for this address
+    if (currentAuthInProgress && currentAuthAddress === address) {
+      console.log('📝 Skipping auto-login: another authentication system is already processing for this address');
+      return;
+    }
+    
     if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) return;
 
     try {
       isGlobalAuthInProgress = true;
+      currentAuthInProgress = true;
+      currentAuthAddress = address;
       setIsLoggingIn(true);
       hasTriedLoginRef.current = true;
       
@@ -220,6 +232,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     } finally {
       setIsLoggingIn(false);
       isGlobalAuthInProgress = false; // Reset the global flag
+      currentAuthInProgress = false;
+      currentAuthAddress = null;
     }
   };
 
@@ -254,9 +268,13 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     return () => {
       if (hasTriedLoginRef.current) {
         isGlobalAuthInProgress = false;
+        if (currentAuthAddress === address) {
+          currentAuthInProgress = false;
+          currentAuthAddress = null;
+        }
       }
     };
-  }, []);
+  }, [address]);
 
   // This component doesn't render anything visible
   return null;

@@ -460,9 +460,13 @@ class AuthService {
         return user;
       }
       
-      // Token might be invalid, clear it
+      // Token might be invalid, clear it only if it's a 401/403 error (unauthorized)
       if (response.status === 401 || response.status === 403) {
+        console.log(`Token validation failed with status ${response.status}, clearing token`);
         this.clearToken();
+      } else {
+        // For other errors (like 500, network issues), don't clear token, just return null
+        console.warn(`Token validation failed with status ${response.status}, but not clearing token`);
       }
       
       return null;

@@ -2,14 +2,12 @@ import { Server } from 'socket.io';
 import { safeLogger } from '../utils/safeLogger';
 import { Server as HttpServer } from 'http';
 
-interface WebSocketUser {
-  userId: string;
-  walletAddress: string;
+interface ConnectedUser {
   socketId: string;
-  connectedAt: Date;
+  walletAddress: string;
   lastSeen: Date;
-  subscriptions: Set<string>;
   connectionState: 'connected' | 'reconnecting' | 'disconnected';
+  ip?: string;
 }
 
 interface NotificationData {
@@ -226,15 +224,24 @@ export class WebSocketService {
   private setupEventHandlers() {
     this.io.on('connection', (socket) => {
       // Check connection limits
-      if (this.connectedUsers.size >= this.config.maxConnections!) {
-        safeLogger.warn(`Connection limit reached (${this.config.maxConnections}), rejecting connection: ${socket.id}`);
-        socket.emit('connection_rejected', { 
-          reason: 'server_full',
-          message: 'Server is at capacity. Please try again later.'
-        });
-        socket.disconnect(true);
-        return;
-      }
+    if (this.connectedUsers.size >= this.config.maxConnections!) {
+      safeLogger.warn(`Connection limit reached (${this.config.maxConnections}), rejecting connection: ${socket.id}`);
+      socket.emit('error', { message: 'Server at maximum capacity' });
+      socket.disconnect();
+      return;
+    }
+
+    // Check for multiple connections from the same IP
+    const clientIP = socket.handshake.address;
+    const connectionsFromIP = Array.from(this.connectedUsers.values())
+      .filter(user => user.ip === clientIP).length;
+    
+    if (connectionsFromIP > 5) { // Limit to 5 connections per IP
+      safeLogger.warn(`Too many connections from IP ${clientIP} (${connectionsFromIP}), rejecting: ${socket.id}`);
+      socket.emit('error', { message: 'Too many connections from your IP' });
+      socket.disconnect();
+      return;
+    }
 
       safeLogger.info(`Client connected: ${socket.id} (${this.connectedUsers.size + 1}/${this.config.maxConnections})`);
 
@@ -264,15 +271,13 @@ export class WebSocketService {
         }
 
         // Store user connection
-        const user: WebSocketUser = {
-          userId: walletAddress,
-          walletAddress,
-          socketId: socket.id,
-          connectedAt: new Date(),
-          lastSeen: new Date(),
-          subscriptions: new Set(),
-          connectionState: 'connected'
-        };
+        const user: ConnectedUser = {
+      socketId: socket.id,
+      walletAddress,
+      lastSeen: new Date(),
+      connectionState: 'connected',
+      ip: socket.handshake.address
+    };
 
         this.connectedUsers.set(socket.id, user);
 

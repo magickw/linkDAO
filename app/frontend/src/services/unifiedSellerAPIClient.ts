@@ -17,7 +17,8 @@ import {
 } from '../types/sellerTier';
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
-const SELLER_API_BASE = '/api/marketplace/seller';
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
 
 interface SellerAPIEndpoints {
   // Profile endpoints

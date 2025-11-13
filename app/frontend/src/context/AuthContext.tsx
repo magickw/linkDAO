@@ -249,6 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const handleWalletConnectionChange = async () => {
       if (!isConnected && user) {
         // Wallet disconnected, logout user
+        console.log('🔗 Wallet disconnected, logging out user');
         handleLogout();
       } else if (isConnected && address && !user && !isLoading) {
         // Wallet connected but no user, try to restore session
@@ -259,6 +260,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           console.log('🔐 No valid session found, signature will be required when needed');
         }
+      } else if (isConnected && address && user && user.address !== address) {
+        // Wallet address changed, logout old user and check for new session
+        console.log('🔗 Wallet address changed from', user.address, 'to', address, 'logging out old user');
+        handleLogout();
       }
     };
 
