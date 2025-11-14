@@ -323,6 +323,24 @@ export default function Profile() {
           bioCid: profile.bio,
         };
         await updateBackendProfile(updateData);
+
+        // Update localStorage cache to persist changes across page refreshes
+        try {
+          const storedUserData = localStorage.getItem('linkdao_user_data');
+          if (storedUserData) {
+            const userData = JSON.parse(storedUserData);
+            const updatedUserData = {
+              ...userData,
+              handle: profile.handle,
+              ens: profile.ens,
+            };
+            localStorage.setItem('linkdao_user_data', JSON.stringify(updatedUserData));
+            console.log('✅ Updated localStorage cache with new profile data');
+          }
+        } catch (error) {
+          console.warn('Failed to update localStorage cache:', error);
+          // Non-critical error, continue with success flow
+        }
       } else {
         // Profile doesn't exist, need to create one first
         addToast('Please create your profile first by filling out all required fields.', 'error');
