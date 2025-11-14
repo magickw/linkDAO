@@ -1,4 +1,4 @@
-import { db } from '../db/connection';
+import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { carts, cartItems, products, users } from '../db/schema';
 import { eq, and, desc } from 'drizzle-orm';

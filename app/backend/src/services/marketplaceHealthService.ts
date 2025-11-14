@@ -1,6 +1,6 @@
 import { eq, desc, and, sql, gte, lte, count } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { 
   marketplaceHealthMetrics,
   sellers,

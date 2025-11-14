@@ -1,4 +1,4 @@
-import { db } from '../db/connection';
+import { db } from '../db';
 import { eq, and, or, desc, asc, sql, inArray } from 'drizzle-orm';
 import { 
   WorkflowTemplate, 

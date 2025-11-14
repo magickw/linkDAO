@@ -218,13 +218,24 @@ contract Governance is Ownable, ReentrancyGuard {
         uint256 stakingPower = governanceToken.totalStaked(account);
         
         uint256 totalPower = basePower + stakingPower;
+        require(totalPower >= basePower, "Overflow in voting power calculation"); // Check for overflow
         
         if (reputationVotingEnabled) {
             // Add reputation bonus based on reputation tier
             ReputationSystem.ReputationScore memory reputationData = reputationSystem.getReputationScore(account);
             uint256 reputationScore = reputationData.totalPoints; // Use the total points from the reputation score
-            uint256 reputationBonus = (totalPower * reputationScore * reputationBonusMultiplier) / (100 * 1000); // Assuming max reputation is around 1000
-            totalPower += reputationBonus;
+            
+            // Check for potential division by zero
+            if (100 * 1000 > 0) {
+                uint256 reputationBonus;
+                unchecked {
+                    reputationBonus = (totalPower * reputationScore * reputationBonusMultiplier) / (100 * 1000); // Assuming max reputation is around 1000
+                }
+                
+                uint256 newTotalPower = totalPower + reputationBonus;
+                require(newTotalPower >= totalPower, "Overflow in reputation bonus calculation"); // Check for overflow
+                totalPower = newTotalPower;
+            }
         }
         
         return totalPower;
@@ -352,8 +363,15 @@ contract Governance is Ownable, ReentrancyGuard {
         if (reputationVotingEnabled) {
             ReputationSystem.ReputationScore memory reputationData = reputationSystem.getReputationScore(msg.sender);
             uint256 reputationScore = reputationData.totalPoints; // Use the total points from the reputation score
-            reputationBonus = (totalVotes * reputationScore * reputationBonusMultiplier) / (100 * 1000); // Assuming max reputation is around 1000
-            totalVotes += reputationBonus;
+            
+            // Check for potential division by zero
+            if (100 * 1000 > 0) {
+                reputationBonus = (totalVotes * reputationScore * reputationBonusMultiplier) / (100 * 1000); // Assuming max reputation is around 1000
+                
+                uint256 newTotalVotes = totalVotes + reputationBonus;
+                require(newTotalVotes >= totalVotes, "Overflow in reputation bonus calculation"); // Check for overflow
+                totalVotes = newTotalVotes;
+            }
         }
         
         require(totalVotes > 0, "No voting power");
@@ -400,8 +418,9 @@ contract Governance is Ownable, ReentrancyGuard {
         // Check if this is a treasury operation that needs multisig approval
         bool requiresMultisig = false;
         uint256 totalValue = 0;
+        uint256 maxTargets = 50; // Limit to prevent DoS
         
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
+        for (uint256 i = 0; i < proposal.targets.length && i < maxTargets; i++) {
             totalValue += proposal.values[i];
             
             // If this targets the treasury and the value is large, require multisig
@@ -411,7 +430,7 @@ contract Governance is Ownable, ReentrancyGuard {
         }
         
         // Execute proposal actions
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
+        for (uint256 i = 0; i < proposal.targets.length && i < maxTargets; i++) {
             // Check target is authorized
             require(authorizedTargets[proposal.targets[i]], "Unauthorized target");
             
@@ -494,7 +513,8 @@ contract Governance is Ownable, ReentrancyGuard {
         
         // For this implementation, we'll submit each action as a separate multisig transaction
         // In practice, you might want to batch these operations
-        for (uint256 i = 0; i < proposal.targets.length; i++) {
+        uint256 maxTargets = 50; // Limit to prevent DoS
+        for (uint256 i = 0; i < proposal.targets.length && i < maxTargets; i++) {
             // Check target is authorized
             require(authorizedTargets[proposal.targets[i]], "Unauthorized target");
             

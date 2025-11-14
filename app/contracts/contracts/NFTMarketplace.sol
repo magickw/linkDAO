@@ -65,6 +65,11 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         PaymentMethod paymentMethod;
         mapping(address => uint256) bids;
         address[] bidders;
+        // Commit-reveal auction properties
+        mapping(address => bytes32) bidCommitments;  // Commitment to bid amount
+        mapping(address => uint256) revealedBids;    // Revealed bid amounts
+        bool bidsRevealed;                          // Whether all bids have been revealed
+        uint256 revealPeriodEnd;                    // End time for bid reveal period
     }
     
     // Struct for offer
@@ -271,8 +276,17 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
         // Calculate fees and royalties
         (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, price);
-        uint256 platformFeeAmount = (price * platformFee) / 10000;
-        uint256 sellerAmount = price - royaltyAmount - platformFeeAmount;
+        uint256 platformFeeAmount;
+        unchecked {
+            platformFeeAmount = (price * platformFee) / 10000;
+        }
+        uint256 totalDeductions = royaltyAmount + platformFeeAmount;
+        uint256 sellerAmount;
+        if (totalDeductions <= price) {
+            sellerAmount = price - totalDeductions;
+        } else {
+            sellerAmount = 0; // No seller amount if deductions exceed price
+        }
 
         // Transfer NFT to buyer
         _transfer(address(this), msg.sender, tokenId);
@@ -369,14 +383,131 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         auction.endTime = block.timestamp + duration;
         auction.isActive = true;
         auction.paymentMethod = paymentMethod;
+        
+        // Set up commit-reveal properties
+        // Reveal period is 20% of auction duration or 1 hour minimum
+        uint256 revealPeriod = duration / 5;
+        if (revealPeriod < 1 hours) {
+            revealPeriod = 1 hours;
+        }
+        auction.revealPeriodEnd = block.timestamp + duration + revealPeriod;
+        auction.bidsRevealed = false;
 
         emit AuctionCreated(tokenId, msg.sender, startingPrice, reservePrice, block.timestamp + duration, paymentMethod);
+    }
+    
+    /**
+     * @notice Commit a bid to an auction (front-running resistant)
+     * @param tokenId The NFT token ID
+     * @param bidAmount The bid amount (hidden until reveal)
+     * @param salt Random salt to prevent bid guessing
+     */
+    function commitBid(uint256 tokenId, uint256 bidAmount, uint256 salt) external payable {
+        Auction storage auction = auctions[tokenId];
+
+        require(auction.isActive, "Auction not active");
+        require(block.timestamp <= auction.endTime, "Auction ended");
+        require(msg.sender != auction.seller, "Seller cannot bid");
+        require(bidAmount > 0, "Bid amount must be greater than 0");
+        
+        // Create commitment (bidAmount + salt + bidder address)
+        bytes32 commitment = keccak256(abi.encodePacked(bidAmount, salt, msg.sender));
+        
+        // Store the commitment
+        auction.bidCommitments[msg.sender] = commitment;
+        
+        // Lock funds based on payment method
+        if (auction.paymentMethod == PaymentMethod.ETH) {
+            require(msg.value >= bidAmount, "Insufficient ETH sent");
+            // Note: ETH is already locked in the contract by msg.value
+        } else {
+            IERC20 paymentToken = auction.paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(address(paymentToken) != address(0), "Payment token not set");
+            
+            // Transfer tokens from bidder to contract as lock
+            require(
+                paymentToken.transferFrom(msg.sender, address(this), bidAmount),
+                "Token transfer failed"
+            );
+        }
+        
+        emit BidPlaced(tokenId, msg.sender, bidAmount, auction.paymentMethod);
+    }
+    
+    /**
+     * @notice Reveal a committed bid
+     * @param tokenId The NFT token ID
+     * @param bidAmount The original bid amount
+     * @param salt The salt used for the commitment
+     */
+    function revealBid(uint256 tokenId, uint256 bidAmount, uint256 salt) external nonReentrant {
+        Auction storage auction = auctions[tokenId];
+
+        require(auction.isActive, "Auction not active");
+        require(block.timestamp <= auction.revealPeriodEnd, "Reveal period ended");
+        require(msg.sender != auction.seller, "Seller cannot bid");
+        
+        // Verify the commitment
+        bytes32 expectedCommitment = keccak256(abi.encodePacked(bidAmount, salt, msg.sender));
+        require(auction.bidCommitments[msg.sender] == expectedCommitment, "Invalid commitment");
+        
+        // Check bid amount
+        require(bidAmount >= auction.startingPrice, "Bid below starting price");
+        
+        // Get the highest current bid amount
+        uint256 currentHighestBid = auction.currentBid;
+        
+        // If this is a higher bid than the current highest, update the auction
+        if (bidAmount > currentHighestBid) {
+            // Refund previous highest bidder if exists
+            address previousBidder = auction.currentBidder;
+            uint256 previousBid = currentHighestBid;
+            
+            if (previousBidder != address(0)) {
+                _refundBidder(tokenId, previousBidder, previousBid);
+            }
+            
+            // Update auction state
+            auction.currentBid = bidAmount;
+            auction.currentBidder = msg.sender;
+            auction.revealedBids[msg.sender] = bidAmount;
+            
+            // Add bidder to bidders list if not already there
+            bool bidderExists = false;
+            for (uint256 i = 0; i < auction.bidders.length; i++) {
+                if (auction.bidders[i] == msg.sender) {
+                    bidderExists = true;
+                    break;
+                }
+            }
+            if (!bidderExists) {
+                auction.bidders.push(msg.sender);
+            }
+        } else {
+            // Bid is not winning, just record it
+            auction.revealedBids[msg.sender] = bidAmount;
+            
+            // Refund the bid since it's not winning
+            _refundBidder(tokenId, msg.sender, bidAmount);
+        }
+        
+        // Extend auction if bid placed in last 10 minutes of auction (not reveal period)
+        if (block.timestamp <= auction.endTime && auction.endTime >= block.timestamp && auction.endTime - block.timestamp < 600) {
+            uint256 newEndTime = block.timestamp + 600;
+            // Check for overflow
+            if (newEndTime > block.timestamp) {
+                auction.endTime = newEndTime;
+            }
+        }
+        
+        emit BidPlaced(tokenId, msg.sender, bidAmount, auction.paymentMethod);
     }
     
     /**
      * @notice Place a bid on an auction (ETH or ERC20 tokens)
      * @param tokenId The NFT token ID
      * @param tokenAmount Amount of tokens to bid (only for ERC20 auctions, ignored for ETH)
+     * @dev This function is kept for backward compatibility but should use commit/reveal pattern
      */
     function placeBid(uint256 tokenId, uint256 tokenAmount) external payable nonReentrant {
         Auction storage auction = auctions[tokenId];
@@ -439,8 +570,12 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         }
 
         // Extend auction if bid placed in last 10 minutes
-        if (auction.endTime - block.timestamp < 600) {
-            auction.endTime = block.timestamp + 600;
+        if (auction.endTime >= block.timestamp && auction.endTime - block.timestamp < 600) {
+            uint256 newEndTime = block.timestamp + 600;
+            // Check for overflow
+            if (newEndTime > block.timestamp) {
+                auction.endTime = newEndTime;
+            }
         }
 
         emit BidPlaced(tokenId, msg.sender, bidAmount, paymentMethod);
@@ -454,7 +589,8 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         Auction storage auction = auctions[tokenId];
 
         require(auction.isActive, "Auction not active");
-        require(block.timestamp > auction.endTime, "Auction still active");
+        // Allow ending after either auction end time OR reveal period end
+        require(block.timestamp > auction.endTime || block.timestamp > auction.revealPeriodEnd, "Auction still active");
 
         auction.isActive = false;
         PaymentMethod paymentMethod = auction.paymentMethod;
@@ -467,8 +603,17 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
             // Calculate fees and royalties
             (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, winningBid);
-            uint256 platformFeeAmount = (winningBid * platformFee) / 10000;
-            uint256 sellerAmount = winningBid - royaltyAmount - platformFeeAmount;
+            uint256 platformFeeAmount;
+            unchecked {
+                platformFeeAmount = (winningBid * platformFee) / 10000;
+            }
+            uint256 totalDeductions = royaltyAmount + platformFeeAmount;
+            uint256 sellerAmount;
+            if (totalDeductions <= winningBid) {
+                sellerAmount = winningBid - totalDeductions;
+            } else {
+                sellerAmount = 0; // No seller amount if deductions exceed bid
+            }
 
             // Transfer NFT to winner
             _transfer(address(this), winner, tokenId);
@@ -511,16 +656,22 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             // Auction failed - return NFT to seller
             _transfer(address(this), auction.seller, tokenId);
 
-            // Refund highest bidder if any
-            if (auction.currentBidder != address(0)) {
-                if (auction.paymentMethod == PaymentMethod.ETH) {
-                    (bool sent, ) = payable(auction.currentBidder).call{value: auction.currentBid}("");
-                    require(sent, "Bidder refund failed");
-                } else {
-                    require(
-                        paymentToken.transfer(auction.currentBidder, auction.currentBid),
-                        "Bidder refund failed"
-                    );
+            // Refund all bidders whose funds are locked
+            for (uint256 i = 0; i < auction.bidders.length; i++) {
+                address bidder = auction.bidders[i];
+                uint256 bidAmount = auction.bids[bidder];
+                
+                if (bidAmount > 0) {
+                    if (auction.paymentMethod == PaymentMethod.ETH) {
+                        (bool sent, ) = payable(bidder).call{value: bidAmount}("");
+                        require(sent, "Bidder refund failed");
+                    } else {
+                        IERC20 paymentToken = auction.paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+                        require(
+                            paymentToken.transfer(bidder, bidAmount),
+                            "Bidder refund failed"
+                        );
+                    }
                 }
             }
 
@@ -598,8 +749,17 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
         // Calculate fees and royalties
         (address royaltyRecipient, uint256 royaltyAmount) = royaltyInfo(tokenId, amount);
-        uint256 platformFeeAmount = (amount * platformFee) / 10000;
-        uint256 sellerAmount = amount - royaltyAmount - platformFeeAmount;
+        uint256 platformFeeAmount;
+        unchecked {
+            platformFeeAmount = (amount * platformFee) / 10000;
+        }
+        uint256 totalDeductions = royaltyAmount + platformFeeAmount;
+        uint256 sellerAmount;
+        if (totalDeductions <= amount) {
+            sellerAmount = amount - totalDeductions;
+        } else {
+            sellerAmount = 0; // No seller amount if deductions exceed amount
+        }
 
         // Transfer NFT to buyer
         _transfer(msg.sender, buyer, tokenId);
@@ -681,19 +841,25 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     function getActiveOffers(uint256 tokenId) external view returns (Offer[] memory) {
         Offer[] memory allOffers = offers[tokenId];
         uint256 activeCount = 0;
+        uint256 maxOffers = 100; // Limit to prevent DoS
         
         // Count active offers
-        for (uint256 i = 0; i < allOffers.length; i++) {
+        for (uint256 i = 0; i < allOffers.length && i < maxOffers; i++) {
             if (allOffers[i].isActive && block.timestamp <= allOffers[i].expiresAt) {
                 activeCount++;
             }
+        }
+        
+        // Limit activeCount to maxOffers
+        if (activeCount > maxOffers) {
+            activeCount = maxOffers;
         }
         
         // Create array of active offers
         Offer[] memory activeOffers = new Offer[](activeCount);
         uint256 index = 0;
         
-        for (uint256 i = 0; i < allOffers.length; i++) {
+        for (uint256 i = 0; i < allOffers.length && index < activeCount && i < maxOffers; i++) {
             if (allOffers[i].isActive && block.timestamp <= allOffers[i].expiresAt) {
                 activeOffers[index] = allOffers[i];
                 index++;
@@ -802,6 +968,27 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             require(
                 paymentToken.transfer(msg.sender, amount),
                 "Refund failed"
+            );
+        }
+    }
+    
+    /**
+     * @notice Refund a bidder
+     * @param tokenId The NFT token ID
+     * @param bidder The bidder address
+     * @param amount The amount to refund
+     */
+    function _refundBidder(uint256 tokenId, address bidder, uint256 amount) internal {
+        Auction storage auction = auctions[tokenId];
+        
+        if (auction.paymentMethod == PaymentMethod.ETH) {
+            (bool sent, ) = payable(bidder).call{value: amount}("");
+            require(sent, "Bidder refund failed");
+        } else {
+            IERC20 paymentToken = auction.paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
+            require(
+                paymentToken.transfer(bidder, amount),
+                "Bidder refund failed"
             );
         }
     }

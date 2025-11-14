@@ -55,6 +55,10 @@ contract Marketplace is ReentrancyGuard, Ownable {
         uint256 reservePrice;
         uint256 minIncrement;
         bool reserveMet;
+        // Commit-reveal auction properties
+        mapping(address => bytes32) bidCommitments;  // Commitment to bid amount
+        mapping(address => uint256) revealedBids;    // Revealed bid amounts
+        uint256 revealPeriodEnd;                    // End time for bid reveal period
     }
     
     // Struct for bid
@@ -193,6 +197,14 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         if (listingType == ListingType.AUCTION) {
             require(endTime > block.timestamp, "End time must be in the future");
+            // Set up commit-reveal properties for auctions
+            // Reveal period is 20% of auction duration or 1 hour minimum
+            uint256 auctionDuration = endTime - block.timestamp;
+            uint256 revealPeriod = auctionDuration / 5;
+            if (revealPeriod < 1 hours) {
+                revealPeriod = 1 hours;
+            }
+            listing.revealPeriodEnd = endTime + revealPeriod;
         }
         
         uint256 listingId = nextListingId++;
@@ -277,7 +289,11 @@ contract Marketplace is ReentrancyGuard, Ownable {
         require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity");
         require(listing.startTime <= block.timestamp, "Listing not started yet");
         
-        uint256 totalPrice = listing.price * quantity;
+        uint256 totalPrice;
+        unchecked {
+            totalPrice = listing.price * quantity;
+        }
+        require(totalPrice >= listing.price, "Overflow in total price calculation"); // Check for overflow
         
         // Apply LDAO payment discount if paying with LDAO tokens
         bool isLDAOPayment = (listing.tokenAddress == address(ldaoToken));
@@ -301,12 +317,24 @@ contract Marketplace is ReentrancyGuard, Ownable {
             }
             
             // Additional 2% discount for paying with LDAO tokens regardless of staking tier
-            discountPercentage += 200; // 2% in basis points
+            uint256 newDiscountPercentage = discountPercentage + 200; // 2% in basis points
+            if (newDiscountPercentage >= discountPercentage) { // Check for overflow
+                discountPercentage = newDiscountPercentage;
+            }
         }
         
         // Apply discount to total price
-        uint256 discountAmount = (totalPrice * discountPercentage) / 10000;
-        uint256 discountedPrice = totalPrice - discountAmount;
+        uint256 discountAmount;
+        unchecked {
+            discountAmount = (totalPrice * discountPercentage) / 10000;
+        }
+        
+        uint256 discountedPrice;
+        if (discountAmount <= totalPrice) {
+            discountedPrice = totalPrice - discountAmount;
+        } else {
+            discountedPrice = totalPrice; // No discount if calculation error
+        }
         
         // Calculate platform fee with reduction based on user's staking tier
         uint256 effectiveFeePercentage = platformFeePercentage;
@@ -314,17 +342,33 @@ contract Marketplace is ReentrancyGuard, Ownable {
         // Reduce platform fee based on user's staking tier
         uint256 userDiscountTier = ldaoToken.getDiscountTier(msg.sender);
         if (userDiscountTier == 1) {
-            effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+            }
         } else if (userDiscountTier == 2) {
-            effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+            }
         } else if (userDiscountTier == 3) {
-            effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+            }
         }
         
-        uint256 feeAmount = (discountedPrice * effectiveFeePercentage) / 10000;
-        uint256 sellerAmount = discountedPrice - feeAmount;
+        uint256 feeAmount;
+        unchecked {
+            feeAmount = (discountedPrice * effectiveFeePercentage) / 10000;
+        }
+        
+        uint256 sellerAmount;
+        if (feeAmount <= discountedPrice) {
+            sellerAmount = discountedPrice - feeAmount;
+        } else {
+            sellerAmount = 0; // No seller amount if fee exceeds discounted price
+        }
         
         // Update listing
+        require(listing.quantity >= quantity, "Insufficient quantity"); // Check for underflow
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
             listing.status = ListingStatus.SOLD;
@@ -368,8 +412,122 @@ contract Marketplace is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Place a bid on an auction
+     * @notice Commit a bid to an auction (front-running resistant)
      * @param listingId ID of the listing
+     * @param bidAmount The bid amount (hidden until reveal)
+     * @param salt Random salt to prevent bid guessing
+     */
+    function commitBid(uint256 listingId, uint256 bidAmount, uint256 salt) 
+        external 
+        payable 
+        listingExists(listingId) 
+    {
+        Listing storage listing = listings[listingId];
+        require(listing.status == ListingStatus.ACTIVE, "Listing not active");
+        require(listing.listingType == ListingType.AUCTION, "Not an auction");
+        require(block.timestamp <= listing.endTime, "Auction ended");
+        require(msg.sender != listing.seller, "Cannot bid on own auction");
+        require(bidAmount > 0, "Bid amount must be greater than 0");
+        
+        // Create commitment (bidAmount + salt + bidder address)
+        bytes32 commitment = keccak256(abi.encodePacked(bidAmount, salt, msg.sender));
+        
+        // Store the commitment
+        listing.bidCommitments[msg.sender] = commitment;
+        
+        // Lock funds based on payment method
+        if (listing.tokenAddress == address(0)) {
+            require(msg.value >= bidAmount, "Insufficient ETH sent");
+            // Note: ETH is already locked in the contract by msg.value
+        } else {
+            require(msg.value == 0, "ETH not accepted for token payments");
+            
+            // Transfer tokens from bidder to contract as lock
+            require(
+                IERC20(listing.tokenAddress).transferFrom(msg.sender, address(this), bidAmount),
+                "Token transfer failed"
+            );
+        }
+        
+        emit BidPlaced(listingId, msg.sender, bidAmount);
+    }
+    
+    /**
+     * @notice Reveal a committed bid
+     * @param listingId ID of the listing
+     * @param bidAmount The original bid amount
+     * @param salt The salt used for the commitment
+     */
+    function revealBid(uint256 listingId, uint256 bidAmount, uint256 salt) 
+        external 
+        nonReentrant 
+        listingExists(listingId) 
+    {
+        Listing storage listing = listings[listingId];
+        require(listing.status == ListingStatus.ACTIVE, "Listing not active");
+        require(listing.listingType == ListingType.AUCTION, "Not an auction");
+        require(block.timestamp <= listing.revealPeriodEnd, "Reveal period ended");
+        require(msg.sender != listing.seller, "Cannot bid on own auction");
+        
+        // Verify the commitment
+        bytes32 expectedCommitment = keccak256(abi.encodePacked(bidAmount, salt, msg.sender));
+        require(listing.bidCommitments[msg.sender] == expectedCommitment, "Invalid commitment");
+        
+        // Check bid amount
+        require(bidAmount >= listing.reservePrice, "Bid below reserve price");
+        
+        // Get the highest current bid amount
+        uint256 currentHighestBid = listing.highestBid;
+        
+        // If this is a higher bid than the current highest, update the auction
+        if (bidAmount > currentHighestBid) {
+            // Refund previous highest bidder if exists
+            address previousBidder = listing.highestBidder;
+            uint256 previousBid = currentHighestBid;
+            
+            if (previousBidder != address(0)) {
+                _refundBidder(listingId, previousBidder, previousBid);
+            }
+            
+            // Update auction state
+            listing.highestBid = bidAmount;
+            listing.highestBidder = msg.sender;
+            listing.revealedBids[msg.sender] = bidAmount;
+            
+            // Store bid
+            listingBids[listingId].push(Bid({
+                bidder: msg.sender,
+                amount: bidAmount,
+                timestamp: block.timestamp
+            }));
+        } else {
+            // Bid is not winning, just record it and refund
+            listing.revealedBids[msg.sender] = bidAmount;
+            
+            // Refund the bid since it's not winning
+            if (listing.tokenAddress == address(0)) {
+                (bool sent, ) = payable(msg.sender).call{value: bidAmount}("");
+                require(sent, "Bid refund failed");
+            } else {
+                require(
+                    IERC20(listing.tokenAddress).transfer(msg.sender, bidAmount),
+                    "Bid refund failed"
+                );
+            }
+        }
+        
+        // Extend auction if bid placed in last 10 minutes (during auction period, not reveal)
+        if (block.timestamp <= listing.endTime && listing.endTime - block.timestamp < AUCTION_EXTENSION_TIME) {
+            listing.endTime = block.timestamp + AUCTION_EXTENSION_TIME;
+        }
+        
+        emit BidPlaced(listingId, msg.sender, bidAmount);
+    }
+    
+    /**
+     * @notice Place a bid on an auction (ETH or ERC20 tokens)
+     * @param listingId ID of the listing
+     * @dev This function is kept for backward compatibility but should use commit/reveal pattern
      */
     function placeBid(uint256 listingId) 
         external 
@@ -449,7 +607,8 @@ contract Marketplace is ReentrancyGuard, Ownable {
         Listing storage listing = listings[listingId];
         require(listing.status == ListingStatus.ACTIVE, "Listing not active");
         require(listing.listingType == ListingType.AUCTION, "Not an auction listing");
-        require(block.timestamp >= listing.endTime, "Auction not ended yet");
+        // Allow ending after either auction end time OR reveal period end
+        require(block.timestamp >= listing.endTime || block.timestamp >= listing.revealPeriodEnd, "Auction not ended yet");
         require(listing.highestBid > 0, "No bids");
         
         address bidder = listing.highestBidder;
@@ -461,15 +620,30 @@ contract Marketplace is ReentrancyGuard, Ownable {
         // Reduce platform fee based on seller's staking tier
         uint256 sellerDiscountTier = ldaoToken.getDiscountTier(listing.seller);
         if (sellerDiscountTier == 1) {
-            effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 90) / 100; // 10% fee reduction
+            }
         } else if (sellerDiscountTier == 2) {
-            effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 80) / 100; // 20% fee reduction
+            }
         } else if (sellerDiscountTier == 3) {
-            effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+            unchecked {
+                effectiveFeePercentage = (effectiveFeePercentage * 70) / 100; // 30% fee reduction
+            }
         }
         
-        uint256 feeAmount = (amount * effectiveFeePercentage) / 10000;
-        uint256 sellerAmount = amount - feeAmount;
+        uint256 feeAmount;
+        unchecked {
+            feeAmount = (amount * effectiveFeePercentage) / 10000;
+        }
+        
+        uint256 sellerAmount;
+        if (feeAmount <= amount) {
+            sellerAmount = amount - feeAmount;
+        } else {
+            sellerAmount = 0; // No seller amount if fee exceeds amount
+        }
         
         // Update listing status first
         listing.status = ListingStatus.SOLD;
@@ -560,9 +734,14 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         // Search for the offer in all listings (inefficient but simple)
         bool found = false;
-        for (uint256 i = 1; i < nextListingId; i++) {
+        uint256 loopCount = 0;
+        uint256 maxLoops = 1000; // Limit to prevent DoS
+        
+        for (uint256 i = 1; i < nextListingId && loopCount < maxLoops; i++) {
+            loopCount++;
             Offer[] storage offers = listingOffers[i];
-            for (uint256 j = 0; j < offers.length; j++) {
+            for (uint256 j = 0; j < offers.length && loopCount < maxLoops; j++) {
+                loopCount++;
                 if (offers[j].id == offerId) {
                     offerMem = offers[j];
                     listingId = i;
@@ -634,8 +813,18 @@ contract Marketplace is ReentrancyGuard, Ownable {
         view 
         returns (Listing[] memory) 
     {
+        // Limit count to prevent DoS
+        uint256 maxCount = 100;
+        if (count > maxCount) {
+            count = maxCount;
+        }
+        
         uint256 activeCount = 0;
-        for (uint256 i = 1; i < nextListingId; i++) {
+        uint256 loopCount = 0;
+        uint256 maxLoops = 1000; // Limit to prevent DoS
+        
+        for (uint256 i = 1; i < nextListingId && loopCount < maxLoops; i++) {
+            loopCount++;
             if (listings[i].status == ListingStatus.ACTIVE) {
                 activeCount++;
             }
@@ -649,8 +838,10 @@ contract Marketplace is ReentrancyGuard, Ownable {
         Listing[] memory result = new Listing[](returnCount);
         uint256 currentIndex = 0;
         uint256 resultIndex = 0;
+        loopCount = 0;
         
-        for (uint256 i = 1; i < nextListingId && resultIndex < returnCount; i++) {
+        for (uint256 i = 1; i < nextListingId && resultIndex < returnCount && loopCount < maxLoops; i++) {
+            loopCount++;
             if (listings[i].status == ListingStatus.ACTIVE) {
                 if (currentIndex >= start) {
                     result[resultIndex] = listings[i];

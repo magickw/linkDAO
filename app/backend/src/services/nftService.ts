@@ -1,6 +1,6 @@
 import { eq, desc, and, or, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { nfts, nftCollections, nftListings, nftOffers, nftAuctions, users } from '../db/schema';
 import ipfsService, { NFTMetadata } from './ipfsService';
 import { ethers } from 'ethers';

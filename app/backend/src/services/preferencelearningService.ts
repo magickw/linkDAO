@@ -5,7 +5,7 @@
 
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { paymentMethodUsageHistory, paymentMethodPreferences } from '../db/schema';
 import { UserPreferences, PaymentMethodPreference } from './userPreferenceService';
 

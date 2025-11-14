@@ -1,4 +1,4 @@
-import { db } from '../db/connection';
+import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { users, products, orders } from '../db/schema';
 import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';

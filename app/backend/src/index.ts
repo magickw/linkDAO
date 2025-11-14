@@ -521,12 +521,22 @@ app.use('/api/communities', communityCommentRoutes);
 app.use('/api/messaging', messagingRoutes);
 
 // Add redirect routes for legacy/alternative chat endpoints that frontend might be trying to access
-app.use('/api/chat', messagingRoutes);
-app.use('/api/messages', messagingRoutes);
-app.use('/api/conversations', messagingRoutes);
+// Remove conflicting chat route registrations to prevent 404/500 errors
+// app.use('/api/chat', messagingRoutes);
+// app.use('/api/messages', messagingRoutes);
+// app.use('/api/conversations', messagingRoutes);
+
+// Use the compatibility chat routes instead for better frontend compatibility
+import compatChatRoutes from './routes/compatibilityChat';
+app.use(compatChatRoutes);
+
+// Import and use missing endpoints for better fallbacks
+import missingEndpoints from './routes/missingEndpoints';
+app.use('/api', missingEndpoints);
+app.use('/', missingEndpoints);
 
 // Reputation routes
-
+import reputationRoutes from './routes/reputationRoutes';
 
 // Use notification preferences routes
 // Import user profile API routes
@@ -538,6 +548,9 @@ app.use('/api/mobile', mobileRoutes);
 
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
+
+// Reputation routes
+app.use('/marketplace/reputation', reputationRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';

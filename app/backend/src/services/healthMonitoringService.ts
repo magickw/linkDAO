@@ -96,7 +96,7 @@ export class HealthMonitoringService {
       const startTime = Date.now();
       try {
         // Try to import and use database connection
-        const { db } = await import('../db/connection');
+        const { db } = await import('../db');
         await db.execute('SELECT 1');
         
         // Additional database health checks
@@ -437,7 +437,7 @@ export class HealthMonitoringService {
     this.registerDependencyCheck('postgresql', async () => {
       const startTime = Date.now();
       try {
-        const { db } = await import('../db/connection');
+        const { db } = await import('../db');
         await db.execute('SELECT version()');
         
         return {
@@ -502,7 +502,7 @@ export class HealthMonitoringService {
   // Helper methods for database health checks
   private async getDatabaseConnectionCount(): Promise<number> {
     try {
-      const { db } = await import('../db/connection');
+      const { db } = await import('../db');
       const result = await db.execute('SELECT count(*) as count FROM pg_stat_activity WHERE state = \'active\'');
       return (result as any)[0]?.count || 0;
     } catch (error) {
@@ -512,7 +512,7 @@ export class HealthMonitoringService {
 
   private async getSlowQueryCount(): Promise<number> {
     try {
-      const { db } = await import('../db/connection');
+      const { db } = await import('../db');
       // Check for queries running longer than 5 seconds
       const result = await db.execute(`
         SELECT count(*) as count 

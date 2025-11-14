@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { purchaseTransactions, earningActivities, stakingPositions } from '../db/schema';
 import { eq, gte, lte, desc, sql } from 'drizzle-orm';
 

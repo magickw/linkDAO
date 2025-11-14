@@ -142,7 +142,7 @@ export class CacheWarmingService {
       loader: async () => {
         try {
           // Import database connection dynamically to avoid circular dependencies
-          const { db } = await import('../db/connection');
+          const { db } = await import('../db');
           const { categories } = await import('../db/schema');
           
           // Fetch actual categories from database
@@ -308,7 +308,7 @@ export class CacheWarmingService {
   private async getPopularSellerAddresses(limit: number): Promise<string[]> {
     try {
       // Import database connection dynamically to avoid circular dependencies
-      const { db } = await import('../db/connection');
+      const { db } = await import('../db');
       const { sellers } = await import('../db/schema');
       const { eq, desc } = await import('drizzle-orm');
       
@@ -331,7 +331,7 @@ export class CacheWarmingService {
   private async getActiveUserAddresses(limit: number): Promise<string[]> {
     try {
       // Import database connection dynamically to avoid circular dependencies
-      const { db } = await import('../db/connection');
+      const { db } = await import('../db');
       const { users } = await import('../db/schema');
       const { desc } = await import('drizzle-orm');
       

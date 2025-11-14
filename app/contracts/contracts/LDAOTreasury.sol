@@ -128,11 +128,17 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         // Calculate USD value and apply discounts
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        uint256 usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        uint256 usdAmount;
+        unchecked {
+            usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        }
         
         // Get ETH price from oracle (simplified - use Chainlink in production)
         uint256 ethPriceInUSD = _getETHPrice();
-        uint256 requiredETH = (usdAmount * 1e18) / ethPriceInUSD;
+        uint256 requiredETH;
+        unchecked {
+            requiredETH = (usdAmount * 1e18) / ethPriceInUSD;
+        }
         
         require(msg.value >= requiredETH, "Insufficient ETH sent");
         
@@ -142,10 +148,18 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
             "LDAO transfer failed"
         );
         
-        // Update statistics
-        totalSold += ldaoAmount;
-        totalRevenue += usdAmount;
-        purchaseHistory[msg.sender] += ldaoAmount;
+        // Update statistics with overflow checks
+        uint256 newTotalSold = totalSold + ldaoAmount;
+        require(newTotalSold >= totalSold, "Overflow in totalSold"); // Check for overflow
+        totalSold = newTotalSold;
+        
+        uint256 newTotalRevenue = totalRevenue + usdAmount;
+        require(newTotalRevenue >= totalRevenue, "Overflow in totalRevenue"); // Check for overflow
+        totalRevenue = newTotalRevenue;
+        
+        uint256 newPurchaseHistory = purchaseHistory[msg.sender] + ldaoAmount;
+        require(newPurchaseHistory >= purchaseHistory[msg.sender], "Overflow in purchaseHistory"); // Check for overflow
+        purchaseHistory[msg.sender] = newPurchaseHistory;
         
         // Refund excess ETH
         if (msg.value > requiredETH) {
@@ -177,10 +191,16 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         // Calculate USD value and apply discounts
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        uint256 usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        uint256 usdAmount;
+        unchecked {
+            usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        }
         
         // Convert to USDC amount (6 decimals)
-        uint256 usdcAmount = usdAmount / 1e12;
+        uint256 usdcAmount;
+        unchecked {
+            usdcAmount = usdAmount / 1e12;
+        }
         
         // Transfer USDC from buyer
         require(
@@ -194,10 +214,18 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
             "LDAO transfer failed"
         );
         
-        // Update statistics
-        totalSold += ldaoAmount;
-        totalRevenue += usdAmount;
-        purchaseHistory[msg.sender] += ldaoAmount;
+        // Update statistics with overflow checks
+        uint256 newTotalSold = totalSold + ldaoAmount;
+        require(newTotalSold >= totalSold, "Overflow in totalSold"); // Check for overflow
+        totalSold = newTotalSold;
+        
+        uint256 newTotalRevenue = totalRevenue + usdAmount;
+        require(newTotalRevenue >= totalRevenue, "Overflow in totalRevenue"); // Check for overflow
+        totalRevenue = newTotalRevenue;
+        
+        uint256 newPurchaseHistory = purchaseHistory[msg.sender] + ldaoAmount;
+        require(newPurchaseHistory >= purchaseHistory[msg.sender], "Overflow in purchaseHistory"); // Check for overflow
+        purchaseHistory[msg.sender] = newPurchaseHistory;
         
         emit LDAOPurchased(msg.sender, ldaoAmount, usdAmount, 0, "USDC");
     }
@@ -217,16 +245,27 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         uint256 discount
     ) {
         uint256 finalPrice = _calculateFinalPrice(ldaoAmount);
-        usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        unchecked {
+            usdAmount = (ldaoAmount * finalPrice) / 1e18;
+        }
         
         uint256 ethPriceInUSD = _getETHPrice();
-        ethAmount = (usdAmount * 1e18) / ethPriceInUSD;
-        usdcAmount = usdAmount / 1e12;
+        unchecked {
+            ethAmount = (usdAmount * 1e18) / ethPriceInUSD;
+        }
+        unchecked {
+            usdcAmount = usdAmount / 1e12;
+        }
         
         // Calculate discount percentage
-        uint256 basePrice = (ldaoAmount * ldaoPriceInUSD) / 1e18;
-        if (basePrice > usdAmount) {
-            discount = ((basePrice - usdAmount) * 10000) / basePrice; // In basis points
+        uint256 basePrice;
+        unchecked {
+            basePrice = (ldaoAmount * ldaoPriceInUSD) / 1e18;
+        }
+        if (basePrice > usdAmount && basePrice > 0) {
+            unchecked {
+                discount = ((basePrice - usdAmount) * 10000) / basePrice; // In basis points
+            }
         }
     }
 
@@ -509,16 +548,30 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         uint256 discount = _getVolumeDiscount(ldaoAmount);
         
         if (discount > 0) {
-            uint256 discountAmount = (dynamicPrice * discount) / 10000;
-            return dynamicPrice - discountAmount;
+            uint256 discountAmount;
+            unchecked {
+                discountAmount = (dynamicPrice * discount) / 10000;
+            }
+            
+            if (discountAmount <= dynamicPrice) {
+                return dynamicPrice - discountAmount;
+            } else {
+                return dynamicPrice; // Return original price if discount exceeds it
+            }
         }
         
         return dynamicPrice;
     }
     
     function _getDynamicPrice() internal view returns (uint256) {
-        uint256 adjustedPrice = (basePriceInUSD * demandMultiplier) / 1e18;
-        uint256 maxPrice = (basePriceInUSD * maxPriceMultiplier) / 1e18;
+        uint256 adjustedPrice;
+        unchecked {
+            adjustedPrice = (basePriceInUSD * demandMultiplier) / 1e18;
+        }
+        uint256 maxPrice;
+        unchecked {
+            maxPrice = (basePriceInUSD * maxPriceMultiplier) / 1e18;
+        }
         
         return adjustedPrice > maxPrice ? maxPrice : adjustedPrice;
     }
@@ -527,18 +580,27 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         if (block.timestamp >= lastPriceUpdate + priceUpdateInterval) {
             // Calculate demand based on recent sales volume
             uint256 recentVolume = currentDayPurchases;
-            uint256 targetVolume = dailyPurchaseLimit / 10; // 10% of daily limit as target
+            uint256 targetVolume;
+            unchecked {
+                targetVolume = dailyPurchaseLimit / 10; // 10% of daily limit as target
+            }
             
-            if (recentVolume > targetVolume) {
+            if (targetVolume > 0 && recentVolume > targetVolume) {
                 // Increase price due to high demand with bounded increase
-                uint256 demandRatio = (recentVolume * 1e18) / targetVolume;
+                uint256 demandRatio;
+                unchecked {
+                    demandRatio = (recentVolume * 1e18) / targetVolume;
+                }
                 
                 // Cap the demand ratio to prevent extreme price spikes (max 2x increase per update)
                 if (demandRatio > 2e18) {
                     demandRatio = 2e18;
                 }
                 
-                uint256 newMultiplier = (demandMultiplier * demandRatio) / 1e18;
+                uint256 newMultiplier;
+                unchecked {
+                    newMultiplier = (demandMultiplier * demandRatio) / 1e18;
+                }
                 
                 // Cap the multiplier to prevent extreme price increases
                 if (newMultiplier > maxPriceMultiplier) {
@@ -546,21 +608,30 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
                 }
                 
                 // Apply smoothing to prevent rapid price changes
-                demandMultiplier = (demandMultiplier * 90 + newMultiplier * 10) / 100;
-            } else if (recentVolume < targetVolume / 2) {
+                uint256 smoothedMultiplier;
+                unchecked {
+                    smoothedMultiplier = (demandMultiplier * 90 + newMultiplier * 10) / 100;
+                }
+                demandMultiplier = smoothedMultiplier;
+            } else if (targetVolume > 0 && recentVolume < targetVolume / 2) {
                 // Decrease price due to low demand with bounded decrease
                 uint256 decreaseFactor = 95; // 5% decrease
                 
                 // If volume is very low, allow slightly faster decrease
-                if (recentVolume < targetVolume / 10) {
+                if (targetVolume > 0 && recentVolume < targetVolume / 10) {
                     decreaseFactor = 90; // 10% decrease
                 }
                 
-                demandMultiplier = (demandMultiplier * decreaseFactor) / 100;
+                uint256 newMultiplier;
+                unchecked {
+                    newMultiplier = (demandMultiplier * decreaseFactor) / 100;
+                }
                 
                 // Floor at 1.0
-                if (demandMultiplier < 1e18) {
+                if (newMultiplier < 1e18) {
                     demandMultiplier = 1e18;
+                } else {
+                    demandMultiplier = newMultiplier;
                 }
             }
             
@@ -610,8 +681,9 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
 
     function _getVolumeDiscount(uint256 ldaoAmount) internal view returns (uint256) {
         uint256 maxDiscount = 0;
+        uint256 maxTiers = 50; // Limit to prevent DoS
         
-        for (uint256 i = 1; i < nextTierId; i++) {
+        for (uint256 i = 1; i < nextTierId && i < maxTiers; i++) {
             PricingTier storage tier = pricingTiers[i];
             if (tier.active && ldaoAmount >= tier.threshold && tier.discountBps > maxDiscount) {
                 maxDiscount = tier.discountBps;

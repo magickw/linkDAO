@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { stakingPositions } from '../db/schema';
 import { eq, and, desc, gte, sum, count } from 'drizzle-orm';
 

@@ -129,8 +129,15 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
             "Token transfer failed"
         );
         
-        epochs[currentEpoch].totalFunding = epochs[currentEpoch].totalFunding+(amount);
-        totalPoolBalance = totalPoolBalance+(amount);
+        // Update funding with overflow check
+        uint256 newTotalFunding = epochs[currentEpoch].totalFunding + amount;
+        require(newTotalFunding >= epochs[currentEpoch].totalFunding, "Overflow in epoch funding"); // Check for overflow
+        epochs[currentEpoch].totalFunding = newTotalFunding;
+        
+        // Update pool balance with overflow check
+        uint256 newPoolBalance = totalPoolBalance + amount;
+        require(newPoolBalance >= totalPoolBalance, "Overflow in pool balance"); // Check for overflow
+        totalPoolBalance = newPoolBalance;
         
         emit Funded(currentEpoch, msg.sender, amount);
     }
@@ -154,21 +161,35 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         // Apply reputation multiplier
         uint256 reputationScore = reputationSystem.getReputationScore(user).totalPoints;
         uint256 multiplier = _calculateReputationMultiplier(reputationScore);
-        uint256 finalAmount = baseAmount * (multiplier) / (100);
+        uint256 finalAmount;
+        unchecked {
+            finalAmount = baseAmount * (multiplier) / (100);
+        }
         
         // Apply category weight
         uint256 categoryWeight = rewardCategories[category].weight;
-        finalAmount = finalAmount * (categoryWeight) / (10000);
+        unchecked {
+            finalAmount = finalAmount * (categoryWeight) / (10000);
+        }
         
-        // Update epoch data
-        epochs[epochId].userRewards[user] = epochs[epochId].userRewards[user]+(finalAmount);
-        epochs[epochId].totalRewards = epochs[epochId].totalRewards+(finalAmount);
+        // Update epoch data with overflow checks
+        uint256 newUserReward = epochs[epochId].userRewards[user] + finalAmount;
+        require(newUserReward >= epochs[epochId].userRewards[user], "Overflow in user rewards"); // Check for overflow
+        epochs[epochId].userRewards[user] = newUserReward;
         
-        // Update category stats
-        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed+(finalAmount);
+        uint256 newTotalRewards = epochs[epochId].totalRewards + finalAmount;
+        require(newTotalRewards >= epochs[epochId].totalRewards, "Overflow in total rewards"); // Check for overflow
+        epochs[epochId].totalRewards = newTotalRewards;
         
-        // Update user stats
-        userStats[user].totalEarned = userStats[user].totalEarned+(finalAmount);
+        // Update category stats with overflow checks
+        uint256 newTotalDistributed = rewardCategories[category].totalDistributed + finalAmount;
+        require(newTotalDistributed >= rewardCategories[category].totalDistributed, "Overflow in total distributed rewards"); // Check for overflow
+        rewardCategories[category].totalDistributed = newTotalDistributed;
+        
+        // Update user stats with overflow checks
+        uint256 newTotalEarned = userStats[user].totalEarned + finalAmount;
+        require(newTotalEarned >= userStats[user].totalEarned, "Overflow in total earned"); // Check for overflow
+        userStats[user].totalEarned = newTotalEarned;
         userStats[user].reputationBonus = multiplier;
         
         emit RewardCalculated(epochId, user, finalAmount, category);
@@ -195,30 +216,46 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
                 // Apply reputation multiplier
                 uint256 reputationScore = reputationSystem.getReputationScore(users[i]).totalPoints;
                 uint256 multiplier = _calculateReputationMultiplier(reputationScore);
-                uint256 finalAmount = baseAmounts[i] * (multiplier) / (100);
+                uint256 finalAmount;
+                unchecked {
+                    finalAmount = baseAmounts[i] * (multiplier) / (100);
+                }
                 
                 // Apply category weight
                 uint256 categoryWeight = rewardCategories[category].weight;
-                finalAmount = finalAmount * (categoryWeight) / (10000);
+                unchecked {
+                    finalAmount = finalAmount * (categoryWeight) / (10000);
+                }
                 
-                // Update epoch data
-                epochs[epochId].userRewards[users[i]] = epochs[epochId].userRewards[users[i]]+(finalAmount);
-                epochs[epochId].totalRewards = epochs[epochId].totalRewards+(finalAmount);
+                // Update epoch data with overflow checks
+                uint256 newUserReward = epochs[epochId].userRewards[users[i]] + finalAmount;
+                require(newUserReward >= epochs[epochId].userRewards[users[i]], "Overflow in user rewards"); // Check for overflow
+                epochs[epochId].userRewards[users[i]] = newUserReward;
                 
-                // Update user stats
-                userStats[users[i]].totalEarned = userStats[users[i]].totalEarned+(finalAmount);
+                uint256 newTotalRewards = epochs[epochId].totalRewards + finalAmount;
+                require(newTotalRewards >= epochs[epochId].totalRewards, "Overflow in total rewards"); // Check for overflow
+                epochs[epochId].totalRewards = newTotalRewards;
+                
+                // Update user stats with overflow checks
+                uint256 newTotalEarned = userStats[users[i]].totalEarned + finalAmount;
+                require(newTotalEarned >= userStats[users[i]].totalEarned, "Overflow in total earned"); // Check for overflow
+                userStats[users[i]].totalEarned = newTotalEarned;
                 userStats[users[i]].reputationBonus = multiplier;
                 
                 emit RewardCalculated(epochId, users[i], finalAmount, category);
             }
         }
         
-        // Update category stats
+        // Update category stats with overflow checks
         uint256 totalCategoryRewards = 0;
         for (uint256 i = 0; i < baseAmounts.length; i++) {
-            totalCategoryRewards = totalCategoryRewards+(baseAmounts[i]);
+            uint256 newTotal = totalCategoryRewards + baseAmounts[i];
+            require(newTotal >= totalCategoryRewards, "Overflow in total category rewards"); // Check for overflow
+            totalCategoryRewards = newTotal;
         }
-        rewardCategories[category].totalDistributed = rewardCategories[category].totalDistributed+(totalCategoryRewards);
+        uint256 newTotalDistributed = rewardCategories[category].totalDistributed + totalCategoryRewards;
+        require(newTotalDistributed >= rewardCategories[category].totalDistributed, "Overflow in total distributed rewards"); // Check for overflow
+        rewardCategories[category].totalDistributed = newTotalDistributed;
     }
 
     /**
@@ -233,9 +270,17 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         require(totalPoolBalance >= rewardAmount, "Insufficient pool balance");
         
         epochs[epochId].hasClaimed[msg.sender] = true;
-        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed+(rewardAmount);
+        
+        // Update user stats with overflow checks
+        uint256 newTotalClaimed = userStats[msg.sender].totalClaimed + rewardAmount;
+        require(newTotalClaimed >= userStats[msg.sender].totalClaimed, "Overflow in total claimed"); // Check for overflow
+        userStats[msg.sender].totalClaimed = newTotalClaimed;
+        
         userStats[msg.sender].lastClaimEpoch = epochId;
-        totalPoolBalance = totalPoolBalance- (rewardAmount);
+        
+        // Update pool balance with underflow check
+        require(totalPoolBalance >= rewardAmount, "Insufficient pool balance"); // Check for underflow
+        totalPoolBalance = totalPoolBalance - rewardAmount;
         
         require(ldaoToken.transfer(msg.sender, rewardAmount), "Token transfer failed");
         
@@ -260,7 +305,12 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
             uint256 rewardAmount = epochs[epochId].userRewards[msg.sender];
             if (rewardAmount > 0) {
                 epochs[epochId].hasClaimed[msg.sender] = true;
-                totalClaimAmount = totalClaimAmount+(rewardAmount);
+                
+                // Add to total with overflow check
+                uint256 newTotalClaimAmount = totalClaimAmount + rewardAmount;
+                require(newTotalClaimAmount >= totalClaimAmount, "Overflow in total claim amount"); // Check for overflow
+                totalClaimAmount = newTotalClaimAmount;
+                
                 emit RewardClaimed(msg.sender, epochId, rewardAmount);
             }
         }
@@ -268,9 +318,16 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         require(totalClaimAmount > 0, "No rewards to claim");
         require(totalPoolBalance >= totalClaimAmount, "Insufficient pool balance");
         
-        userStats[msg.sender].totalClaimed = userStats[msg.sender].totalClaimed+(totalClaimAmount);
+        // Update user stats with overflow checks
+        uint256 newTotalClaimed = userStats[msg.sender].totalClaimed + totalClaimAmount;
+        require(newTotalClaimed >= userStats[msg.sender].totalClaimed, "Overflow in total claimed"); // Check for overflow
+        userStats[msg.sender].totalClaimed = newTotalClaimed;
+        
         userStats[msg.sender].lastClaimEpoch = epochIds[epochIds.length - 1];
-        totalPoolBalance = totalPoolBalance- (totalClaimAmount);
+        
+        // Update pool balance with underflow check
+        require(totalPoolBalance >= totalClaimAmount, "Insufficient pool balance"); // Check for underflow
+        totalPoolBalance = totalPoolBalance - totalClaimAmount;
         
         require(ldaoToken.transfer(msg.sender, totalClaimAmount), "Token transfer failed");
     }
@@ -450,15 +507,25 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
      */
     function emergencyWithdraw(uint256 amount) external onlyGovernance {
         require(amount <= totalPoolBalance, "Insufficient balance");
-        totalPoolBalance = totalPoolBalance- (amount);
+        
+        // Check for underflow
+        require(totalPoolBalance >= amount, "Insufficient balance for withdrawal"); // Check for underflow
+        totalPoolBalance = totalPoolBalance - amount;
+        
         require(ldaoToken.transfer(owner(), amount), "Transfer failed");
     }
 
     // Internal functions
     function _startNewEpoch() internal {
         uint256 epochId = nextEpochId++;
+        require(epochId > nextEpochId - 1, "Overflow in epoch ID"); // Check for overflow
+        
         uint256 startTime = block.timestamp;
-        uint256 endTime = startTime+(epochDuration);
+        uint256 endTime;
+        unchecked {
+            endTime = startTime + epochDuration;
+        }
+        require(endTime > startTime, "Overflow in epoch end time"); // Check for overflow
         
         epochs[epochId].id = epochId;
         epochs[epochId].startTime = startTime;

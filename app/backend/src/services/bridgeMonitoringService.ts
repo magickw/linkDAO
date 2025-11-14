@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
 import { bridgeTransactions, bridgeEvents, bridgeMetrics } from '../db/schema';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { eq, and, gte, lte, desc, sql, isNotNull } from 'drizzle-orm';
 import { convertBigIntToStrings, stringifyWithBigInt, jsonToBigInt } from '../utils/bigIntSerializer';
 

@@ -1,6 +1,6 @@
 import { eq, and, desc, sql, gte, lte, count, or } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { 
   orders,
   orderEvents,

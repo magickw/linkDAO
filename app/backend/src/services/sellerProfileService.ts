@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { databaseService } from '../services/databaseService';
 import { sellers } from '../db/schema';
 import { 

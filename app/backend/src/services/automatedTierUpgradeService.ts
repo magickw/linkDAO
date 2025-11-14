@@ -3,7 +3,7 @@
  * Handles automated evaluation and processing of seller tier upgrades
  */
 
-import { db } from '../db/connection';
+import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { sellers, orders, products, reviews } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';

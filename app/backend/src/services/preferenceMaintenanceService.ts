@@ -7,7 +7,7 @@ import cron from 'node-cron';
 import { safeLogger } from '../utils/safeLogger';
 import { userPreferenceService } from './userPreferenceService';
 import { preferenceLearningService } from './preferencelearningService';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { paymentMethodPreferences, users } from '../db/schema';
 import { eq, lt, and } from 'drizzle-orm';
 

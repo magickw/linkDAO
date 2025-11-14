@@ -4,7 +4,7 @@
  * Implements requirements 4.2, 4.5, 4.6 from the interconnected social platform spec
  */
 
-import { db } from '../db/connection';
+import { db } from '../db';
 import { posts, communities, users, shares } from '../db/schema';
 import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 import { messagingService } from './messagingService';

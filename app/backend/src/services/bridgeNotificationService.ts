@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
-import { db } from '../db/connection';
+import { db } from '../db';
 import { bridgeAlerts } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
