@@ -201,6 +201,54 @@ export default function Profile() {
     }
   };
 
+  // Handle post editing
+  const handleEditPost = async (post: any) => {
+    if (!currentUserAddress || currentUserAddress !== targetUserAddress) {
+      addToast('You can only edit your own posts', 'error');
+      return;
+    }
+
+    // Navigate to the edit post page
+    router.push({
+      pathname: `/edit-post/${post.id}`,
+      query: {
+        title: post.title,
+        content: post.contentCid,
+        tags: post.tags ? post.tags.join(',') : '',
+        dao: post.dao || post.communityId || ''
+      }
+    });
+  };
+
+  // Handle post deletion
+  const handleDeletePost = async (postId: string) => {
+    if (!currentUserAddress || currentUserAddress !== targetUserAddress) {
+      addToast('You can only delete your own posts', 'error');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Import PostService dynamically to avoid SSR issues
+      const { PostService } = await import('@/services/postService');
+      
+      await PostService.deletePost(postId);
+      
+      // Refresh the posts list
+      if (refetchPosts) {
+        refetchPosts();
+      }
+      
+      addToast('Post deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      addToast(`Failed to delete post: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
   // Check for edit query parameter (only for current user's profile)
   useEffect(() => {
     if (router.query.edit === 'true' && (!router.query.user || router.query.user === currentUserAddress)) {
@@ -1026,14 +1074,46 @@ export default function Profile() {
                     <div className="space-y-4">
                       {posts.map((post) => (
                         <Link key={post.id} href={`/posts/${post.id}`}>
-                          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                              {post.title || 'Untitled Post'}
-                            </h4>
-                            <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
-                              {post.contentCid}
-                            </p>
-                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <div className="flex justify-between items-start">
+                              <Link href={`/posts/${post.id}`} className="flex-grow">
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                  {post.title || 'Untitled Post'}
+                                </h4>
+                                <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
+                                  {post.contentCid}
+                                </p>
+                              </Link>
+                              {targetUserAddress === currentUserAddress && (
+                                <div className="flex space-x-2 ml-4">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleEditPost(post);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                    title="Edit post"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDeletePost(post.id);
+                                    }}
+                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                    title="Delete post"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mt-2">
                               <div className="flex items-center space-x-4">
                                 <span>{post.comments || 0} comments</span>
                                 <span>{post.views || 0} views</span>

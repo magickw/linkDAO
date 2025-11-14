@@ -19,10 +19,11 @@ export interface CreatePostInput {
 }
 
 export interface UpdatePostInput {
-  content?: string;
-  media?: string[];
-  tags?: string[];
   title?: string;
+  content?: string;
+  dao?: string;
+  tags?: string[];
+  media?: string[];
 }
 
 // Utility function to convert backend post to frontend post

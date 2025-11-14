@@ -804,6 +804,361 @@ app.get('/api/profiles/address/:address', async (req, res) => {
   }
 });
 
+// Posts routes
+app.get('/api/posts/feed', async (req, res) => {
+  try {
+    const { forUser } = req.query;
+    
+    if (!forUser || typeof forUser !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'forUser parameter is required'
+      });
+    }
+    
+    // Get user ID from address
+    const userResult = await getUserByAddress(forUser);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    const userId = user.id;
+    
+    // Get the list of users that this user follows
+    const followingQuery = 'SELECT * FROM follows WHERE follower_id = $1';
+    const followingResult = await executeQuery(followingQuery, [userId], null);
+    const followingIds = followingResult.rows.map(f => f.following_id);
+    
+    // Include the user's own posts
+    followingIds.push(userId);
+    
+    // Get posts from followed users (including self)
+    const placeholders = followingIds.map((_, i) => `${i + 1}`).join(', ');
+    const postsQuery = `
+      SELECT * FROM posts 
+      WHERE author_id IN (${placeholders})
+      ORDER BY created_at DESC
+      LIMIT 50
+    `;
+    const postsResult = await executeQuery(postsQuery, followingIds, null);
+    
+    // Format posts
+    const posts = postsResult.rows.map(dbPost => ({
+      id: dbPost.id.toString(),
+      author: dbPost.author_id,
+      parentId: dbPost.parent_id ? dbPost.parent_id.toString() : null,
+      title: dbPost.title,
+      contentCid: dbPost.content_cid,
+      mediaCids: dbPost.media_cids ? JSON.parse(dbPost.media_cids) : [],
+      tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+      dao: dbPost.dao,
+      createdAt: new Date(dbPost.created_at),
+      
+    }));
+    
+    res.json({
+      success: true,
+      data: posts
+    });
+  } catch (error) {
+    console.error('Error getting feed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/posts', async (req, res) => {
+  try {
+    const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef } = req.body;
+    
+    if (!content || content.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Content is required'
+      });
+    }
+    
+    if (!author) {
+      return res.status(400).json({
+        success: false,
+        error: 'Author is required'
+      });
+    }
+    
+    // Create user if they don't exist
+    await createOrUpdateUser(author);
+    
+    // Get user ID
+    const userResult = await getUserByAddress(author);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const userId = userResult.rows[0].id;
+    
+    // Insert post
+    const insertQuery = `
+      INSERT INTO posts (author_id, content_cid, parent_id, media_cids, tags, staked_value, reputation_score, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `;
+    
+    const result = await executeQuery(insertQuery, [
+      userId,
+      content,
+      parentId || null,
+      media ? JSON.stringify(media) : '[]',
+      tags ? JSON.stringify(tags) : '[]',
+      '0',  // staked_value
+      0,    // reputation_score
+    ], null);
+    
+    const newPost = result.rows[0];
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        id: newPost.id.toString(),
+        author: newPost.author_id,
+        parentId: newPost.parent_id ? newPost.parent_id.toString() : null,
+        contentCid: newPost.content_cid,
+        mediaCids: newPost.media_cids ? JSON.parse(newPost.media_cids) : [],
+        tags: newPost.tags ? JSON.parse(newPost.tags) : [],
+        createdAt: new Date(newPost.created_at),
+        
+      }
+    });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/posts', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const postsQuery = `
+      SELECT * FROM posts 
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+    const postsResult = await executeQuery(postsQuery, [parseInt(limit), parseInt(offset)], null);
+    
+    const posts = postsResult.rows.map(dbPost => ({
+      id: dbPost.id.toString(),
+      author: dbPost.author_id,
+      parentId: dbPost.parent_id ? dbPost.parent_id.toString() : null,
+      title: dbPost.title,
+      contentCid: dbPost.content_cid,
+      mediaCids: dbPost.media_cids ? JSON.parse(dbPost.media_cids) : [],
+      tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+      dao: dbPost.dao,
+      createdAt: new Date(dbPost.created_at),
+      
+    }));
+    
+    res.json({
+      success: true,
+      data: posts
+    });
+  } catch (error) {
+    console.error('Error getting posts:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/posts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const postQuery = 'SELECT * FROM posts WHERE id = $1';
+    const postResult = await executeQuery(postQuery, [id], null);
+    
+    if (postResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Post not found'
+      });
+    }
+    
+    const dbPost = postResult.rows[0];
+    
+    res.json({
+      success: true,
+      data: {
+        id: dbPost.id.toString(),
+        author: dbPost.author_id,
+        parentId: dbPost.parent_id ? dbPost.parent_id.toString() : null,
+        title: dbPost.title,
+        contentCid: dbPost.content_cid,
+        mediaCids: dbPost.media_cids ? JSON.parse(dbPost.media_cids) : [],
+        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        dao: dbPost.dao,
+        createdAt: new Date(dbPost.created_at),
+        
+      }
+    });
+  } catch (error) {
+    console.error('Error getting post:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/posts/author/:author', async (req, res) => {
+  try {
+    const { author } = req.params;
+    
+    // Get user by address
+    const userResult = await getUserByAddress(author);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const userId = userResult.rows[0].id;
+    
+    const postsQuery = `
+      SELECT * FROM posts 
+      WHERE author_id = $1
+      ORDER BY created_at DESC
+    `;
+    const postsResult = await executeQuery(postsQuery, [userId], null);
+    
+    const posts = postsResult.rows.map(dbPost => ({
+      id: dbPost.id.toString(),
+      author: dbPost.author_id,
+      parentId: dbPost.parent_id ? dbPost.parent_id.toString() : null,
+      title: dbPost.title,
+      contentCid: dbPost.content_cid,
+      mediaCids: dbPost.media_cids ? JSON.parse(dbPost.media_cids) : [],
+      tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+      dao: dbPost.dao,
+      createdAt: new Date(dbPost.created_at),
+      
+    }));
+    
+    res.json({
+      success: true,
+      data: posts
+    });
+  } catch (error) {
+    console.error('Error getting posts by author:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.put('/api/posts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, tags, media, dao } = req.body;
+    
+    // First get the post to ensure it exists
+    const getQuery = 'SELECT * FROM posts WHERE id = $1';
+    const getResult = await executeQuery(getQuery, [id], null);
+    
+    if (getResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Post not found'
+      });
+    }
+    
+    // Update post
+    const updateQuery = `
+      UPDATE posts 
+      SET title = COALESCE($1, title),
+          content_cid = COALESCE($2, content_cid),
+          tags = COALESCE($3, tags),
+          media_cids = COALESCE($4, media_cids),
+          dao = COALESCE($5, dao),
+          updated_at = NOW()
+      WHERE id = $6
+      RETURNING *
+    `;
+    
+    const result = await executeQuery(updateQuery, [
+      title,
+      content,
+      tags ? JSON.stringify(tags) : null,
+      media ? JSON.stringify(media) : null,
+      dao,
+      id
+    ], null);
+    
+    const updatedPost = result.rows[0];
+    
+    res.json({
+      success: true,
+      data: {
+        id: updatedPost.id.toString(),
+        author: updatedPost.author_id,
+        parentId: updatedPost.parent_id ? updatedPost.parent_id.toString() : null,
+        title: updatedPost.title,
+        contentCid: updatedPost.content_cid,
+        mediaCids: updatedPost.media_cids ? JSON.parse(updatedPost.media_cids) : [],
+        tags: updatedPost.tags ? JSON.parse(updatedPost.tags) : [],
+        dao: updatedPost.dao,
+        createdAt: new Date(updatedPost.created_at),
+        
+      }
+    });
+  } catch (error) {
+    console.error('Error updating post:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.delete('/api/posts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deleteQuery = 'DELETE FROM posts WHERE id = $1 RETURNING id';
+    const result = await executeQuery(deleteQuery, [id], null);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Post not found'
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Marketplace listing routes
 app.post('/api/marketplace/listings', async (req, res) => {
   try {
