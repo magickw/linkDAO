@@ -751,11 +751,15 @@ class EnhancedAuthService {
       return;
     }
 
-    // Check if address changed
-    if (this.sessionData && this.sessionData.user.address !== newAddress) {
-      console.log('👛 Wallet address changed, clearing session');
-      await this.logout();
+    // Check if address changed - be careful about initial connections
+    if (this.sessionData && this.sessionData.user.address) {
+      // Only check for real address changes, not initial connections
+      if (this.sessionData.user.address !== newAddress) {
+        console.log('👛 Wallet address changed from', this.sessionData.user.address, 'to', newAddress, 'clearing session');
+        await this.logout();
+      }
     }
+    // If sessionData.user.address is undefined or empty, it's likely an initial connection, don't logout
   }
 
   /**
