@@ -95,6 +95,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (!address) return false;
 
+      const normalizedAddress = address.toLowerCase();
+
       const sessionValidation = await validateSession(address);
       if (sessionValidation.isValid && sessionValidation.token) {
         // Try to get user data from storage first
@@ -114,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // If no user data in storage, try to fetch from auth service
         try {
           const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address === address) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             setUser(currentUser);
             setAccessToken(sessionValidation.token);
             // Store for future use
@@ -129,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Also try enhanced auth service
         try {
           const currentUser = await enhancedAuthService.getCurrentUser();
-          if (currentUser && currentUser.address === address) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             setUser(currentUser);
             setAccessToken(sessionValidation.token);
             // Store for future use
@@ -266,10 +268,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      // Handle wallet address changes more carefully
+      // Handle wallet address changes more carefully (case-insensitive)
       if (isConnected && address && user) {
         // Check if this is a real address change vs. initial connection
-        if (user.address && user.address !== address) {
+        if (user.address && user.address.toLowerCase() !== address.toLowerCase()) {
           console.log('🔗 Wallet address changed from', user.address, 'to', address, 'logging out old user');
           handleLogout();
         }
@@ -306,15 +308,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const walletAddress = accounts[0];
+      const normalizedWalletAddress = walletAddress.toLowerCase();
 
       // Check if we already have a valid session for this address in multiple places
-      // First check the stored session in localStorage
+      // First check the stored session in localStorage (case-insensitive)
       const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
       const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
       const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
 
-      if (storedToken && storedAddress === walletAddress && storedTimestamp && storedUserData) {
+      if (storedToken && storedAddress?.toLowerCase() === normalizedWalletAddress && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
@@ -358,11 +361,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Check if authService already has a token for this address
+      // Check if authService already has a token for this address (case-insensitive)
       if (authService.isAuthenticated()) {
         try {
           const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address === walletAddress) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedWalletAddress) {
             const token = authService.getToken();
             if (token) {
               setUser(currentUser);
@@ -407,10 +410,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Login with wallet authentication (legacy method for compatibility)
   const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     console.log('🔐 Login called for address:', walletAddress);
-    
+
+    // Normalize address to lowercase for case-insensitive comparisons
+    const normalizedAddress = walletAddress.toLowerCase();
+
     try {
-      // Check if already authenticated for this address
-      if (user && user.address === walletAddress && accessToken) {
+      // Check if already authenticated for this address (case-insensitive)
+      if (user && user.address?.toLowerCase() === normalizedAddress && accessToken) {
         console.log('✅ Already authenticated for address:', walletAddress);
         return { success: true };
       }
@@ -421,7 +427,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
       const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
 
-      if (storedToken && storedAddress === walletAddress && storedTimestamp && storedUserData) {
+      if (storedToken && storedAddress?.toLowerCase() === normalizedAddress && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
@@ -450,11 +456,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Check if authService already has a token for this address
+      // Check if authService already has a token for this address (case-insensitive)
       if (authService.isAuthenticated()) {
         try {
           const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address === walletAddress) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             const token = authService.getToken();
             if (token) {
               setUser(currentUser);
@@ -471,12 +477,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Check enhancedAuthService as fallback
+      // Check enhancedAuthService as fallback (case-insensitive)
       const sessionStatus = enhancedAuthService.getSessionStatus();
-      if (sessionStatus.isAuthenticated && sessionStatus.address === walletAddress) {
+      if (sessionStatus.isAuthenticated && sessionStatus.address?.toLowerCase() === normalizedAddress) {
         try {
           const currentUser = await enhancedAuthService.getCurrentUser();
-          if (currentUser && currentUser.address === walletAddress) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             const token = enhancedAuthService.getToken();
             if (token) {
               setUser(currentUser);
@@ -725,15 +731,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: 'Wallet not connected' };
     }
 
+    const normalizedAddress = address.toLowerCase();
+
     // Check for existing valid session first to avoid unnecessary signature requests
     if (!options.forceRefresh) {
-      // Check the stored session in localStorage
+      // Check the stored session in localStorage (case-insensitive)
       const storedToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
       const storedAddress = localStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS);
       const storedTimestamp = localStorage.getItem(STORAGE_KEYS.SIGNATURE_TIMESTAMP);
       const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
 
-      if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
+      if (storedToken && storedAddress?.toLowerCase() === normalizedAddress && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
@@ -762,12 +770,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Check enhanced auth service session
+      // Check enhanced auth service session (case-insensitive)
       const sessionStatus = enhancedAuthService.getSessionStatus();
-      if (sessionStatus.isAuthenticated && sessionStatus.address === address) {
+      if (sessionStatus.isAuthenticated && sessionStatus.address?.toLowerCase() === normalizedAddress) {
         try {
           const currentUser = await enhancedAuthService.getCurrentUser();
-          if (currentUser && currentUser.address === address) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             setUser(currentUser);
             setAccessToken(enhancedAuthService.getToken());
             await loadKYCStatus();
