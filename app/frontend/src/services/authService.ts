@@ -435,7 +435,7 @@ class AuthService {
       if (data.success && data.data.authenticated) {
         // Convert session data to AuthUser format, use role and permissions from backend if available
         const user: AuthUser = {
-          id: data.data.sessionId || `user_${data.data.walletAddress}`,
+          id: data.data.id || data.data.sessionId || `user_${data.data.walletAddress}`,
           address: data.data.walletAddress,
           handle: data.data.handle || `user_${data.data.walletAddress.slice(0, 6)}`,
           ens: data.data.ens,
@@ -450,6 +450,7 @@ class AuthService {
           lastLogin: data.data.lastLogin,
           createdAt: data.data.createdAt || new Date().toISOString(),
           updatedAt: data.data.updatedAt || new Date().toISOString(),
+          avatarCid: data.data.avatarCid,
           preferences: data.data.preferences,
           privacySettings: data.data.privacySettings,
         };
@@ -823,6 +824,46 @@ class AuthService {
         success: false,
         error: 'Network error occurred',
       };
+    }
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(profileData: any): Promise<{ success: boolean; user?: AuthUser; error?: string }> {
+    if (!this.token) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) {
+        return { success: false, error: 'Current user not found' };
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/profiles/address/${currentUser.address}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // Update the stored user data
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('linkdao_user_data', JSON.stringify(data.data));
+        }
+        return { success: true, user: data.data };
+      } else {
+        return { success: false, error: data.error || 'Update failed' };
+      }
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      return { success: false, error: error.message || 'Update failed' };
     }
   }
 

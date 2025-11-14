@@ -276,6 +276,74 @@ export class ProfileService {
   }
 
   /**
+   * Update a profile by wallet address
+   * @param address - Wallet address
+   * @param data - Updated profile data
+   * @returns The updated profile
+   */
+  static async updateProfileByAddress(address: string, data: UpdateUserProfileInput): Promise<UserProfile> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      // Get auth token from localStorage - check multiple possible storage keys
+      const token = localStorage.getItem('linkdao_access_token') ||
+                   localStorage.getItem('authToken') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('auth_token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/address/${address}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to update profile';
+        try {
+          const error = await response.json();
+          errorMessage = error.error?.message || error.error || errorMessage;
+        } catch (jsonError) {
+          // If response is not JSON, provide a better error message
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('text/html')) {
+            errorMessage = `Backend service unavailable (received HTML instead of JSON). Please check if the backend is running on ${BACKEND_API_BASE_URL}`;
+          } else {
+            errorMessage = `Invalid response from backend (status: ${response.status})`;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      const profile = await response.json();
+      // Convert string dates to Date objects
+      return {
+        ...profile.data,
+        createdAt: new Date(profile.data.createdAt),
+        updatedAt: new Date(profile.data.updatedAt)
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+
+      throw error;
+    }
+  }
+
+  /**
    * Delete a profile
    * @param id - Profile ID
    * @returns True if deleted, false if not found

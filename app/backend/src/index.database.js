@@ -573,9 +573,132 @@ app.put('/api/profiles/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    // First, get the current user by ID
-    const userQuery = 'SELECT * FROM users WHERE id = $1';
-    const userResult = await executeQuery(userQuery, [id], null);
+    // Update the profile and return the result
+    const updatedUser = await updateUserProfile(id, updateData);
+    
+    res.json({
+      success: true,
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Helper function to update user profile with all fields
+async function updateUserProfile(userId, updateData) {
+  // First get the current user to preserve existing values
+  const userQuery = 'SELECT * FROM users WHERE id = $1';
+  const userResult = await executeQuery(userQuery, [userId], null);
+  
+  if (userResult.rows.length === 0) {
+    throw new Error('User not found');
+  }
+  
+  const user = userResult.rows[0];
+  
+  // Try to parse existing profile data
+  let profileData = {};
+  if (user.profile_cid) {
+    try {
+      profileData = JSON.parse(user.profile_cid);
+    } catch (e) {
+      console.log('Failed to parse existing profile data for user:', user.wallet_address);
+    }
+  }
+  
+  // Merge updated fields with existing data
+  const mergedProfileData = {
+    ...profileData,
+    ens: updateData.ens || profileData.ens,
+    avatarCid: updateData.avatarCid || profileData.avatarCid,
+    bioCid: updateData.bioCid || updateData.bio || profileData.bioCid || profileData.bio,
+    email: updateData.email || profileData.email,
+    // Billing Address fields
+    billingFirstName: updateData.billingFirstName || profileData.billingFirstName,
+    billingLastName: updateData.billingLastName || profileData.billingLastName,
+    billingCompany: updateData.billingCompany || profileData.billingCompany,
+    billingAddress1: updateData.billingAddress1 || profileData.billingAddress1,
+    billingAddress2: updateData.billingAddress2 || profileData.billingAddress2,
+    billingCity: updateData.billingCity || profileData.billingCity,
+    billingState: updateData.billingState || profileData.billingState,
+    billingZipCode: updateData.billingZipCode || profileData.billingZipCode,
+    billingCountry: updateData.billingCountry || profileData.billingCountry,
+    billingPhone: updateData.billingPhone || profileData.billingPhone,
+    // Shipping Address fields
+    shippingFirstName: updateData.shippingFirstName || profileData.shippingFirstName,
+    shippingLastName: updateData.shippingLastName || profileData.shippingLastName,
+    shippingCompany: updateData.shippingCompany || profileData.shippingCompany,
+    shippingAddress1: updateData.shippingAddress1 || profileData.shippingAddress1,
+    shippingAddress2: updateData.shippingAddress2 || profileData.shippingAddress2,
+    shippingCity: updateData.shippingCity || profileData.shippingCity,
+    shippingState: updateData.shippingState || profileData.shippingState,
+    shippingZipCode: updateData.shippingZipCode || profileData.shippingZipCode,
+    shippingCountry: updateData.shippingCountry || profileData.shippingCountry,
+    shippingPhone: updateData.shippingPhone || profileData.shippingPhone
+  };
+
+  // Update the user profile - handle is allowed to be updated but wallet address is immutable
+  const updateQuery = `
+    UPDATE users 
+    SET handle = COALESCE($1, handle),
+        profile_cid = $2,
+        updated_at = NOW()
+    WHERE id = $3
+    RETURNING *
+  `;
+  
+  const result = await executeQuery(updateQuery, [
+    updateData.handle || user.handle,
+    JSON.stringify(mergedProfileData),
+    userId
+  ], null);
+  
+  return result.rows[0];
+}
+
+// Update the profile update endpoint by ID to handle all profile fields
+app.put('/api/profiles/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    // Update the profile and return the result
+    const updatedUser = await updateUserProfile(id, updateData);
+    
+    res.json({
+      success: true,
+      data: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add PUT endpoint for updating profile by wallet address
+app.put('/api/profiles/address/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const updateData = req.body;
+    
+    // Validate Ethereum address format
+    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Ethereum address'
+      });
+    }
+    
+    // First, get the current user by address
+    const userResult = await getUserByAddress(address);
     
     if (userResult.rows.length === 0) {
       return res.status(404).json({
@@ -585,30 +708,17 @@ app.put('/api/profiles/:id', async (req, res) => {
     }
     
     const user = userResult.rows[0];
-    const walletAddress = user.wallet_address;
+    const userId = user.id;
     
-    // Update the user profile
-    const updateQuery = `
-      UPDATE users 
-      SET handle = COALESCE($1, handle),
-          profile_cid = COALESCE($2, profile_cid),
-          updated_at = NOW()
-      WHERE id = $3
-      RETURNING *
-    `;
-    
-    const result = await executeQuery(updateQuery, [
-      updateData.handle,
-      updateData.profileCid || updateData.profile_cid,
-      id
-    ], null);
+    // Update the profile and return the result
+    const updatedUser = await updateUserProfile(userId, updateData);
     
     res.json({
       success: true,
-      data: result.rows[0]
+      data: updatedUser
     });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    console.error('Error updating profile by address:', error);
     res.status(500).json({
       success: false,
       error: error.message

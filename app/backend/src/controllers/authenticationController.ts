@@ -300,25 +300,30 @@ export class AuthenticationController {
         });
       }
 
+      // Get full user profile with avatar from database
+      const userProfileService = new UserProfileService();
+      const fullProfile = await userProfileService.getProfileByAddress(req.user.walletAddress);
+      
       // Return user profile information from database
       const userProfile = {
         id: req.user.userId || req.user.sessionId,
         address: req.user.walletAddress,
         handle: req.user.handle || `user_${req.user.walletAddress.slice(0, 6)}`,
-        ens: undefined,
+        ens: fullProfile?.ens || undefined,
         email: req.user.email,
         kycStatus: req.user.kycStatus || 'none',
         role: req.user.role || 'user',
         permissions: req.user.permissions || [],
         isActive: req.user.isActiveUser ?? true,
         isSuspended: req.user.isSuspended ?? false,
+        avatarCid: fullProfile?.avatarCid || undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       res.json({
         success: true,
-        user: userProfile,
+        data: userProfile,
       });
     } catch (error) {
       safeLogger.error('Error getting current user:', error);

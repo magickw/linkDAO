@@ -31,6 +31,7 @@ export interface AuthUser {
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
+  avatarCid?: string;
   preferences?: {
     notifications?: {
       email?: boolean;
