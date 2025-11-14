@@ -229,44 +229,7 @@ export class DatabaseService {
     }
   }
 
-  async getPostById(id: number) {
-    try {
-      const result = await this.db.select().from(schema.posts).where(eq(schema.posts.id, id));
-      return result[0] || null;
-    } catch (error) {
-      safeLogger.error("Error getting post by ID:", error);
-      throw error;
-    }
-  }
-
-  async getPostsByTag(tag: string) {
-    try {
-      // Join with postTags table to find posts with specific tag
-      const result = await this.db
-        .select({
-          id: schema.posts.id,
-          authorId: schema.posts.authorId,
-          contentCid: schema.posts.contentCid,
-          parentId: schema.posts.parentId,
-          mediaCids: schema.posts.mediaCids,
-          tags: schema.posts.tags,
-          createdAt: schema.posts.createdAt,
-          updatedAt: schema.posts.updatedAt,
-          dao: schema.posts.dao,
-          communityId: schema.posts.communityId,
-          stakedValue: schema.posts.stakedValue
-        })
-        .from(schema.posts)
-        .innerJoin(schema.postTags, eq(schema.posts.id, schema.postTags.postId))
-        .where(eq(schema.postTags.tag, tag.toLowerCase()))
-        .orderBy(desc(schema.posts.createdAt));
-      
-      return result;
-    } catch (error) {
-      safeLogger.error("Error getting posts by tag:", error);
-      throw error;
-    }
-  }
+  
 
   async getPostsByCommunity(communityId: string) {
     try {
@@ -541,7 +504,7 @@ export class DatabaseService {
     }
   }
 
-  async updateListing(id: number, updates: Partial<typeof schema.listings.$inferInsert>) {
+  async updateListing(id: string, updates: Partial<typeof schema.listings.$inferInsert>) {
     try {
       const result = await this.db.update(schema.listings).set(updates).where(eq(schema.listings.id, id)).returning();
       return result[0] || null;
@@ -551,7 +514,7 @@ export class DatabaseService {
     }
   }
 
-  async cancelListing(id: number) {
+  async cancelListing(id: string) {
     try {
       const result = await this.db.update(schema.listings).set({ status: 'cancelled' }).where(eq(schema.listings.id, id)).returning();
       return result[0] || null;
