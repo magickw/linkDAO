@@ -35,19 +35,32 @@ const EditPostPage: React.FC = () => {
   const loadPost = async () => {
     try {
       setIsLoading(true);
-      const postData = await PostService.getPostById(id as string);
+      const postData: any = await PostService.getPostById(id as string);
       setPost(postData);
       
       // Populate form fields with existing post data
       setTitle(postData.title || '');
-      setContent(postData.content || postData.contentCid || '');
+      setContent(postData.contentCid || '');
       setSelectedCommunity(postData.dao || postData.communityId || '');
       
       // Parse tags if they exist
       if (Array.isArray(postData.tags)) {
         setTags(postData.tags);
       } else if (typeof postData.tags === 'string') {
-        setTags(postData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean));
+        setTags(postData.tags.split(',').map((tag: any) => tag.trim()).filter(Boolean));
+      } else if (postData.tags && typeof postData.tags === 'object') {
+        // Handle case where tags might be stored as JSON string
+        try {
+          const parsedTags = JSON.parse(postData.tags);
+          if (Array.isArray(parsedTags)) {
+            setTags(parsedTags);
+          }
+        } catch {
+          // If JSON parsing fails, treat as string
+          setTags([]);
+        }
+      } else {
+        setTags([]);
       }
     } catch (error) {
       console.error('Error loading post:', error);
