@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -96,6 +96,9 @@ export default function Profile() {
     }
   });
 
+  // Cache for post content to avoid repeated fetches
+  const [postContentCache, setPostContentCache] = useState<Record<string, string>>({});
+
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
   const { data: isFollowing, isLoading: isFollowStatusLoading, refetch: refetchFollowStatus } = useFollowStatus(
@@ -181,6 +184,47 @@ export default function Profile() {
       addToast(`Failed to follow user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
+
+  // Get post content preview by fetching from IPFS
+  const getPostContentPreview = useCallback((post: any) => {
+    // If we already have the content in cache, return it
+    if (postContentCache[post.id]) {
+      return postContentCache[post.id];
+    }
+
+    // If no content CID, return empty string
+    if (!post.contentCid) {
+      return '';
+    }
+
+    // If it looks like a CID, fetch the content
+    if (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('baf')) {
+      // Fetch content from backend API that proxies IPFS
+      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/feed/content/${post.contentCid}`)
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+          throw new Error('Failed to fetch content');
+        })
+        .then(data => {
+          const content = data.data?.content || 'Content not available';
+          // Cache the content
+          setPostContentCache(prev => ({ ...prev, [post.id]: content }));
+          return content;
+        })
+        .catch(error => {
+          console.error('Error fetching post content:', error);
+          return 'Content not available';
+        });
+      
+      // Return loading state while fetching
+      return 'Loading content...';
+    }
+    
+    // If it's already content (not a CID), return as is
+    return post.contentCid;
+  }, [postContentCache]);
 
   const handleUnfollow = async () => {
     if (!currentUserAddress || !targetUserAddress) {
@@ -1121,7 +1165,7 @@ export default function Profile() {
                                   {post.title || 'Untitled Post'}
                                 </h4>
                                 <p className="text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
-                                  {post.contentCid}
+                                  {getPostContentPreview(post)}
                                 </p>
                               </Link>
                               {targetUserAddress === currentUserAddress && (

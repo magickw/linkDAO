@@ -148,7 +148,8 @@ export class FeedService {
           followingFilter = eq(posts.authorId, userRecord.id);
         } else {
           // Fallback - user doesn't exist, return empty result
-          followingFilter = sql`1=0`;
+          // Fallback - show posts from all users
+          followingFilter = sql`1=1`;
         }
       }
     } else if (feedSource === 'all' && userAddress) {
