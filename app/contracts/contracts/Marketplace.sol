@@ -711,7 +711,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         Listing storage listing = listings[listingId];
         
         if (listing.tokenAddress == address(0)) {
-            payable(bidder).transfer(amount);
+            // Use safe ETH transfer instead of .transfer()
+            (bool sent, ) = payable(bidder).call{value: amount}("");
+            require(sent, "Failed to refund ETH to bidder");
         } else {
             IERC20(listing.tokenAddress).transfer(bidder, amount);
         }

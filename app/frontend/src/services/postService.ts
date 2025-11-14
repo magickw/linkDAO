@@ -1,4 +1,4 @@
-import { Post, CreatePostInput, UpdatePostInput, convertBackendPostToPost } from '../models/Post';
+import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { QuickPost, convertBackendQuickPostToQuickPost } from '../models/QuickPost';
 import { requestManager } from './requestManager';
 import { authService } from './authService';

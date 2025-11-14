@@ -204,8 +204,8 @@ export const quickPostBookmarks = pgTable("quick_post_bookmarks", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
-  primaryKey: primaryKey({ columns: [t.userId, t.quickPostId] }),
 }, (t) => ({
+  pk: primaryKey(t.userId, t.quickPostId),
   userIdx: index("idx_quick_post_bookmark_user").on(t.userId),
   postIdx: index("idx_quick_post_bookmark_post").on(t.quickPostId),
   userFk: foreignKey({

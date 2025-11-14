@@ -283,16 +283,21 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
             // Distribute ETH payments
             if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
-                payable(royaltyRecipient).transfer(royaltyAmount);
+                (bool royaltySent, ) = payable(royaltyRecipient).call{value: royaltyAmount}("");
+                require(royaltySent, "Royalty payment failed");
                 emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
             }
 
-            payable(platformFeeRecipient).transfer(platformFeeAmount);
-            payable(seller).transfer(sellerAmount);
+            (bool feeSent, ) = payable(platformFeeRecipient).call{value: platformFeeAmount}("");
+            require(feeSent, "Platform fee transfer failed");
 
-            // Refund excess payment
+            (bool sellerSent, ) = payable(seller).call{value: sellerAmount}("");
+            require(sellerSent, "Seller payment failed");
+
+            // Refund excess ETH
             if (msg.value > price) {
-                payable(msg.sender).transfer(msg.value - price);
+                (bool excessSent, ) = payable(msg.sender).call{value: msg.value - price}("");
+                require(excessSent, "Excess ETH refund failed");
             }
         } else {
             require(msg.value == 0, "ETH not accepted for token payments");
@@ -390,7 +395,8 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
             // Refund previous bidder in ETH
             if (auction.currentBidder != address(0)) {
-                payable(auction.currentBidder).transfer(auction.currentBid);
+                (bool sent, ) = payable(auction.currentBidder).call{value: auction.currentBid}("");
+                require(sent, "Previous bidder refund failed");
             }
         } else {
             require(msg.value == 0, "ETH not accepted for token auctions");
@@ -497,10 +503,10 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
             // Refund highest bidder if any
             if (auction.currentBidder != address(0)) {
-                if (paymentMethod == PaymentMethod.ETH) {
-                    payable(auction.currentBidder).transfer(auction.currentBid);
+                if (auction.paymentMethod == PaymentMethod.ETH) {
+                    (bool sent, ) = payable(auction.currentBidder).call{value: auction.currentBid}("");
+                    require(sent, "Bidder refund failed");
                 } else {
-                    IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
                     require(
                         paymentToken.transfer(auction.currentBidder, auction.currentBid),
                         "Bidder refund failed"
@@ -592,12 +598,16 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         if (paymentMethod == PaymentMethod.ETH) {
             // Distribute ETH payments
             if (royaltyAmount > 0 && royaltyRecipient != address(0)) {
-                payable(royaltyRecipient).transfer(royaltyAmount);
+                (bool royaltySent, ) = payable(royaltyRecipient).call{value: royaltyAmount}("");
+                require(royaltySent, "Royalty payment failed");
                 emit RoyaltyPaid(tokenId, royaltyRecipient, royaltyAmount);
             }
 
-            payable(platformFeeRecipient).transfer(platformFeeAmount);
-            payable(msg.sender).transfer(sellerAmount);
+            (bool feeSent, ) = payable(platformFeeRecipient).call{value: platformFeeAmount}("");
+            require(feeSent, "Platform fee transfer failed");
+
+            (bool sellerSent, ) = payable(msg.sender).call{value: sellerAmount}("");
+            require(sellerSent, "Seller payment failed");
         } else {
             // Distribute token payments
             IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
@@ -743,7 +753,8 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
         // Refund the offer amount
         if (paymentMethod == PaymentMethod.ETH) {
-            payable(msg.sender).transfer(amount);
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            require(sent, "Offer refund failed");
         } else {
             IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
             require(

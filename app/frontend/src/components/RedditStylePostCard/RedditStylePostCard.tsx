@@ -87,36 +87,16 @@ export default function RedditStylePostCard({
   const [showOptions, setShowOptions] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [isHidden, setIsHidden] = useState(false);
-  const [showHideUndo, setShowHideUndo] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
-  const postCardRef = useRef<HTMLDivElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const id = useId();
-  
-  // Generate IDs
-  const menuId = `${id}-menu`;
-  
-  // Accessibility context
-  const { announceToScreenReader, settings } = useAccessibility();
-  
-  // Keyboard navigation
-  const { createKeyboardHandler } = useKeyboardNavigation();
   
   // Normalize the post data for consistent access
   const normalizedPost = useMemo(() => normalizePost(post), [post]);
 
   // Calculate vote score
   const voteScore = normalizedPost.upvotes - normalizedPost.downvotes;
-  
-  // Generate IDs
-  const postId = normalizedPost.id;
-  const voteGroupId = `${id}-vote-group`;
 
   // Format relative time
   const formatTimeAgo = (date: Date): string => {

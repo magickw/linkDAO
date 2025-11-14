@@ -225,7 +225,7 @@ contract MultiSigWallet is ReentrancyGuard {
         }
         
         txn.executed = true;
-        
+
         (bool success, ) = txn.to.call{value: txn.value}(txn.data);
         if (!success) revert TransactionFailed();
         

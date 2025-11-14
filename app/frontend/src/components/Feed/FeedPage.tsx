@@ -66,14 +66,57 @@ export const FeedPage: React.FC<FeedPageProps> = ({
     }
   };
 
+  if (loading) {
+    return <LoadingSkeletons />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center text-red-500">
+        {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="feed-page">
+      {showHeader && (
+        <FeedSortingHeader
+          currentSort={currentSort}
+          currentTimeRange={currentTimeRange}
+          onSortChange={updateSort}
+          onTimeRangeChange={updateTimeRange}
+        />
+      )}
+      
+      <div className="feed-content">
+        {posts.length > 0 ? (
+          posts.map((post) => (
+            <div key={post.id} className="post-card">
+              <div className="post-author">{post.author}</div>
+              <div className="post-content">{post.contentCid}</div>
+              <div className="post-meta">
+                <span>{post.createdAt.toLocaleString()}</span>
+                <span>{post.comments} comments</span>
+                <span>{post.engagementScore} engagement</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            No posts found
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+  };
+
   const handleRefresh = async () => {
     await cacheService.invalidateByTags(['feed', 'posts']);
     await loadPosts();
   };
-
-  if (loading && posts.length === 0) {
-    return <LoadingSkeletons />;
-  }
 
   if (error && posts.length === 0) {
     return (

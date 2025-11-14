@@ -220,23 +220,11 @@ export default function SwipeablePostCard({
     );
   };
 
-  // Convert CommunityPost to EnhancedPost for compatibility
-  const convertCommunityPostToEnhancedPost = (communityPost: CommunityPost): any => {
-    return {
-      ...communityPost,
-      parentId: communityPost.parentId || null,
-      comments: communityPost.comments?.length || 0,
-      isQuickPost: false
-    };
-  };
-  
-  const enhancedPost = convertCommunityPostToEnhancedPost(post);
-
   // Fallback to regular post card if swipe is not supported or disabled
   if (!isSwipeSupported || !enableSwipeGestures) {
     return (
       <RedditStylePostCard
-        post={enhancedPost}
+        post={post}
         community={community}
         viewMode={viewMode}
         showThumbnail={showThumbnail}
@@ -289,7 +277,7 @@ export default function SwipeablePostCard({
 
         {/* Post Card */}
         <RedditStylePostCard
-          post={enhancedPost}
+          post={post}
           community={community}
           viewMode={viewMode}
           showThumbnail={showThumbnail}

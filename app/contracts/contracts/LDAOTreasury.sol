@@ -325,7 +325,7 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         address target,
         uint256 value,
         bytes calldata data
-    ) external returns (bool success) {
+    ) external onlyOwner returns (bool success) {
         // Check if this call is coming from the governance contract
         require(msg.sender == address(governance), "Only governance can execute treasury operations");
         
@@ -353,7 +353,8 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         
         if (token == address(0)) {
             // Withdrawing ETH
-            payable(recipient).transfer(amount);
+            (bool success, ) = payable(recipient).call{value: amount}("");
+            require(success, "ETH transfer failed");
         } else {
             IERC20(token).transfer(recipient, amount);
         }
@@ -460,7 +461,8 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      */
     function withdrawETH(uint256 amount, address payable recipient) external onlyOwner {
         require(amount <= address(this).balance, "Insufficient balance");
-        recipient.transfer(amount);
+        (bool success, ) = recipient.call{value: amount}("");
+        require(success, "ETH transfer failed");
         emit FundsWithdrawn(address(0), amount, recipient);
     }
 
