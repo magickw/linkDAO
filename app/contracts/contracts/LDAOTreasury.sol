@@ -530,17 +530,33 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
             uint256 targetVolume = dailyPurchaseLimit / 10; // 10% of daily limit as target
             
             if (recentVolume > targetVolume) {
-                // Increase price due to high demand
+                // Increase price due to high demand with bounded increase
                 uint256 demandRatio = (recentVolume * 1e18) / targetVolume;
-        demandMultiplier = (demandMultiplier * demandRatio) / 1e18;
                 
-                // Cap the multiplier
-                if (demandMultiplier > maxPriceMultiplier) {
-                    demandMultiplier = maxPriceMultiplier;
+                // Cap the demand ratio to prevent extreme price spikes (max 2x increase per update)
+                if (demandRatio > 2e18) {
+                    demandRatio = 2e18;
                 }
+                
+                uint256 newMultiplier = (demandMultiplier * demandRatio) / 1e18;
+                
+                // Cap the multiplier to prevent extreme price increases
+                if (newMultiplier > maxPriceMultiplier) {
+                    newMultiplier = maxPriceMultiplier;
+                }
+                
+                // Apply smoothing to prevent rapid price changes
+                demandMultiplier = (demandMultiplier * 90 + newMultiplier * 10) / 100;
             } else if (recentVolume < targetVolume / 2) {
-                // Decrease price due to low demand
-                demandMultiplier = (demandMultiplier * 95) / 100; // 5% decrease
+                // Decrease price due to low demand with bounded decrease
+                uint256 decreaseFactor = 95; // 5% decrease
+                
+                // If volume is very low, allow slightly faster decrease
+                if (recentVolume < targetVolume / 10) {
+                    decreaseFactor = 90; // 10% decrease
+                }
+                
+                demandMultiplier = (demandMultiplier * decreaseFactor) / 100;
                 
                 // Floor at 1.0
                 if (demandMultiplier < 1e18) {

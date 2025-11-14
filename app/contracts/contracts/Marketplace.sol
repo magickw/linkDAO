@@ -324,24 +324,6 @@ contract Marketplace is ReentrancyGuard, Ownable {
         uint256 feeAmount = (discountedPrice * effectiveFeePercentage) / 10000;
         uint256 sellerAmount = discountedPrice - feeAmount;
         
-        if (listing.tokenAddress == address(0)) {
-            // ETH payment
-            require(msg.value == totalPrice, "Incorrect ETH amount");
-            
-            // Send ETH to seller and platform owner with proper error handling
-            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
-            require(sentToSeller, "Failed to send ETH to seller");
-            
-            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
-            require(sentToOwner, "Failed to send ETH to owner");
-        } else {
-            // ERC20 token payment
-            require(msg.value == 0, "ETH not accepted for token payments");
-            IERC20(listing.tokenAddress).transferFrom(msg.sender, address(this), totalPrice);
-            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
-            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
-        }
-        
         // Update listing
         listing.quantity -= quantity;
         if (listing.quantity == 0) {
@@ -362,6 +344,24 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.updatedAt = block.timestamp;
         
         userOrders[msg.sender].push(orderId);
+        
+        if (listing.tokenAddress == address(0)) {
+            // ETH payment - execute external calls after state updates
+            require(msg.value == totalPrice, "Incorrect ETH amount");
+            
+            // Send ETH to seller and platform owner with proper error handling
+            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
+            require(sentToSeller, "Failed to send ETH to seller");
+            
+            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
+        } else {
+            // ERC20 token payment
+            require(msg.value == 0, "ETH not accepted for token payments");
+            IERC20(listing.tokenAddress).transferFrom(msg.sender, address(this), totalPrice);
+            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
+            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
+        }
         
         // Emit event with discount information
         emit OrderCreatedWithDiscount(orderId, listingId, msg.sender, discountAmount, discountPercentage);
@@ -471,21 +471,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
         uint256 feeAmount = (amount * effectiveFeePercentage) / 10000;
         uint256 sellerAmount = amount - feeAmount;
         
-        if (listing.tokenAddress == address(0)) {
-            // ETH payment
-            // Send ETH to seller and platform owner with proper error handling
-            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
-            require(sentToSeller, "Failed to send ETH to seller");
-            
-            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
-            require(sentToOwner, "Failed to send ETH to owner");
-        } else {
-            // ERC20 token payment
-            IERC20(listing.tokenAddress).transfer(bidder, amount);
-            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
-            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
-        }
-        
+        // Update listing status first
         listing.status = ListingStatus.SOLD;
         
         // Create order
@@ -502,6 +488,21 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.updatedAt = block.timestamp;
         
         userOrders[bidder].push(orderId);
+        
+        if (listing.tokenAddress == address(0)) {
+            // ETH payment - execute external calls after state updates
+            // Send ETH to seller and platform owner with proper error handling
+            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
+            require(sentToSeller, "Failed to send ETH to seller");
+            
+            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
+        } else {
+            // ERC20 token payment
+            IERC20(listing.tokenAddress).transfer(bidder, amount);
+            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
+            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
+        }
         
         emit AuctionEnded(listingId, bidder, amount);
         emit OrderCreated(orderId, listingId, bidder);

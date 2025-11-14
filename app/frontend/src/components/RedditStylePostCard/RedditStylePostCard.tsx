@@ -87,10 +87,26 @@ export default function RedditStylePostCard({
   const [showOptions, setShowOptions] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [showHideUndo, setShowHideUndo] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [settings, setSettings] = useState({ reducedMotion: false });
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
+  const postCardRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const id = useId();
+  
+  // Generate IDs for accessibility
+  const postId = `${id}-post`;
+  const voteGroupId = `${id}-vote`;
+  const menuId = `${id}-menu`;
+  
+  // Accessibility hook
+  const { announceToScreenReader } = useAccessibility();
   
   // Normalize the post data for consistent access
   const normalizedPost = useMemo(() => normalizePost(post), [post]);
@@ -266,19 +282,31 @@ export default function RedditStylePostCard({
   }, [normalizedPost.id, normalizedPost.author, normalizedPost.contentCid, isProcessingAction, onShare]);
 
   // Keyboard navigation handlers
-  const handleKeyDown = createKeyboardHandler({
-    'Enter': () => onComment?.(normalizedPost.id),
-    ' ': () => onComment?.(normalizedPost.id),
-    'u': () => handleVote('up'),
-    'd': () => handleVote('down'),
-    's': () => handleSave(),
-    'h': () => handleHide(),
-    'r': () => setShowReportModal(true),
-    'Escape': () => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onComment?.(normalizedPost.id);
+    } else if (e.key === 'u') {
+      e.preventDefault();
+      handleVote('up');
+    } else if (e.key === 'd') {
+      e.preventDefault();
+      handleVote('down');
+    } else if (e.key === 's') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'h') {
+      e.preventDefault();
+      handleHide();
+    } else if (e.key === 'r') {
+      e.preventDefault();
+      setShowReportModal(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
       setShowMenu(false);
       setShowReportModal(false);
     }
-  });
+  };
 
   // Get view mode specific classes
   const viewModeClasses = getViewModeClasses(viewMode);

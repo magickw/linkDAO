@@ -1,7 +1,7 @@
 // Mock FeedPage component for testing
 import React, { useState, useEffect } from 'react';
 import { FeedSortingHeader } from './FeedSortingTabs';
-import { FeedSortType, EnhancedPost } from '../../types/feed';
+import { EnhancedPost } from '../../types/feed';
 import { useFeedSortingPreferences } from '../../hooks/useFeedPreferences';
 import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 import { FeedService } from '../../services/feedService';
@@ -66,53 +66,6 @@ export const FeedPage: React.FC<FeedPageProps> = ({
     }
   };
 
-  if (loading) {
-    return <LoadingSkeletons />;
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 text-center text-red-500">
-        {error}
-      </div>
-    );
-  }
-
-  return (
-    <div className="feed-page">
-      {showHeader && (
-        <FeedSortingHeader
-          currentSort={currentSort}
-          currentTimeRange={currentTimeRange}
-          onSortChange={updateSort}
-          onTimeRangeChange={updateTimeRange}
-        />
-      )}
-      
-      <div className="feed-content">
-        {posts.length > 0 ? (
-          posts.map((post) => (
-            <div key={post.id} className="post-card">
-              <div className="post-author">{post.author}</div>
-              <div className="post-content">{post.contentCid}</div>
-              <div className="post-meta">
-                <span>{post.createdAt.toLocaleString()}</span>
-                <span>{post.comments} comments</span>
-                <span>{post.engagementScore} engagement</span>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="p-4 text-center text-gray-500">
-            No posts found
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-  };
-
   const handleRefresh = async () => {
     await cacheService.invalidateByTags(['feed', 'posts']);
     await loadPosts();
@@ -122,7 +75,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
     return (
       <div>
         <p>Failed to load feed</p>
-        <button onClick={loadPosts}>Try Again</button>
+        <button onClick={() => loadPosts()}>Try Again</button>
       </div>
     );
   }
@@ -132,6 +85,18 @@ export const FeedPage: React.FC<FeedPageProps> = ({
       <div>
         <p>No posts found</p>
         <button onClick={handleRefresh}>Refresh Feed</button>
+      </div>
+    );
+  }
+
+  if (loading && posts.length === 0) {
+    return <LoadingSkeletons />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center text-red-500">
+        {error}
       </div>
     );
   }
@@ -163,7 +128,15 @@ export const FeedPage: React.FC<FeedPageProps> = ({
         <div data-testid="virtualized-list">
           {posts.map((post, index) => (
             <article key={post.id || index} data-testid="post-card">
-              Post content
+              <div className="post-card">
+                <div className="post-author">{post.author}</div>
+                <div className="post-content">{post.contentCid}</div>
+                <div className="post-meta">
+                  <span>{new Date(post.createdAt).toLocaleString()}</span>
+                  <span>{post.comments} comments</span>
+                  <span>{post.engagementScore} engagement</span>
+                </div>
+              </div>
             </article>
           ))}
         </div>

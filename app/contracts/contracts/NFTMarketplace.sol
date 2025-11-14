@@ -385,6 +385,10 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         require(block.timestamp <= auction.endTime, "Auction ended");
         require(msg.sender != auction.seller, "Seller cannot bid");
 
+        // Update auction first to prevent reentrancy
+        uint256 previousBid = auction.currentBid;
+        address previousBidder = auction.currentBidder;
+        
         uint256 bidAmount;
         PaymentMethod paymentMethod = auction.paymentMethod;
 
@@ -393,9 +397,15 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             require(bidAmount >= auction.startingPrice, "Bid below starting price");
             require(bidAmount > auction.currentBid, "Bid too low");
 
+            // Update auction state before external calls
+            auction.currentBid = bidAmount;
+            auction.currentBidder = msg.sender;
+            auction.bids[msg.sender] = bidAmount;
+            auction.bidders.push(msg.sender);
+
             // Refund previous bidder in ETH
-            if (auction.currentBidder != address(0)) {
-                (bool sent, ) = payable(auction.currentBidder).call{value: auction.currentBid}("");
+            if (previousBidder != address(0)) {
+                (bool sent, ) = payable(previousBidder).call{value: previousBid}("");
                 require(sent, "Previous bidder refund failed");
             }
         } else {
@@ -407,6 +417,12 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
             require(address(paymentToken) != address(0), "Payment token not set");
 
+            // Update auction state before external calls
+            auction.currentBid = bidAmount;
+            auction.currentBidder = msg.sender;
+            auction.bids[msg.sender] = bidAmount;
+            auction.bidders.push(msg.sender);
+
             // Transfer new bid tokens from bidder to contract
             require(
                 paymentToken.transferFrom(msg.sender, address(this), bidAmount),
@@ -414,19 +430,13 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
             );
 
             // Refund previous bidder in tokens
-            if (auction.currentBidder != address(0)) {
+            if (previousBidder != address(0)) {
                 require(
-                    paymentToken.transfer(auction.currentBidder, auction.currentBid),
+                    paymentToken.transfer(previousBidder, previousBid),
                     "Previous bidder refund failed"
                 );
             }
         }
-
-        // Update auction
-        auction.currentBid = bidAmount;
-        auction.currentBidder = msg.sender;
-        auction.bids[msg.sender] = bidAmount;
-        auction.bidders.push(msg.sender);
 
         // Extend auction if bid placed in last 10 minutes
         if (auction.endTime - block.timestamp < 600) {

@@ -19,6 +19,7 @@ import { useReputationData } from '@/hooks/useReputationData';
 import { useTipsData } from '@/hooks/useTipsData';
 import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
+import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
 
 export default function Profile() {
@@ -342,7 +343,7 @@ export default function Profile() {
         setUpdateError(null);
         
         // Upload the image using the unified image service
-        const uploadResult = await unifiedImageService.uploadImage(file, 'avatars');
+        const uploadResult = await unifiedImageService.uploadImage(file, 'profile');
         
         // Update the profile state with the new avatar URL
         setProfile(prev => ({ ...prev, avatar: uploadResult.cdnUrl }));

@@ -92,6 +92,9 @@ contract Governance is Ownable, ReentrancyGuard {
     uint256 public proposalThreshold; // Minimum votes to create proposal
     uint256 public executionDelay = 2 days; // Default execution delay
     
+    // Flag to track if a governance function is being executed as part of a proposal
+    bool private _executingGovernanceFunction;
+    
     // Category-specific parameters
     mapping(ProposalCategory => uint256) public categoryQuorum;
     mapping(ProposalCategory => uint256) public categoryThreshold;
@@ -130,6 +133,19 @@ contract Governance is Ownable, ReentrancyGuard {
     event TargetRevoked(address indexed target);
     event SystemIntegrationUpdated(address indexed governanceToken, address indexed reputationSystem, address indexed treasury);
     event ReputationVotingConfigUpdated(bool enabled, uint256 multiplier);
+    
+    // Modifier to restrict access to governance-only functions
+    modifier onlyGovernance() {
+        require(msg.sender == address(this), "Only governance can call this function");
+        _;
+    }
+    
+    // Modifier to track when governance functions are being executed
+    modifier governanceExecution() {
+        _executingGovernanceFunction = true;
+        _;
+        _executingGovernanceFunction = false;
+    }
     
     constructor(
         address _governanceToken, 
@@ -558,5 +574,20 @@ contract Governance is Ownable, ReentrancyGuard {
         categoryQuorum[ProposalCategory.MULTISIG_OPERATIONS] = 1000000 * 10**18; // 1M tokens (highest threshold)
         categoryThreshold[ProposalCategory.MULTISIG_OPERATIONS] = 100000 * 10**18; // 100k tokens
         categoryRequiresStaking[ProposalCategory.MULTISIG_OPERATIONS] = true;
+    }
+    
+    /**
+     * @dev Execute governance configuration changes as part of a proposal
+     * @param target Address of the contract to call
+     * @param value ETH value to send
+     * @param data Calldata for the function call
+     */
+    function executeGovernanceChange(address target, uint256 value, bytes calldata data) external {
+        // Only allow this function to be called during proposal execution
+        require(msg.sender == address(this), "Only governance can execute governance changes");
+        
+        // Execute the governance change
+        (bool success, ) = target.call{value: value}(data);
+        require(success, "Governance change execution failed");
     }
 }

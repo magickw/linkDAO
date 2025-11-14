@@ -1,8 +1,9 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Bookmark, Share2, Check, X } from 'lucide-react';
 import { CommunityPost } from '@/models/CommunityPost';
 import { Community } from '@/models/Community';
+import { EnhancedPost } from '@/types/feed';
 import { usePostCardSwipeGestures } from '@/hooks/useSwipeGestures';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
 import RedditStylePostCard from './RedditStylePostCard';
@@ -46,6 +47,15 @@ export default function SwipeablePostCard({
   const [showSwipeHint, setShowSwipeHint] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { announceToScreenReader } = useMobileAccessibility();
+  
+  // Convert CommunityPost to EnhancedPost for compatibility
+  const enhancedPost = useMemo((): EnhancedPost => {
+    return {
+      ...post,
+      parentId: post.parentId ?? null, // Ensure parentId is never undefined
+      comments: post.comments.length, // Convert comments array to count
+    };
+  }, [post]);
 
   // Handle swipe actions with visual feedback
   const handleSwipeVote = useCallback(async (postId: string, direction: 'up' | 'down') => {
@@ -224,7 +234,7 @@ export default function SwipeablePostCard({
   if (!isSwipeSupported || !enableSwipeGestures) {
     return (
       <RedditStylePostCard
-        post={post}
+        post={enhancedPost}
         community={community}
         viewMode={viewMode}
         showThumbnail={showThumbnail}
@@ -277,7 +287,7 @@ export default function SwipeablePostCard({
 
         {/* Post Card */}
         <RedditStylePostCard
-          post={post}
+          post={enhancedPost}
           community={community}
           viewMode={viewMode}
           showThumbnail={showThumbnail}
