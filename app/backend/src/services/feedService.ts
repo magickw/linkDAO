@@ -333,57 +333,30 @@ export class FeedService {
           walletAddress: users.walletAddress,
           handle: users.handle,
           profileCid: users.profileCid,
-          reactionCount: sql<number>`COALESCE(reaction_counts.count, 0)`,
-          tipCount: sql<number>`COALESCE(tip_counts.count, 0)`,
-          totalTipAmount: sql<number>`COALESCE(tip_counts.total, 0)`,
-          commentCount: sql<number>`COALESCE(comment_counts.count, 0)`,
-          viewCount: sql<number>`COALESCE(view_counts.count, 0)`
+          reactionCount: sql<number>`COALESCE((
+            SELECT COUNT(*) 
+            FROM reactions 
+            WHERE reactions.post_id = posts.id
+          ), 0)`,
+          tipCount: sql<number>`COALESCE((
+            SELECT COUNT(*) 
+            FROM tips 
+            WHERE tips.post_id = posts.id
+          ), 0)`,
+          totalTipAmount: sql<number>`COALESCE((
+            SELECT SUM(CAST(amount AS DECIMAL)) 
+            FROM tips 
+            WHERE tips.post_id = posts.id
+          ), 0)`,
+          commentCount: sql<number>`COALESCE((
+            SELECT COUNT(*) 
+            FROM posts AS comments 
+            WHERE comments.parent_id = posts.id
+          ), 0)`,
+          viewCount: sql<number>`0` // Placeholder for view counts
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
-        .leftJoin(
-          db.select({
-            post_id: reactions.postId,
-            count: sql<number>`COUNT(*)`.as('count')
-          })
-          .from(reactions)
-          .groupBy(reactions.postId)
-          .as('reaction_counts'),
-          eq(posts.id, sql.raw(`reaction_counts.post_id`))
-        )
-        .leftJoin(
-          db.select({
-            post_id: tips.postId,
-            count: sql<number>`COUNT(*)`.as('count'),
-            total: sql<number>`SUM(CAST(amount AS DECIMAL))`.as('total')
-          })
-          .from(tips)
-          .groupBy(tips.postId)
-          .as('tip_counts'),
-          eq(posts.id, sql.raw(`tip_counts.post_id`))
-        )
-        .leftJoin(
-          db.select({
-            post_id: sql`parent_id`.as('post_id'),
-            count: sql<number>`COUNT(*)`.as('count')
-          })
-          .from(posts)
-          .where(sql`parent_id IS NOT NULL`)
-          .groupBy(sql`parent_id`)
-          .as('comment_counts'),
-          eq(posts.id, sql.raw(`comment_counts.post_id`))
-        )
-        .leftJoin(
-          // Placeholder for view counts - would need a views table
-          db.select({
-            post_id: sql`0`.as('post_id'),
-            count: sql<number>`0`
-          })
-          .from(posts)
-          .where(sql`false`)
-          .as('view_counts'),
-          eq(posts.id, sql.raw(`view_counts.post_id`))
-        )
         .where(and(
           timeFilter,
           isNull(posts.parentId) // Exclude comments (only show top-level posts)
@@ -476,7 +449,7 @@ export class FeedService {
         .select({
           tag: postTags.tag,
           postCount: sql<number>`COUNT(DISTINCT ${postTags.postId})`,
-          totalEngagement: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`,
+          totalEngagement: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`,
           recentActivity: sql<number>`COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END)`
         })
         .from(postTags)
@@ -485,7 +458,7 @@ export class FeedService {
         .groupBy(postTags.tag)
         .orderBy(
           sql`(COUNT(DISTINCT ${postTags.postId}) * 0.3 + 
-               SUM(CAST(${posts.stakedValue} AS DECIMAL)) * 0.5 + 
+               COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) * 0.5 + 
                COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END) * 0.2) DESC`
         )
         .limit(limit);
@@ -1503,7 +1476,7 @@ export class FeedService {
           handle: users.handle,
           profileCid: users.profileCid,
           postCount: sql<number>`COUNT(${posts.id})`,
-          engagementScore: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`
+          engagementScore: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
@@ -1512,7 +1485,7 @@ export class FeedService {
           timeFilter
         ))
         .groupBy(posts.authorId, users.walletAddress, users.handle, users.profileCid)
-        .orderBy(sql`SUM(CAST(${posts.stakedValue} AS DECIMAL)) DESC`)
+        .orderBy(sql`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) DESC`)
         .limit(5);
 
       // Get trending tags
@@ -1586,13 +1559,13 @@ export class FeedService {
               walletAddress: users.walletAddress,
               handle: users.handle,
               profileCid: users.profileCid,
-              score: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`
+              score: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`
             })
             .from(posts)
             .leftJoin(users, eq(posts.authorId, users.id))
             .where(eq(posts.dao, communityId))
             .groupBy(posts.authorId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`SUM(CAST(${posts.stakedValue} AS DECIMAL)) DESC`);
+            .orderBy(sql`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) DESC`);
           break;
 
         case 'tips_received':
@@ -1602,14 +1575,14 @@ export class FeedService {
               walletAddress: users.walletAddress,
               handle: users.handle,
               profileCid: users.profileCid,
-              score: sql<number>`SUM(CAST(${tips.amount} AS DECIMAL))`
+              score: sql<number>`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0)`
             })
             .from(tips)
             .leftJoin(posts, eq(tips.postId, posts.id))
             .leftJoin(users, eq(tips.toUserId, users.id))
             .where(eq(posts.dao, communityId))
             .groupBy(tips.toUserId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`SUM(CAST(${tips.amount} AS DECIMAL)) DESC`);
+            .orderBy(sql`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0) DESC`);
           break;
 
         case 'tips_given':
@@ -1619,14 +1592,14 @@ export class FeedService {
               walletAddress: users.walletAddress,
               handle: users.handle,
               profileCid: users.profileCid,
-              score: sql<number>`SUM(CAST(${tips.amount} AS DECIMAL))`
+              score: sql<number>`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0)`
             })
             .from(tips)
             .leftJoin(posts, eq(tips.postId, posts.id))
             .leftJoin(users, eq(tips.fromUserId, users.id))
             .where(eq(posts.dao, communityId))
             .groupBy(tips.fromUserId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`SUM(CAST(${tips.amount} AS DECIMAL)) DESC`);
+            .orderBy(sql`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0) DESC`);
           break;
 
         default:
