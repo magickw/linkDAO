@@ -90,27 +90,22 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       const timestamp = parseInt(storedTimestamp);
       const now = Date.now();
       const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-      
+
       if (now - timestamp < TOKEN_EXPIRY_TIME) {
-        console.log('✅ Valid session exists, ensuring auth context is updated');
+        console.log('✅ Valid session exists in localStorage');
         hasTriedLoginRef.current = false;
-        // Ensure the auth context is updated with the stored session
-        if (!isAuthenticated && !isAuthLoading && !isLoggingIn) {
-          console.log('🔄 Updating auth context with stored session');
-          // Set a small delay to ensure auth context is ready to update
-          setTimeout(() => {
-            login(address, connector, status).catch(err => {
-              console.warn('Failed to update auth context with stored session:', err);
-            });
-          }, 100);
-        }
+
+        // Trust the AuthContext initialization to handle session restoration
+        // Do NOT call login() here as it can trigger unnecessary signature requests
+        // The AuthContext useEffect (lines 154-245) will restore the session from localStorage
+
         return;
       } else {
         console.log('⏰ Stored session expired, clearing expired session');
         // Clear expired session
         const storageKeys = [
           'linkdao_access_token',
-          'linkdao_wallet_address', 
+          'linkdao_wallet_address',
           'linkdao_signature_timestamp',
           'linkdao_user_data'
         ];
@@ -159,30 +154,28 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       const storedAddress = localStorage.getItem('linkdao_wallet_address');
       const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
       const storedUserData = localStorage.getItem('linkdao_user_data');
-      
+
       if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-        
+
         if (now - timestamp < TOKEN_EXPIRY_TIME) {
-          console.log('✅ Found valid stored session, skipping signature request');
-          // Reset failed attempts on successful session restoration
+          console.log('✅ Found valid stored session in handleAutoLogin, trusting AuthContext to restore it');
+          // Reset failed attempts on successful session detection
           setFailedAttempts(0);
           hasTriedLoginRef.current = false;
-          
-          // Still call login to ensure the AuthContext state is updated
-          const result = await login(address, connector, status);
-          
-          if (result.success) {
-            const walletName = connector?.name || 'Wallet';
-            console.log(`✅ Session restored successfully for ${walletName}!`);
-            
-            if (onLoginSuccess) {
-              onLoginSuccess({ address });
-            }
+
+          // Do NOT call login() here - let AuthContext handle session restoration
+          // Calling login() can trigger a signature request if services aren't fully synced
+
+          const walletName = connector?.name || 'Wallet';
+          console.log(`✅ Session already exists for ${walletName}, no action needed`);
+
+          if (onLoginSuccess) {
+            onLoginSuccess({ address });
           }
-          
+
           return;
         }
       }
