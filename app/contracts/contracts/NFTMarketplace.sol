@@ -785,7 +785,8 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
 
         // Refund the offer amount
         if (paymentMethod == PaymentMethod.ETH) {
-            payable(msg.sender).transfer(amount);
+            (bool sent, ) = payable(msg.sender).call{value: amount}("");
+            require(sent, "Offer refund failed");
         } else {
             IERC20 paymentToken = paymentMethod == PaymentMethod.USDC ? usdcToken : usdtToken;
             require(

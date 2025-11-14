@@ -67,7 +67,8 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
 
         // Send payment to creator
         if (msg.value > 0) {
-            payable(collectionInfo.creator).transfer(msg.value);
+            (bool sent, ) = payable(collectionInfo.creator).call{value: msg.value}("");
+            require(sent, "Payment to creator failed");
         }
 
         emit NFTMinted(tokenId, to, _tokenURI);
@@ -168,7 +169,8 @@ contract NFTCollectionFactory is Ownable {
         
         // Send fee to recipient
         if (msg.value > 0) {
-            payable(feeRecipient).transfer(msg.value);
+            (bool sent, ) = payable(feeRecipient).call{value: msg.value}("");
+            require(sent, "Fee transfer failed");
         }
         
         emit CollectionCreated(collectionAddress, msg.sender, name, symbol);

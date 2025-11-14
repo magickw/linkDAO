@@ -460,7 +460,9 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      * @param recipient Recipient address
      */
     function withdrawETH(uint256 amount, address payable recipient) external onlyOwner {
-        require(amount <= address(this).balance, "Insufficient balance");
+        require(amount > 0, "Amount must be greater than 0");
+        require(recipient != address(0), "Invalid recipient address");
+        require(address(this).balance >= amount, "Insufficient ETH balance");
         (bool success, ) = recipient.call{value: amount}("");
         require(success, "ETH transfer failed");
         emit FundsWithdrawn(address(0), amount, recipient);
@@ -478,6 +480,10 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
         address recipient
     ) external onlyOwner {
         require(token != address(ldaoToken), "Cannot withdraw LDAO");
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(IERC20(token).balanceOf(address(this)) >= amount, "Insufficient token balance");
+        
         IERC20(token).transfer(recipient, amount);
         emit FundsWithdrawn(token, amount, recipient);
     }
@@ -488,6 +494,11 @@ contract LDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      * @param recipient Recipient address
      */
     function emergencyWithdrawLDAO(uint256 amount, address recipient) external onlyOwner {
+        // Add additional security checks
+        require(recipient != address(0), "Invalid recipient address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(ldaoToken.balanceOf(address(this)) >= amount, "Insufficient LDAO balance");
+        
         ldaoToken.transfer(recipient, amount);
         emit FundsWithdrawn(address(ldaoToken), amount, recipient);
     }

@@ -58,6 +58,9 @@ export default function CommunityPostCardEnhanced({
 
   // Check if the post is a CommunityPost or a QuickPost
   const isCommunityPostType = isCommunityPost(post);
+  
+  // Type guard to safely access CommunityPost properties
+  const communityPost = isCommunityPostType ? post as any : null;
 
   // State
   const [showComments, setShowComments] = useState(false);
@@ -115,17 +118,6 @@ export default function CommunityPostCardEnhanced({
       </motion.div>
     );
   }
-
-  // Format timestamp
-  const formatTimestamp = (date: Date) => {
-    
-    if (isCommunityPostType && post.tags?.includes('wallet') && post.onchainRef) {
-      return <WalletSnapshotEmbed walletAddress={post.onchainRef} className="mt-3" />;
-    }
-    
-    if (isCommunityPostType && post.tags?.includes('governance') || post.tags?.includes('dao')) {
-      return <CommunityGovernance community={community} className="mt-3" />;
-    }
 
   // Format timestamp
   const formatTimestamp = (date: Date) => {
@@ -397,16 +389,16 @@ export default function CommunityPostCardEnhanced({
               <span>•</span>
               <span>{formatTimestamp(post.createdAt)}</span>
               {/* Only show flair for community posts */}
-              {isCommunityPostType && post.flair && (
+              {isCommunityPostType && communityPost && communityPost.flair && (
                 <>
                   <span>•</span>
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                    {post.flair}
+                    {communityPost.flair}
                   </span>
                 </>
               )}
               {/* Only show pinned status for community posts */}
-              {isCommunityPostType && post.isPinned && (
+              {isCommunityPostType && communityPost && communityPost.isPinned && (
                 <>
                   <span>•</span>
                   <span className="inline-flex items-center text-green-600 dark:text-green-400">
@@ -419,7 +411,7 @@ export default function CommunityPostCardEnhanced({
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
               {/* Only show locked status for community posts */}
-              {isCommunityPostType && post.isLocked && (
+              {isCommunityPostType && communityPost && communityPost.isLocked && (
                 <span className="text-yellow-500" title="Comments are locked" aria-label="Comments are locked">
                   🔒
                 </span>
@@ -585,7 +577,7 @@ export default function CommunityPostCardEnhanced({
           {showComments && (
             <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
               {/* Comment Form (only for community posts) */}
-              {isCommunityPostType && userMembership && !post.isLocked && (
+              {isCommunityPostType && userMembership && communityPost && !communityPost.isLocked && (
                 <form onSubmit={handleCommentSubmit} className="mb-4">
                   <div className="flex space-x-3">
                     <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
