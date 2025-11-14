@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef, useId } from 'react';
+import React, { useState, useCallback, useRef, useId, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, MessageCircle, Share2, Bookmark, MoreHorizontal, Eye, Flag, Check, X, Undo2 } from 'lucide-react';
 import { CommunityPost } from '@/models/CommunityPost';
+import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
 import MediaPreview from './MediaPreview';
 import PostMetadata from './PostMetadata';
@@ -11,8 +12,46 @@ import { getViewModeClasses, shouldShowThumbnail, getThumbnailSize } from '@/hoo
 import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useKeyboardNavigation } from '@/hooks/useAccessibility';
 
+// Helper function to normalize post data for consistent access
+interface NormalizedPost {
+  id: string;
+  author: string;
+  contentCid: string;
+  mediaCids?: string[];
+  tags?: string[];
+  createdAt: Date;
+  upvotes: number;
+  downvotes: number;
+  comments: number;
+  flair?: string;
+  isPinned: boolean;
+  isLocked: boolean;
+  isQuickPost: boolean;
+}
+
+const normalizePost = (post: EnhancedPost): NormalizedPost => {
+  // Check if it's a quickPost based on the isQuickPost flag or missing community fields
+  const isQuickPost = post.isQuickPost || (!post.dao && !post.communityId);
+  
+  return {
+    id: post.id,
+    author: post.author,
+    contentCid: post.contentCid,
+    mediaCids: post.mediaCids,
+    tags: post.tags,
+    createdAt: post.createdAt,
+    upvotes: 0, // QuickPosts don't have upvotes/downvotes, default to 0
+    downvotes: 0,
+    comments: post.comments || 0,
+    flair: undefined, // QuickPosts don't have flair
+    isPinned: false, // QuickPosts aren't pinned
+    isLocked: false, // QuickPosts aren't locked
+    isQuickPost
+  };
+};
+
 interface RedditStylePostCardProps {
-  post: CommunityPost;
+  post: EnhancedPost; // Changed from CommunityPost to EnhancedPost to handle both regular posts and quickPosts
   community?: Community;
   viewMode?: 'card' | 'compact';
   showThumbnail?: boolean;
@@ -40,34 +79,44 @@ export default function RedditStylePostCard({
   isPinned = false,
   className = ''
 }: RedditStylePostCardProps) {
-  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
+  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [showHideUndo, setShowHideUndo] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-  const [isHidden, setIsHidden] = useState(false);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [showHideUndo, setShowHideUndo] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [isProcessingAction, setIsProcessingAction] = useState(false);
-
-  // Accessibility hooks and refs
-  const { 
-    announceToScreenReader, 
-    settings
-  } = useAccessibility();
-  const { createKeyboardHandler } = useKeyboardNavigation();
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
   const postCardRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const id = useId();
   
-  // Generate unique IDs for ARIA relationships
-  const postId = useId();
-  const menuId = `post-menu-${postId}`;
-  const voteGroupId = `vote-group-${postId}`;
-  const actionsId = `post-actions-${postId}`;
+  // Generate IDs
+  const menuId = `${id}-menu`;
+  
+  // Accessibility context
+  const { announceToScreenReader, settings } = useAccessibility();
+  
+  // Keyboard navigation
+  const { createKeyboardHandler } = useKeyboardNavigation();
+  
+  // Normalize the post data for consistent access
+  const normalizedPost = useMemo(() => normalizePost(post), [post]);
 
   // Calculate vote score
-  const voteScore = post.upvotes - post.downvotes;
+  const voteScore = normalizedPost.upvotes - normalizedPost.downvotes;
+  
+  // Generate IDs
+  const postId = normalizedPost.id;
+  const voteGroupId = `${id}-vote-group`;
 
   // Format relative time
   const formatTimeAgo = (date: Date): string => {
@@ -104,7 +153,7 @@ export default function RedditStylePostCard({
     announceToScreenReader(`${voteAction}. Current score: ${voteScore + (finalVote === 'up' ? 1 : finalVote === 'down' ? -1 : 0)}`);
     
     try {
-      await onVote(post.id, direction);
+      await onVote(normalizedPost.id, direction);
     } catch (error) {
       // Revert on error
       setUserVote(userVote);
@@ -113,7 +162,7 @@ export default function RedditStylePostCard({
     } finally {
       setIsVoting(false);
     }
-  }, [post.id, userVote, isVoting, onVote, announceToScreenReader, voteScore]);
+  }, [normalizedPost.id, userVote, isVoting, onVote, announceToScreenReader, voteScore]);
 
   // Get vote button styling
   const getVoteButtonStyle = (direction: 'up' | 'down') => {
@@ -142,7 +191,7 @@ export default function RedditStylePostCard({
     const newSavedState = !isSaved;
     
     try {
-      await onSave(post.id);
+      await onSave(normalizedPost.id);
       setIsSaved(newSavedState);
       setShowSaveConfirmation(true);
       
@@ -167,7 +216,7 @@ export default function RedditStylePostCard({
     
     setIsProcessingAction(true);
     try {
-      await onHide(post.id);
+      await onHide(normalizedPost.id);
       setIsHidden(true);
       setShowHideUndo(true);
       
@@ -215,13 +264,13 @@ export default function RedditStylePostCard({
     setIsProcessingAction(true);
     try {
       if (onShare) {
-        await onShare(post.id);
+        await onShare(normalizedPost.id);
       } else {
         // Fallback to native share or copy to clipboard
         if (navigator.share) {
           await navigator.share({
-            title: `Post by ${post.author}`,
-            text: post.contentCid,
+            title: `Post by ${normalizedPost.author}`,
+            text: normalizedPost.contentCid,
             url: window.location.href
           });
         } else {
@@ -234,12 +283,12 @@ export default function RedditStylePostCard({
     } finally {
       setIsProcessingAction(false);
     }
-  }, [post.id, post.author, post.contentCid, isProcessingAction, onShare]);
+  }, [normalizedPost.id, normalizedPost.author, normalizedPost.contentCid, isProcessingAction, onShare]);
 
   // Keyboard navigation handlers
   const handleKeyDown = createKeyboardHandler({
-    'Enter': () => onComment?.(post.id),
-    ' ': () => onComment?.(post.id),
+    'Enter': () => onComment?.(normalizedPost.id),
+    ' ': () => onComment?.(normalizedPost.id),
     'u': () => handleVote('up'),
     'd': () => handleVote('down'),
     's': () => handleSave(),
@@ -253,7 +302,7 @@ export default function RedditStylePostCard({
 
   // Get view mode specific classes
   const viewModeClasses = getViewModeClasses(viewMode);
-  const showThumbnailForMode = shouldShowThumbnail(viewMode, !!(post.mediaCids && post.mediaCids.length > 0));
+  const showThumbnailForMode = shouldShowThumbnail(viewMode, !!(normalizedPost.mediaCids && normalizedPost.mediaCids.length > 0));
   const thumbnailSize = getThumbnailSize(viewMode);
 
   // Render compact view
@@ -313,11 +362,11 @@ export default function RedditStylePostCard({
           </div>
 
           {/* Thumbnail (if available) */}
-          {showThumbnailForMode && post.mediaCids && post.mediaCids.length > 0 && (
+          {showThumbnailForMode && normalizedPost.mediaCids && normalizedPost.mediaCids.length > 0 && (
             <div className="flex-shrink-0">
               <img
-                src={post.mediaCids[0]}
-                alt={`Thumbnail for post: ${post.contentCid.substring(0, 50)}...`}
+                src={normalizedPost.mediaCids[0]}
+                alt={`Thumbnail for post: ${normalizedPost.contentCid.substring(0, 50)}...`}
                 className={viewModeClasses.thumbnail}
                 loading="lazy"
               />
@@ -332,20 +381,20 @@ export default function RedditStylePostCard({
                 id={`${postId}-title`}
                 className={viewModeClasses.title}
               >
-                {post.contentCid}
+                {normalizedPost.contentCid}
               </h3>
               <div 
                 id={`${postId}-metadata`}
                 className={viewModeClasses.metadata}
               >
                 <PostMetadata
-                  author={post.author}
-                  createdAt={post.createdAt}
+                  author={normalizedPost.author}
+                  createdAt={normalizedPost.createdAt}
                   community={community}
-                  flair={post.flair}
-                  commentCount={post.comments?.length || 0}
-                  isPinned={isPinned || post.isPinned}
-                  isLocked={post.isLocked}
+                  flair={normalizedPost.flair}
+                  commentCount={normalizedPost.comments}
+                  isPinned={isPinned || normalizedPost.isPinned}
+                  isLocked={normalizedPost.isLocked}
                   compact={true}
                 />
               </div>
@@ -359,13 +408,13 @@ export default function RedditStylePostCard({
               aria-label="Post actions"
             >
               <button
-                onClick={() => onComment?.(post.id)}
+                onClick={() => onComment?.(normalizedPost.id)}
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                aria-label={`View ${post.comments?.length || 0} comments`}
+                aria-label={`View ${normalizedPost.comments} comments`}
                 title="View comments (Enter key)"
               >
                 <MessageCircle className="w-4 h-4 inline mr-1" aria-hidden="true" />
-                {post.comments?.length || 0} comments
+                {normalizedPost.comments} comments
               </button>
               <button
                 onClick={handleShare}
@@ -418,7 +467,7 @@ export default function RedditStylePostCard({
           onClose={() => setShowReportModal(false)}
           onSubmit={handleReport}
           isLoading={isProcessingAction}
-          postId={post.id}
+          postId={normalizedPost.id}
           postAuthor={post.author}
         />
       </motion.article>
@@ -501,13 +550,13 @@ export default function RedditStylePostCard({
           <div className="flex items-center justify-between mb-2">
             <div id={`${postId}-metadata`} className="flex-1">
               <PostMetadata
-                author={post.author}
-                createdAt={post.createdAt}
+                author={normalizedPost.author}
+                createdAt={normalizedPost.createdAt}
                 community={community}
-                flair={post.flair}
-                commentCount={post.comments?.length || 0}
-                isPinned={isPinned || post.isPinned}
-                isLocked={post.isLocked}
+                flair={normalizedPost.flair}
+                commentCount={normalizedPost.comments}
+                isPinned={isPinned || normalizedPost.isPinned}
+                isLocked={normalizedPost.isLocked}
                 className="flex-1"
               />
             </div>
@@ -682,16 +731,16 @@ export default function RedditStylePostCard({
               id={`${postId}-title`}
               className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
             >
-              {post.contentCid.split('\n')[0] || 'Untitled Post'}
+              {normalizedPost.contentCid.split('\n')[0] || 'Untitled Post'}
             </h2>
             <div className="text-gray-900 dark:text-white whitespace-pre-wrap break-words leading-relaxed">
-              {post.contentCid}
+              {normalizedPost.contentCid}
             </div>
 
             {/* Media */}
-            {showThumbnail && post.mediaCids && post.mediaCids.length > 0 && (
+            {showThumbnail && normalizedPost.mediaCids && normalizedPost.mediaCids.length > 0 && (
               <div className="mt-3">
-                {post.mediaCids.map((mediaUrl, index) => (
+                {normalizedPost.mediaCids.map((mediaUrl, index) => (
                   <MediaPreview
                     key={index}
                     url={mediaUrl}
@@ -704,9 +753,9 @@ export default function RedditStylePostCard({
             )}
 
             {/* Tags */}
-            {post.tags && post.tags.length > 0 && (
+            {normalizedPost.tags && normalizedPost.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
+                {normalizedPost.tags.map((tag) => (
                   <PostFlair
                     key={tag}
                     flair={{
@@ -735,13 +784,13 @@ export default function RedditStylePostCard({
           >
             {/* Comments */}
             <button
-              onClick={() => onComment?.(post.id)}
+              onClick={() => onComment?.(normalizedPost.id)}
               className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-              aria-label={`View ${post.comments?.length || 0} comments`}
+              aria-label={`View ${normalizedPost.comments} comments`}
               title="View comments (Enter key)"
             >
               <MessageCircle className="w-4 h-4" aria-hidden="true" />
-              <span>{post.comments?.length || 0} comments</span>
+              <span>{normalizedPost.comments} comments</span>
             </button>
 
             {/* Share */}
@@ -828,7 +877,7 @@ export default function RedditStylePostCard({
         onClose={() => setShowReportModal(false)}
         onSubmit={handleReport}
         isLoading={isProcessingAction}
-        postId={post.id}
+        postId={normalizedPost.id}
         postAuthor={post.author}
       />
     </motion.article>

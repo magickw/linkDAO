@@ -20,6 +20,7 @@ import { useTipsData } from '@/hooks/useTipsData';
 import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
 import Link from 'next/link';
+import { unifiedImageService } from '@/services/unifiedImageService';
 
 export default function Profile() {
   const router = useRouter();
@@ -56,9 +57,11 @@ export default function Profile() {
   // State for tracking operations
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   const [profile, setProfile] = useState({
     handle: '',
+    displayName: '',
     ens: '',
     bio: '',
     avatar: '',
@@ -105,10 +108,12 @@ export default function Profile() {
     if (backendProfile) {
       setProfile({
         handle: backendProfile.handle,
+        displayName: backendProfile.displayName || '',
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: backendProfile.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
       });
+      setAvatarError(false); // Reset avatar error when loading new profile
       
       // Load addresses from backend profile
       setAddresses({
@@ -141,10 +146,12 @@ export default function Profile() {
     } else if (contractProfileData && contractProfileData.handle) {
       setProfile({
         handle: contractProfileData.handle,
+        displayName: contractProfileData.displayName || '',
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: contractProfileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
       });
+      setAvatarError(false); // Reset avatar error when loading new profile
     }
   }, [backendProfile, contractProfileData]);
 
@@ -263,6 +270,11 @@ export default function Profile() {
     }
   }, [router.query.edit, router.query.user, currentUserAddress, router]);
 
+  // Reset avatar error when viewing a different user's profile
+  useEffect(() => {
+    setAvatarError(false);
+  }, [targetUserAddress]);
+
   // Listen for post creation events to refresh the posts list
   useEffect(() => {
     const handlePostCreated = () => {
@@ -326,21 +338,26 @@ export default function Profile() {
       const file = e.target.files[0];
       
       try {
-        // Dynamically import unifiedImageService to avoid SSR issues
-        const { unifiedImageService } = await import('@/services/unifiedImageService');
+        // Show loading state
+        setIsUpdating(true);
+        setUpdateError(null);
         
-        // Show uploading state
-        addToast('Uploading avatar...', 'info');
-        
-        // Upload the image using the unified service
+        // Upload the image using the unified image service
         const uploadResult = await unifiedImageService.uploadImage(file, 'profile');
         
-        // Update profile state with the returned URL
+        // Update the profile state with the new avatar URL
         setProfile(prev => ({ ...prev, avatar: uploadResult.cdnUrl }));
+        setAvatarError(false); // Reset avatar error after successful upload
+        
         addToast('Avatar uploaded successfully!', 'success');
       } catch (error) {
         console.error('Error uploading avatar:', error);
+        setUpdateError(error instanceof Error ? error.message : 'Failed to upload avatar');
         addToast(`Failed to upload avatar: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      } finally {
+        setIsUpdating(false);
+        // Reset the file input
+        e.target.value = '';
       }
     }
   };
@@ -366,6 +383,7 @@ export default function Profile() {
         // Update existing profile
         const updateData: UpdateUserProfileInput = {
           handle: profile.handle,
+          displayName: profile.displayName,
           ens: profile.ens,
           avatarCid: profile.avatar,
           bioCid: profile.bio,
@@ -644,11 +662,15 @@ export default function Profile() {
                 <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
                   <div className="relative">
                     <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white dark:border-gray-700 shadow-xl overflow-hidden">
-                      {profile.avatar ? (
+                      {(profile.avatar && !avatarError) ? (
                         <img
                           className="h-full w-full object-cover"
                           src={profile.avatar}
                           alt={profile.handle}
+                          onError={() => {
+                            console.error('Avatar image failed to load:', profile.avatar);
+                            setAvatarError(true);
+                          }}
                         />
                       ) : (
                         <DefaultAvatar />
@@ -665,8 +687,11 @@ export default function Profile() {
                 <div className="text-center lg:text-left flex-1 w-full">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{profile.handle || 'Anonymous User'}</h2>
-                      {profile.ens && (
+                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{profile.displayName || profile.handle || 'Anonymous User'}</h2>
+                      {profile.handle && profile.displayName && (
+                        <p className="text-xl text-gray-600 dark:text-gray-300 mt-1">@{profile.handle}</p>
+                      )}
+                      {profile.ens && !profile.displayName && (
                         <p className="text-xl text-gray-600 dark:text-gray-300 mt-1">{profile.ens}</p>
                       )}
                     </div>
@@ -963,6 +988,21 @@ export default function Profile() {
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="your-handle"
                         disabled={!!(contractProfileData && contractProfileData.handle)}
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Display Name
+                      </label>
+                      <input
+                        type="text"
+                        id="displayName"
+                        name="displayName"
+                        value={profile.displayName}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Your display name"
                       />
                     </div>
 

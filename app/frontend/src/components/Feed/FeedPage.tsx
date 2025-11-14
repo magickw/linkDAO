@@ -34,17 +34,33 @@ export const FeedPage: React.FC<FeedPageProps> = ({
   const loadPosts = async () => {
     try {
       setLoading(true);
-      const response = await FeedService.getEnhancedFeed({
-        sortBy: currentSort,
-        timeRange: currentTimeRange,
-        communityId: communityId
-      }, 1, 20);
+      // If communityId is provided, we should use postService to get posts for that community
+      // Otherwise, use feedService for the enhanced feed (home/feed page)
+      let response;
+      if (communityId) {
+        // For community-specific pages, we should get posts from that specific community
+        const { PostService } = await import('../../services/postService');
+        const communityPosts = await PostService.getPostsByCommunity(communityId);
+        response = {
+          posts: communityPosts,
+          hasMore: false,
+          totalPages: 1
+        };
+      } else {
+        // For home/feed page, get the enhanced feed that includes both regular posts and quickPosts
+        response = await FeedService.getEnhancedFeed({
+          sortBy: currentSort,
+          timeRange: currentTimeRange,
+          feedSource: 'all' // Show all posts for home/feed
+        }, 1, 20);
+      }
       
       setPosts(response.posts);
       setHasMore(response.hasMore);
       setError(null);
     } catch (err) {
       setError('Failed to load feed');
+      console.error('Error loading feed:', err);
     } finally {
       setLoading(false);
     }
@@ -54,6 +70,10 @@ export const FeedPage: React.FC<FeedPageProps> = ({
     await cacheService.invalidateByTags(['feed', 'posts']);
     await loadPosts();
   };
+
+  if (loading && posts.length === 0) {
+    return <LoadingSkeletons />;
+  }
 
   if (error && posts.length === 0) {
     return (

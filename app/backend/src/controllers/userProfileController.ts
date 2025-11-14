@@ -41,24 +41,17 @@ export class UserProfileController {
   updateProfile = async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
     const input: UpdateUserProfileInput = req.body;
-
+    
     // Verify the user is updating their own profile
     const existingProfile = await userProfileService.getProfileById(id);
     if (!existingProfile) {
       throw new NotFoundError('Profile not found');
     }
-
-    // Check authentication - handle both address and walletAddress properties
-    const userAddress = req.user?.walletAddress || req.user?.address;
-    if (!userAddress) {
-      throw new AppError('Authentication required', 401);
-    }
-
-    // Case-insensitive address comparison to handle checksummed vs lowercase addresses
-    if (userAddress.toLowerCase() !== existingProfile.walletAddress.toLowerCase()) {
+    
+    if (req.user?.walletAddress !== existingProfile.walletAddress) {
       throw new AppError('You can only update your own profile', 403);
     }
-
+    
     const profile = await userProfileService.updateProfile(id, input);
     if (!profile) {
       throw new NotFoundError('Profile not found');
@@ -68,24 +61,17 @@ export class UserProfileController {
 
   deleteProfile = async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
-
+    
     // Verify the user is deleting their own profile
     const existingProfile = await userProfileService.getProfileById(id);
     if (!existingProfile) {
       throw new NotFoundError('Profile not found');
     }
-
-    // Check authentication - handle both address and walletAddress properties
-    const userAddress = req.user?.walletAddress || req.user?.address;
-    if (!userAddress) {
-      throw new AppError('Authentication required', 401);
-    }
-
-    // Case-insensitive address comparison to handle checksummed vs lowercase addresses
-    if (userAddress.toLowerCase() !== existingProfile.walletAddress.toLowerCase()) {
+    
+    if (req.user?.walletAddress !== existingProfile.walletAddress) {
       throw new AppError('You can only delete your own profile', 403);
     }
-
+    
     const deleted = await userProfileService.deleteProfile(id);
     if (!deleted) {
       throw new NotFoundError('Profile not found');

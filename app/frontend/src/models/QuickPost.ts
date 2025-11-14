@@ -1,38 +1,35 @@
 import { EnhancedPost } from '@/types/feed';
 
-// Standardized Post interface that matches backend schema
-export interface Post extends EnhancedPost {
-  // All properties inherited from EnhancedPost
+// QuickPost interface for home/feed posts (no title or community required)
+export interface QuickPost extends EnhancedPost {
+  // Inherit all properties from EnhancedPost
+  // QuickPosts don't have titles or community associations
+  // The isQuickPost flag will be set to true
 }
 
-export interface CreatePostInput {
+export interface CreateQuickPostInput {
   author: string;
   parentId?: string;
   content: string; // This would be uploaded to IPFS and the CID stored
   media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
   tags?: string[];
   onchainRef?: string;
-  title?: string; // Optional for quickPosts
-  dao?: string; // Optional for quickPosts
   poll?: any; // Poll data for poll posts
   proposal?: any; // Proposal data for governance posts
 }
 
-export interface UpdatePostInput {
-  title?: string;
+export interface UpdateQuickPostInput {
   content?: string;
-  dao?: string;
   tags?: string[];
   media?: string[];
 }
 
-// Utility function to convert backend post to frontend post
-export function convertBackendPostToPost(backendPost: any): Post {
+// Utility function to convert backend quick post to frontend quick post
+export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost {
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
-    title: backendPost.title || '', // Optional for quickPosts
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
@@ -41,7 +38,6 @@ export function convertBackendPostToPost(backendPost: any): Post {
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
-    dao: backendPost.dao || '', // Optional for quickPosts
     
     // Engagement data (will be populated by services)
     reactions: [],
@@ -57,11 +53,10 @@ export function convertBackendPostToPost(backendPost: any): Post {
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
-    communityId: backendPost.dao || backendPost.communityId,
     contentType: detectContentType(backendPost),
     
     // Flag to distinguish quickPosts from regular posts
-    isQuickPost: !backendPost.title && !backendPost.dao && !backendPost.communityId
+    isQuickPost: true
   };
 }
 

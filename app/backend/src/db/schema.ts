@@ -85,6 +85,161 @@ export const posts = pgTable("posts", {
   tokenGatedIdx: index("idx_posts_token_gated").on(t.isTokenGated),
 }));
 
+// Quick Posts - for home/feed posts (no title or community required)
+export const quickPosts = pgTable("quick_posts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentCid: text("content_cid").notNull(),
+  parentId: uuid("parent_id").references(() => quickPosts.id, { onDelete: "cascade" }), // For replies
+  mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
+  tags: text("tags"), // JSON array of tags
+  stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
+  reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
+  isTokenGated: boolean("is_token_gated").default(false), // Whether this post is token gated
+  gatedContentPreview: text("gated_content_preview"), // Preview content for gated posts
+  moderationStatus: varchar("moderation_status", { length: 24 }).default('active'), // 'active' | 'limited' | 'pending_review' | 'blocked'
+  moderationWarning: text("moderation_warning"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  authorFk: foreignKey({
+    columns: [t.authorId],
+    foreignColumns: [users.id]
+  }),
+  parentFk: foreignKey({
+    columns: [t.parentId],
+    foreignColumns: [quickPosts.id]
+  }),
+  moderationStatusIdx: index("idx_quick_posts_moderation_status").on(t.moderationStatus),
+  authorIdIdx: index("idx_quick_posts_author_id").on(t.authorId),
+  createdAtIdx: index("idx_quick_posts_created_at").on(t.createdAt),
+}));
+
+// Quick Post Tags - for efficient querying of quick posts by tags
+export const quickPostTags = pgTable("quick_post_tags", {
+  id: serial("id").primaryKey(),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  tag: varchar("tag", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("idx_quick_post_tag").on(t.quickPostId, t.tag),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  })
+}));
+
+// Quick Post Reactions - token-based reactions to quick posts
+export const quickPostReactions = pgTable("quick_post_reactions", {
+  id: serial("id").primaryKey(),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 32 }).notNull(), // 'hot', 'diamond', 'bullish', 'governance', 'art'
+  amount: numeric("amount").notNull(), // Amount of tokens staked
+  rewardsEarned: numeric("rewards_earned").default('0'), // Rewards earned by the post author
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("idx_quick_post_reaction_user").on(t.quickPostId, t.userId),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Quick Post Tips - direct token transfers to quick post authors
+export const quickPostTips = pgTable("quick_post_tips", {
+  id: serial("id").primaryKey(),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  fromUserId: uuid("from_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  toUserId: uuid("to_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 64 }).notNull(), // e.g. USDC, LNK
+  amount: numeric("amount").notNull(),
+  message: text("message"), // Optional message with the tip
+  txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("idx_quick_post_tip").on(t.quickPostId),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  }),
+  fromUserFk: foreignKey({
+    columns: [t.fromUserId],
+    foreignColumns: [users.id]
+  }),
+  toUserFk: foreignKey({
+    columns: [t.toUserId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Quick Post Views - track quick post views with deduplication
+export const quickPostViews = pgTable("quick_post_views", {
+  id: serial("id").primaryKey(),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }), // Nullable for anonymous views
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("idx_quick_post_view_post_user").on(t.quickPostId, t.userId),
+  createdAtIdx: index("idx_quick_post_view_created_at").on(t.createdAt),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Quick Post Bookmarks - user bookmarks for quick posts
+export const quickPostBookmarks = pgTable("quick_post_bookmarks", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+  primaryKey: primaryKey({ columns: [t.userId, t.quickPostId] }),
+}, (t) => ({
+  userIdx: index("idx_quick_post_bookmark_user").on(t.userId),
+  postIdx: index("idx_quick_post_bookmark_post").on(t.quickPostId),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  })
+}));
+
+// Quick Post Shares - track sharing of quick posts
+export const quickPostShares = pgTable("quick_post_shares", {
+  id: serial("id").primaryKey(),
+  quickPostId: uuid("quick_post_id").notNull().references(() => quickPosts.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  targetType: varchar("target_type", { length: 32 }).notNull(), // 'community', 'dm', 'external'
+  targetId: uuid("target_id"), // Community ID or User ID for DMs
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("idx_quick_post_share_post_user").on(t.quickPostId, t.userId),
+  createdAtIdx: index("idx_quick_post_share_created_at").on(t.createdAt),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
 // Post Tags - for efficient querying of posts by tags
 export const postTags = pgTable("post_tags", {
   id: serial("id").primaryKey(),

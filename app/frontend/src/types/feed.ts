@@ -32,11 +32,12 @@ export interface FeedFilter {
 }
 
 // Standardized post interface that matches backend schema
+// This can be either a regular Post (with title/dao) or QuickPost (without title/dao)
 export interface EnhancedPost {
   id: string;
   author: string;
   parentId: string | null;
-  title: string;
+  title?: string; // Optional for quickPosts
   contentCid: string;
   mediaCids: string[];
   tags: string[];
@@ -45,7 +46,7 @@ export interface EnhancedPost {
   onchainRef: string;
   stakedValue: number;
   reputationScore: number;
-  dao: string;
+  dao?: string; // Optional for quickPosts
   
   // Engagement data
   reactions: Reaction[];
@@ -61,8 +62,11 @@ export interface EnhancedPost {
   trendingStatus?: string | null;
   trendingScore?: number;
   isBookmarked?: boolean;
-  communityId?: string;
+  communityId?: string; // Optional for quickPosts
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
+  
+  // Flag to distinguish quickPosts from regular posts
+  isQuickPost?: boolean;
 }
 
 export interface Reaction {

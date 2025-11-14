@@ -45,13 +45,7 @@ export class ProfileService {
         throw new Error(error.error || 'Failed to create profile');
       }
 
-      const profile = await response.json();
-      // Convert string dates to Date objects
-      return {
-        ...profile.data,
-        createdAt: new Date(profile.data.createdAt),
-        updatedAt: new Date(profile.data.updatedAt)
-      };
+      return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -93,14 +87,11 @@ export class ProfileService {
       
       const profile = await response.json();
       // Convert string dates to Date objects
-      if (profile && profile.data) {
-        return {
-          ...profile.data,
-          createdAt: new Date(profile.data.createdAt),
-          updatedAt: new Date(profile.data.updatedAt)
-        };
-      }
-      return null;
+      return {
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -241,28 +232,16 @@ export class ProfileService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        let errorMessage = 'Failed to update profile';
-        try {
-          const error = await response.json();
-          errorMessage = error.error?.message || error.error || errorMessage;
-        } catch (jsonError) {
-          // If response is not JSON, provide a better error message
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('text/html')) {
-            errorMessage = `Backend service unavailable (received HTML instead of JSON). Please check if the backend is running on ${BACKEND_API_BASE_URL}`;
-          } else {
-            errorMessage = `Invalid response from backend (status: ${response.status})`;
-          }
-        }
-        throw new Error(errorMessage);
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update profile');
       }
 
       const profile = await response.json();
       // Convert string dates to Date objects
       return {
-        ...profile.data,
-        createdAt: new Date(profile.data.createdAt),
-        updatedAt: new Date(profile.data.updatedAt)
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
       };
     } catch (error) {
       clearTimeout(timeoutId);
@@ -418,8 +397,7 @@ export class ProfileService {
         throw new Error(error.error || 'Failed to fetch profiles');
       }
       
-      const result = await response.json();
-      const profiles = Array.isArray(result) ? result : result.data || [];
+      const profiles = await response.json();
       // Convert string dates to Date objects for all profiles
       return profiles.map((profile: any) => ({
         ...profile,

@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, reactions, tips, users, postTags, views, bookmarks, shares, follows } from '../db/schema';
+import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows } from '../db/schema';
 import { eq, desc, and, inArray, sql, gt, isNull } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
@@ -184,8 +184,8 @@ export class FeedService {
       // Build moderation filter - exclude blocked content
       const moderationFilter = sql`(${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked')`;
 
-      // Get posts with engagement metrics using proper subqueries
-      const feedPosts = await db
+      // Get regular posts with engagement metrics
+      const regularPosts = await db
         .select({
           id: posts.id,
           authorId: posts.authorId,
@@ -201,7 +201,8 @@ export class FeedService {
           // Moderation fields
           moderationStatus: posts.moderationStatus,
           moderationWarning: posts.moderationWarning,
-          riskScore: posts.riskScore
+          riskScore: posts.riskScore,
+          isQuickPost: sql`false` // Mark as regular post
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
@@ -211,31 +212,102 @@ export class FeedService {
           followingFilter,
           moderationFilter, // Add moderation filter
           isNull(posts.parentId) // Only show top-level posts, not comments
-        ))
-        .orderBy(sortOrder)
-        .limit(limit)
-        .offset(offset);
+        ));
+
+      // Get quick posts with engagement metrics
+      const quickPostsResults = await db
+        .select({
+          id: quickPosts.id,
+          authorId: quickPosts.authorId,
+          dao: sql<string>`NULL` as unknown as string, // Quick posts don't have DAO
+          contentCid: quickPosts.contentCid,
+          mediaCids: quickPosts.mediaCids,
+          tags: quickPosts.tags,
+          createdAt: quickPosts.createdAt,
+          stakedValue: quickPosts.stakedValue,
+          walletAddress: users.walletAddress,
+          handle: users.handle,
+          profileCid: users.profileCid,
+          // Moderation fields
+          moderationStatus: quickPosts.moderationStatus,
+          moderationWarning: quickPosts.moderationWarning,
+          riskScore: quickPosts.riskScore,
+          isQuickPost: sql`true` // Mark as quick post
+        })
+        .from(quickPosts)
+        .leftJoin(users, eq(quickPosts.authorId, users.id))
+        .where(and(
+          timeFilter,
+          followingFilter,
+          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
+          isNull(quickPosts.parentId) // Only show top-level posts, not comments
+        ));
+
+      // Combine regular posts and quick posts
+      let allPosts = [...regularPosts, ...quickPostsResults];
+
+      // Apply sorting to the combined results
+      allPosts.sort((a, b) => {
+        if (sort === 'new' || sort === 'hot') {
+          // Sort by creation date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        } else if (sort === 'top') {
+          // Sort by engagement/staked value
+          return (b.stakedValue || 0) - (a.stakedValue || 0);
+        } else {
+          // Default to newest
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+      });
+
+      // Apply pagination after sorting
+      const paginatedPosts = allPosts.slice(offset, offset + limit);
 
       // Get engagement metrics for each post
       const postsWithMetrics = await Promise.all(
-        feedPosts.map(async (post) => {
-          const [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(reactions)
-              .where(eq(reactions.postId, post.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(tips)
-              .where(eq(tips.postId, post.id)),
-            db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
-              .from(tips)
-              .where(eq(tips.postId, post.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(posts)
-              .where(eq(posts.parentId, post.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(views)
-              .where(eq(views.postId, post.id))
-          ]);
+        paginatedPosts.map(async (post) => {
+          // Determine which reactions/tips tables to use based on post type
+          let reactionCount, tipCount, tipTotal, commentCount, viewCount;
+          
+          if (post.isQuickPost) {
+            // For quick posts, use quick post tables
+            [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(quickPostReactions)
+                .where(eq(quickPostReactions.quickPostId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(quickPostTips)
+                .where(eq(quickPostTips.quickPostId, post.id)),
+              db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
+                .from(quickPostTips)
+                .where(eq(quickPostTips.quickPostId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(quickPosts)
+                .where(eq(quickPosts.parentId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(quickPostViews)
+                .where(eq(quickPostViews.quickPostId, post.id))
+            ]);
+          } else {
+            // For regular posts, use regular post tables
+            [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(reactions)
+                .where(eq(reactions.postId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(tips)
+                .where(eq(tips.postId, post.id)),
+              db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
+                .from(tips)
+                .where(eq(tips.postId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(posts)
+                .where(eq(posts.parentId, post.id)),
+              db.select({ count: sql<number>`COUNT(*)` })
+                .from(views)
+                .where(eq(views.postId, post.id))
+            ]);
+          }
 
           return {
             ...post,
@@ -254,7 +326,7 @@ export class FeedService {
       );
 
       // Get total count for pagination (excluding blocked content)
-      const totalCount = await db
+      const totalRegularCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(posts)
         .where(and(
@@ -264,6 +336,37 @@ export class FeedService {
           moderationFilter, // Include moderation filter in count
           isNull(posts.parentId) // Only count top-level posts
         ));
+
+      const totalQuickCount = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(quickPosts)
+        .where(and(
+          timeFilter,
+          followingFilter,
+          sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
+          isNull(quickPosts.parentId) // Only count top-level posts
+        ));
+
+      const totalCount = (totalRegularCount[0]?.count || 0) + (totalQuickCount[0]?.count || 0);
+
+      console.log('📊 [BACKEND FEED] Returning posts:', {
+        postsCount: postsWithMetrics.length,
+        regularPostsCount: regularPosts.length,
+        quickPostsCount: quickPostsResults.length,
+        totalInDB: totalCount,
+        page,
+        limit
+      });
+
+      return {
+        posts: postsWithMetrics,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      };
 
       console.log('📊 [BACKEND FEED] Returning posts:', {
         postsCount: postsWithMetrics.length,

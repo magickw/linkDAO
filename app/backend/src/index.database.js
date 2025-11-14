@@ -614,6 +614,7 @@ async function updateUserProfile(userId, updateData) {
   // Merge updated fields with existing data
   const mergedProfileData = {
     ...profileData,
+    displayName: ('displayName' in updateData) ? updateData.displayName : profileData.displayName,
     ens: ('ens' in updateData) ? updateData.ens : profileData.ens,
     avatarCid: ('avatarCid' in updateData) ? updateData.avatarCid : profileData.avatarCid,
     bioCid: ('bioCid' in updateData) ? updateData.bioCid : 
@@ -765,6 +766,7 @@ app.get('/api/profiles/address/:address', async (req, res) => {
       id: user.id,
       walletAddress: user.wallet_address,
       handle: user.handle || '',
+      displayName: profileData.displayName || '',
       ens: profileData.ens || '',
       avatarCid: profileData.avatarCid || profileData.profilePicture || '',
       bioCid: profileData.bioCid || profileData.bio || '',

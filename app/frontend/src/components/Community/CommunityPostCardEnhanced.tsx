@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { CommunityPost, Comment, CreateCommentInput } from '@/models/CommunityPost';
+import { EnhancedPost } from '@/types/feed';
 import { Community } from '@/models/Community';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
@@ -15,6 +16,12 @@ import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
 import { motion } from 'framer-motion';
 
+// Helper function to check if post is a community post
+const isCommunityPost = (post: EnhancedPost): boolean => {
+  // Check if it has community-specific fields
+  return 'flair' in post && 'isPinned' in post && 'isLocked' in post;
+};
+
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
   emoji: string;
@@ -26,7 +33,7 @@ interface Reaction {
 }
 
 interface CommunityPostCardEnhancedProps {
-  post: CommunityPost;
+  post: EnhancedPost; // Changed from CommunityPost to EnhancedPost
   community: Community;
   userMembership: CommunityMembership | null;
   onVote: (postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => void;
@@ -49,9 +56,16 @@ export default function CommunityPostCardEnhanced({
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
 
+  // Check if the post is a CommunityPost or a QuickPost
+  const isCommunityPostType = isCommunityPost(post);
+  
+  // Type assertion for community post properties
+  const communityPost = isCommunityPostType ? post as unknown as CommunityPost : null;
+
   // State
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(post.comments || []);
+  // Initialize comments based on the type of post (CommunityPost has structured comments, EnhancedPost has a count)
+  const [comments, setComments] = useState<Comment[]>(isCommunityPostType && communityPost && Array.isArray(communityPost.comments) ? communityPost.comments : []);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -64,6 +78,9 @@ export default function CommunityPostCardEnhanced({
     { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 21, userStaked: 0, contributors: [], rewardsEarned: 4.2 },
     { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 9, userStaked: 0, contributors: [], rewardsEarned: 1.8 }
   ]);
+
+  // Calculate vote score (community posts have upvotes/downvotes, quickPosts don't)
+  const voteScore = isCommunityPostType && communityPost && typeof communityPost.upvotes === 'number' && typeof communityPost.downvotes === 'number' ? (communityPost.upvotes - communityPost.downvotes) : 0;
 
   // Loading skeleton
   if (isLoading) {
@@ -101,9 +118,6 @@ export default function CommunityPostCardEnhanced({
       </motion.div>
     );
   }
-
-  // Calculate vote score
-  const voteScore = post.upvotes - post.downvotes;
 
   // Format timestamp
   const formatTimestamp = (date: Date) => {
@@ -270,14 +284,14 @@ export default function CommunityPostCardEnhanced({
 
   // Get category gradient based on post tags
   const getCategoryGradient = () => {
-    if (post.tags && post.tags.length > 0) {
-      if (post.tags.includes('defi') || post.tags.includes('yield') || post.tags.includes('trade')) {
+    if (communityPost?.tags && communityPost.tags.length > 0) {
+      if (communityPost.tags.includes('defi') || communityPost.tags.includes('yield') || communityPost.tags.includes('trade')) {
         return 'from-green-400/30 via-emerald-500/20 to-teal-600/30';
-      } else if (post.tags.includes('nft') || post.tags.includes('art') || post.tags.includes('collection')) {
+      } else if (communityPost.tags.includes('nft') || communityPost.tags.includes('art') || communityPost.tags.includes('collection')) {
         return 'from-purple-400/30 via-fuchsia-500/20 to-pink-600/30';
-      } else if (post.tags.includes('governance') || post.tags.includes('proposal') || post.tags.includes('dao')) {
+      } else if (communityPost.tags.includes('governance') || communityPost.tags.includes('proposal') || communityPost.tags.includes('dao')) {
         return 'from-blue-400/30 via-indigo-500/20 to-violet-600/30';
-      } else if (post.tags.includes('social') || post.tags.includes('community') || post.tags.includes('discussion')) {
+      } else if (communityPost.tags.includes('social') || communityPost.tags.includes('community') || communityPost.tags.includes('discussion')) {
         return 'from-orange-400/30 via-amber-500/20 to-yellow-600/30';
       }
     }
@@ -286,8 +300,8 @@ export default function CommunityPostCardEnhanced({
 
   // Render enhanced web3 embeds based on post type
   const renderWeb3Embed = () => {
-    if (post.tags?.includes('nft') && post.onchainRef) {
-      const [contractAddress, tokenId] = post.onchainRef.split(':');
+    if (isCommunityPostType && communityPost?.tags?.includes('nft') && communityPost.onchainRef) {
+      const [contractAddress, tokenId] = communityPost.onchainRef.split(':');
       return (
         <CommunityNFTEmbed
           contractAddress={contractAddress || '0x1234567890123456789012345678901234567890'}
@@ -297,19 +311,19 @@ export default function CommunityPostCardEnhanced({
       );
     }
     
-    if (post.tags?.includes('defi')) {
+    if (isCommunityPostType && communityPost?.tags?.includes('defi')) {
       // Extract protocol name from tags or content
-      const protocolName = post.tags.find(tag => 
+      const protocolName = communityPost.tags.find(tag => 
         ['aave', 'compound', 'uniswap', 'curve', 'yearn'].includes(tag.toLowerCase())
       ) || 'Aave';
       return <CommunityDeFiEmbed protocolName={protocolName} className="mt-3" />;
     }
     
-    if (post.tags?.includes('wallet') && post.onchainRef) {
-      return <WalletSnapshotEmbed walletAddress={post.onchainRef} className="mt-3" />;
+    if (isCommunityPostType && communityPost?.tags?.includes('wallet') && communityPost.onchainRef) {
+      return <WalletSnapshotEmbed walletAddress={communityPost.onchainRef} className="mt-3" />;
     }
     
-    if (post.tags?.includes('governance') || post.tags?.includes('dao')) {
+    if (isCommunityPostType && (communityPost?.tags?.includes('governance') || communityPost?.tags?.includes('dao'))) {
       return <CommunityGovernance community={community} className="mt-3" />;
     }
     
@@ -374,15 +388,17 @@ export default function CommunityPostCardEnhanced({
               </span>
               <span>•</span>
               <span>{formatTimestamp(post.createdAt)}</span>
-              {post.flair && (
+              {/* Only show flair for community posts */}
+              {isCommunityPostType && communityPost?.flair && (
                 <>
                   <span>•</span>
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                    {post.flair}
+                    {communityPost.flair}
                   </span>
                 </>
               )}
-              {post.isPinned && (
+              {/* Only show pinned status for community posts */}
+              {isCommunityPostType && communityPost?.isPinned && (
                 <>
                   <span>•</span>
                   <span className="inline-flex items-center text-green-600 dark:text-green-400">
@@ -394,7 +410,8 @@ export default function CommunityPostCardEnhanced({
 
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
-              {post.isLocked && (
+              {/* Only show locked status for community posts */}
+              {isCommunityPostType && communityPost?.isLocked && (
                 <span className="text-yellow-500" title="Comments are locked" aria-label="Comments are locked">
                   🔒
                 </span>
@@ -427,13 +444,13 @@ export default function CommunityPostCardEnhanced({
               </div>
             )}
 
-            {/* NFT/Onchain Reference */}
-            {post.onchainRef && (
+            {/* NFT/Onchain Reference (only for community posts) */}
+            {isCommunityPostType && communityPost?.onchainRef && (
               <div className="mt-3 p-3 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg border border-primary-200 dark:border-primary-700">
                 <div className="flex items-center space-x-2">
                   <span className="text-lg">🔗</span>
                   <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-                    Onchain Reference: {post.onchainRef}
+                    Onchain Reference: {communityPost.onchainRef}
                   </span>
                 </div>
               </div>
@@ -442,13 +459,17 @@ export default function CommunityPostCardEnhanced({
             {/* Web3 Embeds */}
             {renderWeb3Embed()}
 
-            {/* Tags */}
-            {post.tags && post.tags.length > 0 && (
+            {/* Tags (only for community posts) */}
+            {isCommunityPostType && communityPost?.tags && communityPost.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
+                {communityPost.tags.map((tag) => (
                   <span
                     key={tag}
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer bg-gradient-to-r ${getCategoryGradient()} text-white shadow-sm hover:shadow-md hover:scale-105`}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors duration-200"
+                    onClick={() => window.open(`/tag/${tag}`, '_blank')}
+                    onKeyDown={(e) => e.key === 'Enter' && window.open(`/tag/${tag}`, '_blank')}
+                    tabIndex={0}
+                    role="button"
                     aria-label={`Tag: ${tag}`}
                   >
                     #{tag}
@@ -465,7 +486,7 @@ export default function CommunityPostCardEnhanced({
                     id: post.id,
                     contentCid: post.contentCid,
                     author: post.author,
-                    communityId: community.id,
+                    communityId: community.id, // Use the community ID passed to the component
                     commentCount: comments.length,
                     stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0)
                   }}
@@ -555,8 +576,8 @@ export default function CommunityPostCardEnhanced({
           {/* Comments Section */}
           {showComments && (
             <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-              {/* Comment Form */}
-              {userMembership && !post.isLocked && (
+              {/* Comment Form (only for community posts) */}
+              {isCommunityPostType && userMembership && !communityPost?.isLocked && (
                 <form onSubmit={handleCommentSubmit} className="mb-4">
                   <div className="flex space-x-3">
                     <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">

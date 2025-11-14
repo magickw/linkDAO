@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string;
   walletAddress: string;
   handle: string;
+  displayName?: string;
   ens: string;
   avatarCid: string;
   bioCid: string;
@@ -64,6 +65,7 @@ export interface CreateUserProfileInput {
 
 export interface UpdateUserProfileInput {
   handle?: string;
+  displayName?: string;
   ens?: string;
   avatarCid?: string;
   bioCid?: string;

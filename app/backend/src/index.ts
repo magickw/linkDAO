@@ -380,6 +380,7 @@ app.use(fileUploadSecurity);
 
 // Import routes
 import postRoutes from './routes/postRoutes';
+import quickPostRoutes from './routes/quickPostRoutes';
 import feedRoutes from './routes/feedRoutes';
 import userRoutes from './routes/userRoutes';
 import communityRoutes from './routes/communityRoutes';
@@ -405,8 +406,12 @@ app.use('/marketplace/reputation', reputationRoutes);
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);
 
+// Import quick post routes
+import quickPostRoutes from './routes/quickPostRoutes';
+
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
+app.use('/api/quick-posts', quickPostRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/communities', communityRoutes);
@@ -476,6 +481,8 @@ app.use('/api', sessionRoutes);
 
 // Use post routes
 app.use('/api/posts', postRoutes);
+// Use quick post routes
+app.use('/api/quick-posts', quickPostRoutes);
 
 // Use feed routes
 app.use('/api/feed', feedRoutes);

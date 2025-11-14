@@ -1,6 +1,7 @@
 import { EnhancedPost, FeedFilter, CommunityEngagementMetrics, LeaderboardEntry, LikedByData, FeedSortType, FeedError, FeedAnalyticsEvent } from '../types/feed';
 import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
+import { convertBackendQuickPostToQuickPost } from '../models/QuickPost';
 import { analyticsService } from './analyticsService';
 import { authService } from './authService'; // Add authService import
 import { ENV_CONFIG } from '@/config/environment';
@@ -234,7 +235,17 @@ export class FeedService {
       }
 
       // Transform backend posts to frontend posts
-      const posts = response_data.data.posts.map(convertBackendPostToPost);
+      // The enhanced feed API now returns both regular posts and quickPosts
+      const posts = response_data.data.posts.map((post: any) => {
+        // Check if this is a quickPost (no DAO/communityId) or a regular post
+        if (!post.dao && !post.communityId) {
+          // This is a quickPost (home/feed post)
+          return convertBackendQuickPostToQuickPost(post);
+        } else {
+          // This is a regular post (community post)
+          return convertBackendPostToPost(post);
+        }
+      });
 
       const result: FeedResponse = {
         posts,

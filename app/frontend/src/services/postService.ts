@@ -1,4 +1,5 @@
-import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
+import { Post, CreatePostInput, UpdatePostInput, convertBackendPostToPost } from '../models/Post';
+import { QuickPost, convertBackendQuickPostToQuickPost } from '../models/QuickPost';
 import { requestManager } from './requestManager';
 import { authService } from './authService';
 
@@ -408,21 +409,28 @@ export class PostService {
   }
 
   /**
-   * Get user feed
+   * Get user feed (home/feed page) - now includes both regular posts and quickPosts
    * @param forUser - User address to get feed for (optional)
    * @returns Array of posts in the user's feed
    */
-  static async getFeed(forUser?: string): Promise<Post[]> {
+  static async getFeed(forUser?: string): Promise<(Post | QuickPost)[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     try {
-      let url = `${BACKEND_API_BASE_URL}/api/posts/feed`;
+      let url = `${BACKEND_API_BASE_URL}/api/feed/enhanced`;
+      const params = new URLSearchParams();
+      
       if (forUser) {
-        url += `?forUser=${encodeURIComponent(forUser)}`;
+        params.append('feedSource', 'following');
+        params.append('userAddress', encodeURIComponent(forUser));
+      } else {
+        params.append('feedSource', 'all');
       }
       
-      console.log(`Fetching feed from: ${url}`);
+      url += `?${params.toString()}`;
+      
+      console.log(`Fetching enhanced feed from: ${url}`);
       
       // Get auth headers from authService to include JWT token
       const authHeaders = authService.getAuthHeaders();
@@ -444,7 +452,17 @@ export class PostService {
       }
       
       const result = await response.json();
-      return result.data || result;
+      const feedData = result.data || result;
+
+      // Process the feed data - each post could be either a regular Post or a QuickPost
+      return feedData.posts?.map((post: any) => {
+        // If the post has no title and no dao/communityId, it's a quickPost
+        if (!post.dao && !post.communityId) {
+          return convertBackendQuickPostToQuickPost(post);
+        } else {
+          return convertBackendPostToPost(post);
+        }
+      }) || [];
     } catch (error: any) {
       clearTimeout(timeoutId);
       
@@ -497,17 +515,21 @@ export class PostService {
       
       const data = await response.json();
       
-      // Handle different response structures
+      // Handle different response structures and convert to Post objects
+      let postsArray: any[] = [];
       if (Array.isArray(data)) {
-        return data;
+        postsArray = data;
       } else if (data && typeof data === 'object' && Array.isArray(data.posts)) {
-        return data.posts;
+        postsArray = data.posts;
       } else if (data && typeof data === 'object' && Array.isArray(data.data)) {
-        return data.data;
+        postsArray = data.data;
       } else {
         console.warn('Unexpected response structure for getPostsByCommunity:', data);
         return [];
       }
+      
+      // Convert each returned post to a proper Post object
+      return postsArray.map(post => convertBackendPostToPost(post));
     } catch (error) {
       clearTimeout(timeoutId);
       
