@@ -233,14 +233,14 @@ export class SellerProfileService {
       });
 
       // Update onboardingSteps using raw SQL with proper JSON string serialization
-      await db.execute(sql`
+      await db.execute(sql.raw(`
         UPDATE sellers 
         SET 
-          onboarding_steps = ${JSON.stringify(updatedSteps)},
+          onboarding_steps = '${JSON.stringify(updatedSteps).replace(/'/g, "''")}',
           onboarding_completed = ${onboardingCompleted},
           updated_at = NOW()
-        WHERE wallet_address = ${walletAddress}
-      `);
+        WHERE wallet_address = '${walletAddress}'
+      `));
       
       safeLogger.info('Onboarding steps updated successfully:', { walletAddress, step, completed });
 
