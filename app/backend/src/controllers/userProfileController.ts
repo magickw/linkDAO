@@ -48,7 +48,13 @@ export class UserProfileController {
       throw new NotFoundError('Profile not found');
     }
     
-    if (req.user?.walletAddress !== existingProfile.walletAddress) {
+    // Check authentication - handle both address and walletAddress properties
+    const userAddress = req.user?.walletAddress || req.user?.address;
+    if (!userAddress) {
+      throw new AppError('Authentication required', 401);
+    }
+    
+    if (userAddress !== existingProfile.walletAddress) {
       throw new AppError('You can only update your own profile', 403);
     }
     
@@ -68,7 +74,13 @@ export class UserProfileController {
       throw new NotFoundError('Profile not found');
     }
     
-    if (req.user?.walletAddress !== existingProfile.walletAddress) {
+    // Check authentication - handle both address and walletAddress properties
+    const userAddress = req.user?.walletAddress || req.user?.address;
+    if (!userAddress) {
+      throw new AppError('Authentication required', 401);
+    }
+    
+    if (userAddress !== existingProfile.walletAddress) {
       throw new AppError('You can only delete your own profile', 403);
     }
     

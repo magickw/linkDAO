@@ -176,37 +176,42 @@ export class UserProfileService {
   }
 
   async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {
-    const db = databaseService.getDatabase();
-    
-    // Get existing profile to preserve existing address data
-    const existingProfile = await this.getProfileById(id);
-    if (!existingProfile) {
-      return undefined;
+    try {
+      const db = databaseService.getDatabase();
+      
+      // Get existing profile to preserve existing address data
+      const existingProfile = await this.getProfileById(id);
+      if (!existingProfile) {
+        return undefined;
+      }
+
+      // Prepare updated address data
+      const addressData = {
+        physicalAddress: input.physicalAddress || existingProfile.physicalAddress,
+        email: (input as any).email || (existingProfile as any).email,
+        ens: input.ens || (existingProfile as any).ens,
+        avatarCid: input.avatarCid || existingProfile.avatarCid,
+        bioCid: input.bioCid || existingProfile.bioCid
+      };
+
+      // Encrypt updated address data
+      const encryptedAddressData = await encryptAddressData(addressData);
+
+      // Update in database
+      await db.update(users)
+        .set({ 
+          handle: input.handle ?? existingProfile.handle,
+          profileCid: input.bioCid ?? existingProfile.bioCid,
+          physicalAddress: encryptedAddressData,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, id));
+
+      return await this.getProfileById(id);
+    } catch (error) {
+      safeLogger.error('Error updating profile:', error);
+      throw error;
     }
-
-    // Prepare updated address data
-    const addressData = {
-      physicalAddress: input.physicalAddress || existingProfile.physicalAddress,
-      email: (input as any).email || (existingProfile as any).email,
-      ens: input.ens || (existingProfile as any).ens,
-      avatarCid: input.avatarCid || existingProfile.avatarCid,
-      bioCid: input.bioCid || existingProfile.bioCid
-    };
-
-    // Encrypt updated address data
-    const encryptedAddressData = await encryptAddressData(addressData);
-
-    // Update in database
-    await db.update(users)
-      .set({ 
-        handle: input.handle ?? existingProfile.handle,
-        profileCid: input.bioCid ?? existingProfile.bioCid,
-        physicalAddress: encryptedAddressData,
-        updatedAt: new Date()
-      })
-      .where(eq(users.id, id));
-
-    return await this.getProfileById(id);
   }
 
   async updatePreferences(address: string, preferences: any): Promise<UserProfile> {
