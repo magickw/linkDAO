@@ -614,32 +614,34 @@ async function updateUserProfile(userId, updateData) {
   // Merge updated fields with existing data
   const mergedProfileData = {
     ...profileData,
-    ens: updateData.ens || profileData.ens,
-    avatarCid: updateData.avatarCid || profileData.avatarCid,
-    bioCid: updateData.bioCid || updateData.bio || profileData.bioCid || profileData.bio,
-    email: updateData.email || profileData.email,
+    ens: ('ens' in updateData) ? updateData.ens : profileData.ens,
+    avatarCid: ('avatarCid' in updateData) ? updateData.avatarCid : profileData.avatarCid,
+    bioCid: ('bioCid' in updateData) ? updateData.bioCid : 
+            ('bio' in updateData) ? updateData.bio : 
+            profileData.bioCid || profileData.bio,
+    email: ('email' in updateData) ? updateData.email : profileData.email,
     // Billing Address fields
-    billingFirstName: updateData.billingFirstName || profileData.billingFirstName,
-    billingLastName: updateData.billingLastName || profileData.billingLastName,
-    billingCompany: updateData.billingCompany || profileData.billingCompany,
-    billingAddress1: updateData.billingAddress1 || profileData.billingAddress1,
-    billingAddress2: updateData.billingAddress2 || profileData.billingAddress2,
-    billingCity: updateData.billingCity || profileData.billingCity,
-    billingState: updateData.billingState || profileData.billingState,
-    billingZipCode: updateData.billingZipCode || profileData.billingZipCode,
-    billingCountry: updateData.billingCountry || profileData.billingCountry,
-    billingPhone: updateData.billingPhone || profileData.billingPhone,
+    billingFirstName: ('billingFirstName' in updateData) ? updateData.billingFirstName : profileData.billingFirstName,
+    billingLastName: ('billingLastName' in updateData) ? updateData.billingLastName : profileData.billingLastName,
+    billingCompany: ('billingCompany' in updateData) ? updateData.billingCompany : profileData.billingCompany,
+    billingAddress1: ('billingAddress1' in updateData) ? updateData.billingAddress1 : profileData.billingAddress1,
+    billingAddress2: ('billingAddress2' in updateData) ? updateData.billingAddress2 : profileData.billingAddress2,
+    billingCity: ('billingCity' in updateData) ? updateData.billingCity : profileData.billingCity,
+    billingState: ('billingState' in updateData) ? updateData.billingState : profileData.billingState,
+    billingZipCode: ('billingZipCode' in updateData) ? updateData.billingZipCode : profileData.billingZipCode,
+    billingCountry: ('billingCountry' in updateData) ? updateData.billingCountry : profileData.billingCountry,
+    billingPhone: ('billingPhone' in updateData) ? updateData.billingPhone : profileData.billingPhone,
     // Shipping Address fields
-    shippingFirstName: updateData.shippingFirstName || profileData.shippingFirstName,
-    shippingLastName: updateData.shippingLastName || profileData.shippingLastName,
-    shippingCompany: updateData.shippingCompany || profileData.shippingCompany,
-    shippingAddress1: updateData.shippingAddress1 || profileData.shippingAddress1,
-    shippingAddress2: updateData.shippingAddress2 || profileData.shippingAddress2,
-    shippingCity: updateData.shippingCity || profileData.shippingCity,
-    shippingState: updateData.shippingState || profileData.shippingState,
-    shippingZipCode: updateData.shippingZipCode || profileData.shippingZipCode,
-    shippingCountry: updateData.shippingCountry || profileData.shippingCountry,
-    shippingPhone: updateData.shippingPhone || profileData.shippingPhone
+    shippingFirstName: ('shippingFirstName' in updateData) ? updateData.shippingFirstName : profileData.shippingFirstName,
+    shippingLastName: ('shippingLastName' in updateData) ? updateData.shippingLastName : profileData.shippingLastName,
+    shippingCompany: ('shippingCompany' in updateData) ? updateData.shippingCompany : profileData.shippingCompany,
+    shippingAddress1: ('shippingAddress1' in updateData) ? updateData.shippingAddress1 : profileData.shippingAddress1,
+    shippingAddress2: ('shippingAddress2' in updateData) ? updateData.shippingAddress2 : profileData.shippingAddress2,
+    shippingCity: ('shippingCity' in updateData) ? updateData.shippingCity : profileData.shippingCity,
+    shippingState: ('shippingState' in updateData) ? updateData.shippingState : profileData.shippingState,
+    shippingZipCode: ('shippingZipCode' in updateData) ? updateData.shippingZipCode : profileData.shippingZipCode,
+    shippingCountry: ('shippingCountry' in updateData) ? updateData.shippingCountry : profileData.shippingCountry,
+    shippingPhone: ('shippingPhone' in updateData) ? updateData.shippingPhone : profileData.shippingPhone
   };
 
   // Update the user profile - handle is allowed to be updated but wallet address is immutable
