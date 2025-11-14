@@ -398,7 +398,7 @@ import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/securityRoutes';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
-import { reputationRoutes } from './routes/reputationRoutes';
+import reputationRoutes from './routes/reputationRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
@@ -406,8 +406,7 @@ app.use('/marketplace/reputation', reputationRoutes);
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);
 
-// Import quick post routes
-import quickPostRoutes from './routes/quickPostRoutes';
+// Quick post routes already imported above
 
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
@@ -535,8 +534,7 @@ import missingEndpoints from './routes/missingEndpoints';
 app.use('/api', missingEndpoints);
 app.use('/', missingEndpoints);
 
-// Reputation routes
-import reputationRoutes from './routes/reputationRoutes';
+// Reputation routes already imported above
 
 // Use notification preferences routes
 // Import user profile API routes
@@ -778,128 +776,8 @@ app.use('/api/marketplace', sellerVerificationRoutes);
 // ENS validation routes
 app.use('/api/marketplace', ensValidationRoutes);
 
-// Add the missing endpoint that matches the frontend expectation
-app.get('/api/profiles/address/:address', async (req, res) => {
-  try {
-    const { address } = req.params;
-
-    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid Ethereum address'
-      });
-    }
-    
-    // Convert address to lowercase for consistent querying
-    const normalizedAddress = address.toLowerCase();
-
-    // Check if database connection is available
-    if (!db) {
-      console.error('Database connection not available');
-      return res.status(503).json({
-        success: false,
-        error: {
-          code: 'DATABASE_UNAVAILABLE',
-          message: 'Database service temporarily unavailable',
-          details: {
-            userFriendlyMessage: 'We are experiencing technical difficulties. Please try again later.',
-            suggestions: ['Try again in a few moments', 'Contact support if the issue persists'],
-            requestId: req.headers['x-request-id'] || 'unknown',
-            timestamp: new Date().toISOString()
-          }
-        }
-      });
-    }
-
-    console.log('Querying database for address:', normalizedAddress);
-    // Query the database (case-insensitive)
-    let result;
-    try {
-      result = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      console.log('Database query result:', result);
-    } catch (queryError) {
-      console.error('Database query error:', queryError);
-      throw queryError;
-    }
-    
-    if (result.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-    
-    // Transform the user data to match the frontend UserProfile interface
-    const user = result[0];
-    let profileData: any = {};
-
-    try {
-      if (user.profileCid) {
-        profileData = JSON.parse(user.profileCid);
-      }
-    } catch (e) {
-      console.log('Failed to parse profile data for user:', user.walletAddress);
-    }
-    
-    const profile = {
-      id: user.id,
-      walletAddress: user.walletAddress,
-      handle: user.handle || '',
-      ens: profileData.ens || '',
-      avatarCid: profileData.avatarCid || profileData.profilePicture || '',
-      bioCid: profileData.bioCid || profileData.bio || '',
-      email: profileData.email || '',
-      billingFirstName: profileData.billingFirstName || '',
-      billingLastName: profileData.billingLastName || '',
-      billingCompany: profileData.billingCompany || '',
-      billingAddress1: profileData.billingAddress1 || '',
-      billingAddress2: profileData.billingAddress2 || '',
-      billingCity: profileData.billingCity || '',
-      billingState: profileData.billingState || '',
-      billingZipCode: profileData.billingZipCode || '',
-      billingCountry: profileData.billingCountry || '',
-      billingPhone: profileData.billingPhone || '',
-      shippingFirstName: profileData.shippingFirstName || '',
-      shippingLastName: profileData.shippingLastName || '',
-      shippingCompany: profileData.shippingCompany || '',
-      shippingAddress1: profileData.shippingAddress1 || '',
-      shippingAddress2: profileData.shippingAddress2 || '',
-      shippingCity: profileData.shippingCity || '',
-      shippingState: profileData.shippingState || '',
-      shippingZipCode: profileData.shippingZipCode || '',
-      shippingCountry: profileData.shippingCountry || '',
-      shippingPhone: profileData.shippingPhone || '',
-      createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
-      updatedAt: user.updatedAt ? new Date(user.updatedAt) : (user.createdAt ? new Date(user.createdAt) : new Date())
-    };
-    
-    res.json({
-      success: true,
-      data: profile
-    });
-  } catch (error) {
-    console.error('Error fetching profile by address:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: error.message,
-        details: {
-          userFriendlyMessage: 'An unexpected error occurred. Please try again.',
-          suggestions: [],
-          requestId: req.headers['x-request-id'] || 'unknown',
-          timestamp: new Date().toISOString(),
-          technicalDetails: {
-            originalMessage: error.message,
-            errorType: error.constructor.name,
-            stack: error.stack
-          }
-        }
-      }
-    });
-  }
-});
+// Profile routes are handled by userProfileRoutes.ts
+// This duplicate definition has been removed to prevent conflicts
 
 // Marketplace listings routes (legacy support)
 app.use('/api/marketplace', marketplaceListingsRoutes);

@@ -29,7 +29,23 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
       const userProfile = await ProfileService.getProfileByAddress(walletAddress);
       setProfile(userProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch profile');
+      // Handle error objects properly to avoid [object Object] display
+      let errorMessage = 'Failed to fetch profile';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        // Try to extract a meaningful message from the error object
+        if ('message' in err && typeof (err as any).message === 'string') {
+          errorMessage = (err as any).message;
+        } else if ('error' in err && typeof (err as any).error === 'string') {
+          errorMessage = (err as any).error;
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
       setProfile(null);
     } finally {
       setIsLoading(false);
@@ -46,7 +62,23 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
       const updatedProfile = await ProfileService.updateProfile(profile.id, data);
       setProfile(updatedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      // Handle error objects properly to avoid [object Object] display
+      let errorMessage = 'Failed to update profile';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'object' && err !== null) {
+        // Try to extract a meaningful message from the error object
+        if ('message' in err && typeof (err as any).message === 'string') {
+          errorMessage = (err as any).message;
+        } else if ('error' in err && typeof (err as any).error === 'string') {
+          errorMessage = (err as any).error;
+        } else {
+          errorMessage = JSON.stringify(err);
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      setError(errorMessage);
       throw err;
     }
   }, [profile]);
