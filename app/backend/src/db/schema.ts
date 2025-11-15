@@ -6,8 +6,9 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
   handle: varchar("handle", { length: 64 }).unique(),
+  displayName: varchar("display_name", { length: 100 }), // Public display name
   profileCid: text("profile_cid"), // IPFS metadata
-  physicalAddress: text("physical_address"), // JSON object for shipping/billing address (deprecated)
+  physicalAddress: text("physical_address"), // JSON object for encrypted private data (addresses, names, etc.)
   
   // Role field for admin functionality
   role: varchar("role", { length: 32 }).default('user'),

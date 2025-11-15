@@ -72,14 +72,21 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
           errorMessage = (err as any).message;
         } else if ('error' in err && typeof (err as any).error === 'string') {
           errorMessage = (err as any).error;
+        } else if ('error' in err && typeof (err as any).error === 'object' && (err as any).error?.message) {
+          errorMessage = (err as any).error.message;
         } else {
-          errorMessage = JSON.stringify(err);
+          // Better stringify the error object to show meaningful information
+          try {
+            errorMessage = JSON.stringify(err, null, 2);
+          } catch (stringifyError) {
+            errorMessage = 'Failed to update profile due to an unknown error';
+          }
         }
       } else if (typeof err === 'string') {
         errorMessage = err;
       }
       setError(errorMessage);
-      throw err;
+      throw new Error(errorMessage); // Throw the formatted error message
     }
   }, [profile]);
 

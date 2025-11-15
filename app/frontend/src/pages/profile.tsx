@@ -111,7 +111,7 @@ export default function Profile() {
     if (backendProfile) {
       setProfile({
         handle: backendProfile.handle,
-        displayName: backendProfile.displayName || '',
+        displayName: backendProfile.displayName || '', // Use actual displayName field
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: backendProfile.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
@@ -149,7 +149,7 @@ export default function Profile() {
     } else if (contractProfileData && contractProfileData.handle) {
       setProfile({
         handle: contractProfileData.handle,
-        displayName: contractProfileData.displayName || '',
+        displayName: contractProfileData.displayName || '', // Use actual displayName field
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: contractProfileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
@@ -469,6 +469,74 @@ export default function Profile() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!backendProfile) {
+      addToast('No profile to update', 'error');
+      return;
+    }
+
+    setIsUpdating(true);
+    setUpdateError(null);
+
+    try {
+      // Prepare update data - map frontend fields to backend fields
+      const updateData = {
+        handle: profile.handle,
+        displayName: profile.displayName, // This will be handled by the backend
+        ens: profile.ens,
+        bioCid: profile.bio,
+        avatarCid: profile.avatar,
+        // Billing address
+        billingFirstName: addresses.billing.firstName,
+        billingLastName: addresses.billing.lastName,
+        billingCompany: addresses.billing.company,
+        billingAddress1: addresses.billing.address1,
+        billingAddress2: addresses.billing.address2,
+        billingCity: addresses.billing.city,
+        billingState: addresses.billing.state,
+        billingZipCode: addresses.billing.zipCode,
+        billingCountry: addresses.billing.country,
+        billingPhone: addresses.billing.phone,
+        // Shipping address
+        shippingFirstName: addresses.shipping.firstName,
+        shippingLastName: addresses.shipping.lastName,
+        shippingCompany: addresses.shipping.company,
+        shippingAddress1: addresses.shipping.address1,
+        shippingAddress2: addresses.shipping.address2,
+        shippingCity: addresses.shipping.city,
+        shippingState: addresses.shipping.state,
+        shippingZipCode: addresses.shipping.zipCode,
+        shippingCountry: addresses.shipping.country,
+        shippingPhone: addresses.shipping.phone,
+      };
+
+      await updateBackendProfile(updateData);
+      setIsEditing(false);
+      addToast('Profile updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      // Better error handling to avoid [object Object] display
+      let errorMessage = 'Failed to update profile';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        if ('message' in error && typeof (error as any).message === 'string') {
+          errorMessage = (error as any).message;
+        } else if ('error' in error && typeof (error as any).error === 'string') {
+          errorMessage = (error as any).error;
+        } else {
+          errorMessage = JSON.stringify(error);
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      setUpdateError(errorMessage);
+      addToast(errorMessage, 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Format wallet address for display
   const formatAddress = (addr: string) => {
     if (!addr) return '';
@@ -541,6 +609,34 @@ export default function Profile() {
           billingAddress1: addresses.billing.address1,
           billingAddress2: addresses.billing.address2,
           billingCity: addresses.billing.city,
+          billingState: addresses.billing.state,
+          billingZipCode: addresses.billing.zipCode,
+          billingCountry: addresses.billing.country,
+          billingPhone: addresses.billing.phone,
+          // Shipping Address
+          shippingFirstName: addresses.shipping.firstName,
+          shippingLastName: addresses.shipping.lastName,
+          shippingCompany: addresses.shipping.company,
+          shippingAddress1: addresses.shipping.address1,
+          shippingAddress2: addresses.shipping.address2,
+          shippingCity: addresses.shipping.city,
+          shippingState: addresses.shipping.state,
+          shippingZipCode: addresses.shipping.zipCode,
+          shippingCountry: addresses.shipping.country,
+          shippingPhone: addresses.shipping.phone,
+        };
+
+        await updateBackendProfile(updateData);
+        setIsEditing(false);
+        addToast('Profile updated successfully', 'success');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      addToast(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
           billingState: addresses.billing.state,
           billingZipCode: addresses.billing.zipCode,
           billingCountry: addresses.billing.country,

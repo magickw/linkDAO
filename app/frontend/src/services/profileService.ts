@@ -131,8 +131,19 @@ export class ProfileService {
         
         let errorMessage = 'Failed to fetch profile';
         try {
-          const error = await response.json();
-          errorMessage = error.error || error.message || errorMessage;
+          const errorData = await response.json();
+          // Extract error message from various possible error response formats
+          if (errorData.error) {
+            if (typeof errorData.error === 'string') {
+              errorMessage = errorData.error;
+            } else if (typeof errorData.error === 'object' && errorData.error.message) {
+              errorMessage = errorData.error.message;
+            } else {
+              errorMessage = JSON.stringify(errorData.error);
+            }
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
         } catch (jsonError) {
           // If response is not JSON (e.g., HTML error page), provide a better error message
           const contentType = response.headers.get('content-type');
@@ -168,6 +179,14 @@ export class ProfileService {
             ...parsed.data,
             createdAt: new Date(parsed.data.createdAt),
             updatedAt: new Date(parsed.data.updatedAt)
+          };
+        }
+        // Handle case where the response is the profile data directly (not wrapped in data)
+        if (parsed && parsed.id) {
+          return {
+            ...parsed,
+            createdAt: new Date(parsed.createdAt),
+            updatedAt: new Date(parsed.updatedAt)
           };
         }
         return null;
@@ -232,16 +251,39 @@ export class ProfileService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update profile');
+        let errorMessage = 'Failed to update profile';
+        try {
+          const errorData = await response.json();
+          // Extract error message from various possible error response formats
+          if (errorData.error) {
+            if (typeof errorData.error === 'string') {
+              errorMessage = errorData.error;
+            } else if (typeof errorData.error === 'object' && errorData.error.message) {
+              errorMessage = errorData.error.message;
+            } else {
+              errorMessage = JSON.stringify(errorData.error);
+            }
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch (jsonError) {
+          // If response is not JSON, provide a better error message
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('text/html')) {
+            errorMessage = `Backend service unavailable (received HTML instead of JSON). Please check if the backend is running on ${BACKEND_API_BASE_URL}`;
+          } else {
+            errorMessage = `Invalid response from backend (status: ${response.status})`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const profile = await response.json();
       // Convert string dates to Date objects
       return {
-        ...profile,
-        createdAt: new Date(profile.createdAt),
-        updatedAt: new Date(profile.updatedAt)
+        ...profile.data,
+        createdAt: new Date(profile.data.createdAt),
+        updatedAt: new Date(profile.data.updatedAt)
       };
     } catch (error) {
       clearTimeout(timeoutId);

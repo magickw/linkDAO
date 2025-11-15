@@ -52,12 +52,37 @@ export class UserProfileService {
       throw new Error('Profile already exists for this address');
     }
 
-    // Prepare address data for encryption
+    // Prepare address data for encryption (all private information)
     const addressData = {
       physicalAddress: input.physicalAddress,
       email: (input as any).email,
       preferences: (input as any).preferences,
-      privacySettings: (input as any).privacySettings
+      privacySettings: (input as any).privacySettings,
+      // Store firstName and lastName in encrypted data for privacy
+      firstName: (input as any).firstName,
+      lastName: (input as any).lastName,
+      // Store billing and shipping addresses in encrypted data for privacy
+      billingFirstName: input.billingFirstName,
+      billingLastName: input.billingLastName,
+      billingCompany: input.billingCompany,
+      billingAddress1: input.billingAddress1,
+      billingAddress2: input.billingAddress2,
+      billingCity: input.billingCity,
+      billingState: input.billingState,
+      billingZipCode: input.billingZipCode,
+      billingCountry: input.billingCountry,
+      billingPhone: input.billingPhone,
+      // Shipping address fields
+      shippingFirstName: input.shippingFirstName,
+      shippingLastName: input.shippingLastName,
+      shippingCompany: input.shippingCompany,
+      shippingAddress1: input.shippingAddress1,
+      shippingAddress2: input.shippingAddress2,
+      shippingCity: input.shippingCity,
+      shippingState: input.shippingState,
+      shippingZipCode: input.shippingZipCode,
+      shippingCountry: input.shippingCountry,
+      shippingPhone: input.shippingPhone
     };
 
     // Encrypt address data
@@ -68,8 +93,9 @@ export class UserProfileService {
     const userData = {
       walletAddress: input.walletAddress,
       handle: input.handle,
+      displayName: input.displayName, // Public display name
       profileCid: input.bioCid || null,
-      physicalAddress: encryptedAddressData,
+      physicalAddress: encryptedAddressData, // All encrypted private data
       createdAt: new Date()
     };
 
@@ -79,14 +105,49 @@ export class UserProfileService {
     const now = new Date();
     const createdAt = dbUser.createdAt || now;
 
+    // Decrypt address data to return in profile
+    let additionalData: any = {};
+    try {
+      if (dbUser.physicalAddress) {
+        additionalData = await decryptAddressData(dbUser.physicalAddress);
+      }
+    } catch (error) {
+      safeLogger.error('Error decrypting user additional data, defaulting to empty object:', error);
+    }
+
     // Create profile object
     const profile: UserProfile = {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
-      ens: '',
-      avatarCid: '',
+      displayName: dbUser.displayName || '', // Public display name
+      ens: additionalData.ens || '',
+      avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
+      email: additionalData.email,
+      physicalAddress: additionalData.physicalAddress,
+      // Billing Address (from decrypted data)
+      billingFirstName: additionalData.billingFirstName || '',
+      billingLastName: additionalData.billingLastName || '',
+      billingCompany: additionalData.billingCompany || '',
+      billingAddress1: additionalData.billingAddress1 || '',
+      billingAddress2: additionalData.billingAddress2 || '',
+      billingCity: additionalData.billingCity || '',
+      billingState: additionalData.billingState || '',
+      billingZipCode: additionalData.billingZipCode || '',
+      billingCountry: additionalData.billingCountry || '',
+      billingPhone: additionalData.billingPhone || '',
+      // Shipping Address (from decrypted data)
+      shippingFirstName: additionalData.shippingFirstName || '',
+      shippingLastName: additionalData.shippingLastName || '',
+      shippingCompany: additionalData.shippingCompany || '',
+      shippingAddress1: additionalData.shippingAddress1 || '',
+      shippingAddress2: additionalData.shippingAddress2 || '',
+      shippingCity: additionalData.shippingCity || '',
+      shippingState: additionalData.shippingState || '',
+      shippingZipCode: additionalData.shippingZipCode || '',
+      shippingCountry: additionalData.shippingCountry || '',
+      shippingPhone: additionalData.shippingPhone || '',
       createdAt,
       updatedAt: createdAt
     };
@@ -122,11 +183,34 @@ export class UserProfileService {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
+      displayName: dbUser.displayName || '', // Public display name
       ens: additionalData.ens || '',
       avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
+      // Billing Address
+      billingFirstName: dbUser.billingFirstName || '',
+      billingLastName: dbUser.billingLastName || '',
+      billingCompany: dbUser.billingCompany || '',
+      billingAddress1: dbUser.billingAddress1 || '',
+      billingAddress2: dbUser.billingAddress2 || '',
+      billingCity: dbUser.billingCity || '',
+      billingState: dbUser.billingState || '',
+      billingZipCode: dbUser.billingZipCode || '',
+      billingCountry: dbUser.billingCountry || '',
+      billingPhone: dbUser.billingPhone || '',
+      // Shipping Address
+      shippingFirstName: dbUser.shippingFirstName || '',
+      shippingLastName: dbUser.shippingLastName || '',
+      shippingCompany: dbUser.shippingCompany || '',
+      shippingAddress1: dbUser.shippingAddress1 || '',
+      shippingAddress2: dbUser.shippingAddress2 || '',
+      shippingCity: dbUser.shippingCity || '',
+      shippingState: dbUser.shippingState || '',
+      shippingZipCode: dbUser.shippingZipCode || '',
+      shippingCountry: dbUser.shippingCountry || '',
+      shippingPhone: dbUser.shippingPhone || '',
       createdAt,
       updatedAt
     };
@@ -163,11 +247,34 @@ export class UserProfileService {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
+      displayName: dbUser.displayName || '', // Public display name
       ens: additionalData.ens || '',
       avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
+      // Billing Address
+      billingFirstName: dbUser.billingFirstName || '',
+      billingLastName: dbUser.billingLastName || '',
+      billingCompany: dbUser.billingCompany || '',
+      billingAddress1: dbUser.billingAddress1 || '',
+      billingAddress2: dbUser.billingAddress2 || '',
+      billingCity: dbUser.billingCity || '',
+      billingState: dbUser.billingState || '',
+      billingZipCode: dbUser.billingZipCode || '',
+      billingCountry: dbUser.billingCountry || '',
+      billingPhone: dbUser.billingPhone || '',
+      // Shipping Address
+      shippingFirstName: dbUser.shippingFirstName || '',
+      shippingLastName: dbUser.shippingLastName || '',
+      shippingCompany: dbUser.shippingCompany || '',
+      shippingAddress1: dbUser.shippingAddress1 || '',
+      shippingAddress2: dbUser.shippingAddress2 || '',
+      shippingCity: dbUser.shippingCity || '',
+      shippingState: dbUser.shippingState || '',
+      shippingZipCode: dbUser.shippingZipCode || '',
+      shippingCountry: dbUser.shippingCountry || '',
+      shippingPhone: dbUser.shippingPhone || '',
       createdAt,
       updatedAt
     };
@@ -184,13 +291,50 @@ export class UserProfileService {
       return undefined;
     }
 
-    // Prepare updated address data
+    // Get existing decrypted data to preserve it
+    let existingAdditionalData: any = {};
+    try {
+      if (existingProfile.physicalAddress) {
+        existingAdditionalData = await decryptAddressData(existingProfile.physicalAddress);
+      }
+    } catch (error) {
+      safeLogger.error('Error decrypting existing user additional data:', error);
+    }
+
+    // Prepare updated address data (all private information)
     const addressData = {
-      physicalAddress: input.physicalAddress || existingProfile.physicalAddress,
-      email: (input as any).email || (existingProfile as any).email,
-      ens: input.ens || (existingProfile as any).ens,
-      avatarCid: input.avatarCid || existingProfile.avatarCid,
-      bioCid: input.bioCid || existingProfile.bioCid
+      physicalAddress: input.physicalAddress || existingAdditionalData.physicalAddress,
+      email: input.email || existingAdditionalData.email,
+      ens: input.ens || existingAdditionalData.ens,
+      avatarCid: input.avatarCid || existingAdditionalData.avatarCid,
+      bioCid: input.bioCid || existingProfile.bioCid,
+      preferences: existingAdditionalData.preferences,
+      privacySettings: existingAdditionalData.privacySettings,
+      // Preserve firstName and lastName in encrypted data
+      firstName: (input as any).firstName || existingAdditionalData.firstName,
+      lastName: (input as any).lastName || existingAdditionalData.lastName,
+      // Update billing and shipping addresses in encrypted data
+      billingFirstName: input.billingFirstName || existingAdditionalData.billingFirstName,
+      billingLastName: input.billingLastName || existingAdditionalData.billingLastName,
+      billingCompany: input.billingCompany || existingAdditionalData.billingCompany,
+      billingAddress1: input.billingAddress1 || existingAdditionalData.billingAddress1,
+      billingAddress2: input.billingAddress2 || existingAdditionalData.billingAddress2,
+      billingCity: input.billingCity || existingAdditionalData.billingCity,
+      billingState: input.billingState || existingAdditionalData.billingState,
+      billingZipCode: input.billingZipCode || existingAdditionalData.billingZipCode,
+      billingCountry: input.billingCountry || existingAdditionalData.billingCountry,
+      billingPhone: input.billingPhone || existingAdditionalData.billingPhone,
+      // Shipping address fields
+      shippingFirstName: input.shippingFirstName || existingAdditionalData.shippingFirstName,
+      shippingLastName: input.shippingLastName || existingAdditionalData.shippingLastName,
+      shippingCompany: input.shippingCompany || existingAdditionalData.shippingCompany,
+      shippingAddress1: input.shippingAddress1 || existingAdditionalData.shippingAddress1,
+      shippingAddress2: input.shippingAddress2 || existingAdditionalData.shippingAddress2,
+      shippingCity: input.shippingCity || existingAdditionalData.shippingCity,
+      shippingState: input.shippingState || existingAdditionalData.shippingState,
+      shippingZipCode: input.shippingZipCode || existingAdditionalData.shippingZipCode,
+      shippingCountry: input.shippingCountry || existingAdditionalData.shippingCountry,
+      shippingPhone: input.shippingPhone || existingAdditionalData.shippingPhone
     };
 
     // Encrypt updated address data
@@ -200,8 +344,9 @@ export class UserProfileService {
     await db.update(users)
       .set({ 
         handle: input.handle ?? existingProfile.handle,
+        displayName: input.displayName ?? existingProfile.displayName, // Public display name
         profileCid: input.bioCid ?? existingProfile.bioCid,
-        physicalAddress: encryptedAddressData,
+        physicalAddress: encryptedAddressData, // All encrypted private data
         updatedAt: new Date()
       })
       .where(eq(users.id, id));
