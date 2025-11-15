@@ -34,7 +34,7 @@ export default function Profile() {
   const targetUserAddress = typeof router.query.user === 'string' ? router.query.user : currentUserAddress;
   
   // Backend profile loading with error handling
-  const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, updateProfile: updateBackendProfile } = useProfile(targetUserAddress);
+  const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile } = useProfile(targetUserAddress);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
 
   // Wallet data

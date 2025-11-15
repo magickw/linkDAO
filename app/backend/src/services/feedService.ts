@@ -136,34 +136,13 @@ export class FeedService {
           console.log('📋 [BACKEND FEED] Using simple EQ filter for user posts');
         }
       } else {
-        console.log('⚠️ [BACKEND FEED] User not found in database, creating user...');
-        // User doesn't exist in database, but let's still try to show their posts
-        // Get or create user first
-        let userRecord = (await db.insert(users)
-          .values({
-            walletAddress: normalizedAddress,
-            createdAt: new Date()
-          })
-          .onConflictDoNothing()
-          .returning())[0];
-
-        // If onConflictDoNothing prevented insertion, we need to fetch the existing user
-        if (!userRecord) {
-          userRecord = (await db.select().from(users)
-            .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
-            .limit(1))[0];
-        }
-
-        // If user was created or already exists, show their posts
-        if (userRecord) {
-          followingFilter = eq(posts.authorId, userRecord.id);
-          quickPostFollowingFilter = eq(quickPosts.authorId, userRecord.id); // Use quickPosts.authorId
-        } else {
-          // Fallback - user doesn't exist, return empty result
-          // Fallback - show posts from all users
-          followingFilter = sql`1=1`;
-          quickPostFollowingFilter = sql`1=1`;
-        }
+        console.log('⚠️ [BACKEND FEED] User not found in database, but ensuring user sees their own posts...');
+        // Even if user is not found in database, ensure they see their own posts
+        // This can happen when user exists in posts but not in users table yet
+        // Try to find posts by the user's wallet address directly
+        followingFilter = sql`LOWER(${posts.walletAddress}) = LOWER(${normalizedAddress})`;
+        quickPostFollowingFilter = sql`LOWER(${quickPosts.walletAddress}) = LOWER(${normalizedAddress})`;
+        console.log('📋 [BACKEND FEED] Using wallet address filter for user posts');
       }
     } else if (feedSource === 'all' && userAddress) {
       // For 'all' feedSource but when user is authenticated, ensure they see their own posts
