@@ -604,74 +604,194 @@ export class WalletService {
    */
   async getTransactionHistory(address: Address, limit: number = 20): Promise<Transaction[]> {
     try {
-      // Get latest block number
-      const latestBlock = await this.publicClient.getBlockNumber();
+      // Map chain IDs to their explorer APIs
+      const explorerConfigs: Record<number, { baseUrl: string; apiKey?: string; nativeSymbol: string }> = {
+        1: { baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
+        8453: { baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
+        84532: { baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
+        137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY, nativeSymbol: 'MATIC' },
+        42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY, nativeSymbol: 'ETH' },
+        11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
+      };
+
+      const config = explorerConfigs[this.chainId];
+      if (!config) {
+        console.warn(`No explorer config for chain ${this.chainId}`);
+        return [];
+      }
+
       const transactions: Transaction[] = [];
 
-      // Scan recent blocks for transactions
-      const blocksToScan = Math.min(100, Number(latestBlock)); // Reduced block scan for better performance
-      const startBlock = latestBlock - BigInt(blocksToScan);
-
-      for (let i = 0; i < Math.min(10, blocksToScan); i++) {
+      // Try unified v2 endpoint first if API key is available
+      const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
+      if (unifiedKey && this.chainId !== 11155111) {
         try {
-          const blockNumber = latestBlock - BigInt(i);
-          // Get block without transactions first, then get individual transactions
-          const block = await this.publicClient.getBlock({
-            blockNumber,
-            includeTransactions: false
-          });
-
-          // For demo purposes, we'll create mock transaction data
-          // In a real implementation, you'd use a block explorer API or indexing service
-          if (i === 0) { // Only add one mock transaction to avoid rate limits
-            const mockTransaction: Transaction = {
-              id: `mock-tx-${Date.now()}`,
-              hash: `0x${Math.random().toString(16).slice(2).padStart(64, '0')}` as `0x${string}`,
-              type: Math.random() > 0.5 ? 'receive' : 'send',
-              amount: (Math.random() * 10).toFixed(4),
-              token: { symbol: this.chainId === 8453 || this.chainId === 84532 ? 'ETH' : 'ETH' },
-              valueUSD: (Math.random() * 1000).toFixed(2),
-              from: address,
-              to: `0x${Math.random().toString(16).slice(2).padStart(40, '0')}` as Address,
-              status: 'confirmed',
-              timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
-              blockNumber: Number(blockNumber),
-              gasUsed: '21000',
-              gasFee: '0.001'
-            };
-
-            transactions.push(mockTransaction);
+          // Fetch native token transactions
+          const nativeUrl = new URL('https://api.etherscan.io/v2/api');
+          nativeUrl.searchParams.set('chainid', String(this.chainId));
+          nativeUrl.searchParams.set('module', 'account');
+          nativeUrl.searchParams.set('action', 'txlist');
+          nativeUrl.searchParams.set('address', address);
+          nativeUrl.searchParams.set('sort', 'desc');
+          nativeUrl.searchParams.set('apikey', unifiedKey);
+          
+          const nativeResponse = await fetch(nativeUrl.toString());
+          const nativeData = await nativeResponse.json();
+          
+          // Fetch ERC-20 token transactions
+          const erc20Url = new URL('https://api.etherscan.io/v2/api');
+          erc20Url.searchParams.set('chainid', String(this.chainId));
+          erc20Url.searchParams.set('module', 'account');
+          erc20Url.searchParams.set('action', 'tokentx');
+          erc20Url.searchParams.set('address', address);
+          erc20Url.searchParams.set('sort', 'desc');
+          erc20Url.searchParams.set('apikey', unifiedKey);
+          
+          const erc20Response = await fetch(erc20Url.toString());
+          const erc20Data = await erc20Response.json();
+          
+          // Process native transactions
+          if (nativeData && nativeData.status === '1' && Array.isArray(nativeData.result)) {
+            for (const tx of nativeData.result.slice(0, limit)) {
+              const valueWei = BigInt(tx.value || '0');
+              const amount = Number(valueWei) / 1e18;
+              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
+              
+              transactions.push({
+                id: `${this.chainId}_${tx.hash}`,
+                hash: tx.hash,
+                type: isSend ? 'send' : 'receive',
+                amount: amount.toFixed(6),
+                token: { symbol: config.nativeSymbol },
+                valueUSD: '0', // Will be updated with real price data
+                from: tx.from,
+                to: tx.to || (isSend ? tx.to : address),
+                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
+                blockNumber: Number(tx.blockNumber),
+                gasUsed: tx.gasUsed,
+                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
+              });
+            }
           }
-
-          if (transactions.length >= limit) {
-            break;
+          
+          // Process ERC-20 transactions
+          if (erc20Data && erc20Data.status === '1' && Array.isArray(erc20Data.result)) {
+            for (const tx of erc20Data.result.slice(0, limit)) {
+              const decimals = Number(tx.tokenDecimal || 18);
+              const raw = tx.value || '0';
+              const amount = Number(raw) / Math.pow(10, decimals);
+              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
+              const symbol = (tx.tokenSymbol || '').toUpperCase();
+              
+              transactions.push({
+                id: `${this.chainId}_${tx.hash}_${tx.contractAddress}`,
+                hash: tx.hash,
+                type: isSend ? 'send' : 'receive',
+                amount: amount.toFixed(6),
+                token: { symbol },
+                valueUSD: '0', // Will be updated with real price data
+                from: tx.from,
+                to: tx.to || (isSend ? tx.to : address),
+                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
+                blockNumber: Number(tx.blockNumber),
+                gasUsed: tx.gasUsed,
+                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
+              });
+            }
           }
-        } catch (blockError) {
-          console.warn(`Failed to fetch block ${latestBlock - BigInt(i)}:`, blockError);
+        } catch (err) {
+          console.warn('Unified API transaction fetch failed:', err);
+        }
+      } else if (config.apiKey) {
+        // Fallback to per-chain API if unified key is not available
+        try {
+          // Fetch native token transactions
+          const nativeUrl = new URL(config.baseUrl);
+          nativeUrl.searchParams.set('module', 'account');
+          nativeUrl.searchParams.set('action', 'txlist');
+          nativeUrl.searchParams.set('address', address);
+          nativeUrl.searchParams.set('sort', 'desc');
+          nativeUrl.searchParams.set('apikey', config.apiKey);
+          
+          const nativeResponse = await fetch(nativeUrl.toString());
+          const nativeData = await nativeResponse.json();
+          
+          // Fetch ERC-20 token transactions
+          const erc20Url = new URL(config.baseUrl);
+          erc20Url.searchParams.set('module', 'account');
+          erc20Url.searchParams.set('action', 'tokentx');
+          erc20Url.searchParams.set('address', address);
+          erc20Url.searchParams.set('sort', 'desc');
+          erc20Url.searchParams.set('apikey', config.apiKey);
+          
+          const erc20Response = await fetch(erc20Url.toString());
+          const erc20Data = await erc20Response.json();
+          
+          // Process native transactions
+          if (nativeData && nativeData.status === '1' && Array.isArray(nativeData.result)) {
+            for (const tx of nativeData.result.slice(0, limit)) {
+              const valueWei = BigInt(tx.value || '0');
+              const amount = Number(valueWei) / 1e18;
+              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
+              
+              transactions.push({
+                id: `${this.chainId}_${tx.hash}`,
+                hash: tx.hash,
+                type: isSend ? 'send' : 'receive',
+                amount: amount.toFixed(6),
+                token: { symbol: config.nativeSymbol },
+                valueUSD: '0', // Will be updated with real price data
+                from: tx.from,
+                to: tx.to || (isSend ? tx.to : address),
+                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
+                blockNumber: Number(tx.blockNumber),
+                gasUsed: tx.gasUsed,
+                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
+              });
+            }
+          }
+          
+          // Process ERC-20 transactions
+          if (erc20Data && erc20Data.status === '1' && Array.isArray(erc20Data.result)) {
+            for (const tx of erc20Data.result.slice(0, limit)) {
+              const decimals = Number(tx.tokenDecimal || 18);
+              const raw = tx.value || '0';
+              const amount = Number(raw) / Math.pow(10, decimals);
+              const isSend = (tx.from || '').toLowerCase() === address.toLowerCase();
+              const symbol = (tx.tokenSymbol || '').toUpperCase();
+              
+              transactions.push({
+                id: `${this.chainId}_${tx.hash}_${tx.contractAddress}`,
+                hash: tx.hash,
+                type: isSend ? 'send' : 'receive',
+                amount: amount.toFixed(6),
+                token: { symbol },
+                valueUSD: '0', // Will be updated with real price data
+                from: tx.from,
+                to: tx.to || (isSend ? tx.to : address),
+                status: Number(tx.confirmations || 0) > 0 ? 'confirmed' : 'pending',
+                timestamp: new Date((Number(tx.timeStamp) || 0) * 1000).toISOString(),
+                blockNumber: Number(tx.blockNumber),
+                gasUsed: tx.gasUsed,
+                gasFee: tx.gasPrice ? (Number(tx.gasPrice) * Number(tx.gasUsed) / 1e18).toFixed(8) : '0'
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Explorer API transaction fetch failed:', err);
         }
       }
 
-      return transactions.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      // Sort transactions by timestamp (newest first) and limit to requested amount
+      return transactions
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, limit);
     } catch (error) {
       console.error('Error fetching transaction history:', error);
-      // Return mock transaction data as fallback
-      return [{
-        id: 'mock-fallback-tx',
-        hash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-        type: 'receive',
-        amount: '1.0',
-        token: { symbol: this.chainId === 8453 || this.chainId === 84532 ? 'ETH' : 'ETH' },
-        valueUSD: '2500.00',
-        from: '0x742d35Cc0000000000000000000000C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-        to: address,
-        status: 'confirmed',
-        timestamp: new Date().toISOString(),
-        blockNumber: 0,
-        gasUsed: '21000',
-        gasFee: '0.001'
-      }];
+      return [];
     }
   }
 

@@ -36,13 +36,15 @@ export default function SmartRightSidebar({
   const [prefillToken, setPrefillToken] = useState<string | null>(null);
   const [sendModalEstimate, setSendModalEstimate] = useState<any /* GasFeeEstimate */ | null>(null);
   
-  // Use real wallet data with live prices
+  // Use real wallet data with live prices and transaction history
   const {
     walletData,
     isLoading
   } = useWalletData({
     autoRefresh: true,
-    refreshInterval: 300000 // Refresh every 5 minutes
+    refreshInterval: 300000, // Refresh every 5 minutes
+    enableTransactionHistory: true,
+    maxTransactions: 10
   });
 
   const { addToast } = useToast();

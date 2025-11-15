@@ -114,18 +114,26 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] User is following:', followingIds.length, 'users');
 
         // Always include the user's own posts in the following feed
-        followingIds.push(userId);
+        // Only add if not already included to avoid duplicates
+        if (!followingIds.includes(userId)) {
+          followingIds.push(userId);
+        }
 
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
+        console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
 
         // Filter posts to show from followed users AND the user's own posts
+        // Use a more inclusive filter to ensure user's own posts are always shown
         if (followingIds.length > 0) {
-          followingFilter = inArray(posts.authorId, followingIds);
-          quickPostFollowingFilter = inArray(quickPosts.authorId, followingIds); // Use quickPosts.authorId
+          // Create a more explicit filter that ensures user's own posts are included
+          followingFilter = sql`(${inArray(posts.authorId, followingIds)}) OR (${posts.authorId} = ${userId})`;
+          quickPostFollowingFilter = sql`(${inArray(quickPosts.authorId, followingIds)}) OR (${quickPosts.authorId} = ${userId})`;
+          console.log('📋 [BACKEND FEED] Using inArray filter with explicit OR for user posts');
         } else {
           // If not following anyone, show only user's own posts
           followingFilter = eq(posts.authorId, userId);
-          quickPostFollowingFilter = eq(quickPosts.authorId, userId); // Use quickPosts.authorId
+          quickPostFollowingFilter = eq(quickPosts.authorId, userId);
+          console.log('📋 [BACKEND FEED] Using simple EQ filter for user posts');
         }
       } else {
         console.log('⚠️ [BACKEND FEED] User not found in database, creating user...');

@@ -185,7 +185,8 @@ export class UserProfileService {
         additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      safeLogger.error('Error decrypting user additional data, defaulting to empty object:', error);
+      safeLogger.warn('Error decrypting user additional data, defaulting to empty object:', error);
+      additionalData = {};
     }
 
     // Handle potential null dates by providing default values
@@ -244,7 +245,16 @@ export class UserProfileService {
       }
 
       // Decrypt address data
-      const decryptedData = await decryptAddressData(dbUser.physicalAddress);
+      let decryptedData: any = {};
+      try {
+        if (dbUser.physicalAddress) {
+          decryptedData = await decryptAddressData(dbUser.physicalAddress);
+        }
+      } catch (decryptError) {
+        safeLogger.warn('Failed to decrypt user address data, using empty object:', decryptError);
+        // Continue with empty decrypted data rather than failing completely
+        decryptedData = {};
+      }
 
       return {
         id: dbUser.id,
@@ -286,7 +296,7 @@ export class UserProfileService {
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
       };
     } catch (error) {
-      console.error('Error in getProfileByAddress:', error);
+      safeLogger.error('Error in getProfileByAddress:', error);
       // Return undefined instead of throwing to prevent crashes
       return undefined;
     }
