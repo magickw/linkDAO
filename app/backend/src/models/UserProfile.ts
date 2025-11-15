@@ -1,8 +1,8 @@
 export interface UserProfile {
   id: string;
   walletAddress: string;
-  handle?: string;
-  displayName?: string;
+  handle: string;        // Essential field with fallback
+  displayName: string;   // Essential field with fallback
   ens?: string;
   avatarCid?: string;
   bioCid?: string;

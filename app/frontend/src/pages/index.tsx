@@ -135,7 +135,7 @@ export default function Home() {
     }
 
     try {
-      const newPost = await createPost({ ...postData, author: address });
+      const newPost = await createPost({ ...postData, author: address.toLowerCase() });
       addToast('Post created successfully!', 'success');
       closeModal('postCreation');
       // Force feed refresh to show the new post

@@ -244,13 +244,13 @@ export class UserProfileService {
       }
 
       // Decrypt address data
-      const decryptedData = await dataEncryptionService.decryptAddressData(dbUser.physicalAddress);
+      const decryptedData = await encryptionService.decryptAddressData(dbUser.physicalAddress);
 
       return {
         id: dbUser.id,
         walletAddress: dbUser.walletAddress,
         handle: dbUser.handle || '',
-        displayName: dbUser.displayName || '',
+        displayName: dbUser.displayName || dbUser.handle || `User ${dbUser.walletAddress.substring(0, 8)}`, // Public display name - fallback to handle or wallet address
         profileCid: dbUser.profileCid || '',
         physicalAddress: decryptedData,
         role: dbUser.role || 'user',
@@ -352,9 +352,9 @@ export class UserProfileService {
     // Update in database
     await db.update(users)
       .set({ 
-        handle: input.handle ?? existingProfile.handle,
-        displayName: input.displayName ?? existingProfile.displayName, // Public display name
-        profileCid: input.bioCid ?? existingProfile.bioCid,
+        handle: input.handle !== undefined ? input.handle : existingProfile.handle,
+        displayName: input.displayName !== undefined ? input.displayName : existingProfile.displayName, // Public display name
+        profileCid: input.bioCid !== undefined ? input.bioCid : existingProfile.bioCid,
         physicalAddress: encryptedAddressData, // All encrypted private data
         updatedAt: new Date()
       })
