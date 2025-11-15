@@ -188,8 +188,8 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
     storeName: data?.storeName || profile?.storeName || '',
     bio: data?.bio || profile?.bio || '',
     description: data?.description || profile?.description || '',
-    coverImage: data?.coverImage || data?.coverImageUrl || profile?.coverImageUrl || profile?.coverImage || '',
-    logo: data?.logo || profile?.profilePicture || profile?.logo || '',
+    coverImage: data?.coverImage || profile?.coverImage || (profile as any)?.coverImageCdn || '',
+    logo: data?.logo || profile?.logo || profile?.profilePicture || (profile as any)?.profileImageCdn || '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -263,8 +263,8 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
         storeName: formData.storeName,
         bio: formData.bio,
         description: formData.description,
-        coverImageUrl: formData.coverImage,  // Map coverImage to coverImageUrl
-        // Note: Logo might need to be handled separately as profile picture
+        coverImageUrl: formData.coverImage,  // Map form's coverImage to API's coverImageUrl
+        // Note: Logo might need to be handled separately as profile picture in a separate field
       };
       
       await onComplete(profileData);
