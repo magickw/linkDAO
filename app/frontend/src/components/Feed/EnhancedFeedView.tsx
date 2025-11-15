@@ -184,9 +184,9 @@ const EnhancedFeedView = React.memo(({
       content: '', // Will be loaded from IPFS using contentCid
       author: feedPost.author,
       authorProfile: {
-        handle: feedPost.author.slice(0, 8),
+        handle: feedPost.handle || feedPost.author.slice(0, 8),
         verified: false,
-        avatar: undefined,
+        avatar: feedPost.profileCid || undefined,
         reputationTier: undefined
       },
       createdAt: feedPost.createdAt,

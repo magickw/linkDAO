@@ -55,6 +55,14 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     isBookmarked: false,
     contentType: detectContentType(backendPost),
     
+    // Add author profile information including avatar
+    authorProfile: {
+      handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
+      verified: false,
+      avatar: backendPost.profileCid || undefined,  // Use profileCid as avatar if available
+      reputationTier: undefined
+    },
+    
     // Flag to distinguish quickPosts from regular posts
     isQuickPost: true
   };

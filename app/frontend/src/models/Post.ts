@@ -60,6 +60,14 @@ export function convertBackendPostToPost(backendPost: any): Post {
     communityId: backendPost.dao || backendPost.communityId,
     contentType: detectContentType(backendPost),
     
+    // Add author profile information including avatar
+    authorProfile: {
+      handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
+      verified: false,
+      avatar: backendPost.profileCid || undefined,  // Use profileCid as avatar if available
+      reputationTier: undefined
+    },
+    
     // Flag to distinguish quickPosts from regular posts
     isQuickPost: !backendPost.title && !backendPost.dao && !backendPost.communityId
   };
