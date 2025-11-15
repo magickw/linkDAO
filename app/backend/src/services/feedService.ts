@@ -139,10 +139,10 @@ export class FeedService {
         console.log('⚠️ [BACKEND FEED] User not found in database, but ensuring user sees their own posts...');
         // Even if user is not found in database, ensure they see their own posts
         // This can happen when user exists in posts but not in users table yet
-        // Try to find posts by the user's wallet address directly
-        followingFilter = sql`LOWER(${posts.walletAddress}) = LOWER(${normalizedAddress})`;
-        quickPostFollowingFilter = sql`LOWER(${quickPosts.walletAddress}) = LOWER(${normalizedAddress})`;
-        console.log('📋 [BACKEND FEED] Using wallet address filter for user posts');
+        // Try to find posts by joining with users table to match wallet address
+        followingFilter = sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`;
+        quickPostFollowingFilter = sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`;
+        console.log('📋 [BACKEND FEED] Using wallet address filter for user posts via users table join');
       }
     } else if (feedSource === 'all' && userAddress) {
       // For 'all' feedSource but when user is authenticated, ensure they see their own posts
@@ -362,22 +362,7 @@ export class FeedService {
         }
       };
 
-      console.log('📊 [BACKEND FEED] Returning posts:', {
-        postsCount: postsWithMetrics.length,
-        totalInDB: totalCount[0]?.count || 0,
-        page,
-        limit
-      });
-
-      return {
-        posts: postsWithMetrics,
-        pagination: {
-          page,
-          limit,
-          total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
-        }
-      };
+      
     } catch (error) {
       safeLogger.error('Error getting enhanced feed:', error);
       throw new Error('Failed to retrieve feed');

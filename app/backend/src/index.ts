@@ -406,8 +406,6 @@ app.use('/marketplace/reputation', reputationRoutes);
 // Add API reputation routes for frontend compatibility
 app.use('/api/reputation', reputationRoutes);
 
-// Quick post routes already imported above
-
 // Register routes with enhanced error handling
 app.use('/api/posts', postRoutes);
 app.use('/api/quick-posts', quickPostRoutes);
@@ -531,8 +529,6 @@ app.use(compatChatRoutes);
 
 // Import and use missing endpoints for better fallbacks
 import missingEndpoints from './routes/missingEndpoints';
-app.use('/api', missingEndpoints);
-app.use('/', missingEndpoints);
 
 // Reputation routes already imported above
 
@@ -958,6 +954,10 @@ app.use(notFoundHandler);
 app.get('/cart', (req, res) => {
   res.redirect(301, '/api/cart');
 });
+
+// Use missing endpoints for better fallbacks (after all specific routes, before error handlers)
+app.use('/api', missingEndpoints);
+app.use('/', missingEndpoints);
 
 // Catch all API routes (should be just before error handlers)
 app.use('/api/*', (req, res) => {

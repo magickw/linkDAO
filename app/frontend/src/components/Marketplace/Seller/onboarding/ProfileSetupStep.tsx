@@ -188,8 +188,8 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
     storeName: data?.storeName || profile?.storeName || '',
     bio: data?.bio || profile?.bio || '',
     description: data?.description || profile?.description || '',
-    coverImage: data?.coverImage || data?.profilePicture || profile?.profilePicture || profile?.coverImage || '',
-    logo: data?.logo || profile?.logo || '',
+    coverImage: data?.coverImage || data?.coverImageUrl || profile?.coverImageUrl || profile?.coverImage || '',
+    logo: data?.logo || profile?.profilePicture || profile?.logo || '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -257,7 +257,17 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
     setSubmitError(null);
     
     try {
-      await onComplete(formData);
+      // Map form data to the expected API structure
+      const profileData = {
+        displayName: formData.displayName,
+        storeName: formData.storeName,
+        bio: formData.bio,
+        description: formData.description,
+        coverImageUrl: formData.coverImage,  // Map coverImage to coverImageUrl
+        // Note: Logo might need to be handled separately as profile picture
+      };
+      
+      await onComplete(profileData);
       addToast('Profile saved successfully!', 'success');
     } catch (error) {
       console.error('Failed to save profile:', error);
