@@ -408,6 +408,9 @@ export default function Profile() {
             // Update the backend profile
             await updateBackendProfile(updateData);
             
+            // Refresh the backend profile to ensure the changes are reflected
+            await refetch();
+            
             addToast('Avatar saved to profile!', 'success');
           } catch (saveError) {
             console.error('Failed to save avatar to backend:', saveError);
