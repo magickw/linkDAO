@@ -99,7 +99,22 @@ export class UserProfileService {
       createdAt: new Date()
     };
 
-    const [dbUser] = await db.insert(users).values(userData).returning();
+    // Use onConflictDoUpdate to prevent duplicates and handle race conditions
+    // This ensures that if a user is created by another request simultaneously,
+    // we update the existing record instead of creating a duplicate
+    const [dbUser] = await db.insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.walletAddress,
+        set: {
+          handle: userData.handle,
+          displayName: userData.displayName,
+          profileCid: userData.profileCid,
+          physicalAddress: userData.physicalAddress,
+          updatedAt: new Date()
+        }
+      })
+      .returning();
 
     // Handle potential null dates by providing default values
     const now = new Date();

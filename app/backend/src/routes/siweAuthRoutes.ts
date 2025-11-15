@@ -101,7 +101,7 @@ router.post(
 
       const walletAddress = verificationResult.address!.toLowerCase();
 
-      // Find or create user
+      // Find or create user - using onConflictDoNothing to prevent race conditions
       let user = await db
         .select()
         .from(users)
@@ -109,16 +109,27 @@ router.post(
         .limit(1);
 
       if (user.length === 0) {
-        // Create new user
+        // Try to create new user with conflict handling
         const newUser = await db
           .insert(users)
           .values({
             walletAddress,
             createdAt: new Date()
           })
+          .onConflictDoNothing()
           .returning();
 
-        user = newUser;
+        // If onConflictDoNothing prevented insertion (another request created it),
+        // fetch the existing user
+        if (newUser.length === 0) {
+          user = await db
+            .select()
+            .from(users)
+            .where(eq(users.walletAddress, walletAddress))
+            .limit(1);
+        } else {
+          user = newUser;
+        }
       }
 
       const userData = user[0];

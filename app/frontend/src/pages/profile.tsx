@@ -9,7 +9,7 @@ import { useFollowCount } from '@/hooks/useFollow';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/context/ToastContext';
 import { countries } from '@/utils/countries';
-import { UpdateUserProfileInput } from '@/models/UserProfile';
+import { UpdateUserProfileInput, CreateUserProfileInput } from '@/models/UserProfile';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
 import TipBar from '@/components/TipBar';
@@ -21,6 +21,8 @@ import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
 import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
+import { ProfileService } from '@/services/profileService';
+
 
 export default function Profile() {
   const router = useRouter();
@@ -600,8 +602,66 @@ export default function Profile() {
 
       // Save addresses to backend database
       if (backendProfile) {
+        // If shipping address is same as billing, copy the billing address to shipping
+        let shippingData = {
+          shippingFirstName: addresses.shipping.firstName,
+          shippingLastName: addresses.shipping.lastName,
+          shippingCompany: addresses.shipping.company,
+          shippingAddress1: addresses.shipping.address1,
+          shippingAddress2: addresses.shipping.address2,
+          shippingCity: addresses.shipping.city,
+          shippingState: addresses.shipping.state,
+          shippingZipCode: addresses.shipping.zipCode,
+          shippingCountry: addresses.shipping.country,
+          shippingPhone: addresses.shipping.phone,
+        };
+
+        // If same as billing is checked, copy billing address to shipping
+        if (addresses.shipping.sameAsBilling) {
+          shippingData = {
+            shippingFirstName: addresses.billing.firstName,
+            shippingLastName: addresses.billing.lastName,
+            shippingCompany: addresses.billing.company,
+            shippingAddress1: addresses.billing.address1,
+            shippingAddress2: addresses.billing.address2,
+            shippingCity: addresses.billing.city,
+            shippingState: addresses.billing.state,
+            shippingZipCode: addresses.billing.zipCode,
+            shippingCountry: addresses.billing.country,
+            shippingPhone: addresses.billing.phone,
+          };
+        }
+
         // Update existing profile with address information
         const updateData: UpdateUserProfileInput = {
+          // Billing Address
+          billingFirstName: addresses.billing.firstName,
+          billingLastName: addresses.billing.lastName,
+          billingCompany: addresses.billing.company,
+          billingAddress1: addresses.billing.address1,
+          billingAddress2: addresses.billing.address2,
+          billingCity: addresses.billing.city,
+          billingState: addresses.billing.state,
+          billingZipCode: addresses.billing.zipCode,
+          billingCountry: addresses.billing.country,
+          billingPhone: addresses.billing.phone,
+          // Shipping Address
+          ...shippingData,
+          shippingSameAsBilling: addresses.shipping.sameAsBilling,
+        };
+
+        await updateBackendProfile(updateData);
+        setIsEditing(false);
+        addToast('Profile updated successfully', 'success');
+      } else {
+        // If no backend profile exists, create one
+        const createData: CreateUserProfileInput = {
+          walletAddress: currentUserAddress,
+          handle: profile.handle,
+          displayName: profile.displayName,
+          ens: profile.ens,
+          avatarCid: profile.avatar,
+          bioCid: profile.bio,
           // Billing Address
           billingFirstName: addresses.billing.firstName,
           billingLastName: addresses.billing.lastName,
@@ -624,15 +684,39 @@ export default function Profile() {
           shippingZipCode: addresses.shipping.zipCode,
           shippingCountry: addresses.shipping.country,
           shippingPhone: addresses.shipping.phone,
+          shippingSameAsBilling: addresses.shipping.sameAsBilling,
         };
 
-        await updateBackendProfile(updateData);
+        // Create profile
+        await ProfileService.createProfile(createData);
         setIsEditing(false);
-        addToast('Profile updated successfully', 'success');
+        addToast('Profile created successfully', 'success');
+        
+        // Refresh the page to load the new profile
+        router.reload();
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      addToast(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      let errorMessage = 'Failed to update profile';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        if ('message' in error && typeof (error as any).message === 'string') {
+          errorMessage = (error as any).message;
+        } else if ('error' in error && typeof (error as any).error === 'string') {
+          errorMessage = (error as any).error;
+        } else {
+          errorMessage = JSON.stringify(error);
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      addToast(errorMessage, 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
     } finally {
       setIsUpdating(false);
     }
