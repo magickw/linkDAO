@@ -189,7 +189,11 @@ router.get('/status', async (req, res) => {
     let userEmail = null;
     let userPermissions = [];
     
-    if (decoded.userId) {
+    // Check for userId first, then walletAddress
+    const userId = decoded.userId || decoded.id;
+    const walletAddress = decoded.walletAddress || decoded.address;
+    
+    if (userId || walletAddress) {
       try {
         const { drizzle } = require('drizzle-orm/postgres-js');
         const postgres = require('postgres');
@@ -200,11 +204,21 @@ router.get('/status', async (req, res) => {
         const sql = postgres(connectionString, { ssl: 'require' });
         const db = drizzle(sql);
         
-        const userResult = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, decoded.userId))
-          .limit(1);
+        // Query by userId first if available, otherwise by walletAddress
+        let userResult = [];
+        if (userId) {
+          userResult = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+        } else if (walletAddress) {
+          userResult = await db
+            .select()
+            .from(users)
+            .where(eq(users.walletAddress, walletAddress))
+            .limit(1);
+        }
           
         if (userResult.length > 0) {
           userRole = userResult[0].role || 'user';
@@ -220,8 +234,8 @@ router.get('/status', async (req, res) => {
       success: true,
       data: {
         authenticated: true,
-        walletAddress: decoded.walletAddress || decoded.address,
-        sessionId: decoded.userId || decoded.id,
+        walletAddress: walletAddress,
+        sessionId: userId,
         expiresAt: new Date(decoded.exp * 1000),
         role: userRole,
         email: userEmail,

@@ -51,8 +51,8 @@ BEGIN
 
         -- Update all votes to point to the kept user
         UPDATE votes
-        SET user_id = keep_user_id
-        WHERE user_id = ANY(delete_user_ids);
+        SET voter_id = keep_user_id
+        WHERE voter_id = ANY(delete_user_ids);
 
         -- Update all follows where the duplicate is the follower
         UPDATE follows
