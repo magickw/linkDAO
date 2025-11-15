@@ -88,6 +88,7 @@ export class FeedService {
 
     // Build following filter if feedSource is 'following'
     let followingFilter = sql`1=1`;
+    let quickPostFollowingFilter = sql`1=1`; // Separate filter for quick posts
     if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
       const normalizedAddress = userAddress.toLowerCase();
@@ -120,9 +121,11 @@ export class FeedService {
         // Filter posts to show from followed users AND the user's own posts
         if (followingIds.length > 0) {
           followingFilter = inArray(posts.authorId, followingIds);
+          quickPostFollowingFilter = inArray(quickPosts.authorId, followingIds); // Use quickPosts.authorId
         } else {
           // If not following anyone, show only user's own posts
           followingFilter = eq(posts.authorId, userId);
+          quickPostFollowingFilter = eq(quickPosts.authorId, userId); // Use quickPosts.authorId
         }
       } else {
         console.log('⚠️ [BACKEND FEED] User not found in database, creating user...');
@@ -135,21 +138,23 @@ export class FeedService {
           })
           .onConflictDoNothing()
           .returning())[0];
-        
+
         // If onConflictDoNothing prevented insertion, we need to fetch the existing user
         if (!userRecord) {
           userRecord = (await db.select().from(users)
             .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
             .limit(1))[0];
         }
-        
+
         // If user was created or already exists, show their posts
         if (userRecord) {
           followingFilter = eq(posts.authorId, userRecord.id);
+          quickPostFollowingFilter = eq(quickPosts.authorId, userRecord.id); // Use quickPosts.authorId
         } else {
           // Fallback - user doesn't exist, return empty result
           // Fallback - show posts from all users
           followingFilter = sql`1=1`;
+          quickPostFollowingFilter = sql`1=1`;
         }
       }
     } else if (feedSource === 'all' && userAddress) {
@@ -166,6 +171,7 @@ export class FeedService {
         // Modify the followingFilter to include user's own posts in addition to all posts
         // This ensures the user sees their own content even in 'all' feed
         followingFilter = sql`(${followingFilter}) OR ${posts.authorId} = ${userId}`;
+        quickPostFollowingFilter = sql`(${quickPostFollowingFilter}) OR ${quickPosts.authorId} = ${userId}`; // Use quickPosts.authorId
       } else {
         // If user doesn't exist in DB, create them so their future posts can be found
         await db.insert(users)
@@ -239,7 +245,7 @@ export class FeedService {
         .leftJoin(users, eq(quickPosts.authorId, users.id))
         .where(and(
           timeFilter,
-          followingFilter,
+          quickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only show top-level posts, not comments
         ));
@@ -343,7 +349,7 @@ export class FeedService {
         .from(quickPosts)
         .where(and(
           timeFilter,
-          followingFilter,
+          quickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only count top-level posts
         ));

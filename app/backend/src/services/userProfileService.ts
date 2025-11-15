@@ -219,67 +219,61 @@ export class UserProfileService {
   }
 
   async getProfileByAddress(address: string): Promise<UserProfile | undefined> {
-    const db = databaseService.getDatabase();
-    const normalizedAddress = address.toLowerCase();
-    const [dbUser] = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-    
-    if (!dbUser) {
+    try {
+      const db = databaseService.getDatabase();
+      const normalizedAddress = address.toLowerCase();
+      const [dbUser] = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      
+      if (!dbUser) {
+        return undefined;
+      }
+
+      // Decrypt address data
+      const decryptedData = await dataEncryptionService.decryptAddressData(dbUser.physicalAddress);
+
+      return {
+        id: dbUser.id,
+        walletAddress: dbUser.walletAddress,
+        handle: dbUser.handle || '',
+        displayName: dbUser.displayName || '',
+        profileCid: dbUser.profileCid || '',
+        physicalAddress: decryptedData,
+        role: dbUser.role || 'user',
+        email: dbUser.email || '',
+        emailVerified: dbUser.emailVerified || false,
+        permissions: dbUser.permissions || [],
+        lastLogin: dbUser.lastLogin ? new Date(dbUser.lastLogin) : undefined,
+        loginAttempts: dbUser.loginAttempts || 0,
+        lockedUntil: dbUser.lockedUntil ? new Date(dbUser.lockedUntil) : undefined,
+        billingFirstName: dbUser.billingFirstName || '',
+        billingLastName: dbUser.billingLastName || '',
+        billingCompany: dbUser.billingCompany || '',
+        billingAddress1: dbUser.billingAddress1 || '',
+        billingAddress2: dbUser.billingAddress2 || '',
+        billingCity: dbUser.billingCity || '',
+        billingState: dbUser.billingState || '',
+        billingZipCode: dbUser.billingZipCode || '',
+        billingCountry: dbUser.billingCountry || '',
+        billingPhone: dbUser.billingPhone || '',
+        shippingFirstName: dbUser.shippingFirstName || '',
+        shippingLastName: dbUser.shippingLastName || '',
+        shippingCompany: dbUser.shippingCompany || '',
+        shippingAddress1: dbUser.shippingAddress1 || '',
+        shippingAddress2: dbUser.shippingAddress2 || '',
+        shippingCity: dbUser.shippingCity || '',
+        shippingState: dbUser.shippingState || '',
+        shippingZipCode: dbUser.shippingZipCode || '',
+        shippingCountry: dbUser.shippingCountry || '',
+        shippingPhone: dbUser.shippingPhone || '',
+        shippingSameAsBilling: dbUser.shippingSameAsBilling ?? true,
+        createdAt: dbUser.createdAt ? new Date(dbUser.createdAt) : new Date(),
+        updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
+      };
+    } catch (error) {
+      console.error('Error in getProfileByAddress:', error);
+      // Return undefined instead of throwing to prevent crashes
       return undefined;
     }
-
-    // Decrypt address data
-    let additionalData: any = {};
-    try {
-      if (dbUser.physicalAddress) {
-        additionalData = await decryptAddressData(dbUser.physicalAddress);
-      }
-    } catch (error) {
-      safeLogger.error('Error decrypting user additional data, defaulting to empty object:', error);
-    }
-
-    // Handle potential null dates by providing default values
-    const now = new Date();
-    const createdAt = dbUser.createdAt || now;
-    const updatedAt = dbUser.updatedAt || now;
-
-    // Create profile object with decrypted data
-    const profile: UserProfile = {
-      id: dbUser.id,
-      walletAddress: dbUser.walletAddress,
-      handle: dbUser.handle || '',
-      displayName: dbUser.displayName || '', // Public display name
-      ens: additionalData.ens || '',
-      avatarCid: additionalData.avatarCid || '',
-      bioCid: dbUser.profileCid || '',
-      email: additionalData.email,
-      physicalAddress: additionalData.physicalAddress,
-      // Billing Address
-      billingFirstName: dbUser.billingFirstName || '',
-      billingLastName: dbUser.billingLastName || '',
-      billingCompany: dbUser.billingCompany || '',
-      billingAddress1: dbUser.billingAddress1 || '',
-      billingAddress2: dbUser.billingAddress2 || '',
-      billingCity: dbUser.billingCity || '',
-      billingState: dbUser.billingState || '',
-      billingZipCode: dbUser.billingZipCode || '',
-      billingCountry: dbUser.billingCountry || '',
-      billingPhone: dbUser.billingPhone || '',
-      // Shipping Address
-      shippingFirstName: dbUser.shippingFirstName || '',
-      shippingLastName: dbUser.shippingLastName || '',
-      shippingCompany: dbUser.shippingCompany || '',
-      shippingAddress1: dbUser.shippingAddress1 || '',
-      shippingAddress2: dbUser.shippingAddress2 || '',
-      shippingCity: dbUser.shippingCity || '',
-      shippingState: dbUser.shippingState || '',
-      shippingZipCode: dbUser.shippingZipCode || '',
-      shippingCountry: dbUser.shippingCountry || '',
-      shippingPhone: dbUser.shippingPhone || '',
-      createdAt,
-      updatedAt
-    };
-
-    return profile;
   }
 
   async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {

@@ -6,12 +6,17 @@ import { sanitizeWalletAddress } from '../utils/inputSanitization';
 const followService = new FollowService();
 
 export class FollowController {
-  async follow(req: Request, res: Response): Promise<Response> {
+  async follow(req: Request, res: Response): Promise<void> {
     try {
       const { follower, following } = req.body;
       
       if (!follower || !following) {
-        throw new ValidationError('Both follower and following addresses are required');
+        res.status(400).json({ 
+          error: 'VALIDATION_ERROR',
+          message: 'Both follower and following addresses are required',
+          timestamp: new Date().toISOString()
+        });
+        return;
       }
       
       // Validate and sanitize wallet addresses
@@ -19,30 +24,46 @@ export class FollowController {
       const sanitizedFollowing = sanitizeWalletAddress(following);
       
       if (sanitizedFollower === sanitizedFollowing) {
-        throw new ValidationError('Cannot follow yourself');
+        res.status(400).json({ 
+          error: 'VALIDATION_ERROR',
+          message: 'Cannot follow yourself',
+          timestamp: new Date().toISOString()
+        });
+        return;
       }
       
       const result = await followService.follow(sanitizedFollower, sanitizedFollowing);
       
       if (result) {
-        return res.status(201).json({ message: 'Successfully followed' });
+        res.status(201).json({ message: 'Successfully followed' });
       } else {
-        throw new ValidationError('Already following this user');
+        res.status(400).json({ 
+          error: 'VALIDATION_ERROR',
+          message: 'Already following this user',
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'FOLLOW_ERROR');
+      console.error('Error in follow:', error);
+      res.status(500).json({ 
+        error: 'FOLLOW_ERROR',
+        message: error.message || 'Failed to follow user',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
-  async unfollow(req: Request, res: Response): Promise<Response> {
+  async unfollow(req: Request, res: Response): Promise<void> {
     try {
       const { follower, following } = req.body;
       
       if (!follower || !following) {
-        throw new ValidationError('Both follower and following addresses are required');
+        res.status(400).json({ 
+          error: 'VALIDATION_ERROR',
+          message: 'Both follower and following addresses are required',
+          timestamp: new Date().toISOString()
+        });
+        return;
       }
       
       // Validate and sanitize wallet addresses
@@ -52,60 +73,86 @@ export class FollowController {
       const result = await followService.unfollow(sanitizedFollower, sanitizedFollowing);
       
       if (result) {
-        return res.json({ message: 'Successfully unfollowed' });
+        res.json({ message: 'Successfully unffollowed' });
       } else {
-        throw new ValidationError('Not following this user');
+        res.status(400).json({ 
+          error: 'VALIDATION_ERROR',
+          message: 'Not following this user',
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'UNFOLLOW_ERROR');
+      console.error('Error in unfollow:', error);
+      res.status(500).json({ 
+        error: 'UNFOLLOW_ERROR',
+        message: error.message || 'Failed to unfollow user',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
-  async getFollowers(req: Request, res: Response): Promise<Response> {
+  async getFollowers(req: Request, res: Response): Promise<void> {
     try {
       const { address } = req.params;
       const sanitizedAddress = sanitizeWalletAddress(address);
       const followers = await followService.getFollowers(sanitizedAddress);
-      return res.json(followers);
+      res.json(followers);
     } catch (error: any) {
-      throw new AppError(error.message, 500, 'FOLLOWERS_ERROR');
+      console.error('Error in getFollowers:', error);
+      res.status(500).json({ 
+        error: 'FOLLOWERS_ERROR',
+        message: error.message || 'Failed to get followers',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
-  async getFollowing(req: Request, res: Response): Promise<Response> {
+  async getFollowing(req: Request, res: Response): Promise<void> {
     try {
       const { address } = req.params;
       const sanitizedAddress = sanitizeWalletAddress(address);
       const following = await followService.getFollowing(sanitizedAddress);
-      return res.json(following);
+      res.json(following);
     } catch (error: any) {
-      throw new AppError(error.message, 500, 'FOLLOWING_ERROR');
+      console.error('Error in getFollowing:', error);
+      res.status(500).json({ 
+        error: 'FOLLOWING_ERROR',
+        message: error.message || 'Failed to get following',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
-  async isFollowing(req: Request, res: Response): Promise<Response> {
+  async isFollowing(req: Request, res: Response): Promise<void> {
     try {
       const { follower, following } = req.params;
       const sanitizedFollower = sanitizeWalletAddress(follower);
       const sanitizedFollowing = sanitizeWalletAddress(following);
       const isFollowing = await followService.isFollowing(sanitizedFollower, sanitizedFollowing);
-      return res.json({ isFollowing });
+      res.json({ isFollowing });
     } catch (error: any) {
-      throw new AppError(error.message, 500, 'IS_FOLLOWING_ERROR');
+      console.error('Error in isFollowing:', error);
+      res.status(500).json({ 
+        error: 'IS_FOLLOWING_ERROR',
+        message: error.message || 'Failed to check following status',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
-  async getFollowCount(req: Request, res: Response): Promise<Response> {
+  async getFollowCount(req: Request, res: Response): Promise<void> {
     try {
       const { address } = req.params;
       const sanitizedAddress = sanitizeWalletAddress(address);
       const count = await followService.getFollowCount(sanitizedAddress);
-      return res.json(count);
+      res.json(count);
     } catch (error: any) {
-      throw new AppError(error.message, 500, 'FOLLOW_COUNT_ERROR');
+      console.error('Error in getFollowCount:', error);
+      res.status(500).json({ 
+        error: 'FOLLOW_COUNT_ERROR',
+        message: error.message || 'Failed to get follow count',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 }

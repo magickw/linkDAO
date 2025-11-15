@@ -340,7 +340,8 @@ export class DatabaseService {
       return await this.db.select().from(schema.follows).where(eq(schema.follows.followingId, userId));
     } catch (error) {
       safeLogger.error("Error getting followers:", error);
-      throw error;
+      // Return empty array instead of throwing to prevent crashes
+      return [];
     }
   }
 
@@ -349,7 +350,8 @@ export class DatabaseService {
       return await this.db.select().from(schema.follows).where(eq(schema.follows.followerId, userId));
     } catch (error) {
       safeLogger.error("Error getting following:", error);
-      throw error;
+      // Return empty array instead of throwing to prevent crashes
+      return [];
     }
   }
 

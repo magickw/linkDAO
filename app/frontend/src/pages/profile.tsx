@@ -637,37 +637,6 @@ export default function Profile() {
       setIsUpdating(false);
     }
   };
-          billingState: addresses.billing.state,
-          billingZipCode: addresses.billing.zipCode,
-          billingCountry: addresses.billing.country,
-          billingPhone: addresses.billing.phone,
-          // Shipping Address - use billing address if sameAsBilling is true
-          shippingFirstName: addresses.shipping.sameAsBilling ? addresses.billing.firstName : addresses.shipping.firstName,
-          shippingLastName: addresses.shipping.sameAsBilling ? addresses.billing.lastName : addresses.shipping.lastName,
-          shippingCompany: addresses.shipping.sameAsBilling ? addresses.billing.company : addresses.shipping.company,
-          shippingAddress1: addresses.shipping.sameAsBilling ? addresses.billing.address1 : addresses.shipping.address1,
-          shippingAddress2: addresses.shipping.sameAsBilling ? addresses.billing.address2 : addresses.shipping.address2,
-          shippingCity: addresses.shipping.sameAsBilling ? addresses.billing.city : addresses.shipping.city,
-          shippingState: addresses.shipping.sameAsBilling ? addresses.billing.state : addresses.shipping.state,
-          shippingZipCode: addresses.shipping.sameAsBilling ? addresses.billing.zipCode : addresses.shipping.zipCode,
-          shippingCountry: addresses.shipping.sameAsBilling ? addresses.billing.country : addresses.shipping.country,
-          shippingPhone: addresses.shipping.sameAsBilling ? addresses.billing.phone : addresses.shipping.phone,
-        };
-
-        await updateBackendProfile(updateData);
-        addToast('Addresses saved successfully!', 'success');
-      } else {
-        addToast('Please create a profile first before saving addresses.', 'error');
-      }
-    } catch (error) {
-      console.error('Error saving addresses:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save addresses. Please try again.';
-      setUpdateError(errorMessage);
-      addToast(errorMessage, 'error');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   if (!isConnected) {
     return (

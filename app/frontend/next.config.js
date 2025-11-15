@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  
+
+  // Set the correct output file tracing root
+  outputFileTracingRoot: require('path').join(__dirname),
+
   // Disable ESLint during build
   eslint: {
     ignoreDuringBuilds: true,
