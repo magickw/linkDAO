@@ -73,11 +73,11 @@ export interface EnhancedPost {
   moderationStatus?: string;
   moderationWarning?: string;
   riskScore?: string;
-  reactionCount?: string;
-  tipCount?: string;
-  totalTipAmount?: string;
-  commentCount?: string;
-  viewCount?: string;
+  reactionCount?: number;
+  tipCount?: number;
+  totalTipAmount?: number;
+  commentCount?: number;
+  viewCount?: number;
   
   // Flag to distinguish quickPosts from regular posts
   isQuickPost?: boolean;
