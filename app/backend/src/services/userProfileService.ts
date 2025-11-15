@@ -94,7 +94,7 @@ export class UserProfileService {
       walletAddress: input.walletAddress,
       handle: input.handle,
       displayName: input.displayName, // Public display name
-      profileCid: input.bioCid || null,
+      profileCid: input.avatarCid || null, // Store avatar in profileCid for public access
       physicalAddress: encryptedAddressData, // All encrypted private data
       createdAt: new Date()
     };
@@ -137,8 +137,8 @@ export class UserProfileService {
       handle: dbUser.handle || '',
       displayName: dbUser.displayName || '', // Public display name
       ens: additionalData.ens || '',
-      avatarCid: additionalData.avatarCid || '',
-      bioCid: dbUser.profileCid || '',
+      avatarCid: dbUser.profileCid || '', // Avatar is stored directly in profileCid for public access
+      bioCid: additionalData.bioCid || '', // Bio is stored in encrypted data
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
       // Billing Address (from decrypted data)
@@ -261,7 +261,8 @@ export class UserProfileService {
         walletAddress: dbUser.walletAddress,
         handle: dbUser.handle || '',
         displayName: dbUser.displayName || dbUser.handle || `User ${dbUser.walletAddress.substring(0, 8)}`, // Public display name - fallback to handle or wallet address
-        profileCid: dbUser.profileCid || '',
+        avatarCid: dbUser.profileCid || '', // Avatar is stored directly in profileCid for public access
+        bioCid: decryptedData.bioCid || '', // Bio is stored in encrypted data
         physicalAddress: decryptedData,
         role: dbUser.role || 'user',
         email: decryptedData.email || '',
@@ -326,8 +327,8 @@ export class UserProfileService {
       physicalAddress: input.physicalAddress || existingAdditionalData.physicalAddress,
       email: input.email || existingAdditionalData.email,
       ens: input.ens || existingAdditionalData.ens,
-      avatarCid: input.avatarCid || existingAdditionalData.avatarCid,
-      bioCid: input.bioCid || existingProfile.bioCid,
+      avatarCid: input.avatarCid || existingAdditionalData.avatarCid, // This is still stored encrypted for consistency but we'll also store in profileCid
+      bioCid: input.bioCid || existingAdditionalData.bioCid, // Bio is stored encrypted
       preferences: existingAdditionalData.preferences,
       privacySettings: existingAdditionalData.privacySettings,
       // Preserve firstName and lastName in encrypted data
@@ -360,12 +361,12 @@ export class UserProfileService {
     // Encrypt updated address data
     const encryptedAddressData = await encryptAddressData(addressData);
 
-    // Update in database
+    // Update in database - store avatar in profileCid for public access
     await db.update(users)
       .set({ 
         handle: input.handle !== undefined ? input.handle : existingProfile.handle,
         displayName: input.displayName !== undefined ? input.displayName : existingProfile.displayName, // Public display name
-        profileCid: input.bioCid !== undefined ? input.bioCid : existingProfile.bioCid,
+        profileCid: input.avatarCid !== undefined ? input.avatarCid : existingProfile.avatarCid, // Store avatar in profileCid for public access
         physicalAddress: encryptedAddressData, // All encrypted private data
         updatedAt: new Date()
       })
