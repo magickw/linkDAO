@@ -266,6 +266,41 @@ export class DatabaseService {
     }
   }
 
+  async getAllPosts() {
+    try {
+      const result = await this.db
+        .select({
+          id: schema.posts.id,
+          authorId: schema.posts.authorId,
+          title: schema.posts.title,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          stakedValue: schema.posts.stakedValue,
+          reputationScore: schema.posts.reputationScore,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          pollId: schema.posts.pollId,
+          isTokenGated: schema.posts.isTokenGated,
+          gatedContentPreview: schema.posts.gatedContentPreview,
+          moderationStatus: schema.posts.moderationStatus,
+          moderationWarning: schema.posts.moderationWarning,
+          riskScore: schema.posts.riskScore,
+          createdAt: schema.posts.createdAt,
+          updatedAt: schema.posts.updatedAt,
+        })
+        .from(schema.posts)
+        .orderBy(desc(schema.posts.createdAt));
+      
+      safeLogger.info(`Retrieved ${result.length} posts from database`);
+      return result;
+    } catch (error) {
+      safeLogger.error("Error getting all posts:", error);
+      throw error;
+    }
+  }
+
   async updatePost(id: number, updates: any) {
     try {
       const result = await this.db

@@ -18,9 +18,24 @@ export class PostService {
 
   async createPost(input: CreatePostInput): Promise<Post> {
     try {
-      // Check if database is connected
+      // Check if database is connected with more detailed logging
       if (!databaseService.isDatabaseConnected() || !databaseService.db) {
-        throw new Error('Database service temporarily unavailable. Please try again later.');
+        safeLogger.warn('Database service not connected. Current state:', {
+          isConnected: databaseService.isDatabaseConnected(),
+          hasDbInstance: !!databaseService.db,
+          timestamp: new Date().toISOString()
+        });
+        
+        // The database service might have been initialized but failed to connect
+        // Check if the database connection is actually available by testing it
+        try {
+          // Attempt a simple query to test the connection
+          await databaseService.getDatabase().select().from({}).limit(1);
+        } catch (dbTestError) {
+          safeLogger.error('Database connection test failed:', dbTestError);
+          // If we can't connect to the database, throw the original error
+          throw new Error('Service temporarily unavailable. Please try again later.');
+        }
       }
 
       // Get user ID and profile from address with fallback
@@ -439,25 +454,39 @@ export class PostService {
       const dbPosts = await databaseService.getAllPosts();
       
       // Convert to Post model with proper author information
-      const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
-        // Get the author's profile
-        const author = await userProfileService.getProfileById(dbPost.authorId);
-        const authorAddress = author ? author.walletAddress : 'unknown';
-        
-        // Handle potential null dates by providing default values
-        const createdAt = dbPost.createdAt || new Date();
-        
-        return {
-          id: dbPost.id.toString(),
-          author: authorAddress,
-          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
-          contentCid: dbPost.contentCid,
-          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
-          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
-          createdAt,
-          onchainRef: dbPost.onchainRef || ''
-        };
-      }));
+      const posts: Post[] = [];
+      for (const dbPost of dbPosts) {
+        try {
+          // Get the author's profile with error handling
+          let authorAddress = 'unknown';
+          if (dbPost.authorId) {
+            try {
+              const author = await userProfileService.getProfileById(dbPost.authorId);
+              authorAddress = author ? author.walletAddress : 'unknown';
+            } catch (profileError) {
+              safeLogger.warn(`Failed to get profile for author ID ${dbPost.authorId}:`, profileError);
+              authorAddress = 'unknown';
+            }
+          }
+          
+          // Handle potential null dates by providing default values
+          const createdAt = dbPost.createdAt || new Date();
+          
+          posts.push({
+            id: dbPost.id.toString(),
+            author: authorAddress,
+            parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+            contentCid: dbPost.contentCid,
+            mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+            tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+            createdAt,
+            onchainRef: dbPost.onchainRef || ''
+          });
+        } catch (postError) {
+          safeLogger.error(`Error processing post ${dbPost.id}:`, postError);
+          continue; // Skip this post and continue with others
+        }
+      }
       
       // Sort by creation date (newest first)
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

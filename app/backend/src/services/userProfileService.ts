@@ -198,34 +198,34 @@ export class UserProfileService {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
-      displayName: dbUser.displayName || '', // Public display name
+      displayName: dbUser.displayName || dbUser.handle || `User ${id.substring(0, 8)}`, // Public display name - fallback to handle or wallet ID
       ens: additionalData.ens || '',
       avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
-      // Billing Address
-      billingFirstName: dbUser.billingFirstName || '',
-      billingLastName: dbUser.billingLastName || '',
-      billingCompany: dbUser.billingCompany || '',
-      billingAddress1: dbUser.billingAddress1 || '',
-      billingAddress2: dbUser.billingAddress2 || '',
-      billingCity: dbUser.billingCity || '',
-      billingState: dbUser.billingState || '',
-      billingZipCode: dbUser.billingZipCode || '',
-      billingCountry: dbUser.billingCountry || '',
-      billingPhone: dbUser.billingPhone || '',
-      // Shipping Address
-      shippingFirstName: dbUser.shippingFirstName || '',
-      shippingLastName: dbUser.shippingLastName || '',
-      shippingCompany: dbUser.shippingCompany || '',
-      shippingAddress1: dbUser.shippingAddress1 || '',
-      shippingAddress2: dbUser.shippingAddress2 || '',
-      shippingCity: dbUser.shippingCity || '',
-      shippingState: dbUser.shippingState || '',
-      shippingZipCode: dbUser.shippingZipCode || '',
-      shippingCountry: dbUser.shippingCountry || '',
-      shippingPhone: dbUser.shippingPhone || '',
+      // Billing Address - read from encrypted data for security
+      billingFirstName: additionalData.billingFirstName || '',
+      billingLastName: additionalData.billingLastName || '',
+      billingCompany: additionalData.billingCompany || '',
+      billingAddress1: additionalData.billingAddress1 || '',
+      billingAddress2: additionalData.billingAddress2 || '',
+      billingCity: additionalData.billingCity || '',
+      billingState: additionalData.billingState || '',
+      billingZipCode: additionalData.billingZipCode || '',
+      billingCountry: additionalData.billingCountry || '',
+      billingPhone: additionalData.billingPhone || '',
+      // Shipping Address - read from encrypted data for security
+      shippingFirstName: additionalData.shippingFirstName || '',
+      shippingLastName: additionalData.shippingLastName || '',
+      shippingCompany: additionalData.shippingCompany || '',
+      shippingAddress1: additionalData.shippingAddress1 || '',
+      shippingAddress2: additionalData.shippingAddress2 || '',
+      shippingCity: additionalData.shippingCity || '',
+      shippingState: additionalData.shippingState || '',
+      shippingZipCode: additionalData.shippingZipCode || '',
+      shippingCountry: additionalData.shippingCountry || '',
+      shippingPhone: additionalData.shippingPhone || '',
       createdAt,
       updatedAt
     };
@@ -244,7 +244,7 @@ export class UserProfileService {
       }
 
       // Decrypt address data
-      const decryptedData = await encryptionService.decryptAddressData(dbUser.physicalAddress);
+      const decryptedData = await decryptAddressData(dbUser.physicalAddress);
 
       return {
         id: dbUser.id,
@@ -281,7 +281,7 @@ export class UserProfileService {
         shippingZipCode: decryptedData.shippingZipCode || '',
         shippingCountry: decryptedData.shippingCountry || '',
         shippingPhone: decryptedData.shippingPhone || '',
-        shippingSameAsBilling: true, // Default value since it's not stored
+        shippingSameAsBilling: decryptedData.shippingSameAsBilling ?? true,
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt) : new Date(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
       };
