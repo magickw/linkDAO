@@ -12,18 +12,14 @@ import GestureHandler from '../GestureHandler';
 import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../VisualPolish';
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import { analyticsService } from '@/services/analyticsService';
+import { AuthorProfile } from '@/types/feed';
 
 export interface EnhancedPost {
   id: string;
   title: string;
   content: string;
   author: string;
-  authorProfile: {
-    handle: string;
-    verified: boolean;
-    reputationTier?: string;
-    avatar?: string;
-  };
+  authorProfile: AuthorProfile;
   createdAt: Date;
   updatedAt: Date;
   

@@ -31,6 +31,14 @@ export interface FeedFilter {
   web3SortDirection?: 'asc' | 'desc';
 }
 
+// Author profile interface
+export interface AuthorProfile {
+  handle: string;
+  verified: boolean;
+  reputationTier?: string;
+  avatar?: string;
+}
+
 // Standardized post interface that matches backend schema
 // This can be either a regular Post (with title/dao) or QuickPost (without title/dao)
 export interface EnhancedPost {
@@ -38,6 +46,7 @@ export interface EnhancedPost {
   author: string;
   authorId?: string; // Optional for compatibility with backend
   handle?: string; // User handle from backend
+  authorProfile?: AuthorProfile; // Author profile information
   parentId: string | null;
   title?: string; // Optional for quickPosts
   contentCid: string;
