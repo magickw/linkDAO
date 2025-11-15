@@ -29,6 +29,7 @@ export interface UserProfile {
   shippingZipCode?: string;
   shippingCountry?: string;
   shippingPhone?: string;
+  shippingSameAsBilling?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +62,8 @@ export interface CreateUserProfileInput {
   shippingZipCode?: string;
   shippingCountry?: string;
   shippingPhone?: string;
+  shippingSameAsBilling?: boolean;
+  displayName?: string;
 }
 
 export interface UpdateUserProfileInput {
@@ -92,4 +95,5 @@ export interface UpdateUserProfileInput {
   shippingZipCode?: string;
   shippingCountry?: string;
   shippingPhone?: string;
+  shippingSameAsBilling?: boolean;
 }

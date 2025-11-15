@@ -717,11 +717,6 @@ export default function Profile() {
     }
   };
 
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   if (!isConnected) {
     return (
       <Layout title="Profile - LinkDAO" fullWidth={true}>
