@@ -258,12 +258,12 @@ class DatabaseSeeder {
       
       // Onboarding
       onboardingCompleted: Math.random() > 0.2,
-      onboardingSteps: JSON.stringify({
+      onboardingSteps: {
         profile_setup: Math.random() > 0.1,
         verification: Math.random() > 0.3,
         payout_setup: Math.random() > 0.4,
         first_listing: Math.random() > 0.2
-      }),
+      },
       
       createdAt: faker.date.past({ years: 1 }),
       updatedAt: faker.date.recent({ days: 30 })
@@ -664,7 +664,11 @@ class DatabaseSeeder {
       'Limited edition'
     ], { min: 2, max: 4 });
     
-    return `${baseDescription}\n\nKey Features:\n${features.map(f => `• ${f}`).join('\n')}`;
+    return `${baseDescription}
+
+Key Features:
+${features.map(f => `• ${f}`).join('
+')}`;
   }
 
   /**

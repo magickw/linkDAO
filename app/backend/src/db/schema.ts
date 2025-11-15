@@ -646,7 +646,12 @@ export const sellers = pgTable("sellers", {
   storeDescription: text("store_description"),
   isVerified: boolean("is_verified").default(false),
   onboardingCompleted: boolean("onboarding_completed").default(false),
-  onboardingSteps: jsonb("onboarding_steps").default('{"profile_setup": false, "verification": false, "payout_setup": false, "first_listing": false}'),
+  onboardingSteps: jsonb("onboarding_steps").default({
+    profile_setup: false,
+    verification: false,
+    payout_setup: false,
+    first_listing: false
+  }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

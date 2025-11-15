@@ -81,7 +81,7 @@ export class SellerProfileService {
           coverImageUrl: profileData.coverImageUrl,
           isVerified: false,
           onboardingCompleted: false,
-          onboardingSteps: JSON.stringify(defaultOnboardingSteps),
+          onboardingSteps: defaultOnboardingSteps,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -140,7 +140,7 @@ export class SellerProfileService {
           socialLinks: updates.socialLinks ? JSON.stringify(updates.socialLinks) : undefined,
           storeDescription: updates.storeDescription,
           coverImageUrl: updates.coverImageUrl,
-          onboardingSteps: JSON.stringify(updatedOnboardingSteps),
+          onboardingSteps: updatedOnboardingSteps,
           onboardingCompleted: this.calculateOnboardingCompletion(updatedOnboardingSteps),
           updatedAt: new Date(),
         })
@@ -232,15 +232,15 @@ export class SellerProfileService {
         onboardingCompleted
       });
 
-      // Update onboardingSteps using raw SQL with proper JSON string serialization
-      await db.execute(sql.raw(`
-        UPDATE sellers 
-        SET 
-          onboarding_steps = '${JSON.stringify(updatedSteps).replace(/'/g, "''")}',
-          onboarding_completed = ${onboardingCompleted},
-          updated_at = NOW()
-        WHERE wallet_address = '${walletAddress}'
-      `));
+      // Update onboardingSteps using drizzle ORM with proper JSON serialization
+      await db
+        .update(sellers)
+        .set({
+          onboardingSteps: updatedSteps,
+          onboardingCompleted,
+          updatedAt: new Date(),
+        })
+        .where(eq(sellers.walletAddress, walletAddress));
       
       safeLogger.info('Onboarding steps updated successfully:', { walletAddress, step, completed });
 
