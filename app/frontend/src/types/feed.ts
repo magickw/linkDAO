@@ -36,6 +36,8 @@ export interface FeedFilter {
 export interface EnhancedPost {
   id: string;
   author: string;
+  authorId?: string; // Optional for compatibility with backend
+  handle?: string; // User handle from backend
   parentId: string | null;
   title?: string; // Optional for quickPosts
   contentCid: string;
@@ -57,13 +59,25 @@ export interface EnhancedPost {
   engagementScore: number;
   
   // Enhanced features
-  previews: ContentPreview[];
+  previews?: ContentPreview[]; // Made optional
   socialProof?: SocialProof;
   trendingStatus?: string | null;
   trendingScore?: number;
   isBookmarked?: boolean;
   communityId?: string; // Optional for quickPosts
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
+  
+  // Additional fields from backend
+  walletAddress?: string;
+  profileCid?: string; // For avatar
+  moderationStatus?: string;
+  moderationWarning?: string;
+  riskScore?: string;
+  reactionCount?: string;
+  tipCount?: string;
+  totalTipAmount?: string;
+  commentCount?: string;
+  viewCount?: string;
   
   // Flag to distinguish quickPosts from regular posts
   isQuickPost?: boolean;

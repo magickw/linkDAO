@@ -396,6 +396,24 @@ export default function Profile() {
         setAvatarError(false); // Reset avatar error after successful upload
         
         addToast('Avatar uploaded successfully!', 'success');
+        
+        // Automatically save the updated avatar to the backend
+        if (backendProfile) {
+          try {
+            // Prepare update data with only the avatar change
+            const updateData: UpdateUserProfileInput = {
+              avatarCid: uploadResult.cdnUrl
+            };
+            
+            // Update the backend profile
+            await updateBackendProfile(updateData);
+            
+            addToast('Avatar saved to profile!', 'success');
+          } catch (saveError) {
+            console.error('Failed to save avatar to backend:', saveError);
+            addToast('Avatar uploaded but failed to save. Please save your profile manually.', 'warning');
+          }
+        }
       } catch (error) {
         console.error('Error uploading avatar:', error);
         setUpdateError(error instanceof Error ? error.message : 'Failed to upload avatar');
@@ -859,6 +877,12 @@ export default function Profile() {
                             console.error('Avatar image failed to load:', profile.avatar);
                             setAvatarError(true);
                           }}
+                          onLoad={() => {
+                            // Reset avatar error when image loads successfully
+                            if (avatarError) {
+                              setAvatarError(false);
+                            }
+                          }}
                         />
                       ) : (
                         <DefaultAvatar />
@@ -1232,7 +1256,21 @@ export default function Profile() {
                         <div className="flex-shrink-0">
                           <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {profile.avatar ? (
-                              <img src={profile.avatar} alt="Avatar" className="h-16 w-16 object-cover" />
+                              <img 
+                                src={profile.avatar} 
+                                alt="Avatar" 
+                                className="h-16 w-16 object-cover" 
+                                onError={() => {
+                                  console.error('Avatar image failed to load:', profile.avatar);
+                                  setAvatarError(true);
+                                }}
+                                onLoad={() => {
+                                  // Reset avatar error when image loads successfully
+                                  if (avatarError) {
+                                    setAvatarError(false);
+                                  }
+                                }}
+                              />
                             ) : (
                               <DefaultAvatar />
                             )}
