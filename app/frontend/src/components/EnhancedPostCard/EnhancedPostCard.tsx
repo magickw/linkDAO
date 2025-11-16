@@ -476,7 +476,7 @@ const EnhancedPostCard = React.memo(({
               post={{
                 id: post.id,
                 title: post.title,
-                contentCid: post.content,
+                contentCid: post.contentCid,
                 author: post.author,
                 dao: post.communityName || 'general',
                 commentCount: post.comments,

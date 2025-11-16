@@ -4,6 +4,7 @@ import { UnifiedSellerProfile } from '../../../../types/unifiedSeller';
 import { Button } from '../../../../design-system';
 import { useToast } from '../../../../context/ToastContext';
 import { UnifiedImageUpload } from '../ImageUpload/UnifiedImageUpload';
+import { useAccount } from 'wagmi';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;

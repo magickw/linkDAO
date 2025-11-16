@@ -19,7 +19,7 @@ export class IPFSContentService {
     }
 
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/ipfs/post-content/${cid}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/content/${cid}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export class IPFSContentService {
       }
 
       const data = await response.json();
-      const content = data.data.content;
+      const content = data.data?.content || data.content || '';
 
       // Cache the content
       this.cache.set(cid, { content, timestamp: Date.now() });

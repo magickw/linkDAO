@@ -24,7 +24,7 @@ interface SellerAPIEndpoints {
   // Profile endpoints
   getProfile: (walletAddress: string) => string;
   updateProfile: (walletAddress: string) => string;
-  createProfile: () => string;
+  createProfile: (walletAddress?: string) => string;
   updateProfileEnhanced: (walletAddress: string) => string;
   
   // Onboarding endpoints
