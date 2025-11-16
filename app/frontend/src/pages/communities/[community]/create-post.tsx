@@ -1,24 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import { ArrowLeft, Hash } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
-import { useCommunities } from '@/hooks/useCommunities';
-import { PostService } from '@/services/postService';
+import { CommunityService } from '@/services/communityService';
+import { CommunityPostService } from '@/services/communityPostService';
 import { useAccount } from 'wagmi';
+import { useToast } from '@/context/ToastContext';
 
-const CreatePostPage: React.FC = () => {
+const CreateCommunityPostPage: React.FC = () => {
   const router = useRouter();
+  const { community } = router.query;
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedCommunity, setSelectedCommunity] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [communityData, setCommunityData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const { address } = useAccount();
+  const { addToast } = useToast();
 
-  const { data: communities, isLoading } = useCommunities();
+  // Fetch community data
+  useEffect(() => {
+    const fetchCommunityData = async () => {
+      if (community) {
+        try {
+          const data = await CommunityService.getCommunityBySlug(community as string);
+          if (data) {
+            setCommunityData(data);
+          } else {
+            addToast('Community not found', 'error');
+            router.push('/communities');
+          }
+        } catch (error) {
+          console.error('Error fetching community:', error);
+          addToast('Error loading community', 'error');
+          router.push('/communities');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchCommunityData();
+  }, [community, router, addToast]);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -31,86 +60,103 @@ const CreatePostPage: React.FC = () => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const { address } = useAccount();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!title.trim() || !content.trim() || !selectedCommunity) {
-      alert('Please fill in all required fields');
+    if (!title.trim() || !content.trim()) {
+      addToast('Please fill in all required fields', 'error');
       return;
     }
 
     if (!address) {
-      alert('Please connect your wallet to create a post');
+      addToast('Please connect your wallet to create a post', 'error');
+      return;
+    }
+
+    if (!communityData) {
+      addToast('Community data not loaded', 'error');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await PostService.createPost({
-        author: address,
+      const postData = {
+        communityId: communityData.id,
         title: title.trim(),
         content: content.trim(),
-        dao: selectedCommunity,
-        tags
-      });
+        tags,
+        author: address
+      };
 
-      // Dispatch event to notify other components that a post was created
-      window.dispatchEvent(new CustomEvent('postCreated'));
+      await CommunityPostService.createCommunityPost(postData);
 
-      router.push(`/communities/${selectedCommunity}`);
+      addToast('Post created successfully!', 'success');
+      router.push(`/communities/${community}`);
     } catch (error) {
       console.error('Error creating post:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create post. Please try again.');
+      addToast(error instanceof Error ? error.message : 'Failed to create post. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <ErrorBoundary>
+        <Layout title="Create Post - LinkDAO">
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 dark:text-gray-400">Loading community...</p>
+            </div>
+          </div>
+        </Layout>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <Layout title="Create Post - LinkDAO">
+      <Layout title={`Create Post in ${communityData?.displayName || communityData?.name} - LinkDAO`}>
         <Head>
-          <meta name="description" content="Create a new post in your community" />
+          <meta name="description" content={`Create a new post in ${communityData?.displayName || communityData?.name}`} />
         </Head>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push(`/communities/${community}`)}
               className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 mb-4"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back
+              Back to {communityData?.displayName || communityData?.name}
             </button>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Create a Post
+              Create a Post in {communityData?.displayName || communityData?.name}
             </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Community Selection */}
+            {/* Community Info (Read-only) */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Choose a community *
+                Community
               </label>
-              <select
-                value={selectedCommunity}
-                onChange={(e) => setSelectedCommunity(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-                disabled={isLoading}
-              >
-                <option value="">{isLoading ? 'Loading communities...' : 'Select a community'}</option>
-                {communities?.map(community => (
-                  <option key={community.id} value={community.id}>
-                    {community.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">
+                  {communityData?.avatar || '🏛️'}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {communityData?.displayName || communityData?.name}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {communityData?.memberCount?.toLocaleString() || 0} members
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Title */}
@@ -192,7 +238,7 @@ const CreatePostPage: React.FC = () => {
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => router.push(`/communities/${community}`)}
                 className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
@@ -212,4 +258,4 @@ const CreatePostPage: React.FC = () => {
   );
 };
 
-export default CreatePostPage;
+export default CreateCommunityPostPage;

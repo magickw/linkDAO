@@ -49,59 +49,31 @@ dotenv.config();
 // Import security configuration and middleware
 import { validateSecurityConfig } from './config/securityConfig';
 import {
-  helmetMiddleware,
-  ddosProtection,
-  requestFingerprinting,
-  inputValidation,
-  threatDetection,
-  securityAuditLogging,
-  fileUploadSecurity,
-  apiRateLimit,
-} from './middleware/securityMiddleware';
-// ULTIMATE CORS FIX - Uses lowest-level HTTP APIs
+  rateLimitWithCache,
+  cacheMiddleware,
+  cachingMiddleware
+} from './middleware/rateLimit';
 import { ultimateCorsMiddleware } from './middleware/ultimateCors';
-// OLD CORS IMPORTS - All disabled
 // import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
 // import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
-// import {
-//   enhancedCorsMiddleware,
-//   getEnvironmentCorsMiddleware,
-//   developmentCorsMiddleware,
-//   productionCorsMiddleware
-// } from './middleware/corsMiddleware';
-// Import new marketplace infrastructure
-import { 
-  requestLoggingMiddleware, 
-  performanceMonitoringMiddleware,
-  requestSizeMonitoringMiddleware,
-  errorCorrelationMiddleware,
-  healthCheckExclusionMiddleware
-} from './middleware/requestLogging';
-import { globalErrorHandler, notFoundHandler } from './middleware/globalErrorHandler';
+import { globalErrorHandler, notFoundHandler, asyncHandler } from './middleware/globalErrorHandler';
 
-// Import enhanced error handling and logging
-import {
-  enhancedErrorHandler, 
-  EnhancedAppError, 
-  ErrorFactory,
-  asyncHandler 
-} from './middleware/enhancedErrorHandler';
-import {
-  enhancedRequestLoggingMiddleware,
-  databaseQueryTrackingMiddleware,
-  cacheOperationTrackingMiddleware,
-  businessContextMiddleware,
-  RequestLoggingHelpers
-} from './middleware/enhancedRequestLogging';
-import {
-  enhancedRateLimitingService,
-  enhancedGeneralRateLimit,
-  enhancedAuthRateLimit,
-  enhancedApiRateLimit
-} from './middleware/enhancedRateLimiting';
-import { errorLoggingService } from './services/errorLoggingService';
-import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
+// Create a simple middleware to handle missing endpoints
+import type { Request, Response, NextFunction } from 'express';
+const missingEndpoints = (req: Request, res: Response, next: NextFunction) => {
+  // For API routes, return JSON response
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({
+      success: false,
+      message: 'API endpoint not found',
+      data: null
+    });
+  }
+  // For other routes, pass to next middleware (likely the 404 handler)
+  next();
+};
+
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
 

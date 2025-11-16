@@ -26,6 +26,7 @@ import { PostService } from '@/services/postService';
 import { useWeb3 } from '@/context/Web3Context';
 import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
+import CommunityPostCreator from './Community/CommunityPostCreator';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -45,6 +46,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showPostCreator, setShowPostCreator] = useState(false);
 
   // Mock user membership state for demonstration purposes
   const memberRole = (communityData?.moderators || []).includes(address || '') ? 'admin' : 'member';
@@ -113,7 +115,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   };
 
   const handleCreatePost = () => {
-    router.push('/create-post');
+    setShowPostCreator(true);
   };
 
   if (loading) {
@@ -310,6 +312,28 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             </div>
           </div>
         </div>
+
+        {/* Post Creator Modal */}
+        {showPostCreator && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CommunityPostCreator
+                communityId={communityData.id}
+                communityName={communityData.displayName || communityData.name}
+                onPostCreated={() => {
+                  setShowPostCreator(false);
+                  // Refresh posts by fetching them again
+                  if (communityData?.id) {
+                    PostService.getPostsByCommunity(communityData.id).then(newPosts => {
+                      setPosts(newPosts || []);
+                    });
+                  }
+                }}
+                onCancel={() => setShowPostCreator(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Reddit-style Posts Feed */}
         <div className="space-y-0">
