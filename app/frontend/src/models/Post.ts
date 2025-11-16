@@ -1,5 +1,23 @@
 import { EnhancedPost } from '@/types/feed';
 
+// Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's already a valid URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, check if it's a valid IPFS CID
+    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+      return `https://ipfs.io/ipfs/${profileCid}`;
+    }
+    // If it's not a valid URL or IPFS CID, return undefined
+    return undefined;
+  }
+}
+
 // Standardized Post interface that matches backend schema
 export interface Post extends EnhancedPost {
   // All properties inherited from EnhancedPost
@@ -60,11 +78,29 @@ export function convertBackendPostToPost(backendPost: any): Post {
     communityId: backendPost.dao || backendPost.communityId,
     contentType: detectContentType(backendPost),
     
+    // Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's already a valid URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, check if it's a valid IPFS CID
+    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+      return `https://ipfs.io/ipfs/${profileCid}`;
+    }
+    // If it's not a valid URL or IPFS CID, return undefined
+    return undefined;
+  }
+}
+
     // Add author profile information including avatar
     authorProfile: {
       handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
       verified: false,
-      avatar: backendPost.profileCid || undefined,  // Use profileCid as avatar if available
+      avatar: getAvatarUrl(backendPost.profileCid),  // Use profileCid as avatar if available
       reputationTier: undefined
     },
     

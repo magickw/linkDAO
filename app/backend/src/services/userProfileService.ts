@@ -166,7 +166,15 @@ export class UserProfileService {
       createdAt,
       updatedAt: createdAt
     };
-
+    
+    // Make the user follow themselves to ensure their own posts appear in their following feed
+    try {
+      await databaseService.followUser(dbUser.id, dbUser.id);
+    } catch (followError) {
+      safeLogger.warn('Failed to make user follow themselves:', followError);
+      // Continue even if self-follow fails, as this shouldn't block profile creation
+    }
+    
     return profile;
   }
 

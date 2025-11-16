@@ -29,17 +29,16 @@ export interface UpdateQuickPostInput {
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
   
-  // Check if it's a valid IPFS CID
-  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
-    return `https://ipfs.io/ipfs/${profileCid}`;
-  }
-  
-  // Check if it's already a full URL
+  // Check if it's already a valid URL
   try {
     new URL(profileCid);
     return profileCid;
   } catch {
-    // Not a valid URL, return undefined
+    // Not a valid URL, check if it's a valid IPFS CID
+    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+      return `https://ipfs.io/ipfs/${profileCid}`;
+    }
+    // If it's not a valid URL or IPFS CID, return undefined
     return undefined;
   }
 }

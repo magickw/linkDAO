@@ -92,36 +92,41 @@ export class FeedService {
     if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
       const normalizedAddress = userAddress.toLowerCase();
-
+      
       console.log('🔍 [BACKEND FEED] Building following filter for user:', normalizedAddress);
-
+      
       const user = await db.select({ id: users.id })
         .from(users)
         .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
-
+      
+      console.log('🔍 [BACKEND FEED] User lookup result:', user);
+      
       if (user.length > 0) {
         const userId = user[0].id;
         console.log('✅ [BACKEND FEED] Found user ID:', userId);
-
+        
         // Get list of users the current user is following
         const followingList = await db.select({ followingId: follows.followingId })
           .from(follows)
           .where(eq(follows.followerId, userId));
-
+        
+        console.log('🔍 [BACKEND FEED] Following list query result:', followingList);
+        
         const followingIds = followingList.map(f => f.followingId);
-
+        
         console.log('📋 [BACKEND FEED] User is following:', followingIds.length, 'users');
-
+        
         // Always include the user's own posts in the following feed
         // Only add if not already included to avoid duplicates
         if (!followingIds.includes(userId)) {
           followingIds.push(userId);
+          console.log('📋 [BACKEND FEED] Added user\'s own ID to following list');
         }
-
+        
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
-
+        
         // Filter posts to show from followed users AND the user's own posts
         // Since userId is already in followingIds, we can use a simpler filter
         // But we keep the OR as a safety measure to ensure user's posts are always shown
@@ -129,11 +134,11 @@ export class FeedService {
           // Use proper Drizzle ORM or() function for combining conditions
           followingFilter = or(
             inArray(posts.authorId, followingIds),
-            eq(posts.authorId, userId)
+            eq(posts.authorId, userId) // Always include user's own posts
           );
           quickPostFollowingFilter = or(
             inArray(quickPosts.authorId, followingIds),
-            eq(quickPosts.authorId, userId)
+            eq(quickPosts.authorId, userId) // Always include user's own posts
           );
           console.log('📋 [BACKEND FEED] Using inArray filter with explicit OR for user posts');
         } else {
@@ -147,8 +152,16 @@ export class FeedService {
         // Even if user is not found in database, ensure they see their own posts
         // This can happen when user exists in posts but not in users table yet
         // Try to find posts by joining with users table to match wallet address
-        followingFilter = sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`;
-        quickPostFollowingFilter = sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`;
+        followingFilter = sql`EXISTS (
+          SELECT 1 FROM ${users} 
+          WHERE ${users.id} = ${posts.authorId} 
+          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
+        )`;
+        quickPostFollowingFilter = sql`EXISTS (
+          SELECT 1 FROM ${users} 
+          WHERE ${users.id} = ${quickPosts.authorId} 
+          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
+        )`;
         console.log('📋 [BACKEND FEED] Using wallet address filter for user posts via users table join');
       }
     } else if (feedSource === 'all' && userAddress) {
