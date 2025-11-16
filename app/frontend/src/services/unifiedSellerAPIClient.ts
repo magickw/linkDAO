@@ -199,12 +199,18 @@ export class UnifiedSellerAPIClient {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
         let errorData;
         try {
-          errorData = JSON.parse(errorText);
+          const errorText = await response.text();
+          if (errorText) {
+            errorData = JSON.parse(errorText);
+          } else {
+            errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+          }
         } catch {
-          errorData = { message: errorText };
+          // If JSON parsing fails, use the raw text
+          const errorText = await response.text();
+          errorData = { message: errorText || `HTTP ${response.status}: ${response.statusText}` };
         }
         
         throw new SellerAPIError(
@@ -216,7 +222,24 @@ export class UnifiedSellerAPIClient {
         );
       }
       
-      const result = await response.json();
+      // Check if response has content before trying to parse JSON
+      const responseText = await response.text();
+      if (!responseText) {
+        return {} as T;
+      }
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        // If JSON parsing fails, return the raw text
+        throw new SellerAPIError(
+          SellerErrorType.API_ERROR,
+          `Invalid JSON response: ${responseText.substring(0, 100)}${responseText.length > 100 ? '...' : ''}`,
+          'INVALID_JSON_RESPONSE',
+          { responseText }
+        );
+      }
       
       // Handle backend response format { success: true, data: ... }
       if (result.success === false) {
@@ -274,12 +297,18 @@ export class UnifiedSellerAPIClient {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
         let errorData;
         try {
-          errorData = JSON.parse(errorText);
+          const errorText = await response.text();
+          if (errorText) {
+            errorData = JSON.parse(errorText);
+          } else {
+            errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+          }
         } catch {
-          errorData = { message: errorText };
+          // If JSON parsing fails, use the raw text
+          const errorText = await response.text();
+          errorData = { message: errorText || `HTTP ${response.status}: ${response.statusText}` };
         }
         
         throw new SellerAPIError(
@@ -291,7 +320,24 @@ export class UnifiedSellerAPIClient {
         );
       }
       
-      const result = await response.json();
+      // Check if response has content before trying to parse JSON
+      const responseText = await response.text();
+      if (!responseText) {
+        return {} as T;
+      }
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        // If JSON parsing fails, return the raw text
+        throw new SellerAPIError(
+          SellerErrorType.API_ERROR,
+          `Invalid JSON response: ${responseText.substring(0, 100)}${responseText.length > 100 ? '...' : ''}`,
+          'INVALID_JSON_RESPONSE',
+          { responseText }
+        );
+      }
       
       if (result.success === false) {
         throw new SellerAPIError(

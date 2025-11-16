@@ -139,9 +139,16 @@ export class UnifiedSellerService {
       return transformResult.data;
     } catch (error) {
       console.error('Failed to create seller profile:', error);
+      // Provide a more user-friendly error message
+      const errorMessage = error instanceof SellerAPIError 
+        ? error.message 
+        : error instanceof Error 
+          ? error.message 
+          : 'Failed to create seller profile. Please try again.';
+      
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to create seller profile: ${error instanceof Error ? error.message : String(error)}`,
+        errorMessage,
         'PROFILE_CREATE_ERROR'
       );
     }

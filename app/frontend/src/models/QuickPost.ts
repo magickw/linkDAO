@@ -1,10 +1,11 @@
-import { EnhancedPost } from '@/types/feed';
+import { EnhancedPost, Reaction, Tip, ContentPreview } from '@/types/feed';
 
 // QuickPost interface for home/feed posts (no title or community required)
 export interface QuickPost extends EnhancedPost {
   // Inherit all properties from EnhancedPost
   // QuickPosts don't have titles or community associations
   // The isQuickPost flag will be set to true
+  media?: string[]; // Additional property specific to frontend QuickPost
 }
 
 export interface CreateQuickPostInput {
@@ -49,6 +50,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
     title: backendPost.title || '', // Optional for quickPosts
+    content: backendPost.content || '', // Add content property
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
@@ -60,15 +62,15 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     dao: backendPost.dao || '', // Optional for quickPosts
     
     // Engagement data (will be populated by services)
-    reactions: [],
-    tips: [],
+    reactions: [] as Reaction[],
+    tips: [] as Tip[],
     comments: backendPost.commentCount || 0,
     shares: backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
     
     // Enhanced features (will be populated by services)
-    previews: [],
+    previews: [] as ContentPreview[],
     socialProof: undefined,
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
@@ -83,6 +85,9 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
       avatar: getAvatarUrl(backendPost.profileCid),
       reputationTier: undefined
     },
+    
+    // Add media property for frontend QuickPost interface
+    media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     
     // Flag to distinguish quickPosts from regular posts
     isQuickPost: true

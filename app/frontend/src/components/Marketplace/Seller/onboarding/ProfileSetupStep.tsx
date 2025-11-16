@@ -271,7 +271,25 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
       addToast('Profile saved successfully!', 'success');
     } catch (error) {
       console.error('Failed to save profile:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save profile. Please try again.';
+      // Handle error properly to avoid JSON parsing issues
+      let errorMessage = 'Failed to save profile. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        // If error is an object, try to extract message
+        if ('message' in error) {
+          errorMessage = (error as any).message || errorMessage;
+        } else {
+          // Stringify the error object safely
+          try {
+            errorMessage = JSON.stringify(error);
+          } catch {
+            errorMessage = 'An unknown error occurred';
+          }
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       setSubmitError(errorMessage);
       addToast(errorMessage, 'error');
     } finally {

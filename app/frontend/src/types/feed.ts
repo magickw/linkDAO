@@ -49,6 +49,7 @@ export interface EnhancedPost {
   authorProfile?: AuthorProfile; // Author profile information
   parentId: string | null;
   title?: string; // Optional for quickPosts
+  content?: string; // Add content property
   contentCid: string;
   mediaCids: string[];
   tags: string[];

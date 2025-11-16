@@ -1,4 +1,10 @@
-import { EnhancedPost } from '@/types/feed';
+import { EnhancedPost, Reaction, Tip, ContentPreview } from '@/types/feed';
+
+// Standardized Post interface that matches backend schema
+export interface Post extends EnhancedPost {
+  // All properties inherited from EnhancedPost
+  media?: string[]; // Additional property specific to frontend Post
+}
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
@@ -18,32 +24,6 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
   }
 }
 
-// Standardized Post interface that matches backend schema
-export interface Post extends EnhancedPost {
-  // All properties inherited from EnhancedPost
-}
-
-export interface CreatePostInput {
-  author: string;
-  parentId?: string;
-  content: string; // This would be uploaded to IPFS and the CID stored
-  media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
-  tags?: string[];
-  onchainRef?: string;
-  title?: string; // Optional for quickPosts
-  dao?: string; // Optional for quickPosts
-  poll?: any; // Poll data for poll posts
-  proposal?: any; // Proposal data for governance posts
-}
-
-export interface UpdatePostInput {
-  title?: string;
-  content?: string;
-  dao?: string;
-  tags?: string[];
-  media?: string[];
-}
-
 // Utility function to convert backend post to frontend post
 export function convertBackendPostToPost(backendPost: any): Post {
   return {
@@ -51,6 +31,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
     title: backendPost.title || '', // Optional for quickPosts
+    content: backendPost.content || '', // Add content property
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
@@ -62,15 +43,15 @@ export function convertBackendPostToPost(backendPost: any): Post {
     dao: backendPost.dao || '', // Optional for quickPosts
     
     // Engagement data (will be populated by services)
-    reactions: [],
-    tips: [],
+    reactions: [] as Reaction[],
+    tips: [] as Tip[],
     comments: backendPost.commentCount || 0,
     shares: backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
     
     // Enhanced features (will be populated by services)
-    previews: [],
+    previews: [] as ContentPreview[],
     socialProof: undefined,
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
@@ -78,24 +59,6 @@ export function convertBackendPostToPost(backendPost: any): Post {
     communityId: backendPost.dao || backendPost.communityId,
     contentType: detectContentType(backendPost),
     
-    // Helper function to validate IPFS CID and construct proper URL
-function getAvatarUrl(profileCid: string | undefined): string | undefined {
-  if (!profileCid) return undefined;
-  
-  // Check if it's already a valid URL
-  try {
-    new URL(profileCid);
-    return profileCid;
-  } catch {
-    // Not a valid URL, check if it's a valid IPFS CID
-    if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
-      return `https://ipfs.io/ipfs/${profileCid}`;
-    }
-    // If it's not a valid URL or IPFS CID, return undefined
-    return undefined;
-  }
-}
-
     // Add author profile information including avatar
     authorProfile: {
       handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
@@ -103,6 +66,9 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
       avatar: getAvatarUrl(backendPost.profileCid),  // Use profileCid as avatar if available
       reputationTier: undefined
     },
+    
+    // Add media property for frontend Post interface
+    media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     
     // Flag to distinguish quickPosts from regular posts
     isQuickPost: !backendPost.title && !backendPost.dao && !backendPost.communityId
@@ -128,4 +94,25 @@ function detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'pro
   }
   
   return 'text';
+}
+
+export interface CreatePostInput {
+  author: string;
+  parentId?: string;
+  content: string; // This would be uploaded to IPFS and the CID stored
+  media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
+  tags?: string[];
+  onchainRef?: string;
+  title?: string; // Optional for quickPosts
+  dao?: string; // Optional for quickPosts
+  poll?: any; // Poll data for poll posts
+  proposal?: any; // Proposal data for governance posts
+}
+
+export interface UpdatePostInput {
+  title?: string;
+  content?: string;
+  dao?: string;
+  tags?: string[];
+  media?: string[];
 }
