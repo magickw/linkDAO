@@ -390,6 +390,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                 {/* Posts List */}
                 <CommunityPostList
                   communityId={community.id}
+                  communitySlug={community.slug}
                   canPost={canUserPost}
                   canModerate={canUserModerate}
                   sort={postSort}

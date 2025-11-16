@@ -527,12 +527,6 @@ app.use('/api/messaging', messagingRoutes);
 import compatChatRoutes from './routes/compatibilityChat';
 app.use(compatChatRoutes);
 
-// Import and use missing endpoints for better fallbacks
-import missingEndpoints from './routes/missingEndpoints';
-
-// Reputation routes already imported above
-
-// Use notification preferences routes
 // Import user profile API routes
 import userProfileRoutes from './routes/userProfileRoutes';
 
@@ -542,9 +536,6 @@ app.use('/api/mobile', mobileRoutes);
 
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
-
-// Reputation routes
-app.use('/marketplace/reputation', reputationRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';

@@ -871,7 +871,7 @@ export default function Profile() {
                 <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
                   <div className="relative">
                     <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white dark:border-gray-700 shadow-xl overflow-hidden">
-                      {(profile.avatar && !avatarError) ? (
+                      {(profile.avatar && !avatarError && typeof profile.avatar === 'string' && profile.avatar.startsWith('http')) ? (
                         <img
                           className="h-full w-full object-cover"
                           src={profile.avatar}

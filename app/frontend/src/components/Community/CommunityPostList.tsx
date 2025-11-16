@@ -15,6 +15,7 @@ import { CommunityOfflineCacheService } from '../../services/communityOfflineCac
 
 interface CommunityPostListProps {
   communityId: string;
+  communitySlug: string;
   canPost: boolean;
   canModerate: boolean;
   sort: 'hot' | 'new' | 'top';
@@ -31,6 +32,7 @@ interface PostFilters {
 
 export const CommunityPostList: React.FC<CommunityPostListProps> = ({
   communityId,
+  communitySlug,
   canPost,
   canModerate,
   sort,
@@ -148,7 +150,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [communityId, sort, filters, isOnline, offlineCacheService]);
+  }, [communitySlug, communityId, sort, filters, isOnline, offlineCacheService]);
 
   // Load more posts
   const loadMore = useCallback(() => {

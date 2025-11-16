@@ -20,20 +20,7 @@ router.all('/cart*', (req: Request, res: Response) => {
   });
 });
 
-// Marketplace listings fallback
-router.all('/marketplace/listings*', (req: Request, res: Response) => {
-  res.status(503).json({
-    success: false,
-    error: {
-      code: 'SERVICE_UNAVAILABLE',
-      message: 'Marketplace listings service is temporarily unavailable',
-      fallback: 'cached',
-      suggestion: 'Showing cached listings'
-    }
-  });
-});
-
-// Marketplace categories fallback
+// Marketplace categories fallback (only for when categories service is down)
 router.all('/marketplace/categories*', (req: Request, res: Response) => {
   res.status(503).json({
     success: false,

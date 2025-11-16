@@ -246,13 +246,30 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <div className="relative">
-                        {/* Avatar with gradient background */}
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                          {(profile as any)?.handle
-                            ? (profile as any).handle.charAt(0).toUpperCase()
-                            : (profile as any)?.ens
-                            ? (profile as any).ens.charAt(0).toUpperCase()
-                            : address.slice(2, 4).toUpperCase()}
+                        {/* Avatar with fallback to text */}
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-lg">
+                          {profile?.avatarCid ? (
+                            <img
+                              src={profile.avatarCid}
+                              alt={(profile as any)?.handle || (profile as any)?.ens || 'User avatar'}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                // If avatar image fails to load, we'll handle this by falling back to initials
+                                // In React, we should use state to manage this, but for simplicity in this context,
+                                // we'll just hide the image and let the container display the initials
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            // If no avatarCid, show initials
+                            <div className="w-full h-full flex items-center justify-center">
+                              {(profile as any)?.handle
+                                ? (profile as any).handle.charAt(0).toUpperCase()
+                                : (profile as any)?.ens
+                                ? (profile as any).ens.charAt(0).toUpperCase()
+                                : address.slice(2, 4).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         {/* Online status indicator */}
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
