@@ -57,17 +57,6 @@ import { ultimateCorsMiddleware } from './middleware/ultimateCors';
 // import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
 // import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
-// Import security configuration and middleware
-import { validateSecurityConfig } from './config/securityConfig';
-import {
-  rateLimitWithCache,
-  cacheMiddleware,
-  cachingMiddleware
-} from './middleware/rateLimit';
-import { ultimateCorsMiddleware } from './middleware/ultimateCors';
-// import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
-// import { corsMiddleware } from './middleware/corsMiddleware';
-// import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
 import { globalErrorHandler, notFoundHandler, asyncHandler } from './middleware/globalErrorHandler';
 
 // Create a simple middleware to handle missing endpoints
@@ -93,6 +82,21 @@ const helmetMiddleware = securityHeaders;
 
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
+
+// Import security middleware
+import {
+  ddosProtection,
+  requestFingerprinting,
+  hideServerInfo,
+  requestSizeLimits,
+  csrfProtection,
+  validateContentType,
+  securityLogger,
+  inputValidation,
+  threatDetection,
+  securityAuditLogging,
+  fileUploadSecurity
+} from './middleware/securityMiddleware';
 
 // Import performance optimization middleware
 import PerformanceOptimizationIntegration from './middleware/performanceOptimizationIntegration';
@@ -664,9 +668,9 @@ import ldaoBenefitsRoutes from './routes/ldaoBenefitsRoutes';
 // import stakingRoutes from './routes/stakingRoutes';
 // import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
 
-// app.use('/api/dex', dexTradingRoutes);
-// app.use('/api/staking', stakingRoutes);
-// app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
+app.use('/api/dex', dexTradingRoutes);
+app.use('/api/staking', stakingRoutes);
+app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
 // process.stdout.write('✅ DEX, Staking, and LDAO monitoring routes enabled\n');
 
