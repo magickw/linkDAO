@@ -119,7 +119,9 @@ import { comprehensiveMonitoringService } from './services/comprehensiveMonitori
 // Import request logging middleware
 import {
   healthCheckExclusionMiddleware,
-  errorCorrelationMiddleware
+  errorCorrelationMiddleware,
+  performanceMonitoringMiddleware,
+  requestSizeMonitoringMiddleware
 } from './middleware/requestLogging';
 
 // Import enhanced request logging middleware
