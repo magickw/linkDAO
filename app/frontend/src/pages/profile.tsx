@@ -134,7 +134,7 @@ export default function Profile() {
         displayName: backendProfile.displayName || '', // Use actual displayName field
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: getAvatarUrl(backendProfile.avatarCid), // Validate avatar URL
+        avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Fallback to profileCid for backend compatibility
       });
       setAvatarError(false); // Reset avatar error when loading new profile
       

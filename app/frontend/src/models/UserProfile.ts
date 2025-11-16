@@ -5,6 +5,7 @@ export interface UserProfile {
   displayName?: string;
   ens: string;
   avatarCid: string;
+  profileCid?: string; // Backend compatibility - some endpoints return profileCid instead of avatarCid
   bioCid: string;
   email?: string;
   // Billing Address

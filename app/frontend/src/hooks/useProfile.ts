@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserProfile, UpdateUserProfileInput } from '@/models/UserProfile';
 import { ProfileService } from '@/services/profileService';
+import { optimizedProfileService } from '@/services/optimizedProfileService';
 
 interface UseProfileReturn {
   profile: UserProfile | null;
@@ -25,8 +26,9 @@ export function useProfile(walletAddress?: string): UseProfileReturn {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const userProfile = await ProfileService.getProfileByAddress(walletAddress);
+
+      // Use optimized profile service with caching and deduplication
+      const userProfile = await optimizedProfileService.getProfileByAddress(walletAddress);
       setProfile(userProfile);
     } catch (err) {
       // Handle error objects properly to avoid [object Object] display

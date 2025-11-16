@@ -12,7 +12,8 @@ import { globalRequestCoalescer } from '../hooks/useRequestCoalescing';
 import { authService } from './authService';
 
 // Get the backend API base URL from environment variables
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+const BACKEND_API_BASE_URL = API_BASE_URL;
 
 // Default retry options for community API calls
 const COMMUNITY_RETRY_OPTIONS: RetryOptions = {
@@ -66,7 +67,7 @@ export class CommunityService {
       const authHeaders = authService.getAuthHeaders();
       
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}`,
         {
           method: 'POST',
           headers: authHeaders,
@@ -118,7 +119,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/${id}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
           method: 'GET',
           headers: {
@@ -204,7 +205,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/slug/${slug}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/slug/${slug}`,
         {
           method: 'GET',
           headers: {
@@ -310,7 +311,7 @@ export class CommunityService {
       () => globalRequestCoalescer.request(
         cacheKey,
         async () => {
-          let url = `${BACKEND_API_BASE_URL}/communities`;
+          let url = `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}`;
           const searchParams = new URLSearchParams();
           
           if (params) {
@@ -395,7 +396,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/name/${name}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/name/${name}`,
         {
           method: 'GET',
           headers: {
@@ -451,7 +452,7 @@ export class CommunityService {
   static async getUserCommunityMemberships(): Promise<string[]> {
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/user/memberships`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/user/memberships`,
         {
           method: 'GET',
           headers: {
@@ -495,7 +496,7 @@ export class CommunityService {
       const authHeaders = authService.getAuthHeaders();
       
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/${id}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
           method: 'PUT',
           headers: authHeaders,
@@ -558,7 +559,7 @@ export class CommunityService {
       const authHeaders = authService.getAuthHeaders();
       
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/${id}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
           method: 'DELETE',
           headers: authHeaders,
@@ -616,7 +617,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/search?q=${encodeURIComponent(query)}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -680,7 +681,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}/communities/trending?limit=${limit}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/trending?limit=${limit}`,
         {
           method: 'GET',
           headers: {

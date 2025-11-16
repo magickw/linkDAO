@@ -1,4 +1,5 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
+import { deduplicatedFetch } from '../utils/requestDeduplication';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';

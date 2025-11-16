@@ -2,10 +2,16 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { safeLogger } from '../utils/safeLogger';
 import { Request, Response } from 'express';
 
+// Helper function to check if user is authenticated
+const isAuthenticated = (req: Request): boolean => {
+  // Check for session or authorization header
+  return !!(req.headers.authorization || (req as any).session?.userId);
+};
+
 // General rate limiter for all requests
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  max: 2000, // Increased from 1000 to 2000 for better UX
   message: {
     error: 'Too many requests',
     message: 'Too many requests from this IP, please try again later.',
@@ -23,10 +29,13 @@ export const generalLimiter = rateLimit({
   }
 });
 
-// Stricter rate limiter for API endpoints
+// Stricter rate limiter for API endpoints - with authentication-aware limits
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 API requests per windowMs
+  max: (req: Request) => {
+    // Authenticated users get higher limits
+    return isAuthenticated(req) ? 1500 : 500;
+  },
   message: {
     error: 'API rate limit exceeded',
     message: 'Too many API requests from this IP, please try again later.',
@@ -39,7 +48,7 @@ export const apiLimiter = rateLimit({
     return req.path === '/health' || req.path === '/api/health';
   },
   handler: (req: Request, res: Response) => {
-    safeLogger.warn(`API rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+    safeLogger.warn(`API rate limit exceeded for IP: ${req.ip}, Path: ${req.path}, Authenticated: ${isAuthenticated(req)}`);
     res.status(429).json({
       error: 'API rate limit exceeded',
       message: 'Too many API requests from this IP, please try again later.',
@@ -48,10 +57,13 @@ export const apiLimiter = rateLimit({
   }
 });
 
-// Very strict rate limiter for feed endpoints to prevent spam
+// More lenient rate limiter for feed endpoints - increased for authenticated users
 export const feedLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20, // Limit each IP to 20 feed requests per minute
+  max: (req: Request) => {
+    // Authenticated users get much higher limits for profile/feed pages
+    return isAuthenticated(req) ? 100 : 30;
+  },
   message: {
     error: 'Feed rate limit exceeded',
     message: 'Too many feed requests, please try again in a minute.',
@@ -61,7 +73,7 @@ export const feedLimiter = rateLimit({
   legacyHeaders: false,
   // keyGenerator: ipKeyGenerator, // Removed to fix compilation error
   handler: (req: Request, res: Response) => {
-    safeLogger.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}`);
+    safeLogger.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}, Authenticated: ${isAuthenticated(req)}`);
     res.status(429).json({
       error: 'Feed rate limit exceeded',
       message: 'Too many feed requests, please try again in a minute.',
