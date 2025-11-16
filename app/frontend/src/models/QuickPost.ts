@@ -25,11 +25,31 @@ export interface UpdateQuickPostInput {
 }
 
 // Utility function to convert backend quick post to frontend quick post
+// Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's a valid IPFS CID
+  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${profileCid}`;
+  }
+  
+  // Check if it's already a full URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, return undefined
+    return undefined;
+  }
+}
+
 export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost {
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
+    title: backendPost.title || '', // Optional for quickPosts
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
@@ -38,6 +58,7 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
+    dao: backendPost.dao || '', // Optional for quickPosts
     
     // Engagement data (will be populated by services)
     reactions: [],
@@ -53,13 +74,14 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
+    communityId: backendPost.dao || backendPost.communityId,
     contentType: detectContentType(backendPost),
     
     // Add author profile information including avatar
     authorProfile: {
       handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
       verified: false,
-      avatar: backendPost.profileCid || undefined,  // Use profileCid as avatar if available
+      avatar: getAvatarUrl(backendPost.profileCid),
       reputationTier: undefined
     },
     

@@ -14,6 +14,7 @@ export interface Community {
   tags: string[];
   isPublic: boolean;
   moderators: string[];
+  creatorAddress?: string; // Add creatorAddress field
   treasuryAddress?: string;
   governanceToken?: string;
   settings: CommunitySettings;

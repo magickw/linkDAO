@@ -2,6 +2,25 @@ import React from 'react';
 import { Service } from '../../../types/service';
 import { StarIcon, ClockIcon, MapPinIcon, TagIcon } from '@heroicons/react/24/solid';
 
+// Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's a valid IPFS CID
+  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${profileCid}`;
+  }
+  
+  // Check if it's already a full URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, return undefined
+    return undefined;
+  }
+}
+
 interface ServiceCardProps {
   service: Service;
   onBook: () => void;
@@ -93,9 +112,9 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({ service, onBook }) => 
         {/* Provider Info */}
         <div className="flex items-center mb-4">
           <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-            {service.provider?.profileCid ? (
+            {getAvatarUrl(service.provider?.profileCid) ? (
               <img
-                src={`https://ipfs.io/ipfs/${service.provider.profileCid}`}
+                src={getAvatarUrl(service.provider?.profileCid)!}
                 alt="Provider"
                 className="w-8 h-8 rounded-full object-cover"
               />

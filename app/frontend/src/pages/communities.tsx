@@ -213,6 +213,23 @@ const CommunitiesPage: React.FC = () => {
         
         setCommunities(communitiesData);
 
+        // Load user's community memberships if wallet is connected
+        if (address && isConnected) {
+          const userMemberships = await CommunityService.getUserCommunityMemberships();
+          setJoinedCommunities(userMemberships);
+          
+          // Set admin roles for communities where user is admin
+          const adminRoles: Record<string, string> = {};
+          communitiesData.forEach(community => {
+            // Check if user is an admin/moderator of this community (based on moderators field)
+            if (community.moderators && Array.isArray(community.moderators) && 
+                address && community.moderators.includes(address)) {
+              adminRoles[community.id] = 'admin';
+            }
+          });
+          setUserAdminRoles(adminRoles);
+        }
+
         // Load enhanced Web3 data
         await loadWeb3EnhancedData(communitiesData);
         

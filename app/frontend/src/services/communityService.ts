@@ -445,6 +445,42 @@ export class CommunityService {
   }
 
   /**
+   * Get user's community memberships
+   * @returns Array of community IDs that the user has joined
+   */
+  static async getUserCommunityMemberships(): Promise<string[]> {
+    try {
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/communities/user/memberships`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user community memberships: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.data) {
+        return [];
+      }
+
+      // Return array of community IDs
+      return data.data.map((membership: any) => membership.communityId);
+    } catch (error) {
+      console.error('Error fetching user community memberships:', error);
+      return [];
+    }
+  }
+
+  /**
    * Update an existing community
    * @param id - Community ID
    * @param data - Updated community data

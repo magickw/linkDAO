@@ -51,6 +51,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   // Mock user membership state for demonstration purposes
   const memberRole = (communityData?.moderators || []).includes(address || '') ? 'admin' : 'member';
   const canEditCommunity = isConnected && address && memberRole === 'admin';
+  const isCommunityCreator = isConnected && address && communityData?.creatorAddress === address;
 
   useEffect(() => {
     const fetchCommunityData = async () => {
@@ -224,15 +225,18 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                 </div>
               </div>
               <div className="flex items-center space-x-2 mt-8">
-                <button
-                  onClick={() => setIsJoined(!isJoined)}
-                  className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${isJoined
-                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                >
-                  {isJoined ? 'Joined' : 'Join'}
-                </button>
+                {/* Only show join button if user is not the creator */}
+                {!isCommunityCreator && (
+                  <button
+                    onClick={() => setIsJoined(!isJoined)}
+                    className={`px-4 py-1.5 rounded-full font-medium text-sm transition-colors ${isJoined
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                  >
+                    {isJoined ? 'Joined' : 'Join'}
+                  </button>
+                )}
                 {/* Show edit button if user is admin */}
                 {canEditCommunity && (
                   <button

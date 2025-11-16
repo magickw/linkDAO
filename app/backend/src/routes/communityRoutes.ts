@@ -605,4 +605,10 @@ router.get('/my-communities',
   communityController.getMyCommunities
 );
 
+// Get user's community memberships (auth required)
+router.get('/user/memberships', 
+  authRequired,
+  communityController.getUserCommunityMemberships
+);
+
 export default router;

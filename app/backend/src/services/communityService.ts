@@ -326,6 +326,40 @@ export class CommunityService {
     }
   }
 
+  // Get user's community memberships
+  async getUserCommunityMemberships(userAddress: string) {
+    try {
+      const memberships = await db
+        .select({
+          communityId: communityMembers.communityId,
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+          contributions: communityMembers.contributions,
+          joinedAt: communityMembers.joinedAt,
+          isActive: communityMembers.isActive,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      return memberships.map(membership => ({
+        communityId: membership.communityId,
+        role: membership.role,
+        reputation: membership.reputation,
+        contributions: membership.contributions,
+        joinedAt: membership.joinedAt,
+        isActive: membership.isActive,
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting user community memberships:', error);
+      throw new Error('Failed to get user community memberships');
+    }
+  }
+
   // Get community details with membership info
   async getCommunityDetails(communityId: string, userAddress?: string) {
     try {
@@ -345,6 +379,7 @@ export class CommunityService {
           postCount: communities.postCount,
           isPublic: communities.isPublic,
           moderators: communities.moderators,
+          creatorAddress: communities.creatorAddress, // Add creatorAddress
           treasuryAddress: communities.treasuryAddress,
           governanceToken: communities.governanceToken,
           settings: communities.settings,
@@ -409,6 +444,7 @@ export class CommunityService {
         postCount: community.postCount,
         isPublic: community.isPublic,
         moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: community.treasuryAddress,
         governanceToken: community.governanceToken,
         settings: community.settings ? JSON.parse(community.settings) : null,
@@ -460,6 +496,7 @@ export class CommunityService {
           postCount: communities.postCount,
           isPublic: communities.isPublic,
           moderators: communities.moderators,
+          creatorAddress: communities.creatorAddress, // Add creatorAddress
           treasuryAddress: communities.treasuryAddress,
           governanceToken: communities.governanceToken,
           settings: communities.settings,
@@ -525,6 +562,7 @@ export class CommunityService {
         postCount: community.postCount,
         isPublic: community.isPublic,
         moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: community.treasuryAddress,
         governanceToken: community.governanceToken,
         settings: community.settings ? JSON.parse(community.settings) : null,
@@ -3559,7 +3597,122 @@ export class CommunityService {
       };
     } catch (error) {
       safeLogger.error('Error getting communities user is member of:', error);
-      throw new Error('Failed to retrieve member communities');
+    }
+  }
+
+  // Get community details with membership info
+  async getCommunityDetails(communityId: string, userAddress?: string) {
+    try {
+      // Get community details
+      const communityResult = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          rules: communities.rules,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          moderators: communities.moderators,
+          creatorAddress: communities.creatorAddress, // Add creatorAddress
+          treasuryAddress: communities.treasuryAddress,
+          governanceToken: communities.governanceToken,
+          settings: communities.settings,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+        })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        return null;
+      }
+
+      const community = communityResult[0];
+
+      // Get user membership if userAddress provided
+      let membership = null;
+      if (userAddress) {
+        const membershipResult = await db
+          .select({
+            role: communityMembers.role,
+            reputation: communityMembers.reputation,
+            contributions: communityMembers.contributions,
+            joinedAt: communityMembers.joinedAt,
+            isActive: communityMembers.isActive,
+          })
+          .from(communityMembers)
+          .where(
+            and(
+              eq(communityMembers.communityId, communityId),
+              eq(communityMembers.userAddress, userAddress)
+            )
+          )
+          .limit(1);
+
+        if (membershipResult.length > 0) {
+          membership = membershipResult[0];
+        }
+      }
+
+      // Get community statistics
+      const statsResult = await db
+        .select()
+        .from(communityStats)
+        .where(eq(communityStats.communityId, communityId))
+        .limit(1);
+
+      const stats = statsResult[0] || null;
+
+      const communityData = {
+        id: community.id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description || '',
+        rules: community.rules ? JSON.parse(community.rules) : [],
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        banner: community.banner,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        isPublic: community.isPublic,
+        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        creatorAddress: community.creatorAddress, // Add creatorAddress
+        treasuryAddress: community.treasuryAddress,
+        governanceToken: community.governanceToken,
+        settings: community.settings ? JSON.parse(community.settings) : null,
+        createdAt: community.createdAt,
+        updatedAt: community.updatedAt,
+        // User-specific data
+        isMember: membership !== null,
+        memberRole: membership?.role || null,
+        memberReputation: membership?.reputation || 0,
+        memberContributions: membership?.contributions || 0,
+        memberJoinedAt: membership?.joinedAt || null,
+        // Statistics
+        stats: stats ? {
+          activeMembers7d: stats.activeMembers7d,
+          activeMembers30d: stats.activeMembers30d,
+          posts7d: stats.posts7d,
+          posts30d: stats.posts30d,
+          engagementRate: Number(stats.engagementRate),
+          growthRate7d: Number(stats.growthRate7d),
+          growthRate30d: Number(stats.growthRate30d),
+          trendingScore: Number(stats.trendingScore),
+        } : null,
+      };
+
+      return communityData;
+    } catch (error) {
+      safeLogger.error('Error getting community details:', error);
+      throw new Error('Failed to get community details');
     }
   }
 

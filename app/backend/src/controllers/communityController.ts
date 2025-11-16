@@ -1028,6 +1028,24 @@ export class CommunityController {
     }
   }
 
+  // Get user's community memberships
+  async getUserCommunityMemberships(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const memberships = await communityService.getUserCommunityMemberships(userAddress);
+
+      res.json(createSuccessResponse(memberships, {}));
+    } catch (error) {
+      safeLogger.error('Error getting user community memberships:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve user community memberships'));
+    }
+  }
+
   // Check if user has access to token-gated content
   async checkContentAccess(req: Request, res: Response): Promise<void> {
     try {

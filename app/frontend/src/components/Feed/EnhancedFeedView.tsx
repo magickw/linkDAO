@@ -15,6 +15,25 @@ import { useAccount } from 'wagmi';
 import { useFollowing } from '@/hooks/useFollow';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
 
+// Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's a valid IPFS CID
+  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${profileCid}`;
+  }
+  
+  // Check if it's already a full URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, return undefined
+    return undefined;
+  }
+}
+
 interface EnhancedPost {
   id: string;
   title: string;
@@ -119,7 +138,7 @@ const EnhancedFeedView = React.memo(({
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
-    feedSource: 'following', // Ensure 'following' feed to include user's own posts
+    feedSource: 'following', // Default to 'following' - shows user's own posts + people they follow
     userAddress: address || '', // Add user address for personalized feed
     ...initialFilter
   });
@@ -138,8 +157,8 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      // Ensure feedSource is always 'following' to include user's own posts
-      feedSource: 'following',
+      // Preserve user's feedSource preference (all or following)
+      feedSource: prev.feedSource || 'following',
       userAddress: address || '' // Update user address when it changes
     }));
   }, [currentSort, currentTimeRange, address]);
@@ -186,7 +205,7 @@ const EnhancedFeedView = React.memo(({
       authorProfile: {
         handle: feedPost.handle || feedPost.author.slice(0, 8),
         verified: false,
-        avatar: feedPost.profileCid || undefined,
+        avatar: getAvatarUrl(feedPost.profileCid),
         reputationTier: undefined
       },
       createdAt: feedPost.createdAt,
@@ -414,7 +433,7 @@ const EnhancedFeedView = React.memo(({
                 <EmptyFeedState filter={filter} />
               ) : (
                 <div className="space-y-4">
-                  {posts.map(renderPost)}
+                  {feedPosts.map(post => convertFeedPostToCardPost(post)).map(renderPost)}
                 </div>
               )}
 
