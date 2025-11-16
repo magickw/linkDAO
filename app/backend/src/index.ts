@@ -114,6 +114,23 @@ import { initializeWebSocket, shutdownWebSocket } from './services/webSocketServ
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
 import { memoryMonitoringService } from './services/memoryMonitoringService';
+import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
+
+// Import request logging middleware
+import {
+  healthCheckExclusionMiddleware,
+  errorCorrelationMiddleware
+} from './middleware/requestLogging';
+
+// Import enhanced request logging middleware
+import {
+  enhancedRequestLoggingMiddleware,
+  databaseQueryTrackingMiddleware,
+  cacheOperationTrackingMiddleware
+} from './middleware/enhancedRequestLogging';
+
+// Import enhanced error handler
+import { enhancedErrorHandler } from './middleware/enhancedErrorHandler';
 
 // Import production configuration
 import { productionConfig } from './config/productionConfig';
