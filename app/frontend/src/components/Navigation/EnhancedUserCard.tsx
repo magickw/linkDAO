@@ -21,6 +21,9 @@ export const EnhancedUserCard: React.FC<EnhancedUserCardProps> = ({
   const username = profile?.handle ? `@${profile.handle}` : profile?.ens || (address ? address.slice(0, 10) : '');
   const avatar = profile?.avatarCid || '';
 
+  // Get reputation score from profile if available
+  const reputationScore = (profile as any)?.reputationScore || null;
+
   return (
     <div
       className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer ${className}`}
@@ -44,9 +47,9 @@ export const EnhancedUserCard: React.FC<EnhancedUserCardProps> = ({
         <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
           {username}
         </div>
-        {profile && (
+        {reputationScore !== null && (
           <div className="text-xs text-blue-600 dark:text-blue-400">
-            Member
+            Reputation: {reputationScore}
           </div>
         )}
       </div>

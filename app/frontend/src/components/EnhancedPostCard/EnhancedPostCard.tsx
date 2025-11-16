@@ -477,13 +477,13 @@ const EnhancedPostCard = React.memo(({
               post={{
                 id: post.id,
                 title: post.title,
-                contentCid: post.contentCid,
+                contentCid: post.contentCid, // Use contentCid field instead of content
                 author: post.author,
                 dao: post.communityName || 'general',
                 commentCount: post.comments,
                 stakedValue: post.reactions.reduce((sum, r) => sum + r.totalStaked, 0)
               }}
-              postType={post.communityId ? "community" : "feed"} // Use "feed" for quick posts, "community" for community posts
+              postType={post.communityId ? 'community' : 'feed'} // Use appropriate post type
               onComment={() => {
                 // Expand the post to show comments
                 setExpanded(true);

@@ -89,7 +89,11 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         setPosts(communityPosts || []); // Ensure posts is always an array
       } catch (err) {
         console.error('Error fetching community data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load community');
+        // Provide a more user-friendly error message that accounts for network issues
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Failed to load community. Please check your connection and try again.';
+        setError(errorMessage);
         setCommunityData(null);
         setPosts([]);
       } finally {
@@ -133,13 +137,29 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   if (error || !communityData) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             {error || 'Community Not Found'}
           </h1>
-          <Link href="/communities" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-            ← Back to Communities
-          </Link>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            {error 
+              ? 'There was an issue loading this community. The community may not exist or there might be a temporary server issue.' 
+              : 'The community you are looking for could not be found.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link 
+              href="/communities" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
+            >
+              ← Back to Communities
+            </Link>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-center dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );

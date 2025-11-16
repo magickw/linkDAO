@@ -1,7 +1,9 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import multer from 'multer';
 import { sellerController } from '../controllers/sellerController';
+import { sellerProfileService } from '../services/sellerProfileService';
+import { successResponse, errorResponse } from '../utils/apiResponse';
 
 const router = Router();
 
@@ -51,72 +53,95 @@ router.get('/seller/:walletAddress/sync/validate', sellerController.validateProf
 router.get('/seller/:walletAddress/history', sellerController.getProfileHistory.bind(sellerController));
 
 // Onboarding routes - using actual service implementation
-router.get('/seller/onboarding/:walletAddress', async (req, res) => {
+router.get('/seller/onboarding/:walletAddress', async (req: Request, res: Response) => {
   try {
     const { walletAddress } = req.params;
-    const { sellerProfileService } = await import('../services/sellerProfileService');
+    
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid wallet address format'
+      });
+    }
     
     const onboardingStatus = await sellerProfileService.getOnboardingStatus(walletAddress);
     
-    res.json({
-      success: true,
-      data: onboardingStatus
-    });
+    return successResponse(res, onboardingStatus, 200);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to get onboarding status',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return errorResponse(
+      res,
+      'ONBOARDING_FETCH_ERROR',
+      'Failed to get onboarding status',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
   }
 });
 
 router.put(
-  '/seller/onboarding/:walletAddress/:stepId', csrfProtection, async (req, res) => {
+  '/seller/onboarding/:walletAddress/:stepId', 
+  csrfProtection, 
+  async (req: Request, res: Response) => {
     try {
       const { walletAddress, stepId } = req.params;
       const { completed } = req.body;
       
+      // Validate wallet address format
+      if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid wallet address format'
+        });
+      }
+      
+      // Validate completed parameter
+      if (typeof completed !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          error: 'Completed must be a boolean value'
+        });
+      }
+      
       // Normalize step ID: convert hyphens to underscores for backend compatibility
       // Frontend uses: 'profile-setup', Backend uses: 'profile_setup'
-      const normalizedStep = stepId.replace(/-/g, '_');
+      const normalizedStep = stepId.replace(/-/g, '_') as keyof import('../types/sellerProfile').OnboardingSteps;
       
-      const { sellerProfileService } = await import('../services/sellerProfileService');
+      // Validate step parameter
+      const validSteps = ['profile_setup', 'verification', 'payout_setup', 'first_listing'];
+      if (!validSteps.includes(normalizedStep)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid onboarding step'
+        });
+      }
       
       // First ensure seller profile exists
-      const existingProfile = await sellerProfileService.getProfile(walletAddress);
+      let existingProfile = await sellerProfileService.getProfile(walletAddress);
       if (!existingProfile) {
         // Create basic profile if it doesn't exist
-        await sellerController.createProfile({
-          body: {
-            walletAddress,
-            businessName: 'Seller',
-            email: `${walletAddress}@example.com`,
-            description: 'New seller profile'
-          }
-        } as any, {
-          status: () => ({ json: (data: any) => data })
-        } as any);
+        existingProfile = await sellerProfileService.createProfile({
+          walletAddress,
+          storeName: 'New Seller',
+          displayName: 'New Seller'
+        });
       }
       
       const onboardingStatus = await sellerProfileService.updateOnboardingStep(
         walletAddress,
-        normalizedStep as keyof import('../types/sellerProfile').OnboardingSteps,
+        normalizedStep,
         completed
       );
       
-      res.json({
-        success: true,
-        message: `Onboarding step ${stepId} updated successfully`,
-        data: onboardingStatus
-      });
+      return successResponse(res, onboardingStatus, 200);
     } catch (error) {
-      console.error('Error updating onboarding step:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to update onboarding step',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      return errorResponse(
+        res,
+        'ONBOARDING_UPDATE_ERROR',
+        'Failed to update onboarding step',
+        500,
+        { error: error instanceof Error ? error.message : 'Unknown error' }
+      );
     }
   });
 

@@ -403,7 +403,7 @@ export class SellerProfileService {
       coverImageCdn: seller.coverImageCdn || undefined,
       coverImageUrl: seller.coverImageUrl || undefined,
       websiteUrl: seller.websiteUrl || undefined,
-      socialLinks: seller.socialLinks ? JSON.parse(seller.socialLinks) : undefined,
+      socialLinks: seller.socialLinks ? this.parseSocialLinks(seller.socialLinks) : undefined,
       storeDescription: seller.storeDescription || undefined,
       tier: seller.tier || 'basic',
       isVerified: seller.isVerified || false,
@@ -435,14 +435,43 @@ export class SellerProfileService {
     return /^[a-zA-Z0-9-]+\.eth$/.test(ensHandle);
   }
 
+  private parseSocialLinks(links: any): SellerProfile['socialLinks'] {
+    try {
+      // Handle case where links might be a JSON string
+      if (typeof links === 'string') {
+        return JSON.parse(links);
+      }
+      
+      // If it's already an object, return it
+      if (typeof links === 'object' && links !== null) {
+        return links;
+      }
+    } catch (error) {
+      safeLogger.error('Error parsing social links:', { links, error });
+    }
+    
+    // Return undefined if parsing fails
+    return undefined;
+  }
+
   private parseOnboardingSteps(steps: any): OnboardingSteps {
-    if (typeof steps === 'object' && steps !== null) {
-      return {
-        profile_setup: Boolean(steps.profile_setup),
-        verification: Boolean(steps.verification),
-        payout_setup: Boolean(steps.payout_setup),
-        first_listing: Boolean(steps.first_listing)
-      };
+    try {
+      // Handle case where steps might be a JSON string
+      let parsedSteps: any = steps;
+      if (typeof steps === 'string') {
+        parsedSteps = JSON.parse(steps);
+      }
+      
+      if (typeof parsedSteps === 'object' && parsedSteps !== null) {
+        return {
+          profile_setup: Boolean(parsedSteps.profile_setup),
+          verification: Boolean(parsedSteps.verification),
+          payout_setup: Boolean(parsedSteps.payout_setup),
+          first_listing: Boolean(parsedSteps.first_listing)
+        };
+      }
+    } catch (error) {
+      safeLogger.error('Error parsing onboarding steps:', { steps, error });
     }
 
     // Return default if parsing fails
