@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
+import { CommunityService } from '@/services/communityService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import CommentThread from './CommentThread';
@@ -9,6 +10,7 @@ import CommentThread from './CommentThread';
 interface EnhancedCommentSystemProps {
   postId: string;
   postType: 'feed' | 'community' | 'enhanced';
+  communityId?: string; // Add communityId to determine if community is public/private
   initialComments?: Comment[];
   userMembership?: CommunityMembership | null;
   isLocked?: boolean;
@@ -21,6 +23,7 @@ type SortOption = 'best' | 'new' | 'top' | 'controversial';
 export default function EnhancedCommentSystem({
   postId,
   postType,
+  communityId,
   initialComments = [],
   userMembership,
   isLocked = false,
@@ -37,6 +40,8 @@ export default function EnhancedCommentSystem({
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('best');
   const [showCommentForm, setShowCommentForm] = useState(false);
+  const [community, setCommunity] = useState<any>(null); // Store community information
+  const [communityLoading, setCommunityLoading] = useState(false);
 
   // Load comments with sorting
   const loadComments = useCallback(async (sortOption: SortOption = sortBy) => {
@@ -48,6 +53,7 @@ export default function EnhancedCommentSystem({
         sortBy: sortOption,
         limit: 100
       });
+
       setComments(commentsData);
     } catch (err) {
       console.error('Error loading comments:', err);
@@ -56,6 +62,25 @@ export default function EnhancedCommentSystem({
       setCommentsLoading(false);
     }
   }, [postId, sortBy, commentsLoading, addToast]);
+
+  // Load community information when communityId is provided
+  useEffect(() => {
+    const loadCommunity = async () => {
+      if (communityId && !community) {
+        try {
+          setCommunityLoading(true);
+          const communityData = await CommunityService.getCommunityById(communityId);
+          setCommunity(communityData);
+        } catch (err) {
+          console.error('Error loading community:', err);
+        } finally {
+          setCommunityLoading(false);
+        }
+      }
+    };
+
+    loadCommunity();
+  }, [communityId, community]);
 
   // Handle comment submission
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -68,8 +93,25 @@ export default function EnhancedCommentSystem({
       return;
     }
 
-    if (postType === 'community' && !userMembership) {
-      addToast('You must join the community to comment', 'error');
+    // For community posts, check if community is public or if user is a member
+    if (postType === 'community' && communityId && community) {
+      // Only require membership for private communities or if there are special requirements
+      if (!community.isPublic && !userMembership) {
+        addToast('You must join the community to comment', 'error');
+        return;
+      }
+      
+      // Check for staking requirements
+      if (community.settings && community.settings.stakingRequirements) {
+        const commentStakingReq = community.settings.stakingRequirements.find(req => req.action === 'comment');
+        if (commentStakingReq && !userMembership) {
+          addToast(`This community requires staking ${commentStakingReq.minimumAmount} ${commentStakingReq.tokenAddress} to comment`, 'error');
+          return;
+        }
+      }
+    } else if (postType === 'community' && communityId && !community) {
+      // Community data not loaded yet
+      addToast('Community information is still loading. Please try again.', 'info');
       return;
     }
 
@@ -173,72 +215,74 @@ export default function EnhancedCommentSystem({
       </div>
 
       {/* Comment Form */}
-      {!isLocked && (postType === 'feed' || userMembership) && (
-        <div className="space-y-3">
-          {!showCommentForm ? (
-            <button
-              onClick={() => setShowCommentForm(true)}
-              className="w-full p-3 text-left text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
-            >
-              Add a comment...
-            </button>
-          ) : (
-            <form onSubmit={handleCommentSubmit} className="space-y-3">
-              <div className="flex space-x-3">
-                <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">
-                    {address ? address.slice(2, 4).toUpperCase() : 'U'}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="What are your thoughts?"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
-                    rows={4}
-                    disabled={commentSubmitting}
-                    maxLength={1000}
-                  />
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {newComment.length}/1000 characters
+      {!isLocked && (
+        (!communityId || (community && community.isPublic) || userMembership) && (
+          <div className="space-y-3">
+            {!showCommentForm ? (
+              <button
+                onClick={() => setShowCommentForm(true)}
+                className="w-full p-3 text-left text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
+              >
+                Add a comment...
+              </button>
+            ) : (
+              <form onSubmit={handleCommentSubmit} className="space-y-3">
+                <div className="flex space-x-3">
+                  <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">
+                      {address ? address.slice(2, 4).toUpperCase() : 'U'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="What are your thoughts?"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+                      rows={4}
+                      disabled={commentSubmitting}
+                      maxLength={1000}
+                    />
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {newComment.length}/1000 characters
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCommentForm(false);
-                    setNewComment('');
-                  }}
-                  disabled={commentSubmitting}
-                  className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newComment.trim() || commentSubmitting}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
-                >
-                  {commentSubmitting ? (
-                    <div className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Posting...
-                    </div>
-                  ) : (
-                    'Comment'
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCommentForm(false);
+                      setNewComment('');
+                    }}
+                    disabled={commentSubmitting}
+                    className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!newComment.trim() || commentSubmitting}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
+                  >
+                    {commentSubmitting ? (
+                      <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Posting...
+                      </div>
+                    ) : (
+                      'Comment'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )
       )}
 
       {/* Locked Message */}
@@ -288,7 +332,7 @@ export default function EnhancedCommentSystem({
           <p className="text-sm">
             {isLocked 
               ? 'Comments are locked for this post.' 
-              : postType === 'community' && !userMembership
+              : postType === 'community' && communityId && community && !community.isPublic && !userMembership
                 ? 'Join the community to start the conversation!'
                 : 'Be the first to share your thoughts!'
             }
