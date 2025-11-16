@@ -4,6 +4,12 @@ import { ipfsService } from '../services/ipfsService';
 import { safeLogger } from '../utils/safeLogger';
 import multer from 'multer';
 
+// Log the imported services for debugging
+safeLogger.info('IPFS routes - imported services', { 
+  ipfsService: !!ipfsService, 
+  ipfsIntegrationService: !!ipfsIntegrationService 
+});
+
 const router = Router();
 
 // Configure multer for file uploads
@@ -99,6 +105,33 @@ router.post('/upload-multiple', upload.array('files', 10), async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
+    });
+  }
+});
+
+/**
+ * GET /api/ipfs/health
+ * Health check endpoint
+ */
+router.get('/health', async (req, res) => {
+  try {
+    // Try to get IPFS node info
+    const nodeInfo = await ipfsService.getNodeInfo();
+    
+    res.status(200).json({
+      success: true,
+      status: 'healthy',
+      data: {
+        nodeId: nodeInfo.id,
+        version: nodeInfo.agentVersion,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'IPFS node is not accessible',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -508,33 +541,6 @@ router.get('/post-content/:hash', async (req, res) => {
         error: error instanceof Error ? error.message : 'Post download failed'
       });
     }
-  }
-});
-
-/**
- * GET /api/ipfs/health
- * Health check endpoint
- */
-router.get('/health', async (req, res) => {
-  try {
-    // Try to get IPFS node info
-    const nodeInfo = await ipfsService.getNodeInfo();
-    
-    res.status(200).json({
-      success: true,
-      status: 'healthy',
-      data: {
-        nodeId: nodeInfo.id,
-        version: nodeInfo.agentVersion,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'IPFS node is not accessible',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
   }
 });
 
