@@ -87,16 +87,20 @@ import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceS
 import {
   ddosProtection,
   requestFingerprinting,
-  hideServerInfo,
   requestSizeLimits,
   csrfProtection,
   validateContentType,
-  securityLogger,
   inputValidation,
   threatDetection,
   securityAuditLogging,
   fileUploadSecurity
 } from './middleware/securityMiddleware';
+
+// Import security enhancements middleware
+import {
+  hideServerInfo,
+  securityLogger
+} from './middleware/securityEnhancementsMiddleware';
 
 // Import performance optimization middleware
 import PerformanceOptimizationIntegration from './middleware/performanceOptimizationIntegration';
