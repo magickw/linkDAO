@@ -196,6 +196,7 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const { addToast } = useToast();
+  const { address: walletAddress } = useAccount(); // Get the connected wallet address
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -264,7 +265,7 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
         bio: formData.bio,
         description: formData.description,
         coverImageUrl: formData.coverImage,  // Map form's coverImage to API's coverImageUrl
-        // Note: Logo might need to be handled separately as profile picture in a separate field
+        walletAddress, // Include wallet address
       };
       
       await onComplete(profileData);

@@ -45,12 +45,16 @@ export class PostService {
     }
     
     try {
+      // Get auth headers from authService to include JWT token
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-session-id': sessionId,
           ...(csrfToken && { 'x-csrf-token': csrfToken }),
+          ...authHeaders // Include auth headers with JWT token
         },
         body: JSON.stringify(data),
         signal: controller.signal,
@@ -270,10 +274,14 @@ export class PostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get auth headers from authService to include JWT token
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders // Include auth headers with JWT token
         },
         body: JSON.stringify(data),
         signal: controller.signal,
@@ -325,10 +333,14 @@ export class PostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
+      // Get auth headers from authService to include JWT token
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders // Include auth headers with JWT token
         },
         signal: controller.signal,
       });

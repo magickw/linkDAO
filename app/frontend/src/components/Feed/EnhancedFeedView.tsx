@@ -163,6 +163,14 @@ const EnhancedFeedView = React.memo(({
     }));
   }, [currentSort, currentTimeRange, address]);
 
+  // Refresh the feed when user address changes (e.g., when wallet connects/disconnects)
+  useEffect(() => {
+    if (address) {
+      // Refresh the feed when user connects their wallet
+      setRefreshKey(prev => prev + 1);
+    }
+  }, [address]);
+
   // Handle external refresh key changes - trigger a refresh when externalRefreshKey prop changes
   useEffect(() => {
     // Only trigger refresh if externalRefreshKey is a positive number (not undefined, null, or 0)

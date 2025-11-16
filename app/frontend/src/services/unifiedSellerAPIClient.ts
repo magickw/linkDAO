@@ -117,7 +117,7 @@ export class UnifiedSellerAPIClient {
     // Profile endpoints
     getProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
     updateProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
-    createProfile: () => `${this.baseURL}/profile`,
+    createProfile: (walletAddress?: string) => walletAddress ? `${this.baseURL}/${walletAddress}` : `${this.baseURL}/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/${walletAddress}/enhanced`,
     
     // Onboarding endpoints
@@ -203,14 +203,18 @@ export class UnifiedSellerAPIClient {
         try {
           const errorText = await response.text();
           if (errorText) {
-            errorData = JSON.parse(errorText);
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              // If JSON parsing fails, use the raw text as message
+              errorData = { message: errorText };
+            }
           } else {
             errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
           }
-        } catch {
-          // If JSON parsing fails, use the raw text
-          const errorText = await response.text();
-          errorData = { message: errorText || `HTTP ${response.status}: ${response.statusText}` };
+        } catch (readError) {
+          // If we can't read the response, provide a generic error
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
         
         throw new SellerAPIError(
@@ -222,7 +226,7 @@ export class UnifiedSellerAPIClient {
         );
       }
       
-      // Check if response has content before trying to parse JSON
+      // For successful responses, check if there's content to parse
       const responseText = await response.text();
       if (!responseText) {
         return {} as T;
@@ -286,7 +290,7 @@ export class UnifiedSellerAPIClient {
       
       const response = await fetch(endpoint, {
         ...options,
-        method: 'PUT',
+        method: 'POST', // Changed from PUT to POST for form data
         body: formData,
         headers: {
           'Accept': 'application/json',
@@ -301,14 +305,18 @@ export class UnifiedSellerAPIClient {
         try {
           const errorText = await response.text();
           if (errorText) {
-            errorData = JSON.parse(errorText);
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              // If JSON parsing fails, use the raw text as message
+              errorData = { message: errorText };
+            }
           } else {
             errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
           }
-        } catch {
-          // If JSON parsing fails, use the raw text
-          const errorText = await response.text();
-          errorData = { message: errorText || `HTTP ${response.status}: ${response.statusText}` };
+        } catch (readError) {
+          // If we can't read the response, provide a generic error
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
         
         throw new SellerAPIError(
@@ -320,7 +328,7 @@ export class UnifiedSellerAPIClient {
         );
       }
       
-      // Check if response has content before trying to parse JSON
+      // For successful responses, check if there's content to parse
       const responseText = await response.text();
       if (!responseText) {
         return {} as T;
@@ -385,8 +393,8 @@ export class UnifiedSellerAPIClient {
     }
   }
 
-  async createProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    return await this.request<SellerProfile>(this.endpoints.createProfile(), {
+  async createProfile(walletAddress: string | undefined, profileData: Partial<SellerProfile>): Promise<SellerProfile> {
+    return await this.request<SellerProfile>(this.endpoints.createProfile(walletAddress), {
       method: 'POST',
       body: JSON.stringify(profileData),
     });

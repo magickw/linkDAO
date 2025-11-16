@@ -119,8 +119,11 @@ export class UnifiedSellerService {
     try {
       // Convert unified profile data to legacy format for API
       const legacyProfileData = this.convertUnifiedProfileToLegacy(profileData);
-
-      const response = await unifiedSellerAPIClient.createProfile(legacyProfileData);
+      
+      // Get the wallet address from the profile data or from the context
+      const walletAddress = legacyProfileData.walletAddress;
+      
+      const response = await unifiedSellerAPIClient.createProfile(walletAddress, legacyProfileData);
 
       // Transform response to unified format
       const transformResult = transformSellerProfileToUnified(response, this.transformationOptions);
@@ -637,6 +640,7 @@ export class UnifiedSellerService {
       phone: unified.phone,
       websiteUrl: unified.websiteUrl,
       socialLinks: unified.socialLinks,
+      walletAddress: unified.walletAddress, // Include walletAddress if provided
       // Map other fields as needed
     };
   }

@@ -55,7 +55,14 @@ export function useUnifiedSeller(walletAddress?: string) {
 
   const createProfile = useMutation({
     mutationFn: (profileData: Partial<UnifiedSellerProfile>) => {
-      return unifiedSellerService.createProfile(profileData);
+      // Get the current effective address
+      const currentAddress = effectiveAddress;
+      // Add the wallet address to the profile data
+      const profileDataWithAddress = {
+        ...profileData,
+        walletAddress: currentAddress
+      };
+      return unifiedSellerService.createProfile(profileDataWithAddress);
     },
     onSuccess: (createdProfile) => {
       // Update the cache with the new profile data

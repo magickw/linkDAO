@@ -44,12 +44,16 @@ export class QuickPostService {
     }
     
     try {
+      // Get auth headers from authService to include JWT token
+      const authHeaders = authService.getAuthHeaders();
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-session-id': sessionId,
           ...(csrfToken && { 'x-csrf-token': csrfToken }),
+          ...authHeaders // Include auth headers with JWT token
         },
         body: JSON.stringify(data),
         signal: controller.signal,
