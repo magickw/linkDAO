@@ -57,6 +57,17 @@ import { ultimateCorsMiddleware } from './middleware/ultimateCors';
 // import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
 // import { corsMiddleware } from './middleware/corsMiddleware';
 // import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
+// Import security configuration and middleware
+import { validateSecurityConfig } from './config/securityConfig';
+import {
+  rateLimitWithCache,
+  cacheMiddleware,
+  cachingMiddleware
+} from './middleware/rateLimit';
+import { ultimateCorsMiddleware } from './middleware/ultimateCors';
+// import { ultraEmergencyCorsMiddleware } from './middleware/ultraEmergencyCors';
+// import { corsMiddleware } from './middleware/corsMiddleware';
+// import { emergencyCorsMiddleware, simpleCorsMiddleware } from './middleware/emergencyCorsMiddleware';
 import { globalErrorHandler, notFoundHandler, asyncHandler } from './middleware/globalErrorHandler';
 
 // Create a simple middleware to handle missing endpoints
@@ -73,6 +84,12 @@ const missingEndpoints = (req: Request, res: Response, next: NextFunction) => {
   // For other routes, pass to next middleware (likely the 404 handler)
   next();
 };
+
+import { securityHeaders } from './middleware/securityEnhancementsMiddleware';
+
+// Helmet middleware for security headers (imported from securityEnhancementsMiddleware)
+// For backward compatibility, we'll create an alias
+const helmetMiddleware = securityHeaders;
 
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
