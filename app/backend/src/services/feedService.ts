@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
 import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows } from '../db/schema';
-import { eq, desc, and, inArray, sql, gt, isNull } from 'drizzle-orm';
+import { eq, desc, and, or, inArray, sql, gt, isNull } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 
@@ -123,11 +123,18 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
 
         // Filter posts to show from followed users AND the user's own posts
-        // Use a more inclusive filter to ensure user's own posts are always shown
+        // Since userId is already in followingIds, we can use a simpler filter
+        // But we keep the OR as a safety measure to ensure user's posts are always shown
         if (followingIds.length > 0) {
-          // Create a more explicit filter that ensures user's own posts are included
-          followingFilter = sql`(${inArray(posts.authorId, followingIds)}) OR (${posts.authorId} = ${userId})`;
-          quickPostFollowingFilter = sql`(${inArray(quickPosts.authorId, followingIds)}) OR (${quickPosts.authorId} = ${userId})`;
+          // Use proper Drizzle ORM or() function for combining conditions
+          followingFilter = or(
+            inArray(posts.authorId, followingIds),
+            eq(posts.authorId, userId)
+          );
+          quickPostFollowingFilter = or(
+            inArray(quickPosts.authorId, followingIds),
+            eq(quickPosts.authorId, userId)
+          );
           console.log('📋 [BACKEND FEED] Using inArray filter with explicit OR for user posts');
         } else {
           // If not following anyone, show only user's own posts
@@ -145,21 +152,16 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Using wallet address filter for user posts via users table join');
       }
     } else if (feedSource === 'all' && userAddress) {
-      // For 'all' feedSource but when user is authenticated, ensure they see their own posts
-      // This helps with user engagement - they can see what they just posted
+      // For 'all' feedSource, show all posts (no additional filtering needed)
+      // The followingFilter is already set to sql`1=1` which shows all posts
+      // We don't need to add user-specific filtering for 'all' feed
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select({ id: users.id })
         .from(users)
         .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
 
-      if (user.length > 0) {
-        const userId = user[0].id;
-        // Modify the followingFilter to include user's own posts in addition to all posts
-        // This ensures the user sees their own content even in 'all' feed
-        followingFilter = sql`(${followingFilter}) OR ${posts.authorId} = ${userId}`;
-        quickPostFollowingFilter = sql`(${quickPostFollowingFilter}) OR ${quickPosts.authorId} = ${userId}`; // Use quickPosts.authorId
-      } else {
+      if (user.length === 0) {
         // If user doesn't exist in DB, create them so their future posts can be found
         await db.insert(users)
           .values({

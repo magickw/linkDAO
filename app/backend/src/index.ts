@@ -328,15 +328,7 @@ const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
 
 // Performance optimizer will be set after routes are imported
 
-// Import security enhancements
-import {
-  securityHeaders,
-  csrfProtection,
-  requestSizeLimits,
-  validateContentType,
-  hideServerInfo,
-  securityLogger
-} from './middleware/securityEnhancementsMiddleware';
+// Get CSRF token function
 import { getCSRFToken } from './middleware/csrfProtection';
 
 // Core middleware stack (order matters!)

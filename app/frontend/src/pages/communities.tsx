@@ -385,7 +385,21 @@ const CommunitiesPage: React.FC = () => {
     setSelectedFilters(filters);
   };
 
-  
+  const handleCreatePost = () => {
+    // If there's only one joined community, redirect directly to that community's create post page
+    if (joinedCommunities.length === 1) {
+      const communityId = joinedCommunities[0];
+      const community = communityList.find(c => c.id === communityId);
+      if (community) {
+        router.push(`/communities/${community.slug || community.name}/create-post`);
+        return;
+      }
+    }
+    
+    // If there are multiple joined communities, redirect to a page where user can select community
+    // For now, we'll redirect to the generic create post page which should handle community selection
+    router.push('/create-post');
+  };
 
   const handleCreateCommunity = async (communityData: any) => {
     setIsCreatingCommunity(true);
@@ -499,10 +513,6 @@ const CommunitiesPage: React.FC = () => {
       const community = communityList.find(c => c.id === post.communityId);
       router.push(`/communities/${community?.slug || community?.name || post.communityId}?post=${postId}`);
     }
-  };
-
-  const handleCreatePost = () => {
-    router.push('/create-post');
   };
 
   const handleNavigate = (path: string) => {

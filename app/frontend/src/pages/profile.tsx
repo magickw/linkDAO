@@ -23,6 +23,24 @@ import { unifiedImageService } from '@/services/unifiedImageService';
 import Link from 'next/link';
 import { ProfileService } from '@/services/profileService';
 
+// Helper function to validate IPFS CID and construct proper URL
+function getAvatarUrl(profileCid: string | undefined): string | undefined {
+  if (!profileCid) return undefined;
+  
+  // Check if it's a valid IPFS CID
+  if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
+    return `https://ipfs.io/ipfs/${profileCid}`;
+  }
+  
+  // Check if it's already a full URL
+  try {
+    new URL(profileCid);
+    return profileCid;
+  } catch {
+    // Not a valid URL, return undefined
+    return undefined;
+  }
+}
 
 export default function Profile() {
   const router = useRouter();
@@ -116,7 +134,7 @@ export default function Profile() {
         displayName: backendProfile.displayName || '', // Use actual displayName field
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: backendProfile.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
+        avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Validate avatar URL
       });
       setAvatarError(false); // Reset avatar error when loading new profile
       
@@ -154,7 +172,7 @@ export default function Profile() {
         displayName: contractProfileData.displayName || '', // Use actual displayName field
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: contractProfileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
+        avatar: getAvatarUrl(contractProfileData.avatarCid || contractProfileData.profileCid), // Validate avatar URL
       });
       setAvatarError(false); // Reset avatar error when loading new profile
     }
@@ -1258,7 +1276,7 @@ export default function Profile() {
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
                           <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
-                            {profile.avatar ? (
+                            {profile.avatar && typeof profile.avatar === 'string' && profile.avatar.startsWith('http') ? (
                               <img 
                                 src={profile.avatar} 
                                 alt="Avatar" 
