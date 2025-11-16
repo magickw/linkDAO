@@ -18,6 +18,7 @@ export interface EnhancedPost {
   id: string;
   title: string;
   content: string;
+  contentCid: string;  // Add the contentCid property
   author: string;
   authorProfile: AuthorProfile;
   createdAt: Date;

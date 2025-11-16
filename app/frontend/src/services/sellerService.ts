@@ -283,9 +283,9 @@ class SellerService {
     }
   }
 
-  async createSellerProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    console.log(`Creating seller profile:`, profileData);
-    return await unifiedSellerAPIClient.createProfile(profileData);
+  async createSellerProfile(walletAddress: string, profileData: Partial<SellerProfile>): Promise<SellerProfile> {
+    console.log(`Creating seller profile for ${walletAddress}:`, profileData);
+    return await unifiedSellerAPIClient.createProfile(walletAddress, profileData);
   }
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {

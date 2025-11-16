@@ -101,6 +101,7 @@ const PostItem: React.FC<{
           id: post.id,
           title: post.title,
           content: `Content for post ${post.id}`, // Using a placeholder since contentCid is just a reference
+          contentCid: post.contentCid || '', // Add contentCid property
           author: post.author,
           authorProfile: {
             handle: post.author?.slice(0, 8) || `user_${post.id?.slice(0, 8)}`,

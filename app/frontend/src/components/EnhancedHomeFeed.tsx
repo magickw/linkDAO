@@ -40,6 +40,7 @@ interface EnhancedPost {
     ens?: string;
   };
   content: string;
+  contentCid: string;  // Add the contentCid property
   timestamp: string;
   engagement: {
     likes: number;

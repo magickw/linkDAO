@@ -24,7 +24,7 @@ export function useSeller() {
     if (!address) throw new Error('Wallet not connected');
 
     try {
-      const newProfile = await sellerService.createSellerProfile({
+      const newProfile = await sellerService.createSellerProfile(address, {
         ...profileData,
         walletAddress: address,
       });
