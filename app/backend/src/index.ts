@@ -83,23 +83,23 @@ const helmetMiddleware = securityHeaders;
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
 
-// Import security middleware
+// Import security middleware from securityMiddleware.ts
 import {
   ddosProtection,
   requestFingerprinting,
-  requestSizeLimits,
-  csrfProtection,
-  validateContentType,
   inputValidation,
   threatDetection,
   securityAuditLogging,
   fileUploadSecurity
 } from './middleware/securityMiddleware';
 
-// Import security enhancements middleware
+// Import security enhancements middleware from securityEnhancementsMiddleware.ts
 import {
   hideServerInfo,
-  securityLogger
+  securityLogger,
+  requestSizeLimits,
+  csrfProtection,
+  validateContentType
 } from './middleware/securityEnhancementsMiddleware';
 
 // Import performance optimization middleware
