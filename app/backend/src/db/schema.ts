@@ -131,6 +131,42 @@ export const quickPostTags = pgTable("quick_post_tags", {
   })
 }));
 
+// Comments - for both regular posts and quick posts
+export const comments = pgTable("comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  quickPostId: uuid("quick_post_id").references(() => quickPosts.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  parentCommentId: uuid("parent_comment_id"), // For nested comments/replies
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
+  moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  quickPostFk: foreignKey({
+    columns: [t.quickPostId],
+    foreignColumns: [quickPosts.id]
+  }),
+  authorFk: foreignKey({
+    columns: [t.authorId],
+    foreignColumns: [users.id]
+  }),
+  parentCommentFk: foreignKey({
+    columns: [t.parentCommentId],
+    foreignColumns: [comments.id]
+  }),
+  postIdIdx: index("idx_comments_post_id").on(t.postId),
+  quickPostIdIdx: index("idx_comments_quick_post_id").on(t.quickPostId),
+  authorIdIdx: index("idx_comments_author_id").on(t.authorId),
+  createdAtIdx: index("idx_comments_created_at").on(t.createdAt),
+}));
+
 // Quick Post Reactions - token-based reactions to quick posts
 export const quickPostReactions = pgTable("quick_post_reactions", {
   id: serial("id").primaryKey(),

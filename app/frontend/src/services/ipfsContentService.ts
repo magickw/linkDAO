@@ -19,7 +19,7 @@ export class IPFSContentService {
     }
 
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/content/${cid}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/ipfs/post-content/${cid}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

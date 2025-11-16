@@ -476,29 +476,6 @@ const EnhancedFeedView = React.memo(({
         {/* Trending Content Detector - Hidden, runs in background */}
         {trendingDetector}
 
-        {/* Simplified Header - Show that it's showing all posts */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Feed</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {filter.feedSource === 'following' 
-                  ? 'Posts from accounts you follow and your own posts' 
-                  : 'All posts from the LinkDAO community'}
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                filter.feedSource === 'following' 
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-                  : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              }`}>
-                {filter.feedSource === 'following' ? 'Following' : 'All Posts'}
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Error state */}
         {errorState}
 
