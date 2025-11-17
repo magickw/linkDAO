@@ -73,6 +73,12 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
+    // Skip if we already tried login for this address (prevent endless loops)
+    if (hasTriedLoginRef.current && !addressChanged) {
+      console.log('📝 Skipping auto-login: already attempted for this address');
+      return;
+    }
+
     // Skip if we already tried login for this address recently (cooldown)
     const now = Date.now();
     if (!addressChanged && (now - loginAttemptTimestampRef.current < AUTH_COOLDOWN_MS)) {
@@ -113,13 +119,11 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       }
     }
 
-    // Add a short delay to ensure all initialization is complete
-    const timer = setTimeout(() => {
+    // Only attempt login once per address change
+    if (!hasTriedLoginRef.current || addressChanged) {
       console.log('🚀 Triggering auto-login for:', address);
       handleAutoLogin();
-    }, 500); // Reduced back to 500ms since we now properly wait for initialization
-
-    return () => clearTimeout(timer);
+    }
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
   const handleAutoLogin = async () => {
@@ -202,6 +206,9 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         const errorMessage = result.error || 'Authentication failed';
         console.error('❌ Auto-login failed:', errorMessage);
         
+        // Stop retrying on authentication failures to prevent endless loops
+        hasTriedLoginRef.current = true;
+        
         // Increment failed attempts for certain types of errors
         if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
           setFailedAttempts(prev => prev + 1);
@@ -217,6 +224,9 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     } catch (error) {
       console.error('💥 Auto-login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      
+      // Stop retrying on errors to prevent endless loops
+      hasTriedLoginRef.current = true;
       
       // Increment failed attempts for connector errors
       if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
@@ -241,6 +251,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   useEffect(() => {
     if (!isConnected || !connector) {
       hasTriedLoginRef.current = false;
+      setFailedAttempts(0);
     }
   }, [isConnected, connector]);
 
