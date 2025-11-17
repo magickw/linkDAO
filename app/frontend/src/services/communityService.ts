@@ -149,6 +149,9 @@ export class CommunityService {
             return cached;
           }
           console.warn('Community service unavailable (503), returning null');
+          
+          // Add a small delay before retrying to avoid overwhelming the service
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
           return null;
         }
         if (response.status === 429) {
@@ -235,6 +238,9 @@ export class CommunityService {
             return cached;
           }
           console.warn('Community service unavailable (503), returning null');
+          
+          // Add a small delay before retrying to avoid overwhelming the service
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
           return null;
         }
         if (response.status === 429) {

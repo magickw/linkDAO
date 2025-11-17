@@ -336,7 +336,7 @@ export class PostService {
     try {
       const authHeaders = authService.getAuthHeaders();
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/feed/posts/author/${author}`,
+        `${BACKEND_API_BASE_URL}/api/posts/author/${author}`,
         {
           method: 'GET',
           headers: {

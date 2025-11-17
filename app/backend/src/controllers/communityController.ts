@@ -95,14 +95,25 @@ export class CommunityController {
         community = await communityService.getCommunityBySlug(id, userAddress);
       }
       
+      // Handle service errors gracefully
       if (!community) {
-        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found or unavailable', 404));
         return;
       }
       
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error getting community details:', error);
+      
+      // Handle service unavailable errors specifically
+      if (error.message === 'Service temporarily unavailable') {
+        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again later.', {
+          retryable: true,
+          retryAfter: 30
+        }));
+        return;
+      }
+      
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }
@@ -115,14 +126,25 @@ export class CommunityController {
 
       const community = await communityService.getCommunityBySlug(slug, userAddress);
 
+      // Handle service errors gracefully
       if (!community) {
-        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found or unavailable', 404));
         return;
       }
 
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error getting community by slug:', error);
+      
+      // Handle service unavailable errors specifically
+      if (error.message === 'Service temporarily unavailable') {
+        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again later.', {
+          retryable: true,
+          retryAfter: 30
+        }));
+        return;
+      }
+      
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }

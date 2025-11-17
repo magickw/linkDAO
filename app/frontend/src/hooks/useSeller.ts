@@ -82,6 +82,13 @@ export function useSellerOnboarding() {
 
     try {
       const onboardingSteps = await sellerService.getOnboardingSteps(address);
+
+      // Defensive check: ensure we have a valid array
+      if (!Array.isArray(onboardingSteps)) {
+        console.error('Invalid onboarding steps response:', onboardingSteps);
+        throw new Error('Invalid onboarding steps data received');
+      }
+
       setSteps(onboardingSteps);
 
       // Find current step (first incomplete step)
@@ -113,9 +120,11 @@ export function useSellerOnboarding() {
       );
 
       // Move to next step if current step is completed
-      const stepIndex = steps.findIndex(step => step.id === stepId);
-      if (stepIndex === currentStep && stepIndex < steps.length - 1) {
-        setCurrentStep(stepIndex + 1);
+      if (Array.isArray(steps)) {
+        const stepIndex = steps.findIndex(step => step.id === stepId);
+        if (stepIndex === currentStep && stepIndex < steps.length - 1) {
+          setCurrentStep(stepIndex + 1);
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update onboarding step';

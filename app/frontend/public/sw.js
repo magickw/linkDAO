@@ -290,8 +290,12 @@ async function networkFirst(request, cacheName) {
   // Check if request recently failed with exponential backoff
   const failureInfo = failedRequests.get(requestKey);
   if (failureInfo) {
+    // Special handling for community requests - shorter backoff times
+    const isCommunityRequest = url.pathname.includes('/api/communities');
+    const baseBackoffTime = isCommunityRequest ? 10000 : 30000; // 10s for communities, 30s for others
+    
     const backoffTime = Math.min(
-      30000 * Math.pow(BACKOFF_MULTIPLIER, failureInfo.attempts - 1),
+      baseBackoffTime * Math.pow(BACKOFF_MULTIPLIER, failureInfo.attempts - 1),
       MAX_BACKOFF_TIME
     );
     
@@ -454,6 +458,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         // Don't backoff image failures, let them fail fast
         failedRequests.delete(requestKey);
       }
+      // Handle community API 503 errors with specific backoff
+      else if (url.pathname.includes('/api/communities') && networkResponse.status === 503) {
+        console.warn('Community API service unavailable (503):', networkResponse.status, requestKey);
+        // Track failure with exponential backoff for community requests
+        const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+        failureInfo.attempts += 1;
+        failureInfo.lastFailure = Date.now();
+        failedRequests.set(requestKey, failureInfo);
+      }
       else {
         // Track failure with exponential backoff for other requests
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
@@ -492,6 +505,16 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     else if (url.hostname.includes('ip-api.com')) {
       console.warn('Geolocation service failed, trying next:', error.message);
       // Try alternative geolocation services immediately
+    }
+    // Handle community API failures with more specific backoff
+    else if (url.pathname.includes('/api/communities')) {
+      console.warn('Community API failed:', error.message, requestKey);
+      // Track failure with exponential backoff for community requests
+      const requestKey = `${request.method}:${request.url}`;
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
     }
     else {
       // Track failure with exponential backoff for other requests
@@ -912,6 +935,7 @@ function isCriticalRequest(request) {
       url.pathname.startsWith('/api/profiles') ||
       url.pathname.startsWith('/api/users') ||
       url.pathname.includes('/feed/enhanced') ||
+      url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
       url.searchParams.has('timestamp') ||
       url.searchParams.has('nonce') ||
       url.searchParams.has('_t')) {

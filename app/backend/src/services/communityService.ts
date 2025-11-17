@@ -471,8 +471,9 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community details:', error);
-      throw new Error('Failed to get community details');
+      safeLogger.error('Error getting community details for ID:', communityId, error);
+      // Return a more graceful error response instead of throwing
+      return null;
     }
   }
 
@@ -589,8 +590,17 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community by slug:', error);
-      throw new Error('Failed to get community by slug');
+      safeLogger.error('Error getting community by slug:', slug, error);
+      
+      // Handle database connection errors specifically
+      if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
+        safeLogger.error('Database connection error when fetching community by slug:', slug);
+        // Return a service unavailable response
+        throw new Error('Service temporarily unavailable');
+      }
+      
+      // Return a more graceful error response instead of throwing for other errors
+      return null;
     }
   }
 
@@ -3711,8 +3721,17 @@ export class CommunityService {
 
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community details:', error);
-      throw new Error('Failed to get community details');
+      safeLogger.error('Error getting community details for ID:', communityId, error);
+      
+      // Handle database connection errors specifically
+      if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
+        safeLogger.error('Database connection error when fetching community:', communityId);
+        // Return a service unavailable response
+        throw new Error('Service temporarily unavailable');
+      }
+      
+      // Return a more graceful error response instead of throwing for other errors
+      return null;
     }
   }
 

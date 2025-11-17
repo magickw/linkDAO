@@ -7,7 +7,10 @@ export const users = pgTable("users", {
   walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
   handle: varchar("handle", { length: 64 }).unique(),
   displayName: varchar("display_name", { length: 100 }), // Public display name
-  profileCid: text("profile_cid"), // IPFS metadata
+  ens: varchar("ens", { length: 255 }), // ENS name (public)
+  avatarCid: text("avatar_cid"), // Avatar image IPFS CID or URL (public)
+  bioCid: text("bio_cid"), // Bio text (public)
+  profileCid: text("profile_cid"), // Legacy IPFS metadata (deprecated)
   physicalAddress: text("physical_address"), // JSON object for encrypted private data (addresses, names, etc.)
   
   // Role field for admin functionality
