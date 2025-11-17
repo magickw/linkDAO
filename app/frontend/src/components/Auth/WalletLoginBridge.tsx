@@ -196,7 +196,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         console.error('❌ Auto-login failed:', errorMessage);
         
         // Increment failed attempts for certain types of errors
-        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign')) {
+        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
           setFailedAttempts(prev => prev + 1);
         }
         
@@ -212,7 +212,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       
       // Increment failed attempts for connector errors
-      if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign')) {
+      if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed')) {
         setFailedAttempts(prev => prev + 1);
       }
       

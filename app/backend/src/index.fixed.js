@@ -206,7 +206,9 @@ app.get('/', (req, res) => {
       'POST /api/auth/wallet',
       'GET /api/posts',
       'GET /api/communities',
-      'GET /api/profiles'
+      'GET /api/profiles',
+      'POST /api/auth/wallet',
+      'POST /api/auth/wallet-connect'
     ]
   });
 });
@@ -264,6 +266,7 @@ app.get('/api/auth/nonce/:address', (req, res) => {
   });
 });
 
+// Wallet authentication endpoints
 app.post('/api/auth/wallet', (req, res) => {
   const { address, signature, message } = req.body;
   
@@ -274,16 +277,41 @@ app.post('/api/auth/wallet', (req, res) => {
     });
   }
   
-  // Mock authentication - in production, verify the signature
-  res.json({
-    success: true,
-    token: 'mock-jwt-token',
-    user: {
-      address,
-      authenticated: true,
-      timestamp: new Date().toISOString()
-    }
-  });
+  try {
+    // Generate a proper JWT token instead of mock token
+    const JWT_SECRET = process.env.JWT_SECRET || '68511d56377eb3959e43fd953c2ee76346eb8becf62e08f0afe5439efa8595d4';
+    const token = jwt.sign({
+      walletAddress: address.toLowerCase(),
+      address: address.toLowerCase(),
+      userId: address.toLowerCase(),
+      type: 'session',
+      timestamp: Date.now()
+    }, JWT_SECRET, { expiresIn: '24h' });
+    
+    res.json({
+      success: true,
+      token: token,
+      user: {
+        address,
+        authenticated: true,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('JWT generation failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate authentication token'
+    });
+  }
+});
+
+// Wallet connect endpoint (alias for wallet authentication)
+app.post('/api/auth/wallet-connect', (req, res) => {
+  // Forward to the same wallet authentication logic
+  req.url = '/api/auth/wallet';
+  req.originalUrl = '/api/auth/wallet';
+  return app._router.handle(req, res);
 });
 
 // Posts routes
@@ -794,174 +822,7 @@ app.get('/api/profiles/address/:address', (req, res) => {
     success: true,
     data: profile
   });
-});
-
-// Chat History Routes
-app.get('/api/chat/conversations', (req, res) => {
-  // Mock conversations for now - replace with database query
-  const conversations = [
-    {
-      id: 'conv_1',
-      type: 'dm',
-      participants: ['0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1', req.headers.authorization?.split(' ')[1] || ''],
-      lastActivity: new Date(),
-      unreadCount: 2,
-      isArchived: false,
-      createdAt: new Date(Date.now() - 86400000)
-    }
-  ];
-  
-  res.json({
-    success: true,
-    data: conversations
-  });
-});
-
-app.get('/api/chat/history/:conversationId', (req, res) => {
-  const { conversationId } = req.params;
-  const { limit = 50, before, after } = req.query;
-  
-  // Mock messages - replace with database query
-  const messages = [
-    {
-      id: 'msg_1',
-      conversationId,
-      fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-      content: 'Hello! How are you?',
-      timestamp: new Date(Date.now() - 3600000),
-      messageType: 'text',
-      isEncrypted: true,
-      reactions: []
-    },
-    {
-      id: 'msg_2',
-      conversationId,
-      fromAddress: req.headers.authorization?.split(' ')[1] || '',
-      content: 'Hi! I\'m doing well, thanks for asking.',
-      timestamp: new Date(Date.now() - 1800000),
-      messageType: 'text',
-      isEncrypted: true,
-      reactions: []
-    }
-  ];
-  
-  res.json({
-    success: true,
-    data: {
-      messages,
-      hasMore: false,
-      nextCursor: null,
-      prevCursor: null
-    }
-  });
-});
-
-app.post('/api/chat/messages', (req, res) => {
-  const { conversationId, toAddress, channelId, content, messageType = 'text', isEncrypted = true } = req.body;
-  
-  if (!conversationId || !content) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing required fields: conversationId, content'
-    });
-  }
-  
-  const message = {
-    id: `msg_${Date.now()}`,
-    conversationId,
-    fromAddress: req.headers.authorization?.split(' ')[1] || '',
-    toAddress,
-    channelId,
-    content,
-    timestamp: new Date(),
-    messageType,
-    isEncrypted,
-    reactions: []
-  };
-  
-  res.status(201).json({
-    success: true,
-    data: message
-  });
-});
-
-app.post('/api/chat/conversations/dm', (req, res) => {
-  const { participantAddress } = req.body;
-  
-  if (!participantAddress) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing participantAddress'
-    });
-  }
-  
-  const conversation = {
-    id: `conv_${Date.now()}`,
-    type: 'dm',
-    participants: [req.headers.authorization?.split(' ')[1] || '', participantAddress],
-    lastActivity: new Date(),
-    unreadCount: 0,
-    isArchived: false,
-    createdAt: new Date()
-  };
-  
-  res.status(201).json({
-    success: true,
-    data: conversation
-  });
-});
-
-app.post('/api/chat/messages/read', (req, res) => {
-  const { conversationId, messageIds } = req.body;
-  
-  if (!conversationId || !messageIds) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing required fields'
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Messages marked as read'
-  });
-});
-
-app.post('/api/chat/messages/:messageId/reactions', (req, res) => {
-  const { messageId } = req.params;
-  const { emoji } = req.body;
-  
-  if (!emoji) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing emoji'
-    });
-  }
-  
-  res.json({
-    success: true,
-    message: 'Reaction added'
-  });
-});
-
-app.delete('/api/chat/messages/:messageId/reactions', (req, res) => {
-  const { messageId } = req.params;
-  const { emoji } = req.body;
-  
-  res.json({
-    success: true,
-    message: 'Reaction removed'
-  });
-});
-
-app.delete('/api/chat/messages/:messageId', (req, res) => {
-  const { messageId } = req.params;
-  
-  res.json({
-    success: true,
-    message: 'Message deleted'
-  });
-});
+}
 
 // Messaging API aliases for backward compatibility
 // These endpoints provide alternative routes to the same chat functionality
@@ -1079,6 +940,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   GET  /health                              - Health check`);
   console.log(`   GET  /api/auth/nonce/:address             - Get auth nonce`);
   console.log(`   POST /api/auth/wallet                     - Wallet auth`);
+  console.log(`   POST /api/auth/wallet-connect             - Wallet connect auth`);
   console.log(`   GET  /api/posts/feed                      - Posts feed`);
   console.log(`   GET  /api/profiles/address/:address       - User profile`);
   console.log(`   GET  /api/sellers/profile/:walletAddress  - Seller profile`);
