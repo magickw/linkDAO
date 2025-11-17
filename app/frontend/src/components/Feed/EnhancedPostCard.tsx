@@ -62,16 +62,18 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       setLoading(true);
       setError(null);
       
-      // If post has direct content, use it
-      if (post.content && typeof post.content === 'string' && post.content.length > 0) {
-        setContent(post.content);
-        setLoading(false);
-        return;
-      }
-      
-      // If post has contentCid, fetch from IPFS
-      if (post.contentCid) {
-        try {
+      try {
+        // First, check if post has direct content (not empty and not a CID)
+        if (post.content && typeof post.content === 'string' && post.content.length > 0 && 
+            !post.content.startsWith('Qm') && !post.content.startsWith('bafy')) {
+          console.log('Using direct content for post:', { id: post.id, contentLength: post.content.length });
+          setContent(post.content);
+          setLoading(false);
+          return;
+        }
+        
+        // If post has contentCid, fetch from IPFS
+        if (post.contentCid) {
           console.log('Fetching content from IPFS for CID:', post.contentCid);
           const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
           console.log('Received content from IPFS:', { contentText, length: contentText?.length });
@@ -94,16 +96,21 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           } else {
             setContent(`Content not available (CID: ${post.contentCid})`);
           }
-        } catch (error) {
-          console.error('Failed to fetch content:', error);
-          setError(`Failed to load content: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          setContent(`Content not available (CID: ${post.contentCid})`);
-        } finally {
-          setLoading(false);
+        } else if (post.content) {
+          // If we have content but no CID, use the content directly
+          console.log('Using direct content for post:', { id: post.id, contentLength: post.content.length });
+          setContent(post.content);
+        } else {
+          // If no content CID and no direct content, show default message
+          console.log('No content available for post:', { id: post.id });
+          setContent('No content available');
         }
-      } else {
-        // If no content CID and no direct content, show whatever content is available
-        setContent(post.content || 'No content available');
+      } catch (error) {
+        console.error('Failed to fetch content:', error);
+        setError(`Failed to load content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Even on error, show what content we have
+        setContent(post.content || `Content not available`);
+      } finally {
         setLoading(false);
       }
     };
@@ -113,6 +120,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       id: post.id,
       contentCid: post.contentCid,
       content: post.content,
+      contentLength: post.content?.length,
       mediaCids: post.mediaCids,
       mediaCidsLength: post.mediaCids?.length,
       hasMediaCids: !!post.mediaCids && post.mediaCids.length > 0
@@ -237,7 +245,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         {loading ? (
           <p>Loading content...</p>
         ) : error ? (
-          <p className="text-red-500">{error}</p>
+          <div>
+            <p className="text-red-500">{error}</p>
+            {/* Still show content if we have it, even if there was an error */}
+            {content && content !== 'No content available' && (
+              <p>{content}</p>
+            )}
+          </div>
         ) : content ? (
           <p>{content}</p>
         ) : (

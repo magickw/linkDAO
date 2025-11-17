@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { QuickPostService } from '../services/quickPostService';
-import { CreateQuickPostInput } from '../models/QuickPost';
+import { MetadataService } from '../services/metadataService';
+import { safeLogger } from '../utils/safeLogger';
+import { apiResponse } from '../utils/apiResponse';
 
 export class QuickPostController {
   private quickPostService: QuickPostService;
@@ -13,29 +15,34 @@ export class QuickPostController {
     try {
       console.log('POST /api/quick-posts - Creating quick post');
       
-      const { contentCid, authorId, parentId, mediaCids, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
+      const { content, authorId, parentId, media, tags, onchainRef, isTokenGated, gatedContentPreview } = req.body;
       
-      if (!contentCid || contentCid.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          error: 'Content CID is required'
-        });
+      if (!content || content.trim() === '') {
+        return res.status(400).json(apiResponse.error('Content is required', 400));
       }
       
       if (!authorId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Author ID is required'
-        });
+        return res.status(400).json(apiResponse.error('Author ID is required', 400));
+      }
+      
+      // Upload content to IPFS to get CID
+      let contentCid: string;
+      try {
+        const metadataService = new MetadataService();
+        contentCid = await metadataService.uploadToIPFS(content);
+        console.log('Content uploaded to IPFS with CID:', contentCid);
+      } catch (uploadError) {
+        safeLogger.error('Error uploading content to IPFS:', uploadError);
+        return res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
       }
       
       // Prepare input for QuickPostService
-      const quickPostInput: CreateQuickPostInput = {
+      const quickPostInput = {
         authorId,
         contentCid,
         parentId,
-        mediaCids,
-        tags,
+        mediaCids: media ? JSON.stringify(media) : undefined,
+        tags: tags ? JSON.stringify(tags) : undefined,
         onchainRef,
         isTokenGated,
         gatedContentPreview
@@ -46,126 +53,63 @@ export class QuickPostController {
       
       console.log('Quick post created:', quickPost.id);
       
-      return res.status(201).json({
-        success: true,
-        data: quickPost
-      });
+      return res.status(201).json(apiResponse.success(quickPost, 'Quick post created successfully'));
     } catch (error: any) {
       console.error('Error creating quick post:', error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to create quick post'
-      });
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to create quick post', 500));
     }
   }
 
-  async getAllQuickPosts(req: Request, res: Response): Promise<Response> {
-    try {
-      const quickPosts = await this.quickPostService.getAllQuickPosts();
-      
-      return res.json({
-        success: true,
-        data: quickPosts
-      });
-    } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve quick posts'
-      });
-    }
-  }
-
-  async getQuickPostById(req: Request, res: Response): Promise<Response> {
+  async getQuickPost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const quickPost = await this.quickPostService.getQuickPostById(id);
+      
+      const quickPost = await this.quickPostService.getQuickPost(id);
       
       if (!quickPost) {
-        return res.status(404).json({
-          success: false,
-          error: 'Quick post not found'
-        });
+        return res.status(404).json(apiResponse.error('Quick post not found', 404));
       }
       
-      return res.json({
-        success: true,
-        data: quickPost
-      });
+      return res.json(apiResponse.success(quickPost, 'Quick post retrieved successfully'));
     } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve quick post'
-      });
-    }
-  }
-
-  async getQuickPostFeed(req: Request, res: Response): Promise<Response> {
-    try {
-      const { forUser } = req.query;
-      
-      const quickPosts = await this.quickPostService.getQuickPostFeed(forUser ? String(forUser) : undefined);
-      
-      return res.json({
-        success: true,
-        data: quickPosts
-      });
-    } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve quick post feed'
-      });
-    }
-  }
-
-  async getQuickPostsByAuthor(req: Request, res: Response): Promise<Response> {
-    try {
-      const { authorId } = req.params;
-      const quickPosts = await this.quickPostService.getQuickPostsByAuthor(authorId);
-      
-      return res.json({
-        success: true,
-        data: quickPosts
-      });
-    } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve quick posts by author'
-      });
-    }
-  }
-
-  async getQuickPostsByTag(req: Request, res: Response): Promise<Response> {
-    try {
-      const { tag } = req.params;
-      // For now, return empty array - tags for quick posts would need to be implemented
-      return res.json({
-        success: true,
-        data: []
-      });
-    } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve quick posts by tag'
-      });
+      console.error('Error getting quick post:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post', 500));
     }
   }
 
   async updateQuickPost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { content, tags } = req.body;
       
-      const updatedQuickPost = await this.quickPostService.updateQuickPost(id, updateData);
+      // Upload content to IPFS to get CID if content is provided
+      let contentCid: string | undefined;
+      if (content) {
+        try {
+          const metadataService = new MetadataService();
+          contentCid = await metadataService.uploadToIPFS(content);
+          console.log('Content uploaded to IPFS with CID:', contentCid);
+        } catch (uploadError) {
+          safeLogger.error('Error uploading content to IPFS:', uploadError);
+          return res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
+        }
+      }
       
-      return res.json({
-        success: true,
-        data: updatedQuickPost
-      });
+      const updateData = {
+        contentCid,
+        tags: tags ? JSON.stringify(tags) : undefined
+      };
+      
+      const quickPost = await this.quickPostService.updateQuickPost(id, updateData);
+      
+      if (!quickPost) {
+        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      }
+      
+      return res.json(apiResponse.success(quickPost, 'Quick post updated successfully'));
     } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update quick post'
-      });
+      console.error('Error updating quick post:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to update quick post', 500));
     }
   }
 
@@ -173,17 +117,62 @@ export class QuickPostController {
     try {
       const { id } = req.params;
       
-      await this.quickPostService.deleteQuickPost(id);
+      const deleted = await this.quickPostService.deleteQuickPost(id);
       
-      return res.json({
-        success: true,
-        message: 'Quick post deleted successfully'
-      });
+      if (!deleted) {
+        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+      }
+      
+      return res.json(apiResponse.success(null, 'Quick post deleted successfully'));
     } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to delete quick post'
-      });
+      console.error('Error deleting quick post:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to delete quick post', 500));
+    }
+  }
+
+  async getQuickPostsByAuthor(req: Request, res: Response): Promise<Response> {
+    try {
+      const { authorId } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      
+      const quickPosts = await this.quickPostService.getQuickPostsByAuthor(
+        authorId,
+        parseInt(page as string),
+        parseInt(limit as string)
+      );
+      
+      return res.json(apiResponse.success(quickPosts, 'Quick posts retrieved successfully'));
+    } catch (error: any) {
+      console.error('Error getting quick posts by author:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts', 500));
+    }
+  }
+
+  async addQuickPostReaction(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { userId, type, amount } = req.body;
+      
+      const reaction = await this.quickPostService.addReaction(id, userId, type, amount);
+      
+      return res.status(201).json(apiResponse.success(reaction, 'Reaction added successfully'));
+    } catch (error: any) {
+      console.error('Error adding quick post reaction:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to add reaction', 500));
+    }
+  }
+
+  async addQuickPostTip(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { fromUserId, toUserId, token, amount, message } = req.body;
+      
+      const tip = await this.quickPostService.addTip(id, fromUserId, toUserId, token, amount, message);
+      
+      return res.status(201).json(apiResponse.success(tip, 'Tip added successfully'));
+    } catch (error: any) {
+      console.error('Error adding quick post tip:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to add tip', 500));
     }
   }
 }

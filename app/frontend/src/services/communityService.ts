@@ -205,7 +205,7 @@ export class CommunityService {
     
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/slug/${slug}`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${slug}`,
         {
           method: 'GET',
           headers: {

@@ -120,13 +120,30 @@ export class FeedController {
         pollData
       } = req.body;
 
+      // Validate required fields
+      if (!content || content.trim() === '') {
+        res.status(400).json(apiResponse.error('Content is required', 400));
+        return;
+      }
+
+      // Upload content to IPFS to get CID
+      let contentCid: string;
+      try {
+        const metadataService = new MetadataService();
+        contentCid = await metadataService.uploadToIPFS(content);
+        safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
+      } catch (uploadError) {
+        safeLogger.error('Error uploading content to IPFS:', uploadError);
+        res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
+        return;
+      }
+
       const post = await feedService.createPost({
         authorAddress: userAddress,
-        content,
+        content: contentCid, // Pass the CID, not the content
         communityId,
         mediaUrls,
-        tags,
-        pollData
+        tags
       });
 
       res.status(201).json(apiResponse.success(post, 'Post created successfully'));
@@ -148,10 +165,24 @@ export class FeedController {
       const { id } = req.params;
       const { content, tags } = req.body;
 
+      // Upload content to IPFS to get CID if content is provided
+      let contentCid: string | undefined;
+      if (content) {
+        try {
+          const metadataService = new MetadataService();
+          contentCid = await metadataService.uploadToIPFS(content);
+          safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
+        } catch (uploadError) {
+          safeLogger.error('Error uploading content to IPFS:', uploadError);
+          res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
+          return;
+        }
+      }
+
       const updatedPost = await feedService.updatePost({
         postId: id,
         userAddress,
-        content,
+        content: contentCid, // Pass the CID, not the content
         tags
       });
 
@@ -540,7 +571,7 @@ export class FeedController {
         res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully'));
       } catch (ipfsError) {
         safeLogger.error('Error retrieving content from IPFS:', ipfsError);
-        res.status(500).json(apiResponse.error('Failed to retrieve content from IPFS'));
+        res.status(500).json(apiResponse.error(`Failed to retrieve content from IPFS: ${ipfsError instanceof Error ? ipfsError.message : 'Unknown error'}`));
       }
     } catch (error) {
       safeLogger.error('Error in getContentFromIPFS:', error);

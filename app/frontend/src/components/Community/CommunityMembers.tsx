@@ -3,7 +3,8 @@
  * Displays community members with role-based permissions and management tools
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { CommunityMember, Community } from '../../models/Community';
 import { formatNumber, formatDate } from '../../utils/formatters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';
@@ -91,8 +92,11 @@ export const CommunityMembers: React.FC<CommunityMembersProps> = ({
       console.error('Error loading members:', err);
       setError(err instanceof Error ? err.message : 'Failed to load members');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (pageNum === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
   }, [communityId, sortBy, roleFilter, searchQuery]);
 

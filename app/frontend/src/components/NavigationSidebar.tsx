@@ -369,7 +369,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                             indicator.type === 'community' ? 'bg-purple-500' :
                             'bg-orange-500'
                           }`}></div>
-                          <span className="text-sm text-gray-900 dark:text-gray-100 font-medium capitalize">
+                          <span className="text-sm text-gray-900 dark:text-white font-medium capitalize">
                             {indicator.type === 'notification' ? 'Notifications' :
                              indicator.type === 'transaction' ? 'Transactions' :
                              indicator.type === 'community' ? 'Community' :
@@ -377,7 +377,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                              indicator.type}
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                        <span className="text-sm font-bold text-white bg-primary-600 dark:bg-primary-500 px-2 py-1 rounded-full">
                           {indicator.count}
                         </span>
                       </button>

@@ -56,7 +56,8 @@ export class IPFSContentService {
       return content;
     } catch (error) {
       console.error('Error fetching content from IPFS:', error);
-      throw new Error(`Failed to retrieve content from IPFS: ${cid}`);
+      // Return a more descriptive error message
+      throw new Error(`Failed to retrieve content from IPFS: ${cid} - ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

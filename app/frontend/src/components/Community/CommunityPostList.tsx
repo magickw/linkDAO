@@ -89,14 +89,14 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
 
   // Load posts
   const loadPosts = useCallback(async (pageNum: number = 1, reset: boolean = true) => {
-    try {
-      if (pageNum === 1) {
-        setLoading(true);
-        setError(null);
-      } else {
-        setLoadingMore(true);
-      }
+    if (pageNum === 1) {
+      setLoading(true);
+      setError(null);
+    } else {
+      setLoadingMore(true);
+    }
 
+    try {
       const params = new URLSearchParams({
         page: pageNum.toString(),
         limit: '20',
@@ -147,10 +147,13 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
       
       setError(err instanceof Error ? err.message : 'Failed to load posts');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (pageNum === 1) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
     }
-  }, [communitySlug, communityId, sort, filters, isOnline, offlineCacheService]);
+  }, [communityId, sort, filters, isOnline, offlineCacheService]);
 
   // Load more posts
   const loadMore = useCallback(() => {

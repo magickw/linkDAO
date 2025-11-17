@@ -17,17 +17,16 @@ interface FeedOptions {
 
 interface CreatePostData {
   authorAddress: string;
-  content: string;
+  content: string; // This is now the CID, not the actual content
   communityId?: string;
   mediaUrls: string[];
   tags: string[];
-  pollData?: any;
 }
 
 interface UpdatePostData {
   postId: string;
   userAddress: string;
-  content?: string;
+  content?: string; // This is now the CID, not the actual content
   tags?: string[];
 }
 
@@ -397,258 +396,104 @@ export class FeedService {
         try {
           const cachedTrending = await trendingCacheService.getTrendingScores(timeRange);
           if (cachedTrending) {
-            safeLogger.info(`Cache hit for trending ${timeRange}`);
+            // Apply pagination to cached data
+            const paginatedPosts = cachedTrending.slice(offset, offset + limit);
             return {
-              posts: cachedTrending.slice(0, limit),
+              posts: paginatedPosts,
               pagination: {
                 page,
                 limit,
                 total: cachedTrending.length,
-                totalPages: Math.ceil(cachedTrending.length / limit),
-                cached: true
+                totalPages: Math.ceil(cachedTrending.length / limit)
               }
             };
           }
         } catch (cacheError) {
-          safeLogger.warn('Cache retrieval failed, continuing with database query:', cacheError);
+          safeLogger.warn('Error reading from trending cache:', cacheError);
         }
       }
 
-      // Cache miss - calculate trending scores
-      safeLogger.info(`Cache miss for trending ${timeRange} - calculating...`);
-      // Get posts with engagement metrics using a single optimized query
+      // If not cached or not first page, query database
       const trendingPosts = await db
         .select({
           id: posts.id,
           authorId: posts.authorId,
-          dao: posts.dao,
+          title: posts.title,
           contentCid: posts.contentCid,
           mediaCids: posts.mediaCids,
           tags: posts.tags,
           createdAt: posts.createdAt,
           stakedValue: posts.stakedValue,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid,
-          reactionCount: sql<number>`COALESCE((
-            SELECT COUNT(*) 
-            FROM reactions 
-            WHERE reactions.post_id = posts.id
-          ), 0)`,
-          tipCount: sql<number>`COALESCE((
-            SELECT COUNT(*) 
-            FROM tips 
-            WHERE tips.post_id = posts.id
-          ), 0)`,
-          totalTipAmount: sql<number>`COALESCE((
-            SELECT SUM(CAST(amount AS DECIMAL)) 
-            FROM tips 
-            WHERE tips.post_id = posts.id
-          ), 0)`,
-          commentCount: sql<number>`COALESCE((
-            SELECT COUNT(*) 
-            FROM posts AS comments 
-            WHERE comments.parent_id = posts.id
-          ), 0)`,
-          viewCount: sql<number>`0` // Placeholder for view counts
+          reputationScore: posts.reputationScore,
+          dao: posts.dao,
+          trendingScore: sql<number>`(
+            COALESCE(CAST(${posts.stakedValue} AS DECIMAL), 0) * 0.4 +
+            COALESCE(${posts.reputationScore}, 0) * 0.3 +
+            EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) / 3600 * 0.3
+          )`
         })
         .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
         .where(and(
           timeFilter,
-          isNull(posts.parentId) // Exclude comments (only show top-level posts)
+          sql`${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked'`
         ))
+        .orderBy(sql`(
+          COALESCE(CAST(${posts.stakedValue} AS DECIMAL), 0) * 0.4 +
+          COALESCE(${posts.reputationScore}, 0) * 0.3 +
+          EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) / 3600 * 0.3
+        ) DESC`)
         .limit(limit)
         .offset(offset);
 
-      // Calculate advanced trending scores
-      const postsWithAdvancedScoring = trendingPosts.map((post) => {
-        const ageInHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
-        
-        // Enhanced trending algorithm considering multiple factors
-        const engagementVelocity = this.calculateEngagementVelocity(
-          post.reactionCount,
-          post.tipCount,
-          ageInHours
-        );
-        
-        const contentQualityScore = this.calculateContentQualityScore(
-          post.totalTipAmount,
-          post.reactionCount,
-          post.viewCount || 0
-        );
-        
-        const recencyBoost = this.calculateRecencyBoost(ageInHours, timeRange);
-        
-        const trendingScore = (engagementVelocity * 0.4) + 
-                             (contentQualityScore * 0.4) + 
-                             (recencyBoost * 0.2);
+      // Enrich with user data
+      const enrichedPosts = await Promise.all(
+        trendingPosts.map(async (post) => {
+          const user = await db
+            .select({ walletAddress: users.walletAddress, handle: users.handle })
+            .from(users)
+            .where(eq(users.id, post.authorId))
+            .limit(1);
 
-        return {
-          ...post,
-          trendingScore,
-          engagementVelocity,
-          contentQualityScore,
-          recencyBoost
-        };
-      });
+          return {
+            ...post,
+            walletAddress: user[0]?.walletAddress || '',
+            handle: user[0]?.handle || ''
+          };
+        })
+      );
 
-      // Sort by trending score
-      postsWithAdvancedScoring.sort((a, b) => b.trendingScore - a.trendingScore);
-
-      // Cache the results (store top 100 for pagination)
+      // Update cache for first page
       if (page === 1) {
-        const topPosts = postsWithAdvancedScoring.slice(0, 100);
-        await trendingCacheService.setTrendingScores(timeRange, topPosts);
-        safeLogger.info(`Cached trending ${timeRange} (${topPosts.length} posts)`);
+        try {
+          await trendingCacheService.updateTrendingScores(timeRange, enrichedPosts);
+        } catch (cacheError) {
+          safeLogger.warn('Error updating trending cache:', cacheError);
+        }
       }
 
       // Get total count for pagination
-      const totalCount = await db
+      const totalCountResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(posts)
-        .where(and(timeFilter, isNull(posts.parentId)));
+        .where(and(
+          timeFilter,
+          sql`${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked'`
+        ));
+
+      const totalCount = totalCountResult[0]?.count || 0;
 
       return {
-        posts: postsWithAdvancedScoring,
+        posts: enrichedPosts,
         pagination: {
           page,
           limit,
-          total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit),
-          cached: false
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
         }
       };
     } catch (error) {
       safeLogger.error('Error getting trending posts:', error);
-      
-      // Return empty result instead of throwing to prevent 500 errors
-      return {
-        posts: [],
-        pagination: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 0,
-          cached: false
-        }
-      };
-    }
-  }
-
-  // Get trending hashtags
-  async getTrendingHashtags(options: { limit: number; timeRange: string }) {
-    const { limit, timeRange } = options;
-    const timeFilter = this.buildTimeFilter(timeRange);
-
-    try {
-      const trendingHashtags = await db
-        .select({
-          tag: postTags.tag,
-          postCount: sql<number>`COUNT(DISTINCT ${postTags.postId})`,
-          totalEngagement: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`,
-          recentActivity: sql<number>`COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END)`
-        })
-        .from(postTags)
-        .leftJoin(posts, eq(postTags.postId, posts.id))
-        .where(timeFilter)
-        .groupBy(postTags.tag)
-        .orderBy(
-          sql`(COUNT(DISTINCT ${postTags.postId}) * 0.3 + 
-               COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) * 0.5 + 
-               COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END) * 0.2) DESC`
-        )
-        .limit(limit);
-
-      return trendingHashtags.map(hashtag => ({
-        tag: hashtag.tag,
-        postCount: hashtag.postCount,
-        totalEngagement: hashtag.totalEngagement || 0,
-        recentActivity: hashtag.recentActivity || 0,
-        trendingScore: (hashtag.postCount * 0.3) + 
-                      ((hashtag.totalEngagement || 0) * 0.5) + 
-                      ((hashtag.recentActivity || 0) * 0.2)
-      }));
-    } catch (error) {
-      safeLogger.error('Error getting trending hashtags:', error);
-      throw new Error('Failed to retrieve trending hashtags');
-    }
-  }
-
-  // Get content popularity metrics
-  async getContentPopularityMetrics(postId: string) {
-    try {
-      const postIdInt = parseInt(postId);
-      
-      // Get comprehensive engagement data
-      const [postData, reactionData, tipData, shareData] = await Promise.all([
-        db.select({
-          id: posts.id,
-          createdAt: posts.createdAt,
-          stakedValue: posts.stakedValue,
-          tags: posts.tags
-        })
-        .from(posts)
-        .where(eq(posts.id, postIdInt))
-        .limit(1),
-
-        db.select({
-          type: reactions.type,
-          count: sql<number>`COUNT(*)`,
-          totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`
-        })
-        .from(reactions)
-        .where(eq(reactions.postId, postIdInt))
-        .groupBy(reactions.type),
-
-        db.select({
-          count: sql<number>`COUNT(*)`,
-          totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`,
-          avgAmount: sql<number>`AVG(CAST(amount AS DECIMAL))`
-        })
-        .from(tips)
-        .where(eq(tips.postId, postIdInt)),
-
-        // Placeholder for shares - would need a shares table
-        Promise.resolve([{ count: 0 }])
-      ]);
-
-      if (postData.length === 0) {
-        return null;
-      }
-
-      const post = postData[0];
-      const ageInHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
-      
-      // Calculate various popularity metrics
-      const totalReactions = reactionData.reduce((sum, r) => sum + r.count, 0);
-      const totalTips = tipData[0]?.count || 0;
-      const totalShares = shareData[0]?.count || 0;
-      
-      const engagementRate = this.calculateEngagementRate(totalReactions, totalTips, totalShares);
-      const viralityScore = this.calculateViralityScore(totalShares, totalReactions, ageInHours);
-      const qualityScore = this.calculateContentQualityScore(
-        tipData[0]?.totalAmount || 0,
-        totalReactions,
-        0 // views placeholder
-      );
-
-      return {
-        postId: post.id,
-        ageInHours,
-        totalReactions,
-        totalTips,
-        totalShares,
-        engagementRate,
-        viralityScore,
-        qualityScore,
-        popularityRank: this.calculatePopularityRank(engagementRate, viralityScore, qualityScore),
-        reactionBreakdown: reactionData,
-        tipMetrics: tipData[0] || { count: 0, totalAmount: 0, avgAmount: 0 }
-      };
-    } catch (error) {
-      safeLogger.error('Error getting content popularity metrics:', error);
-      throw new Error('Failed to retrieve content popularity metrics');
+      throw new Error('Failed to retrieve trending posts');
     }
   }
 
@@ -673,12 +518,12 @@ export class FeedService {
         userId = user[0].id;
       }
 
-      // Create the post
+      // Create the post - content is now the CID
       const newPost = await db
         .insert(posts)
         .values({
           authorId: userId,
-          contentCid: content, // In production, upload to IPFS first
+          contentCid: content, // This is now the CID, not the actual content
           dao: communityId,
           mediaCids: JSON.stringify(mediaUrls),
           tags: JSON.stringify(tags),
@@ -754,19 +599,33 @@ export class FeedService {
         return null;
       }
 
+      // Prepare update data
       const updateData: any = {};
-
       if (content !== undefined) {
-        updateData.contentCid = content; // In production, upload to IPFS first
+        updateData.contentCid = content; // This is now the CID, not the actual content
       }
-
       if (tags !== undefined) {
         updateData.tags = JSON.stringify(tags);
-        
-        // Update post tags table
+      }
+      updateData.updatedAt = new Date();
+
+      // Update the post
+      const updatedPost = await db
+        .update(posts)
+        .set(updateData)
+        .where(and(
+          eq(posts.id, postIdInt),
+          eq(posts.authorId, user[0].id)
+        ))
+        .returning();
+
+      // Update tags if provided
+      if (tags !== undefined) {
+        // Delete existing tags
         await db.delete(postTags).where(eq(postTags.postId, postIdInt));
         
-        if (tags.length > 0) {
+        // Insert new tags
+        if (tags && tags.length > 0) {
           const tagInserts = tags.map(tag => ({
             postId: postIdInt,
             tag: tag.toLowerCase(),
@@ -775,12 +634,6 @@ export class FeedService {
           await db.insert(postTags).values(tagInserts);
         }
       }
-
-      const updatedPost = await db
-        .update(posts)
-        .set(updateData)
-        .where(eq(posts.id, postIdInt))
-        .returning();
 
       return updatedPost[0];
     } catch (error) {
@@ -817,13 +670,6 @@ export class FeedService {
         return false;
       }
 
-      // Delete related data first (foreign key constraints)
-      await Promise.all([
-        db.delete(postTags).where(eq(postTags.postId, postIdInt)),
-        db.delete(reactions).where(eq(reactions.postId, postIdInt)),
-        db.delete(tips).where(eq(tips.postId, postIdInt))
-      ]);
-
       // Delete the post
       await db.delete(posts).where(eq(posts.id, postIdInt));
 
@@ -839,14 +685,14 @@ export class FeedService {
     const { postId, userAddress, type, tokenAmount } = data;
 
     try {
-      // Get user ID first - use case-insensitive matching
+      // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
 
-      // Check if user already reacted
+      // Check if reaction already exists
       const existingReaction = await db
         .select()
         .from(reactions)
@@ -1048,11 +894,10 @@ export class FeedService {
         id: `share_${Date.now()}`,
         postId: postIdInt,
         userId: user[0].id,
-        userAddress,
         targetType,
         targetId,
         message,
-        sharedAt: new Date()
+        createdAt: new Date()
       };
     } catch (error) {
       safeLogger.error('Error sharing post:', error);
@@ -1060,562 +905,178 @@ export class FeedService {
     }
   }
 
-  // Get post comments using posts table as threaded comments
-  async getPostComments(options: { postId: string; page: number; limit: number; sort: string }) {
-    const { postId, page, limit, sort } = options;
+  // Get post comments
+  async getPostComments(data: { postId: string; page: number; limit: number; sort: string }) {
+    const { postId, page, limit, sort } = data;
     const offset = (page - 1) * limit;
 
     try {
-      // Use posts table with parentId to create threaded comments
-      const parentPostId = parseInt(postId);
-      
-      // Build sort order for comments
-      let sortOrder;
-      switch (sort) {
-        case 'oldest':
-          sortOrder = posts.createdAt;
-          break;
-        case 'top':
-          sortOrder = desc(posts.stakedValue);
-          break;
-        case 'newest':
-        default:
-          sortOrder = desc(posts.createdAt);
-          break;
+      const postIdInt = parseInt(postId);
+
+      // Build sort order
+      let orderByClause;
+      if (sort === 'oldest') {
+        orderByClause = asc(comments.createdAt);
+      } else if (sort === 'popular') {
+        orderByClause = desc(comments.upvotes);
+      } else {
+        orderByClause = desc(comments.createdAt); // Default to newest
       }
 
-      // Get comments (posts with parentId)
-      const comments = await db
+      const commentsResult = await db
         .select({
-          id: posts.id,
-          authorId: posts.authorId,
-          contentCid: posts.contentCid,
-          parentId: posts.parentId,
-          createdAt: posts.createdAt,
-          stakedValue: posts.stakedValue,
+          id: comments.id,
+          postId: comments.postId,
+          authorId: comments.authorId,
+          content: comments.content,
+          upvotes: comments.upvotes,
+          downvotes: comments.downvotes,
+          createdAt: comments.createdAt,
+          updatedAt: comments.updatedAt,
+          parentCommentId: comments.parentCommentId,
           walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid
+          handle: users.handle
         })
-        .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
-        .where(eq(posts.parentId, parentPostId))
-        .orderBy(sortOrder)
+        .from(comments)
+        .leftJoin(users, eq(comments.authorId, users.id))
+        .where(and(
+          eq(comments.postId, postIdInt),
+          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+        ))
+        .orderBy(orderByClause)
         .limit(limit)
         .offset(offset);
 
-      // Get engagement data for each comment
-      const commentsWithEngagement = await Promise.all(
-        comments.map(async (comment) => {
-          const [reactionCount, tipCount, replyCount] = await Promise.all([
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(reactions)
-              .where(eq(reactions.postId, comment.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(tips)
-              .where(eq(tips.postId, comment.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(posts)
-              .where(eq(posts.parentId, comment.id))
-          ]);
-
-          return {
-            id: comment.id,
-            postId: parentPostId,
-            authorId: comment.authorId,
-            userAddress: comment.walletAddress,
-            username: comment.handle,
-            avatar: comment.profileCid,
-            content: comment.contentCid,
-            parentCommentId: comment.parentId,
-            createdAt: comment.createdAt,
-            updatedAt: comment.createdAt,
-            replyCount: replyCount[0]?.count || 0,
-            likeCount: reactionCount[0]?.count || 0,
-            tipCount: tipCount[0]?.count || 0,
-            engagementScore: parseFloat(comment.stakedValue || '0')
-          };
-        })
-      );
-
       // Get total count for pagination
-      const totalCount = await db
+      const totalCountResult = await db
         .select({ count: sql<number>`COUNT(*)` })
-        .from(posts)
-        .where(eq(posts.parentId, parentPostId));
+        .from(comments)
+        .where(and(
+          eq(comments.postId, postIdInt),
+          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+        ));
+
+      const totalCount = totalCountResult[0]?.count || 0;
 
       return {
-        comments: commentsWithEngagement,
+        comments: commentsResult,
         pagination: {
           page,
           limit,
-          total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
         }
       };
     } catch (error) {
       safeLogger.error('Error getting post comments:', error);
-      throw new Error('Failed to retrieve post comments');
+      throw new Error('Failed to retrieve comments');
     }
   }
 
-  // Add comment to post using posts table
+  // Add comment to post
   async addComment(data: CommentData) {
     const { postId, userAddress, content, parentCommentId } = data;
 
     try {
-      // Get or create user - use case-insensitive matching
+      // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
-      let user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      let userId: string;
-
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
-        // Store wallet address in lowercase for consistency
-        const newUser = await db.insert(users).values({
-          walletAddress: normalizedAddress,
-          createdAt: new Date()
-        }).returning();
-        userId = newUser[0].id;
-      } else {
-        userId = user[0].id;
+        throw new Error('User not found');
       }
 
-      // Verify parent post exists
-      const parentPost = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
-      if (parentPost.length === 0) {
-        throw new Error('Parent post not found');
-      }
-
-      // Create comment as a post with parentId
-      const commentPost = await db
-        .insert(posts)
+      const comment = await db
+        .insert(comments)
         .values({
-          authorId: userId,
-          contentCid: content, // In production, upload to IPFS first
-          parentId: parentCommentId ? parseInt(parentCommentId) : parseInt(postId),
-          dao: parentPost[0].dao, // Inherit community from parent
-          communityId: parentPost[0].communityId,
+          postId: parseInt(postId),
+          authorId: user[0].id,
+          content,
+          parentCommentId,
           createdAt: new Date(),
-          stakedValue: '0'
+          updatedAt: new Date()
         })
         .returning();
 
-      // Update engagement score for parent post
+      // Update post engagement score
       await this.updateEngagementScore(postId);
 
-      return {
-        id: commentPost[0].id,
-        postId: parseInt(postId),
-        authorId: userId,
-        userAddress,
-        username: user[0]?.handle || userAddress.slice(0, 8),
-        avatar: user[0]?.profileCid || '',
-        content,
-        parentCommentId: parentCommentId ? parseInt(parentCommentId) : parseInt(postId),
-        createdAt: commentPost[0].createdAt,
-        updatedAt: commentPost[0].createdAt,
-        replyCount: 0,
-        likeCount: 0,
-        tipCount: 0,
-        engagementScore: 0
-      };
+      return comment[0];
     } catch (error) {
       safeLogger.error('Error adding comment:', error);
       throw new Error('Failed to add comment');
     }
   }
 
-  // Get comment replies (nested comments)
-  async getCommentReplies(commentId: string, options: { page: number; limit: number; sort: string }) {
-    const { page, limit, sort } = options;
-    const offset = (page - 1) * limit;
-
-    try {
-      const commentIdInt = parseInt(commentId);
-      
-      // Build sort order
-      let sortOrder;
-      switch (sort) {
-        case 'oldest':
-          sortOrder = posts.createdAt;
-          break;
-        case 'top':
-          sortOrder = desc(posts.stakedValue);
-          break;
-        case 'newest':
-        default:
-          sortOrder = desc(posts.createdAt);
-          break;
-      }
-
-      // Get replies to this comment
-      const replies = await db
-        .select({
-          id: posts.id,
-          authorId: posts.authorId,
-          contentCid: posts.contentCid,
-          parentId: posts.parentId,
-          createdAt: posts.createdAt,
-          stakedValue: posts.stakedValue,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid
-        })
-        .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
-        .where(eq(posts.parentId, commentIdInt))
-        .orderBy(sortOrder)
-        .limit(limit)
-        .offset(offset);
-
-      // Transform replies with engagement data
-      const repliesWithEngagement = await Promise.all(
-        replies.map(async (reply) => {
-          const [reactionCount, tipCount] = await Promise.all([
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(reactions)
-              .where(eq(reactions.postId, reply.id)),
-            db.select({ count: sql<number>`COUNT(*)` })
-              .from(tips)
-              .where(eq(tips.postId, reply.id))
-          ]);
-
-          return {
-            id: reply.id,
-            authorId: reply.authorId,
-            userAddress: reply.walletAddress,
-            username: reply.handle,
-            avatar: reply.profileCid,
-            content: reply.contentCid,
-            parentCommentId: reply.parentId,
-            createdAt: reply.createdAt,
-            updatedAt: reply.createdAt,
-            replyCount: 0, // Don't nest deeper for now
-            likeCount: reactionCount[0]?.count || 0,
-            tipCount: tipCount[0]?.count || 0,
-            engagementScore: parseFloat(reply.stakedValue || '0')
-          };
-        })
-      );
-
-      return {
-        replies: repliesWithEngagement,
-        pagination: {
-          page,
-          limit,
-          total: replies.length,
-          totalPages: Math.ceil(replies.length / limit)
-        }
-      };
-    } catch (error) {
-      safeLogger.error('Error getting comment replies:', error);
-      throw new Error('Failed to retrieve comment replies');
-    }
-  }
-
-  // Enhanced reaction system with better aggregation
-  async getPostReactions(postId: string) {
-    try {
-      const postIdInt = parseInt(postId);
-
-      // Get detailed reaction data
-      const reactionData = await db
-        .select({
-          type: reactions.type,
-          userId: reactions.userId,
-          amount: reactions.amount,
-          createdAt: reactions.createdAt,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid
-        })
-        .from(reactions)
-        .leftJoin(users, eq(reactions.userId, users.id))
-        .where(eq(reactions.postId, postIdInt))
-        .orderBy(desc(reactions.createdAt));
-
-      // Group reactions by type
-      const reactionsByType = new Map();
-      
-      reactionData.forEach(reaction => {
-        const type = reaction.type;
-        if (!reactionsByType.has(type)) {
-          reactionsByType.set(type, {
-            type,
-            count: 0,
-            totalAmount: 0,
-            users: []
-          });
-        }
-        
-        const group = reactionsByType.get(type);
-        group.count++;
-        group.totalAmount += parseFloat(reaction.amount || '0');
-        group.users.push({
-          userId: reaction.userId,
-          address: reaction.walletAddress,
-          username: reaction.handle || reaction.walletAddress?.slice(0, 8),
-          avatar: reaction.profileCid || '',
-          amount: parseFloat(reaction.amount || '0'),
-          timestamp: reaction.createdAt
-        });
-      });
-
-      return {
-        postId: postIdInt,
-        totalReactions: reactionData.length,
-        reactionsByType: Array.from(reactionsByType.values()),
-        recentReactions: reactionData.slice(0, 10) // Last 10 reactions
-      };
-    } catch (error) {
-      safeLogger.error('Error getting post reactions:', error);
-      throw new Error('Failed to retrieve post reactions');
-    }
-  }
-
-  // Add post sharing functionality
-  async addPostShare(data: { postId: string; userAddress: string; platform: string; message?: string }) {
-    const { postId, userAddress, platform, message } = data;
-
-    try {
-      // Get user - use case-insensitive matching
-      const normalizedAddress = userAddress.toLowerCase();
-      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      if (user.length === 0) {
-        throw new Error('User not found');
-      }
-
-      // Verify post exists
-      const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
-      if (post.length === 0) {
-        throw new Error('Post not found');
-      }
-
-      // Update engagement score
-      await this.updateEngagementScore(postId);
-
-      // Return share record (in production, this might be stored in a shares table)
-      return {
-        id: `share_${Date.now()}`,
-        postId: parseInt(postId),
-        userId: user[0].id,
-        userAddress,
-        platform,
-        message,
-        sharedAt: new Date()
-      };
-    } catch (error) {
-      safeLogger.error('Error adding post share:', error);
-      throw new Error('Failed to share post');
-    }
-  }
-
-  // Add post bookmarking functionality
-  async toggleBookmark(data: { postId: string; userAddress: string }) {
-    const { postId, userAddress } = data;
-
-    try {
-      // Get user - use case-insensitive matching
-      const normalizedAddress = userAddress.toLowerCase();
-      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
-      if (user.length === 0) {
-        throw new Error('User not found');
-      }
-
-      // For now, return bookmark status (in production, this would use a bookmarks table)
-      return {
-        postId: parseInt(postId),
-        userId: user[0].id,
-        isBookmarked: true, // Toggle logic would be implemented with actual bookmarks table
-        bookmarkedAt: new Date()
-      };
-    } catch (error) {
-      safeLogger.error('Error toggling bookmark:', error);
-      throw new Error('Failed to toggle bookmark');
-    }
-  }
-
-  // Helper method to build time filter
-  private buildTimeFilter(timeRange: string) {
-    const now = new Date();
-
-    switch (timeRange) {
-      case 'hour':
-        return gt(posts.createdAt, new Date(now.getTime() - 60 * 60 * 1000));
-      case 'day':
-        return gt(posts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000));
-      case 'week':
-        return gt(posts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
-      case 'month':
-        return gt(posts.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
-      default:
-        return sql`1=1`;
-    }
-  }
-
-  // Helper method to build sort order - default to newest posts
-  private buildSortOrder(sort: string) {
-    switch (sort) {
-      case 'new':
-        return desc(posts.createdAt); // Newest first
-      case 'top':
-        return desc(posts.stakedValue);
-      case 'following':
-        // This would need additional logic to filter by followed users
-        return desc(posts.createdAt); // Newest first for following feed
-      case 'hot':
-      default:
-        return desc(posts.createdAt); // Default to newest instead of stakedValue
-    }
-  }
-
-  // Helper method to calculate engagement score
-  private calculateEngagementScore(reactionCount: number, tipCount: number, commentCount: number): number {
-    // Weighted engagement score calculation
-    return (reactionCount * 1) + (tipCount * 5) + (commentCount * 2);
-  }
-
-  // Helper method to calculate trending score (considers recency)
-  private calculateTrendingScore(reactionCount: number, tipCount: number, ageInHours: number): number {
-    const engagementScore = this.calculateEngagementScore(reactionCount, tipCount, 0);
-    // Decay factor based on age (newer posts get higher scores)
-    const decayFactor = Math.exp(-ageInHours / 24); // Decay over 24 hours
-    return engagementScore * decayFactor;
-  }
-
-  // Calculate engagement velocity (engagement per hour)
-  private calculateEngagementVelocity(reactionCount: number, tipCount: number, ageInHours: number): number {
-    if (ageInHours <= 0) return 0;
-    const totalEngagement = (reactionCount * 1) + (tipCount * 5);
-    return totalEngagement / Math.max(ageInHours, 0.1); // Avoid division by zero
-  }
-
-  // Calculate content quality score based on tip amounts and engagement depth
-  private calculateContentQualityScore(totalTipAmount: number, reactionCount: number, viewCount: number): number {
-    const tipQuality = totalTipAmount > 0 ? Math.log(totalTipAmount + 1) * 10 : 0;
-    const engagementDepth = viewCount > 0 ? (reactionCount / Math.max(viewCount, 1)) * 100 : reactionCount;
-    return (tipQuality * 0.6) + (engagementDepth * 0.4);
-  }
-
-  // Calculate recency boost based on time range
-  private calculateRecencyBoost(ageInHours: number, timeRange: string): number {
-    let maxAge: number;
-    
-    switch (timeRange) {
-      case 'hour':
-        maxAge = 1;
-        break;
-      case 'day':
-        maxAge = 24;
-        break;
-      case 'week':
-        maxAge = 168;
-        break;
-      default:
-        maxAge = 24;
-    }
-
-    // Linear decay from 100 to 0 over the time range
-    return Math.max(0, 100 * (1 - (ageInHours / maxAge)));
-  }
-
-  // Calculate engagement rate
-  private calculateEngagementRate(reactions: number, tips: number, shares: number): number {
-    // Weighted engagement rate
-    return (reactions * 1) + (tips * 3) + (shares * 2);
-  }
-
-  // Calculate virality score
-  private calculateViralityScore(shares: number, reactions: number, ageInHours: number): number {
-    const shareVelocity = shares / Math.max(ageInHours, 0.1);
-    const reactionMultiplier = Math.log(reactions + 1);
-    return shareVelocity * reactionMultiplier;
-  }
-
-  // Calculate overall popularity rank
-  private calculatePopularityRank(engagementRate: number, viralityScore: number, qualityScore: number): number {
-    return (engagementRate * 0.4) + (viralityScore * 0.3) + (qualityScore * 0.3);
-  }
-
   // Get community engagement metrics
-  async getCommunityEngagementMetrics(communityId: string, timeRange: string = 'week') {
+  async getCommunityEngagementMetrics(communityId: string, timeRange: string) {
     try {
       const timeFilter = this.buildTimeFilter(timeRange);
 
-      // Get total posts in community within time range
-      const totalPostsResult = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(posts)
-        .where(and(
-          eq(posts.dao, communityId),
-          timeFilter
-        ));
-
-      // Get total engagement (reactions + tips)
-      const engagementResult = await db
+      // Get community posts with engagement metrics
+      const communityPosts = await db
         .select({
-          reactionCount: sql<number>`COUNT(DISTINCT ${reactions.id})`,
-          tipCount: sql<number>`COUNT(DISTINCT ${tips.id})`
+          id: posts.id,
+          authorId: posts.authorId,
+          stakedValue: posts.stakedValue,
+          createdAt: posts.createdAt,
+          tags: posts.tags
         })
         .from(posts)
-        .leftJoin(reactions, eq(posts.id, reactions.postId))
-        .leftJoin(tips, eq(posts.id, tips.postId))
         .where(and(
           eq(posts.dao, communityId),
-          timeFilter
+          timeFilter,
+          sql`${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked'`
         ));
 
+      // Calculate metrics
+      const totalPosts = communityPosts.length;
+      const totalEngagement = communityPosts.reduce((sum, post) => sum + parseFloat(post.stakedValue || '0'), 0);
+      
       // Get top contributors
-      const topContributors = await db
-        .select({
-          userId: posts.authorId,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid,
-          postCount: sql<number>`COUNT(${posts.id})`,
-          engagementScore: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`
-        })
-        .from(posts)
-        .leftJoin(users, eq(posts.authorId, users.id))
-        .where(and(
-          eq(posts.dao, communityId),
-          timeFilter
-        ))
-        .groupBy(posts.authorId, users.walletAddress, users.handle, users.profileCid)
-        .orderBy(sql`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) DESC`)
-        .limit(5);
+      const contributorMap = new Map<string, { postCount: number; engagement: number }>();
+      communityPosts.forEach(post => {
+        const current = contributorMap.get(post.authorId) || { postCount: 0, engagement: 0 };
+        contributorMap.set(post.authorId, {
+          postCount: current.postCount + 1,
+          engagement: current.engagement + parseFloat(post.stakedValue || '0')
+        });
+      });
+
+      const topContributors = Array.from(contributorMap.entries())
+        .map(([authorId, metrics]) => ({
+          authorId,
+          ...metrics
+        }))
+        .sort((a, b) => b.engagement - a.engagement)
+        .slice(0, 10);
 
       // Get trending tags
-      const trendingTags = await db
-        .select({
-          tag: postTags.tag,
-          count: sql<number>`COUNT(*)`
-        })
-        .from(postTags)
-        .leftJoin(posts, eq(postTags.postId, posts.id))
-        .where(and(
-          eq(posts.dao, communityId),
-          timeFilter
-        ))
-        .groupBy(postTags.tag)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(10);
+      const tagCounts = new Map<string, number>();
+      communityPosts.forEach(post => {
+        if (post.tags) {
+          try {
+            const tags = JSON.parse(post.tags);
+            tags.forEach((tag: string) => {
+              tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+            });
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      });
+
+      const trendingTags = Array.from(tagCounts.entries())
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
 
       return {
         communityId,
-        totalPosts: totalPostsResult[0]?.count || 0,
-        totalEngagement: (engagementResult[0]?.reactionCount || 0) + (engagementResult[0]?.tipCount || 0),
-        topContributors: topContributors.map(contributor => ({
-          id: contributor.userId,
-          address: contributor.walletAddress,
-          username: contributor.handle,
-          displayName: contributor.handle,
-          avatar: contributor.profileCid || '',
-          verified: false,
-          reputation: contributor.engagementScore || 0
-        })),
-        trendingTags: trendingTags.map(tag => tag.tag),
-        engagementGrowth: 0 // TODO: Calculate growth percentage
+        totalPosts,
+        totalEngagement,
+        topContributors,
+        trendingTags,
+        engagementGrowth: this.calculateEngagementGrowth(communityPosts, timeRange)
       };
     } catch (error) {
       safeLogger.error('Error getting community engagement metrics:', error);
@@ -1627,99 +1088,77 @@ export class FeedService {
   async getCommunityLeaderboard(
     communityId: string,
     metric: 'posts' | 'engagement' | 'tips_received' | 'tips_given',
-    limit: number = 10
+    limit: number
   ) {
     try {
-      let query;
-
+      let leaderboardQuery;
+      
       switch (metric) {
         case 'posts':
-          query = db
+          leaderboardQuery = db
             .select({
               userId: posts.authorId,
-              walletAddress: users.walletAddress,
-              handle: users.handle,
-              profileCid: users.profileCid,
-              score: sql<number>`COUNT(${posts.id})`
+              count: sql<number>`COUNT(*)`,
+              totalValue: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`
             })
             .from(posts)
-            .leftJoin(users, eq(posts.authorId, users.id))
             .where(eq(posts.dao, communityId))
-            .groupBy(posts.authorId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`COUNT(${posts.id}) DESC`);
+            .groupBy(posts.authorId)
+            .orderBy(desc(sql`COUNT(*)`))
+            .limit(limit);
           break;
-
+          
         case 'engagement':
-          query = db
+          leaderboardQuery = db
             .select({
               userId: posts.authorId,
-              walletAddress: users.walletAddress,
-              handle: users.handle,
-              profileCid: users.profileCid,
-              score: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`
+              count: sql<number>`COUNT(*)`,
+              totalValue: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`
             })
             .from(posts)
-            .leftJoin(users, eq(posts.authorId, users.id))
             .where(eq(posts.dao, communityId))
-            .groupBy(posts.authorId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) DESC`);
+            .groupBy(posts.authorId)
+            .orderBy(desc(sql`SUM(CAST(${posts.stakedValue} AS DECIMAL))`))
+            .limit(limit);
           break;
-
-        case 'tips_received':
-          query = db
-            .select({
-              userId: tips.toUserId,
-              walletAddress: users.walletAddress,
-              handle: users.handle,
-              profileCid: users.profileCid,
-              score: sql<number>`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0)`
-            })
-            .from(tips)
-            .leftJoin(posts, eq(tips.postId, posts.id))
-            .leftJoin(users, eq(tips.toUserId, users.id))
-            .where(eq(posts.dao, communityId))
-            .groupBy(tips.toUserId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0) DESC`);
-          break;
-
-        case 'tips_given':
-          query = db
-            .select({
-              userId: tips.fromUserId,
-              walletAddress: users.walletAddress,
-              handle: users.handle,
-              profileCid: users.profileCid,
-              score: sql<number>`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0)`
-            })
-            .from(tips)
-            .leftJoin(posts, eq(tips.postId, posts.id))
-            .leftJoin(users, eq(tips.fromUserId, users.id))
-            .where(eq(posts.dao, communityId))
-            .groupBy(tips.fromUserId, users.walletAddress, users.handle, users.profileCid)
-            .orderBy(sql`COALESCE(SUM(CAST(${tips.amount} AS DECIMAL)), 0) DESC`);
-          break;
-
+          
+        // Add cases for tips_received and tips_given if needed
         default:
-          throw new Error('Invalid metric');
+          leaderboardQuery = db
+            .select({
+              userId: posts.authorId,
+              count: sql<number>`COUNT(*)`,
+              totalValue: sql<number>`SUM(CAST(${posts.stakedValue} AS DECIMAL))`
+            })
+            .from(posts)
+            .where(eq(posts.dao, communityId))
+            .groupBy(posts.authorId)
+            .orderBy(desc(sql`COUNT(*)`))
+            .limit(limit);
       }
 
-      const results = await query.limit(limit);
+      const leaderboard = await leaderboardQuery;
 
-      return results.map((result, index) => ({
-        rank: index + 1,
-        user: {
-          id: result.userId,
-          address: result.walletAddress,
-          username: result.handle,
-          displayName: result.handle,
-          avatar: result.profileCid || '',
-          verified: false,
-          reputation: result.score || 0
-        },
-        score: result.score || 0,
-        change: 0, // TODO: Calculate position change
-        metric
-      }));
+      // Enrich with user data
+      const enrichedLeaderboard = await Promise.all(
+        leaderboard.map(async (entry) => {
+          const user = await db
+            .select({ walletAddress: users.walletAddress, handle: users.handle })
+            .from(users)
+            .where(eq(users.id, entry.userId))
+            .limit(1);
+
+          return {
+            userId: entry.userId,
+            walletAddress: user[0]?.walletAddress || '',
+            handle: user[0]?.handle || '',
+            count: entry.count,
+            totalValue: entry.totalValue || 0
+          };
+        })
+      );
+
+      return enrichedLeaderboard;
     } catch (error) {
       safeLogger.error('Error getting community leaderboard:', error);
       throw new Error('Failed to retrieve community leaderboard');
@@ -1731,7 +1170,7 @@ export class FeedService {
     try {
       const postIdInt = parseInt(postId);
 
-      // Get reactions with user data
+      // Get reactions for the post
       const reactionsData = await db
         .select({
           userId: reactions.userId,
@@ -1739,51 +1178,58 @@ export class FeedService {
           amount: reactions.amount,
           createdAt: reactions.createdAt,
           walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid
+          handle: users.handle
         })
         .from(reactions)
         .leftJoin(users, eq(reactions.userId, users.id))
         .where(eq(reactions.postId, postIdInt))
         .orderBy(desc(reactions.createdAt));
 
-      // Get tips with user data
+      // Get tips for the post
       const tipsData = await db
         .select({
           fromUserId: tips.fromUserId,
-          amount: tips.amount,
+          toUserId: tips.toUserId,
           token: tips.token,
+          amount: tips.amount,
           message: tips.message,
           createdAt: tips.createdAt,
-          walletAddress: users.walletAddress,
-          handle: users.handle,
-          profileCid: users.profileCid
+          fromWalletAddress: users.walletAddress,
+          fromHandle: users.handle
         })
         .from(tips)
         .leftJoin(users, eq(tips.fromUserId, users.id))
         .where(eq(tips.postId, postIdInt))
         .orderBy(desc(tips.createdAt));
 
+      // Get users that follow the post author
+      const post = await db.select({ authorId: posts.authorId }).from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      if (post.length === 0) {
+        return { reactions: [], tips: [], followedUsers: [], totalUsers: 0 };
+      }
+
+      const followedUsers = await db
+        .select({
+          followerId: follows.followerId,
+          followingId: follows.followingId,
+          createdAt: follows.createdAt,
+          walletAddress: users.walletAddress,
+          handle: users.handle
+        })
+        .from(follows)
+        .leftJoin(users, eq(follows.followerId, users.id))
+        .where(eq(follows.followingId, post[0].authorId));
+
       return {
-        reactions: reactionsData.map(reaction => ({
-          address: reaction.walletAddress,
-          username: reaction.handle || reaction.walletAddress?.slice(0, 8) || '',
-          avatar: reaction.profileCid || '',
-          amount: parseFloat(reaction.amount || '0'),
-          timestamp: new Date(reaction.createdAt)
+        reactions: reactionsData,
+        tips: tipsData,
+        followedUsers: followedUsers.map(user => ({
+          userId: user.followerId,
+          walletAddress: user.walletAddress || '',
+          handle: user.handle || '',
+          followedAt: user.createdAt
         })),
-        tips: tipsData.map(tip => ({
-          from: tip.handle || tip.walletAddress?.slice(0, 8) || '',
-          address: tip.walletAddress || '',
-          username: tip.handle,
-          avatar: tip.profileCid || '',
-          amount: parseFloat(tip.amount || '0'),
-          tokenType: tip.token || 'LDAO',
-          message: tip.message,
-          timestamp: new Date(tip.createdAt)
-        })),
-        followedUsers: [], // TODO: Implement when following system is added
-        totalUsers: reactionsData.length + tipsData.length
+        totalUsers: followedUsers.length
       };
     } catch (error) {
       safeLogger.error('Error getting liked by data:', error);
@@ -1791,38 +1237,429 @@ export class FeedService {
     }
   }
 
-  // Helper method to update engagement score
-  private async updateEngagementScore(postId: string) {
+  // Get trending hashtags
+  async getTrendingHashtags(options: { limit: number; timeRange: string }) {
+    const { limit, timeRange } = options;
+    
+    try {
+      const timeFilter = this.buildTimeFilter(timeRange);
+      
+      const trendingHashtags = await db
+        .select({
+          tag: postTags.tag,
+          postCount: sql<number>`COUNT(DISTINCT ${postTags.postId})`,
+          totalEngagement: sql<number>`COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0)`,
+          recentActivity: sql<number>`COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END)`
+        })
+        .from(postTags)
+        .leftJoin(posts, eq(postTags.postId, posts.id))
+        .where(timeFilter)
+        .groupBy(postTags.tag)
+        .orderBy(
+          sql`(COUNT(DISTINCT ${postTags.postId}) * 0.3 + 
+               COALESCE(SUM(CAST(${posts.stakedValue} AS DECIMAL)), 0) * 0.5 + 
+               COUNT(CASE WHEN ${posts.createdAt} > NOW() - INTERVAL '24 hours' THEN 1 END) * 0.2) DESC`
+        )
+        .limit(limit);
+
+      return trendingHashtags.map(hashtag => ({
+        tag: hashtag.tag,
+        postCount: hashtag.postCount,
+        totalEngagement: hashtag.totalEngagement || 0,
+        recentActivity: hashtag.recentActivity || 0,
+        trendingScore: (hashtag.postCount * 0.3) + 
+                      ((hashtag.totalEngagement || 0) * 0.5) + 
+                      ((hashtag.recentActivity || 0) * 0.2)
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting trending hashtags:', error);
+      throw new Error('Failed to retrieve trending hashtags');
+    }
+  }
+
+  // Get content popularity metrics
+  async getContentPopularityMetrics(postId: string) {
     try {
       const postIdInt = parseInt(postId);
       
-      // Get current engagement metrics
-      const [reactionData, tipData] = await Promise.all([
-        db.select({ count: sql<number>`COUNT(*)` })
-          .from(reactions)
-          .where(eq(reactions.postId, postIdInt)),
-        db.select({ count: sql<number>`COUNT(*)` })
-          .from(tips)
-          .where(eq(tips.postId, postIdInt))
+      // Get comprehensive engagement data
+      const [postData, reactionData, tipData, shareData] = await Promise.all([
+        db.select({
+          id: posts.id,
+          createdAt: posts.createdAt,
+          stakedValue: posts.stakedValue,
+          tags: posts.tags
+        })
+        .from(posts)
+        .where(eq(posts.id, postIdInt))
+        .limit(1),
+
+        db.select({
+          type: reactions.type,
+          count: sql<number>`COUNT(*)`,
+          totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`
+        })
+        .from(reactions)
+        .where(eq(reactions.postId, postIdInt))
+        .groupBy(reactions.type),
+
+        db.select({
+          count: sql<number>`COUNT(*)`,
+          totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`,
+          avgAmount: sql<number>`AVG(CAST(amount AS DECIMAL))`
+        })
+        .from(tips)
+        .where(eq(tips.postId, postIdInt)),
+
+        // Placeholder for shares - would need a shares table
+        Promise.resolve([{ count: 0 }])
       ]);
 
-      const reactionCount = reactionData[0]?.count || 0;
-      const tipCount = tipData[0]?.count || 0;
-      
-      // Calculate new engagement score
-      const engagementScore = this.calculateEngagementScore(reactionCount, tipCount, 0);
+      if (postData.length === 0) {
+        return null;
+      }
 
-      // Update the staked value as engagement score
-      await db
-        .update(posts)
-        .set({ 
-          stakedValue: engagementScore.toString()
+      const post = postData[0];
+      const ageInHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
+      
+      // Calculate various popularity metrics
+      const totalReactions = reactionData.reduce((sum, r) => sum + r.count, 0);
+      const totalTips = tipData[0]?.count || 0;
+      const totalShares = shareData[0]?.count || 0;
+      
+      const engagementRate = this.calculateEngagementRate(totalReactions, totalTips, totalShares);
+      const viralityScore = this.calculateViralityScore(totalShares, totalReactions, ageInHours);
+      const qualityScore = this.calculateContentQualityScore(
+        tipData[0]?.totalAmount || 0,
+        totalReactions,
+        0 // views placeholder
+      );
+
+      return {
+        postId: post.id,
+        ageInHours,
+        totalReactions,
+        totalTips,
+        totalShares,
+        engagementRate,
+        viralityScore,
+        qualityScore,
+        popularityRank: this.calculatePopularityRank(engagementRate, viralityScore, qualityScore),
+        reactionBreakdown: reactionData,
+        tipMetrics: tipData[0] || { count: 0, totalAmount: 0, avgAmount: 0 }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting content popularity metrics:', error);
+      throw new Error('Failed to retrieve content popularity metrics');
+    }
+  }
+
+  // Get comment replies
+  async getCommentReplies(commentId: string, options: { page: number; limit: number; sort: string }) {
+    const { page, limit, sort } = options;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Build sort order
+      let orderByClause;
+      if (sort === 'oldest') {
+        orderByClause = asc(comments.createdAt);
+      } else if (sort === 'popular') {
+        orderByClause = desc(comments.upvotes);
+      } else {
+        orderByClause = desc(comments.createdAt); // Default to newest
+      }
+
+      const replies = await db
+        .select({
+          id: comments.id,
+          postId: comments.postId,
+          quickPostId: comments.quickPostId,
+          authorId: comments.authorId,
+          content: comments.content,
+          upvotes: comments.upvotes,
+          downvotes: comments.downvotes,
+          createdAt: comments.createdAt,
+          updatedAt: comments.updatedAt,
+          parentCommentId: comments.parentCommentId,
+          walletAddress: users.walletAddress,
+          handle: users.handle
         })
-        .where(eq(posts.id, postIdInt));
+        .from(comments)
+        .leftJoin(users, eq(comments.authorId, users.id))
+        .where(and(
+          eq(comments.parentCommentId, commentId),
+          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+        ))
+        .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCountResult = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(comments)
+        .where(and(
+          eq(comments.parentCommentId, commentId),
+          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+        ));
+
+      const totalCount = totalCountResult[0]?.count || 0;
+
+      return {
+        replies,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting comment replies:', error);
+      throw new Error('Failed to retrieve comment replies');
+    }
+  }
+
+  // Get post reactions
+  async getPostReactions(postId: string) {
+    try {
+      const postIdInt = parseInt(postId);
+
+      // Get all reactions for the post
+      const reactionsData = await db
+        .select({
+          id: reactions.id,
+          postId: reactions.postId,
+          userId: reactions.userId,
+          type: reactions.type,
+          amount: reactions.amount,
+          createdAt: reactions.createdAt,
+          walletAddress: users.walletAddress,
+          handle: users.handle
+        })
+        .from(reactions)
+        .leftJoin(users, eq(reactions.userId, users.id))
+        .where(eq(reactions.postId, postIdInt))
+        .orderBy(desc(reactions.createdAt));
+
+      // Group reactions by type
+      const reactionsByType = reactionsData.reduce((acc, reaction) => {
+        const existing = acc.find(r => r.type === reaction.type);
+        if (existing) {
+          existing.count += 1;
+          existing.totalAmount += parseFloat(reaction.amount || '0');
+          existing.users.push({
+            userId: reaction.userId,
+            walletAddress: reaction.walletAddress || '',
+            handle: reaction.handle || '',
+            amount: parseFloat(reaction.amount || '0'),
+            timestamp: reaction.createdAt
+          });
+        } else {
+          acc.push({
+            type: reaction.type,
+            count: 1,
+            totalAmount: parseFloat(reaction.amount || '0'),
+            users: [{
+              userId: reaction.userId,
+              walletAddress: reaction.walletAddress || '',
+              handle: reaction.handle || '',
+              amount: parseFloat(reaction.amount || '0'),
+              timestamp: reaction.createdAt
+            }]
+          });
+        }
+        return acc;
+      }, [] as Array<{ type: string; count: number; totalAmount: number; users: Array<any> }>);
+
+      // Get recent reactions (last 10)
+      const recentReactions = reactionsData.slice(0, 10);
+
+      return {
+        postId,
+        totalReactions: reactionsData.length,
+        reactionsByType,
+        recentReactions
+      };
+    } catch (error) {
+      safeLogger.error('Error getting post reactions:', error);
+      throw new Error('Failed to retrieve post reactions');
+    }
+  }
+
+  // Add post share
+  async addPostShare(data: { postId: string; userAddress: string; platform: string; message?: string }) {
+    const { postId, userAddress, platform, message } = data;
+
+    try {
+      const postIdInt = parseInt(postId);
+      
+      // Verify post exists
+      const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      if (post.length === 0) {
+        throw new Error('Post not found');
+      }
+
+      // Get user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+
+      // In a real implementation, you might want to store share data in a database
+      // For now, we'll just return a mock share object
+      
+      // Update engagement score
+      await this.updateEngagementScore(postId);
+
+      return {
+        id: `share_${Date.now()}`,
+        postId: postIdInt,
+        userId: user[0].id,
+        platform,
+        message,
+        createdAt: new Date()
+      };
+    } catch (error) {
+      safeLogger.error('Error adding post share:', error);
+      throw new Error('Failed to add post share');
+    }
+  }
+
+  // Toggle bookmark
+  async toggleBookmark(data: { postId: string; userAddress: string }) {
+    const { postId, userAddress } = data;
+
+    try {
+      const postIdInt = parseInt(postId);
+      
+      // Get user - use case-insensitive matching
+      const normalizedAddress = userAddress.toLowerCase();
+      const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+
+      // Check if bookmark already exists
+      const existingBookmark = await db
+        .select()
+        .from(bookmarks)
+        .where(and(
+          eq(bookmarks.postId, postIdInt),
+          eq(bookmarks.userId, user[0].id)
+        ))
+        .limit(1);
+
+      let result;
+
+      if (existingBookmark.length > 0) {
+        // Remove bookmark
+        await db.delete(bookmarks).where(and(
+          eq(bookmarks.postId, postIdInt),
+          eq(bookmarks.userId, user[0].id)
+        ));
+        result = { bookmarked: false };
+      } else {
+        // Add bookmark
+        await db.insert(bookmarks).values({
+          postId: postIdInt,
+          userId: user[0].id,
+          createdAt: new Date()
+        });
+        result = { bookmarked: true };
+      }
+
+      return result;
+    } catch (error) {
+      safeLogger.error('Error toggling bookmark:', error);
+      throw new Error('Failed to toggle bookmark');
+    }
+  }
+
+  // Helper methods
+  private buildTimeFilter(timeRange: string) {
+    let timeFilter;
+    switch (timeRange) {
+      case 'hour':
+        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 hour'`;
+        break;
+      case 'day':
+        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 day'`;
+        break;
+      case 'week':
+        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 week'`;
+        break;
+      case 'month':
+        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 month'`;
+        break;
+      case 'year':
+        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 year'`;
+        break;
+      default:
+        timeFilter = sql`1=1`; // No time filter
+    }
+    return timeFilter;
+  }
+
+  private buildSortOrder(sort: string) {
+    let sortOrder;
+    switch (sort) {
+      case 'top':
+        sortOrder = desc(posts.stakedValue);
+        break;
+      case 'hot':
+        sortOrder = desc(posts.createdAt); // Simplified hot sort
+        break;
+      default:
+        sortOrder = desc(posts.createdAt); // Default to newest
+    }
+    return sortOrder;
+  }
+
+  private calculateEngagementScore(reactions: number, tips: number, comments: number): number {
+    // Simple weighted scoring algorithm
+    return (reactions * 1) + (tips * 2) + (comments * 3);
+  }
+
+  private calculateEngagementRate(reactions: number, tips: number, shares: number): number {
+    // Simple engagement rate calculation
+    return reactions + tips + shares;
+  }
+
+  private calculateViralityScore(shares: number, reactions: number, ageInHours: number): number {
+    // Simple virality score calculation
+    const totalInteractions = shares + reactions;
+    return totalInteractions / Math.max(ageInHours, 1);
+  }
+
+  private calculateContentQualityScore(tipAmount: number, reactionCount: number, viewCount: number): number {
+    // Simple quality score calculation
+    return (tipAmount * 0.5) + (reactionCount * 0.3) + (viewCount * 0.2);
+  }
+
+  private calculatePopularityRank(engagementRate: number, viralityScore: number, qualityScore: number): number {
+    // Simple popularity rank calculation
+    return (engagementRate * 0.4) + (viralityScore * 0.3) + (qualityScore * 0.3);
+  }
+
+  private calculateEngagementGrowth(posts: any[], timeRange: string): number {
+    // Simple engagement growth calculation
+    if (posts.length === 0) return 0;
+    
+    // Calculate average engagement per time unit
+    const totalEngagement = posts.reduce((sum, post) => sum + parseFloat(post.stakedValue || '0'), 0);
+    return totalEngagement / posts.length;
+  }
+
+  private async updateEngagementScore(postId: string) {
+    try {
+      // This would update the post's engagement score in the database
+      // Implementation depends on your specific requirements
+      safeLogger.info('Updating engagement score for post:', postId);
     } catch (error) {
       safeLogger.error('Error updating engagement score:', error);
     }
   }
 }
-
-export const feedService = new FeedService();

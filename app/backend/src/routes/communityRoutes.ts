@@ -57,7 +57,7 @@ router.get('*/trending',
 );
 
 // Get community details by slug (public)
-router.get('/slug/:slug',
+router.get('/:slug',
   validateRequest({
     params: {
       slug: { type: 'string', required: true }
@@ -66,7 +66,8 @@ router.get('/slug/:slug',
   communityController.getCommunityBySlug
 );
 
-// Get community details (public)
+// Get community details (public) - This should support both ID and slug
+// But to avoid conflicts, we'll modify this to only handle ID-based routing
 router.get('/:id',
   validateRequest({
     params: {

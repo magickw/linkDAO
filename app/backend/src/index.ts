@@ -142,6 +142,7 @@ let cacheService: any = null;
 let cacheWarmingService: any = null;
 
 async function initializeServices() {
+  // Initialize cache service if not already done
   if (!cacheService) {
     try {
       // Explicitly import the TypeScript version
@@ -157,6 +158,16 @@ async function initializeServices() {
     } catch (error) {
       console.error('Failed to import cacheService:', error);
     }
+  }
+  
+  // Initialize Redis service singleton to ensure it's connected
+  try {
+    const { redisService } = await import('./services/redisService');
+    // Connect Redis service singleton during startup
+    await redisService.connect();
+    console.log('✅ Redis service singleton connected');
+  } catch (error) {
+    console.warn('⚠️ Redis service singleton connection failed:', error);
   }
   
   if (!cacheWarmingService) {
@@ -428,11 +439,23 @@ app.use('/api/health', healthRoutes);
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {
+  // Prevent caching of health check responses
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+  
   // Get Redis status
   let redisStatus = { enabled: false, connected: false };
   try {
     const { redisService } = await import('./services/redisService');
-    redisStatus = redisService.getRedisStatus();
+    // Test Redis connection to ensure current status
+    const testResult = await redisService.testConnection();
+    redisStatus = {
+      ...redisService.getRedisStatus(),
+      testResult
+    };
   } catch (error) {
     // Redis service not available
     console.warn('Redis service not available for health check:', error.message);

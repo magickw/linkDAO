@@ -79,19 +79,27 @@ export class CommunityController {
     }
   }
 
-  // Get community details
+  // Get community details - handles both ID and slug
   async getCommunityDetails(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const userAddress = (req as AuthenticatedRequest).user?.address;
-
-      const community = await communityService.getCommunityDetails(id, userAddress);
-
+      
+      // Check if the parameter is a numeric ID or a slug
+      let community;
+      if (/^\d+$/.test(id)) {
+        // It's a numeric ID
+        community = await communityService.getCommunityDetails(id, userAddress);
+      } else {
+        // It's a slug
+        community = await communityService.getCommunityBySlug(id, userAddress);
+      }
+      
       if (!community) {
         res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
         return;
       }
-
+      
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error getting community details:', error);

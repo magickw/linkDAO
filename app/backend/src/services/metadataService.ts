@@ -298,7 +298,7 @@ export class MetadataService {
       return content;
     } catch (error) {
       safeLogger.error('Error retrieving from IPFS:', error);
-      throw new Error(`Failed to retrieve content: ${cid}`);
+      throw new Error(`Failed to retrieve content: ${cid} - ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
