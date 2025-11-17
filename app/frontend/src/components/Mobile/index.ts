@@ -1,7 +1,7 @@
 // Mobile Components Export
-export { MobileEnhancedPostComposer } from './MobileEnhancedPostComposer';
+export { default as MobileEnhancedPostComposer } from './MobileEnhancedPostComposer';
 export { MobileTokenReactionSystem } from './MobileTokenReactionSystem';
-export { MobileEnhancedPostCard } from './MobileEnhancedPostCard';
+export { default as MobileEnhancedPostCard } from './MobileEnhancedPostCard';
 export { 
   MobileModal, 
   MobileBottomSheet, 

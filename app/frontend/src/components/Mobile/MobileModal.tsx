@@ -153,8 +153,6 @@ export const MobileModal: React.FC<MobileModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   const modalContent = (
     <AnimatePresence>
       <motion.div
@@ -241,6 +239,8 @@ export const MobileModal: React.FC<MobileModalProps> = ({
     </AnimatePresence>
   );
 
+  if (!isOpen) return null;
+  
   return createPortal(modalContent, document.body);
 };
 

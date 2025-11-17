@@ -11,24 +11,28 @@ import { ReactionType } from '@/types/tokenReaction';
 
 interface MobileEnhancedPostCardProps {
   post: EnhancedPost;
-  onReact: (postId: string, type: ReactionType, amount: number) => Promise<void>;
-  onComment: (postId: string) => void;
-  onShare: (postId: string) => void;
+  onReact: (postId: string, emoji: string, intensity: number) => void;
   onBookmark: (postId: string) => void;
+  onShare: (postId: string) => void;
+  onComment: (postId: string) => void;
   onViewReactors: (postId: string, type: ReactionType) => void;
   onUserPress: (userId: string) => void;
   className?: string;
+  defaultReactionEmoji?: string;
+  defaultReactionIntensity?: number;
 }
 
-export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
+const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   post,
   onReact,
-  onComment,
-  onShare,
   onBookmark,
+  onShare,
+  onComment,
   onViewReactors,
   onUserPress,
-  className = ''
+  className = '',
+  defaultReactionEmoji = '🔥',
+  defaultReactionIntensity = 0.5
 }) => {
   const {
     triggerHapticFeedback,
@@ -71,7 +75,7 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         setSwipeAction('like');
         triggerHapticFeedback('medium');
         setTimeout(() => {
-          onReact(post.id, '🔥', 0.5);
+          onReact(post.id, defaultReactionEmoji, defaultReactionIntensity);
           setSwipeAction(null);
           announceToScreenReader('Post liked');
         }, 200);
@@ -132,7 +136,7 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
           <div className={`
             text-4xl ${swipeAction === 'bookmark' ? 'text-blue-500' : 'text-green-500'}
           `}>
-            {swipeAction === 'bookmark' ? '🔖' : '👍'}
+            {swipeAction === 'bookmark' ? '🔖' : defaultReactionEmoji}
           </div>
         </motion.div>
       )}
@@ -140,7 +144,12 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
       {/* Trending Badge */}
       {post.trendingStatus && (
         <div className="absolute top-3 right-3 z-10">
-          <TrendingBadge level={post.trendingStatus === 'trending' ? 'hot' : (post.trendingStatus as any)} />
+          <TrendingBadge 
+            level={post.trendingStatus === 'trending' ? 'hot' : 
+                   post.trendingStatus === 'viral' ? 'viral' :
+                   post.trendingStatus === 'hot' ? 'hot' :
+                   post.trendingStatus === 'rising' ? 'rising' : 'hot'} 
+          />
         </div>
       )}
 
@@ -363,3 +372,5 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
     </motion.div>
   );
 };
+
+export default MobileEnhancedPostCard;

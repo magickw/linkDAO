@@ -3,7 +3,7 @@ import React from 'react';
 interface Community {
   id: string;
   name: string;
-  icon: string;
+  icon?: string; // Make icon optional
   unreadCount?: number;
   isJoined?: boolean;
   displayName?: string;
@@ -41,7 +41,7 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                community.icon || '👥'
+                community.icon || '👥' // Use '👥' as fallback when no icon is provided
               )}
             </div>
             <div className="flex-1 min-w-0">

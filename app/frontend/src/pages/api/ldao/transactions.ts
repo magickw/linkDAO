@@ -23,6 +23,8 @@ interface Transaction {
 interface TransactionHistoryResponse {
   transactions: Transaction[];
   total: number;
+  limit: number;
+  offset: number;
 }
 
 interface ErrorResponse {
@@ -75,11 +77,17 @@ export default async function handler(
 
     const data = await response.json();
     const transactions = data.transactions;
+    
+    // Use data.total if available from the API, otherwise fall back to length
+    // This ensures proper pagination total count
+    const total = data.total !== undefined ? data.total : (Array.isArray(transactions) ? transactions.length : 0);
 
-    // Return fetched transactions (apply server-side pagination if needed)
+    // Return fetched transactions with correct pagination metadata
     return res.status(200).json({
       transactions: Array.isArray(transactions) ? transactions : [],
-      total: Array.isArray(transactions) ? transactions.length : 0
+      total: total,
+      limit: limitNum,
+      offset: offsetNum
     });
 
   } catch (error) {

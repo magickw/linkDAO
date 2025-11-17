@@ -168,6 +168,15 @@ export default function FilterPanel({
   // Handle custom date range change
   const handleCustomDateChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
     const date = value ? new Date(value) : null;
+    
+    // Validate date range
+    if (field === 'startDate' && customDateRange.endDate && date && date > customDateRange.endDate) {
+      return; // Don't allow start date after end date
+    }
+    if (field === 'endDate' && customDateRange.startDate && date && date < customDateRange.startDate) {
+      return; // Don't allow end date before start date
+    }
+    
     const newCustomRange = {
       ...customDateRange,
       [field]: date
@@ -333,12 +342,25 @@ export default function FilterPanel({
             
             {/* Author Suggestions */}
             {showAuthorSuggestions && authorSuggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {authorSuggestions.map((author) => (
+              <div 
+                className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
+                role="listbox"
+                aria-label="Author suggestions"
+              >
+                {authorSuggestions.map((author, index) => (
                   <button
                     key={author.id}
                     onClick={() => handleAuthorAdd(author)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between focus:bg-gray-50 dark:focus:bg-gray-700 focus:outline-none"
+                    role="option"
+                    aria-selected={false}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAuthorAdd(author);
+                      }
+                    }}
                   >
                     <div>
                       <div className="font-medium text-gray-900 dark:text-gray-100">

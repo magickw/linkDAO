@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PollData } from '@/types/enhancedPost';
 
 interface PollCreatorProps {
@@ -22,6 +22,18 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
   const [expiresAt, setExpiresAt] = useState(
     poll?.endDate ? poll.endDate.toISOString().slice(0, 16) : ''
   );
+
+  // Sync state with prop changes to prevent stale data
+  useEffect(() => {
+    if (poll) {
+      setQuestion(poll.question || '');
+      setOptions(poll.options?.map(opt => opt.text) || ['', '']);
+      setAllowMultiple(poll.allowMultiple || false);
+      setTokenWeighted(poll.tokenWeighted || false);
+      setMinTokens(poll.minTokens || 0);
+      setExpiresAt(poll.endDate ? poll.endDate.toISOString().slice(0, 16) : '');
+    }
+  }, [poll]);
 
   const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuestion(e.target.value);

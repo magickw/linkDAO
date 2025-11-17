@@ -211,9 +211,10 @@ app.get('/', (req, res) => {
       'GET /api/auth/nonce/:address',
       'POST /api/auth/wallet',
       'GET /api/posts',
+      'GET /api/posts/feed',
+      'GET /api/feed/enhanced',
       'GET /api/communities',
       'GET /api/profiles',
-      'POST /api/auth/wallet',
       'POST /api/auth/wallet-connect'
     ]
   });
@@ -909,6 +910,118 @@ app.get('/api/posts/feed', (req, res) => {
   });
 });
 
+// Enhanced feed route (matches frontend expectations)
+app.get('/api/feed/enhanced', (req, res) => {
+  const { page = 1, limit = 20, sort = 'hot', timeRange = 'all', feedSource = 'all' } = req.query;
+  
+  console.log(`🔍 Enhanced feed request - page: ${page}, limit: ${limit}, sort: ${sort}, source: ${feedSource}`);
+  
+  // Enhanced mock posts with more detailed data structure matching frontend expectations
+  const enhancedPosts = Array.from({ length: parseInt(limit) }, (_, i) => {
+    const postId = `enhanced-post-${page}-${i + 1}`;
+    const authorAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
+    
+    return {
+      id: postId,
+      title: `Enhanced Feed Post ${i + 1}`,
+      content: '', // Empty content - frontend loads from IPFS
+      excerpt: `This is an excerpt for enhanced feed post ${i + 1}. It provides a preview of the full content.`,
+      contentCid: `QmXy${Math.random().toString(36).substr(2, 44)}`, // IPFS content identifier
+      handle: `user${i + 1}`,
+      author: {
+        address: authorAddress,
+        username: `user${i + 1}`,
+        displayName: `User ${i + 1}`,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=user${i + 1}`,
+        ens: null,
+        reputation: Math.floor(Math.random() * 1000),
+        verified: Math.random() > 0.8
+      },
+      createdAt: new Date(Date.now() - i * 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - i * 1800000).toISOString(),
+      contentType: 'text',
+      tags: ['defi', 'nft', 'community', 'governance'].slice(0, Math.floor(Math.random() * 3) + 1),
+      likes: Math.floor(Math.random() * 150),
+      comments: Math.floor(Math.random() * 30),
+      shares: Math.floor(Math.random() * 15),
+      views: Math.floor(Math.random() * 500),
+      reactions: {
+        likes: Math.floor(Math.random() * 150),
+        loves: Math.floor(Math.random() * 20),
+        laughs: Math.floor(Math.random() * 10),
+        angry: Math.floor(Math.random() * 5),
+        sad: Math.floor(Math.random() * 5)
+      },
+      engagement: {
+        likes: Math.floor(Math.random() * 150),
+        comments: Math.floor(Math.random() * 30),
+        shares: Math.floor(Math.random() * 15),
+        bookmarks: Math.floor(Math.random() * 20)
+      },
+      metadata: {
+        isPinned: Math.random() > 0.9,
+        isFeatured: Math.random() > 0.95,
+        priority: Math.random() > 0.7 ? 'high' : 'normal',
+        source: feedSource
+      },
+      mediaCids: Math.random() > 0.6 ? [`QmMedia${Math.random().toString(36).substr(2, 44)}`] : [],
+      previews: Math.random() > 0.5 ? [{
+        id: `preview-${postId}`,
+        type: 'link',
+        url: `https://example.com/preview-${i + 1}`,
+        data: { title: `Preview ${i + 1}`, description: 'Preview description' },
+        metadata: { siteName: 'Example', favicon: '/favicon.ico' },
+        cached: true,
+        securityStatus: 'safe'
+      }] : [],
+      profileCid: `QmProfile${Math.random().toString(36).substr(2, 44)}`,
+      communityId: `community-${Math.floor(Math.random() * 10) + 1}`,
+      dao: `community-${Math.floor(Math.random() * 10) + 1}`, // Alternative field name
+      community: {
+        id: `community-${Math.floor(Math.random() * 10) + 1}`,
+        name: `Community ${Math.floor(Math.random() * 10) + 1}`,
+        slug: `community-${Math.floor(Math.random() * 10) + 1}`,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=community${Math.floor(Math.random() * 10) + 1}`
+      },
+      permissions: {
+        canEdit: false,
+        canDelete: false,
+        canModerate: false
+      },
+      userInteraction: {
+        hasLiked: Math.random() > 0.7,
+        hasBookmarked: Math.random() > 0.8,
+        hasShared: Math.random() > 0.9
+      },
+      lastActivity: new Date(Date.now() - i * 1800000).toISOString(),
+      socialProof: {
+        followedUsersWhoEngaged: [],
+        totalEngagementFromFollowed: 0,
+        communityLeadersWhoEngaged: [],
+        verifiedUsersWhoEngaged: []
+      },
+      trendingStatus: Math.random() > 0.8 ? 'trending' : 'normal',
+      engagementScore: Math.floor(Math.random() * 100)
+    };
+  });
+  
+  res.json({
+    success: true,
+    data: {
+      posts: enhancedPosts,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 500,
+        totalPages: 25,
+        hasMore: parseInt(page) < 25,
+        nextPage: parseInt(page) + 1
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
@@ -975,6 +1088,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   POST /api/auth/wallet                     - Wallet auth`);
   console.log(`   POST /api/auth/wallet-connect             - Wallet connect auth`);
   console.log(`   GET  /api/posts/feed                      - Posts feed`);
+  console.log(`   GET  /api/feed/enhanced                   - Enhanced feed`);
   console.log(`   GET  /api/profiles/address/:address       - User profile`);
   console.log(`   GET  /api/sellers/profile/:walletAddress  - Seller profile`);
   console.log(`   POST /api/sellers/profile                 - Create seller`);

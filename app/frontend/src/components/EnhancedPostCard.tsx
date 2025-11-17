@@ -45,6 +45,7 @@ interface PostMedia {
     height?: number;
     duration?: number;
     size?: string;
+    [key: string]: any;
   };
 }
 
@@ -420,7 +421,7 @@ export default function EnhancedPostCard({
                           </button>
                         </div>
                       </div>
-                      {media.metadata?.duration && (
+                      {media.metadata?.duration && typeof media.metadata.duration === 'number' && media.metadata.duration > 0 && (
                         <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
                           {Math.floor(media.metadata.duration / 60)}:{(media.metadata.duration % 60).toString().padStart(2, '0')}
                         </div>
@@ -442,7 +443,13 @@ export default function EnhancedPostCard({
                             </p>
                           )}
                           <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                            {new URL(media.url).hostname}
+                            {(() => {
+                              try {
+                                return media.url ? new URL(media.url).hostname : '';
+                              } catch {
+                                return '';
+                              }
+                            })()}
                           </p>
                         </div>
                       </div>

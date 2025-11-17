@@ -51,7 +51,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   const { address } = useAccount();
   
   // State
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(defaultQuickFilters as any);
+  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(defaultQuickFilters);
   const [communities, setCommunities] = useState<CommunityWithIcons[]>([]);
   const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [enhancedUser, setEnhancedUser] = useState<UserProfile | null>(null);
@@ -127,7 +127,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
       createActivityIndicator('governance', 1, 'bg-red-500')
     ];
     
-    setActivityIndicators(indicators as any);
+    setActivityIndicators(indicators);
   }, []);
 
   // Update filter counts based on real data

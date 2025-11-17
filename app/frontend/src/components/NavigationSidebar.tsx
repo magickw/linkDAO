@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link'; // Add missing import
 import { useAccount } from 'wagmi';
-import { useNavigation } from '@/context/NavigationContext';
-import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
-import { useNotifications } from '@/hooks/useNotifications';
-import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
-import {
+import { 
+  QuickFilterPanel, 
   CommunityIconList,
   EnhancedUserCard,
   NavigationBreadcrumbs,
   ActivityIndicators
 } from '@/components/Navigation';
+import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement'; // Add missing import
+import { useNavigation } from '@/context/NavigationContext'; // Add missing import
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
@@ -21,6 +20,7 @@ import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useWalletData } from '@/hooks/useWalletData';
 import { QuickAction } from '@/types/wallet';
 import { SearchService } from '@/services/searchService';
+import { ActivityIndicator } from '@/types/navigation'; // Import from correct location
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -496,7 +496,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </div>
                 
                 <CommunityIconList
-                  communities={enhancedCommunities as any}
+                  communities={enhancedCommunities}
                   onCommunitySelect={handleCommunitySelectWithContext}
                   favoriteCommunities={userPreferences.favoriteCommunities}
                   onToggleFavorite={toggleFavoriteCommunity}
@@ -619,7 +619,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             {/* </Link> */}
 
             {/* Collapsed joined communities with favorites */}
-            {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 5).map((community: any) => (
+            {enhancedCommunities.filter(c => c.isJoined).slice(0, 5).map((community) => (
               <button
                 key={community.id}
                 onClick={() => handleCommunitySelectWithContext(community.id)}

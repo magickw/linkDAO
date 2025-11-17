@@ -718,6 +718,21 @@ class AuthService {
   }
 
   /**
+   * Check if we have a potentially valid session without validating it
+   * This is used to prevent signature prompts on page refresh
+   */
+  hasPotentialSession(): boolean {
+    const token = this.getToken();
+    const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
+                         localStorage.getItem('wallet_address');
+    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
+                           localStorage.getItem('signature_timestamp');
+    
+    // Quick check - if we have a token and basic session data, we might have a valid session
+    return !!(token && storedAddress && storedTimestamp);
+  }
+
+  /**
    * Set authentication token
    */
   private setToken(token: string): void {

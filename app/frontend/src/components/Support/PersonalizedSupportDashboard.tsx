@@ -155,7 +155,11 @@ const PersonalizedSupportDashboard: React.FC = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Your Support Dashboard</h2>
-        <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+        <button 
+          onClick={() => console.log('View All clicked - would navigate to full dashboard')}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          aria-label="View all support dashboard items"
+        >
           View All
         </button>
       </div>
@@ -173,8 +177,18 @@ const PersonalizedSupportDashboard: React.FC = () => {
                 <div 
                   key={item.id} 
                   className="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => console.log(`Opening ${item.title} - would navigate to document`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      console.log(`Opening ${item.title} - would navigate to document`);
+                    }
+                  }}
+                  aria-label={`Open ${item.title} - ${item.category}`}
                 >
-                  <div className="p-2 bg-blue-50 rounded-lg mr-3">
+                  <div className="p-2 bg-blue-50 rounded-lg mr-3" aria-hidden="true">
                     {getTypeIcon(item.type)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -313,20 +327,36 @@ const PersonalizedSupportDashboard: React.FC = () => {
       <div className="mt-6 pt-6 border-t border-gray-200">
         <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <button className="flex flex-col items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-            <HelpCircle className="w-6 h-6 text-blue-600 mb-2" />
+          <button 
+            onClick={() => console.log('Creating new support ticket')}
+            className="flex flex-col items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            aria-label="Create new support ticket"
+          >
+            <HelpCircle className="w-6 h-6 text-blue-600 mb-2" aria-hidden="true" />
             <span className="text-sm font-medium text-gray-900">New Ticket</span>
           </button>
-          <button className="flex flex-col items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-            <BookOpen className="w-6 h-6 text-green-600 mb-2" />
+          <button 
+            onClick={() => console.log('Opening documentation browser')}
+            className="flex flex-col items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            aria-label="Browse documentation"
+          >
+            <BookOpen className="w-6 h-6 text-green-600 mb-2" aria-hidden="true" />
             <span className="text-sm font-medium text-gray-900">Browse Docs</span>
           </button>
-          <button className="flex flex-col items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-            <MessageCircle className="w-6 h-6 text-purple-600 mb-2" />
+          <button 
+            onClick={() => console.log('Opening live chat')}
+            className="flex flex-col items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            aria-label="Open live chat"
+          >
+            <MessageCircle className="w-6 h-6 text-purple-600 mb-2" aria-hidden="true" />
             <span className="text-sm font-medium text-gray-900">Live Chat</span>
           </button>
-          <button className="flex flex-col items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-            <Settings className="w-6 h-6 text-orange-600 mb-2" />
+          <button 
+            onClick={() => console.log('Opening FAQ')}
+            className="flex flex-col items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+            aria-label="View FAQ"
+          >
+            <Settings className="w-6 h-6 text-orange-600 mb-2" aria-hidden="true" />
             <span className="text-sm font-medium text-gray-900">FAQ</span>
           </button>
         </div>

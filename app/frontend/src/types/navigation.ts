@@ -143,4 +143,5 @@ export interface ActivityIndicator {
   priority: 'low' | 'medium' | 'high';
   lastUpdate: Date;
   isAnimated: boolean;
+  color?: string; // Add optional color property
 }

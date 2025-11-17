@@ -4,6 +4,8 @@ import { EnhancedStateProvider } from '@/contexts/EnhancedStateProvider';
 import { PerformanceProvider } from '@/components/Performance/PerformanceProvider';
 import { SecurityProvider } from '@/components/Security/SecurityProvider';
 import { LoadingSkeleton } from '@/design-system/components/LoadingSkeleton';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthUser } from '@/types/auth';
 
 // Lazy load major components for better performance
 const EnhancedPostComposer = lazy(() => import('@/components/EnhancedPostComposer/EnhancedPostComposer'));
@@ -13,12 +15,24 @@ const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/Smar
 const RealTimeNotificationSystem = lazy(() => import('@/components/RealTimeNotifications/RealTimeNotificationSystem'));
 const VisualPolishIntegration = lazy(() => import('@/components/VisualPolish/VisualPolishIntegration'));
 
+interface UserData {
+  user?: AuthUser;
+  communities?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    memberCount?: number;
+  }>;
+  posts?: Array<{
+    id: string;
+    content: string;
+    author: string;
+    createdAt: string;
+  }>;
+}
+
 interface EnhancedSocialDashboardProps {
-  initialData?: {
-    user?: any;
-    communities?: any[];
-    posts?: any[];
-  };
+  initialData?: UserData;
   featureFlags?: {
     enableTokenReactions?: boolean;
     enableRealTimeNotifications?: boolean;
@@ -36,6 +50,7 @@ const EnhancedSocialDashboard: React.FC<EnhancedSocialDashboardProps> = ({
     enablePerformanceOptimizations: true,
   }
 }) => {
+  const { user, isAuthenticated, accessToken } = useAuth();
   return (
     <ErrorBoundary>
       <EnhancedStateProvider>
@@ -44,11 +59,11 @@ const EnhancedSocialDashboard: React.FC<EnhancedSocialDashboardProps> = ({
             <VisualPolishIntegration>
               <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
                 {/* Real-time Notification System */}
-                {featureFlags.enableRealTimeNotifications && (
+                {featureFlags.enableRealTimeNotifications && isAuthenticated && user && (
                   <Suspense fallback={null}>
                     <RealTimeNotificationSystem
-                      userId="current-user" // TODO: Get from user context
-                      token="auth-token" // TODO: Get from auth context
+                      userId={user.id}
+                      token={accessToken || undefined}
                     />
                   </Suspense>
                 )}

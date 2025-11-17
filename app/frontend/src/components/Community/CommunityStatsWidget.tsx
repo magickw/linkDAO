@@ -33,17 +33,6 @@ export const CommunityStatsWidget: React.FC<CommunityStatsWidgetProps> = ({
     lastUpdated: null
   });
 
-  // Auto-refresh functionality
-  useEffect(() => {
-    if (!onRefresh || refreshInterval <= 0) return;
-
-    const interval = setInterval(() => {
-      handleRefresh();
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [onRefresh, refreshInterval]);
-
   const handleRefresh = useCallback(async () => {
     if (!onRefresh) return;
 
@@ -64,6 +53,17 @@ export const CommunityStatsWidget: React.FC<CommunityStatsWidgetProps> = ({
       }));
     }
   }, [onRefresh]);
+
+  // Auto-refresh functionality
+  useEffect(() => {
+    if (!onRefresh || refreshInterval <= 0) return;
+
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [onRefresh, refreshInterval, handleRefresh]);
 
   const formatNumber = (num: number | undefined): string => {
     if (num === undefined || num === null) return 'N/A';
@@ -159,7 +159,7 @@ export const CommunityStatsWidget: React.FC<CommunityStatsWidgetProps> = ({
 
         {/* Activity Level Indicator */}
         <div className="text-center mb-4">
-          <div className={`text-sm font-medium ${activityLevel.color} dark:${activityLevel.color.replace('text-', 'text-')}`}>
+          <div className={`text-sm font-medium ${activityLevel.color}`}>
             {activityLevel.level}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">

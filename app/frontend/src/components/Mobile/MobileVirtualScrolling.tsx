@@ -147,36 +147,44 @@ export const MobileVirtualScrolling = <T,>({
     setPullDistance(0);
   };
 
-  // Keyboard navigation
+  // Keyboard navigation with actual scroll position update
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || !scrollElementRef.current) return;
+
+      const scrollElement = scrollElementRef.current;
+      let newScrollTop = scrollTop;
 
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setScrollTop(prev => Math.min(prev + itemHeight, totalHeight - actualContainerHeight));
+          newScrollTop = Math.min(scrollTop + itemHeight, totalHeight - actualContainerHeight);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setScrollTop(prev => Math.max(prev - itemHeight, 0));
+          newScrollTop = Math.max(scrollTop - itemHeight, 0);
           break;
         case 'PageDown':
           e.preventDefault();
-          setScrollTop(prev => Math.min(prev + actualContainerHeight, totalHeight - actualContainerHeight));
+          newScrollTop = Math.min(scrollTop + actualContainerHeight, totalHeight - actualContainerHeight);
           break;
         case 'PageUp':
           e.preventDefault();
-          setScrollTop(prev => Math.max(prev - actualContainerHeight, 0));
+          newScrollTop = Math.max(scrollTop - actualContainerHeight, 0);
           break;
         case 'Home':
           e.preventDefault();
-          setScrollTop(0);
+          newScrollTop = 0;
           break;
         case 'End':
           e.preventDefault();
-          setScrollTop(totalHeight - actualContainerHeight);
+          newScrollTop = totalHeight - actualContainerHeight;
           break;
+      }
+
+      if (newScrollTop !== scrollTop) {
+        scrollElement.scrollTop = newScrollTop;
+        setScrollTop(newScrollTop);
       }
     };
 
@@ -185,7 +193,7 @@ export const MobileVirtualScrolling = <T,>({
       container.addEventListener('keydown', handleKeyDown);
       return () => container.removeEventListener('keydown', handleKeyDown);
     }
-  }, [itemHeight, totalHeight, actualContainerHeight]);
+  }, [itemHeight, totalHeight, actualContainerHeight, scrollTop]);
 
   // Error state
   if (error && errorComponent) {

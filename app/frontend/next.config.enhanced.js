@@ -86,7 +86,6 @@ const nextConfig = {
 
     // Tree shaking optimizations
     config.optimization.usedExports = true;
-    config.optimization.sideEffects = false;
 
     // Resolve aliases for better tree shaking
     config.resolve.alias = {
@@ -94,27 +93,7 @@ const nextConfig = {
       '@': require('path').resolve(__dirname, 'src'),
     };
 
-    // Optimize imports
-    config.module.rules.push({
-      test: /\.(js|jsx|ts|tsx)$/,
-      use: [
-        {
-          loader: 'babel-loader',
-          options: {
-            presets: ['next/babel'],
-            plugins: [
-              // Import optimization for lodash
-              ['babel-plugin-lodash'],
-              // Import optimization for date-fns
-              ['babel-plugin-date-fns'],
-              // Remove console.log in production
-              ...(dev ? [] : [['babel-plugin-transform-remove-console', { exclude: ['error', 'warn'] }]]),
-            ],
-          },
-        },
-      ],
-      exclude: /node_modules/,
-    });
+
 
     return config;
   },

@@ -1,41 +1,40 @@
 import React from 'react';
+import { ActivityIndicator } from '@/types/navigation';
 
 interface ActivityIndicatorsProps {
   className?: string;
+  activities?: ActivityIndicator[];
 }
 
-export interface ActivityIndicator {
-  label: string;
-  count: number;
-  color: string;
-}
-
-export const createActivityIndicator = (label: string, count: number, color: string): ActivityIndicator => ({
-  label,
+export const createActivityIndicator = (type: ActivityIndicator['type'], count: number, color: string): ActivityIndicator => ({
+  id: `${type}-${Date.now()}`, // Generate a unique ID
+  type,
   count,
-  color
+  priority: 'medium', // Default priority
+  lastUpdate: new Date(),
+  isAnimated: false
 });
 
 export const mockActivityIndicators: ActivityIndicator[] = [
-  { label: 'New Posts', count: 12, color: 'bg-blue-500' },
-  { label: 'Mentions', count: 3, color: 'bg-green-500' },
-  { label: 'Reactions', count: 8, color: 'bg-purple-500' },
-  { label: 'Comments', count: 5, color: 'bg-orange-500' },
+  createActivityIndicator('notification', 12, 'bg-blue-500'),
+  createActivityIndicator('transaction', 3, 'bg-green-500'),
+  createActivityIndicator('community', 8, 'bg-purple-500'),
+  createActivityIndicator('governance', 5, 'bg-orange-500'),
 ];
 
 export const ActivityIndicators: React.FC<ActivityIndicatorsProps> = ({
-  className = ''
+  className = '',
+  activities = mockActivityIndicators
 }) => {
-  const activities = mockActivityIndicators;
 
   return (
     <div className={`space-y-3 ${className}`}>
       {activities.map((activity) => (
-        <div key={activity.label} className="flex items-center justify-between">
+        <div key={activity.id} className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${activity.color}`} />
             <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {activity.label}
+              {activity.type}
             </span>
           </div>
           <span className="text-sm font-bold text-white bg-primary-600 dark:bg-primary-500 px-2 py-0.5 rounded-full">

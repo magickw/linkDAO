@@ -205,6 +205,43 @@ export const CachedContentFallback: React.FC<{
     return <FallbackContent type="generic" />;
   }
 
+  // Sanitize and validate cached data
+  const sanitizeData = (data: any): string => {
+    try {
+      // Only serialize safe data types
+      if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+        return String(data);
+      }
+      
+      if (Array.isArray(data)) {
+        return JSON.stringify(data.map(item => sanitizeData(item)), null, 2);
+      }
+      
+      if (typeof data === 'object' && data !== null) {
+        const sanitized: Record<string, any> = {};
+        for (const [key, value] of Object.entries(data)) {
+          // Skip potentially sensitive keys
+          if (typeof key === 'string' && 
+              (key.toLowerCase().includes('password') || 
+               key.toLowerCase().includes('token') || 
+               key.toLowerCase().includes('secret') ||
+               key.toLowerCase().includes('private'))) {
+            sanitized[key] = '[REDACTED]';
+          } else {
+            sanitized[key] = sanitizeData(value);
+          }
+        }
+        return JSON.stringify(sanitized, null, 2);
+      }
+      
+      return '[Unsupported data type]';
+    } catch (error) {
+      return '[Error sanitizing data]';
+    }
+  };
+
+  const sanitizedContent = sanitizeData(cachedData);
+
   return (
     <div className="space-y-4">
       <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -227,9 +264,9 @@ export const CachedContentFallback: React.FC<{
       </div>
       
       <div className="opacity-75">
-        {/* Render cached content here */}
-        <pre className="text-sm bg-gray-100 p-3 rounded overflow-auto">
-          {JSON.stringify(cachedData, null, 2)}
+        {/* Render sanitized cached content */}
+        <pre className="text-sm bg-gray-100 p-3 rounded overflow-auto max-h-96">
+          {sanitizedContent}
         </pre>
       </div>
     </div>

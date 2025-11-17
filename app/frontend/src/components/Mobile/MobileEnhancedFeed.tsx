@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
 import { MobileVirtualScrolling } from './MobileVirtualScrolling';
-import { MobileEnhancedPostCard } from './MobileEnhancedPostCard';
-import { MobileEnhancedPostComposer } from './MobileEnhancedPostComposer';
+import MobileEnhancedPostCard from './MobileEnhancedPostCard';
+import MobileEnhancedPostComposer from './MobileEnhancedPostComposer';
 import { EnhancedPost } from '@/types/feed';
 import { RichPostInput } from '@/types/enhancedPost';
 import { ReactionType } from '@/types/tokenReaction';
@@ -102,7 +102,7 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
     <div className="px-4 pb-4">
       <MobileEnhancedPostCard
         post={item.data}
-        onReact={onPostReact}
+        onReact={(postId, emoji, intensity) => onPostReact(postId, emoji as ReactionType, intensity)}
         onComment={onPostComment}
         onShare={onPostShare}
         onBookmark={onPostBookmark}

@@ -107,7 +107,11 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute bottom-16 right-0 space-y-3"
+              className={`absolute space-y-3 ${
+                position === 'bottom-left' ? 'bottom-16 left-0' :
+                position === 'bottom-center' ? 'bottom-16 left-1/2 transform -translate-x-1/2' :
+                'bottom-16 right-0'
+              }`}
             >
               {secondaryActions.map((action, index) => (
                 <motion.div

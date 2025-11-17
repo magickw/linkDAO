@@ -27,7 +27,8 @@ interface TranslatedDocument {
 const MultiLanguageSupport: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isLanguageSelectorOpen, setIsLanguageSelectorOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [languageSearchQuery, setLanguageSearchQuery] = useState(''); // Separate search for languages
+  const [documentSearchQuery, setDocumentSearchQuery] = useState(''); // Separate search for documents
   const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
   const [translatedDocuments, setTranslatedDocuments] = useState<TranslatedDocument[]>([]);
 
@@ -48,23 +49,53 @@ const MultiLanguageSupport: React.FC = () => {
 
   // Mock translated documents - in a real implementation, this would come from an API
   useEffect(() => {
+    const translations = {
+      'en': {
+        '1': { title: 'Beginner\'s Guide to LDAO Tokens', content: 'This guide will help you understand the basics of LDAO tokens...' },
+        '2': { title: 'How to Stake Your Tokens', content: 'Learn how to stake your LDAO tokens to earn rewards...' },
+        '3': { title: 'Security Best Practices', content: 'Keep your tokens safe with these security recommendations...' }
+      },
+      'es': {
+        '1': { title: 'Guía para Principiantes de Tokens LDAO', content: 'Esta guía te ayudará a entender los conceptos básicos de los tokens LDAO...' },
+        '2': { title: 'Cómo Hacer Staking de Tus Tokens', content: 'Aprende cómo hacer staking de tus tokens LDAO para ganar recompensas...' },
+        '3': { title: 'Mejores Prácticas de Seguridad', content: 'Mantén tus tokens seguros con estas recomendaciones de seguridad...' }
+      },
+      'fr': {
+        '1': { title: 'Guide du Débutant pour les Tokens LDAO', content: 'Ce guide vous aidera à comprendre les bases des tokens LDAO...' },
+        '2': { title: 'Comment Staker vos Tokens', content: 'Apprenez comment staker vos tokens LDAO pour gagner des récompenses...' },
+        '3': { title: 'Meilleures Pratiques de Sécurité', content: 'Gardez vos tokens en sécurité avec ces recommandations de sécurité...' }
+      },
+      'de': {
+        '1': { title: 'Anfängerleitfaden für LDAO-Token', content: 'Diese Anleitung hilft Ihnen, die Grundlagen von LDAO-Token zu verstehen...' },
+        '2': { title: 'Wie man Ihre Tokens staked', content: 'Lernen Sie, wie Sie Ihre LDAO-Token staken können, um Belohnungen zu verdienen...' },
+        '3': { title: 'Sicherheitsbest Practices', content: 'Halten Sie Ihre Token mit diesen Sicherheitsempfehlungen sicher...' }
+      },
+      'zh': {
+        '1': { title: 'LDAO代币初学者指南', content: '本指南将帮助您了解LDAO代币的基础知识...' },
+        '2': { title: '如何质押您的代币', content: '学习如何质押您的LDAO代币以获得奖励...' },
+        '3': { title: '安全最佳实践', content: '通过这些安全建议保护您的代币安全...' }
+      }
+    };
+
+    const languageData = translations[selectedLanguage as keyof typeof translations] || translations['en'];
+    
     const mockDocuments: TranslatedDocument[] = [
       {
         id: '1',
-        title: 'Beginner\'s Guide to LDAO Tokens',
-        content: 'This guide will help you understand the basics of LDAO tokens...',
+        title: languageData['1'].title,
+        content: languageData['1'].content,
         language: selectedLanguage
       },
       {
         id: '2',
-        title: 'How to Stake Your Tokens',
-        content: 'Learn how to stake your LDAO tokens to earn rewards...',
+        title: languageData['2'].title,
+        content: languageData['2'].content,
         language: selectedLanguage
       },
       {
         id: '3',
-        title: 'Security Best Practices',
-        content: 'Keep your tokens safe with these security recommendations...',
+        title: languageData['3'].title,
+        content: languageData['3'].content,
         language: selectedLanguage
       }
     ];
@@ -77,6 +108,20 @@ const MultiLanguageSupport: React.FC = () => {
     setIsLanguageSelectorOpen(false);
   };
 
+  const handleTranslationRequest = () => {
+    // Mock translation request functionality
+    const currentDoc = translatedDocuments[0]; // Get first document as example
+    if (currentDoc) {
+      alert(`Translation request submitted for "${currentDoc.title}" in ${selectedLanguage}. This would typically send a request to translation services.`);
+      console.log('Translation request:', {
+        documentId: currentDoc.id,
+        documentTitle: currentDoc.title,
+        targetLanguage: selectedLanguage,
+        currentLanguage: currentDoc.language
+      });
+    }
+  };
+
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -86,8 +131,8 @@ const MultiLanguageSupport: React.FC = () => {
   };
 
   const filteredDocuments = translatedDocuments.filter(doc => 
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.content.toLowerCase().includes(searchQuery.toLowerCase())
+    doc.title.toLowerCase().includes(documentSearchQuery.toLowerCase()) ||
+    doc.content.toLowerCase().includes(documentSearchQuery.toLowerCase())
   );
 
   return (
@@ -117,15 +162,16 @@ const MultiLanguageSupport: React.FC = () => {
                       type="text"
                       placeholder="Search languages..."
                       className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={languageSearchQuery}
+                      onChange={(e) => setLanguageSearchQuery(e.target.value)}
+                      aria-label="Search languages"
                     />
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {languages
                       .filter(lang => 
-                        lang.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        lang.nativeName.toLowerCase().includes(searchQuery.toLowerCase())
+                        lang.name.toLowerCase().includes(languageSearchQuery.toLowerCase()) ||
+                        lang.nativeName.toLowerCase().includes(languageSearchQuery.toLowerCase())
                       )
                       .map((language) => (
                         <button
@@ -171,6 +217,21 @@ const MultiLanguageSupport: React.FC = () => {
               <VolumeX className="w-5 h-5" />
             )}
           </button>
+        </div>
+
+        {/* Document Search */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search documents..."
+              className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={documentSearchQuery}
+              onChange={(e) => setDocumentSearchQuery(e.target.value)}
+              aria-label="Search documents"
+            />
+          </div>
         </div>
 
         {filteredDocuments.length > 0 ? (
@@ -223,7 +284,11 @@ const MultiLanguageSupport: React.FC = () => {
             <h4 className="font-medium text-gray-900">Need translation in another language?</h4>
             <p className="text-sm text-gray-600">Request translation for this document</p>
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+          <button 
+            onClick={handleTranslationRequest}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            aria-label="Request translation for current document"
+          >
             Request Translation
           </button>
         </div>

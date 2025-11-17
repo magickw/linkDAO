@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FilterState, ContentType, DateRange } from '../types/communityFilter';
+import { EnhancedPost } from '../types/communityEnhancements';
 
 const DEFAULT_FILTER_STATE: FilterState = {
   flair: [],
@@ -164,18 +165,18 @@ export function useFilterState({
   }, [filterState]);
 
   // Apply filters to a list of posts (utility function)
-  const applyFilters = useCallback((posts: any[]) => {
+  const applyFilters = useCallback((posts: EnhancedPost[]) => {
     return posts.filter(post => {
       // Flair filter
       if (filterState.flair.length > 0) {
-        if (!post.flair || !filterState.flair.includes(post.flair)) {
+        if (!post.flair || !filterState.flair.includes(post.flair.id)) {
           return false;
         }
       }
 
       // Author filter
       if (filterState.author.length > 0) {
-        if (!filterState.author.includes(post.author)) {
+        if (!filterState.author.includes(post.author.username)) {
           return false;
         }
       }
@@ -190,7 +191,7 @@ export function useFilterState({
 
       // Time range filter
       if (filterState.timeRange.startDate || filterState.timeRange.endDate) {
-        const postDate = new Date(post.createdAt);
+        const postDate = new Date(post.timestamp);
         
         if (filterState.timeRange.startDate && postDate < filterState.timeRange.startDate) {
           return false;

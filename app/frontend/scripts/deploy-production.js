@@ -318,7 +318,7 @@ class ProductionDeployer {
       await new Promise(resolve => setTimeout(resolve, 30000));
     }
     
-    const uptime = ((checkCount - errorCount) / checkCount) * 100;
+    const uptime = checkCount > 0 ? ((checkCount - errorCount) / checkCount) * 100 : 0;
     
     if (uptime < DEPLOYMENT_CONFIG.monitoring.uptimeThreshold) {
       throw new Error(`Uptime ${uptime.toFixed(2)}% below threshold ${DEPLOYMENT_CONFIG.monitoring.uptimeThreshold}%`);
@@ -397,7 +397,14 @@ class ProductionDeployer {
         throw new Error('No previous deployment found for rollback');
       }
       
-      const previousDeployment = backupFiles[1]; // Second most recent (first is current failed deployment)
+      if (backupFiles.length === 0) {
+        throw new Error('No deployment backups found');
+      }
+      
+      // Find the most recent successful deployment (not the current failed one)
+      const previousDeployment = backupFiles.find(backup => 
+        backup.metadata.deploymentId !== this.deploymentId
+      ) || backupFiles[0];
       
       console.log(`🔄 Rolling back to: ${previousDeployment.metadata.commitHash}`);
       

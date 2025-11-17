@@ -1,4 +1,4 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useCallback } from 'react';
 import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useAccessibility';
 
@@ -300,25 +300,29 @@ export function usePostSorting(initialSort: PostSortOption = PostSortOption.BEST
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(initialTimeFilter);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSortChange = (newSort: PostSortOption) => {
+  const handleSortChange = useCallback((newSort: PostSortOption) => {
     setSortBy(newSort);
     setIsLoading(true);
     
     // Simulate API call delay
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setIsLoading(false);
     }, 500);
-  };
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
-  const handleTimeFilterChange = (newFilter: TimeFilter) => {
+  const handleTimeFilterChange = useCallback((newFilter: TimeFilter) => {
     setTimeFilter(newFilter);
     setIsLoading(true);
     
     // Simulate API call delay
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setIsLoading(false);
     }, 500);
-  };
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   return {
     sortBy,

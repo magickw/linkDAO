@@ -52,7 +52,7 @@ const AdvancedNavigationSidebar: React.FC = () => {
             Communities
           </h3>
           <CommunityIconList
-            communities={communities as any}
+            communities={communities}
             onCommunitySelect={handleCommunitySelect}
           />
         </div>

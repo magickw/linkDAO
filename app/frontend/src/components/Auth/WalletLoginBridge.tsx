@@ -6,6 +6,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/services/authService';
 
 interface WalletLoginBridgeProps {
   autoLogin?: boolean;
@@ -37,7 +38,9 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
   // Prevent page refresh loops by tracking failed attempts
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const maxFailedAttempts = 3;
+  const maxFailedAttempts = 2; // Maximum failed attempts before stopping (reduced from 3)
+  const failedAttemptCooldown = 60000; // 60 seconds cooldown after failed attempts (increased from 30s)
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track if this is the initial page load
   
   // Add a cooldown period to prevent rapid retries
   const AUTH_COOLDOWN_MS = 2000;
@@ -86,11 +89,24 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
+    // Quick session check to prevent signature prompts
+    if (authService.hasPotentialSession()) {
+      console.log('✅ Potential session detected, skipping auto-login to avoid signature prompt');
+      return;
+    }
+
     // Check for existing valid session BEFORE attempting login
-    const storedToken = localStorage.getItem('linkdao_access_token');
-    const storedAddress = localStorage.getItem('linkdao_wallet_address');
-    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
-    const storedUserData = localStorage.getItem('linkdao_user_data');
+    // Enhanced session validation with multiple fallback checks
+    const storedToken = localStorage.getItem('linkdao_access_token') ||
+                       localStorage.getItem('token') ||
+                       localStorage.getItem('authToken') ||
+                       localStorage.getItem('auth_token');
+    const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
+                         localStorage.getItem('wallet_address');
+    const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
+                           localStorage.getItem('signature_timestamp');
+    const storedUserData = localStorage.getItem('linkdao_user_data') ||
+                          localStorage.getItem('user_data');
     
     if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
       const timestamp = parseInt(storedTimestamp);
@@ -121,8 +137,14 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
     // Only attempt login once per address change
     if (!hasTriedLoginRef.current || addressChanged) {
+      // Add a longer delay on initial page load to prevent immediate signature prompts
+    const delay = isInitialLoad ? 2000 : 500; // 2 seconds on first load, 500ms otherwise
+    
+    const timer = setTimeout(() => {
       console.log('🚀 Triggering auto-login for:', address);
+      setIsInitialLoad(false); // Mark initial load as complete
       handleAutoLogin();
+    }, delay);
     }
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
@@ -139,7 +161,28 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
     
-    if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) return;
+    // Enhanced connector validation to prevent errors
+    if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) {
+      console.log('📝 Skipping auto-login: invalid state', {
+        hasAddress: !!address,
+        isLoggingIn,
+        hasConnector: !!connector,
+        status,
+        failedAttempts,
+        maxFailedAttempts
+      });
+      return;
+    }
+    
+    // Additional connector readiness check
+    if (connector && typeof connector.getChainId !== 'function') {
+      console.log('📝 Skipping auto-login: connector not fully initialized', {
+        connectorName: connector.name,
+        hasGetChainId: typeof connector.getChainId === 'function',
+        connectorReady: connector.ready
+      });
+      return;
+    }
 
     try {
       isGlobalAuthInProgress = true;
@@ -153,6 +196,15 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
       console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
 
+      // Add delay to ensure connector is fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Double-check connector readiness after delay
+      if (!connector || typeof connector.getChainId !== 'function') {
+        console.log('📝 Connector not ready after delay, skipping authentication');
+        return;
+      }
+
       // First check if we already have a valid session to avoid unnecessary signature prompts
       // Use the same logic as authService.getToken() to find the token
       const storedToken = localStorage.getItem('linkdao_access_token') ||
@@ -165,6 +217,16 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
                              localStorage.getItem('signature_timestamp');
       const storedUserData = localStorage.getItem('linkdao_user_data') ||
                             localStorage.getItem('user_data');
+
+      console.log('🔍 Session validation check:', {
+        hasStoredToken: !!storedToken,
+        storedAddress,
+        currentAddress: address,
+        addressesMatch: storedAddress === address,
+        hasStoredTimestamp: !!storedTimestamp,
+        hasStoredUserData: !!storedUserData,
+        tokenPreview: storedToken ? storedToken.substring(0, 20) + '...' : 'none'
+      });
 
       if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
@@ -191,8 +253,23 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         }
       }
 
-      const result = await login(address, connector, status);
-      console.log('🔍 Login result:', result);
+      let result;
+      try {
+        result = await login(address, connector, status);
+        console.log('🔍 Login result:', result);
+      } catch (loginError) {
+        console.error('💥 Login threw an exception:', loginError);
+        const errorMessage = loginError instanceof Error ? loginError.message : 'Login failed';
+        
+        // Stop retrying on connector errors to prevent endless loops
+        if (errorMessage.includes('getChainId') || errorMessage.includes('connector')) {
+          console.log('📝 Stopping auto-login due to connector error');
+          hasTriedLoginRef.current = true;
+          return;
+        }
+        
+        result = { success: false, error: errorMessage };
+      }
 
       if (result.success) {
         const walletName = connector?.name || 'Wallet';
@@ -206,7 +283,17 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         const errorMessage = result.error || 'Authentication failed';
         console.error('❌ Auto-login failed:', errorMessage);
         
+        // Increment failed attempts for certain types of errors
+        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign') || errorMessage.includes('Authentication failed') || errorMessage.includes('getChainId')) {
+          setFailedAttempts(prev => prev + 1);
+        }
+        
         // Stop retrying on authentication failures to prevent endless loops
+        // Add a longer cooldown for connector-related errors
+        if (errorMessage.includes('getChainId') || errorMessage.includes('connector')) {
+          console.log('📝 Extended cooldown for connector errors - will not retry for 5 minutes');
+          loginAttemptTimestampRef.current = Date.now() + 300000; // 5 minutes
+        }
         hasTriedLoginRef.current = true;
         
         // Increment failed attempts for certain types of errors

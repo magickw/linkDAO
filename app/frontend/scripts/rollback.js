@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const fetch = require('node-fetch');
 
 class RollbackManager {
   constructor(environment = 'production') {
@@ -131,22 +132,22 @@ class RollbackManager {
     
     // Checkout target commit
     console.log('📦 Checking out target commit...');
-    execSync(`git checkout ${commitHash}`, { stdio: 'inherit' });
+    spawnSync('git', ['checkout', commitHash], { stdio: 'inherit' });
     
     // Install dependencies
     console.log('📦 Installing dependencies...');
-    execSync('npm ci', { stdio: 'inherit' });
+    spawnSync('npm', ['ci'], { stdio: 'inherit' });
     
     // Build application
     console.log('🔨 Building application...');
-    execSync('npm run build', { stdio: 'inherit' });
+    spawnSync('npm', ['run', 'build'], { stdio: 'inherit' });
     
     // Deploy application
     console.log('🚢 Deploying application...');
     if (this.environment === 'production') {
-      execSync('npm run deploy:production', { stdio: 'inherit' });
+      spawnSync('npm', ['run', 'deploy:production'], { stdio: 'inherit' });
     } else {
-      execSync('npm run deploy:staging', { stdio: 'inherit' });
+      spawnSync('npm', ['run', 'deploy:staging'], { stdio: 'inherit' });
     }
     
     // Verify deployment
@@ -160,7 +161,8 @@ class RollbackManager {
   async createRollbackBackup() {
     console.log('💾 Creating rollback backup...');
     
-    const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+    const result = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
+    const currentCommit = result.stdout.trim();
     const rollbackId = `rollback_${Date.now()}`;
     
     const backupMetadata = {

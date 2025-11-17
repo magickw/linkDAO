@@ -11,7 +11,8 @@ import {
   Filter,
   TrendingUp,
   Clock,
-  Award
+  Award,
+  Check
 } from 'lucide-react';
 
 interface ForumPost {
@@ -196,21 +197,27 @@ const CommunitySupportForum: React.FC = () => {
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
+            <label htmlFor="community-search" className="sr-only">Search community discussions</label>
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
+              id="community-search"
               type="text"
               placeholder="Search community discussions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-label="Search community discussions"
             />
           </div>
           
           <div className="flex gap-2">
+            <label htmlFor="category-select" className="sr-only">Select category</label>
             <select
+              id="category-select"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-label="Select category"
             >
               {categories.map(category => (
                 <option key={category.id} value={category.id}>
@@ -219,10 +226,13 @@ const CommunitySupportForum: React.FC = () => {
               ))}
             </select>
             
+            <label htmlFor="sort-select" className="sr-only">Sort posts</label>
             <select
+              id="sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-label="Sort posts"
             >
               <option value="recent">Most Recent</option>
               <option value="popular">Most Popular</option>
@@ -235,20 +245,63 @@ const CommunitySupportForum: React.FC = () => {
       {/* Categories */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex flex-wrap gap-3">
-          {categories.filter(cat => cat.id !== 'all').map(category => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category.id
-                  ? `bg-${category.color}-100 text-${category.color}-800 border-${category.color}-200`
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full bg-${category.color}-500 mr-2`}></span>
-              {category.name}
-            </button>
-          ))}
+          {categories.filter(cat => cat.id !== 'all').map(category => {
+            const isSelected = selectedCategory === category.id;
+            const colorClasses = {
+              blue: {
+                bg: 'bg-blue-100',
+                text: 'text-blue-800',
+                border: 'border-blue-200',
+                dot: 'bg-blue-500'
+              },
+              green: {
+                bg: 'bg-green-100',
+                text: 'text-green-800',
+                border: 'border-green-200',
+                dot: 'bg-green-500'
+              },
+              purple: {
+                bg: 'bg-purple-100',
+                text: 'text-purple-800',
+                border: 'border-purple-200',
+                dot: 'bg-purple-500'
+              },
+              orange: {
+                bg: 'bg-orange-100',
+                text: 'text-orange-800',
+                border: 'border-orange-200',
+                dot: 'bg-orange-500'
+              },
+              red: {
+                bg: 'bg-red-100',
+                text: 'text-red-800',
+                border: 'border-red-200',
+                dot: 'bg-red-500'
+              }
+            }[category.color] || {
+              bg: 'bg-gray-100',
+              text: 'text-gray-800',
+              border: 'border-gray-200',
+              dot: 'bg-gray-500'
+            };
+
+            return (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={`flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  isSelected
+                    ? `${colorClasses.bg} ${colorClasses.text} ${colorClasses.border}`
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                aria-pressed={isSelected}
+                aria-label={`Select ${category.name} category`}
+              >
+                <span className={`w-2 h-2 rounded-full ${colorClasses.dot} mr-2`}></span>
+                {category.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -260,11 +313,19 @@ const CommunitySupportForum: React.FC = () => {
               <div className="flex">
                 {/* Vote Section */}
                 <div className="flex flex-col items-center mr-4">
-                  <button className="p-1 text-gray-400 hover:text-green-600 transition-colors">
+                  <button 
+                    className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                    aria-label={`Upvote ${post.title}`}
+                    title="Upvote this post"
+                  >
                     <ThumbsUp className="w-5 h-5" />
                   </button>
-                  <span className="text-sm font-medium text-gray-900 my-1">{post.upvotes}</span>
-                  <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                  <span className="text-sm font-medium text-gray-900 my-1" aria-label={`${post.upvotes} upvotes`}>{post.upvotes}</span>
+                  <button 
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    aria-label={`Downvote ${post.title}`}
+                    title="Downvote this post"
+                  >
                     <ThumbsDown className="w-5 h-5" />
                   </button>
                 </div>
@@ -274,7 +335,14 @@ const CommunitySupportForum: React.FC = () => {
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center mb-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getCategoryColor(post.category)}-100 text-${getCategoryColor(post.category)}-800 mr-2`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-2 ${
+                    getCategoryColor(post.category) === 'blue' ? 'bg-blue-100 text-blue-800' :
+                    getCategoryColor(post.category) === 'green' ? 'bg-green-100 text-green-800' :
+                    getCategoryColor(post.category) === 'purple' ? 'bg-purple-100 text-purple-800' :
+                    getCategoryColor(post.category) === 'orange' ? 'bg-orange-100 text-orange-800' :
+                    getCategoryColor(post.category) === 'red' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
                           {categories.find(c => c.id === post.category)?.name}
                         </span>
                         {post.isResolved && (
@@ -406,12 +474,5 @@ const CommunitySupportForum: React.FC = () => {
     </div>
   );
 };
-
-// Placeholder component for the check icon
-const Check: React.FC<{className?: string}> = ({className}) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-  </svg>
-);
 
 export default CommunitySupportForum;

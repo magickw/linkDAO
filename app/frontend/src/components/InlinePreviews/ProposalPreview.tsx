@@ -9,50 +9,37 @@ interface ProposalPreviewProps {
 }
 
 export default function ProposalPreview({ data, className = '', compact = false, onClick }: ProposalPreviewProps) {
-  // Handle both legacy and new data formats
-  const proposalData = 'category' in data ? {
-    id: data.id,
-    title: data.title,
-    description: data.description,
-    status: data.status === ProposalStatus.ACTIVE ? 'active' : 
-            data.status === ProposalStatus.SUCCEEDED ? 'passed' :
-            data.status === ProposalStatus.DEFEATED ? 'failed' :
-            data.status === ProposalStatus.EXECUTED ? 'executed' :
-            data.status === ProposalStatus.DRAFT ? 'draft' : 'draft',
-    votingEnds: data.votingEnds,
-    yesVotes: data.yesVotes,
-    noVotes: data.noVotes,
-    quorum: data.quorum,
-    proposer: data.proposer
-  } : data as ProposalPreviewData;
-  const getStatusColor = (status: string) => {
+  // The data should already be in the correct format as ProposalPreviewData
+  // No need for legacy handling since the type system ensures correct data format
+  const proposalData = data;
+  const getStatusColor = (status: ProposalStatus) => {
     switch (status) {
-      case 'active':
+      case ProposalStatus.ACTIVE:
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'passed':
+      case ProposalStatus.SUCCEEDED:
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'failed':
+      case ProposalStatus.DEFEATED:
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-      case 'executed':
+      case ProposalStatus.EXECUTED:
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      case 'draft':
+      case ProposalStatus.DRAFT:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: ProposalStatus) => {
     switch (status) {
-      case 'active':
+      case ProposalStatus.ACTIVE:
         return '🗳️';
-      case 'passed':
+      case ProposalStatus.SUCCEEDED:
         return '✅';
-      case 'failed':
+      case ProposalStatus.DEFEATED:
         return '❌';
-      case 'executed':
+      case ProposalStatus.EXECUTED:
         return '⚡';
-      case 'draft':
+      case ProposalStatus.DRAFT:
         return '📝';
       default:
         return '📋';
@@ -103,9 +90,9 @@ export default function ProposalPreview({ data, className = '', compact = false,
         onClick={onClick}
       >
         <div className="flex-shrink-0">
-          <div className={`w-3 h-3 rounded-full ${proposalData.status === 'active' ? 'bg-blue-500 animate-pulse' : 
-                                                   proposalData.status === 'passed' ? 'bg-green-500' :
-                                                   proposalData.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'}`}></div>
+          <div className={`w-3 h-3 rounded-full ${proposalData.status === ProposalStatus.ACTIVE ? 'bg-blue-500 animate-pulse' :
+                                                   proposalData.status === ProposalStatus.SUCCEEDED ? 'bg-green-500' :
+                                                   proposalData.status === ProposalStatus.DEFEATED ? 'bg-red-500' : 'bg-gray-500'}`}></div>
         </div>
         
         <div className="flex-1 min-w-0">
@@ -119,11 +106,11 @@ export default function ProposalPreview({ data, className = '', compact = false,
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
             {'category' in data ? `${data.category} • ` : ''}
-            {proposalData.status === 'active' ? formatTimeRemaining(proposalData.votingEnds) : 'Voting ended'}
+            {proposalData.status === ProposalStatus.ACTIVE ? formatTimeRemaining(proposalData.votingEnds) : 'Voting ended'}
           </p>
         </div>
         
-        {proposalData.status === 'active' && (
+        {proposalData.status === ProposalStatus.ACTIVE && (
           <div className="text-right text-xs">
             <div className="text-green-600 dark:text-green-400">✅ {yesPercentage}%</div>
             <div className="text-red-600 dark:text-red-400">❌ {noPercentage}%</div>
@@ -264,7 +251,7 @@ export default function ProposalPreview({ data, className = '', compact = false,
         )}
 
         {/* Final Results for non-active proposals */}
-        {proposalData.status !== 'active' && proposalData.status !== 'draft' && (
+        {proposalData.status !== ProposalStatus.ACTIVE && proposalData.status !== ProposalStatus.DRAFT && (
           <div className="mb-4">
             <div className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
               Final Results

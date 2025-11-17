@@ -3,7 +3,7 @@
  * Provides error handling utilities for components
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ErrorContext, ErrorCategory, errorManager } from '../utils/errorHandling/ErrorManager';
 
 interface UseErrorHandlerOptions {
@@ -28,6 +28,18 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const lastOperationRef = useRef<(() => Promise<any>) | null>(null);
+  const isMountedRef = useRef(true);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const {
     category = ErrorCategory.UNKNOWN,
@@ -37,6 +49,8 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   } = options;
 
   const handleError = useCallback((errorInput: Error | ErrorContext) => {
+    if (!isMountedRef.current) return;
+    
     const errorContext = errorManager.handleError(errorInput, { category });
     setError(errorContext);
     setIsLoading(false);
@@ -49,10 +63,14 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   const clearError = useCallback(() => {
     setError(null);
     setRetryCount(0);
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
   }, []);
 
   const retry = useCallback(async () => {
-    if (!enableRetry || retryCount >= maxRetries || !lastOperationRef.current) {
+    if (!enableRetry || retryCount >= maxRetries || !lastOperationRef.current || !isMountedRef.current) {
       return;
     }
 
@@ -61,27 +79,38 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
     setRetryCount(prev => prev + 1);
 
     try {
-      await lastOperationRef.current();
+      // Use the same retry logic as errorManager for consistency
+      await errorManager.retryOperation(lastOperationRef.current, { category });
     } catch (err) {
-      handleError(err as Error);
+      if (isMountedRef.current) {
+        handleError(err as Error);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [enableRetry, retryCount, maxRetries, handleError]);
+  }, [enableRetry, retryCount, maxRetries, handleError, category]);
 
   const executeWithErrorHandling = useCallback(async <T>(
     operation: () => Promise<T>
   ): Promise<T | null> => {
+    if (!isMountedRef.current) return null;
+    
     lastOperationRef.current = operation;
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await errorManager.retryOperation(operation, { category });
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
       return result;
     } catch (err) {
-      handleError(err as Error);
+      if (isMountedRef.current) {
+        handleError(err as Error);
+      }
       return null;
     }
   }, [category, handleError]);

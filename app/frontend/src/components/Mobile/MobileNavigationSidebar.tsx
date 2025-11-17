@@ -7,15 +7,17 @@ import { CommunityIconList } from '@/components/Navigation/CommunityIconList';
 import { EnhancedUserCard } from '@/components/Navigation/EnhancedUserCard';
 import { ActivityIndicators } from '@/components/Navigation/ActivityIndicators';
 import { UserProfile } from '@/models/UserProfile';
+import { Community } from '@/types/community';
+import { FilterState } from '@/types/communityFilter';
 
 interface MobileNavigationSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile | null;
   address: string | undefined;
-  communities: any[]; // Replace with proper community type
-  activeFilters: any[]; // Replace with proper filter type
-  onFilterChange: (filters: any[]) => void;
+  communities: Community[];
+  activeFilters: FilterState[];
+  onFilterChange: (filters: FilterState[]) => void;
   onCommunitySelect: (communityId: string) => void;
   onUserProfileClick: () => void;
   className?: string;
@@ -61,7 +63,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
     announceToScreenReader(`Selected community: ${communityId}`);
   };
 
-  const handleFilterChange = (filters: any[]) => {
+  const handleFilterChange = (filters: FilterState[]) => {
     triggerHapticFeedback('light');
     onFilterChange(filters);
     announceToScreenReader(`Applied ${filters.length} filters`);
@@ -170,6 +172,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
               {/* Additional Navigation Items */}
               <div className="p-4 space-y-2">
                 <button
+                  onClick={() => console.log('Navigate to bookmarks')}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -183,6 +186,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                 </button>
 
                 <button
+                  onClick={() => console.log('Navigate to analytics')}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -196,6 +200,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                 </button>
 
                 <button
+                  onClick={() => console.log('Navigate to settings')}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800

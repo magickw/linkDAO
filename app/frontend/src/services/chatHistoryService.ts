@@ -388,8 +388,11 @@ class ChatHistoryService {
 
   // Private helper methods
   private getAuthToken(): string {
-    // Get JWT token from localStorage or context
-    return localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
+    // Get JWT token from localStorage using the correct key from AuthContext
+    return localStorage.getItem('linkdao_access_token') || 
+           localStorage.getItem('token') || 
+           localStorage.getItem('authToken') || 
+           localStorage.getItem('auth_token') || '';
   }
 
   private transformMessage(data: any): ChatMessage {

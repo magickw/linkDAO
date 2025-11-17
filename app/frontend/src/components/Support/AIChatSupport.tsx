@@ -48,9 +48,9 @@ const AIChatSupport: React.FC = () => {
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isSending) return;
 
-    // Add user message
+    // Add user message with proper unique ID
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       role: 'user',
       content: inputValue,
       timestamp: new Date()
@@ -68,7 +68,7 @@ const AIChatSupport: React.FC = () => {
       const aiResponse = generateAIResponse(inputValue);
       
       const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date()
@@ -83,7 +83,7 @@ const AIChatSupport: React.FC = () => {
     } catch (error) {
       console.error('Failed to get AI response:', error);
       const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         role: 'assistant',
         content: 'Sorry, I encountered an issue processing your request. Please try again or contact our human support team.',
         timestamp: new Date()
@@ -141,8 +141,24 @@ const AIChatSupport: React.FC = () => {
     ));
   };
 
-  const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
+  const handleCopyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      // Fallback for older browsers or clipboard API issues
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Fallback clipboard copy failed:', err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
   };
 
   const handleRestartConversation = () => {
@@ -156,7 +172,7 @@ const AIChatSupport: React.FC = () => {
     ]);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -288,7 +304,7 @@ const AIChatSupport: React.FC = () => {
                 <textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder="Type your question here..."
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={2}

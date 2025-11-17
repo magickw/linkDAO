@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { referralService } from '@/services/referralService';
+import { referralService, ReferralReward } from '@/services/referralService';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { 
@@ -26,15 +26,7 @@ interface ReferralInfo {
   pendingRewards: number;
 }
 
-interface ReferralReward {
-  id: string;
-  referrer: string;
-  referredUser: string;
-  amount: number;
-  timestamp: number;
-  status: 'pending' | 'claimed' | 'expired';
-  transactionHash?: string;
-}
+// Remove duplicate interface definition and use the imported one
 
 interface LeaderboardEntry {
   user: string;
@@ -69,8 +61,7 @@ const ReferralSystem: React.FC = () => {
       }
 
   // Load rewards
-  // Cast to any to avoid TS surface mismatch for the demo service implementation
-  const userRewards = await (referralService as any).getReferralRewards(address);
+  const userRewards = await referralService.getReferralRewards(address);
       setRewards(userRewards);
 
       // Load leaderboard

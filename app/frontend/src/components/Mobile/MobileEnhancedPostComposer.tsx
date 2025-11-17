@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
@@ -8,7 +8,8 @@ import { HashtagMentionInput } from '@/components/EnhancedPostComposer/HashtagMe
 import { PollCreator } from '@/components/EnhancedPostComposer/PollCreator';
 import { ProposalCreator } from '@/components/EnhancedPostComposer/ProposalCreator';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
-import { ContentType, RichPostInput, MediaFile } from '@/types/enhancedPost';
+import { RichPostInput, MediaFile, PollData, ProposalData } from '@/types/enhancedPost';
+import AuthContext from '@/context/AuthContext';
 
 interface MobileEnhancedPostComposerProps {
   isOpen: boolean;
@@ -16,15 +17,26 @@ interface MobileEnhancedPostComposerProps {
   onSubmit: (post: RichPostInput) => Promise<void>;
   communityId?: string;
   initialContentType?: ContentType;
+  className?: string;
 }
 
-export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
+enum ContentType {
+  TEXT = 'text',
+  MEDIA = 'media',
+  POLL = 'poll',
+  PROPOSAL = 'proposal',
+  LINK = 'link'
+}
+
+const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
   isOpen,
   onClose,
   onSubmit,
   communityId,
-  initialContentType = ContentType.TEXT
+  initialContentType = ContentType.TEXT,
+  className = ''
 }) => {
+  const { user } = useContext(AuthContext);
   const {
     isMobile,
     triggerHapticFeedback,
@@ -49,6 +61,21 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
   const [mentions, setMentions] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [pollData, setPollData] = useState<PollData | undefined>(undefined);
+  const [proposalData, setProposalData] = useState<ProposalData | undefined>(undefined);
+  const [linkUrl, setLinkUrl] = useState('');
+
+  // Clean up object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Cleanup object URLs when component unmounts
+      media.forEach(mediaItem => {
+        if (mediaItem.preview && mediaItem.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(mediaItem.preview);
+        }
+      });
+    };
+  }, []); // Only run on unmount
 
   const composerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -97,14 +124,26 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
 
     try {
       const postData: RichPostInput = {
-        author: 'current-user', // TODO: Get from user context
+        author: user?.id || user?.address || 'anonymous',
         contentType,
         title: title.trim() || undefined,
         content: content.trim(),
         media: media.length > 0 ? media : undefined,
         hashtags,
         mentions,
-        communityId
+        communityId,
+        // Include poll data for poll content type
+        poll: contentType === ContentType.POLL ? pollData : undefined,
+        // Include proposal data for proposal content type
+        proposal: contentType === ContentType.PROPOSAL ? proposalData : undefined,
+        // Include link data for link content type
+        links: contentType === ContentType.LINK && linkUrl ? [{
+          url: linkUrl,
+          title: undefined,
+          description: undefined,
+          image: undefined,
+          type: 'website' // Add the required type field
+        }] : undefined
       };
 
       await onSubmit(postData);
@@ -115,6 +154,9 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
       setMedia([]);
       setHashtags([]);
       setMentions([]);
+      setPollData(undefined);
+      setProposalData(undefined);
+      setLinkUrl('');
       
       triggerHapticFeedback('success');
       announceToScreenReader('Post created successfully');
@@ -129,6 +171,18 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
 
   const handleContentTypeChange = (type: ContentType) => {
     setContentType(type);
+    
+    // Clear content type-specific data when switching types
+    if (type !== ContentType.POLL) {
+      setPollData(undefined);
+    }
+    if (type !== ContentType.PROPOSAL) {
+      setProposalData(undefined);
+    }
+    if (type !== ContentType.LINK) {
+      setLinkUrl('');
+    }
+    
     triggerHapticFeedback('light');
     announceToScreenReader(`Switched to ${type} content type`);
   };
@@ -150,7 +204,17 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
   };
 
   const handleMediaRemove = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
+    setMedia(prev => {
+      const newMedia = [...prev];
+      const removedItem = newMedia[index];
+      
+      // Clean up object URL for the removed item
+      if (removedItem.preview && removedItem.preview.startsWith('blob:')) {
+        URL.revokeObjectURL(removedItem.preview);
+      }
+      
+      return newMedia.filter((_, i) => i !== index);
+    });
     triggerHapticFeedback('light');
   };
 
@@ -328,7 +392,7 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
                 {contentType === ContentType.POLL && (
                   <PollCreator
                     onPollChange={(pollData) => {
-                      // Handle poll data
+                      setPollData(pollData);
                     }}
                     className="mobile-optimized"
                   />
@@ -337,7 +401,7 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
                 {contentType === ContentType.PROPOSAL && (
                   <ProposalCreator
                     onProposalChange={(proposalData) => {
-                      // Handle proposal data
+                      setProposalData(proposalData);
                     }}
                     className="mobile-optimized"
                   />
@@ -348,6 +412,8 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
                     <input
                       type="url"
                       placeholder="Paste a link..."
+                      value={linkUrl}
+                      onChange={(e) => setLinkUrl(e.target.value)}
                       className={`
                         w-full px-3 py-2 border border-gray-300 dark:border-gray-600
                         rounded-lg bg-white dark:bg-gray-800
@@ -400,3 +466,5 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
     </AnimatePresence>
   );
 };
+
+export default MobileEnhancedPostComposer;

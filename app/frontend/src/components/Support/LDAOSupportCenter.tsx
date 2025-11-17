@@ -207,19 +207,72 @@ const LDAOSupportCenter: React.FC = () => {
                 { title: 'Governance Voting', articles: 10, color: 'orange' },
                 { title: 'Security Best Practices', articles: 7, color: 'red' },
                 { title: 'Wallet Setup', articles: 9, color: 'indigo' }
-              ].map((topic) => (
-                <div
-                  key={topic.title}
-                  className={`p-4 bg-${topic.color}-50 border border-${topic.color}-200 rounded-lg hover:bg-${topic.color}-100 cursor-pointer transition-colors`}
-                >
-                  <h3 className={`font-semibold text-${topic.color}-900 mb-1`}>
-                    {topic.title}
-                  </h3>
-                  <p className={`text-sm text-${topic.color}-600`}>
-                    {topic.articles} articles
-                  </p>
-                </div>
-              ))}
+              ].map((topic) => {
+                const colorClasses = {
+                  blue: {
+                    bg: 'bg-blue-50',
+                    border: 'border-blue-200',
+                    hover: 'hover:bg-blue-100',
+                    title: 'text-blue-900',
+                    text: 'text-blue-600'
+                  },
+                  green: {
+                    bg: 'bg-green-50',
+                    border: 'border-green-200',
+                    hover: 'hover:bg-green-100',
+                    title: 'text-green-900',
+                    text: 'text-green-600'
+                  },
+                  purple: {
+                    bg: 'bg-purple-50',
+                    border: 'border-purple-200',
+                    hover: 'hover:bg-purple-100',
+                    title: 'text-purple-900',
+                    text: 'text-purple-600'
+                  },
+                  orange: {
+                    bg: 'bg-orange-50',
+                    border: 'border-orange-200',
+                    hover: 'hover:bg-orange-100',
+                    title: 'text-orange-900',
+                    text: 'text-orange-600'
+                  },
+                  red: {
+                    bg: 'bg-red-50',
+                    border: 'border-red-200',
+                    hover: 'hover:bg-red-100',
+                    title: 'text-red-900',
+                    text: 'text-red-600'
+                  },
+                  indigo: {
+                    bg: 'bg-indigo-50',
+                    border: 'border-indigo-200',
+                    hover: 'hover:bg-indigo-100',
+                    title: 'text-indigo-900',
+                    text: 'text-indigo-600'
+                  }
+                }[topic.color] || {
+                  bg: 'bg-gray-50',
+                  border: 'border-gray-200',
+                  hover: 'hover:bg-gray-100',
+                  title: 'text-gray-900',
+                  text: 'text-gray-600'
+                };
+
+                return (
+                  <div
+                    key={topic.title}
+                    className={`p-4 ${colorClasses.bg} ${colorClasses.border} rounded-lg ${colorClasses.hover} cursor-pointer transition-colors`}
+                  >
+                    <h3 className={`font-semibold ${colorClasses.title} mb-1`}>
+                      {topic.title}
+                    </h3>
+                    <p className={`text-sm ${colorClasses.text}`}>
+                      {topic.articles} articles
+                    </p>
+                  </div>
+                );
+              })},
             </div>
           </div>
 

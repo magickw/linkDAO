@@ -27,12 +27,14 @@ export function jsonToBigInt(key: string, value: any): any {
   if (typeof value === 'string' && /^-?\d+n?$/.test(value)) {
     // Remove the 'n' suffix if present
     const cleanValue = value.replace(/n$/, '');
-    // Check if it's a valid number (don't check for safe integer as BigInt can be larger)
-    if (!isNaN(Number(cleanValue))) {
+    
+    // Validate that the string contains only digits (and optional minus sign)
+    // Don't use Number() conversion as it has limitations with large integers
+    if (/^-?\d+$/.test(cleanValue)) {
       try {
         return BigInt(cleanValue);
       } catch (e) {
-        // If conversion fails, return the original value
+        // If conversion fails (e.g., empty string, invalid format), return the original value
         return value;
       }
     }

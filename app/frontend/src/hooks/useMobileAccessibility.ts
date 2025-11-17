@@ -22,34 +22,57 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
   const [colorScheme, setColorScheme] = useState<'light' | 'dark' | 'auto'>('auto');
   const [textSize, setTextSize] = useState<'normal' | 'large' | 'extra-large'>('normal');
 
-  // Screen reader detection
+  // Screen reader detection - more reliable approach
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check for screen reader indicators
     const checkScreenReader = () => {
-      // Check for common screen reader user agents or accessibility APIs
-      const hasScreenReader = 
-        'speechSynthesis' in window ||
-        navigator.userAgent.includes('NVDA') ||
-        navigator.userAgent.includes('JAWS') ||
-        navigator.userAgent.includes('VoiceOver') ||
-        navigator.userAgent.includes('TalkBack');
+      // More reliable screen reader detection using multiple indicators
+      const indicators = {
+        // Check if speech synthesis is available (but not necessarily active)
+        hasSpeechSynthesis: 'speechSynthesis' in window,
+        
+        // Check for high contrast mode (often used with screen readers)
+        highContrast: window.matchMedia('(prefers-contrast: high)').matches,
+        
+        // Check for reduced motion (often used with screen readers)
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        
+        // Check for forced colors mode (Windows high contrast)
+        forcedColors: window.matchMedia('(forced-colors: active)').matches,
+        
+        // Check if user has navigated with keyboard
+        hasKeyboardNavigation: document.querySelector('[data-keyboard-navigation]') !== null
+      };
 
-      setIsScreenReaderActive(hasScreenReader);
+      // Screen reader is likely active if multiple indicators are present
+      const confidenceScore = Object.values(indicators).filter(Boolean).length;
+      setIsScreenReaderActive(confidenceScore >= 2);
     };
 
     checkScreenReader();
 
-    // Listen for accessibility events
-    const handleFocusIn = (e: FocusEvent) => {
-      if (e.target && (e.target as HTMLElement).getAttribute('aria-live')) {
-        setIsScreenReaderActive(true);
+    // Listen for accessibility-related events
+    const handleAccessibilityEvent = () => {
+      // Debounce the check to avoid excessive updates
+      setTimeout(checkScreenReader, 100);
+    };
+
+    // Monitor for keyboard navigation patterns
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        document.documentElement.setAttribute('data-keyboard-navigation', 'true');
+        handleAccessibilityEvent();
       }
     };
 
-    document.addEventListener('focusin', handleFocusIn);
-    return () => document.removeEventListener('focusin', handleFocusIn);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleAccessibilityEvent);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleAccessibilityEvent);
+    };
   }, []);
 
   // Media query preferences
@@ -60,9 +83,20 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
       setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
       setPrefersHighContrast(window.matchMedia('(prefers-contrast: high)').matches);
       
-      // Check for large text preference
-      const largeTextQuery = window.matchMedia('(min-resolution: 2dppx)');
-      setPrefersLargeText(largeTextQuery.matches);
+      // Check for large text preference using correct media query
+      // Check both font-size preferences and zoom level
+      const largeFontQuery = window.matchMedia('(min-font-size: 18px)');
+      const zoomLevel = Math.round((window.outerWidth / window.innerWidth) * 100);
+      
+      // Also check if user has increased browser font size
+      const computedFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const baseFontSize = 16; // Default browser font size
+      
+      setPrefersLargeText(
+        largeFontQuery.matches || 
+        zoomLevel > 110 || // Zoom level above 110%
+        computedFontSize > baseFontSize * 1.125 // Font size increased by more than 12.5%
+      );
 
       // Color scheme preference
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -157,7 +191,7 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
     }, 1000);
   }, []);
 
-  // Focus management
+  // Focus management - fixed memory leaks
   const manageFocus = useCallback((element: HTMLElement | null) => {
     if (!element) return;
 
@@ -169,19 +203,29 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
     // Focus the element
     element.focus();
 
-    // Add focus ring for keyboard users
-    element.addEventListener('blur', () => {
+    // Create named functions for event handlers so they can be properly removed
+    const handleBlur = () => {
       element.classList.remove('keyboard-focus');
-    }, { once: true });
+    };
 
-    element.addEventListener('keydown', (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Tab') {
         element.classList.add('keyboard-focus');
       }
-    });
+    };
+
+    // Add focus ring for keyboard users
+    element.addEventListener('blur', handleBlur, { once: true });
+    element.addEventListener('keydown', handleKeyDown);
+
+    // Return cleanup function to remove event listeners
+    return () => {
+      element.removeEventListener('blur', handleBlur);
+      element.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
-  // Touch target enhancement
+  // Touch target enhancement - fixed memory leaks
   const enhanceTouchTargets = useCallback((element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
     const minSize = 44; // WCAG minimum touch target size
@@ -194,18 +238,30 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
       element.style.justifyContent = 'center';
     }
 
-    // Add touch feedback
-    element.addEventListener('touchstart', () => {
+    // Create named functions for touch event handlers
+    const handleTouchStart = () => {
       element.style.opacity = '0.7';
-    }, { passive: true });
+    };
 
-    element.addEventListener('touchend', () => {
+    const handleTouchEnd = () => {
       element.style.opacity = '';
-    }, { passive: true });
+    };
 
-    element.addEventListener('touchcancel', () => {
+    const handleTouchCancel = () => {
       element.style.opacity = '';
-    }, { passive: true });
+    };
+
+    // Add touch feedback
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
+    element.addEventListener('touchend', handleTouchEnd, { passive: true });
+    element.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+
+    // Return cleanup function to remove event listeners
+    return () => {
+      element.removeEventListener('touchstart', handleTouchStart);
+      element.removeEventListener('touchend', handleTouchEnd);
+      element.removeEventListener('touchcancel', handleTouchCancel);
+    };
   }, []);
 
   // High contrast mode
