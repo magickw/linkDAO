@@ -45,12 +45,36 @@ function getAvatarUrl(profileCid: string | undefined): string | undefined {
 }
 
 export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost {
+  // Parse content if it's stored as JSON string
+  let content = '';
+  if (backendPost.content) {
+    if (typeof backendPost.content === 'string') {
+      try {
+        // Try to parse as JSON in case it's stored as a JSON string
+        const parsedContent = JSON.parse(backendPost.content);
+        if (typeof parsedContent === 'string') {
+          content = parsedContent;
+        } else if (typeof parsedContent === 'object' && parsedContent.content) {
+          content = parsedContent.content;
+        } else {
+          content = backendPost.content;
+        }
+      } catch {
+        // If parsing fails, use the content as is
+        content = backendPost.content;
+      }
+    } else {
+      // If it's already an object, convert to string
+      content = JSON.stringify(backendPost.content);
+    }
+  }
+  
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
     title: backendPost.title || '', // Optional for quickPosts
-    content: backendPost.content || '', // Add content property
+    content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],

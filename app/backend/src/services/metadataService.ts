@@ -54,8 +54,8 @@ export class MetadataService {
             protocol: 'https',
             headers: {
               Authorization: `Bearer ${IPFS_CONFIG.projectId}`
-            },
-            apiPath: '/data'
+            }
+            // Remove apiPath to use default path
           });
           
           // Test connection with a simple request
@@ -168,21 +168,134 @@ export class MetadataService {
     const ipfsClient = await this.ipfsClientPromise;
     try {
       if (!ipfsClient) {
-        // Try to retrieve from public gateway as fallback
+        // Try to retrieve from public gateways as fallback
+        const gateways = [
+          `https://gateway.pinata.cloud/ipfs/${cid}`,
+          `https://ipfs.io/ipfs/${cid}`,
+          `https://cloudflare-ipfs.com/ipfs/${cid}`,
+          `https://dweb.link/ipfs/${cid}`
+        ];
+        
+        for (const gateway of gateways) {
+          try {
+            safeLogger.info(`Attempting to fetch content from gateway: ${gateway}`);
+            const response = await axios.get(gateway, { 
+              timeout: 15000, // Increase timeout
+              headers: {
+                'User-Agent': 'LinkDAO/1.0'
+              }
+            });
+            
+            // Check if response is valid (not a Cloudflare challenge page)
+            if (response.status === 200 && 
+                response.data && 
+                (typeof response.data === 'string' || typeof response.data === 'object') && 
+                !response.data.includes('Just a moment...') &&
+                !response.data.includes('cf-chl-task')) {
+              // If it's an object, stringify it
+              const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+              safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { contentLength: content.length });
+              return content;
+            } else {
+              safeLogger.warn(`Gateway returned invalid response: ${gateway}`, { 
+                status: response.status, 
+                dataType: typeof response.data,
+                hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+              });
+            }
+          } catch (gatewayError) {
+            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError.message });
+            // Continue to next gateway
+          }
+        }
+        
+        safeLogger.warn(`All IPFS gateways failed for CID: ${cid}`);
+        throw new Error(`Content not available: ${cid}`);
+      }
+      
+      // For Pinata, use the gateway URL directly instead of the API client
+      if (IPFS_CONFIG.host.includes('pinata')) {
         try {
-          const response = await axios.get(`https://ipfs.io/ipfs/${cid}`, { timeout: 5000 });
-          return response.data;
-        } catch (gatewayError) {
-          safeLogger.warn(`IPFS and gateway unavailable for CID: ${cid}`);
-          throw new Error(`Content not available: ${cid}`);
+          safeLogger.info(`Attempting to fetch content from Pinata gateway for CID: ${cid}`);
+          const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${cid}`, { 
+            timeout: 15000, // Increase timeout
+            headers: {
+              'Authorization': `Bearer ${IPFS_CONFIG.projectId}`,
+              'User-Agent': 'LinkDAO/1.0'
+            }
+          });
+          
+          // Check if response is valid (not a Cloudflare challenge page)
+          if (response.status === 200 && 
+              response.data && 
+              (typeof response.data === 'string' || typeof response.data === 'object') && 
+              !response.data.includes('Just a moment...') &&
+              !response.data.includes('cf-chl-task')) {
+            // If it's an object, stringify it
+            const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            safeLogger.info(`Successfully retrieved content from Pinata gateway`, { contentLength: content.length });
+            return content;
+          } else {
+            safeLogger.warn(`Pinata gateway returned invalid response`, { 
+              status: response.status, 
+              dataType: typeof response.data,
+              hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+            });
+          }
+        } catch (pinataError) {
+          safeLogger.warn(`Pinata gateway failed for CID: ${cid}`, pinataError);
+        }
+        
+        // Fallback to other gateways
+        const gateways = [
+          `https://ipfs.io/ipfs/${cid}`,
+          `https://cloudflare-ipfs.com/ipfs/${cid}`,
+          `https://dweb.link/ipfs/${cid}`
+        ];
+        
+        for (const gateway of gateways) {
+          try {
+            safeLogger.info(`Attempting to fetch content from fallback gateway: ${gateway}`);
+            const response = await axios.get(gateway, { 
+              timeout: 15000, // Increase timeout
+              headers: {
+                'User-Agent': 'LinkDAO/1.0'
+              }
+            });
+            
+            // Check if response is valid (not a Cloudflare challenge page)
+            if (response.status === 200 && 
+                response.data && 
+                (typeof response.data === 'string' || typeof response.data === 'object') && 
+                !response.data.includes('Just a moment...') &&
+                !response.data.includes('cf-chl-task')) {
+              // If it's an object, stringify it
+              const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+              safeLogger.info(`Successfully retrieved content from fallback gateway: ${gateway}`, { contentLength: content.length });
+              return content;
+            } else {
+              safeLogger.warn(`Fallback gateway returned invalid response: ${gateway}`, { 
+                status: response.status, 
+                dataType: typeof response.data,
+                hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+              });
+            }
+          } catch (gatewayError) {
+            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError.message });
+            // Continue to next gateway
+          }
         }
       }
       
+      // For other IPFS clients, use the cat method
+      safeLogger.info(`Using IPFS client cat method for CID: ${cid}`);
       const chunks = [];
       for await (const chunk of ipfsClient.cat(cid)) {
         chunks.push(chunk);
       }
-      return Buffer.concat(chunks).toString();
+      const content = Buffer.concat(chunks).toString();
+      safeLogger.info(`Successfully retrieved content using IPFS client cat method`, { contentLength: content.length });
+      return content;
     } catch (error) {
       safeLogger.error('Error retrieving from IPFS:', error);
       throw new Error(`Failed to retrieve content: ${cid}`);

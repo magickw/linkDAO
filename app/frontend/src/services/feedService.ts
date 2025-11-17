@@ -240,9 +240,11 @@ export class FeedService {
         // Check if this is a quickPost (no DAO/communityId) or a regular post
         if (!post.dao && !post.communityId) {
           // This is a quickPost (home/feed post)
+          console.log('🔍 [FEED DEBUG] Converting quickPost:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
           return convertBackendQuickPostToQuickPost(post);
         } else {
           // This is a regular post (community post)
+          console.log('🔍 [FEED DEBUG] Converting regular post:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
           return convertBackendPostToPost(post);
         }
       });

@@ -31,7 +31,24 @@ export class IPFSContentService {
       }
 
       const data = await response.json();
-      const content = data.data?.content || data.content || '';
+      
+      // Handle different response formats from the backend
+      let content = '';
+      if (data.data && data.data.content) {
+        content = data.data.content;
+      } else if (data.content) {
+        content = data.content;
+      } else if (typeof data.data === 'string') {
+        content = data.data;
+      } else if (data.data && typeof data.data === 'object' && data.data.cid) {
+        // If we get an object with cid but no content, try to extract content
+        content = JSON.stringify(data.data);
+      }
+      
+      // If we still don't have content, check if the entire data is a string
+      if (!content && typeof data === 'string') {
+        content = data;
+      }
 
       // Cache the content
       this.cache.set(cid, { content, timestamp: Date.now() });

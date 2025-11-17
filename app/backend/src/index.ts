@@ -973,12 +973,12 @@ process.stdout.write('📝 All routes and middleware registered successfully\n')
 process.stdout.write(`📡 Attempting to start server on port ${PORT}...\n`);
 
 // Start server
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`MakeRange Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
-
+  
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
@@ -991,7 +991,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     // } catch (error: any) {
     //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
     // }
-
+    
     // WebSocket services - enabled for standard tier and above
     const enableWebSockets = (!isResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
     
@@ -1010,7 +1010,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
                     'manual disable';
       console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
     }
-
+    
     // Admin WebSocket service - only on non-constrained environments
     if (enableWebSockets && !isRenderFree) {
       try {
@@ -1023,7 +1023,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     } else {
       console.log('⚠️ Admin WebSocket service disabled for resource optimization');
     }
-
+    
     // Seller WebSocket service - only on non-constrained environments
     if (enableWebSockets && !isRenderFree) {
       try {
@@ -1055,7 +1055,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
       } else {
         console.log('⚠️ Cache service not available');
       }
-
+      
       // Cache warming
       setTimeout(() => {
         try {
@@ -1070,12 +1070,12 @@ httpServer.listen(PORT, '0.0.0.0', () => {
           console.warn('⚠️ Initial cache warming failed:', error);
         }
       }, 5000);
-
+      
     } catch (error) {
       console.warn('⚠️ Cache service initialization failed:', error);
       console.log('📝 Server will continue without caching');
     }
-
+    
     // Comprehensive monitoring - disabled on resource-constrained environments
     const enableMonitoring = !isResourceConstrained && !process.env.DISABLE_MONITORING;
     
@@ -1095,7 +1095,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
                     'manual disable';
       console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
     }
-
+    
     // Order event listener - disabled on resource-constrained environments
     if (enableMonitoring && !isRenderFree) {
       try {

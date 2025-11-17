@@ -17,7 +17,7 @@
     "start:compiled": "node --max-old-space-size=450 --optimize-for-size dist/index.js",
     "start:optimized": "node --max-old-space-size=450 --optimize-for-size src/index.production.optimized.js",
     "start:ts": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",
-    "dev": "PORT=10000 ts-node --transpileOnly src/index.ts",
+    "dev": "ts-node --transpileOnly src/index.ts",
     "simple": "node src/index.simple.js",
     "database": "node src/index.database.js",
     "migrate": "ts-node src/scripts/migrate.ts",

@@ -40,6 +40,8 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const [content, setContent] = useState<string>('');
   const [imageError, setImageError] = useState(false);
   const [ipfsGatewayIndex, setIpfsGatewayIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // List of IPFS gateways to try as fallbacks
   const ipfsGateways = [
@@ -53,31 +55,71 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const { addToast } = useToast();
   const { invalidateFeedCache, invalidateUserCache, invalidateCommunityCache } = useCacheInvalidation();
 
-  // Fetch content from IPFS when component mounts
+  // Fetch content from IPFS when component mounts or when post.contentCid changes
   useEffect(() => {
     const fetchContent = async () => {
+      // Reset states when fetching new content
+      setLoading(true);
+      setError(null);
+      
+      // If post has direct content, use it
+      if (post.content && typeof post.content === 'string' && post.content.length > 0) {
+        setContent(post.content);
+        setLoading(false);
+        return;
+      }
+      
+      // If post has contentCid, fetch from IPFS
       if (post.contentCid) {
         try {
+          console.log('Fetching content from IPFS for CID:', post.contentCid);
           const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
-          setContent(contentText);
+          console.log('Received content from IPFS:', { contentText, length: contentText?.length });
+          
+          if (contentText && contentText.length > 0) {
+            // Try to parse as JSON if it looks like JSON
+            try {
+              const parsed = JSON.parse(contentText);
+              if (typeof parsed === 'string') {
+                setContent(parsed);
+              } else if (typeof parsed === 'object' && parsed.content) {
+                setContent(parsed.content);
+              } else {
+                setContent(contentText);
+              }
+            } catch (parseError) {
+              // If not valid JSON, use as is
+              setContent(contentText);
+            }
+          } else {
+            setContent(`Content not available (CID: ${post.contentCid})`);
+          }
         } catch (error) {
           console.error('Failed to fetch content:', error);
-          setContent(`Failed to load content (CID: ${post.contentCid})`);
+          setError(`Failed to load content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setContent(`Content not available (CID: ${post.contentCid})`);
+        } finally {
+          setLoading(false);
         }
+      } else {
+        // If no content CID and no direct content, show whatever content is available
+        setContent(post.content || 'No content available');
+        setLoading(false);
       }
     };
 
-    // Debug: Log post data to see if mediaCids is present
+    // Debug: Log post data to see what we're working with
     console.log('EnhancedPostCard mounted with post:', {
       id: post.id,
       contentCid: post.contentCid,
+      content: post.content,
       mediaCids: post.mediaCids,
       mediaCidsLength: post.mediaCids?.length,
       hasMediaCids: !!post.mediaCids && post.mediaCids.length > 0
     });
 
     fetchContent();
-  }, [post.contentCid, post.id, post.mediaCids]);
+  }, [post.contentCid, post.id, post.mediaCids, post.content]);
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -192,7 +234,15 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
       {/* Content */}
       <div>
-        <p>{content || 'Loading content...'}</p>
+        {loading ? (
+          <p>Loading content...</p>
+        ) : error ? (
+          <p className="text-red-500">{error}</p>
+        ) : content ? (
+          <p>{content}</p>
+        ) : (
+          <p className="text-gray-500">No content available</p>
+        )}
 
         {/* Media */}
         {post.mediaCids && post.mediaCids.length > 0 && !imageError && (

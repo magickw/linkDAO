@@ -536,6 +536,7 @@ export class FeedController {
         const metadataService = new MetadataService();
         const content = await metadataService.getFromIPFS(cid);
         
+        // Return consistent response format
         res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully'));
       } catch (ipfsError) {
         safeLogger.error('Error retrieving content from IPFS:', ipfsError);
