@@ -4,7 +4,6 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { CommunityMember, Community } from '../../models/Community';
 import { formatNumber, formatDate } from '../../utils/formatters';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';

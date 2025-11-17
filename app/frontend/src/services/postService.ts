@@ -66,6 +66,11 @@ export class PostService {
     }
   }
 
+  // Alias for getPost for consistency
+  static async getPostById(id: string): Promise<Post | null> {
+    return this.getPost(id);
+  }
+
   static async updatePost(id: string, data: UpdatePostInput): Promise<Post> {
     try {
       const authHeaders = authService.getAuthHeaders();
@@ -278,6 +283,78 @@ export class PostService {
       return result.data || result;
     } catch (error) {
       console.error('Error fetching community posts:', error);
+      throw error;
+    }
+  }
+
+  static async getPostsByCommunity(
+    communityId: string,
+    page: number = 1,
+    limit: number = 20,
+    sort: string = 'new'
+  ): Promise<Post[]> {
+    try {
+      const result = await this.getCommunityPosts(communityId, page, limit, sort);
+      return result.posts || [];
+    } catch (error) {
+      console.error('Error fetching posts by community:', error);
+      throw error;
+    }
+  }
+
+  static async getFeed(forUser?: string): Promise<Post[]> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const params = new URLSearchParams();
+      if (forUser) params.append('forUser', forUser);
+
+      const response = await fetch(
+        `${BACKEND_API_BASE_URL}/api/feed${params.toString() ? `?${params}` : ''}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to fetch feed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching feed:', error);
+      throw error;
+    }
+  }
+
+  static async getPostsByAuthor(author: string): Promise<Post[]> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(
+        `${BACKEND_API_BASE_URL}/api/feed/posts/author/${author}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to fetch posts by author: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching posts by author:', error);
       throw error;
     }
   }

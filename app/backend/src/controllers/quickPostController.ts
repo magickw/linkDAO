@@ -8,7 +8,12 @@ export class QuickPostController {
   private quickPostService: QuickPostService;
 
   constructor() {
-    this.quickPostService = new QuickPostService();
+    try {
+      this.quickPostService = new QuickPostService();
+    } catch (error) {
+      console.error('Failed to initialize QuickPostService:', error);
+      throw new Error(`QuickPostController initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async createQuickPost(req: Request, res: Response): Promise<Response> {
@@ -173,6 +178,66 @@ export class QuickPostController {
     } catch (error: any) {
       console.error('Error adding quick post tip:', error);
       return res.status(500).json(apiResponse.error(error.message || 'Failed to add tip', 500));
+    }
+  }
+
+  // Additional methods to match route expectations
+  async getAllQuickPosts(req: Request, res: Response): Promise<Response> {
+    try {
+      const { page = 1, limit = 20, sort = 'new' } = req.query;
+      
+      // Use the feed method as a fallback for all posts
+      const quickPosts = await this.quickPostService.getQuickPostFeed({
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        sort: sort as 'new' | 'hot' | 'top',
+        timeRange: 'all'
+      });
+      
+      return res.json(apiResponse.success(quickPosts, 'Quick posts retrieved successfully'));
+    } catch (error: any) {
+      console.error('Error getting all quick posts:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts', 500));
+    }
+  }
+
+  async getQuickPostFeed(req: Request, res: Response): Promise<Response> {
+    try {
+      const { page = 1, limit = 20, sort = 'new', timeRange = 'day' } = req.query;
+      
+      const quickPosts = await this.quickPostService.getQuickPostFeed({
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        sort: sort as 'new' | 'hot' | 'top',
+        timeRange: timeRange as 'hour' | 'day' | 'week' | 'month' | 'year' | 'all'
+      });
+      
+      return res.json(apiResponse.success(quickPosts, 'Quick post feed retrieved successfully'));
+    } catch (error: any) {
+      console.error('Error getting quick post feed:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick post feed', 500));
+    }
+  }
+
+  async getQuickPostsByTag(req: Request, res: Response): Promise<Response> {
+    try {
+      const { tag } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      
+      // For now, return empty array since tag filtering is not implemented
+      // This is a placeholder until proper tag filtering is added to the service
+      const quickPosts = {
+        posts: [],
+        total: 0,
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        totalPages: 0
+      };
+      
+      return res.json(apiResponse.success(quickPosts, `Quick posts with tag ${tag} retrieved successfully (placeholder)`));
+    } catch (error: any) {
+      console.error('Error getting quick posts by tag:', error);
+      return res.status(500).json(apiResponse.error(error.message || 'Failed to retrieve quick posts by tag', 500));
     }
   }
 }

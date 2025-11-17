@@ -147,12 +147,11 @@ class CommunityPerformanceService {
     if (!community) {
       throw new Error(`Community ${communityId} not found`);
     }
-    
+
     // Get recent posts (last 30 days)
-    const posts = await CommunityPostService.getCommunityPosts(communityId, {
-      limit: 100
-    });
-    
+    const result = await CommunityPostService.getCommunityPosts(communityId, 1, 100);
+    const posts = result.posts || [];
+
     // Calculate metrics
     const metrics = this.calculateMetrics(community, posts);
     
