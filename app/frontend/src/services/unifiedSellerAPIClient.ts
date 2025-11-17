@@ -17,8 +17,11 @@ import {
 } from '../types/sellerTier';
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
+// In production or when NEXT_PUBLIC_USE_API_ROUTES is true, use Next.js API routes as proxy
+// Otherwise, directly call the backend
+const USE_API_ROUTES = process.env.NEXT_PUBLIC_USE_API_ROUTES === 'true' || typeof window !== 'undefined';
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
+const SELLER_API_BASE = USE_API_ROUTES ? '/api/marketplace/seller' : `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
 
 interface SellerAPIEndpoints {
   // Profile endpoints

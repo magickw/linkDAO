@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Forward the request to the backend
-        const getEndpoint = `${BACKEND_URL}/marketplace/seller/onboarding/${walletAddress}/${stepId}`;
+        const getEndpoint = `${BACKEND_URL}/api/marketplace/seller/onboarding/${walletAddress}/${stepId}`;
         console.log(`Proxying ${method} request to: ${getEndpoint}`);
         
         const getResponse = await fetch(getEndpoint, {
@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Forward the request to the backend
-        const putEndpoint = `${BACKEND_URL}/marketplace/seller/onboarding/${walletAddress}/${stepId}`;
+        const putEndpoint = `${BACKEND_URL}/api/marketplace/seller/onboarding/${walletAddress}/${stepId}`;
         console.log(`Proxying ${method} request to: ${putEndpoint}`);
         
         const putResponse = await fetch(putEndpoint, {

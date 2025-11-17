@@ -401,7 +401,7 @@ class EnhancedAuthService {
     return await apiCircuitBreaker.execute(
       async () => {
         const response = await enhancedRequestManager.request<any>(
-          `${this.baseUrl}/api/auth/wallet`,
+          `${this.baseUrl}/api/auth/wallet-connect`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

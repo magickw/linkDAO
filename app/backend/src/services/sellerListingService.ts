@@ -233,6 +233,10 @@ class SellerListingService {
       throw new Error('Seller profile not found. Please complete seller onboarding first.');
     }
 
+    // Set initial status to active for all sellers (seller approval handles verification)
+    const initialStatus = 'active';
+    const initialListingStatus = 'active';
+
     // Create listing
     const [newListing] = await db.insert(products).values({
       sellerId: user.id,
@@ -244,13 +248,14 @@ class SellerListingService {
       images: JSON.stringify(data.images || []),
       metadata: JSON.stringify(data.metadata || {}),
       inventory: data.inventory || 0,
-      status: 'draft',
+      status: initialStatus,
       tags: JSON.stringify(data.tags || []),
       shipping: JSON.stringify(data.shipping || null),
       nft: JSON.stringify(data.nft || null),
       views: 0,
       favorites: 0,
-      listingStatus: 'draft',
+      listingStatus: initialListingStatus,
+      publishedAt: seller.isVerified ? new Date() : undefined,
     }).returning();
 
     return {
@@ -374,6 +379,31 @@ class SellerListingService {
       .set({
         status: 'inactive',
         listingStatus: 'inactive',
+        updatedAt: new Date(),
+      })
+      .where(eq(products.id, listingId));
+  }
+
+  /**
+   * Reject a listing with reason
+   */
+  async rejectListing(listingId: string, reason?: string): Promise<void> {
+    // Verify listing exists
+    const listing = await db.query.products.findFirst({
+      where: eq(products.id, listingId),
+    });
+
+    if (!listing) {
+      throw new Error('Listing not found');
+    }
+
+    // Update listing status to rejected with reason
+    await db
+      .update(products)
+      .set({
+        listingStatus: 'rejected',
+        rejectionReason: reason || 'Not specified',
+        rejectedAt: new Date().toISOString(),
         updatedAt: new Date(),
       })
       .where(eq(products.id, listingId));

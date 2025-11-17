@@ -1,8 +1,8 @@
 // Centralized environment configuration
 export const ENV_CONFIG = {
   // Backend API URL - defaults to localhost:8000 for development
-  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
-  API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
+  BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
+  API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   
   // WebSocket URL - derived from backend URL (Socket.IO will append /socket.io/)
   WS_URL: process.env.NEXT_PUBLIC_WS_URL || 

@@ -126,9 +126,9 @@ export class EnhancedUserService {
         id: user.id,
         walletAddress: user.walletAddress,
         handle: user.handle || '',
-        ens: '', // Would need ENS resolution service
-        avatarCid: '', // Would need to be stored in user profile
-        bioCid: user.profileCid || '',
+        ens: user.ens || '',
+        avatarCid: user.avatarCid || '',
+        bioCid: user.bioCid || '',
         followers: followerCount.count || 0,
         following: followingCount.count || 0,
         reputationScore,

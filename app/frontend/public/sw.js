@@ -291,6 +291,7 @@ async function networkFirst(request, cacheName) {
   const failureInfo = failedRequests.get(requestKey);
   if (failureInfo) {
     // Special handling for community requests - shorter backoff times
+    const url = new URL(request.url);
     const isCommunityRequest = url.pathname.includes('/api/communities');
     const baseBackoffTime = isCommunityRequest ? 10000 : 30000; // 10s for communities, 30s for others
     
@@ -310,17 +311,26 @@ async function networkFirst(request, cacheName) {
   if (pendingRequests.has(requestKey) && !isCriticalRequest(request)) {
     console.log('Request already pending, coalescing:', requestKey);
     try {
-      const sharedResponse = await pendingRequests.get(requestKey);
-      // Check if response body has been consumed
-      if (sharedResponse.bodyUsed) {
-        console.warn('Shared response body already consumed, falling back to cache');
-        return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
+      const sharedPromise = pendingRequests.get(requestKey);
+      if (!sharedPromise) {
+        console.warn('Shared promise not found, proceeding with new request');
+        // Continue to normal request handling below
+      } else {
+        // Wait for the existing promise to resolve
+        const sharedResponse = await sharedPromise;
+        
+        // Check if response body has been consumed
+        if (sharedResponse.bodyUsed) {
+          console.warn('Shared response body already consumed, falling back to cache');
+          return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
+        }
+        
+        // Clone the response to avoid bodyUsed issues
+        const responseClone = sharedResponse.clone();
+        return responseClone;
       }
-      // Clone the response to avoid bodyUsed issues
-      const responseClone = sharedResponse.clone();
-      return responseClone;
     } catch (error) {
-      console.warn('Failed to clone shared response, falling back to cache:', error);
+      console.warn('Failed to use shared response, falling back to cache:', error);
       return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }

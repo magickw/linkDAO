@@ -32,7 +32,8 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  LogOut
+  LogOut,
+  Package
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -231,6 +232,7 @@ export function EnhancedAdminDashboard() {
     { id: 'workflows', label: 'Workflows', icon: Settings, permission: null, category: 'automation' },
     { id: 'onboarding', label: 'Onboarding', icon: HelpCircle, permission: null, category: 'user' },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review', category: 'business' },
+    
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view', category: 'business' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },

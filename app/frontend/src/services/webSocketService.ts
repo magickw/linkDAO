@@ -42,6 +42,7 @@ class WebSocketService {
   private resourceConstraints: ResourceConstraints;
   private fallbackToPolling: boolean = false;
   private isOptional: boolean = false;
+  private connectionPromise: Promise<void> | null = null;
 
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -144,6 +145,11 @@ class WebSocketService {
       return Promise.resolve();
     }
 
+    // If connection is already in progress, return the existing promise
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
     // Skip connection if resource-constrained and WebSocket is optional
     if (this.isOptional && this.config.resourceAware) {
       // Silently skip connection
@@ -151,7 +157,7 @@ class WebSocketService {
       return Promise.resolve();
     }
 
-    return new Promise<void>((resolve, reject) => {
+    this.connectionPromise = new Promise<void>((resolve, reject) => {
       try {
         this.connectionState.isReconnecting = false;
         
@@ -195,6 +201,7 @@ class WebSocketService {
       } catch (error) {
         this.handleConnectionError(error as Error);
         reject(error);
+        this.connectionPromise = null; // Clear the connection promise on error
       }
     });
   }
@@ -214,6 +221,7 @@ class WebSocketService {
       this.startHeartbeat();
       this.emit('connected');
       resolve?.();
+      this.connectionPromise = null; // Clear the connection promise
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -238,6 +246,7 @@ class WebSocketService {
       }
       this.handleConnectionError(error);
       reject?.(error);
+      this.connectionPromise = null; // Clear the connection promise on connection error
     });
 
     this.socket.on('reconnect_failed', () => {

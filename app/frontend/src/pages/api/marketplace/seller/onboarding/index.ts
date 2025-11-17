@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === 'GET' && walletAddress && typeof walletAddress === 'string') {
     try {
       // Construct the backend URL for fetching onboarding steps
-      const backendEndpoint = `${BACKEND_URL}/api/sellers/onboarding/${walletAddress}`;
+      const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/onboarding/${walletAddress}`;
       console.log(`Proxying GET request to: ${backendEndpoint}`);
       
       // Forward the request to the backend

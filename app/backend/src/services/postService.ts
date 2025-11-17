@@ -515,8 +515,10 @@ export class PostService {
       const following = await databaseService.getFollowing(user.id);
       const followingIds = following.map((f: any) => f.followingId);
 
-      // Include the user's own posts
-      followingIds.push(user.id);
+      // Include the user's own posts (only if not already included)
+      if (!followingIds.includes(user.id)) {
+        followingIds.push(user.id);
+      }
 
       // For now, we'll return posts from followed users
       // In a full implementation, this would also include:
@@ -555,7 +557,18 @@ export class PostService {
       // Sort by creation date (newest first)
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       
-      return posts;
+      // Remove duplicates by ID
+      const uniquePosts: Post[] = [];
+      const seenIds = new Set<string>();
+      
+      for (const post of posts) {
+        if (!seenIds.has(post.id)) {
+          seenIds.add(post.id);
+          uniquePosts.push(post);
+        }
+      }
+      
+      return uniquePosts;
     } catch (error) {
       safeLogger.error("Error getting personalized feed:", error);
       throw error;

@@ -213,7 +213,7 @@ class AuthService {
       
       // Send authentication request
       try {
-        const response = await fetch(`${this.baseUrl}/api/auth/wallet`, {
+        const response = await fetch(`${this.baseUrl}/api/auth/wallet-connect`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

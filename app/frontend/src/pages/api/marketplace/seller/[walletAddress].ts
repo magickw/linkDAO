@@ -69,7 +69,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, data: profile });
     } catch (error) {
       console.error('Error fetching seller profile:', error);
-      return res.status(500).json({ success: false, message: 'Failed to fetch seller profile' });
+
+      // Provide more detailed error information
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch seller profile';
+      const errorDetails = error instanceof Error ? {
+        message: error.message,
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      } : {};
+
+      return res.status(500).json({
+        success: false,
+        message: errorMessage,
+        error: errorDetails
+      });
     }
   }
   
@@ -77,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === 'POST') {
     try {
       // Construct the backend URL for creating a profile
-      const backendEndpoint = `${BACKEND_URL}/api/sellers/profile`;
+      const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/profile`;
       console.log(`Proxying POST request to: ${backendEndpoint}`);
       
       // Forward the request to the backend
@@ -107,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === 'PUT' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile') {
     try {
       // Construct the backend URL for updating a profile
-      const backendEndpoint = `${BACKEND_URL}/api/sellers/profile/${walletAddress}`;
+      const backendEndpoint = `${BACKEND_URL}/api/marketplace/seller/${walletAddress}`;
       console.log(`Proxying PUT request to: ${backendEndpoint}`);
       
       // Forward the request to the backend

@@ -138,16 +138,51 @@ app.use((req, res, next) => {
   next();
 });
 
-// Simple auth middleware - validates Bearer token and attaches user address to req.user
+// Enhanced JWT authentication middleware
+const jwt = require('jsonwebtoken');
+
 app.use((req, res, next) => {
   const auth = req.get('Authorization') || '';
   if (!auth) return next();
+  
   const parts = auth.split(' ');
   if (parts.length === 2 && parts[0] === 'Bearer') {
     const token = parts[1];
-    // For now accept 'mock-jwt-token' and map to address in header X-User-Address if provided
-    if (token === 'mock-jwt-token') {
-      req.user = { address: req.get('X-User-Address') || null };
+    
+    try {
+      // Verify JWT token
+      const JWT_SECRET = process.env.JWT_SECRET || '68511d56377eb3959e43fd953c2ee76346eb8becf62e08f0afe5439efa8595d4';
+      const decoded = jwt.verify(token, JWT_SECRET);
+      
+      // Extract user address from various possible JWT payload formats
+      const userAddress = decoded.walletAddress || decoded.address || decoded.userId || decoded.sub || decoded.id;
+      
+      if (userAddress) {
+        req.user = { address: userAddress };
+        console.log(`✅ JWT authentication successful for address: ${userAddress}`);
+      } else {
+        console.log('⚠️ JWT token decoded but no address found in payload');
+        req.user = { address: null };
+      }
+    } catch (error) {
+      console.log('⚠️ JWT verification failed:', error.message);
+      
+      // Handle mock tokens from frontend when backend is unavailable
+      if (token.startsWith('mock_token_')) {
+        // Extract address from mock token format: mock_token_{address}_{timestamp}
+        const parts = token.split('_');
+        if (parts.length >= 3 && parts[2].startsWith('0x')) {
+          const mockAddress = parts[2];
+          req.user = { address: mockAddress };
+          console.log(`✅ Mock token authentication for address: ${mockAddress}`);
+        } else {
+          req.user = { address: null };
+        }
+      }
+      // Fallback to legacy mock token for backward compatibility
+      else if (token === 'mock-jwt-token') {
+        req.user = { address: req.get('X-User-Address') || null };
+      }
     }
   }
   next();
@@ -495,28 +530,31 @@ app.post('/api/chat/messages', async (req, res) => {
 });
 
 
-// Communities routes
-app.get('/api/communities', (req, res) => {
+// Communities routes - return empty data until real implementation is ready
+app.get('/api/communities', async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   
-  const mockCommunities = Array.from({ length: parseInt(limit) }, (_, i) => ({
-    id: `community-${i + 1}`,
-    name: `Community ${i + 1}`,
-    description: `This is a sample community ${i + 1}`,
-    members: Math.floor(Math.random() * 1000),
-    posts: Math.floor(Math.random() * 500),
-    created: new Date(Date.now() - i * 86400000).toISOString()
-  }));
-  
+  // Return empty communities list
   res.json({
     success: true,
-    data: mockCommunities,
+    data: [],
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
-      total: 50,
-      pages: 5
+      total: 0,
+      pages: 0
     }
+  });
+});
+
+// Get specific community by ID - return 404 for now
+app.get('/api/communities/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // Return 404 - community not found
+  res.status(404).json({
+    success: false,
+    message: 'Community not found'
   });
 });
 
@@ -923,6 +961,25 @@ app.delete('/api/chat/messages/:messageId', (req, res) => {
     success: true,
     message: 'Message deleted'
   });
+});
+
+// Messaging API aliases for backward compatibility
+// These endpoints provide alternative routes to the same chat functionality
+
+// Alias: /api/messages/conversations -> /api/chat/conversations
+app.get('/api/messages/conversations', async (req, res) => {
+  // Forward to the existing chat conversations endpoint
+  req.url = '/api/chat/conversations';
+  req.originalUrl = '/api/chat/conversations';
+  return app._router.handle(req, res);
+});
+
+// Alias: /api/messaging/conversations -> /api/chat/conversations  
+app.get('/api/messaging/conversations', async (req, res) => {
+  // Forward to the existing chat conversations endpoint
+  req.url = '/api/chat/conversations';
+  req.originalUrl = '/api/chat/conversations';
+  return app._router.handle(req, res);
 });
 
 // Posts feed route
