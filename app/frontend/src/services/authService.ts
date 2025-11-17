@@ -723,6 +723,10 @@ class AuthService {
   private setToken(token: string): void {
     this.token = token;
     if (typeof window !== 'undefined') {
+      // Store token in all expected keys for consistency
+      localStorage.setItem('linkdao_access_token', token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('authToken', token);
       localStorage.setItem('auth_token', token);
     }
   }

@@ -143,11 +143,15 @@ const jwt = require('jsonwebtoken');
 
 app.use((req, res, next) => {
   const auth = req.get('Authorization') || '';
-  if (!auth) return next();
+  if (!auth) {
+    console.log(`🔍 No Authorization header for ${req.method} ${req.url}`);
+    return next();
+  }
   
   const parts = auth.split(' ');
   if (parts.length === 2 && parts[0] === 'Bearer') {
     const token = parts[1];
+    console.log(`🔍 Processing JWT token for ${req.method} ${req.url}: ${token.substring(0, 20)}...`);
     
     try {
       // Verify JWT token
@@ -184,6 +188,8 @@ app.use((req, res, next) => {
         req.user = { address: req.get('X-User-Address') || null };
       }
     }
+  } else {
+    console.log(`⚠️ Invalid Authorization header format: ${auth}`);
   }
   next();
 });
@@ -373,9 +379,18 @@ app.post('/api/posts', (req, res) => {
 // Get user's conversations (persistent)
 app.get('/api/chat/conversations', async (req, res) => {
   try {
+    console.log(`🔍 Chat conversations request from user: ${req.user?.address || 'none'}`);
+    console.log(`🔍 X-User-Address header: ${req.get('X-User-Address') || 'none'}`);
+    
     const userAddress = req.user?.address || req.get('X-User-Address');
-    if (!userAddress) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!userAddress) {
+      console.log('❌ No user address found for chat conversations');
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    
+    console.log(`✅ Processing chat conversations for address: ${userAddress}`);
     try {
+      console.log(`🗄️  Querying conversations for address: ${userAddress}`);
       const { rows } = await pool.query(
         `SELECT id, type, participants, last_message_id, last_activity, unread_counts, metadata, created_at
          FROM conversations
@@ -384,6 +399,7 @@ app.get('/api/chat/conversations', async (req, res) => {
          LIMIT 100`,
         [userAddress]
       );
+      console.log(`✅ Found ${rows.length} conversations for address: ${userAddress}`);
 
       // Load last messages for each conversation
       const convs = await Promise.all(rows.map(async (r) => {
@@ -446,7 +462,24 @@ app.get('/api/chat/conversations', async (req, res) => {
       return res.json(conversations);
     }
   } catch (err) {
-    console.error('Error fetching conversations', err);
+    console.error('❌ Error fetching conversations:', err);
+    
+    // If database is unavailable, return empty conversations instead of 500 error
+    if (err.code === 'ECONNREFUSED' || err.message?.includes('database') || err.message?.includes('connection')) {
+      console.log('🗄️  Database unavailable, returning empty conversations');
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+    
+    // For other errors, return 500
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });

@@ -49,9 +49,12 @@ export const useSessionValidation = () => {
       }
 
       // 3. Check localStorage for valid session data
-      const storedAddress = localStorage.getItem('linkdao_wallet_address');
-      const storedToken = localStorage.getItem('linkdao_access_token');
-      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+      const storedAddress = localStorage.getItem('linkdao_wallet_address') || localStorage.getItem('wallet_address');
+      const storedToken = localStorage.getItem('linkdao_access_token') ||
+                         localStorage.getItem('token') ||
+                         localStorage.getItem('authToken') ||
+                         localStorage.getItem('auth_token');
+      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') || localStorage.getItem('signature_timestamp');
       
       if (storedAddress === address && storedToken && storedTimestamp) {
         const timestamp = parseInt(storedTimestamp);
@@ -100,6 +103,9 @@ export const useSessionValidation = () => {
 
     // Clear regular auth service session
     try {
+      localStorage.removeItem('linkdao_access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('auth_token');
     } catch (error) {
       console.warn('Could not clear auth service session:', error);
@@ -107,10 +113,12 @@ export const useSessionValidation = () => {
 
     // Clear all localStorage session data
     try {
-      localStorage.removeItem('linkdao_access_token');
       localStorage.removeItem('linkdao_wallet_address');
+      localStorage.removeItem('wallet_address');
       localStorage.removeItem('linkdao_signature_timestamp');
+      localStorage.removeItem('signature_timestamp');
       localStorage.removeItem('linkdao_user_data');
+      localStorage.removeItem('user_data');
       localStorage.removeItem('linkdao_refresh_token');
       localStorage.removeItem('linkdao_session_data');
     } catch (error) {

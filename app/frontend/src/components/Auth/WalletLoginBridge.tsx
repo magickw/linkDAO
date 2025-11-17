@@ -150,10 +150,17 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
 
       // First check if we already have a valid session to avoid unnecessary signature prompts
-      const storedToken = localStorage.getItem('linkdao_access_token');
-      const storedAddress = localStorage.getItem('linkdao_wallet_address');
-      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp');
-      const storedUserData = localStorage.getItem('linkdao_user_data');
+      // Use the same logic as authService.getToken() to find the token
+      const storedToken = localStorage.getItem('linkdao_access_token') ||
+                         localStorage.getItem('token') ||
+                         localStorage.getItem('authToken') ||
+                         localStorage.getItem('auth_token');
+      const storedAddress = localStorage.getItem('linkdao_wallet_address') ||
+                           localStorage.getItem('wallet_address');
+      const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') ||
+                             localStorage.getItem('signature_timestamp');
+      const storedUserData = localStorage.getItem('linkdao_user_data') ||
+                            localStorage.getItem('user_data');
 
       if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
         const timestamp = parseInt(storedTimestamp);
