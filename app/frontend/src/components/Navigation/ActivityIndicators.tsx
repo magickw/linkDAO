@@ -10,21 +10,24 @@ export const createActivityIndicator = (type: ActivityIndicator['type'], count: 
   id: `${type}-${Date.now()}`, // Generate a unique ID
   type,
   count,
+  color,
   priority: 'medium', // Default priority
   lastUpdate: new Date(),
   isAnimated: false
 });
 
-export const mockActivityIndicators: ActivityIndicator[] = [
+const getDefaultActivityIndicators = (): ActivityIndicator[] => [
   createActivityIndicator('notification', 12, 'bg-blue-500'),
   createActivityIndicator('transaction', 3, 'bg-green-500'),
   createActivityIndicator('community', 8, 'bg-purple-500'),
   createActivityIndicator('governance', 5, 'bg-orange-500'),
 ];
 
+export const mockActivityIndicators: ActivityIndicator[] = getDefaultActivityIndicators();
+
 export const ActivityIndicators: React.FC<ActivityIndicatorsProps> = ({
   className = '',
-  activities = mockActivityIndicators
+  activities = getDefaultActivityIndicators()
 }) => {
 
   return (

@@ -164,7 +164,7 @@ class AuthService {
 
       // Check if we're running in a browser environment for SSR safety
       if (typeof window === 'undefined') {
-        throw new Error('Wallet authentication requires browser environment');
+        return { success: false, error: 'Wallet authentication requires browser environment' };
       }
 
       // Validate config is available

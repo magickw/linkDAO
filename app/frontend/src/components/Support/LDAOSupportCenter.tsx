@@ -10,7 +10,7 @@ interface SupportTicket {
   status: 'open' | 'in-progress' | 'resolved';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   createdAt: Date;
-  lastUpdate: Date;
+  updatedAt: Date;
 }
 
 interface FAQItem {
@@ -207,57 +207,19 @@ const LDAOSupportCenter: React.FC = () => {
                 { title: 'Governance Voting', articles: 10, color: 'orange' },
                 { title: 'Security Best Practices', articles: 7, color: 'red' },
                 { title: 'Wallet Setup', articles: 9, color: 'indigo' }
-              ].map((topic) => {
-                const getColorClasses = (color: string) => {
-                  switch (color) {
-                    case 'blue': return 'p-4 bg-blue-50 border-blue-200 rounded-lg hover:bg-blue-100 cursor-pointer transition-colors';
-                    case 'green': return 'p-4 bg-green-50 border-green-200 rounded-lg hover:bg-green-100 cursor-pointer transition-colors';
-                    case 'purple': return 'p-4 bg-purple-50 border-purple-200 rounded-lg hover:bg-purple-100 cursor-pointer transition-colors';
-                    case 'orange': return 'p-4 bg-orange-50 border-orange-200 rounded-lg hover:bg-orange-100 cursor-pointer transition-colors';
-                    case 'red': return 'p-4 bg-red-50 border-red-200 rounded-lg hover:bg-red-100 cursor-pointer transition-colors';
-                    case 'indigo': return 'p-4 bg-indigo-50 border-indigo-200 rounded-lg hover:bg-indigo-100 cursor-pointer transition-colors';
-                    default: return 'p-4 bg-gray-50 border-gray-200 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors';
-                  }
-                };
-
-                const getTitleClasses = (color: string) => {
-                  switch (color) {
-                    case 'blue': return 'font-semibold text-blue-900 mb-1';
-                    case 'green': return 'font-semibold text-green-900 mb-1';
-                    case 'purple': return 'font-semibold text-purple-900 mb-1';
-                    case 'orange': return 'font-semibold text-orange-900 mb-1';
-                    case 'red': return 'font-semibold text-red-900 mb-1';
-                    case 'indigo': return 'font-semibold text-indigo-900 mb-1';
-                    default: return 'font-semibold text-gray-900 mb-1';
-                  }
-                };
-
-                const getTextClasses = (color: string) => {
-                  switch (color) {
-                    case 'blue': return 'text-sm text-blue-600';
-                    case 'green': return 'text-sm text-green-600';
-                    case 'purple': return 'text-sm text-purple-600';
-                    case 'orange': return 'text-sm text-orange-600';
-                    case 'red': return 'text-sm text-red-600';
-                    case 'indigo': return 'text-sm text-indigo-600';
-                    default: return 'text-sm text-gray-600';
-                  }
-                };
-
-                return (
-                  <div
-                    key={topic.title}
-                    className={getColorClasses(topic.color)}
-                  >
-                    <h3 className={getTitleClasses(topic.color)}>
-                      {topic.title}
-                    </h3>
-                    <p className={getTextClasses(topic.color)}>
-                      {topic.articles} articles
-                    </p>
-                  </div>
-                );
-              })}
+              ].map((topic) => (
+                <div
+                  key={topic.title}
+                  className="p-4 border rounded-lg cursor-pointer transition-colors bg-blue-50 border-blue-200 hover:bg-blue-100"
+                >
+                  <h3 className="font-semibold text-blue-900 mb-1">
+                    {topic.title}
+                  </h3>
+                  <p className="text-sm text-blue-600">
+                    {topic.articles} articles
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 

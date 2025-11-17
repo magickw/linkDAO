@@ -144,23 +144,31 @@ const SupportAnalyticsDashboard: React.FC = () => {
   // Simple chart components for demonstration
   const SimpleBarChart = () => {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    const maxHeight = Math.max(...ticketData.map(d => d.count), 1);
+    const chartData = ticketData.slice(-days);
+    const maxHeight = Math.max(...chartData.map(d => d.count), 1);
     
     return (
       <div className="h-64">
         <div className="flex items-end h-48 border-b border-l border-gray-200 pb-4 pl-4">
-          {ticketData.slice(-Math.min(days, 30)).map((data, index) => (
-            <div key={index} className="flex flex-col items-center flex-1 px-1">
-              <div
-                className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer min-h-1"
-                style={{ height: `${Math.max((data.count / maxHeight) * 100, 2)}%` }}
-                title={`${data.count} tickets on ${data.date}`}
-              ></div>
-              <div className="text-xs text-gray-500 mt-2">
-                {new Date(data.date).getDate()}
+          {chartData.map((data, index) => {
+            const date = new Date(data.date);
+            const label = days <= 7 ? date.getDate().toString() : 
+                         days <= 30 ? `${date.getMonth() + 1}/${date.getDate()}` :
+                         `${date.getMonth() + 1}/${date.getDate()}`;
+            
+            return (
+              <div key={index} className="flex flex-col items-center flex-1 px-1">
+                <div
+                  className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
+                  style={{ height: `${Math.max((data.count / maxHeight) * 180, 4)}px` }}
+                  title={`${data.count} tickets on ${data.date}`}
+                ></div>
+                <div className="text-xs text-gray-500 mt-2">
+                  {label}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="text-center text-sm text-gray-500 mt-2">
           Ticket Volume ({timeRange})
@@ -171,6 +179,8 @@ const SupportAnalyticsDashboard: React.FC = () => {
 
   const SimplePieChart = () => {
     const total = categoryData.reduce((sum, cat) => sum + cat.value, 0);
+    const radius = 15.915;
+    const circumference = 2 * Math.PI * radius;
     let cumulativePercentage = 0;
     
     return (
@@ -179,8 +189,8 @@ const SupportAnalyticsDashboard: React.FC = () => {
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             {categoryData.map((cat, index) => {
               const percentage = (cat.value / total) * 100;
-              const strokeDasharray = `${percentage} ${100 - percentage}`;
-              const strokeDashoffset = -cumulativePercentage;
+              const strokeLength = (percentage / 100) * circumference;
+              const strokeOffset = -cumulativePercentage * circumference / 100;
               cumulativePercentage += percentage;
               
               return (
@@ -188,12 +198,12 @@ const SupportAnalyticsDashboard: React.FC = () => {
                   key={cat.name}
                   cx="50"
                   cy="50"
-                  r="15.915"
+                  r={radius}
                   fill="transparent"
                   stroke={cat.color}
                   strokeWidth="8"
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
+                  strokeDasharray={`${strokeLength} ${circumference}`}
+                  strokeDashoffset={strokeOffset}
                   className="transition-all duration-300"
                 />
               );
@@ -201,8 +211,8 @@ const SupportAnalyticsDashboard: React.FC = () => {
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{total}</div>
-              <div className="text-xs text-gray-500">Total</div>
+              <div className="text-lg font-bold text-gray-900">{categoryData.length}</div>
+              <div className="text-xs text-gray-500">Categories</div>
             </div>
           </div>
         </div>
@@ -212,8 +222,8 @@ const SupportAnalyticsDashboard: React.FC = () => {
 
   const SimpleLineChart = () => {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
-    const chartData = ticketData.slice(-Math.min(days, 30));
-    const maxResolved = Math.max(...chartData.map(d => d.resolved), 1);
+    const chartData = ticketData.slice(-days);
+    const maxValue = Math.max(...chartData.map(d => Math.max(d.resolved, d.count)), 1);
     
     return (
       <div className="h-64">
@@ -223,20 +233,21 @@ const SupportAnalyticsDashboard: React.FC = () => {
             <div
               key={y}
               className="absolute left-0 right-0 h-px bg-gray-100"
-              style={{ bottom: `${y}%` }}
+              style={{ bottom: `${y * 0.8}%` }}
             ></div>
           ))}
 
-          {/* Line */}
-          <svg className="absolute inset-0 w-full h-full">
+          {/* Resolution rate line */}
+          <svg className="absolute inset-0 w-full h-full" style={{ padding: '8px' }}>
             <polyline
               fill="none"
-              stroke="#3b82f6"
+              stroke="#10b981"
               strokeWidth="2"
               points={chartData.map((data, index) => {
-                const x = chartData.length > 1 ? (index / (chartData.length - 1)) * 100 : 50;
-                const y = 100 - (data.resolved / maxResolved) * 100;
-                return `${x}%,${Math.max(y, 0)}%`;
+                const x = chartData.length > 1 ? (index / (chartData.length - 1)) * 90 + 5 : 50;
+                const resolutionRate = data.count > 0 ? (data.resolved / data.count) * 100 : 0;
+                const y = 85 - (resolutionRate * 0.8);
+                return `${x}%,${Math.max(y, 5)}%`;
               }).join(' ')}
             />
           </svg>

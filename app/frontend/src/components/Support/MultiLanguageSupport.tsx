@@ -49,38 +49,35 @@ const MultiLanguageSupport: React.FC = () => {
 
   // Mock translated documents - in a real implementation, this would come from an API
   useEffect(() => {
-    const getTranslatedContent = (langCode: string) => {
-      const translations: Record<string, Record<string, { title: string; content: string }>> = {
-        'en': {
-          '1': { title: 'Beginner\'s Guide to LDAO Tokens', content: 'This guide will help you understand the basics of LDAO tokens...' },
-          '2': { title: 'How to Stake Your Tokens', content: 'Learn how to stake your LDAO tokens to earn rewards...' },
-          '3': { title: 'Security Best Practices', content: 'Keep your tokens safe with these security recommendations...' }
-        },
-        'es': {
-          '1': { title: 'Guía para Principiantes de Tokens LDAO', content: 'Esta guía te ayudará a entender los conceptos básicos de los tokens LDAO...' },
-          '2': { title: 'Cómo Hacer Staking de Tus Tokens', content: 'Aprende cómo hacer staking de tus tokens LDAO para ganar recompensas...' },
-          '3': { title: 'Mejores Prácticas de Seguridad', content: 'Mantén tus tokens seguros con estas recomendaciones de seguridad...' }
-        },
-        'fr': {
-          '1': { title: 'Guide du Débutant pour les Tokens LDAO', content: 'Ce guide vous aidera à comprendre les bases des tokens LDAO...' },
-          '2': { title: 'Comment Staker vos Tokens', content: 'Apprenez comment staker vos tokens LDAO pour gagner des récompenses...' },
-          '3': { title: 'Meilleures Pratiques de Sécurité', content: 'Gardez vos tokens en sécurité avec ces recommandations de sécurité...' }
-        },
-        'de': {
-          '1': { title: 'Anfängerleitfaden für LDAO-Token', content: 'Diese Anleitung hilft Ihnen, die Grundlagen von LDAO-Token zu verstehen...' },
-          '2': { title: 'Wie man Ihre Tokens staked', content: 'Lernen Sie, wie Sie Ihre LDAO-Token staken können, um Belohnungen zu verdienen...' },
-          '3': { title: 'Sicherheitsbest Practices', content: 'Halten Sie Ihre Token mit diesen Sicherheitsempfehlungen sicher...' }
-        },
-        'zh': {
-          '1': { title: 'LDAO代币初学者指南', content: '本指南将帮助您了解LDAO代币的基础知识...' },
-          '2': { title: '如何质押您的代币', content: '学习如何质押您的LDAO代币以获得奖励...' },
-          '3': { title: '安全最佳实践', content: '通过这些安全建议保护您的代币安全...' }
-        }
-      };
-      return translations[langCode] || translations['en'];
+    const translations: Record<string, Record<string, { title: string; content: string }>> = {
+      'en': {
+        '1': { title: 'Beginner\'s Guide to LDAO Tokens', content: 'This guide will help you understand the basics of LDAO tokens...' },
+        '2': { title: 'How to Stake Your Tokens', content: 'Learn how to stake your LDAO tokens to earn rewards...' },
+        '3': { title: 'Security Best Practices', content: 'Keep your tokens safe with these security recommendations...' }
+      },
+      'es': {
+        '1': { title: 'Guía para Principiantes de Tokens LDAO', content: 'Esta guía te ayudará a entender los conceptos básicos de los tokens LDAO...' },
+        '2': { title: 'Cómo Hacer Staking de Tus Tokens', content: 'Aprende cómo hacer staking de tus tokens LDAO para ganar recompensas...' },
+        '3': { title: 'Mejores Prácticas de Seguridad', content: 'Mantén tus tokens seguros con estas recomendaciones de seguridad...' }
+      },
+      'fr': {
+        '1': { title: 'Guide du Débutant pour les Tokens LDAO', content: 'Ce guide vous aidera à comprendre les bases des tokens LDAO...' },
+        '2': { title: 'Comment Staker vos Tokens', content: 'Apprenez comment staker vos tokens LDAO pour gagner des récompenses...' },
+        '3': { title: 'Meilleures Pratiques de Sécurité', content: 'Gardez vos tokens en sécurité avec ces recommandations de sécurité...' }
+      },
+      'de': {
+        '1': { title: 'Anfängerleitfaden für LDAO-Token', content: 'Diese Anleitung hilft Ihnen, die Grundlagen von LDAO-Token zu verstehen...' },
+        '2': { title: 'Wie man Ihre Tokens staked', content: 'Lernen Sie, wie Sie Ihre LDAO-Token staken können, um Belohnungen zu verdienen...' },
+        '3': { title: 'Sicherheitsbest Practices', content: 'Halten Sie Ihre Token mit diesen Sicherheitsempfehlungen sicher...' }
+      },
+      'zh': {
+        '1': { title: 'LDAO代币初学者指南', content: '本指南将帮助您了解LDAO代币的基础知识...' },
+        '2': { title: '如何质押您的代币', content: '学习如何质押您的LDAO代币以获得奖励...' },
+        '3': { title: '安全最佳实践', content: '通过这些安全建议保护您的代币安全...' }
+      }
     };
 
-    const languageData = translations[selectedLanguage as keyof typeof translations] || translations['en'];
+    const languageData = translations[selectedLanguage] || translations['en'];
     
     const mockDocuments: TranslatedDocument[] = [
       {
@@ -141,8 +138,19 @@ const MultiLanguageSupport: React.FC = () => {
   const speakText = (text: string) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      const lang = languages.find(l => l.code === selectedLanguage);
-      utterance.lang = lang ? `${lang.code}-${lang.code.toUpperCase()}` : 'en-US';
+      const langMap: Record<string, string> = {
+        'en': 'en-US',
+        'es': 'es-ES',
+        'fr': 'fr-FR',
+        'de': 'de-DE',
+        'zh': 'zh-CN',
+        'ja': 'ja-JP',
+        'ko': 'ko-KR',
+        'pt': 'pt-PT',
+        'ru': 'ru-RU',
+        'ar': 'ar-SA'
+      };
+      utterance.lang = langMap[selectedLanguage] || 'en-US';
       speechSynthesis.speak(utterance);
     }
   };
@@ -302,7 +310,14 @@ const MultiLanguageSupport: React.FC = () => {
             <p className="text-sm text-gray-600">Request translation for this document</p>
           </div>
           <button 
-            onClick={handleTranslationRequest}
+            onClick={() => {
+              const currentDoc = translatedDocuments[0];
+              if (currentDoc) {
+                alert(`Translation request submitted for "${currentDoc.title}" to ${currentLanguage.name}`);
+              } else {
+                alert('No document selected for translation');
+              }
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             aria-label="Request translation for current document"
           >

@@ -38,7 +38,10 @@ describe('AIChatSupport', () => {
   it('opens the chat modal when toggle button is clicked', () => {
     render(<AIChatSupport />);
     
-    const toggleButton = screen.getByRole('button');
+    const toggleButton = screen.getByTestId('message-circle-icon').closest('button');
+    if (!toggleButton) {
+      throw new Error('Toggle button not found');
+    }
     fireEvent.click(toggleButton);
     
     expect(screen.getByText('LinkDAO Support Assistant')).toBeInTheDocument();
@@ -58,9 +61,10 @@ describe('AIChatSupport', () => {
     
     // Send the message
     const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (sendButton) {
-      fireEvent.click(sendButton);
+    if (!sendButton) {
+      throw new Error('Send button not found');
     }
+    fireEvent.click(sendButton);
     
     // Wait for the response
     await waitFor(() => {
@@ -77,9 +81,10 @@ describe('AIChatSupport', () => {
     
     // Try to send an empty message
     const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (sendButton) {
-      fireEvent.click(sendButton);
+    if (!sendButton) {
+      throw new Error('Send button not found');
     }
+    fireEvent.click(sendButton);
     
     // Should not add any new messages
     const messages = screen.queryAllByText(/Hello! I'm your LinkDAO support assistant/);
@@ -95,20 +100,22 @@ describe('AIChatSupport', () => {
     
     // Toggle sound off
     const soundButton = screen.getByTestId('volume2-icon').closest('button');
-    if (soundButton) {
-      fireEvent.click(soundButton);
+    if (!soundButton) {
+      throw new Error('Sound button not found');
     }
+    fireEvent.click(soundButton);
     
     // Toggle sound back on
     const muteButton = screen.getByTestId('volume-x-icon').closest('button');
-    if (muteButton) {
-      fireEvent.click(muteButton);
+    if (!muteButton) {
+      throw new Error('Mute button not found');
     }
+    fireEvent.click(muteButton);
     
     expect(screen.getByTestId('volume2-icon')).toBeInTheDocument();
   });
 
-  it('restarts the conversation', () => {
+  it('restarts the conversation', async () => {
     render(<AIChatSupport />);
     
     // Open the chat
@@ -120,21 +127,25 @@ describe('AIChatSupport', () => {
     fireEvent.change(input, { target: { value: 'Hello' } });
     
     const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (sendButton) {
-      fireEvent.click(sendButton);
+    if (!sendButton) {
+      throw new Error('Send button not found');
     }
+    fireEvent.click(sendButton);
     
     // Wait for response
-    jest.advanceTimersByTime(1000);
+    await waitFor(() => {
+      expect(screen.getByText(/I understand you're looking for help/)).toBeInTheDocument();
+    });
     
     // Restart conversation
     const restartButton = screen.getByTestId('rotate-ccw-icon').closest('button');
-    if (restartButton) {
-      fireEvent.click(restartButton);
+    if (!restartButton) {
+      throw new Error('Restart button not found');
     }
+    fireEvent.click(restartButton);
     
     // Should reset to initial message
-    expect(screen.getByText('Hello! I\'m your LinkDAO support assistant. How can I help you today?')).toBeInTheDocument();
+    expect(screen.getByText('Hello! I'm your LinkDAO support assistant. How can I help you today?')).toBeInTheDocument();
   });
 
   it('closes the chat modal', () => {
@@ -146,9 +157,10 @@ describe('AIChatSupport', () => {
     
     // Close the chat
     const closeButton = screen.getByTestId('x-icon').closest('button');
-    if (closeButton) {
-      fireEvent.click(closeButton);
+    if (!closeButton) {
+      throw new Error('Close button not found');
     }
+    fireEvent.click(closeButton);
     
     // Chat should be closed
     expect(screen.queryByText('LinkDAO Support Assistant')).not.toBeInTheDocument();

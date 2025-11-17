@@ -388,7 +388,7 @@ class ChatHistoryService {
 
   // Private helper methods
   private getAuthToken(): string {
-    // Add SSR safety check for localStorage access
+    // Critical: Add SSR safety check for localStorage access
     if (typeof window === 'undefined') {
       return '';
     }

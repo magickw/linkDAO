@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { 
   BookOpen, 
   MessageCircle, 
@@ -26,6 +27,7 @@ interface SupportItem {
 }
 
 const PersonalizedSupportDashboard: React.FC = () => {
+  const router = useRouter();
   const [recentlyViewed, setRecentlyViewed] = useState<SupportItem[]>([]);
   const [savedDocuments, setSavedDocuments] = useState<SupportItem[]>([]);
   const [openTickets, setOpenTickets] = useState<SupportItem[]>([]);
@@ -156,7 +158,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Your Support Dashboard</h2>
         <button 
-          onClick={() => console.log('View All clicked - would navigate to full dashboard')}
+          onClick={() => router.push('/support/dashboard')}
           className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           aria-label="View all support dashboard items"
         >
@@ -179,11 +181,11 @@ const PersonalizedSupportDashboard: React.FC = () => {
                   className="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                   role="button"
                   tabIndex={0}
-                  onClick={() => console.log(`Opening ${item.title} - would navigate to document`)}
+                  onClick={() => router.push(`/support/documents/${item.id}`)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      console.log(`Opening ${item.title} - would navigate to document`);
+                      router.push(`/support/documents/${item.id}`);
                     }
                   }}
                   aria-label={`Open ${item.title} - ${item.category}`}
@@ -221,8 +223,18 @@ const PersonalizedSupportDashboard: React.FC = () => {
                 <div 
                   key={item.id} 
                   className="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`/support/documents/${item.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/support/documents/${item.id}`);
+                    }
+                  }}
+                  aria-label={`Open ${item.title} - ${item.category}`}
                 >
-                  <div className="p-2 bg-green-50 rounded-lg mr-3">
+                  <div className="p-2 bg-green-50 rounded-lg mr-3" aria-hidden="true">
                     {getTypeIcon(item.type)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -255,8 +267,18 @@ const PersonalizedSupportDashboard: React.FC = () => {
                 <div 
                   key={item.id} 
                   className="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`/support/tickets/${item.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/support/tickets/${item.id}`);
+                    }
+                  }}
+                  aria-label={`Open ticket ${item.title} - ${item.status}`}
                 >
-                  <div className="p-2 bg-purple-50 rounded-lg mr-3">
+                  <div className="p-2 bg-purple-50 rounded-lg mr-3" aria-hidden="true">
                     {getTypeIcon(item.type)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -300,15 +322,25 @@ const PersonalizedSupportDashboard: React.FC = () => {
                 <div 
                   key={item.id} 
                   className="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(`/support/documents/${item.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(`/support/documents/${item.id}`);
+                    }
+                  }}
+                  aria-label={`Open suggested article ${item.title} - ${item.category}`}
                 >
-                  <div className="p-2 bg-yellow-50 rounded-lg mr-3">
+                  <div className="p-2 bg-yellow-50 rounded-lg mr-3" aria-hidden="true">
                     {getTypeIcon(item.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-900 truncate">{item.title}</h4>
                     <p className="text-sm text-gray-600">{item.category}</p>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500" aria-hidden="true">
                     <Star className="w-4 h-4 text-yellow-500" />
                   </div>
                 </div>
@@ -328,7 +360,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
         <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button 
-            onClick={() => window.location.href = '/support/tickets/new'}
+            onClick={() => router.push('/support/tickets/new')}
             className="flex flex-col items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             aria-label="Create new support ticket"
           >
@@ -336,7 +368,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">New Ticket</span>
           </button>
           <button 
-            onClick={() => window.location.href = '/support/documents'}
+            onClick={() => router.push('/support/documents')}
             className="flex flex-col items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             aria-label="Browse documentation"
           >
@@ -344,7 +376,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">Browse Docs</span>
           </button>
           <button 
-            onClick={() => window.location.href = '/support/chat'}
+            onClick={() => router.push('/support/chat')}
             className="flex flex-col items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             aria-label="Open live chat"
           >
@@ -352,7 +384,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">Live Chat</span>
           </button>
           <button 
-            onClick={() => window.location.href = '/support/faq'}
+            onClick={() => router.push('/support/faq')}
             className="flex flex-col items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             aria-label="View FAQ"
           >

@@ -7,8 +7,22 @@ import { CommunityIconList } from '@/components/Navigation/CommunityIconList';
 import { EnhancedUserCard } from '@/components/Navigation/EnhancedUserCard';
 import { ActivityIndicators } from '@/components/Navigation/ActivityIndicators';
 import { UserProfile } from '@/models/UserProfile';
-import { Community } from '@/types/community';
-import { FilterState } from '@/types/communityFilter';
+interface Community {
+  id: string;
+  name: string;
+  displayName: string;
+  memberCount: number;
+  avatar?: string;
+  icon?: string;
+  isJoined: boolean;
+  unreadCount?: number;
+}
+
+interface FilterState {
+  id: string;
+  label: string;
+  active: boolean;
+}
 
 interface MobileNavigationSidebarProps {
   isOpen: boolean;
@@ -172,7 +186,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
               {/* Additional Navigation Items */}
               <div className="p-4 space-y-2">
                 <button
-                  onClick={() => console.log('Navigate to bookmarks')}
+                  onClick={() => window.location.href = '/bookmarks'}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -186,7 +200,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                 </button>
 
                 <button
-                  onClick={() => console.log('Navigate to analytics')}
+                  onClick={() => window.location.href = '/analytics'}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800
@@ -200,7 +214,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                 </button>
 
                 <button
-                  onClick={() => console.log('Navigate to settings')}
+                  onClick={() => window.location.href = '/settings'}
                   className={`
                     w-full flex items-center space-x-3 p-3 rounded-lg text-left
                     text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800

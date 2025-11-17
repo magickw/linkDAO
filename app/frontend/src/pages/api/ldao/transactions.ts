@@ -79,8 +79,7 @@ export default async function handler(
     const transactions = data.transactions;
     
     // Use data.total if available from the API for proper pagination
-    // Don't use transactions.length as it only represents current page count
-    const total = data.total !== undefined ? data.total : 0;
+    const total = data.total !== undefined ? data.total : transactions.length;
 
     // Return fetched transactions with correct pagination metadata
     return res.status(200).json({

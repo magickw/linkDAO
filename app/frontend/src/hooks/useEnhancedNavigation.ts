@@ -90,20 +90,31 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
         // Ensure we always have an array before mapping
         const trendingList = Array.isArray(trending) ? trending : [];
         
-        // Transform to expected format
-        const communitiesWithIcons: CommunityWithIcons[] = trendingList.map((community: any) => ({
-          id: community.id || '',
-          name: community.name || '',
-          displayName: community.displayName || community.name || '',
-          memberCount: community.memberCount || 0,
-          avatar: community.avatar || '🏛️', // Default avatar if none provided
-          icon: community.avatar || '🏛️',
-          unreadCount: 0, // Would be calculated from notifications
-          lastActivity: community.updatedAt || new Date(),
-          userRole: { type: 'member', permissions: ['read', 'write'] },
-          isJoined: false, // Would need to check user membership
-          activityLevel: 'medium' as const
-        }));
+        // Transform to expected format with proper typing
+        const communitiesWithIcons: CommunityWithIcons[] = trendingList.map((community) => {
+          const communityData = community as {
+            id?: string;
+            name?: string;
+            displayName?: string;
+            memberCount?: number;
+            avatar?: string;
+            updatedAt?: Date;
+          };
+          
+          return {
+            id: communityData.id || '',
+            name: communityData.name || '',
+            displayName: communityData.displayName || communityData.name || '',
+            memberCount: communityData.memberCount || 0,
+            avatar: communityData.avatar || '🏛️',
+            icon: communityData.avatar || '🏛️',
+            unreadCount: 0,
+            lastActivity: communityData.updatedAt || new Date(),
+            userRole: { type: 'member' as const, permissions: ['read', 'write'] as const },
+            isJoined: false,
+            activityLevel: 'medium' as const
+          };
+        });
         
         setCommunities(communitiesWithIcons);
       } catch (error) {
@@ -153,7 +164,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   // Generate breadcrumbs based on current route
   const breadcrumbs = generateBreadcrumbs(
     router.pathname,
-    communities.find(c => router.query.community === c.id)?.displayName
+    communities.find(c => router.query.community === c.id)?.displayName || undefined
   );
 
   // Handlers

@@ -34,6 +34,14 @@ interface LeaderboardEntry {
   rewards: number;
 }
 
+interface ReferralServiceInterface {
+  getReferralInfo: (address: string) => Promise<ReferralInfo | null>;
+  getReferralRewards: (address: string) => Promise<ReferralReward[]>;
+  getReferralLeaderboard: (limit: number) => Promise<LeaderboardEntry[]>;
+  generateReferralCode: (address: string) => Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }>;
+  claimRewards: (address: string) => Promise<{ success: boolean; error?: string }>;
+}
+
 const ReferralSystem: React.FC = () => {
   const { address, isConnected } = useAccount();
   const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
@@ -60,8 +68,8 @@ const ReferralSystem: React.FC = () => {
         setReferralInfo(info);
       }
 
-  // Load rewards
-  const userRewards = await referralService.getReferralRewards(address);
+      // Load rewards
+      const userRewards = await referralService.getReferralRewards();
       setRewards(userRewards);
 
       // Load leaderboard
@@ -82,7 +90,8 @@ const ReferralSystem: React.FC = () => {
     setErrorMessage('');
 
     try {
-      const result = await referralService.generateReferralCode(address);
+      // Fix: Remove the address parameter since generateReferralCode doesn't take any parameters
+      const result = await referralService.generateReferralCode();
       
       if (result.success && result.referralCode && result.referralLink) {
         const info: ReferralInfo = {

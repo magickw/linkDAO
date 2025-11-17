@@ -202,29 +202,50 @@ export default function FilterPanel({
     }
   }, [customDateRange, selectedTimePreset, activeFilters, onFilterChange]);
 
-  // Enhanced keyboard navigation for author suggestions
+  // Enhanced keyboard navigation for author suggestions with proper focus management
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+
+  // Reset active suggestion when suggestions are hidden
+  useEffect(() => {
+    if (!showAuthorSuggestions) {
+      setActiveSuggestionIndex(-1);
+    }
+  }, [showAuthorSuggestions]);
+  
   const handleAuthorKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showAuthorSuggestions || authorSuggestions.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        // Focus first suggestion
-        const firstSuggestion = document.querySelector('[role="option"]') as HTMLElement;
-        if (firstSuggestion) firstSuggestion.focus();
+        setActiveSuggestionIndex(prev => 
+          prev < authorSuggestions.length - 1 ? prev + 1 : 0
+        );
         break;
       case 'ArrowUp':
         e.preventDefault();
-        // Focus last suggestion
-        const suggestions = document.querySelectorAll('[role="option"]');
-        const lastSuggestion = suggestions[suggestions.length - 1] as HTMLElement;
-        if (lastSuggestion) lastSuggestion.focus();
+        setActiveSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : authorSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (activeSuggestionIndex >= 0 && activeSuggestionIndex < authorSuggestions.length) {
+          handleAuthorAdd(authorSuggestions[activeSuggestionIndex]);
+        }
         break;
       case 'Escape':
+        e.preventDefault();
         setShowAuthorSuggestions(false);
+        setActiveSuggestionIndex(-1);
+        break;
+      case 'Tab':
+        // Allow default tab behavior but close suggestions
+        setShowAuthorSuggestions(false);
+        setActiveSuggestionIndex(-1);
         break;
     }
-  }, [showAuthorSuggestions, authorSuggestions.length]);
+  }, [showAuthorSuggestions, authorSuggestions.length, activeSuggestionIndex, authorSuggestions]);
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -372,14 +393,17 @@ export default function FilterPanel({
               type="text"
               placeholder="Search for authors..."
               value={authorSearch}
-              onChange={(e) => setAuthorSearch(e.target.value)}
+              onChange={(e) => {
+                setAuthorSearch(e.target.value);
+                setActiveSuggestionIndex(-1); // Reset active suggestion when typing
+              }}
               onKeyDown={handleAuthorKeyDown}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               aria-autocomplete="list"
               aria-expanded={showAuthorSuggestions}
               aria-controls="author-suggestions-list"
               role="combobox"
-              aria-activedescendant={showAuthorSuggestions && authorSuggestions.length > 0 ? `author-option-${authorSuggestions[0]?.id}` : undefined}
+              aria-activedescendant={activeSuggestionIndex >= 0 ? `author-option-${authorSuggestions[activeSuggestionIndex]?.id}` : undefined}
             />
             
             {/* Author Suggestions */}
@@ -395,11 +419,16 @@ export default function FilterPanel({
                     key={author.id}
                     id={`author-option-${author.id}`}
                     onClick={() => handleAuthorAdd(author)}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between focus:bg-gray-50 dark:focus:bg-gray-700 focus:outline-none"
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between focus:outline-none transition-colors ${
+                      index === activeSuggestionIndex
+                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 focus:bg-gray-50 dark:focus:bg-gray-700'
+                    }`}
                     role="option"
-                    aria-selected={false}
-                    tabIndex={0}
+                    aria-selected={index === activeSuggestionIndex}
+                    tabIndex={-1}
                     aria-label={`Add author @${author.username}${author.displayName ? ` (${author.displayName})` : ''}`}
+                    onMouseEnter={() => setActiveSuggestionIndex(index)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -408,22 +437,8 @@ export default function FilterPanel({
                       // Allow Escape to close the suggestions
                       if (e.key === 'Escape') {
                         setShowAuthorSuggestions(false);
+                        setActiveSuggestionIndex(-1);
                         document.getElementById('author-search')?.focus();
-                      }
-                      // Handle arrow key navigation between suggestions
-                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        const suggestions = document.querySelectorAll('[role="option"]');
-                        const currentIndex = Array.from(suggestions).indexOf(e.currentTarget as HTMLElement);
-                        let nextIndex = currentIndex;
-                        
-                        if (e.key === 'ArrowDown') {
-                          nextIndex = (currentIndex + 1) % suggestions.length;
-                        } else {
-                          nextIndex = currentIndex === 0 ? suggestions.length - 1 : currentIndex - 1;
-                        }
-                        
-                        (suggestions[nextIndex] as HTMLElement)?.focus();
                       }
                     }}
                   >

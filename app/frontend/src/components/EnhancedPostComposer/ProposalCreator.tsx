@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ProposalData } from '@/types/enhancedPost';
 
 interface ProposalCreatorProps {
@@ -27,22 +27,28 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
     }
   }, [proposal]);
 
-  const updateProposal = (newTitle: string, newDescription: string, newType: typeof type) => {
+  // Create a memoized update function to avoid recreating it on every render
+  const updateProposal = useCallback(() => {
     // Use proposal-specific parameters based on type, not hardcoded values
-    const proposalParams = getProposalParameters(newType, proposal);
+    const proposalParams = getProposalParameters(type, proposal);
     
     onProposalChange({
-      title: newTitle,
-      description: newDescription,
-      type: newType,
+      title,
+      description,
+      type,
       ...proposalParams
     });
-  };
+  }, [title, description, type, proposal, onProposalChange]);
+
+  // Update proposal when any state changes
+  useEffect(() => {
+    updateProposal();
+  }, [updateProposal]);
 
   // Get appropriate parameters based on proposal type
   const getProposalParameters = (proposalType: typeof type, existingProposal?: ProposalData) => {
-    if (existingProposal) {
-      // Preserve existing parameters if available
+    if (existingProposal && existingProposal.type === proposalType) {
+      // Preserve existing parameters if available and type matches
       return {
         votingPeriod: existingProposal.votingPeriod ?? getDefaultVotingPeriod(proposalType),
         quorum: existingProposal.quorum ?? getDefaultQuorum(proposalType),
@@ -93,10 +99,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
       <input
         type="text"
         value={title}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          updateProposal(e.target.value, description, type);
-        }}
+        onChange={(e) => setTitle(e.target.value)}
         placeholder="Proposal title..."
         disabled={disabled}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 ${
@@ -106,10 +109,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
       
       <textarea
         value={description}
-        onChange={(e) => {
-          setDescription(e.target.value);
-          updateProposal(title, e.target.value, type);
-        }}
+        onChange={(e) => setDescription(e.target.value)}
         placeholder="Describe your proposal..."
         rows={4}
         disabled={disabled}
@@ -120,11 +120,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
       
       <select
         value={type}
-        onChange={(e) => {
-          const newType = e.target.value as typeof type;
-          setType(newType);
-          updateProposal(title, description, newType);
-        }}
+        onChange={(e) => setType(e.target.value as typeof type)}
         disabled={disabled}
         className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -135,6 +131,31 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
         <option value="parameter">Parameter Change</option>
         <option value="upgrade">Upgrade</option>
       </select>
+      
+      {/* Display proposal parameters based on type */}
+      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+        <h4 className="font-medium text-gray-900 dark:text-white mb-2">Proposal Parameters</h4>
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="text-gray-500 dark:text-gray-400">Voting Period</div>
+            <div className="font-medium text-gray-900 dark:text-white">
+              {getDefaultVotingPeriod(type)} days
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-500 dark:text-gray-400">Quorum</div>
+            <div className="font-medium text-gray-900 dark:text-white">
+              {getDefaultQuorum(type)}%
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-500 dark:text-gray-400">Threshold</div>
+            <div className="font-medium text-gray-900 dark:text-white">
+              {getDefaultThreshold(type)}%
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

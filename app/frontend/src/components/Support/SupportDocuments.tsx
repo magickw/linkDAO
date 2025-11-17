@@ -50,8 +50,13 @@ const SupportDocuments: React.FC = () => {
   const [showScrollProgress, setShowScrollProgress] = useState(false);
   const [savedDocuments, setSavedDocuments] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('savedDocuments');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('savedDocuments');
+        return saved ? JSON.parse(saved) : [];
+      } catch (error) {
+        console.error('Failed to parse saved documents from localStorage:', error);
+        return [];
+      }
     }
     return [];
   });
@@ -316,7 +321,7 @@ const SupportDocuments: React.FC = () => {
     }
   };
 
-  // Toggle saved document with persistence
+  // Toggle saved document with persistence and error handling
   const toggleSavedDocument = (documentId: string) => {
     setSavedDocuments(prev => {
       const newSaved = prev.includes(documentId) 
@@ -324,12 +329,27 @@ const SupportDocuments: React.FC = () => {
         : [...prev, documentId];
       
       if (typeof window !== 'undefined') {
-        localStorage.setItem('savedDocuments', JSON.stringify(newSaved));
+        try {
+          localStorage.setItem('savedDocuments', JSON.stringify(newSaved));
+        } catch (error) {
+          console.error('Failed to save documents to localStorage:', error);
+        }
       }
       
       return newSaved;
     });
   };
+
+  // Persist saved documents on change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('savedDocuments', JSON.stringify(savedDocuments));
+      } catch (error) {
+        console.error('Failed to persist saved documents:', error);
+      }
+    }
+  }, [savedDocuments]);
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -494,14 +514,15 @@ const SupportDocuments: React.FC = () => {
                       e.stopPropagation();
                       toggleSavedDocument(doc.id);
                     }}
-                    className="text-gray-400 hover:text-blue-600 transition-colors"
-                    aria-label={savedDocuments.includes(doc.id) ? 'Remove bookmark' : 'Add bookmark'}
+                    className="text-gray-400 hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+                    aria-label={savedDocuments.includes(doc.id) ? `Remove ${doc.title} from bookmarks` : `Add ${doc.title} to bookmarks`}
                     title={savedDocuments.includes(doc.id) ? 'Remove from saved documents' : 'Save document'}
+                    type="button"
                   >
                     {savedDocuments.includes(doc.id) ? (
-                      <BookmarkCheck className="w-5 h-5 text-blue-600" />
+                      <BookmarkCheck className="w-5 h-5 text-blue-600" aria-hidden="true" />
                     ) : (
-                      <Bookmark className="w-5 h-5" />
+                      <Bookmark className="w-5 h-5" aria-hidden="true" />
                     )}
                   </button>
                 </div>

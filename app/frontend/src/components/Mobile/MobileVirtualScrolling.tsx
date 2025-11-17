@@ -185,6 +185,9 @@ export const MobileVirtualScrolling = <T,>({
       if (newScrollTop !== scrollTop) {
         scrollElement.scrollTop = newScrollTop;
         setScrollTop(newScrollTop);
+        // Trigger scroll event to update visible items
+        const event = new Event('scroll', { bubbles: true });
+        scrollElement.dispatchEvent(event);
       }
     };
 
@@ -193,7 +196,7 @@ export const MobileVirtualScrolling = <T,>({
       container.addEventListener('keydown', handleKeyDown);
       return () => container.removeEventListener('keydown', handleKeyDown);
     }
-  }, [itemHeight, totalHeight, actualContainerHeight, scrollTop]);
+  }, [itemHeight, totalHeight, actualContainerHeight, scrollTop, handleScroll]);
 
   // Error state
   if (error && errorComponent) {

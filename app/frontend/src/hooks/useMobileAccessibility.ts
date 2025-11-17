@@ -26,7 +26,7 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let debounceTimeout: NodeJS.Timeout;
+    let debounceTimeout: number;
     
     const checkScreenReader = () => {
       // Use conservative detection based on user preferences
@@ -42,8 +42,8 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
 
     // Proper debouncing implementation
     const handleAccessibilityEvent = () => {
-      clearTimeout(debounceTimeout);
-      debounceTimeout = setTimeout(checkScreenReader, 100);
+      window.clearTimeout(debounceTimeout);
+      debounceTimeout = window.setTimeout(checkScreenReader, 100);
     };
 
     // Monitor for keyboard navigation patterns
@@ -57,10 +57,9 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
     window.addEventListener('resize', handleAccessibilityEvent);
     
     return () => {
-      clearTimeout(debounceTimeout);
+      window.clearTimeout(debounceTimeout);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleAccessibilityEvent);
-      // Clear keyboard navigation attribute on cleanup
       document.documentElement.removeAttribute('data-keyboard-navigation');
     };
   }, []);
@@ -78,11 +77,8 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
       const baseFontSize = 16; // Default browser font size
       const devicePixelRatio = window.devicePixelRatio || 1;
       
-      // Check if user has increased browser font size or is using zoom
-      setPrefersLargeText(
-        computedFontSize > baseFontSize * 1.125 || // Font size increased by more than 12.5%
-        devicePixelRatio < 1 // User has zoomed out (inverse relationship)
-      );
+      // Check if user has increased browser font size
+      setPrefersLargeText(computedFontSize > baseFontSize * 1.125);
 
       // Color scheme preference
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {

@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link'; // Add missing import
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useProfile } from '@/hooks/useProfile';
 import { 
-  QuickFilterPanel, 
   CommunityIconList,
   EnhancedUserCard,
   NavigationBreadcrumbs,
   ActivityIndicators
 } from '@/components/Navigation';
-import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement'; // Add missing import
-import { useNavigation } from '@/context/NavigationContext'; // Add missing import
+import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
+import { useNavigation } from '@/context/NavigationContext';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
@@ -93,9 +92,9 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         );
         
         const communityResults = await Promise.allSettled(communityPromises);
-        const validCommunities = (communityResults as any[])
-          .filter((r: any) => r.status === 'fulfilled' && r.value)
-          .map((r: any) => r.value) as CommunityModel[];
+        const validCommunities = communityResults
+          .filter((r): r is PromiseFulfilledResult<CommunityModel> => r.status === 'fulfilled' && r.value !== null && r.value !== undefined)
+          .map(r => r.value);
         
         // Transform to expected format with membership info
         return validCommunities.map((community) => ({
@@ -157,7 +156,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           memberCount: community.memberCount,
           avatar: community.avatar,
           icon: community.icon,
-          isJoined: communities.some((c: any) => c.id === community.id),
+          isJoined: communities.some(c => c.id === community.id),
           growthMetrics: {
             trendingScore: Math.floor(Math.random() * 100), // Mock data for now
             memberGrowthPercentage: Math.floor(Math.random() * 20) // Mock data for now

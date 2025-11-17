@@ -29,8 +29,10 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   const [retryCount, setRetryCount] = useState(0);
   const lastOperationRef = useRef<(() => Promise<any>) | null>(null);
   const isMountedRef = useRef(true);
+  
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -70,16 +72,17 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
     setRetryCount(prev => prev + 1);
 
     try {
-      const result = await errorManager.retryOperation(lastOperationRef.current, { category });
+      const result = await lastOperationRef.current();
       if (isMountedRef.current) {
         setIsLoading(false);
       }
+      return result;
     } catch (err) {
       if (isMountedRef.current) {
         handleError(err as Error);
       }
     }
-  }, [enableRetry, retryCount, maxRetries, handleError, category]);
+  }, [enableRetry, retryCount, maxRetries, handleError]);
 
   const executeWithErrorHandling = useCallback(async <T>(
     operation: () => Promise<T>
@@ -87,21 +90,22 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
     if (!isMountedRef.current) return null;
     
     lastOperationRef.current = operation;
-    setIsLoading(true);
     setError(null);
+    setIsLoading(true);
 
     try {
-      const result = await errorManager.retryOperation(operation, { category });
-      return result;
-    } catch (err) {
-      handleError(err as Error);
-      return null;
-    } finally {
+      const result = await operation();
       if (isMountedRef.current) {
         setIsLoading(false);
       }
+      return result;
+    } catch (err) {
+      if (isMountedRef.current) {
+        handleError(err as Error);
+      }
+      return null;
     }
-  }, [category, handleError]);
+  }, [handleError]);
 
   return {
     error,

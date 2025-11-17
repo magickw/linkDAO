@@ -66,6 +66,7 @@ export const QuickFilterPanel: React.FC<QuickFilterPanelProps> = ({
           role="switch"
           aria-checked={activeFilters.includes(filter.id)}
           aria-label={`Toggle ${filter.label} filter`}
+          aria-describedby={`filter-${filter.id}-desc`}
         >
           <span className="mr-2">{filter.icon}</span>
           {filter.label}

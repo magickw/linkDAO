@@ -135,21 +135,18 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       }
     }
 
-    useEffect(() => {
-    // ... existing code ...
-    
     let timer: NodeJS.Timeout | null = null;
     
     // Only attempt login once per address change
     if (!hasTriedLoginRef.current || addressChanged) {
       // Add a longer delay on initial page load to prevent immediate signature prompts
-    const delay = isInitialLoad ? 2000 : 500; // 2 seconds on first load, 500ms otherwise
-    
-    timer = setTimeout(() => {
-      console.log('🚀 Triggering auto-login for:', address);
-      setIsInitialLoad(false); // Mark initial load as complete
-      handleAutoLogin();
-    }, delay);
+      const delay = isInitialLoad ? 2000 : 500; // 2 seconds on first load, 500ms otherwise
+      
+      timer = setTimeout(() => {
+        console.log('🚀 Triggering auto-login for:', address);
+        setIsInitialLoad(false); // Mark initial load as complete
+        handleAutoLogin();
+      }, delay);
     }
     
     // Cleanup function to prevent memory leaks - always returned
@@ -158,7 +155,6 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         clearTimeout(timer);
       }
     };
-  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
   }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
   const handleAutoLogin = async () => {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
@@ -64,7 +64,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
   const [pollData, setPollData] = useState<PollData | undefined>(undefined);
   const [proposalData, setProposalData] = useState<ProposalData | undefined>(undefined);
   const [linkUrl, setLinkUrl] = useState('');
-  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null); // Add state for link preview
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
 
   // Clean up object URLs to prevent memory leaks
   useEffect(() => {
@@ -117,7 +117,8 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     }
   });
 
-  const handleSubmit = async () => {
+  // Create a memoized submit handler
+  const handleSubmit = useCallback(async () => {
     if (!content.trim()) return;
 
     setIsSubmitting(true);
@@ -158,6 +159,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
       setPollData(undefined);
       setProposalData(undefined);
       setLinkUrl('');
+      setLinkPreview(null); // Reset link preview after submission
       
       triggerHapticFeedback('success');
       announceToScreenReader('Post created successfully');
@@ -168,7 +170,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [content, contentType, title, media, hashtags, mentions, communityId, pollData, proposalData, linkUrl, linkPreview, user, onSubmit, triggerHapticFeedback, announceToScreenReader, onClose]);
 
   const handleContentTypeChange = (type: ContentType) => {
     setContentType(type);
@@ -182,6 +184,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     }
     if (type !== ContentType.LINK) {
       setLinkUrl('');
+      setLinkPreview(null); // Reset link preview when not in link mode
     }
     
     triggerHapticFeedback('light');
@@ -219,264 +222,381 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     triggerHapticFeedback('light');
   };
 
-  const canSubmit = content.trim().length > 0 && !isSubmitting;
+  // Add handlers for Poll and Proposal data
+  const handlePollChange = (pollData: PollData) => {
+    setPollData(pollData);
+  };
+
+  const handleProposalChange = (proposalData: ProposalData) => {
+    setProposalData(proposalData);
+  };
+
+  // Capture URL value for LINK content type
+  const handleLinkUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setLinkUrl(url);
+    
+    if (url) {
+      try {
+        // Validate URL format first
+        new URL(url); // This will throw if invalid
+        
+        // Fetch actual link preview data
+        const response = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, {
+          signal: AbortSignal.timeout(5000), // 5 second timeout
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (response.ok) {
+          const previewData = await response.json();
+          setLinkPreview({
+            url: url,
+            title: previewData.title || '',
+            description: previewData.description || '',
+            image: previewData.image || '',
+            type: previewData.type || 'website'
+          });
+        } else {
+          // Fallback to basic preview if API fails
+          setLinkPreview({
+            url: url,
+            title: '',
+            description: '',
+            image: '',
+            type: 'website'
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to fetch link preview:', error);
+        // Fallback to basic preview on any error
+        setLinkPreview({
+          url: url,
+          title: '',
+          description: '',
+          image: '',
+          type: 'website'
+        });
+      }
+    } else {
+      setLinkPreview(null);
+    }
+  };
+
+  // Content-type-specific validation and character limits
+  const getContentLimits = (type: ContentType) => {
+    switch (type) {
+      case ContentType.TEXT:
+        return { min: 1, max: 2000, field: 'content' };
+      case ContentType.MEDIA:
+        return { min: 0, max: 1000, field: 'media description' };
+      case ContentType.LINK:
+        return { min: 0, max: 500, field: 'link description' };
+      case ContentType.POLL:
+        return { min: 1, max: 500, field: 'poll description' };
+      case ContentType.PROPOSAL:
+        return { min: 10, max: 5000, field: 'proposal content' };
+      default:
+        return { min: 1, max: 2000, field: 'content' };
+    }
+  };
+
+  const validateContent = (type: ContentType, content: string): { isValid: boolean; errors: string[] } => {
+    const limits = getContentLimits(type);
+    const errors: string[] = [];
+    
+    // Basic length validation
+    if (content.length < limits.min) {
+      errors.push(`${limits.field} must be at least ${limits.min} characters`);
+    }
+    if (content.length > limits.max) {
+      errors.push(`${limits.field} must not exceed ${limits.max} characters`);
+    }
+    
+    // Content-type-specific validation
+    switch (type) {
+      case ContentType.POLL:
+        if (!pollData || pollData.options.length < 2) {
+          errors.push('Poll must have at least 2 options');
+        }
+        if (!pollData?.question?.trim()) {
+          errors.push('Poll must have a question');
+        }
+        break;
+      case ContentType.PROPOSAL:
+        if (!proposalData || !proposalData.title?.trim()) {
+          errors.push('Proposal must have a title');
+        }
+        if (!proposalData?.description?.trim()) {
+          errors.push('Proposal must have a description');
+        }
+        break;
+      case ContentType.LINK:
+        if (!linkUrl?.trim()) {
+          errors.push('Link post must have a URL');
+        }
+        try {
+          if (linkUrl) new URL(linkUrl);
+        } catch {
+          errors.push('Please enter a valid URL');
+        }
+        break;
+      case ContentType.MEDIA:
+        if (media.length === 0 && content.trim().length === 0) {
+          errors.push('Media post must have either media files or description');
+        }
+        break;
+    }
+    
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const { isValid, errors } = validateContent(contentType, content);
+  const canSubmit = isValid && !isSubmitting;
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-40"
-            onClick={onClose}
-          />
+      <>
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
 
-          {/* Composer Modal */}
-          <motion.div
-            ref={composerRef}
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
-            className={`
-              fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-gray-900
-              rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden
-              ${mobileOptimizedClasses}
-            `}
-            style={{ paddingTop: safeAreaInsets.top }}
-            {...handleSwipeDown}
-          >
-            {/* Drag Handle */}
-            <div className="flex justify-center py-3">
-              <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        {/* Composer Modal */}
+        <motion.div
+          ref={composerRef}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
+          className={`
+            fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-gray-900
+            rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden
+            ${mobileOptimizedClasses}
+          `}
+          style={{ paddingTop: safeAreaInsets.top }}
+          {...handleSwipeDown}
+        >
+          {/* Drag Handle */}
+          <div className="flex justify-center py-3">
+            <div className="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+          </div>
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={onClose}
+              className={`
+                text-gray-500 dark:text-gray-400 font-medium
+                ${touchTargetClasses} ${accessibilityClasses}
+              `}
+              aria-label="Cancel post creation"
+            >
+              Cancel
+            </button>
+            
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Create Post
+            </h2>
+            
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className={`
+                px-4 py-2 rounded-full font-medium transition-all
+                ${canSubmit 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                }
+                ${touchTargetClasses} ${accessibilityClasses}
+              `}
+              aria-label={isSubmitting ? 'Publishing post...' : 'Publish post'}
+            >
+              {isSubmitting ? 'Publishing...' : 'Post'}
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Content Type Tabs */}
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <ContentTypeTabs
+                activeType={contentType}
+                onTypeChange={handleContentTypeChange}
+                className="mobile-optimized"
+              />
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={onClose}
-                className={`
-                  text-gray-500 dark:text-gray-400 font-medium
-                  ${touchTargetClasses} ${accessibilityClasses}
-                `}
-                aria-label="Cancel post creation"
-              >
-                Cancel
-              </button>
-              
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Create Post
-              </h2>
-              
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className={`
-                  px-4 py-2 rounded-full font-medium transition-all
-                  ${canSubmit 
-                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                    : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                  }
-                  ${touchTargetClasses} ${accessibilityClasses}
-                `}
-                aria-label={isSubmitting ? 'Publishing post...' : 'Publish post'}
-              >
-                {isSubmitting ? 'Publishing...' : 'Post'}
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-              {/* Content Type Tabs */}
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <ContentTypeTabs
-                  activeType={contentType}
-                  onTypeChange={handleContentTypeChange}
-                  className="mobile-optimized"
+            {/* Title Input (for certain content types) */}
+            {(contentType === ContentType.LINK || contentType === ContentType.PROPOSAL) && (
+              <div className="px-4 py-3">
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className={`
+                    w-full px-0 py-2 text-lg font-medium bg-transparent
+                    border-none outline-none resize-none
+                    text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    ${accessibilityClasses}
+                  `}
+                  maxLength={200}
                 />
               </div>
+            )}
 
-              {/* Title Input (for certain content types) */}
-              {(contentType === ContentType.LINK || contentType === ContentType.PROPOSAL) && (
-                <div className="px-4 py-3">
-                  <input
-                    type="text"
-                    placeholder="Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className={`
-                      w-full px-0 py-2 text-lg font-medium bg-transparent
-                      border-none outline-none resize-none
-                      text-gray-900 dark:text-white
-                      placeholder-gray-500 dark:placeholder-gray-400
-                      ${accessibilityClasses}
-                    `}
-                    maxLength={200}
-                  />
-                </div>
+            {/* Main Content Area */}
+            <div className="px-4 py-3">
+              {contentType === ContentType.TEXT && (
+                <textarea
+                  ref={textareaRef}
+                  placeholder="What's on your mind?"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className={`
+                    w-full px-0 py-2 text-base bg-transparent
+                    border-none outline-none resize-none min-h-[120px]
+                    text-gray-900 dark:text-white
+                    placeholder-gray-500 dark:placeholder-gray-400
+                    ${accessibilityClasses}
+                  `}
+                  maxLength={2000}
+                  aria-label="Post content"
+                />
               )}
 
-              {/* Main Content Area */}
-              <div className="px-4 py-3">
-                {contentType === ContentType.TEXT && (
+              {contentType === ContentType.MEDIA && (
+                <div className="space-y-4">
+                  <MediaUploadZone
+                    onUpload={handleMediaUpload}
+                    maxFiles={10}
+                    acceptedTypes={['image/*', 'video/*']}
+                  />
+                  
+                  {media.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {media.map((file, index) => (
+                        <div key={file.id} className="relative">
+                          <img
+                            src={file.preview}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            onClick={() => handleMediaRemove(index)}
+                            className={`
+                              absolute top-1 right-1 w-6 h-6 bg-red-500 text-white
+                              rounded-full flex items-center justify-center text-xs
+                              ${touchTargetClasses}
+                            `}
+                            aria-label={`Remove image ${index + 1}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <textarea
                     ref={textareaRef}
-                    placeholder="What's on your mind?"
+                    placeholder="Add a caption..."
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     className={`
                       w-full px-0 py-2 text-base bg-transparent
-                      border-none outline-none resize-none min-h-[120px]
+                      border-none outline-none resize-none min-h-[80px]
                       text-gray-900 dark:text-white
                       placeholder-gray-500 dark:placeholder-gray-400
                       ${accessibilityClasses}
                     `}
-                    maxLength={2000}
-                    aria-label="Post content"
+                    maxLength={1000}
                   />
-                )}
+                </div>
+              )}
 
-                {contentType === ContentType.MEDIA && (
-                  <div className="space-y-4">
-                    <MediaUploadZone
-                      onUpload={handleMediaUpload}
-                      maxFiles={10}
-                      acceptedTypes={['image/*', 'video/*']}
-
-                    />
-                    
-                    {media.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        {media.map((file, index) => (
-                          <div key={file.id} className="relative">
-                            <img
-                              src={file.preview}
-                              alt={`Upload ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg"
-                            />
-                            <button
-                              onClick={() => handleMediaRemove(index)}
-                              className={`
-                                absolute top-1 right-1 w-6 h-6 bg-red-500 text-white
-                                rounded-full flex items-center justify-center text-xs
-                                ${touchTargetClasses}
-                              `}
-                              aria-label={`Remove image ${index + 1}`}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <textarea
-                      ref={textareaRef}
-                      placeholder="Add a caption..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className={`
-                        w-full px-0 py-2 text-base bg-transparent
-                        border-none outline-none resize-none min-h-[80px]
-                        text-gray-900 dark:text-white
-                        placeholder-gray-500 dark:placeholder-gray-400
-                        ${accessibilityClasses}
-                      `}
-                      maxLength={1000}
-                    />
-                  </div>
-                )}
-
-                {contentType === ContentType.POLL && (
-                  <PollCreator
-                    onPollChange={(pollData) => {
-                      setPollData(pollData);
-                    }}
-                    className="mobile-optimized"
-                  />
-                )}
-
-                {contentType === ContentType.PROPOSAL && (
-                  <ProposalCreator
-                    onProposalChange={(proposalData) => {
-                      setProposalData(proposalData);
-                    }}
-                    className="mobile-optimized"
-                  />
-                )}
-
-                {contentType === ContentType.LINK && (
-                  <div className="space-y-4">
-                    <input
-                      type="url"
-                      placeholder="Paste a link..."
-                      value={linkUrl}
-                      onChange={(e) => {
-                        setLinkUrl(e.target.value);
-                        // Update link preview with the URL
-                        if (e.target.value) {
-                          setLinkPreview({
-                            url: e.target.value,
-                            title: '',
-                            description: '',
-                            type: 'website' // Default type, would be updated with actual preview data
-                          });
-                        } else {
-                          setLinkPreview(null);
-                        }
-                      }}
-                      className={`
-                        w-full px-3 py-2 border border-gray-300 dark:border-gray-600
-                        rounded-lg bg-white dark:bg-gray-800
-                        text-gray-900 dark:text-white
-                        placeholder-gray-500 dark:placeholder-gray-400
-                        ${accessibilityClasses}
-                      `}
-                    />
-                    
-                    <textarea
-                      ref={textareaRef}
-                      placeholder="Add your thoughts..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className={`
-                        w-full px-0 py-2 text-base bg-transparent
-                        border-none outline-none resize-none min-h-[80px]
-                        text-gray-900 dark:text-white
-                        placeholder-gray-500 dark:placeholder-gray-400
-                        ${accessibilityClasses}
-                      `}
-                      maxLength={1000}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Hashtag and Mention Input */}
-              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                <HashtagMentionInput
-                  value={content}
-                  onChange={setContent}
-                  onHashtagsChange={setHashtags}
-                  onMentionsChange={setMentions}
+              {contentType === ContentType.POLL && (
+                <PollCreator
+                  poll={pollData}
+                  onPollChange={handlePollChange}
+                  className="mobile-optimized"
                 />
-              </div>
+              )}
 
-              {/* Character Count */}
-              <div className="px-4 py-2 text-right">
-                <span className={`
-                  text-sm ${content.length > 1800 ? 'text-red-500' : 'text-gray-500'}
-                `}>
-                  {content.length}/2000
-                </span>
-              </div>
+              {contentType === ContentType.PROPOSAL && (
+                <ProposalCreator
+                  proposal={proposalData}
+                  onProposalChange={handleProposalChange}
+                  className="mobile-optimized"
+                />
+              )}
+
+              {contentType === ContentType.LINK && (
+                <div className="space-y-4">
+                  <input
+                    type="url"
+                    placeholder="Paste a link..."
+                    value={linkUrl}
+                    onChange={handleLinkUrlChange}
+                    className={`
+                      w-full px-3 py-2 border border-gray-300 dark:border-gray-600
+                      rounded-lg bg-white dark:bg-gray-800
+                      text-gray-900 dark:text-white
+                      placeholder-gray-500 dark:placeholder-gray-400
+                      ${accessibilityClasses}
+                    `}
+                  />
+                  
+                  <textarea
+                    ref={textareaRef}
+                    placeholder="Add your thoughts..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className={`
+                      w-full px-0 py-2 text-base bg-transparent
+                      border-none outline-none resize-none min-h-[80px]
+                      text-gray-900 dark:text-white
+                      placeholder-gray-500 dark:placeholder-gray-400
+                      ${accessibilityClasses}
+                    `}
+                    maxLength={1000}
+                  />
+                </div>
+              )}
             </div>
-          </motion.div>
-        </>
-      )}
+
+            {/* Hashtag and Mention Input */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+              <HashtagMentionInput
+                value={content}
+                onChange={setContent}
+                onHashtagsChange={setHashtags}
+                onMentionsChange={setMentions}
+              />
+            </div>
+
+            {/* Character Count */}
+            <div className="px-4 py-2 text-right">
+              <span className={`
+                text-sm ${content.length > 1800 ? 'text-red-500' : 'text-gray-500'}
+              `}>
+                {content.length}/2000
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      </>
     </AnimatePresence>
   );
 };

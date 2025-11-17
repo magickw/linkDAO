@@ -28,8 +28,8 @@ describe('SupportWidget', () => {
   it('opens the support options when widget button is clicked', () => {
     render(<SupportWidget />);
     
-    const widgetButton = screen.getByRole('button');
-    fireEvent.click(widgetButton);
+    const widgetButton = screen.getByTestId('help-circle-icon').closest('button');
+    fireEvent.click(widgetButton!);
     
     expect(screen.getByText('How can we help?')).toBeInTheDocument();
     expect(screen.getByText('AI Assistant')).toBeInTheDocument();
@@ -47,29 +47,28 @@ describe('SupportWidget', () => {
     
     // Click the X button to close
     const xButton = screen.getByTestId('x-icon').closest('button');
-    if (xButton) {
-      fireEvent.click(xButton);
-    }
+    fireEvent.click(xButton!);
     
     // Options should be closed
     expect(screen.queryByText('How can we help?')).not.toBeInTheDocument();
   });
 
   it('navigates to documentation when Documentation option is clicked', () => {
-    delete window.location;
-    window.location = { href: '' } as any;
+    const mockAssign = jest.fn();
+    Object.defineProperty(window, 'location', {
+      value: { href: '', assign: mockAssign },
+      writable: true
+    });
     
     render(<SupportWidget />);
     
     // Open the options
-    const widgetButton = screen.getByRole('button');
-    fireEvent.click(widgetButton);
+    const widgetButton = screen.getByTestId('help-circle-icon').closest('button');
+    fireEvent.click(widgetButton!);
     
     // Click Documentation option
     const docOption = screen.getByText('Documentation').closest('button');
-    if (docOption) {
-      fireEvent.click(docOption);
-    }
+    fireEvent.click(docOption!);
     
     expect(window.location.href).toBe('/support/documents');
   });
@@ -85,9 +84,7 @@ describe('SupportWidget', () => {
     
     // Click Community option
     const communityOption = screen.getByText('Community').closest('button');
-    if (communityOption) {
-      fireEvent.click(communityOption);
-    }
+    fireEvent.click(communityOption!);
     
     expect(openSpy).toHaveBeenCalledWith('https://discord.gg/linkdao', '_blank');
     
@@ -95,20 +92,21 @@ describe('SupportWidget', () => {
   });
 
   it('navigates to contact page when Contact Us option is clicked', () => {
-    delete window.location;
-    window.location = { href: '' } as any;
+    const mockAssign = jest.fn();
+    Object.defineProperty(window, 'location', {
+      value: { href: '', assign: mockAssign },
+      writable: true
+    });
     
     render(<SupportWidget />);
     
     // Open the options
-    const widgetButton = screen.getByRole('button');
-    fireEvent.click(widgetButton);
+    const widgetButton = screen.getByTestId('help-circle-icon').closest('button');
+    fireEvent.click(widgetButton!);
     
     // Click Contact Us option
     const contactOption = screen.getByText('Contact Us').closest('button');
-    if (contactOption) {
-      fireEvent.click(contactOption);
-    }
+    fireEvent.click(contactOption!);
     
     expect(window.location.href).toBe('/support/contact');
   });

@@ -6,8 +6,8 @@ import { MobileVirtualScrolling } from './MobileVirtualScrolling';
 import MobileEnhancedPostCard from './MobileEnhancedPostCard';
 import MobileEnhancedPostComposer from './MobileEnhancedPostComposer';
 import { EnhancedPost } from '@/types/feed';
-import { RichPostInput } from '@/types/enhancedPost';
 import { ReactionType } from '@/types/tokenReaction';
+import { RichPostInput } from '@/types/enhancedPost';
 
 interface MobileEnhancedFeedProps {
   posts: EnhancedPost[];
@@ -98,11 +98,23 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
     }
   };
 
+  const validateReactionType = (emoji: string): ReactionType | null => {
+    const validReactions: ReactionType[] = ['🔥', '🚀', '💎'];
+    return validReactions.includes(emoji as ReactionType) ? (emoji as ReactionType) : null;
+  };
+
   const renderPost = useCallback((item: { id: string; data: EnhancedPost }, index: number) => (
     <div className="px-4 pb-4">
       <MobileEnhancedPostCard
         post={item.data}
-        onReact={(postId, emoji, intensity) => onPostReact(postId, emoji as ReactionType, intensity)}
+        onReact={(postId, emoji, intensity) => {
+          const reactionType = validateReactionType(emoji);
+          if (reactionType) {
+            onPostReact(postId, reactionType, intensity);
+          } else {
+            console.warn('Invalid reaction type:', emoji);
+          }
+        }}
         onComment={onPostComment}
         onShare={onPostShare}
         onBookmark={onPostBookmark}
@@ -249,7 +261,7 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
                 {sortOptions.map((option) => (
                   <button
                     key={option.key}
-                    onClick={() => handleSortChange(option.key)}
+                    onClick={() => handleSortChange(option.key as typeof sortBy)}
                     className={`
                       w-full flex items-center space-x-3 p-4 rounded-xl transition-colors
                       ${sortBy === option.key 

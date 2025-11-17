@@ -6,6 +6,7 @@ import { MobileTokenReactionSystem } from './MobileTokenReactionSystem';
 import { InlinePreviewRenderer } from '@/components/InlinePreviews/InlinePreviewRenderer';
 import SocialProofIndicator from '@/components/SocialProof/SocialProofIndicator';
 import TrendingBadge from '@/components/TrendingBadge/TrendingBadge';
+import EnhancedReactionSystem from '@/components/EnhancedReactionSystem';
 import { EnhancedPost } from '@/types/feed';
 import { ReactionType } from '@/types/tokenReaction';
 
@@ -28,12 +29,17 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   onBookmark,
   onShare,
   onComment,
-  onViewReactors,
   onUserPress,
+  onViewReactors,
   className = '',
   defaultReactionEmoji = '🔥',
   defaultReactionIntensity = 0.5
 }) => {
+  // Validate reaction emoji
+  const validReactionEmojis = ['🔥', '🚀', '💎'] as const;
+  const validatedReactionEmoji = validReactionEmojis.includes(defaultReactionEmoji as any) 
+    ? defaultReactionEmoji 
+    : '🔥';
   const {
     triggerHapticFeedback,
     createSwipeHandler,
@@ -53,10 +59,10 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const shouldTruncateContent = post.contentCid.length > 300;
+  const shouldTruncateContent = post.content.length > 300;
   const displayContent = showFullContent || !shouldTruncateContent
-    ? post.contentCid
-    : `${post.contentCid.slice(0, 300)}...`;
+    ? post.content
+    : `${post.content.slice(0, 300)}...`;
 
   const handleSwipe = createSwipeHandler({
     onSwipeLeft: (info: PanInfo) => {
@@ -70,12 +76,16 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         }, 200);
       }
     },
-    onSwipeRight: (info: PanInfo) => {
+    onSwipeRight: async (info: PanInfo) => {
       if (Math.abs(info.offset.x) > 100) {
         setSwipeAction('like');
         triggerHapticFeedback('medium');
-        setTimeout(() => {
-          onReact(post.id, defaultReactionEmoji, defaultReactionIntensity);
+        setTimeout(async () => {
+          try {
+            await onReact(post.id, validatedReactionEmoji, defaultReactionIntensity);
+          } catch (error) {
+            console.error('Failed to add reaction:', error);
+          }
           setSwipeAction(null);
           announceToScreenReader('Post liked');
         }, 200);
@@ -112,6 +122,19 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
     return `${Math.floor(diffInSeconds / 86400)}d`;
   };
 
+  // Map emoji reactions to consistent emojis
+  const getReactionEmoji = (type: string): string => {
+    switch (type) {
+      case 'like': return '👍';
+      case 'love': return '❤️';
+      case 'laugh': return '😂';
+      case 'surprise': return '😮';
+      case 'sad': return '😢';
+      case 'angry': return '😠';
+      default: return '🔥';
+    }
+  };
+
   return (
     <motion.div
       ref={cardRef}
@@ -136,7 +159,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
           <div className={`
             text-4xl ${swipeAction === 'bookmark' ? 'text-blue-500' : 'text-green-500'}
           `}>
-            {swipeAction === 'bookmark' ? '🔖' : defaultReactionEmoji}
+            {swipeAction === 'bookmark' ? '🔖' : validatedReactionEmoji}
           </div>
         </motion.div>
       )}
@@ -289,39 +312,117 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         {/* Social Proof */}
         {post.socialProof && (
           <div className="mb-3">
-            <SocialProofIndicator
-              socialProof={post.socialProof}
-              className="mobile-optimized"
-            />
+            <SocialProofIndicator socialProof={post.socialProof} />
           </div>
         )}
 
-        {/* Engagement Stats */}
-        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
-          <span>{post.views} views</span>
-          <span>{post.comments} comments</span>
-          <span>{post.shares} shares</span>
+        {/* Reactions */}
+        <div className="mb-3">
+          <EnhancedReactionSystem
+            postId={post.id}
+            postType="enhanced"
+            initialReactions={post.reactions.map(r => {
+              // Map the reaction type to a valid type for EnhancedReactionSystem
+              let reactionType: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art' | 'like' | 'love' | 'laugh' | 'angry' | 'sad' = 'like';
+              
+              // Map common reaction types
+              switch (r.type) {
+                case '🔥':
+                case 'hot':
+                  reactionType = 'hot';
+                  break;
+                case '💎':
+                case 'diamond':
+                  reactionType = 'diamond';
+                  break;
+                case '🚀':
+                case 'bullish':
+                  reactionType = 'bullish';
+                  break;
+                case '⚖️':
+                case 'governance':
+                  reactionType = 'governance';
+                  break;
+                case '🎨':
+                case 'art':
+                  reactionType = 'art';
+                  break;
+                case '👍':
+                case 'like':
+                  reactionType = 'like';
+                  break;
+                case '❤️':
+                case 'love':
+                  reactionType = 'love';
+                  break;
+                case '😂':
+                case 'laugh':
+                  reactionType = 'laugh';
+                  break;
+                case '😠':
+                case 'angry':
+                  reactionType = 'angry';
+                  break;
+                case '😢':
+                case 'sad':
+                  reactionType = 'sad';
+                  break;
+                default:
+                  reactionType = 'like';
+              }
+              
+              return {
+                type: reactionType,
+                emoji: getReactionEmoji(r.type),
+                label: r.type,
+                totalStaked: r.totalAmount,
+                userStaked: 0, // We don't have user-specific data in this context
+                contributors: r.users.map(u => u.address),
+                rewardsEarned: 0, // We don't have reward data in this context
+                count: r.users.length
+              };
+            })}
+            onReaction={async (postId, reactionType, amount) => {
+              // Map the reactionType back to an emoji for onReact
+              let emoji = '👍'; // default
+              switch (reactionType) {
+                case 'hot':
+                  emoji = '🔥';
+                  break;
+                case 'diamond':
+                  emoji = '💎';
+                  break;
+                case 'bullish':
+                  emoji = '🚀';
+                  break;
+                case 'governance':
+                  emoji = '⚖️';
+                  break;
+                case 'art':
+                  emoji = '🎨';
+                  break;
+                case 'like':
+                  emoji = '👍';
+                  break;
+                case 'love':
+                  emoji = '❤️';
+                  break;
+                case 'laugh':
+                  emoji = '😂';
+                  break;
+                case 'angry':
+                  emoji = '😠';
+                  break;
+                case 'sad':
+                  emoji = '😢';
+                  break;
+              }
+              await onReact(postId, emoji, amount || 1);
+            }}
+          />
         </div>
 
-        {/* Token Reactions */}
-        <MobileTokenReactionSystem
-          postId={post.id}
-          reactions={post.reactions.map(r => ({
-            id: `${post.id}-${r.type}`,
-            postId: post.id,
-            userId: 'current-user',
-            type: r.type as ReactionType,
-            amount: r.totalAmount,
-            rewardsEarned: 0,
-            createdAt: new Date()
-          }))}
-          userWallet="user-wallet" // This should come from context
-          onReact={handleReaction}
-          onViewReactors={handleViewReactors}
-          className="mb-3"
-        />
-
-        {/* Action Buttons */}
+        {/* Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => onComment(post.id)}
@@ -330,12 +431,27 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
               text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
               ${touchTargetClasses} ${accessibilityClasses}
             `}
-            aria-label="Comment on post"
+            aria-label="Comment"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="text-sm font-medium">Comment</span>
+            <span className="text-sm font-medium">{post.comments}</span>
+          </button>
+
+          <button
+            onClick={() => onReact(post.id, validatedReactionEmoji, defaultReactionIntensity)}
+            className={`
+              flex items-center space-x-2 px-3 py-2 rounded-lg
+              text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
+              ${touchTargetClasses} ${accessibilityClasses}
+            `}
+            aria-label="React"
+          >
+            <span className="text-lg">{validatedReactionEmoji}</span>
+            <span className="text-sm font-medium">
+              {post.reactions.reduce((sum, reaction) => sum + reaction.totalAmount, 0)}
+            </span>
           </button>
 
           <button
@@ -345,12 +461,12 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
               text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
               ${touchTargetClasses} ${accessibilityClasses}
             `}
-            aria-label="Share post"
+            aria-label="Share"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            <span className="text-sm font-medium">Share</span>
+            <span className="text-sm font-medium">{post.shares}</span>
           </button>
 
           <button
@@ -360,12 +476,16 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
               text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
               ${touchTargetClasses} ${accessibilityClasses}
             `}
-            aria-label="Bookmark post"
+            aria-label={post.isBookmarked ? "Remove bookmark" : "Bookmark"}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg 
+              className="w-5 h-5" 
+              fill={post.isBookmarked ? "currentColor" : "none"} 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            <span className="text-sm font-medium">Save</span>
           </button>
         </div>
       </div>

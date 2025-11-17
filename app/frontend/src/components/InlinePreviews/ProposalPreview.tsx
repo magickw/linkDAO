@@ -9,7 +9,7 @@ interface ProposalPreviewProps {
 }
 
 export default function ProposalPreview({ data, className = '', compact = false, onClick }: ProposalPreviewProps) {
-  // The data should already be in the correct format as ProposalPreviewData
+  // The data is already in the correct format as ProposalPreviewData
   // No need for legacy handling since the type system ensures correct data format
   const proposalData = data;
   const getStatusColor = (status: ProposalStatus) => {
@@ -72,10 +72,10 @@ export default function ProposalPreview({ data, className = '', compact = false,
     return Math.round((votes / total) * 100);
   };
 
-  const totalVotes = proposalData.yesVotes + proposalData.noVotes + ('abstainVotes' in data ? data.abstainVotes : 0);
+  const totalVotes = proposalData.yesVotes + proposalData.noVotes + (proposalData.abstainVotes || 0);
   const yesPercentage = calculateVotePercentage(proposalData.yesVotes, totalVotes);
   const noPercentage = calculateVotePercentage(proposalData.noVotes, totalVotes);
-  const abstainPercentage = 'abstainVotes' in data ? calculateVotePercentage(data.abstainVotes, totalVotes) : 0;
+  const abstainPercentage = proposalData.abstainVotes ? calculateVotePercentage(proposalData.abstainVotes, totalVotes) : 0;
   const quorumMet = totalVotes >= proposalData.quorum;
 
   const truncateText = (text: string, maxLength: number) => {
@@ -105,7 +105,7 @@ export default function ProposalPreview({ data, className = '', compact = false,
             </span>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-            {'category' in data ? `${data.category} • ` : ''}
+            {proposalData.category ? `${proposalData.category} • ` : ''}
             {proposalData.status === ProposalStatus.ACTIVE ? formatTimeRemaining(proposalData.votingEnds) : 'Voting ended'}
           </p>
         </div>
@@ -133,9 +133,9 @@ export default function ProposalPreview({ data, className = '', compact = false,
             <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
               Governance Proposal
             </span>
-            {'category' in data && (
+            {'category' in proposalData && (
               <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                {data.category}
+                {proposalData.category}
               </span>
             )}
           </div>
@@ -163,21 +163,19 @@ export default function ProposalPreview({ data, className = '', compact = false,
             <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 font-mono">
               {proposalData.proposer.substring(0, 6)}...{proposalData.proposer.substring(38)}
             </span>
-            {'proposerReputation' in data && data.proposerReputation && (
+            {proposalData.proposerReputation && (
               <span className="text-xs text-gray-500 dark:text-gray-400">
-                (Rep: {data.proposerReputation})
+                (Rep: {proposalData.proposerReputation})
               </span>
             )}
           </div>
-          {'requiredMajority' in data && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {data.requiredMajority}% majority required
-            </span>
-          )}
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {proposalData.requiredMajority}% majority required
+          </span>
         </div>
 
         {/* Voting Progress */}
-        {proposalData.status === 'active' && (
+        {proposalData.status === ProposalStatus.ACTIVE && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
@@ -216,7 +214,7 @@ export default function ProposalPreview({ data, className = '', compact = false,
             </div>
 
             {/* Enhanced Vote Bars with Abstain */}
-            {'abstainVotes' in data && abstainPercentage > 0 && (
+            {'abstainVotes' in proposalData && abstainPercentage > 0 && (
               <div className="flex items-center space-x-2">
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                   <div 
@@ -235,8 +233,8 @@ export default function ProposalPreview({ data, className = '', compact = false,
               <div className="flex space-x-4">
                 <span>✅ {proposalData.yesVotes.toLocaleString()}</span>
                 <span>❌ {proposalData.noVotes.toLocaleString()}</span>
-                {'abstainVotes' in data && data.abstainVotes > 0 && (
-                  <span>⚪ {data.abstainVotes.toLocaleString()}</span>
+                {'abstainVotes' in proposalData && (proposalData as any).abstainVotes > 0 && (
+                  <span>⚪ {proposalData.abstainVotes.toLocaleString()}</span>
                 )}
               </div>
               <div className="flex items-center space-x-1">
@@ -264,9 +262,9 @@ export default function ProposalPreview({ data, className = '', compact = false,
                 <span className="text-red-600 dark:text-red-400">
                   ❌ {proposalData.noVotes.toLocaleString()} ({noPercentage}%)
                 </span>
-                {'abstainVotes' in data && data.abstainVotes > 0 && (
+                {proposalData.abstainVotes > 0 && (
                   <span className="text-gray-600 dark:text-gray-400">
-                    ⚪ {data.abstainVotes.toLocaleString()} ({abstainPercentage}%)
+                    ⚪ {proposalData.abstainVotes.toLocaleString()} ({abstainPercentage}%)
                   </span>
                 )}
               </div>
@@ -282,7 +280,7 @@ export default function ProposalPreview({ data, className = '', compact = false,
           <button className="flex-1 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors duration-200">
             View Proposal
           </button>
-          {proposalData.status === 'active' && (
+          {proposalData.status === ProposalStatus.ACTIVE && (
             <button className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg transition-colors duration-200">
               Vote
             </button>

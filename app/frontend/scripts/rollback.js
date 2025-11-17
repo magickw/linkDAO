@@ -1,10 +1,27 @@
 #!/usr/bin/env node
 
-const { execFileSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const fetch = require('node-fetch');
+
+// Dynamic import for fetch (Node.js 18+ has native fetch, but we'll use node-fetch for compatibility)
+let fetch;
+try {
+  // Try native fetch first (Node.js 18+)
+  fetch = globalThis.fetch;
+  if (!fetch) {
+    throw new Error('Native fetch not available');
+  }
+} catch {
+  // Fallback to node-fetch for older Node.js versions
+  try {
+    fetch = require('node-fetch');
+  } catch (error) {
+    console.warn('⚠️  Fetch not available. Some features may not work.');
+    fetch = null;
+  }
+}
 
 class RollbackManager {
   constructor(environment = 'production') {
@@ -242,10 +259,19 @@ class RollbackManager {
       return;
     }
     
+    // Check if fetch is available
+    if (!fetch) {
+      console.warn('⚠️  Fetch not available - skipping rollback verification');
+      return;
+    }
+    
     // Health check with timeout and proper error handling
+    let controller;
+    let timeoutId;
+    
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
       const response = await fetch(`${baseUrl}/api/health`, {
         signal: controller.signal,
@@ -253,8 +279,6 @@ class RollbackManager {
           'User-Agent': 'LinkDAO-Rollback-Manager/1.0'
         }
       });
-      
-      clearTimeout(timeoutId);
       
       if (!response.ok) {
         throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
@@ -272,6 +296,15 @@ class RollbackManager {
         throw new Error('Rollback verification timed out after 30 seconds');
       }
       throw new Error(`Rollback verification failed: ${error.message}`);
+    } finally {
+      // Always clean up the timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      // Clean up the controller
+      if (controller) {
+        controller.abort(); // This is safe even if already aborted
+      }
     }
   }
 

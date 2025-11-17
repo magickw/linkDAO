@@ -225,15 +225,10 @@ export function useFilterState({
 
 // Helper function to determine post type
 function determinePostType(post: EnhancedPost): ContentType {
-  if (post.poll) return ContentType.POLL;
-  if (post.proposal) return ContentType.PROPOSAL;
-  if (post.mediaCids && post.mediaCids.length > 0) {
-    // This is a simplified check - in reality you'd need to check media types
-    return ContentType.IMAGE;
-  }
-  if (post.content && post.content.includes('http')) {
-    return ContentType.LINK;
-  }
+  if (post.postType === 'proposal') return ContentType.PROPOSAL;
+  // For other post types, we'll need to infer from content
+  if (post.previews?.media) return ContentType.IMAGE;
+  if (post.previews?.link) return ContentType.LINK;
   return ContentType.TEXT;
 }
 

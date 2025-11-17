@@ -22,7 +22,7 @@ interface SupportOption {
 
 const SupportWidget: React.FC = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
-
+  const [showAIChat, setShowAIChat] = useState(false);
 
   const supportOptions: SupportOption[] = [
     {
@@ -31,8 +31,8 @@ const SupportWidget: React.FC = () => {
       description: 'Get instant help from our AI support assistant',
       icon: <MessageCircle className="w-5 h-5" />,
       action: () => {
-        // This would integrate with the AI chat component
-        alert('AI Chat would open here');
+        setShowAIChat(true);
+        setIsWidgetOpen(false);
       },
       color: 'blue'
     },
@@ -96,13 +96,13 @@ const SupportWidget: React.FC = () => {
                   option.color === 'blue' ? 'bg-blue-100' :
                   option.color === 'green' ? 'bg-green-100' :
                   option.color === 'purple' ? 'bg-purple-100' :
-                  option.color === 'orange' ? 'bg-orange-100' : 'bg-gray-100'
+                  'bg-orange-100'
                 }`}>
                   <div className={`${
                     option.color === 'blue' ? 'text-blue-600' :
                     option.color === 'green' ? 'text-green-600' :
                     option.color === 'purple' ? 'text-purple-600' :
-                    option.color === 'orange' ? 'text-orange-600' : 'text-gray-600'
+                    'text-orange-600'
                   }`}>
                     {option.icon}
                   </div>
@@ -128,7 +128,7 @@ const SupportWidget: React.FC = () => {
       )}
 
       {/* AI Chat Support Component */}
-      <AIChatSupport />
+      {showAIChat && <AIChatSupport />}
     </div>
   );
 };

@@ -22,18 +22,13 @@ export function bigIntToJson(key: string, value: any): any {
  * @returns The deserialized value
  */
 export function jsonToBigInt(key: string, value: any): any {
-  // This is a simple approach - in practice, you might want to check
-  // if the string represents a BigInt based on some criteria
   if (typeof value === 'string' && /^-?\d+n?$/.test(value)) {
-    // Remove the 'n' suffix if present
     const cleanValue = value.replace(/n$/, '');
     
-    // Validate that the string contains only digits (and optional minus sign)
     if (/^-?\d+$/.test(cleanValue)) {
       try {
         return BigInt(cleanValue);
       } catch (e) {
-        // If conversion fails (e.g., empty string, invalid format), return the original value
         return value;
       }
     }

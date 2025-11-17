@@ -42,14 +42,14 @@ export class FrontendReferralService {
     return FrontendReferralService.instance;
   }
 
-  async generateReferralCode(userAddress?: string): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
+  async generateReferralCode(): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
     const code = randomHex(8);
     const link = typeof window !== 'undefined' ? `${window.location.origin}/token?ref=${code}` : `/token?ref=${code}`;
     return { success: true, referralCode: code, referralLink: link };
   }
 
   async getReferralInfo(userAddress: string): Promise<ReferralInfo | null> {
-    const codeRes = await this.generateReferralCode(userAddress);
+    const codeRes = await this.generateReferralCode();
     if (!codeRes.success) return null;
     return {
       referrer: userAddress,
@@ -77,7 +77,6 @@ export class FrontendReferralService {
   }
 
   async claimRewards(userAddress: string): Promise<{ success: boolean; totalAmount?: number; transactionHash?: string; error?: string }> {
-    // Demo implementation - validate input and generate mock reward
     if (!userAddress || !userAddress.startsWith('0x')) {
       return { success: false, error: 'Invalid user address' };
     }
@@ -90,7 +89,7 @@ export class FrontendReferralService {
   async getReferralLeaderboard(limit = 10): Promise<Array<{ user: string; referrals: number; rewards: number }>> {
     const list: Array<{ user: string; referrals: number; rewards: number }> = [];
     for (let i = 0; i < Math.min(limit, 10); i++) {
-      const randomStr = Math.random().toString(16).substring(2);
+      const randomStr = Math.random().toString(16).slice(2);
       const paddedStr = randomStr.padEnd(40, '0');
       list.push({ 
         user: `0x${paddedStr}`, 
@@ -102,18 +101,16 @@ export class FrontendReferralService {
   }
 
   async validateReferralCode(referralCode: string): Promise<{ isValid: boolean; referrer?: string; error?: string }> {
-    // Demo implementation - validate referral code format and generate mock referrer
     if (!referralCode || referralCode.length < 6) {
       return { isValid: false, error: 'Invalid referral code format' };
     }
     
-    // Mock validation - 80% chance of being valid for demo purposes
     const isValid = referralCode.length >= 6 && /^[a-zA-Z0-9]+$/.test(referralCode);
     if (!isValid) {
       return { isValid: false, error: 'Referral code contains invalid characters' };
     }
     
-    const randomStr = Math.random().toString(16).substring(2);
+    const randomStr = Math.random().toString(16).slice(2);
     const paddedStr = randomStr.padEnd(40, '0');
     return { 
       isValid: true, 

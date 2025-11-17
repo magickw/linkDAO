@@ -236,6 +236,7 @@ export const CachedContentFallback: React.FC<{
       
       return '[Unsupported data type]';
     } catch (error) {
+      console.warn('Error sanitizing cached data:', error);
       return '[Error sanitizing data]';
     }
   };
@@ -266,7 +267,10 @@ export const CachedContentFallback: React.FC<{
       <div className="opacity-75">
         {/* Render sanitized cached content */}
         <pre className="text-sm bg-gray-100 p-3 rounded overflow-auto max-h-96">
-          {sanitizedContent}
+          {typeof sanitizedContent === 'string' 
+            ? sanitizedContent 
+            : JSON.stringify(sanitizedContent, null, 2)
+          }
         </pre>
       </div>
     </div>
