@@ -25,7 +25,7 @@ export class ConversationService {
     
     for (const endpoint of CONVERSATION_ENDPOINTS) {
       try {
-        return await fetchWithRetry<ConversationResponse>(
+        const response = await fetchWithRetry<ConversationResponse>(
           `${API_BASE_URL}${endpoint}?limit=${limit}&offset=${offset}`,
           {
             headers: {
@@ -39,6 +39,8 @@ export class ConversationService {
             maxBackoffMs: 5000
           }
         );
+        
+        return response;
       } catch (error) {
         console.debug(`Endpoint ${endpoint} failed:`, error);
         lastError = error as Error;
@@ -47,6 +49,13 @@ export class ConversationService {
     }
 
     // If we get here, all endpoints failed
-    throw new Error('Unable to fetch conversations - service unavailable');
+    // Provide more specific error message based on the last error
+    if (lastError && lastError.message.includes('503')) {
+      throw new Error('Messaging service is temporarily unavailable. Please check your connection and try again.');
+    } else if (lastError && lastError.message.includes('offline')) {
+      throw new Error('You appear to be offline. Please check your internet connection and try again.');
+    } else {
+      throw new Error('Unable to fetch conversations - service unavailable. Please try again later.');
+    }
   }
 }

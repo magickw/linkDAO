@@ -142,80 +142,111 @@ const SupportAnalyticsDashboard: React.FC = () => {
   };
 
   // Simple chart components for demonstration
-  const SimpleBarChart = () => (
-    <div className="h-64">
-      <div className="flex items-end h-48 border-b border-l border-gray-200 pb-4 pl-4">
-        {ticketData.slice(-7).map((data, index) => (
-          <div key={index} className="flex flex-col items-center flex-1 px-1">
-            <div
-              className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
-              style={{ height: `${(data.count / 60) * 100}%` }}
-              title={`${data.count} tickets`}
-            ></div>
-            <div className="text-xs text-gray-500 mt-2">
-              {new Date(data.date).getDate()}
+  const SimpleBarChart = () => {
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const maxHeight = Math.max(...ticketData.map(d => d.count), 1);
+    
+    return (
+      <div className="h-64">
+        <div className="flex items-end h-48 border-b border-l border-gray-200 pb-4 pl-4">
+          {ticketData.slice(-Math.min(days, 30)).map((data, index) => (
+            <div key={index} className="flex flex-col items-center flex-1 px-1">
+              <div
+                className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer min-h-1"
+                style={{ height: `${Math.max((data.count / maxHeight) * 100, 2)}%` }}
+                title={`${data.count} tickets on ${data.date}`}
+              ></div>
+              <div className="text-xs text-gray-500 mt-2">
+                {new Date(data.date).getDate()}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-center text-sm text-gray-500 mt-2">
+          Ticket Volume ({timeRange})
+        </div>
+      </div>
+    );
+  };
+
+  const SimplePieChart = () => {
+    const total = categoryData.reduce((sum, cat) => sum + cat.value, 0);
+    let cumulativePercentage = 0;
+    
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="relative w-48 h-48">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+            {categoryData.map((cat, index) => {
+              const percentage = (cat.value / total) * 100;
+              const strokeDasharray = `${percentage} ${100 - percentage}`;
+              const strokeDashoffset = -cumulativePercentage;
+              cumulativePercentage += percentage;
+              
+              return (
+                <circle
+                  key={cat.name}
+                  cx="50"
+                  cy="50"
+                  r="15.915"
+                  fill="transparent"
+                  stroke={cat.color}
+                  strokeWidth="8"
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-300"
+                />
+              );
+            })}
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{total}</div>
+              <div className="text-xs text-gray-500">Total</div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
-      <div className="text-center text-sm text-gray-500 mt-2">
-        Ticket Volume (Last 7 Days)
-      </div>
-    </div>
-  );
+    );
+  };
 
-  const SimplePieChart = () => (
-    <div className="h-64 flex items-center justify-center">
-      <div className="relative w-48 h-48 rounded-full border-8 border-gray-200">
-        {categoryData.map((cat, index) => {
-          const startAngle = index * (360 / categoryData.length);
-          const endAngle = (index + 1) * (360 / categoryData.length);
-          return (
+  const SimpleLineChart = () => {
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const chartData = ticketData.slice(-Math.min(days, 30));
+    const maxResolved = Math.max(...chartData.map(d => d.resolved), 1);
+    
+    return (
+      <div className="h-64">
+        <div className="h-48 border-b border-l border-gray-200 pb-4 pl-4 relative">
+          {/* Grid lines */}
+          {[0, 25, 50, 75, 100].map((y) => (
             <div
-              key={cat.name}
-              className="absolute inset-0 rounded-full"
-              style={{
-                clipPath: `conic-gradient(from ${startAngle}deg, ${cat.color} 0deg ${endAngle - startAngle}deg, transparent ${endAngle - startAngle}deg 360deg)`
-              }}
+              key={y}
+              className="absolute left-0 right-0 h-px bg-gray-100"
+              style={{ bottom: `${y}%` }}
             ></div>
-          );
-        })}
-        <div className="absolute inset-4 bg-white rounded-full"></div>
-      </div>
-    </div>
-  );
+          ))}
 
-  const SimpleLineChart = () => (
-    <div className="h-64">
-      <div className="h-48 border-b border-l border-gray-200 pb-4 pl-4 relative">
-        {/* Grid lines */}
-        {[0, 25, 50, 75, 100].map((y) => (
-          <div
-            key={y}
-            className="absolute left-0 right-0 h-px bg-gray-100"
-            style={{ bottom: `${y}%` }}
-          ></div>
-        ))}
-
-        {/* Line */}
-        <svg className="absolute inset-0 w-full h-full">
-          <polyline
-            fill="none"
-            stroke="#3b82f6"
-            strokeWidth="2"
-            points={ticketData.slice(-7).map((data, index) => {
-              const x = (index / 6) * 100;
-              const y = 100 - (data.resolved / 50) * 100;
-              return `${x}%,${y}%`;
-            }).join(' ')}
-          />
-        </svg>
+          {/* Line */}
+          <svg className="absolute inset-0 w-full h-full">
+            <polyline
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="2"
+              points={chartData.map((data, index) => {
+                const x = chartData.length > 1 ? (index / (chartData.length - 1)) * 100 : 50;
+                const y = 100 - (data.resolved / maxResolved) * 100;
+                return `${x}%,${Math.max(y, 0)}%`;
+              }).join(' ')}
+            />
+          </svg>
+        </div>
+        <div className="text-center text-sm text-gray-500 mt-2">
+          Resolution Rate ({timeRange})
+        </div>
       </div>
-      <div className="text-center text-sm text-gray-500 mt-2">
-        Resolution Rate (Last 7 Days)
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (

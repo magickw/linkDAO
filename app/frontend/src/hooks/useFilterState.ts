@@ -224,7 +224,7 @@ export function useFilterState({
 }
 
 // Helper function to determine post type
-function determinePostType(post: any): ContentType {
+function determinePostType(post: EnhancedPost): ContentType {
   if (post.poll) return ContentType.POLL;
   if (post.proposal) return ContentType.PROPOSAL;
   if (post.mediaCids && post.mediaCids.length > 0) {

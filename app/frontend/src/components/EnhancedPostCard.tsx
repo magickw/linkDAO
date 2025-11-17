@@ -45,7 +45,8 @@ interface PostMedia {
     height?: number;
     duration?: number;
     size?: string;
-    [key: string]: any;
+    // Allow additional properties but maintain type safety
+    [key: string]: unknown;
   };
 }
 
@@ -72,6 +73,27 @@ interface PostEngagement {
   hasShared: boolean;
   recentLikers: PostAuthor[];
 }
+
+// Helper functions for type-safe media handling
+const hasValidDuration = (metadata?: PostMedia['metadata']): boolean => {
+  return metadata?.duration !== undefined && 
+         typeof metadata.duration === 'number' && 
+         metadata.duration > 0;
+};
+
+const formatDuration = (duration: number): string => {
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const getHostnameFromUrl = (url: string): string => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+};
 
 interface EnhancedPost {
   id: string;
@@ -421,9 +443,9 @@ export default function EnhancedPostCard({
                           </button>
                         </div>
                       </div>
-                      {media.metadata?.duration && typeof media.metadata.duration === 'number' && media.metadata.duration > 0 && (
+                      {hasValidDuration(media.metadata) && (
                         <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                          {Math.floor(media.metadata.duration / 60)}:{(media.metadata.duration % 60).toString().padStart(2, '0')}
+                          {formatDuration(media.metadata.duration!)}
                         </div>
                       )}
                     </div>
@@ -443,13 +465,7 @@ export default function EnhancedPostCard({
                             </p>
                           )}
                           <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                            {(() => {
-                              try {
-                                return media.url ? new URL(media.url).hostname : '';
-                              } catch {
-                                return '';
-                              }
-                            })()}
+                            {getHostnameFromUrl(media.url)}
                           </p>
                         </div>
                       </div>

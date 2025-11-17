@@ -14,9 +14,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { referralService } from '../services/referralService';
 
 // Initialize database connection
-const connectionString = process.env.DATABASE_URL!;
-const sql = postgres(connectionString, { ssl: 'require' });
-const db = drizzle(sql);
+import { db } from '../db'; // Use the shared database connection instead of creating a new one
 
 interface WalletConnectRequest {
   walletAddress: string;

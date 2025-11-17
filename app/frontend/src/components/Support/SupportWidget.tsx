@@ -22,7 +22,7 @@ interface SupportOption {
 
 const SupportWidget: React.FC = () => {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
+
 
   const supportOptions: SupportOption[] = [
     {
@@ -72,20 +72,14 @@ const SupportWidget: React.FC = () => {
     <div className="fixed bottom-6 right-6 z-40">
       {/* Main Widget Button */}
       <button
-        onClick={() => {
-          if (showOptions) {
-            setShowOptions(false);
-          } else {
-            setIsWidgetOpen(true);
-          }
-        }}
+        onClick={() => setIsWidgetOpen(!isWidgetOpen)}
         className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-full shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all"
       >
-        {showOptions ? <X className="w-6 h-6" /> : <HelpCircle className="w-6 h-6" />}
+        {isWidgetOpen ? <X className="w-6 h-6" /> : <HelpCircle className="w-6 h-6" />}
       </button>
 
       {/* Support Options */}
-      {showOptions && (
+      {isWidgetOpen && (
         <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900">How can we help?</h3>
@@ -98,8 +92,18 @@ const SupportWidget: React.FC = () => {
                 onClick={option.action}
                 className="w-full flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <div className={`w-10 h-10 bg-${option.color}-100 rounded-lg flex items-center justify-center mr-3`}>
-                  <div className={`text-${option.color}-600`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+                  option.color === 'blue' ? 'bg-blue-100' :
+                  option.color === 'green' ? 'bg-green-100' :
+                  option.color === 'purple' ? 'bg-purple-100' :
+                  option.color === 'orange' ? 'bg-orange-100' : 'bg-gray-100'
+                }`}>
+                  <div className={`${
+                    option.color === 'blue' ? 'text-blue-600' :
+                    option.color === 'green' ? 'text-green-600' :
+                    option.color === 'purple' ? 'text-purple-600' :
+                    option.color === 'orange' ? 'text-orange-600' : 'text-gray-600'
+                  }`}>
                     {option.icon}
                   </div>
                 </div>

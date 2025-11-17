@@ -14,76 +14,18 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
   disabled = false,
   className = ''
 }) => {
-  const [question, setQuestion] = useState(poll?.question || '');
-  const [options, setOptions] = useState(poll?.options?.map(opt => opt.text) || ['', '']);
-  const [allowMultiple, setAllowMultiple] = useState(poll?.allowMultiple || false);
-  const [tokenWeighted, setTokenWeighted] = useState(poll?.tokenWeighted || false);
-  const [minTokens, setMinTokens] = useState(poll?.minTokens || 0);
-  const [expiresAt, setExpiresAt] = useState(
-    poll?.endDate ? poll.endDate.toISOString().slice(0, 16) : ''
-  );
-
-  // Sync state with prop changes to prevent stale data
-  useEffect(() => {
-    if (poll) {
-      setQuestion(poll.question || '');
-      setOptions(poll.options?.map(opt => opt.text) || ['', '']);
-      setAllowMultiple(poll.allowMultiple || false);
-      setTokenWeighted(poll.tokenWeighted || false);
-      setMinTokens(poll.minTokens || 0);
-      setExpiresAt(poll.endDate ? poll.endDate.toISOString().slice(0, 16) : '');
-    }
-  }, [poll]);
+  // Fully controlled component - derive all state from props
+  const question = poll?.question || '';
+  const options = poll?.options?.map(opt => opt.text) || ['', ''];
+  const allowMultiple = poll?.allowMultiple || false;
+  const tokenWeighted = poll?.tokenWeighted || false;
+  const minTokens = poll?.minTokens || 0;
+  const expiresAt = poll?.endDate ? poll.endDate.toISOString().slice(0, 16) : '';
 
   const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuestion(e.target.value);
-    updatePoll(e.target.value, options);
-  };
-
-  const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...options];
-    newOptions[index] = value;
-    setOptions(newOptions);
-    updatePoll(question, newOptions);
-  };
-
-  const addOption = () => {
-    const newOptions = [...options, ''];
-    setOptions(newOptions);
-    updatePoll(question, newOptions);
-  };
-
-  const removeOption = (index: number) => {
-    const newOptions = options.filter((_, i) => i !== index);
-    setOptions(newOptions);
-    updatePoll(question, newOptions);
-  };
-
-  const handleAllowMultipleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAllowMultiple(e.target.checked);
-    updatePoll(question, options);
-  };
-
-  const handleTokenWeightedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTokenWeighted(e.target.checked);
-    updatePoll(question, options);
-  };
-
-  const handleMinTokensChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.max(0, parseInt(e.target.value) || 0);
-    setMinTokens(value);
-    updatePoll(question, options);
-  };
-
-  const handleExpiresAtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setExpiresAt(e.target.value);
-    updatePoll(question, options);
-  };
-
-  const updatePoll = (q: string, opts: string[]) => {
     onPollChange({
-      question: q,
-      options: opts.map((text, index) => ({
+      question: e.target.value,
+      options: options.map((text, index) => ({
         id: `option-${index}`,
         text,
         votes: 0,
@@ -95,6 +37,104 @@ export const PollCreator: React.FC<PollCreatorProps> = ({
       endDate: expiresAt ? new Date(expiresAt) : undefined
     });
   };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    onPollChange({
+      question,
+      options: newOptions.map((text, index) => ({
+        id: `option-${index}`,
+        text,
+        votes: 0,
+        tokenVotes: 0
+      })),
+      allowMultiple,
+      tokenWeighted,
+      minTokens,
+      endDate: expiresAt ? new Date(expiresAt) : undefined
+    });
+  };
+
+  const addOption = () => {
+    const newOptions = [...options, ''];
+    updatePoll(question, newOptions);
+  };
+
+  const removeOption = (index: number) => {
+    const newOptions = options.filter((_, i) => i !== index);
+    updatePoll(question, newOptions);
+  };
+
+  const handleAllowMultipleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newAllowMultiple = e.target.checked;
+    onPollChange({
+      question,
+      options: options.map((text, index) => ({
+        id: `option-${index}`,
+        text,
+        votes: 0,
+        tokenVotes: 0
+      })),
+      allowMultiple: newAllowMultiple,
+      tokenWeighted,
+      minTokens,
+      endDate: expiresAt ? new Date(expiresAt) : undefined
+    });
+  };
+
+  const handleTokenWeightedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTokenWeighted = e.target.checked;
+    onPollChange({
+      question,
+      options: options.map((text, index) => ({
+        id: `option-${index}`,
+        text,
+        votes: 0,
+        tokenVotes: 0
+      })),
+      allowMultiple,
+      tokenWeighted: newTokenWeighted,
+      minTokens,
+      endDate: expiresAt ? new Date(expiresAt) : undefined
+    });
+  };
+
+  const handleMinTokensChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Math.max(0, parseInt(e.target.value) || 0);
+    onPollChange({
+      question,
+      options: options.map((text, index) => ({
+        id: `option-${index}`,
+        text,
+        votes: 0,
+        tokenVotes: 0
+      })),
+      allowMultiple,
+      tokenWeighted,
+      minTokens: value,
+      endDate: expiresAt ? new Date(expiresAt) : undefined
+    });
+  };
+
+  const handleExpiresAtChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newExpiresAt = e.target.value;
+    onPollChange({
+      question,
+      options: options.map((text, index) => ({
+        id: `option-${index}`,
+        text,
+        votes: 0,
+        tokenVotes: 0
+      })),
+      allowMultiple,
+      tokenWeighted,
+      minTokens,
+      endDate: newExpiresAt ? new Date(newExpiresAt) : undefined
+    });
+  };
+
+  // Individual update handlers now handle the onPollChange calls directly
 
   return (
     <div className={`space-y-4 ${className}`}>

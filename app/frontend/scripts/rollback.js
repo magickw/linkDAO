@@ -122,47 +122,96 @@ class RollbackManager {
     });
   }
 
-  async performRollback(deployment) {
-    const commitHash = deployment.metadata.commitHash;
-    
-    console.log(`🔄 Rolling back to commit: ${commitHash}`);
-    
-    // Create rollback backup of current state
-    await this.createRollbackBackup();
-    
-    // Checkout target commit
-    console.log('📦 Checking out target commit...');
-    spawnSync('git', ['checkout', commitHash], { stdio: 'inherit' });
-    
-    // Install dependencies
-    console.log('📦 Installing dependencies...');
-    spawnSync('npm', ['ci'], { stdio: 'inherit' });
-    
-    // Build application
-    console.log('🔨 Building application...');
-    spawnSync('npm', ['run', 'build'], { stdio: 'inherit' });
-    
-    // Deploy application
-    console.log('🚢 Deploying application...');
-    if (this.environment === 'production') {
-      spawnSync('npm', ['run', 'deploy:production'], { stdio: 'inherit' });
-    } else {
-      spawnSync('npm', ['run', 'deploy:staging'], { stdio: 'inherit' });
+  validateCommitHash(commitHash) {
+    // Validate commit hash format (40 character hex string or short hash)
+    if (!commitHash || typeof commitHash !== 'string') {
+      throw new Error('Invalid commit hash: must be a non-empty string');
     }
     
-    // Verify deployment
-    console.log('🔍 Verifying deployment...');
-    await this.verifyRollback();
+    // Remove any potentially dangerous characters and validate format
+    const cleanHash = commitHash.replace(/[^a-fA-F0-9]/g, '');
+    if (cleanHash.length < 7 || cleanHash.length > 40) {
+      throw new Error('Invalid commit hash format: must be 7-40 hexadecimal characters');
+    }
     
-    // Log rollback
-    await this.logRollback(deployment);
+    return cleanHash;
+  }
+
+  async performRollback(deployment) {
+    const rawCommitHash = deployment.metadata.commitHash;
+    
+    try {
+      // Validate and sanitize commit hash to prevent command injection
+      const commitHash = this.validateCommitHash(rawCommitHash);
+      
+      console.log(`🔄 Rolling back to commit: ${commitHash}`);
+      
+      // Create rollback backup of current state
+      await this.createRollbackBackup();
+      
+      // Checkout target commit with error handling
+      console.log('📦 Checking out target commit...');
+      const checkoutResult = spawnSync('git', ['checkout', commitHash], { stdio: 'inherit' });
+      if (checkoutResult.status !== 0) {
+        throw new Error(`Git checkout failed with exit code ${checkoutResult.status}`);
+      }
+      
+      // Install dependencies with error handling
+      console.log('📦 Installing dependencies...');
+      const installResult = spawnSync('npm', ['ci'], { stdio: 'inherit' });
+      if (installResult.status !== 0) {
+        throw new Error(`NPM install failed with exit code ${installResult.status}`);
+      }
+      
+      // Build application with error handling
+      console.log('🔨 Building application...');
+      const buildResult = spawnSync('npm', ['run', 'build'], { stdio: 'inherit' });
+      if (buildResult.status !== 0) {
+        throw new Error(`Build failed with exit code ${buildResult.status}`);
+      }
+      
+      // Deploy application with error handling
+      console.log('🚢 Deploying application...');
+      const deployScript = this.environment === 'production' ? 'deploy:production' : 'deploy:staging';
+      const deployResult = spawnSync('npm', ['run', deployScript], { stdio: 'inherit' });
+      if (deployResult.status !== 0) {
+        throw new Error(`Deployment failed with exit code ${deployResult.status}`);
+      }
+      
+      // Verify deployment
+      console.log('🔍 Verifying deployment...');
+      await this.verifyRollback();
+      
+      // Log rollback
+      await this.logRollback(deployment);
+      
+    } catch (error) {
+      console.error(`❌ Rollback failed: ${error.message}`);
+      throw error;
+    }
   }
 
   async createRollbackBackup() {
     console.log('💾 Creating rollback backup...');
     
     const result = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
+    
+    // Add error checking for git rev-parse command
+    if (result.status !== 0) {
+      throw new Error(`Failed to get current commit hash: git rev-parse failed with exit code ${result.status}`);
+    }
+    
+    if (!result.stdout) {
+      throw new Error('Failed to get current commit hash: no output from git rev-parse');
+    }
+    
     const currentCommit = result.stdout.trim();
+    
+    // Validate the commit hash before using it
+    if (!currentCommit || currentCommit.length < 7) {
+      throw new Error(`Invalid commit hash received: ${currentCommit}`);
+    }
+    
     const rollbackId = `rollback_${Date.now()}`;
     
     const backupMetadata = {
@@ -177,6 +226,8 @@ class RollbackManager {
       path.join(this.backupDir, `${rollbackId}.json`),
       JSON.stringify(backupMetadata, null, 2)
     );
+    
+    console.log(`✅ Rollback backup created: ${rollbackId}`);
   }
 
   async verifyRollback() {
@@ -191,21 +242,35 @@ class RollbackManager {
       return;
     }
     
-    // Health check
+    // Health check with timeout and proper error handling
     try {
-      const response = await fetch(`${baseUrl}/api/health`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      const response = await fetch(`${baseUrl}/api/health`, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'LinkDAO-Rollback-Manager/1.0'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error(`Health check failed: ${response.status}`);
+        throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
       }
       
       const health = await response.json();
       if (health.status !== 'healthy') {
-        throw new Error('Application is not healthy after rollback');
+        throw new Error(`Application is not healthy after rollback: ${health.status}`);
       }
       
       console.log('✅ Rollback verification successful');
       
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Rollback verification timed out after 30 seconds');
+      }
       throw new Error(`Rollback verification failed: ${error.message}`);
     }
   }

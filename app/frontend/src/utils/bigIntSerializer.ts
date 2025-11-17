@@ -29,7 +29,6 @@ export function jsonToBigInt(key: string, value: any): any {
     const cleanValue = value.replace(/n$/, '');
     
     // Validate that the string contains only digits (and optional minus sign)
-    // Don't use Number() conversion as it has limitations with large integers
     if (/^-?\d+$/.test(cleanValue)) {
       try {
         return BigInt(cleanValue);

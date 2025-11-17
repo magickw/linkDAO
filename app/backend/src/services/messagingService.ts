@@ -97,6 +97,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error getting conversations:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to get conversations');
     }
   }
@@ -166,6 +169,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to start conversation');
     }
   }
@@ -194,6 +200,9 @@ export class MessagingService {
       return conversation[0];
     } catch (error) {
       safeLogger.error('Error getting conversation details:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to get conversation details');
     }
   }
@@ -267,6 +276,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error getting conversation messages:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to get conversation messages');
     }
   }
@@ -355,6 +367,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error sending message:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to send message');
     }
   }
@@ -403,6 +418,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error marking conversation as read:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to mark conversation as read');
     }
   }
@@ -445,6 +463,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error deleting conversation:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to delete conversation');
     }
   }
@@ -479,6 +500,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error archiving conversation:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to archive conversation');
     }
   }
@@ -511,6 +535,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error unarchiving conversation:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to unarchive conversation');
     }
   }
@@ -575,6 +602,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error updating message status:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to update message status');
     }
   }
@@ -617,6 +647,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error deleting message:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to delete message');
     }
   }
@@ -674,6 +707,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error searching messages:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to search messages');
     }
   }
@@ -773,6 +809,9 @@ export class MessagingService {
       }));
     } catch (error) {
       safeLogger.error('Error getting blocked users:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to get blocked users');
     }
   }
@@ -817,6 +856,9 @@ export class MessagingService {
       };
     } catch (error) {
       safeLogger.error('Error getting conversation participants:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       throw new Error('Failed to get conversation participants');
     }
   }
@@ -872,6 +914,9 @@ export class MessagingService {
       return blocked.length > 0;
     } catch (error) {
       safeLogger.error('Error checking if user is blocked:', error);
+      if (error instanceof Error && error.message.includes('database')) {
+        throw new Error('Messaging service temporarily unavailable. Database connection error.');
+      }
       return false;
     }
   }

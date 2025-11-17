@@ -31,7 +31,11 @@ export class MessagingController {
       res.json(apiResponse.success(conversations, 'Conversations retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversations:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve conversations'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve conversations'));
+      }
     }
   }
 
@@ -67,7 +71,11 @@ export class MessagingController {
       res.status(201).json(apiResponse.success(conversation.data || conversation, 'Conversation started successfully'));
     } catch (error) {
       safeLogger.error('Error starting conversation:', error);
-      res.status(500).json(apiResponse.error('Failed to start conversation'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to start conversation'));
+      }
     }
   }
 
@@ -95,7 +103,11 @@ export class MessagingController {
       res.json(apiResponse.success(conversation, 'Conversation details retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversation details:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve conversation details'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve conversation details'));
+      }
     }
   }
 
@@ -133,7 +145,11 @@ export class MessagingController {
       res.json(apiResponse.success(messages.data || messages, 'Messages retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversation messages:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve messages'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve messages'));
+      }
     }
   }
 
@@ -185,7 +201,11 @@ export class MessagingController {
       res.status(201).json(apiResponse.success(message.data || message, 'Message sent successfully'));
     } catch (error) {
       safeLogger.error('Error sending message:', error);
-      res.status(500).json(apiResponse.error('Failed to send message'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to send message'));
+      }
     }
   }
 
@@ -213,7 +233,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Conversation marked as read'));
     } catch (error) {
       safeLogger.error('Error marking conversation as read:', error);
-      res.status(500).json(apiResponse.error('Failed to mark conversation as read'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to mark conversation as read'));
+      }
     }
   }
 
@@ -241,7 +265,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Conversation deleted successfully'));
     } catch (error) {
       safeLogger.error('Error deleting conversation:', error);
-      res.status(500).json(apiResponse.error('Failed to delete conversation'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to delete conversation'));
+      }
     }
   }
 
@@ -269,7 +297,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Conversation archived successfully'));
     } catch (error) {
       safeLogger.error('Error archiving conversation:', error);
-      res.status(500).json(apiResponse.error('Failed to archive conversation'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to archive conversation'));
+      }
     }
   }
 
@@ -297,7 +329,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Conversation unarchived successfully'));
     } catch (error) {
       safeLogger.error('Error unarchiving conversation:', error);
-      res.status(500).json(apiResponse.error('Failed to unarchive conversation'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to unarchive conversation'));
+      }
     }
   }
 
@@ -328,7 +364,11 @@ export class MessagingController {
       res.json(apiResponse.success(encryptedMessage, 'Message encrypted successfully'));
     } catch (error) {
       safeLogger.error('Error encrypting message:', error);
-      res.status(500).json(apiResponse.error('Failed to encrypt message'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to encrypt message'));
+      }
     }
   }
 
@@ -359,7 +399,11 @@ export class MessagingController {
       res.json(apiResponse.success(decryptedMessage, 'Message decrypted successfully'));
     } catch (error) {
       safeLogger.error('Error decrypting message:', error);
-      res.status(500).json(apiResponse.error('Failed to decrypt message'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to decrypt message'));
+      }
     }
   }
 
@@ -389,7 +433,11 @@ export class MessagingController {
       res.json(apiResponse.success(result.data || result, 'Message status updated successfully'));
     } catch (error) {
       safeLogger.error('Error updating message status:', error);
-      res.status(500).json(apiResponse.error('Failed to update message status'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to update message status'));
+      }
     }
   }
 
@@ -417,7 +465,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Message deleted successfully'));
     } catch (error) {
       safeLogger.error('Error deleting message:', error);
-      res.status(500).json(apiResponse.error('Failed to delete message'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to delete message'));
+      }
     }
   }
 
@@ -448,7 +500,11 @@ export class MessagingController {
       res.json(apiResponse.success(searchResults, 'Message search completed successfully'));
     } catch (error) {
       safeLogger.error('Error searching messages:', error);
-      res.status(500).json(apiResponse.error('Failed to search messages'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to search messages'));
+      }
     }
   }
 
@@ -476,7 +532,11 @@ export class MessagingController {
       res.json(apiResponse.success(thread.data || thread, 'Message thread retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting message thread:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve message thread'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve message thread'));
+      }
     }
   }
 
@@ -505,7 +565,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'User blocked successfully'));
     } catch (error) {
       safeLogger.error('Error blocking user:', error);
-      res.status(500).json(apiResponse.error('Failed to block user'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to block user'));
+      }
     }
   }
 
@@ -533,7 +597,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'User unblocked successfully'));
     } catch (error) {
       safeLogger.error('Error unblocking user:', error);
-      res.status(500).json(apiResponse.error('Failed to unblock user'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to unblock user'));
+      }
     }
   }
 
@@ -551,7 +619,11 @@ export class MessagingController {
       res.json(apiResponse.success(blockedUsers, 'Blocked users retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting blocked users:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve blocked users'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve blocked users'));
+      }
     }
   }
 
@@ -582,7 +654,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Content reported successfully'));
     } catch (error) {
       safeLogger.error('Error reporting content:', error);
-      res.status(500).json(apiResponse.error('Failed to report content'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to report content'));
+      }
     }
   }
 
@@ -610,7 +686,11 @@ export class MessagingController {
       res.json(apiResponse.success(participants.data || participants, 'Participants retrieved successfully'));
     } catch (error) {
       safeLogger.error('Error getting conversation participants:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve participants'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to retrieve participants'));
+      }
     }
   }
 
@@ -640,7 +720,11 @@ export class MessagingController {
       res.json(apiResponse.success((result as any).data || result, 'Participant added successfully'));
     } catch (error) {
       safeLogger.error('Error adding participant:', error);
-      res.status(500).json(apiResponse.error('Failed to add participant'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to add participant'));
+      }
     }
   }
 
@@ -669,7 +753,11 @@ export class MessagingController {
       res.json(apiResponse.success(null, 'Participant removed successfully'));
     } catch (error) {
       safeLogger.error('Error removing participant:', error);
-      res.status(500).json(apiResponse.error('Failed to remove participant'));
+      if (error instanceof Error && error.message.includes('Messaging service temporarily unavailable')) {
+        res.status(503).json(apiResponse.error('Messaging service temporarily unavailable. Please try again later.', 503));
+      } else {
+        res.status(500).json(apiResponse.error('Failed to remove participant'));
+      }
     }
   }
 }

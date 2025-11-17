@@ -91,17 +91,17 @@ export const CommunityStatsWidget: React.FC<CommunityStatsWidgetProps> = ({
     const onlinePercentage = getOnlinePercentage();
     
     if (onlinePercentage === undefined) {
-      return { level: 'Unknown', color: 'text-gray-500' };
+      return { level: 'Unknown', color: 'text-gray-500 dark:text-gray-400' };
     }
     
     if (onlinePercentage >= 10) {
-      return { level: 'Very Active', color: 'text-green-600' };
+      return { level: 'Very Active', color: 'text-green-600 dark:text-green-400' };
     } else if (onlinePercentage >= 5) {
-      return { level: 'Active', color: 'text-blue-600' };
+      return { level: 'Active', color: 'text-blue-600 dark:text-blue-400' };
     } else if (onlinePercentage >= 2) {
-      return { level: 'Moderate', color: 'text-yellow-600' };
+      return { level: 'Moderate', color: 'text-yellow-600 dark:text-yellow-400' };
     } else {
-      return { level: 'Quiet', color: 'text-gray-600' };
+      return { level: 'Quiet', color: 'text-gray-600 dark:text-gray-400' };
     }
   };
 

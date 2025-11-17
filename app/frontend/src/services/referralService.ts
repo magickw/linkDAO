@@ -42,7 +42,7 @@ export class FrontendReferralService {
     return FrontendReferralService.instance;
   }
 
-  async generateReferralCode(userAddress: string): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
+  async generateReferralCode(userAddress?: string): Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }> {
     const code = randomHex(8);
     const link = typeof window !== 'undefined' ? `${window.location.origin}/token?ref=${code}` : `/token?ref=${code}`;
     return { success: true, referralCode: code, referralLink: link };
@@ -61,16 +61,9 @@ export class FrontendReferralService {
     };
   }
 
-  async getReferralRewards(userAddress: string): Promise<ReferralReward[]> {
-    // Try to fetch from backend if available, otherwise return empty array
-    try {
-      const res = await fetch(`${this.apiBase}/ldao/referral/rewards?address=${userAddress}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data.rewards) ? data.rewards : [];
-    } catch (err) {
-      return [];
-    }
+  async getReferralRewards(): Promise<ReferralReward[]> {
+    // Return empty array for demo implementation
+    return [];
   }
 
   async recordReferral(referralCode: string, referredUserAddress: string): Promise<{ success: boolean; rewardAmount?: number; error?: string }> {
@@ -97,8 +90,10 @@ export class FrontendReferralService {
   async getReferralLeaderboard(limit = 10): Promise<Array<{ user: string; referrals: number; rewards: number }>> {
     const list: Array<{ user: string; referrals: number; rewards: number }> = [];
     for (let i = 0; i < Math.min(limit, 10); i++) {
+      const randomStr = Math.random().toString(16).substring(2);
+      const paddedStr = randomStr.padEnd(40, '0');
       list.push({ 
-        user: `0x${Math.random().toString(16).substring(2, 42)}`, 
+        user: `0x${paddedStr}`, 
         referrals: Math.floor(Math.random() * 50), 
         rewards: parseFloat((Math.random() * 500).toFixed(2)) 
       });
@@ -118,9 +113,11 @@ export class FrontendReferralService {
       return { isValid: false, error: 'Referral code contains invalid characters' };
     }
     
+    const randomStr = Math.random().toString(16).substring(2);
+    const paddedStr = randomStr.padEnd(40, '0');
     return { 
       isValid: true, 
-      referrer: `0x${Math.random().toString(16).substring(2, 42)}` 
+      referrer: `0x${paddedStr}` 
     };
   }
 }

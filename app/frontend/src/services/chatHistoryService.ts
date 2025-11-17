@@ -388,6 +388,11 @@ class ChatHistoryService {
 
   // Private helper methods
   private getAuthToken(): string {
+    // Add SSR safety check for localStorage access
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    
     // Get JWT token from localStorage using the correct key from AuthContext
     return localStorage.getItem('linkdao_access_token') || 
            localStorage.getItem('token') || 

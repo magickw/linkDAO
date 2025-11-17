@@ -69,9 +69,18 @@ class DeploymentMonitor {
     const startTime = Date.now();
     
     try {
+      // Use AbortController for proper timeout handling with node-fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${this.config[this.environment].url}/api/health`, {
-        timeout: 10000,
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'LinkDAO-Deployment-Monitor/1.0'
+        }
       });
+      
+      clearTimeout(timeoutId);
       
       const endTime = Date.now();
       const responseTime = endTime - startTime;
@@ -105,7 +114,11 @@ class DeploymentMonitor {
       }
       
     } catch (error) {
-      this.recordError(`Health check error: ${error.message}`);
+      if (error.name === 'AbortError') {
+        this.recordError('Health check timed out after 10 seconds');
+      } else {
+        this.recordError(`Health check error: ${error.message}`);
+      }
     }
   }
 
@@ -122,9 +135,18 @@ class DeploymentMonitor {
         const startTime = Date.now();
         
         try {
+          // Use AbortController for proper timeout handling
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          
           const response = await fetch(`${this.config[this.environment].url}${endpoint}`, {
-            timeout: 15000,
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'LinkDAO-Deployment-Monitor/1.0'
+            }
           });
+          
+          clearTimeout(timeoutId);
           
           const endTime = Date.now();
           const responseTime = endTime - startTime;
@@ -142,7 +164,11 @@ class DeploymentMonitor {
           }
           
         } catch (error) {
-          this.recordError(`Performance check error for ${endpoint}: ${error.message}`);
+          if (error.name === 'AbortError') {
+            this.recordError(`Performance check timed out for ${endpoint} after 15 seconds`);
+          } else {
+            this.recordError(`Performance check error for ${endpoint}: ${error.message}`);
+          }
         }
       }
       

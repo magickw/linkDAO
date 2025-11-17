@@ -104,7 +104,8 @@ const CACHEABLE_APIS = {
   '/api/follow': { ttl: 120000, priority: 'medium', staleTTL: 600000 }, // 2min fresh, 10min stale
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
   '/api/marketplace': { ttl: 60000, priority: 'medium', staleTTL: 600000 }, // 1min fresh, 10min stale
-  '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 } // 3min fresh, 15min stale
+  '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
+  '/api/messaging': { ttl: 30000, priority: 'medium', staleTTL: 120000 } // 30s fresh, 2min stale
 };
 
 // Critical API responses that should be cached aggressively
@@ -477,6 +478,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
       }
+      // Handle messaging API 503 errors with specific backoff
+      else if (url.pathname.includes('/api/messaging') && networkResponse.status === 503) {
+        console.warn('Messaging API service unavailable (503):', networkResponse.status, requestKey);
+        // Track failure with exponential backoff for messaging requests
+        const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+        failureInfo.attempts += 1;
+        failureInfo.lastFailure = Date.now();
+        failedRequests.set(requestKey, failureInfo);
+      }
       else {
         // Track failure with exponential backoff for other requests
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
@@ -520,6 +530,16 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     else if (url.pathname.includes('/api/communities')) {
       console.warn('Community API failed:', error.message, requestKey);
       // Track failure with exponential backoff for community requests
+      const requestKey = `${request.method}:${request.url}`;
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+    }
+    // Handle messaging API failures with more specific backoff
+    else if (url.pathname.includes('/api/messaging')) {
+      console.warn('Messaging API failed:', error.message, requestKey);
+      // Track failure with exponential backoff for messaging requests
       const requestKey = `${request.method}:${request.url}`;
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
       failureInfo.attempts += 1;
@@ -676,7 +696,19 @@ async function getCachedResponse(request, cacheName) {
       });
     }
     
-    return new Response('Content not available offline', { 
+    // Provide more specific error messages for different API endpoints
+    const url = new URL(request.url);
+    let errorMessage = 'Content not available offline';
+    
+    if (url.pathname.includes('/api/messaging')) {
+      errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
+    } else if (url.pathname.includes('/api/communities')) {
+      errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';
+    } else if (url.pathname.includes('/api/feed')) {
+      errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
+    }
+    
+    return new Response(errorMessage, { 
       status: 503,
       headers: { 'Content-Type': 'text/plain' }
     });
@@ -815,7 +847,18 @@ function getServiceKey(request) {
   const pathParts = url.pathname.split('/');
   
   if (pathParts[1] === 'api' && pathParts[2]) {
-    return pathParts[2]; // e.g., 'feed', 'communities', 'posts'
+    // Return specific service key for different API types
+    if (pathParts[2] === 'messaging') {
+      return 'messaging';
+    } else if (pathParts[2] === 'communities') {
+      return 'communities';
+    } else if (pathParts[2] === 'feed') {
+      return 'feed';
+    } else if (pathParts[2] === 'posts') {
+      return 'posts';
+    } else {
+      return pathParts[2]; // e.g., 'profiles', 'users', 'search', etc.
+    }
   }
   
   return 'default';

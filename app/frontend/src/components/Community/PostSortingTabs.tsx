@@ -1,4 +1,4 @@
-import React, { useState, useId, useCallback } from 'react';
+import React, { useState, useId, useCallback, useRef, useEffect } from 'react';
 import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useAccessibility';
 
@@ -300,28 +300,60 @@ export function usePostSorting(initialSort: PostSortOption = PostSortOption.BEST
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(initialTimeFilter);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Use useRef to store timeout IDs for proper cleanup
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSortChange = useCallback((newSort: PostSortOption) => {
     setSortBy(newSort);
     setIsLoading(true);
     
-    // Simulate API call delay
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
     
-    return () => clearTimeout(timeoutId);
+    // Set new timeout with error handling
+    try {
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        loadingTimeoutRef.current = null;
+      }, 500);
+    } catch (error) {
+      console.error('Error setting loading timeout:', error);
+      setIsLoading(false);
+    }
   }, []);
 
   const handleTimeFilterChange = useCallback((newFilter: TimeFilter) => {
     setTimeFilter(newFilter);
     setIsLoading(true);
     
-    // Simulate API call delay
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
     
-    return () => clearTimeout(timeoutId);
+    // Set new timeout with error handling
+    try {
+      loadingTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        loadingTimeoutRef.current = null;
+      }, 500);
+    } catch (error) {
+      console.error('Error setting loading timeout:', error);
+      setIsLoading(false);
+    }
   }, []);
 
   return {

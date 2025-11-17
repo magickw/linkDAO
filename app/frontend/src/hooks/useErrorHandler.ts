@@ -29,15 +29,10 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   const [retryCount, setRetryCount] = useState(0);
   const lastOperationRef = useRef<(() => Promise<any>) | null>(null);
   const isMountedRef = useRef(true);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Cleanup effect to prevent memory leaks
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -63,10 +58,6 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
   const clearError = useCallback(() => {
     setError(null);
     setRetryCount(0);
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
   }, []);
 
   const retry = useCallback(async () => {
@@ -79,15 +70,13 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
     setRetryCount(prev => prev + 1);
 
     try {
-      // Use the same retry logic as errorManager for consistency
-      await errorManager.retryOperation(lastOperationRef.current, { category });
+      const result = await errorManager.retryOperation(lastOperationRef.current, { category });
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     } catch (err) {
       if (isMountedRef.current) {
         handleError(err as Error);
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
       }
     }
   }, [enableRetry, retryCount, maxRetries, handleError, category]);
@@ -103,15 +92,14 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
 
     try {
       const result = await errorManager.retryOperation(operation, { category });
+      return result;
+    } catch (err) {
+      handleError(err as Error);
+      return null;
+    } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
       }
-      return result;
-    } catch (err) {
-      if (isMountedRef.current) {
-        handleError(err as Error);
-      }
-      return null;
     }
   }, [category, handleError]);
 

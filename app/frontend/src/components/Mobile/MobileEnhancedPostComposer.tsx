@@ -8,7 +8,7 @@ import { HashtagMentionInput } from '@/components/EnhancedPostComposer/HashtagMe
 import { PollCreator } from '@/components/EnhancedPostComposer/PollCreator';
 import { ProposalCreator } from '@/components/EnhancedPostComposer/ProposalCreator';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
-import { RichPostInput, MediaFile, PollData, ProposalData } from '@/types/enhancedPost';
+import { RichPostInput, MediaFile, PollData, ProposalData, LinkPreview } from '@/types/enhancedPost';
 import AuthContext from '@/context/AuthContext';
 
 interface MobileEnhancedPostComposerProps {
@@ -64,6 +64,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
   const [pollData, setPollData] = useState<PollData | undefined>(undefined);
   const [proposalData, setProposalData] = useState<ProposalData | undefined>(undefined);
   const [linkUrl, setLinkUrl] = useState('');
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null); // Add state for link preview
 
   // Clean up object URLs to prevent memory leaks
   useEffect(() => {
@@ -75,7 +76,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
         }
       });
     };
-  }, []); // Only run on unmount
+  }, [media]); // Add media as dependency to cleanup when media changes
 
   const composerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -139,10 +140,10 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
         // Include link data for link content type
         links: contentType === ContentType.LINK && linkUrl ? [{
           url: linkUrl,
-          title: undefined,
-          description: undefined,
-          image: undefined,
-          type: 'website' // Add the required type field
+          title: linkPreview?.title || undefined,
+          description: linkPreview?.description || undefined,
+          image: linkPreview?.image || undefined,
+          type: linkPreview?.type || 'website' // Use actual link type instead of hardcoded value
         }] : undefined
       };
 
@@ -413,7 +414,20 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
                       type="url"
                       placeholder="Paste a link..."
                       value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)}
+                      onChange={(e) => {
+                        setLinkUrl(e.target.value);
+                        // Update link preview with the URL
+                        if (e.target.value) {
+                          setLinkPreview({
+                            url: e.target.value,
+                            title: '',
+                            description: '',
+                            type: 'website' // Default type, would be updated with actual preview data
+                          });
+                        } else {
+                          setLinkPreview(null);
+                        }
+                      }}
                       className={`
                         w-full px-3 py-2 border border-gray-300 dark:border-gray-600
                         rounded-lg bg-white dark:bg-gray-800

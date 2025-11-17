@@ -328,7 +328,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
         <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button 
-            onClick={() => console.log('Creating new support ticket')}
+            onClick={() => window.location.href = '/support/tickets/new'}
             className="flex flex-col items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             aria-label="Create new support ticket"
           >
@@ -336,7 +336,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">New Ticket</span>
           </button>
           <button 
-            onClick={() => console.log('Opening documentation browser')}
+            onClick={() => window.location.href = '/support/documents'}
             className="flex flex-col items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             aria-label="Browse documentation"
           >
@@ -344,7 +344,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">Browse Docs</span>
           </button>
           <button 
-            onClick={() => console.log('Opening live chat')}
+            onClick={() => window.location.href = '/support/chat'}
             className="flex flex-col items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             aria-label="Open live chat"
           >
@@ -352,7 +352,7 @@ const PersonalizedSupportDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">Live Chat</span>
           </button>
           <button 
-            onClick={() => console.log('Opening FAQ')}
+            onClick={() => window.location.href = '/support/faq'}
             className="flex flex-col items-center p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             aria-label="View FAQ"
           >

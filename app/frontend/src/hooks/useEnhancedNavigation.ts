@@ -85,17 +85,17 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
         setIsLoading(true);
         
         // Get trending communities for discovery
-        const trending = await CommunityService.getTrendingCommunities(10).catch(() => [] as any);
+        const trending = await CommunityService.getTrendingCommunities(10).catch(() => []);
 
         // Ensure we always have an array before mapping
         const trendingList = Array.isArray(trending) ? trending : [];
         
         // Transform to expected format
-        const communitiesWithIcons: CommunityWithIcons[] = trendingList.map(community => ({
-          id: community.id,
-          name: community.name,
-          displayName: community.displayName,
-          memberCount: community.memberCount,
+        const communitiesWithIcons: CommunityWithIcons[] = trendingList.map((community: any) => ({
+          id: community.id || '',
+          name: community.name || '',
+          displayName: community.displayName || community.name || '',
+          memberCount: community.memberCount || 0,
           avatar: community.avatar || '🏛️', // Default avatar if none provided
           icon: community.avatar || '🏛️',
           unreadCount: 0, // Would be calculated from notifications

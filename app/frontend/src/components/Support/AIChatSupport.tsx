@@ -50,7 +50,7 @@ const AIChatSupport: React.FC = () => {
 
     // Add user message with proper unique ID
     const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       role: 'user',
       content: inputValue,
       timestamp: new Date()
@@ -68,7 +68,7 @@ const AIChatSupport: React.FC = () => {
       const aiResponse = generateAIResponse(inputValue);
       
       const aiMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date()
@@ -83,7 +83,7 @@ const AIChatSupport: React.FC = () => {
     } catch (error) {
       console.error('Failed to get AI response:', error);
       const errorMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         role: 'assistant',
         content: 'Sorry, I encountered an issue processing your request. Please try again or contact our human support team.',
         timestamp: new Date()
@@ -149,12 +149,18 @@ const AIChatSupport: React.FC = () => {
       // Fallback for older browsers or clipboard API issues
       const textArea = document.createElement('textarea');
       textArea.value = content;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
       document.body.appendChild(textArea);
+      textArea.focus();
       textArea.select();
       try {
         document.execCommand('copy');
+        alert('Message copied to clipboard!');
       } catch (err) {
         console.error('Fallback clipboard copy failed:', err);
+        alert('Failed to copy message. Please copy manually.');
       } finally {
         document.body.removeChild(textArea);
       }

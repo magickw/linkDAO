@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -294,23 +294,35 @@ class ProductionDeployer {
     console.log('📊 Monitoring deployment...');
     
     const monitoringEndTime = Date.now() + DEPLOYMENT_CONFIG.monitoring.monitoringDuration;
-    let errorCount = 0;
+    let totalErrorCount = 0;
+    let consecutiveErrorCount = 0;
     let checkCount = 0;
+    let consecutiveErrorsStartTime = null;
     
     while (Date.now() < monitoringEndTime) {
       try {
         await this.runHealthCheck();
         checkCount++;
         
-        // Reset error count on successful check
-        errorCount = 0;
+        // Reset consecutive error count on successful check
+        consecutiveErrorCount = 0;
+        consecutiveErrorsStartTime = null;
         
       } catch (error) {
-        errorCount++;
-        console.warn(`⚠️  Health check failed (${errorCount}): ${error.message}`);
+        totalErrorCount++;
+        consecutiveErrorCount++;
         
-        if (errorCount >= DEPLOYMENT_CONFIG.monitoring.errorThreshold) {
-          throw new Error(`Too many errors during monitoring: ${errorCount}`);
+        // Track when consecutive errors started
+        if (!consecutiveErrorsStartTime) {
+          consecutiveErrorsStartTime = Date.now();
+        }
+        
+        console.warn(`⚠️  Health check failed (consecutive: ${consecutiveErrorCount}, total: ${totalErrorCount}): ${error.message}`);
+        
+        // Check for too many consecutive errors
+        if (consecutiveErrorCount >= DEPLOYMENT_CONFIG.monitoring.errorThreshold) {
+          const errorDuration = Date.now() - consecutiveErrorsStartTime;
+          throw new Error(`Too many consecutive errors during monitoring: ${consecutiveErrorCount} errors over ${Math.round(errorDuration / 1000)}s`);
         }
       }
       
@@ -318,10 +330,14 @@ class ProductionDeployer {
       await new Promise(resolve => setTimeout(resolve, 30000));
     }
     
-    const uptime = checkCount > 0 ? ((checkCount - errorCount) / checkCount) * 100 : 0;
+    // Calculate uptime as percentage of successful checks
+    const successfulChecks = checkCount - totalErrorCount;
+    const uptime = checkCount > 0 ? (successfulChecks / checkCount) * 100 : 0;
+    
+    console.log(`📊 Monitoring results: ${successfulChecks}/${checkCount} successful checks (${uptime.toFixed(2)}% uptime)`);
     
     if (uptime < DEPLOYMENT_CONFIG.monitoring.uptimeThreshold) {
-      throw new Error(`Uptime ${uptime.toFixed(2)}% below threshold ${DEPLOYMENT_CONFIG.monitoring.uptimeThreshold}%`);
+      throw new Error(`Uptime ${uptime.toFixed(2)}% below threshold ${DEPLOYMENT_CONFIG.monitoring.uptimeThreshold}% (${successfulChecks}/${checkCount} successful checks)`);
     }
     
     console.log(`✅ Monitoring completed: ${uptime.toFixed(2)}% uptime over ${checkCount} checks`);
@@ -378,6 +394,21 @@ class ProductionDeployer {
     }
   }
 
+  validateCommitHash(commitHash) {
+    // Validate commit hash format (40 character hex string or short hash)
+    if (!commitHash || typeof commitHash !== 'string') {
+      throw new Error('Invalid commit hash: must be a non-empty string');
+    }
+    
+    // Remove any potentially dangerous characters and validate format
+    const cleanHash = commitHash.replace(/[^a-fA-F0-9]/g, '');
+    if (cleanHash.length < 7 || cleanHash.length > 40) {
+      throw new Error('Invalid commit hash format: must be 7-40 hexadecimal characters');
+    }
+    
+    return cleanHash;
+  }
+
   async rollback() {
     console.log('🔄 Rolling back deployment...');
     
@@ -396,20 +427,24 @@ class ProductionDeployer {
       if (backupFiles.length < 2) {
         throw new Error('No previous deployment found for rollback');
       }
-      
-      if (backupFiles.length === 0) {
-        throw new Error('No deployment backups found');
-      }
+      // Removed unreachable condition: backupFiles.length === 0
+      // This would never be reached after the < 2 check above
       
       // Find the most recent successful deployment (not the current failed one)
       const previousDeployment = backupFiles.find(backup => 
         backup.metadata.deploymentId !== this.deploymentId
       ) || backupFiles[0];
       
-      console.log(`🔄 Rolling back to: ${previousDeployment.metadata.commitHash}`);
+      // Validate and sanitize commit hash to prevent command injection
+      const commitHash = this.validateCommitHash(previousDeployment.metadata.commitHash);
       
-      // Checkout previous commit
-      execSync(`git checkout ${previousDeployment.metadata.commitHash}`, { stdio: 'inherit' });
+      console.log(`🔄 Rolling back to: ${commitHash}`);
+      
+      // Checkout previous commit with proper argument passing (no command injection)
+      const checkoutResult = spawnSync('git', ['checkout', commitHash], { stdio: 'inherit' });
+      if (checkoutResult.status !== 0) {
+        throw new Error(`Git checkout failed with exit code ${checkoutResult.status}`);
+      }
       
       // Rebuild and redeploy
       await this.buildApplication();

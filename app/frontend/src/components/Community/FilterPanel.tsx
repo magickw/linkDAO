@@ -165,16 +165,26 @@ export default function FilterPanel({
     }
   }, [activeFilters, customDateRange, onFilterChange]);
 
-  // Handle custom date range change
+  // Handle custom date range change with validation and user feedback
   const handleCustomDateChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
     const date = value ? new Date(value) : null;
     
-    // Validate date range
+    // Validate date range with user feedback
     if (field === 'startDate' && customDateRange.endDate && date && date > customDateRange.endDate) {
-      return; // Don't allow start date after end date
+      // Show error feedback instead of silently returning
+      alert('Start date cannot be after end date. Please select a valid date range.');
+      return;
     }
     if (field === 'endDate' && customDateRange.startDate && date && date < customDateRange.startDate) {
-      return; // Don't allow end date before start date
+      // Show error feedback instead of silently returning
+      alert('End date cannot be before start date. Please select a valid date range.');
+      return;
+    }
+    
+    // Additional validation: dates cannot be in the future
+    if (date && date > new Date()) {
+      alert('Selected date cannot be in the future. Please select a past or current date.');
+      return;
     }
     
     const newCustomRange = {
@@ -191,6 +201,30 @@ export default function FilterPanel({
       });
     }
   }, [customDateRange, selectedTimePreset, activeFilters, onFilterChange]);
+
+  // Enhanced keyboard navigation for author suggestions
+  const handleAuthorKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showAuthorSuggestions || authorSuggestions.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        // Focus first suggestion
+        const firstSuggestion = document.querySelector('[role="option"]') as HTMLElement;
+        if (firstSuggestion) firstSuggestion.focus();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        // Focus last suggestion
+        const suggestions = document.querySelectorAll('[role="option"]');
+        const lastSuggestion = suggestions[suggestions.length - 1] as HTMLElement;
+        if (lastSuggestion) lastSuggestion.focus();
+        break;
+      case 'Escape':
+        setShowAuthorSuggestions(false);
+        break;
+    }
+  }, [showAuthorSuggestions, authorSuggestions.length]);
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
@@ -332,17 +366,26 @@ export default function FilterPanel({
 
           {/* Author Search */}
           <div className="relative">
+            <label htmlFor="author-search" className="sr-only">Search for authors</label>
             <input
+              id="author-search"
               type="text"
               placeholder="Search for authors..."
               value={authorSearch}
               onChange={(e) => setAuthorSearch(e.target.value)}
+              onKeyDown={handleAuthorKeyDown}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-autocomplete="list"
+              aria-expanded={showAuthorSuggestions}
+              aria-controls="author-suggestions-list"
+              role="combobox"
+              aria-activedescendant={showAuthorSuggestions && authorSuggestions.length > 0 ? `author-option-${authorSuggestions[0]?.id}` : undefined}
             />
             
             {/* Author Suggestions */}
             {showAuthorSuggestions && authorSuggestions.length > 0 && (
               <div 
+                id="author-suggestions-list"
                 className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
                 role="listbox"
                 aria-label="Author suggestions"
@@ -350,15 +393,37 @@ export default function FilterPanel({
                 {authorSuggestions.map((author, index) => (
                   <button
                     key={author.id}
+                    id={`author-option-${author.id}`}
                     onClick={() => handleAuthorAdd(author)}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between focus:bg-gray-50 dark:focus:bg-gray-700 focus:outline-none"
                     role="option"
                     aria-selected={false}
                     tabIndex={0}
+                    aria-label={`Add author @${author.username}${author.displayName ? ` (${author.displayName})` : ''}`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handleAuthorAdd(author);
+                      }
+                      // Allow Escape to close the suggestions
+                      if (e.key === 'Escape') {
+                        setShowAuthorSuggestions(false);
+                        document.getElementById('author-search')?.focus();
+                      }
+                      // Handle arrow key navigation between suggestions
+                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const suggestions = document.querySelectorAll('[role="option"]');
+                        const currentIndex = Array.from(suggestions).indexOf(e.currentTarget as HTMLElement);
+                        let nextIndex = currentIndex;
+                        
+                        if (e.key === 'ArrowDown') {
+                          nextIndex = (currentIndex + 1) % suggestions.length;
+                        } else {
+                          nextIndex = currentIndex === 0 ? suggestions.length - 1 : currentIndex - 1;
+                        }
+                        
+                        (suggestions[nextIndex] as HTMLElement)?.focus();
                       }
                     }}
                   >

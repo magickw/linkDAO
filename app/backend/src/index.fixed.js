@@ -3,6 +3,53 @@ const cors = require('cors');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Validation functions for request parameters
+function validateLimit(limit) {
+  const parsed = parseInt(limit);
+  
+  // Check if it's a valid number
+  if (isNaN(parsed) || !isFinite(parsed)) {
+    return 20; // Default limit
+  }
+  
+  // Ensure it's positive
+  if (parsed <= 0) {
+    return 20; // Default limit
+  }
+  
+  // Apply reasonable bounds (1-100 items per page)
+  if (parsed > 100) {
+    return 100; // Maximum limit
+  }
+  
+  if (parsed < 1) {
+    return 1; // Minimum limit
+  }
+  
+  return parsed;
+}
+
+function validatePage(page) {
+  const parsed = parseInt(page);
+  
+  // Check if it's a valid number
+  if (isNaN(parsed) || !isFinite(parsed)) {
+    return 1; // Default page
+  }
+  
+  // Ensure it's positive
+  if (parsed <= 0) {
+    return 1; // Default page
+  }
+  
+  // Apply reasonable upper bound to prevent excessive memory usage
+  if (parsed > 1000) {
+    return 1000; // Maximum page
+  }
+  
+  return parsed;
+}
+
 // Initialize PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -914,10 +961,14 @@ app.get('/api/posts/feed', (req, res) => {
 app.get('/api/feed/enhanced', (req, res) => {
   const { page = 1, limit = 20, sort = 'hot', timeRange = 'all', feedSource = 'all' } = req.query;
   
-  console.log(`🔍 Enhanced feed request - page: ${page}, limit: ${limit}, sort: ${sort}, source: ${feedSource}`);
+  // Validate and sanitize limit parameter
+  const validatedLimit = validateLimit(limit);
+  const validatedPage = validatePage(page);
+  
+  console.log(`🔍 Enhanced feed request - page: ${validatedPage}, limit: ${validatedLimit}, sort: ${sort}, source: ${feedSource}`);
   
   // Enhanced mock posts with more detailed data structure matching frontend expectations
-  const enhancedPosts = Array.from({ length: parseInt(limit) }, (_, i) => {
+  const enhancedPosts = Array.from({ length: validatedLimit }, (_, i) => {
     const postId = `enhanced-post-${page}-${i + 1}`;
     const authorAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
     

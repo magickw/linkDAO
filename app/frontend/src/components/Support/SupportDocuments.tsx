@@ -48,7 +48,13 @@ const SupportDocuments: React.FC = () => {
   const [documentContent, setDocumentContent] = useState<string>('');
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [showScrollProgress, setShowScrollProgress] = useState(false);
-  const [savedDocuments, setSavedDocuments] = useState<string[]>([]);
+  const [savedDocuments, setSavedDocuments] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('savedDocuments');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
 
   // Enhanced document structure aligned with spec requirements
   const supportDocuments: SupportDocument[] = [
@@ -310,14 +316,18 @@ const SupportDocuments: React.FC = () => {
     }
   };
 
-  // Toggle saved document
+  // Toggle saved document with persistence
   const toggleSavedDocument = (documentId: string) => {
     setSavedDocuments(prev => {
-      if (prev.includes(documentId)) {
-        return prev.filter(id => id !== documentId);
-      } else {
-        return [...prev, documentId];
+      const newSaved = prev.includes(documentId) 
+        ? prev.filter(id => id !== documentId)
+        : [...prev, documentId];
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('savedDocuments', JSON.stringify(newSaved));
       }
+      
+      return newSaved;
     });
   };
 
@@ -485,6 +495,8 @@ const SupportDocuments: React.FC = () => {
                       toggleSavedDocument(doc.id);
                     }}
                     className="text-gray-400 hover:text-blue-600 transition-colors"
+                    aria-label={savedDocuments.includes(doc.id) ? 'Remove bookmark' : 'Add bookmark'}
+                    title={savedDocuments.includes(doc.id) ? 'Remove from saved documents' : 'Save document'}
                   >
                     {savedDocuments.includes(doc.id) ? (
                       <BookmarkCheck className="w-5 h-5 text-blue-600" />
