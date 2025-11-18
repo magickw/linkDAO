@@ -37,7 +37,7 @@ if (process.env.NODE_ENV === 'development') {
 
 const queryClient = new QueryClient();
 
-function AppContent({ Component, pageProps, router }: AppProps) {
+function AppContent({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = React.useState(true);
   const [updateAvailable, setUpdateAvailable] = React.useState(false);
       const swUtilRef = React.useRef<ServiceWorkerUtil | null>(null);
@@ -271,7 +271,7 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
   return (
     <>
-      <Component {...pageProps} />
+      {children}
       <OfflineIndicator />
       
       {/* Offline Indicator */}
@@ -362,7 +362,9 @@ export default function App({ Component, pageProps, router }: AppProps) {
                     <NavigationProvider>
                       <ContactProvider>
                         <EnhancedThemeProvider defaultTheme="system">
-                          <AppContent Component={Component} pageProps={pageProps} router={router} />
+                          <AppContent>
+                            <Component {...pageProps} />
+                          </AppContent>
                         </EnhancedThemeProvider>
                       </ContactProvider>
                     </NavigationProvider>
