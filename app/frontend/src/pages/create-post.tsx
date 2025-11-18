@@ -30,17 +30,8 @@ const CreatePostPage: React.FC = () => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
         try {
-          // Get all communities first
-          const allCommunities = await CommunityService.getAllCommunities();
-          
-          // Then get user's community memberships
-          const userMembershipIds = await CommunityService.getUserCommunityMemberships();
-          
-          // Filter to only include communities the user is a member of
-          const userCommunities = allCommunities.filter(community => 
-            userMembershipIds.includes(community.id)
-          );
-          
+          // Get user's communities directly (more efficient than fetching all communities)
+          const { communities: userCommunities } = await CommunityService.getMyCommunities(1, 100);
           setUserCommunities(userCommunities);
           
           // If there's a community parameter in the URL, select it

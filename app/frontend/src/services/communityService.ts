@@ -392,6 +392,57 @@ export class CommunityService {
   }
 
   /**
+   * Get communities that belong to the current user (both created and member of)
+   * @param page - Page number (default: 1)
+   * @param limit - Number of items per page (default: 20)
+   * @returns Paginated list of user's communities
+   */
+  static async getMyCommunities(page: number = 1, limit: number = 100): Promise<{ communities: Community[]; pagination: any }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/my`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch my communities');
+      }
+      
+      const json = await safeJson(response);
+      // Normalize payload to expected structure
+      if (json && typeof json === 'object' && Array.isArray(json.communities)) {
+        return json as { communities: Community[]; pagination: any };
+      }
+      if (Array.isArray(json)) {
+        return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
+      }
+      return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
    * Get a community by its name with offline support
    * @param name - Community name (unique identifier)
    * @returns The community or null if not found

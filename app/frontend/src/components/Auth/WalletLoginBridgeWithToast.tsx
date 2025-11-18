@@ -3,15 +3,31 @@
  * This version should be placed in _app.tsx after ToastProvider
  */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/context/ToastContext';
+import { ToastContext } from '@/context/ToastContext';
 import { WalletLoginBridge } from './WalletLoginBridge';
+
+// Custom hook to safely access toast context with fallback
+const useToastOrFallback = () => {
+  const context = useContext(ToastContext);
+  
+  if (context) {
+    return context;
+  }
+  
+  // Fallback implementation when no provider is present
+  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
+  };
+  
+  return { addToast };
+};
 
 export const WalletLoginBridgeWithToast: React.FC = () => {
   const { connector } = useAccount();
-  const { addToast } = useToast();
+  const { addToast } = useToastOrFallback();
 
   const handleLoginSuccess = (user: any) => {
     const walletName = connector?.name || 'Wallet';
