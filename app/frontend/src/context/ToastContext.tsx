@@ -2,7 +2,7 @@
  * Toast Context - Simple toast notification system
  */
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
@@ -84,6 +84,17 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         return 'bg-gray-900/90 border-gray-500/50 text-gray-100';
     }
   };
+
+  // Check if ToastProvider is properly mounted
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <>{children}</>;
+  }
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>

@@ -1957,3 +1957,19 @@ async function tryAlternativeGeolocationServices(originalRequest) {
     headers: { 'Content-Type': 'application/json' }
   });
 }
+
+// Add periodic cleanup of pending requests to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  const timeout = 60000; // 1 minute timeout
+  
+  for (const [key, promise] of pendingRequests.entries()) {
+    // We can't directly check when a promise was created, so we'll use a heuristic
+    // If we have too many pending requests, start cleaning up older ones
+    if (pendingRequests.size > 50) {
+      console.log('Cleaning up old pending request:', key);
+      pendingRequests.delete(key);
+    }
+  }
+}, 30000); // Check every 30 seconds
+

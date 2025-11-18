@@ -30,6 +30,7 @@ const EXTENSION_ERROR_PATTERNS = [
   'web3-provider',
   'ethereum.request',
   'window.ethereum',
+  'Cannot redefine property: ethereum', // Add this specific pattern
   
   // Common error messages
   'Non-Error promise rejection captured',

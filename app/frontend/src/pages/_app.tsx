@@ -96,7 +96,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
         if (errorText.includes('chrome.runtime.sendmessage') || 
             errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
             errorText.includes('extension id') ||
-            errorText.includes('runtime.sendmessage(optional string extensionid')) {
+            errorText.includes('runtime.sendmessage(optional string extensionid') ||
+            errorText.includes('cannot redefine property: ethereum')) { // Add ethereum redefinition check
           console.debug('🚫 IMMEDIATE: Chrome runtime error blocked');
           event.preventDefault?.();
           event.stopPropagation?.();
@@ -130,7 +131,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'must specify an Extension ID',
         'called from a webpage must specify an Extension ID',
         'for its first argument',
-        'opfgelmcmbiajamepnmloijbpoleiama'
+        'opfgelmcmbiajamepnmloijbpoleiama',
+        'Cannot redefine property: ethereum' // Add ethereum redefinition check
       ];
       
       // Check all error information
@@ -173,7 +175,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'runtime.sendMessage(optional string extensionId',
         'must specify an Extension ID',
         'called from a webpage must specify an Extension ID',
-        'opfgelmcmbiajamepnmloijbpoleiama'
+        'opfgelmcmbiajamepnmloijbpoleiama',
+        'Cannot redefine property: ethereum' // Add ethereum redefinition check
       ];
       
       const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
@@ -201,7 +204,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
     console.error = (...args: any[]) => {
       const message = args.join(' ');
       if (message.toLowerCase().includes('chrome.runtime.sendmessage') || 
-          message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama')) {
+          message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
+          message.toLowerCase().includes('cannot redefine property: ethereum')) { // Add ethereum redefinition check
         console.debug('🔇 Console error suppressed (chrome.runtime):', message.substring(0, 200));
         return;
       }
