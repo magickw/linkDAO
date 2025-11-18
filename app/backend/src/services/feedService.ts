@@ -147,21 +147,13 @@ export class FeedService {
           console.log('📋 [BACKEND FEED] Using simple EQ filter for user posts');
         }
       } else {
-        console.log('⚠️ [BACKEND FEED] User not found in database, but ensuring user sees their own posts...');
-        // Even if user is not found in database, ensure they see their own posts
-        // This can happen when user exists in posts but not in users table yet
-        // Try to find posts by joining with users table to match wallet address
-        followingFilter = sql`EXISTS (
-          SELECT 1 FROM ${users} 
-          WHERE ${users.id} = ${posts.authorId} 
-          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
-        )`;
-        quickPostFollowingFilter = sql`EXISTS (
-          SELECT 1 FROM ${users} 
-          WHERE ${users.id} = ${quickPosts.authorId} 
-          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
-        )`;
-        console.log('📋 [BACKEND FEED] Using wallet address filter for user posts via users table join');
+        console.log('⚠️ [BACKEND FEED] User not found in database, showing posts by wallet address directly...');
+        // User not found in users table but may have posts
+        // Directly filter posts by wallet address from the posts table
+        // This handles cases where user exists in blockchain but not in our users table yet
+        followingFilter = sql`LOWER(${posts.authorAddress}) = LOWER(${normalizedAddress})`;
+        quickPostFollowingFilter = sql`LOWER(${quickPosts.authorAddress}) = LOWER(${normalizedAddress})`;
+        console.log('📋 [BACKEND FEED] Using direct wallet address filter for user posts');
       }
     } else if (feedSource === 'all' && userAddress) {
       // For 'all' feedSource, show all posts (no additional filtering needed)

@@ -976,11 +976,17 @@ export default function Profile() {
 
                   {/* User Stats */}
                   <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg">
+                    <div 
+                      className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer"
+                      onClick={() => setActiveTab('followers')}
+                    >
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">{followCount?.followers || 0}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Followers</p>
                     </div>
-                    <div className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg">
+                    <div 
+                      className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer"
+                      onClick={() => setActiveTab('following')}
+                    >
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">{followCount?.following || 0}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Following</p>
                     </div>
@@ -1081,6 +1087,18 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('proposals')}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'posts'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Posts
+                </button>
+                <button
+                  onClick={() => setActiveTab('proposals')}
                   className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'proposals'
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -1090,18 +1108,6 @@ export default function Profile() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                   </svg>
                   Proposals
-                </button>
-                <button
-                  onClick={() => setActiveTab('activity')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'activity'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                >
-                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8h.01M12 12h.01M12 16h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  Activity
                 </button>
                 <button
                   onClick={() => setActiveTab('wallet')}
@@ -1400,22 +1406,13 @@ export default function Profile() {
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mt-2">
-                              <div className="flex items-center space-x-4">
-                                <span>{post.comments || 0} comments</span>
-                                <span>{post.views || 0} views</span>
-                              </div>
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-2">
                               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                              <span className="mx-2">•</span>
+                              <span>{post.comments || 0} comments</span>
+                              <span className="mx-2">•</span>
+                              <span>{post.reactions?.length || 0} reactions</span>
                             </div>
-                            {post.tags && Array.isArray(post.tags) && post.tags.length > 0 && (
-                              <div className="flex gap-2 mt-2 flex-wrap">
-                                {post.tags.map((tag, i) => (
-                                  <span key={i} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
                           </div>
                         </Link>
                       ))}
@@ -1433,61 +1430,6 @@ export default function Profile() {
                     </svg>
                     <p className="mt-2">No proposals yet</p>
                     <p className="text-sm mt-1">Proposals you create will appear here</p>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'activity' && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Activity History</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                          <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">You</span> voted on governance proposal #42
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                          <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">You</span> received a tip of 50 LDAO
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">1 day ago</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                          <svg className="h-5 w-5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">You</span> joined the DeFi Traders DAO
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">3 days ago</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
