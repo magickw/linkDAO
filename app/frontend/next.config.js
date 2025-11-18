@@ -202,6 +202,8 @@ const nextConfig = {
   },
   // Exclude test files from being treated as pages
   serverExternalPackages: ["playwright", "@playwright"],
+  // Custom page resolver to exclude Playwright files
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -210,3 +212,6 @@ const nextConfig = {
 
 // module.exports = withBundleAnalyzer(nextConfig);
 module.exports = nextConfig;
+
+// Ensure Playwright files are not treated as pages
+nextConfig.pageExtensions = ['tsx', 'ts', 'jsx', 'js'];
