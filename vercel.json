@@ -1,7 +1,8 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "cd app/frontend && npm run build",
   "outputDirectory": "app/frontend/.next",
-  "installCommand": "echo 'Using build command for install'",
+  "installCommand": "cd app/frontend && npm install --legacy-peer-deps",
+  "framework": "nextjs",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.linkdao.io",
     "NEXT_PUBLIC_BACKEND_URL": "https://api.linkdao.io",
