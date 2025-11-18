@@ -2,13 +2,12 @@ import React, { useState, useRef, useEffect, useContext, useCallback } from 'rea
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
-import { ContentTypeTabs } from '@/components/EnhancedPostComposer/ContentTypeTabs';
 import { MediaUploadZone } from '@/components/EnhancedPostComposer/MediaUploadZone';
 import { HashtagMentionInput } from '@/components/EnhancedPostComposer/HashtagMentionInput';
 import { PollCreator } from '@/components/EnhancedPostComposer/PollCreator';
 import { ProposalCreator } from '@/components/EnhancedPostComposer/ProposalCreator';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
-import { RichPostInput, MediaFile, PollData, ProposalData, LinkPreview } from '@/types/enhancedPost';
+import { RichPostInput, MediaFile, PollData, ProposalData, ContentType } from '@/types/enhancedPost';
 import AuthContext from '@/context/AuthContext';
 
 interface MobileEnhancedPostComposerProps {
@@ -20,20 +19,12 @@ interface MobileEnhancedPostComposerProps {
   className?: string;
 }
 
-enum ContentType {
-  TEXT = 'text',
-  MEDIA = 'media',
-  POLL = 'poll',
-  PROPOSAL = 'proposal',
-  LINK = 'link'
-}
-
 const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
   isOpen,
   onClose,
   onSubmit,
   communityId,
-  initialContentType = ContentType.TEXT,
+  initialContentType = ContentType.POST,
   className = ''
 }) => {
   const { user } = useContext(AuthContext);
@@ -53,7 +44,8 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     accessibilityClasses
   } = useMobileAccessibility();
 
-  const [contentType, setContentType] = useState<ContentType>(initialContentType);
+  // Unified content type - always POST, with optional poll/proposal
+  const [contentType] = useState<ContentType>(ContentType.POST);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [media, setMedia] = useState<MediaFile[]>([]);
@@ -63,8 +55,6 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [pollData, setPollData] = useState<PollData | undefined>(undefined);
   const [proposalData, setProposalData] = useState<ProposalData | undefined>(undefined);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
 
   // Clean up object URLs to prevent memory leaks
   useEffect(() => {
@@ -127,29 +117,22 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     try {
       const postData: RichPostInput = {
         author: user?.id || user?.address || 'anonymous',
-        contentType,
+        contentType, // Always ContentType.POST
         title: title.trim() || undefined,
         content: content.trim(),
         media: media.length > 0 ? media : undefined,
         hashtags,
         mentions,
         communityId,
-        // Include poll data for poll content type
-        poll: contentType === ContentType.POLL ? pollData : undefined,
-        // Include proposal data for proposal content type
-        proposal: contentType === ContentType.PROPOSAL ? proposalData : undefined,
-        // Include link data for link content type
-        links: contentType === ContentType.LINK && linkUrl ? [{
-          url: linkUrl,
-          title: linkPreview?.title || undefined,
-          description: linkPreview?.description || undefined,
-          image: linkPreview?.image || undefined,
-          type: linkPreview?.type || 'website' // Use actual link type instead of hardcoded value
-        }] : undefined
+        // Include poll data if present
+        poll: pollData,
+        // Include proposal data if present
+        proposal: proposalData,
+        tags: [...hashtags, contentType] // Include content type as tag
       };
 
       await onSubmit(postData);
-      
+
       // Reset form
       setContent('');
       setTitle('');
@@ -158,9 +141,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
       setMentions([]);
       setPollData(undefined);
       setProposalData(undefined);
-      setLinkUrl('');
-      setLinkPreview(null); // Reset link preview after submission
-      
+
       triggerHapticFeedback('success');
       announceToScreenReader('Post created successfully');
       onClose();
@@ -170,26 +151,7 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [content, contentType, title, media, hashtags, mentions, communityId, pollData, proposalData, linkUrl, linkPreview, user, onSubmit, triggerHapticFeedback, announceToScreenReader, onClose]);
-
-  const handleContentTypeChange = (type: ContentType) => {
-    setContentType(type);
-    
-    // Clear content type-specific data when switching types
-    if (type !== ContentType.POLL) {
-      setPollData(undefined);
-    }
-    if (type !== ContentType.PROPOSAL) {
-      setProposalData(undefined);
-    }
-    if (type !== ContentType.LINK) {
-      setLinkUrl('');
-      setLinkPreview(null); // Reset link preview when not in link mode
-    }
-    
-    triggerHapticFeedback('light');
-    announceToScreenReader(`Switched to ${type} content type`);
-  };
+  }, [content, contentType, title, media, hashtags, mentions, communityId, pollData, proposalData, user, onSubmit, triggerHapticFeedback, announceToScreenReader, onClose]);
 
   const handleMediaUpload = (files: File[]) => {
     const mediaFiles: MediaFile[] = files.map(file => ({
@@ -231,68 +193,11 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
     setProposalData(proposalData);
   };
 
-  // Capture URL value for LINK content type
-  const handleLinkUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
-    setLinkUrl(url);
-    
-    if (url) {
-      try {
-        // Validate URL format first
-        new URL(url); // This will throw if invalid
-        
-        // Fetch actual link preview data
-        const response = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`, {
-          signal: AbortSignal.timeout(5000), // 5 second timeout
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-        
-        if (response.ok) {
-          const previewData = await response.json();
-          setLinkPreview({
-            url: url,
-            title: previewData.title || '',
-            description: previewData.description || '',
-            image: previewData.image || '',
-            type: previewData.type || 'website'
-          });
-        } else {
-          // Fallback to basic preview if API fails
-          setLinkPreview({
-            url: url,
-            title: '',
-            description: '',
-            image: '',
-            type: 'website'
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to fetch link preview:', error);
-        // Fallback to basic preview on any error
-        setLinkPreview({
-          url: url,
-          title: '',
-          description: '',
-          image: '',
-          type: 'website'
-        });
-      }
-    } else {
-      setLinkPreview(null);
-    }
-  };
-
   // Content-type-specific validation and character limits
   const getContentLimits = (type: ContentType) => {
     switch (type) {
-      case ContentType.TEXT:
+      case ContentType.POST:
         return { min: 1, max: 2000, field: 'content' };
-      case ContentType.MEDIA:
-        return { min: 0, max: 1000, field: 'media description' };
-      case ContentType.LINK:
-        return { min: 0, max: 500, field: 'link description' };
       case ContentType.POLL:
         return { min: 1, max: 500, field: 'poll description' };
       case ContentType.PROPOSAL:
@@ -332,23 +237,8 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
           errors.push('Proposal must have a description');
         }
         break;
-      case ContentType.LINK:
-        if (!linkUrl?.trim()) {
-          errors.push('Link post must have a URL');
-        }
-        try {
-          if (linkUrl) new URL(linkUrl);
-        } catch {
-          errors.push('Please enter a valid URL');
-        }
-        break;
-      case ContentType.MEDIA:
-        if (media.length === 0 && content.trim().length === 0) {
-          errors.push('Media post must have either media files or description');
-        }
-        break;
     }
-    
+
     return { isValid: errors.length === 0, errors };
   };
 
@@ -427,21 +317,12 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            {/* Content Type Tabs */}
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <ContentTypeTabs
-                activeType={contentType}
-                onTypeChange={handleContentTypeChange}
-                className="mobile-optimized"
-              />
-            </div>
-
-            {/* Title Input (for certain content types) */}
-            {(contentType === ContentType.LINK || contentType === ContentType.PROPOSAL) && (
+            {/* Title Input (for polls and proposals) */}
+            {(pollData || proposalData) && (
               <div className="px-4 py-3">
                 <input
                   type="text"
-                  placeholder="Title"
+                  placeholder={proposalData ? "Proposal Title" : pollData ? "Poll Question" : "Title"}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className={`
@@ -457,123 +338,115 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
             )}
 
             {/* Main Content Area */}
-            <div className="px-4 py-3">
-              {contentType === ContentType.TEXT && (
-                <textarea
-                  ref={textareaRef}
-                  placeholder="What's on your mind?"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className={`
-                    w-full px-0 py-2 text-base bg-transparent
-                    border-none outline-none resize-none min-h-[120px]
-                    text-gray-900 dark:text-white
-                    placeholder-gray-500 dark:placeholder-gray-400
-                    ${accessibilityClasses}
-                  `}
-                  maxLength={2000}
-                  aria-label="Post content"
+            <div className="px-4 py-3 space-y-4">
+              {/* Text Input - Always visible */}
+              <textarea
+                ref={textareaRef}
+                placeholder="What's on your mind?"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className={`
+                  w-full px-0 py-2 text-base bg-transparent
+                  border-none outline-none resize-none min-h-[120px]
+                  text-gray-900 dark:text-white
+                  placeholder-gray-500 dark:placeholder-gray-400
+                  ${accessibilityClasses}
+                `}
+                maxLength={2000}
+                aria-label="Post content"
+              />
+
+              {/* Media Upload - Always available */}
+              <div className="space-y-4">
+                <MediaUploadZone
+                  onUpload={handleMediaUpload}
+                  maxFiles={10}
+                  acceptedTypes={['image/*', 'video/*', 'audio/*']}
                 />
-              )}
 
-              {contentType === ContentType.MEDIA && (
-                <div className="space-y-4">
-                  <MediaUploadZone
-                    onUpload={handleMediaUpload}
-                    maxFiles={10}
-                    acceptedTypes={['image/*', 'video/*']}
-                  />
-                  
-                  {media.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {media.map((file, index) => (
-                        <div key={file.id} className="relative">
-                          <img
-                            src={file.preview}
-                            alt={`Upload ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                     
-                     />
-                          <button
-                            onClick={() => handleMediaRemove(index)}
-                            className={`
-                              absolute top-1 right-1 w-6 h-6 bg-red-500 text-white
-                              rounded-full flex items-center justify-center text-xs
-                              ${touchTargetClasses}
-                            `}
-                            aria-label={`Remove image ${index + 1}`}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                {media.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {media.map((file, index) => (
+                      <div key={file.id} className="relative">
+                        <img
+                          src={file.preview}
+                          alt={`Upload ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => handleMediaRemove(index)}
+                          className={`
+                            absolute top-1 right-1 w-6 h-6 bg-red-500 text-white
+                            rounded-full flex items-center justify-center text-xs
+                            ${touchTargetClasses}
+                          `}
+                          aria-label={`Remove media ${index + 1}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Add a caption..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className={`
-                      w-full px-0 py-2 text-base bg-transparent
-                      border-none outline-none resize-none min-h-[80px]
-                      text-gray-900 dark:text-white
-                      placeholder-gray-500 dark:placeholder-gray-400
-                      ${accessibilityClasses}
-                    `}
-                    maxLength={1000}
-                  />
-                </div>
-              )}
+              {/* Optional Content Toggles */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPollData(pollData ? undefined : { question: '', options: [], allowMultiple: false, tokenWeighted: false });
+                    triggerHapticFeedback('light');
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                    pollData
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                  } ${touchTargetClasses}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <span className="text-sm">{pollData ? 'Remove Poll' : 'Add Poll'}</span>
+                </button>
 
-              {contentType === ContentType.POLL && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProposalData(proposalData ? undefined : { title: '', description: '', type: 'governance', votingPeriod: 7, quorum: 10, threshold: 50 });
+                    triggerHapticFeedback('light');
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                    proposalData
+                      ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                  } ${touchTargetClasses}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-sm">{proposalData ? 'Remove Proposal' : 'Add Proposal'}</span>
+                </button>
+              </div>
+
+              {/* Poll Creator - Conditionally shown */}
+              {pollData && (
                 <PollCreator
                   poll={pollData}
-                  onPollChange={handlePollChange}
+                  onPollChange={setPollData}
                   className="mobile-optimized"
+                  disabled={isSubmitting}
                 />
               )}
 
-              {contentType === ContentType.PROPOSAL && (
+              {/* Proposal Creator - Conditionally shown */}
+              {proposalData && (
                 <ProposalCreator
                   proposal={proposalData}
-                  onProposalChange={handleProposalChange}
+                  onProposalChange={setProposalData}
                   className="mobile-optimized"
+                  disabled={isSubmitting}
                 />
-              )}
-
-              {contentType === ContentType.LINK && (
-                <div className="space-y-4">
-                  <input
-                    type="url"
-                    placeholder="Paste a link..."
-                    value={linkUrl}
-                    onChange={handleLinkUrlChange}
-                    className={`
-                      w-full px-3 py-2 border border-gray-300 dark:border-gray-600
-                      rounded-lg bg-white dark:bg-gray-800
-                      text-gray-900 dark:text-white
-                      placeholder-gray-500 dark:placeholder-gray-400
-                      ${accessibilityClasses}
-                    `}
-                  />
-                  
-                  <textarea
-                    ref={textareaRef}
-                    placeholder="Add your thoughts..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className={`
-                      w-full px-0 py-2 text-base bg-transparent
-                      border-none outline-none resize-none min-h-[80px]
-                      text-gray-900 dark:text-white
-                      placeholder-gray-500 dark:placeholder-gray-400
-                      ${accessibilityClasses}
-                    `}
-                    maxLength={1000}
-                  />
-                </div>
               )}
             </div>
 

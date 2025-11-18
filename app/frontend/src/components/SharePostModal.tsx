@@ -26,15 +26,19 @@ interface SharePostModalProps {
   onShare?: (postId: string, shareType: string, message?: string) => Promise<void>;
 }
 
+interface SharePostModalWithToastProps extends SharePostModalProps {
+  addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
+}
+
 export default function SharePostModal({
   isOpen,
   onClose,
   post,
   postType,
-  onShare
-}: SharePostModalProps) {
+  onShare,
+  addToast
+}: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
-  const { addToast } = useToast();
 
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);
@@ -333,6 +337,8 @@ export default function SharePostModal({
   );
 
   // Use portal to render modal at document root level
+  // Since this is rendered via portal, it's no longer in the ToastProvider context,
+  // so we need to ensure the parent component provides the toast context
   return typeof window !== 'undefined' 
     ? createPortal(modalContent, document.body)
     : null;

@@ -18,7 +18,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const [tags, setTags] = useState('');
   const [media, setMedia] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [contentType, setContentType] = useState<ContentType>(ContentType.TEXT);
+  const [contentType, setContentType] = useState<ContentType>(ContentType.POST);
   const [poll, setPoll] = useState<PollData | undefined>(undefined);
   const [proposal, setProposal] = useState<ProposalData | undefined>(undefined);
   const [postType, setPostType] = useState('standard'); // standard, proposal, defi, nft, analysis
@@ -27,15 +27,13 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate based on content type
     let isValid = false;
     let finalContent = '';
-    
+
     switch (contentType) {
-      case ContentType.TEXT:
-      case ContentType.MEDIA:
-      case ContentType.LINK:
+      case ContentType.POST:
         isValid = content.trim().length > 0;
         finalContent = content;
         break;
@@ -103,7 +101,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
     setTags('');
     setMedia(null);
     setPreview(null);
-    setContentType(ContentType.TEXT);
+    setContentType(ContentType.POST);
     setPoll(undefined);
     setProposal(undefined);
     setPostType('standard');
@@ -199,7 +197,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
           )}
           
           {/* Content Editor based on type */}
-          {contentType === ContentType.TEXT && (
+          {contentType === ContentType.POST && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Content
@@ -233,25 +231,6 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
             />
           )}
 
-          {(contentType === ContentType.MEDIA || contentType === ContentType.LINK) && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {contentType === ContentType.MEDIA ? 'Media Post' : 'Link Post'}
-              </label>
-              <RichTextEditor
-                value={content}
-                onChange={setContent}
-                placeholder={contentType === ContentType.MEDIA 
-                  ? "Add a caption or description for your media..."
-                  : "Share a link and add your thoughts about it..."
-                }
-                disabled={isLoading}
-                showPreview={false}
-                className="min-h-[150px]"
-              />
-            </div>
-          )}
-          
           {preview && (
             <div className="mb-4">
               <img src={preview} alt="Preview" className="rounded-lg max-h-60 object-cover" />
@@ -308,10 +287,8 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
             <button
               type="submit"
               disabled={
-                isLoading || 
-                (contentType === ContentType.TEXT && content.trim() === '') ||
-                (contentType === ContentType.MEDIA && content.trim() === '') ||
-                (contentType === ContentType.LINK && content.trim() === '') ||
+                isLoading ||
+                (contentType === ContentType.POST && content.trim() === '') ||
                 (contentType === ContentType.POLL && (!poll || !poll.question.trim() || poll.options.filter(opt => opt.text.trim()).length < 2)) ||
                 (contentType === ContentType.PROPOSAL && (!proposal || !proposal.title.trim() || !proposal.description.trim())) ||
                 (postType === 'nft' && (!nftAddress || !nftTokenId))

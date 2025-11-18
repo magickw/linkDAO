@@ -103,7 +103,7 @@ class ContentValidationService {
           warnings.push(...pollValidation.warnings);
         }
         break;
-      
+
       case ContentType.PROPOSAL:
         if (post.proposal) {
           const proposalValidation = this.validateProposal(post.proposal);
@@ -111,22 +111,20 @@ class ContentValidationService {
           warnings.push(...proposalValidation.warnings);
         }
         break;
-      
-      case ContentType.MEDIA:
-        if (post.media && post.media.length > 0) {
-          const mediaValidation = this.validateMedia(post.media);
-          errors.push(...mediaValidation.errors);
-          warnings.push(...mediaValidation.warnings);
-        }
-        break;
-      
-      case ContentType.LINK:
-        if (post.links && post.links.length > 0) {
-          const linkValidation = this.validateLinks(post.links);
-          errors.push(...linkValidation.errors);
-          warnings.push(...linkValidation.warnings);
-        }
-        break;
+    }
+
+    // Validate media if present (applies to all POST types)
+    if (post.media && post.media.length > 0) {
+      const mediaValidation = this.validateMedia(post.media);
+      errors.push(...mediaValidation.errors);
+      warnings.push(...mediaValidation.warnings);
+    }
+
+    // Validate links if present (applies to all POST types)
+    if (post.links && post.links.length > 0) {
+      const linkValidation = this.validateLinks(post.links);
+      errors.push(...linkValidation.errors);
+      warnings.push(...linkValidation.warnings);
     }
 
     // Validate hashtags

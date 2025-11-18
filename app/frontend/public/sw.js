@@ -336,7 +336,9 @@ async function networkFirst(request, cacheName) {
       }
     } catch (error) {
       console.warn('Failed to use shared response, falling back to cache:', error);
-      return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
+      // Remove the failed promise from pending requests so a new one can be created
+      pendingRequests.delete(requestKey);
+      // Continue to normal request handling below
     }
   }
   
@@ -413,6 +415,29 @@ async function networkFirst(request, cacheName) {
 }
 
 async function performNetworkRequest(request, cacheName, requestKey, cacheConfig) {
+  // Special handling for blockchain API requests to prevent coalescing issues
+  const url = new URL(request.url);
+  if (url.hostname.includes('etherscan.io') || url.hostname.includes('basescan.org') || url.hostname.includes('bscscan.com')) {
+    // Don't coalesce blockchain API requests as they may have different parameters
+    // but still apply timeout protection
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const networkResponse = await fetch(request, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return networkResponse;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      // For blockchain APIs, try to return cached response if available
+      console.warn('Blockchain API request failed, trying cache:', error.message, requestKey);
+      return await getCachedResponse(request, cacheName);
+    }
+  }
+  
   try {
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
@@ -519,13 +544,19 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         failedRequests.set(requestKey, failureInfo);
       }
       // Handle community API errors with specific backoff
-      else if (url.pathname.includes('/api/communities')) {
-        console.warn('Community API error:', networkResponse.status, requestKey);
-        // Track failure with exponential backoff for community requests
-        const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
-        failureInfo.attempts += 1;
-        failureInfo.lastFailure = Date.now();
-        failedRequests.set(requestKey, failureInfo);
+      else if (url.pathname.includes('/api/communities') || url.pathname.includes('/communities/')) {
+        console.warn('Community API failed:', error.message, requestKey);
+        // For 404 errors, don't aggressively backoff as the resource may not exist
+        if (error.message && (error.message.includes('404') || error.message.includes('not found'))) {
+          console.log('Community not found (404), not applying backoff');
+          failedRequests.delete(requestKey);
+        } else {
+          // Track failure with exponential backoff for other community requests
+          const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+          failureInfo.attempts += 1;
+          failureInfo.lastFailure = Date.now();
+          failedRequests.set(requestKey, failureInfo);
+        }
       }
       // Handle messaging API errors with specific backoff
       else if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations') || url.pathname.includes('/api/conversations') || url.pathname.includes('/api/messages/conversations')) {
@@ -561,6 +592,9 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     }
   } catch (error) {
     console.log('Network failed, trying cache:', error.message);
+    
+    // Clear the pending request on network failure to allow retry
+    pendingRequests.delete(requestKey);
     
     // Special handling for different error types
     const url = new URL(request.url);

@@ -19,9 +19,7 @@ export const ContentTypeTabs: React.FC<ContentTypeTabsProps> = ({
   disabled = false
 }) => {
   const tabs = [
-    { type: ContentType.TEXT, label: 'Text', icon: '📝' },
-    { type: ContentType.MEDIA, label: 'Media', icon: '📷' },
-    { type: ContentType.LINK, label: 'Link', icon: '🔗' },
+    { type: ContentType.POST, label: 'Post', icon: '📝' },
     { type: ContentType.POLL, label: 'Poll', icon: '📊' },
     { type: ContentType.PROPOSAL, label: 'Proposal', icon: '📋' },
   ];

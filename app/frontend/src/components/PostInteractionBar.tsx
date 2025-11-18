@@ -226,6 +226,7 @@ export default function PostInteractionBar({
         post={post}
         postType={postType}
         onShare={onShare}
+        addToast={addToast}
       />
     </div>
   );

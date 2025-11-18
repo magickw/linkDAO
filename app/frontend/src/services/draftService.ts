@@ -113,7 +113,7 @@ export class DraftService {
   static createDraft(
     context: 'feed' | 'community',
     communityId?: string,
-    contentType: ContentType = ContentType.TEXT
+    contentType: ContentType = ContentType.POST
   ): PostDraft {
     const now = new Date();
     
@@ -268,9 +268,7 @@ export class DraftService {
     const stats = {
       total: drafts.length,
       byContentType: {
-        [ContentType.TEXT]: 0,
-        [ContentType.MEDIA]: 0,
-        [ContentType.LINK]: 0,
+        [ContentType.POST]: 0,
         [ContentType.POLL]: 0,
         [ContentType.PROPOSAL]: 0
       } as Record<ContentType, number>,

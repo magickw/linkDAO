@@ -1,21 +1,19 @@
 import { Post, CreatePostInput } from '../models/Post';
 
-// Enhanced content types for the new post composer
+// Unified content type - all posts support mixed content (text, images, videos, links, etc.)
 export enum ContentType {
-  TEXT = 'text',
-  MEDIA = 'media',
-  LINK = 'link',
-  POLL = 'poll',
-  PROPOSAL = 'proposal'
+  POST = 'post', // Standard post with any combination of text, media, links
+  POLL = 'poll', // Poll-specific post
+  PROPOSAL = 'proposal' // Governance proposal post
 }
 
 export interface RichPostInput extends Omit<CreatePostInput, 'media'> {
   contentType: ContentType;
   title?: string;
-  media?: MediaFile[];
-  links?: LinkPreview[];
-  poll?: PollData;
-  proposal?: ProposalData;
+  media?: MediaFile[]; // Can contain images, videos, audio simultaneously
+  links?: LinkPreview[]; // Can have multiple links with previews
+  poll?: PollData; // Optional poll data
+  proposal?: ProposalData; // Optional proposal data
   hashtags: string[];
   mentions: string[];
   communityId?: string;

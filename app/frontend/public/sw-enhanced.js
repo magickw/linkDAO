@@ -7,7 +7,7 @@
 try {
   // Import Workbox modules with error handling
   try {
-    importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.0.0/workbox-sw.js');
+    importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js');
   } catch (error) {
     console.error('Failed to load Workbox from CDN, using fallback service worker:', error);
     // Register a simple service worker without Workbox
@@ -35,7 +35,7 @@ try {
   // Configure Workbox
   workbox.setConfig({
     debug: false,
-    modulePathPrefix: 'https://storage.googleapis.com/workbox-cdn/releases/7.0.0/'
+    modulePathPrefix: 'https://storage.googleapis.com/workbox-cdn/releases/7.3.0/'
   });
 
   // Enable navigation preload

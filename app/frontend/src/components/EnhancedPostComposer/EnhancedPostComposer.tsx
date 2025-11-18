@@ -15,7 +15,6 @@ import {
 import { DraftService } from '../../services/draftService';
 import { contentValidationService } from '../../services/contentValidationService';
 import { mediaProcessingService } from '../../services/mediaProcessingService';
-import { ContentTypeTabs } from './ContentTypeTabs';
 import EnhancedMediaUploadZone from './EnhancedMediaUploadZone';
 import { HashtagMentionInput } from './HashtagMentionInput';
 import { PollCreator } from './PollCreator';
@@ -25,7 +24,7 @@ import RichTextEditor from './RichTextEditor';
 export default function EnhancedPostComposer({
   context,
   communityId,
-  initialContentType = ContentType.TEXT,
+  initialContentType = ContentType.POST, // Default to unified POST type
   initialDraft,
   onSubmit,
   onDraftSave,
@@ -36,15 +35,15 @@ export default function EnhancedPostComposer({
 }: EnhancedPostComposerProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  
-  // Form state
-  const [contentType, setContentType] = useState<ContentType>(initialContentType);
+
+  // Form state - contentType is now fixed to POST (allows all content types)
+  const [contentType] = useState<ContentType>(ContentType.POST);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [media, setMedia] = useState<MediaFile[]>([]);
-  const [links, setLinks] = useState<LinkPreview[]>([]);
-  const [poll, setPoll] = useState<PollData | undefined>();
-  const [proposal, setProposal] = useState<ProposalData | undefined>();
+  const [media, setMedia] = useState<MediaFile[]>([]); // Can contain images, videos, audio
+  const [links, setLinks] = useState<LinkPreview[]>([]); // Can have multiple links
+  const [poll, setPoll] = useState<PollData | undefined>(); // Optional poll
+  const [proposal, setProposal] = useState<ProposalData | undefined>(); // Optional proposal
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [mentions, setMentions] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState<Date | undefined>();
@@ -105,15 +104,15 @@ export default function EnhancedPostComposer({
 
   // Load draft data into form
   const loadDraftData = useCallback((draft: PostDraft) => {
-    setContentType(draft.contentType);
+    // Always use unified POST type, ignore draft contentType for backwards compatibility
     setTitle(draft.title || '');
     setContent(draft.content);
-    setMedia(draft.media);
-    setLinks(draft.links);
+    setMedia(draft.media || []);
+    setLinks(draft.links || []);
     setPoll(draft.poll);
     setProposal(draft.proposal);
-    setHashtags(draft.hashtags);
-    setMentions(draft.mentions);
+    setHashtags(draft.hashtags || []);
+    setMentions(draft.mentions || []);
     setScheduledAt(draft.scheduledAt);
     setIsExpanded(true);
     setDraftLastSaved(draft.updatedAt);
@@ -156,8 +155,8 @@ export default function EnhancedPostComposer({
     if (hashtags.length === 0) {
       suggestions.push('Add hashtags to increase discoverability');
     }
-    if (contentType === ContentType.TEXT && content.length < 50) {
-      suggestions.push('Consider adding more detail to your post');
+    if (content.length < 50 && media.length === 0) {
+      suggestions.push('Consider adding more detail or media to your post');
     }
 
     return {
@@ -168,21 +167,7 @@ export default function EnhancedPostComposer({
     };
   }, [content, contentType, title, media, links, poll, proposal, hashtags, mentions, communityId, scheduledAt, isConnected, address]);
 
-  // Handle content type change
-  const handleContentTypeChange = useCallback((newType: ContentType) => {
-    setContentType(newType);
-    
-    // Clear type-specific data when switching
-    if (newType !== ContentType.MEDIA) {
-      setMedia([]);
-    }
-    if (newType !== ContentType.POLL) {
-      setPoll(undefined);
-    }
-    if (newType !== ContentType.PROPOSAL) {
-      setProposal(undefined);
-    }
-  }, []);
+  // REMOVED: handleContentTypeChange - no longer needed with unified content type
 
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -231,7 +216,7 @@ export default function EnhancedPostComposer({
 
   // Reset form
   const handleReset = useCallback(() => {
-    setContentType(ContentType.TEXT);
+    // Keep contentType as POST
     setTitle('');
     setContent('');
     setMedia([]);
@@ -245,7 +230,7 @@ export default function EnhancedPostComposer({
     setValidation(null);
     setHasDraft(false);
     setDraftLastSaved(null);
-    
+
     // Clear draft
     DraftService.deleteDraft(context, communityId);
     autoSaverRef.current?.cancel();
@@ -287,21 +272,16 @@ export default function EnhancedPostComposer({
   }, [isExpanded]);
 
   const getPlaceholder = useCallback(() => {
-    switch (contentType) {
-      case ContentType.MEDIA:
-        return "Share your media with the world...";
-      case ContentType.LINK:
-        return "Share an interesting link...";
-      case ContentType.POLL:
-        return "Ask the community a question...";
-      case ContentType.PROPOSAL:
-        return "Describe your governance proposal...";
-      default:
-        return context === 'community'
-          ? "Share your thoughts with the community..."
-          : isExpanded ? "What's happening in Web3?" : placeholders[placeholderIndex];
+    if (poll) {
+      return "Ask the community a question...";
     }
-  }, [contentType, context, isExpanded, placeholderIndex]);
+    if (proposal) {
+      return "Describe your governance proposal...";
+    }
+    return context === 'community'
+      ? "Share your thoughts with the community..."
+      : isExpanded ? "What's happening in Web3?" : placeholders[placeholderIndex];
+  }, [poll, proposal, context, isExpanded, placeholderIndex]);
 
   // Collapsed state
   if (!isExpanded) {
@@ -334,17 +314,17 @@ export default function EnhancedPostComposer({
               <button
                 type="button"
                 className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200 hover:scale-105"
-                onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.MEDIA); handleExpand(); }}
+                onClick={(e) => { e.stopPropagation(); handleExpand(); }}
               >
                 <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="text-sm font-medium">Image</span>
+                <span className="text-sm font-medium">Media</span>
               </button>
               <button
                 type="button"
                 className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 hover:scale-105"
-                onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.POLL); handleExpand(); }}
+                onClick={(e) => { e.stopPropagation(); setPoll({ question: '', options: [], allowMultiple: false, tokenWeighted: false }); handleExpand(); }}
               >
                 <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -355,7 +335,7 @@ export default function EnhancedPostComposer({
                 <button
                   type="button"
                   className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 hover:scale-105"
-                  onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.PROPOSAL); handleExpand(); }}
+                  onClick={(e) => { e.stopPropagation(); setProposal({ title: '', description: '', type: 'governance', votingPeriod: 7, quorum: 10, threshold: 50 }); handleExpand(); }}
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -413,27 +393,18 @@ export default function EnhancedPostComposer({
       </div>
       
       <form ref={formRef} onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Content Type Tabs */}
-        <ContentTypeTabs
-          activeType={contentType}
-          onTypeChange={handleContentTypeChange}
-          context={context}
-          communityId={communityId}
-          disabled={isLoading}
-        />
-        
-        {/* Title Input (for certain content types) */}
-        {(contentType === ContentType.PROPOSAL || contentType === ContentType.POLL) && (
+        {/* Title Input (optional for all posts) */}
+        {(poll || proposal) && (
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {contentType === ContentType.PROPOSAL ? 'Proposal Title' : 'Poll Question'}
+              {proposal ? 'Proposal Title' : poll ? 'Poll Question' : 'Title'}
             </label>
             <input
               type="text"
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={contentType === ContentType.PROPOSAL ? 'Enter proposal title...' : 'What would you like to ask?'}
+              placeholder={proposal ? 'Enter proposal title...' : poll ? 'What would you like to ask?' : 'Enter title...'}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white transition-colors duration-200"
               disabled={isLoading}
               required
@@ -446,41 +417,67 @@ export default function EnhancedPostComposer({
           <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Content
           </label>
-          {contentType === ContentType.TEXT || contentType === ContentType.LINK ? (
-            <RichTextEditor
-              value={content}
-              onChange={setContent}
-              placeholder={getPlaceholder()}
+          <HashtagMentionInput
+            value={content}
+            onChange={setContent}
+            onHashtagsChange={setHashtags}
+            onMentionsChange={setMentions}
+            placeholder={getPlaceholder()}
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Media Upload Zone - Always available for all posts */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Media (Images, Videos, Audio)
+          </label>
+          <EnhancedMediaUploadZone
+            files={media}
+            onFilesChange={setMedia}
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Optional Content Toggles */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setPoll(poll ? undefined : { question: '', options: [], allowMultiple: false, tokenWeighted: false })}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
+              poll
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+            disabled={isLoading}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span className="text-sm font-medium">{poll ? 'Remove Poll' : 'Add Poll'}</span>
+          </button>
+
+          {context === 'feed' && (
+            <button
+              type="button"
+              onClick={() => setProposal(proposal ? undefined : { title: '', description: '', type: 'governance', votingPeriod: 7, quorum: 10, threshold: 50 })}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
+                proposal
+                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
               disabled={isLoading}
-              showPreview={false}
-            />
-          ) : (
-            <HashtagMentionInput
-              value={content}
-              onChange={setContent}
-              onHashtagsChange={setHashtags}
-              onMentionsChange={setMentions}
-              placeholder={getPlaceholder()}
-              disabled={isLoading}
-            />
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="text-sm font-medium">{proposal ? 'Remove Proposal' : 'Add Proposal'}</span>
+            </button>
           )}
         </div>
-        
-        {/* Content Type Specific Components */}
-        {contentType === ContentType.MEDIA && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Media Files
-            </label>
-            <EnhancedMediaUploadZone
-              files={media}
-              onFilesChange={setMedia}
-              disabled={isLoading}
-            />
-          </div>
-        )}
 
-        {contentType === ContentType.POLL && (
+        {/* Content Type Specific Components */}
+        {poll && (
           <PollCreator
             poll={poll}
             onPollChange={setPoll}
@@ -488,7 +485,7 @@ export default function EnhancedPostComposer({
           />
         )}
 
-        {contentType === ContentType.PROPOSAL && (
+        {proposal && (
           <ProposalCreator
             proposal={proposal}
             onProposalChange={setProposal}
