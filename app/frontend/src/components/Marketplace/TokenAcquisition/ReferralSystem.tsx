@@ -36,7 +36,7 @@ interface LeaderboardEntry {
 
 interface ReferralServiceInterface {
   getReferralInfo: (address: string) => Promise<ReferralInfo | null>;
-  getReferralRewards: (address: string) => Promise<ReferralReward[]>;
+  getReferralRewards: () => Promise<ReferralReward[]>;
   getReferralLeaderboard: (limit: number) => Promise<LeaderboardEntry[]>;
   generateReferralCode: (address: string) => Promise<{ success: boolean; referralCode?: string; referralLink?: string; error?: string }>;
   claimRewards: (address: string) => Promise<{ success: boolean; error?: string }>;
@@ -69,7 +69,7 @@ const ReferralSystem: React.FC = () => {
       }
 
       // Load rewards
-      const userRewards = await referralService.getReferralRewards(address);
+      const userRewards = await referralService.getReferralRewards();
       setRewards(userRewards);
 
       // Load leaderboard

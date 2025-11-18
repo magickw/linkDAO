@@ -276,10 +276,24 @@ export function EnhancedAnalytics() {
       <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
       <div className="space-y-2">
         {(() => {
-          // Calculate maxValue once outside the loop for efficiency
-          const maxValue = Math.max(...data.data);
+          // Calculate maxValue once outside the loop for efficiency with defensive guards
+          const maxValue = data.data.length > 0 ? Math.max(...data.data) : 0;
+          if (maxValue === 0) {
+            return data.labels.map((label: string, index: number) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm w-12">{label}</span>
+                <div className="flex-1 mx-3">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div className={`h-2 rounded-full ${color}`} style={{ width: '0%' }}></div>
+                  </div>
+                </div>
+                <span className="text-white text-sm w-16 text-right">{data.data[index]?.toLocaleString() || '0'}</span>
+              </div>
+            ));
+          }
+          
           return data.labels.map((label: string, index: number) => {
-            const value = data.data[index];
+            const value = data.data[index] || 0;
             const percentage = (value / maxValue) * 100;
             
             return (
@@ -303,8 +317,21 @@ export function EnhancedAnalytics() {
   );
 
   const PieChartComponent = ({ title, data }: { title: string; data: Record<string, number> }) => {
-    const total = Object.values(data).reduce((sum, value) => sum + value, 0);
+    const values = Object.values(data);
+    const total = values.reduce((sum, value) => sum + value, 0);
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500', 'bg-indigo-500'];
+    
+    // Handle edge case where total is 0
+    if (total === 0) {
+      return (
+        <GlassPanel className="p-6">
+          <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
+          <div className="text-center py-8">
+            <p className="text-gray-400">No data available</p>
+          </div>
+        </GlassPanel>
+      );
+    }
     
     return (
       <GlassPanel className="p-6">
@@ -312,9 +339,9 @@ export function EnhancedAnalytics() {
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex-1">
             <div className="relative w-40 h-40 mx-auto">
-              {Object.values(data).map((value, index) => {
+              {values.map((value, index) => {
                 const percentage = (value / total) * 100;
-                const rotation = index === 0 ? 0 : Object.values(data).slice(0, index).reduce((sum, val) => sum + (val / total) * 360, 0);
+                const rotation = index === 0 ? 0 : values.slice(0, index).reduce((sum, val) => sum + (val / total) * 360, 0);
                 
                 return (
                   <div

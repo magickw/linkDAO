@@ -172,10 +172,24 @@ export function AdminAnalytics() {
       <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
       <div className="space-y-2">
         {(() => {
-          // Calculate maxValue once outside the loop for efficiency
-          const maxValue = Math.max(...data.data);
+          // Calculate maxValue once outside the loop for efficiency with defensive guards
+          const maxValue = data.data.length > 0 ? Math.max(...data.data) : 0;
+          if (maxValue === 0) {
+            return data.labels.map((label: string, index: number) => (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm w-12">{label}</span>
+                <div className="flex-1 mx-3">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div className={`h-2 rounded-full ${color}`} style={{ width: '0%' }}></div>
+                  </div>
+                </div>
+                <span className="text-white text-sm w-16 text-right">{data.data[index]?.toLocaleString() || '0'}</span>
+              </div>
+            ));
+          }
+          
           return data.labels.map((label: string, index: number) => {
-            const value = data.data[index];
+            const value = data.data[index] || 0;
             const percentage = (value / maxValue) * 100;
             
             return (

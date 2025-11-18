@@ -448,11 +448,12 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       try {
         responseToCache = networkResponse.clone();
         responseToReturn = networkResponse.clone();
-        
+
         // Don't cache authenticated responses to avoid security issues
         if (!isAuthRequest) {
           // Check if the request URL scheme is supported for caching
           if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+            const cache = await caches.open(cacheName);
             const responseWithTTL = new Response(responseToCache.body, {
               status: responseToCache.status,
               statusText: responseToCache.statusText,
@@ -462,14 +463,11 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
                 'sw-ttl': cacheConfig.ttl.toString()
               }
             });
-            
-            // Check if the request URL scheme is supported for caching
-            if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
-              await cache.put(request, responseWithTTL);
-            }
+
+            await cache.put(request, responseWithTTL);
           }
         }
-        
+
         // Clear failed request record on success
         failedRequests.delete(requestKey);
         // Reset rate limit counter on success

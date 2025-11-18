@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProposalData } from '@/types/enhancedPost';
 
 interface ProposalCreatorProps {
@@ -17,7 +17,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
   const [title, setTitle] = useState(proposal?.title || '');
   const [description, setDescription] = useState(proposal?.description || '');
   const [type, setType] = useState<'governance' | 'funding' | 'parameter' | 'upgrade'>(proposal?.type || 'governance');
-  const isUpdatingRef = useRef(false);
+  const previousProposalRef = useRef<string>('');
 
   // Sync state with prop changes to prevent stale data
   useEffect(() => {
@@ -32,19 +32,22 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
   useEffect(() => {
     // Use proposal-specific parameters based on type, not hardcoded values
     const proposalParams = getProposalParameters(type, proposal);
-    
+
     const newProposal = {
       title,
       description,
       type,
       ...proposalParams
     };
-    
-    // Only call onProposalChange if the proposal actually changed
-    if (JSON.stringify(newProposal) !== JSON.stringify(proposal)) {
+
+    const newProposalStr = JSON.stringify(newProposal);
+
+    // Only call onProposalChange if the proposal actually changed and is different from previous
+    if (newProposalStr !== previousProposalRef.current) {
+      previousProposalRef.current = newProposalStr;
       onProposalChange(newProposal);
     }
-  }, [title, description, type, proposal, onProposalChange]);
+  }, [title, description, type]);
 
   // Get appropriate parameters based on proposal type
   const getProposalParameters = (proposalType: typeof type, existingProposal?: ProposalData) => {

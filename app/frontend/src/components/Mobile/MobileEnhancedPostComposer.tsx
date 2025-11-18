@@ -492,7 +492,8 @@ const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProps> = ({
                             src={file.preview}
                             alt={`Upload ${index + 1}`}
                             className="w-full h-24 object-cover rounded-lg"
-                          />
+                     
+                     />
                           <button
                             onClick={() => handleMediaRemove(index)}
                             className={`

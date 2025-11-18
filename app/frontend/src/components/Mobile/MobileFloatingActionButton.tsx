@@ -128,7 +128,7 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
                     ${
                       position === 'bottom-left' ? 'order-2 mr-3' :
                       position === 'bottom-center' ? 'order-1 mb-2' :
-                      'order-1 ml-3'
+                      'order-2 ml-3'
                     }
                     ${
                       position === 'bottom-center' ? 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2' :

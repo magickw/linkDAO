@@ -82,16 +82,67 @@ export default function ReportModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // Focus management
+  // Focus management with focus trap
   useEffect(() => {
     if (isOpen) {
       previousFocusRef.current = document.activeElement as HTMLElement;
-      setTimeout(() => {
-        const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        firstFocusable?.focus();
-      }, 100);
+      
+      // Get all focusable elements within the modal
+      const getFocusableElements = () => {
+        const focusableSelectors = [
+          'button:not([disabled])',
+          '[href]',
+          'input:not([disabled])',
+          'select:not([disabled])',
+          'textarea:not([disabled])',
+          '[tabindex]:not([tabindex="-1"]):not([disabled])'
+        ].join(', ');
+        
+        return modalRef.current?.querySelectorAll<HTMLElement>(focusableSelectors) || [];
+      };
+
+      const focusFirstElement = () => {
+        const focusableElements = getFocusableElements();
+        if (focusableElements.length > 0) {
+          focusableElements[0].focus();
+        }
+      };
+
+      // Focus first element after modal opens
+      setTimeout(focusFirstElement, 100);
+
+      // Focus trap handler
+      const handleTabKey = (e: KeyboardEvent) => {
+        if (e.key !== 'Tab') return;
+
+        const focusableElements = getFocusableElements();
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          // Shift + Tab (going backwards)
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Tab (going forwards)
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      };
+
+      // Add event listener for tab key
+      document.addEventListener('keydown', handleTabKey);
+      
+      // Cleanup function
+      return () => {
+        document.removeEventListener('keydown', handleTabKey);
+      };
     } else if (previousFocusRef.current) {
       previousFocusRef.current.focus();
     }
@@ -152,6 +203,12 @@ export default function ReportModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="report-modal-title"
+          onMouseDown={(e) => {
+            // Close modal when clicking outside (on the backdrop)
+            if (e.target === e.currentTarget && !isLoading) {
+              handleClose();
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape' && !isLoading) {
               handleClose();
