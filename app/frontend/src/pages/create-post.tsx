@@ -30,21 +30,47 @@ const CreatePostPage: React.FC = () => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
         try {
-          // Get user's communities directly (more efficient than fetching all communities)
-          const { communities: userCommunities } = await CommunityService.getMyCommunities(1, 100);
-          setUserCommunities(userCommunities);
+          // Get all user's communities by paging through results
+          const allUserCommunities = [];
+          let page = 1;
+          const pageSize = 50; // Reasonable page size for API calls
+          let hasMore = true;
+          
+          while (hasMore) {
+            try {
+              const { communities, pagination } = await CommunityService.getMyCommunities(page, pageSize);
+              allUserCommunities.push(...communities);
+              
+              // Check if there are more pages
+              if (pagination && pagination.page && pagination.totalPages) {
+                hasMore = page < pagination.totalPages;
+              } else {
+                // Fallback: if no pagination info, assume no more pages if we got fewer results than page size
+                hasMore = communities.length === pageSize;
+              }
+              
+              page++;
+            } catch (pageError) {
+              console.error(`Error fetching page ${page} of user communities:`, pageError);
+              // Stop fetching more pages if we encounter an error
+              hasMore = false;
+              // But continue with whatever communities we've already fetched
+            }
+          }
+          
+          setUserCommunities(allUserCommunities);
           
           // If there's a community parameter in the URL, select it
           if (community && typeof community === 'string') {
             // First try to match by id or slug
-            let foundCommunity = userCommunities.find((c: any) => 
+            let foundCommunity = allUserCommunities.find((c: any) => 
               c.id === community || c.slug === community
             );
             
             // If no match found, try strict name matching (normalized)
             if (!foundCommunity) {
               const normalizedCommunity = community.trim().toLowerCase();
-              const nameMatches = userCommunities.filter((c: any) => 
+              const nameMatches = allUserCommunities.filter((c: any) => 
                 c.name && c.name.trim().toLowerCase() === normalizedCommunity
               );
               
@@ -117,7 +143,7 @@ const CreatePostPage: React.FC = () => {
       
       // Redirect based on whether it was a community post or global post
       if (selectedCommunity) {
-        const communityData = userCommunities.find(c => c.id === selectedCommunity);
+        const communityData = allUserCommunities.find(c => c.id === selectedCommunity);
         if (communityData) {
           router.push(`/communities/${communityData.slug || communityData.name || communityData.id}`);
         } else {

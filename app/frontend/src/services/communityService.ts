@@ -391,10 +391,10 @@ export class CommunityService {
     );
   }
 
-  /**
+    /**
    * Get communities that belong to the current user (both created and member of)
    * @param page - Page number (default: 1)
-   * @param limit - Number of items per page (default: 20)
+   * @param limit - Number of items per page (default: 100)
    * @returns Paginated list of user's communities
    */
   static async getMyCommunities(page: number = 1, limit: number = 100): Promise<{ communities: Community[]; pagination: any }> {
@@ -417,12 +417,12 @@ export class CommunityService {
       
       clearTimeout(timeoutId);
       
+      const json = await safeJson(response);
+      
       if (!response.ok) {
-        const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || 'Failed to fetch my communities');
+        throw new Error((json && (json.error || json.message)) || 'Failed to fetch my communities');
       }
       
-      const json = await safeJson(response);
       // Normalize payload to expected structure
       if (json && typeof json === 'object' && Array.isArray(json.communities)) {
         return json as { communities: Community[]; pagination: any };

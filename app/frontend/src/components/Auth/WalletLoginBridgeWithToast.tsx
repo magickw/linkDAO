@@ -9,20 +9,15 @@ import { useAuth } from '@/context/AuthContext';
 import { ToastContext } from '@/context/ToastContext';
 import { WalletLoginBridge } from './WalletLoginBridge';
 
-// Custom hook to safely access toast context with fallback
+// Custom hook to safely access toast context with strict provider requirement
 const useToastOrFallback = () => {
   const context = useContext(ToastContext);
   
-  if (context) {
-    return context;
+  if (!context) {
+    throw new Error('useToast must be inside ToastProvider');
   }
   
-  // Fallback implementation when no provider is present
-  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-    console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
-  };
-  
-  return { addToast };
+  return context;
 };
 
 export const WalletLoginBridgeWithToast: React.FC = () => {

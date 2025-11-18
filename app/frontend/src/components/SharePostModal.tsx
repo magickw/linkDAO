@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { ToastContext } from '@/context/ToastContext';
 
-// Custom hook to safely access toast context with fallback
+// Custom hook to safely access toast context with fallback for portal components
 const useToastOrFallback = () => {
   const context = useContext(ToastContext);
   
@@ -11,7 +11,7 @@ const useToastOrFallback = () => {
     return context;
   }
   
-  // Fallback implementation when no provider is present
+  // Fallback implementation when no provider is present (e.g. for portal components)
   const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
     console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
   };
