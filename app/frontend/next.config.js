@@ -34,6 +34,27 @@ const nextConfig = {
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
+    // Exclude playwright from client-side bundling
+    if (!isServer) {
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push({
+          'playwright': 'commonjs playwright',
+          '@playwright/test': 'commonjs @playwright/test',
+          'playwright-core': 'commonjs playwright-core',
+        });
+      }
+
+      // Add ignore plugin for playwright files
+      const webpack = require('webpack');
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^playwright/,
+          contextRegExp: /node_modules/,
+        })
+      );
+    }
+
     // Add Workbox webpack plugin for service worker generation
     if (!isServer) {
       const WorkboxPlugin = require('workbox-webpack-plugin');
