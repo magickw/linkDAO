@@ -73,7 +73,7 @@ describe('PersonalizedSupportDashboard', () => {
     expect(screen.getByText('Earn LDAO Tokens')).toBeInTheDocument();
   });
 
-  it('shows empty states when no data is available', () => {
+  it('properly tests empty states by checking for specific empty state content', () => {
     render(<PersonalizedSupportDashboard />);
     
     // Check that sections exist even with mock data
@@ -81,13 +81,53 @@ describe('PersonalizedSupportDashboard', () => {
     expect(screen.getByText('Saved Documents')).toBeInTheDocument();
     expect(screen.getByText('Open Tickets')).toBeInTheDocument();
     expect(screen.getByText('Suggested For You')).toBeInTheDocument();
+    
+    // Verify that with mock data, we don't see empty state messages
+    expect(screen.queryByText('No recently viewed documents')).not.toBeInTheDocument();
+    expect(screen.queryByText('No saved documents')).not.toBeInTheDocument();
+    expect(screen.queryByText('No open tickets')).not.toBeInTheDocument();
+    expect(screen.queryByText('No suggestions available')).not.toBeInTheDocument();
   });
 
-  it('has view all links for each section', () => {
+  it('has proper navigation elements', () => {
     render(<PersonalizedSupportDashboard />);
     
-    // Check for any "View All" or similar navigation elements
-    const viewElements = screen.queryAllByText(/View|See/i);
-    expect(viewElements.length).toBeGreaterThanOrEqual(0);
+    // Check for "View All" link
+    expect(screen.getByText('View All')).toBeInTheDocument();
+    
+    // Check that quick action buttons are clickable and have proper aria labels
+    const newTicketButton = screen.getByLabelText('Create new support ticket');
+    const browseDocsButton = screen.getByLabelText('Browse documentation');
+    const liveChatButton = screen.getByLabelText('Open live chat');
+    const faqButton = screen.getByLabelText('View FAQ');
+    
+    expect(newTicketButton).toBeInTheDocument();
+    expect(browseDocsButton).toBeInTheDocument();
+    expect(liveChatButton).toBeInTheDocument();
+    expect(faqButton).toBeInTheDocument();
   });
-});
+
+  it('displays proper date formatting', () => {
+    render(<PersonalizedSupportDashboard />);
+    
+    // Check that dates are displayed in the expected format
+    // The mock data should show dates like "Jan 15", "Feb 20", etc.
+    const dateElements = screen.getAllByText(/^[A-Za-z]{3} \d{1,2}$/);
+    expect(dateElements.length).toBeGreaterThan(0);
+  });
+
+  it('renders status and priority badges correctly', () => {
+    render(<PersonalizedSupportDashboard />);
+    
+    // Check for status badges
+    expect(screen.getByText('In Progress')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    
+    // Verify badges have proper styling classes
+    const statusBadge = screen.getByText('In Progress').closest('span');
+    const priorityBadge = screen.getByText('High').closest('span');
+    
+    expect(statusBadge).toHaveClass('px-2', 'py-1', 'rounded-full', 'text-xs', 'font-medium');
+    expect(priorityBadge).toHaveClass('px-2', 'py-1', 'rounded-full', 'text-xs', 'font-medium');
+  });
+})

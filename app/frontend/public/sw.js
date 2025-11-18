@@ -105,7 +105,11 @@ const CACHEABLE_APIS = {
   '/api/search': { ttl: 300000, priority: 'low', staleTTL: 1800000 }, // 5min fresh, 30min stale
   '/api/marketplace': { ttl: 60000, priority: 'medium', staleTTL: 600000 }, // 1min fresh, 10min stale
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
-  '/api/messaging': { ttl: 30000, priority: 'medium', staleTTL: 120000 } // 30s fresh, 2min stale
+  '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/messages/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/messaging/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 } // 30s fresh, 2min stale
 };
 
 // Critical API responses that should be cached aggressively
@@ -414,7 +418,28 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
-    const networkResponse = await fetch(request, {
+    // Check if this is an authenticated request and add auth headers if needed
+    let fetchRequest = request;
+    const url = new URL(request.url);
+    let isAuthRequest = false;
+    
+    // For API requests that require authentication, try to add auth headers
+    // Note: localStorage is not available in service workers, so we need to check for auth headers in the original request
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth')) {
+      // If there's already an auth header, this is an authenticated request
+      if (authHeader) {
+        isAuthRequest = true;
+      }
+    }
+    
+    // Check if this is already an authenticated request
+    if (!isAuthRequest) {
+      const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+      isAuthRequest = !!authHeader;
+    }
+    
+    const networkResponse = await fetch(fetchRequest, {
       signal: controller.signal
     });
     
@@ -433,8 +458,11 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         responseToCache = networkResponse.clone();
         responseToReturn = networkResponse.clone();
         
-        // Cache with TTL metadata
-        await cacheResponseWithTTL(request, responseToCache, cacheName, cacheConfig.ttl);
+        // Don't cache authenticated responses to avoid security issues
+        if (!isAuthRequest) {
+          // Cache with TTL metadata for non-authenticated requests
+          await cacheResponseWithTTL(request, responseToCache, cacheName, cacheConfig.ttl);
+        }
         
         // Clear failed request record on success
         failedRequests.delete(requestKey);
@@ -469,18 +497,35 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         // Don't backoff image failures, let them fail fast
         failedRequests.delete(requestKey);
       }
-      // Handle community API 503 errors with specific backoff
-      else if (url.pathname.includes('/api/communities') && networkResponse.status === 503) {
-        console.warn('Community API service unavailable (503):', networkResponse.status, requestKey);
+      // Handle authentication failures (401) - don't cache these and don't backoff aggressively
+      else if (networkResponse.status === 401) {
+        console.warn('Authentication failed (401):', networkResponse.status, requestKey);
+        // Don't backoff authentication failures, they may be resolved by user login
+        failedRequests.delete(requestKey);
+        // Don't cache 401 responses
+        return networkResponse;
+      }
+      // Handle service unavailable errors (503) with specific backoff
+      else if (networkResponse.status === 503) {
+        console.warn('Service unavailable (503):', networkResponse.status, requestKey);
+        // Track failure with exponential backoff for service unavailable errors
+        const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+        failureInfo.attempts += 1;
+        failureInfo.lastFailure = Date.now();
+        failedRequests.set(requestKey, failureInfo);
+      }
+      // Handle community API errors with specific backoff
+      else if (url.pathname.includes('/api/communities')) {
+        console.warn('Community API error:', networkResponse.status, requestKey);
         // Track failure with exponential backoff for community requests
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
         failureInfo.attempts += 1;
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
       }
-      // Handle messaging API 503 errors with specific backoff
-      else if (url.pathname.includes('/api/messaging') && networkResponse.status === 503) {
-        console.warn('Messaging API service unavailable (503):', networkResponse.status, requestKey);
+      // Handle messaging API errors with specific backoff
+      else if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations') || url.pathname.includes('/api/conversations') || url.pathname.includes('/api/messages/conversations')) {
+        console.warn('Messaging API error:', networkResponse.status, requestKey);
         // Track failure with exponential backoff for messaging requests
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
         failureInfo.attempts += 1;
@@ -515,6 +560,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     
     // Special handling for different error types
     const url = new URL(request.url);
+    const requestKey = `${request.method}:${request.url}`;
     
     // Handle WebSocket connection failures
     if (url.pathname.includes('socket.io')) {
@@ -530,17 +576,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     else if (url.pathname.includes('/api/communities')) {
       console.warn('Community API failed:', error.message, requestKey);
       // Track failure with exponential backoff for community requests
-      const requestKey = `${request.method}:${request.url}`;
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
     }
     // Handle messaging API failures with more specific backoff
-    else if (url.pathname.includes('/api/messaging')) {
+    else if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations') || url.pathname.includes('/api/conversations') || url.pathname.includes('/api/messages/conversations')) {
       console.warn('Messaging API failed:', error.message, requestKey);
       // Track failure with exponential backoff for messaging requests
-      const requestKey = `${request.method}:${request.url}`;
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
@@ -548,7 +592,6 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     }
     else {
       // Track failure with exponential backoff for other requests
-      const requestKey = `${request.method}:${request.url}`;
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
@@ -619,7 +662,18 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
 // Background cache update for critical APIs
 async function updateCacheInBackground(request, cacheName, requestKey) {
   try {
-    const networkResponse = await fetch(request);
+    // Check if this is an authenticated request and add auth headers if needed
+    let fetchRequest = request;
+    const url = new URL(request.url);
+    
+    // For API requests that require authentication, check if this is already an authenticated request
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
+      // This is an authenticated request, use the original request as-is
+      fetchRequest = request;
+    }
+    
+    const networkResponse = await fetch(fetchRequest);
     
     if (networkResponse.ok) {
       const cacheConfig = getAPICacheConfig(request);
@@ -721,7 +775,18 @@ async function getCachedResponse(request, cacheName) {
 // Navigation handler - for page requests
 async function navigationHandler(request) {
   try {
-    const networkResponse = await fetch(request);
+    // Check if this is an authenticated request and add auth headers if needed
+    let fetchRequest = request;
+    const url = new URL(request.url);
+    
+    // For API requests that require authentication, check if this is already an authenticated request
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
+      // This is an authenticated request, use the original request as-is
+      fetchRequest = request;
+    }
+    
+    const networkResponse = await fetch(fetchRequest);
     return networkResponse;
   } catch (error) {
     // Return cached page or offline page
@@ -742,7 +807,18 @@ async function navigationHandler(request) {
 // Background cache update
 async function updateCache(request, cacheName) {
   try {
-    const networkResponse = await fetch(request);
+    // Check if this is an authenticated request and add auth headers if needed
+    let fetchRequest = request;
+    const url = new URL(request.url);
+    
+    // For API requests that require authentication, check if this is already an authenticated request
+    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
+      // This is an authenticated request, use the original request as-is
+      fetchRequest = request;
+    }
+    
+    const networkResponse = await fetch(fetchRequest);
     
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
@@ -989,6 +1065,7 @@ function isCriticalRequest(request) {
       url.pathname.startsWith('/api/users') ||
       url.pathname.includes('/feed/enhanced') ||
       url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
+      url.pathname.includes('/conversations') || // Don't coalesce conversation requests as they may have different responses
       url.searchParams.has('timestamp') ||
       url.searchParams.has('nonce') ||
       url.searchParams.has('_t')) {

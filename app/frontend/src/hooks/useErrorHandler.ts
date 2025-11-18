@@ -81,6 +81,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}): UseErrorH
       if (isMountedRef.current) {
         handleError(err as Error);
       }
+      return null;
     }
   }, [enableRetry, retryCount, maxRetries, handleError]);
 

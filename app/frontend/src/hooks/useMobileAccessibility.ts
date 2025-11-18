@@ -26,7 +26,7 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let debounceTimeout: number;
+    let debounceTimeout: ReturnType<typeof setTimeout>;
     
     const checkScreenReader = () => {
       // Use conservative detection based on user preferences
@@ -42,8 +42,8 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
 
     // Proper debouncing implementation
     const handleAccessibilityEvent = () => {
-      window.clearTimeout(debounceTimeout);
-      debounceTimeout = window.setTimeout(checkScreenReader, 100);
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(checkScreenReader, 100);
     };
 
     // Monitor for keyboard navigation patterns
@@ -57,7 +57,7 @@ export const useMobileAccessibility = (): MobileAccessibilityHook => {
     window.addEventListener('resize', handleAccessibilityEvent);
     
     return () => {
-      window.clearTimeout(debounceTimeout);
+      clearTimeout(debounceTimeout);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleAccessibilityEvent);
       document.documentElement.removeAttribute('data-keyboard-navigation');

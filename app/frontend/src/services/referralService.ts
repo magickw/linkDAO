@@ -6,7 +6,14 @@
 
 // Lightweight fallback utilities to avoid adding heavy dependencies in the frontend demo
 const randomHex = (length = 40) => {
-  // generate pseudo-random hex (not cryptographically secure) for demo purposes
+  // generate cryptographically secure random hex for production use
+  const crypto = window.crypto || (window as any).msCrypto; // Fallback for older browsers
+  if (crypto && crypto.getRandomValues) {
+    const array = new Uint8Array(Math.ceil(length / 2));
+    crypto.getRandomValues(array);
+    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+  }
+  // Fallback to Math.random for very old browsers (not cryptographically secure)
   return Array.from({ length }).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 };
 
@@ -51,13 +58,23 @@ export class FrontendReferralService {
   async getReferralInfo(userAddress: string): Promise<ReferralInfo | null> {
     const codeRes = await this.generateReferralCode();
     if (!codeRes.success) return null;
+    
+    // Use crypto.getRandomValues for secure random numbers
+    const crypto = window.crypto || (window as any).msCrypto;
+    let randomValue = Math.random();
+    if (crypto && crypto.getRandomValues) {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      randomValue = array[0] / (0xffffffff + 1);
+    }
+    
     return {
       referrer: userAddress,
       referralCode: codeRes.referralCode!,
       referralLink: codeRes.referralLink!,
-      totalReferrals: Math.floor(Math.random() * 10),
-      totalRewards: parseFloat((Math.random() * 500).toFixed(2)),
-      pendingRewards: parseFloat((Math.random() * 100).toFixed(2))
+      totalReferrals: Math.floor(randomValue * 10),
+      totalRewards: parseFloat((randomValue * 500).toFixed(2)),
+      pendingRewards: parseFloat((randomValue * 100).toFixed(2))
     };
   }
 
@@ -72,8 +89,17 @@ export class FrontendReferralService {
       return { success: false, error: 'Invalid referral code or user address' };
     }
     
+    // Use crypto.getRandomValues for secure random numbers
+    const crypto = window.crypto || (window as any).msCrypto;
+    let randomValue = Math.random();
+    if (crypto && crypto.getRandomValues) {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      randomValue = array[0] / (0xffffffff + 1);
+    }
+    
     // Mock successful referral recording
-    return { success: true, rewardAmount: parseFloat((Math.random() * 10).toFixed(2)) };
+    return { success: true, rewardAmount: parseFloat((randomValue * 10).toFixed(2)) };
   }
 
   async claimRewards(userAddress: string): Promise<{ success: boolean; totalAmount?: number; transactionHash?: string; error?: string }> {
@@ -81,20 +107,50 @@ export class FrontendReferralService {
       return { success: false, error: 'Invalid user address' };
     }
     
-    const totalAmount = parseFloat((Math.random() * 100).toFixed(2));
+    // Use crypto.getRandomValues for secure random numbers
+    const crypto = window.crypto || (window as any).msCrypto;
+    let randomValue = Math.random();
+    if (crypto && crypto.getRandomValues) {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      randomValue = array[0] / (0xffffffff + 1);
+    }
+    
+    const totalAmount = parseFloat((randomValue * 100).toFixed(2));
     const tx = `0x${randomHex(64)}`;
     return { success: true, totalAmount, transactionHash: tx };
   }
 
   async getReferralLeaderboard(limit = 10): Promise<Array<{ user: string; referrals: number; rewards: number }>> {
     const list: Array<{ user: string; referrals: number; rewards: number }> = [];
+    
+    // Use crypto.getRandomValues for secure random numbers
+    const crypto = window.crypto || (window as any).msCrypto;
+    
     for (let i = 0; i < Math.min(limit, 10); i++) {
-      const randomStr = Math.random().toString(16).slice(2);
+      let randomStr = Math.random().toString(16).slice(2);
+      if (crypto && crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        randomStr = (array[0] / (0xffffffff + 1)).toString(16).slice(2);
+      }
       const paddedStr = randomStr.padEnd(40, '0');
+      
+      let randomReferrals = Math.floor(Math.random() * 50);
+      let randomRewards = parseFloat((Math.random() * 500).toFixed(2));
+      
+      if (crypto && crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        const randomValue = array[0] / (0xffffffff + 1);
+        randomReferrals = Math.floor(randomValue * 50);
+        randomRewards = parseFloat((randomValue * 500).toFixed(2));
+      }
+      
       list.push({ 
         user: `0x${paddedStr}`, 
-        referrals: Math.floor(Math.random() * 50), 
-        rewards: parseFloat((Math.random() * 500).toFixed(2)) 
+        referrals: randomReferrals, 
+        rewards: randomRewards 
       });
     }
     return list.sort((a, b) => b.referrals - a.referrals);
@@ -110,7 +166,14 @@ export class FrontendReferralService {
       return { isValid: false, error: 'Referral code contains invalid characters' };
     }
     
-    const randomStr = Math.random().toString(16).slice(2);
+    // Use crypto.getRandomValues for secure random string
+    const crypto = window.crypto || (window as any).msCrypto;
+    let randomStr = Math.random().toString(16).slice(2);
+    if (crypto && crypto.getRandomValues) {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      randomStr = (array[0] / (0xffffffff + 1)).toString(16).slice(2);
+    }
     const paddedStr = randomStr.padEnd(40, '0');
     return { 
       isValid: true, 
