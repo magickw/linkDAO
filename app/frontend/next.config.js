@@ -199,9 +199,9 @@ const nextConfig = {
     // newNextLinkBehavior is now the default behavior
     // Optimize server-side rendering
     optimizeServerReact: true,
-    // Exclude test files from being treated as pages
-    serverComponentsExternalPackages: ["playwright", "@playwright"],
   },
+  // Exclude test files from being treated as pages
+  serverExternalPackages: ["playwright", "@playwright"],
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
