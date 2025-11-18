@@ -120,7 +120,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   };
 
   const handleCreatePost = () => {
-    setShowPostCreator(true);
+    // Redirect to the global create post page with community parameter
+    router.push(`/create-post?community=${communitySlug}`);
   };
 
   if (loading) {

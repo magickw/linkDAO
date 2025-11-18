@@ -27,7 +27,7 @@ interface SharePostModalProps {
 }
 
 interface SharePostModalWithToastProps extends SharePostModalProps {
-  addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
+  addToast?: (message: string, type: 'success' | 'error' | 'warning' | 'info', options?: any) => void;
 }
 
 export default function SharePostModal({
@@ -36,9 +36,24 @@ export default function SharePostModal({
   post,
   postType,
   onShare,
-  addToast
+  addToast: providedAddToast
 }: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
+  
+  // Get toast function from context, with fallback for portal rendering
+  const addToastFromContext = (() => {
+    try {
+      return useToast().addToast;
+    } catch (error) {
+      // If context is unavailable (e.g., when rendered via portal outside provider tree),
+      // return a fallback function
+      return (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
+        console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
+      };
+    }
+  })();
+  
+  const addToast = providedAddToast || addToastFromContext;
 
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);

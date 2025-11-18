@@ -545,9 +545,9 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       }
       // Handle community API errors with specific backoff
       else if (url.pathname.includes('/api/communities') || url.pathname.includes('/communities/')) {
-        console.warn('Community API failed:', error.message, requestKey);
+        console.warn('Community API failed:', networkResponse.status, networkResponse.statusText, requestKey);
         // For 404 errors, don't aggressively backoff as the resource may not exist
-        if (error.message && (error.message.includes('404') || error.message.includes('not found'))) {
+        if (networkResponse.status === 404 || networkResponse.statusText.toLowerCase().includes('not found')) {
           console.log('Community not found (404), not applying backoff');
           failedRequests.delete(requestKey);
         } else {

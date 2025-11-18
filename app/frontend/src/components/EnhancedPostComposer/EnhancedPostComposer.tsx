@@ -155,7 +155,7 @@ export default function EnhancedPostComposer({
     if (hashtags.length === 0) {
       suggestions.push('Add hashtags to increase discoverability');
     }
-    if (content.length < 50 && media.length === 0) {
+    if (content.length < 50 && media.filter(m => m.uploadStatus === 'completed').length === 0) {
       suggestions.push('Consider adding more detail or media to your post');
     }
 

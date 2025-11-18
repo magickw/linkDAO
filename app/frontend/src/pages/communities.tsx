@@ -386,32 +386,8 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleCreatePost = () => {
-    // If there's only one joined community, redirect directly to that community's create post page
-    if (joinedCommunities.length === 1) {
-      const communityId = joinedCommunities[0];
-      const community = communityList.find(c => c.id === communityId);
-      if (community) {
-        router.push(`/communities/${community.slug || community.name}/create-post`);
-        return;
-      }
-    }
-
-    // If there are multiple joined communities or no joined communities,
-    // redirect to the first available community (or a default one)
-    if (joinedCommunities.length > 0) {
-      const communityId = joinedCommunities[0];
-      const community = communityList.find(c => c.id === communityId);
-      if (community) {
-        router.push(`/communities/${community.slug || community.name}/create-post`);
-        return;
-      }
-    }
-
-    // Fallback: redirect to the first community in the list
-    if (communityList.length > 0) {
-      const community = communityList[0];
-      router.push(`/communities/${community.slug || community.name}/create-post`);
-    }
+    // Redirect to the global create post page
+    router.push('/create-post');
   };
 
   const handleCreateCommunity = async (communityData: any) => {
