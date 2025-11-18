@@ -53,7 +53,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       // 5. Recently attempted authentication (within 60 seconds)
       // 6. Already attempted for this address
       // 7. Valid session already exists
-      // 8. Max attempts reached for this session
+      // 8. Already attempted for this session (single attempt tracked)
 
       if (!isConnected || !address || isAuthenticating) {
         return false;

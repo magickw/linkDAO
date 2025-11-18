@@ -6,7 +6,7 @@ import { sessionManager } from '@/services/sessionManager';
 import { AuthUser } from '@/types/auth';
 import { UserRole, Permission } from '@/types/auth';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/context/ToastContext';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -550,10 +550,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('✅ Authentication successful for address:', walletAddress);
         
         // Show success notification
-        addToast('Successfully authenticated!', 'success', {
-          duration: 3000,
-          position: 'top-right'
-        });
+        addToast('Successfully authenticated!', 'success', 3000);
         
         return { success: true };
       } else {
@@ -585,10 +582,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Show user-friendly notification
-      addToast(errorMessage, toastType, {
-        duration: 5000,
-        position: 'top-right'
-      });
+      addToast(errorMessage, toastType, 5000);
       
       return { success: false, error: errorMessage };
     } finally {

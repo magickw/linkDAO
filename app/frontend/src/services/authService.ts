@@ -25,6 +25,10 @@ export interface KYCStatus {
 class AuthService {
   private baseUrl: string;
   private token: string | null = null;
+  // Add retry tracking fields
+  private lastAuthAttempt: number = 0;
+  private authAttemptCount: number = 0;
+  private readonly MAX_AUTH_DELAY: number = 5000; // Cap max delay at 5 seconds
 
   constructor() {
     // Use centralized environment config to ensure correct backend port
@@ -75,9 +79,23 @@ class AuthService {
    * Authenticate with Web3 wallet signature
    */
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
+    // Track authentication attempt
+    this.lastAuthAttempt = Date.now();
+    
     try {
-      // Add delay to prevent rapid retry loops
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Add conditional delay based on retry count to prevent rapid retry loops
+      // Only apply delay after failures, not on first attempt
+      if (this.authAttemptCount > 0) {
+        // Calculate exponential backoff with cap
+        const elapsed = Date.now() - this.lastAuthAttempt;
+        const baseDelay = Math.min(1000 * Math.pow(2, this.authAttemptCount - 1), this.MAX_AUTH_DELAY);
+        const remainingDelay = Math.max(0, baseDelay - elapsed);
+        
+        if (remainingDelay > 0) {
+          console.log(`⏳ Applying ${remainingDelay}ms delay before authentication attempt #${this.authAttemptCount + 1}`);
+          await new Promise(resolve => setTimeout(resolve, remainingDelay));
+        }
+      }
       
       // Check if we already have a valid session for this address
       if (this.token && !this.token.startsWith('mock_token_')) {
@@ -146,10 +164,14 @@ class AuthService {
 
       // Ensure wallet is connected and ready
       if (!connector) {
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
         return { success: false, error: 'Connector not available' };
       }
       
       if (status !== 'connected') {
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
         return { success: false, error: 'Wallet not connected' };
       }
 
@@ -162,17 +184,23 @@ class AuthService {
       // Validate message
       if (!nonceInfo.message || typeof nonceInfo.message !== 'string') {
         console.error('Invalid message received from getNonce:', nonceInfo.message);
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
         return { success: false, error: 'Failed to generate authentication message' };
       }
 
       // Check if we're running in a browser environment for SSR safety
       if (typeof window === 'undefined') {
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
         return { success: false, error: 'Wallet authentication requires browser environment' };
       }
 
       // Validate config is available
       if (!config) {
         console.error('Wagmi config is not initialized');
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
         return { success: false, error: 'Wallet configuration not ready. Please refresh and try again.' };
       }
 
@@ -186,6 +214,8 @@ class AuthService {
         });
 
         if (!signature) {
+          // Increment authentication attempt count on failure
+          this.authAttemptCount++;
           return { success: false, error: 'Signature is required for authentication' };
         }
       } catch (signError: any) {
@@ -205,11 +235,17 @@ class AuthService {
         const lowerMessage = signErrorMessage.toLowerCase();
         
         if (lowerMessage.includes('rejected') || lowerMessage.includes('denied')) {
+          // Increment authentication attempt count on failure
+          this.authAttemptCount++;
           return { success: false, error: 'Signature request was rejected by user' };
         } else if (lowerMessage.includes('not supported')) {
+          // Increment authentication attempt count on failure
+          this.authAttemptCount++;
           return { success: false, error: 'Your wallet does not support message signing' };
         } else {
           console.error('Signing error:', signError);
+          // Increment authentication attempt count on failure
+          this.authAttemptCount++;
           return { success: false, error: signErrorMessage };
         }
       }
@@ -236,6 +272,8 @@ class AuthService {
           // Handle specific error cases
           if (response.status === 403) {
             console.warn('🚫 Authentication blocked (403) - may be rate limited or blocked');
+            // Increment authentication attempt count on failure
+            this.authAttemptCount++;
             // Return mock auth for now to allow app to function
             return this.createMockAuthResponse(address);
           }
@@ -243,6 +281,8 @@ class AuthService {
           if (response.status === 401) {
             console.warn('🔒 Authentication unauthorized (401) - clearing session');
             this.clearToken();
+            // Increment authentication attempt count on failure
+            this.authAttemptCount++;
             // Return mock auth for now to allow app to function
             return this.createMockAuthResponse(address);
           }
@@ -250,6 +290,8 @@ class AuthService {
           // If backend is not available (5xx errors) or specific auth errors, return mock user
           if (response.status >= 500 || response.status === 429 || response.status === 503) {
             console.warn('Backend unavailable or rate limited, proceeding with mock authentication');
+            // Increment authentication attempt count on failure
+            this.authAttemptCount++;
             return this.createMockAuthResponse(address);
           }
           
@@ -308,6 +350,9 @@ class AuthService {
             localStorage.setItem('user_data', JSON.stringify(userData));
           }
           
+          // Reset authentication attempt tracking on success
+          this.authAttemptCount = 0;
+          
           // Return in expected format
           return {
             success: true,
@@ -315,9 +360,14 @@ class AuthService {
             user: userData
           };
         } else {
+          // Increment authentication attempt count on failure
+          this.authAttemptCount++;
           throw new Error(data.error?.message || data.error || 'Authentication failed - no token received');
         }
       } catch (fetchError: any) {
+        // Increment authentication attempt count on failure
+        this.authAttemptCount++;
+        
         // If fetch fails (network error, backend down), use mock authentication
         let fetchErrorMessage = 'Network error';
         
@@ -343,6 +393,9 @@ class AuthService {
       }
     } catch (error: any) {
       console.error('Wallet authentication failed:', error);
+      
+      // Increment authentication attempt count on failure
+      this.authAttemptCount++;
       
       // Ensure error message is properly serialized
       let errorMessage = 'Authentication failed';

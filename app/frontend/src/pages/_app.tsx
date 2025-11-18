@@ -27,6 +27,7 @@ import '../styles/globals.css';
 import '../styles/enhanced-glassmorphism.css';
 import '../styles/mobile-optimizations.css';
 import '../styles/design-polish.css';
+import '../styles/tiptap.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 // Development authentication helper

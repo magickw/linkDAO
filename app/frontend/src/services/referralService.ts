@@ -32,6 +32,7 @@ export interface ReferralReward {
 export class FrontendReferralService {
   private static instance: FrontendReferralService;
   private apiBase: string;
+  private readonly DEFAULT_TIMEOUT: number = 8000; // 8 seconds default timeout
 
   private constructor() {
     this.apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
@@ -89,24 +90,38 @@ export class FrontendReferralService {
   }
 
   async claimRewards(userAddress: string): Promise<{ success: boolean; totalAmount?: number; transactionHash?: string; error?: string }> {
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.DEFAULT_TIMEOUT);
+    
     try {
-      // Call the backend API to claim rewards
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
+      }
+      
+      // Call the backend API to claim rewards with timeout
       const res = await fetch(`${this.apiBase}/api/referral/claim-rewards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
         },
-        body: JSON.stringify({ userAddress })
+        signal: controller.signal
+        // Removed userAddress from body as it should be derived from the auth token
       });
-
+      
+      // Clear timeout on response
+      clearTimeout(timeoutId);
+      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Failed to claim rewards' }));
         return { success: false, error: errorData.error || `Failed to claim rewards (${res.status})` };
       }
-
+      
       const data = await res.json();
-
+      
       if (data.success) {
         return {
           success: true,
@@ -117,6 +132,15 @@ export class FrontendReferralService {
         return { success: false, error: data.error || 'Failed to claim rewards' };
       }
     } catch (err) {
+      // Clear timeout on error
+      clearTimeout(timeoutId);
+      
+      // Handle timeout errors specifically
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.error('Referral rewards claim timed out after', this.DEFAULT_TIMEOUT, 'milliseconds');
+        return { success: false, error: 'Request timed out. Please try again.' };
+      }
+      
       console.error('Error claiming rewards:', err);
       return { success: false, error: 'Network error while claiming rewards' };
     }
@@ -131,15 +155,23 @@ export class FrontendReferralService {
   }
 
   async validateReferralCode(referralCode: string): Promise<{ isValid: boolean; referrer?: string; error?: string }> {
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.DEFAULT_TIMEOUT); // 8 second timeout
+    
     try {
-      // Call the backend API to validate the referral code
+      // Call the backend API to validate the referral code with timeout
       const res = await fetch(`${this.apiBase}/api/referral/validate?code=${encodeURIComponent(referralCode)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
-
+      
+      // Clear timeout on response (success or error)
+      clearTimeout(timeoutId);
+      
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Failed to validate referral code' }));
         return { isValid: false, error: errorData.error || `Validation failed (${res.status})` };
@@ -159,6 +191,12 @@ export class FrontendReferralService {
         };
       }
     } catch (err) {
+      // Handle timeout errors specifically
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.error('Referral code validation timed out after 8 seconds');
+        return { isValid: false, error: 'Request timed out. Please try again.' };
+      }
+      
       console.error('Error validating referral code:', err);
       return { isValid: false, error: 'Network error while validating referral code' };
     }
