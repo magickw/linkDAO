@@ -189,8 +189,16 @@ export class FeedService {
     const sortOrder = this.buildSortOrder(sort);
 
     try {
+      try {
       // Build moderation filter - exclude blocked content
       const moderationFilter = sql`(${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked')`;
+
+      console.log('🔍 [BACKEND FEED] Executing regular posts query with filters:', {
+        timeFilter: timeFilter.toString(),
+        communityFilter: communityFilter.toString(),
+        followingFilter: followingFilter.toString(),
+        moderationFilter: moderationFilter.toString()
+      });
 
       // Get regular posts with engagement metrics
       const regularPosts = await db
@@ -198,6 +206,7 @@ export class FeedService {
           id: posts.id,
           authorId: posts.authorId,
           dao: posts.dao,
+          title: posts.title,
           contentCid: posts.contentCid,
           mediaCids: posts.mediaCids,
           tags: posts.tags,
@@ -222,7 +231,22 @@ export class FeedService {
           isNull(posts.parentId) // Only show top-level posts, not comments
         ));
 
+      console.log('📊 [BACKEND FEED] Regular posts query result:', {
+        count: regularPosts.length,
+        samplePost: regularPosts[0] ? {
+          id: regularPosts[0].id,
+          authorId: regularPosts[0].authorId,
+          walletAddress: regularPosts[0].walletAddress,
+          contentCid: regularPosts[0].contentCid
+        } : null
+      });
+
       // Get quick posts with engagement metrics
+      console.log('🔍 [BACKEND FEED] Executing quick posts query with filters:', {
+        timeFilter: timeFilter.toString(),
+        quickPostFollowingFilter: quickPostFollowingFilter.toString()
+      });
+
       const quickPostsResults = await db
         .select({
           id: quickPosts.id,
@@ -251,8 +275,25 @@ export class FeedService {
           isNull(quickPosts.parentId) // Only show top-level posts, not comments
         ));
 
+      console.log('📊 [BACKEND FEED] Quick posts query result:', {
+        count: quickPostsResults.length,
+        samplePost: quickPostsResults[0] ? {
+          id: quickPostsResults[0].id,
+          authorId: quickPostsResults[0].authorId,
+          walletAddress: quickPostsResults[0].walletAddress,
+          contentCid: quickPostsResults[0].contentCid
+        } : null
+      });
+
       // Combine regular posts and quick posts
       let allPosts = [...regularPosts, ...quickPostsResults];
+
+      console.log('📊 [BACKEND FEED] Combined posts before sorting:', {
+        totalPosts: allPosts.length,
+        regularPosts: regularPosts.length,
+        quickPosts: quickPostsResults.length,
+        uniqueAuthors: [...new Set(allPosts.map(p => p.authorId))].length
+      });
 
       // Apply sorting to the combined results
       allPosts.sort((a, b) => {
@@ -270,6 +311,14 @@ export class FeedService {
 
       // Apply pagination after sorting
       const paginatedPosts = allPosts.slice(offset, offset + limit);
+
+      console.log('📊 [BACKEND FEED] Posts after pagination:', {
+        page: page,
+        limit: limit,
+        offset: offset,
+        totalBeforePagination: allPosts.length,
+        returnedPosts: paginatedPosts.length
+      });
 
       // Get engagement metrics for each post
       const postsWithMetrics = await Promise.all(

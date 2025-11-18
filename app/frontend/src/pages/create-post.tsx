@@ -13,6 +13,7 @@ import { useToast } from '@/context/ToastContext';
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
   const { community } = router.query;
+  const { address, isConnected } = useWeb3(); // Properly destructure address and isConnected
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -22,6 +23,8 @@ const CreatePostPage: React.FC = () => {
   const [userCommunities, setUserCommunities] = useState<any[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const { addToast } = useToast();
 
   // Fetch user's communities
   useEffect(() => {
