@@ -310,7 +310,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Marketplace</h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Secure transactions with low-cost x402 payment protocol for reduced fees.
+                  Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Powered by x402 payment protocol for reduced transaction fees and seamless checkout.
                 </p>
               </div>
             </div>
@@ -455,9 +455,9 @@ export default function Home() {
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-6">
                   <span className="text-2xl">🎫</span>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">NFT Receipts</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">x402 Payment Protocol</h3>
                 <p className="text-gray-600 dark:text-gray-300">
-                  Every purchase generates an NFT receipt for digital ownership and proof of authenticity.
+                  Reduced transaction fees for purchases using Coinbase's x402 payment protocol.
                 </p>
               </div>
               

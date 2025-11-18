@@ -174,7 +174,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       
       setFormData(prev => ({
         ...prev,
-        images: [...prev.images, ...base64Images].slice(0, 5) // Max 5 images
+        images: [...prev.images, ...base64Images].slice(0, 10) // Max 10 images
       }));
       
       // Show success feedback
@@ -427,7 +427,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             accept="image/jpeg,image/jpg,image/png,image/webp"
             onChange={handleFileInput}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            disabled={uploadingImage || formData.images.length >= 5}
+            disabled={uploadingImage || formData.images.length >= 10}
           />
           
           <div className="text-center">
@@ -461,7 +461,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                   </p>
                   <p className="text-gray-400">or click to browse files</p>
                   <p className="text-sm text-gray-500">
-                    JPEG, PNG, WebP • Max 5MB per image • Up to 5 images
+                    JPEG, PNG, WebP • Max 5MB per image • Up to 10 images
                   </p>
                 </div>
               </>
@@ -494,7 +494,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         {formData.images.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-gray-300">
-              Uploaded Images ({formData.images.length}/5)
+              Uploaded Images ({formData.images.length}/10)
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {formData.images.map((image: string, index: number) => (

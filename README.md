@@ -12,7 +12,7 @@ LinkDAO represents the next evolution in social networking, where users truly ow
 - **Real-time Interactions**: WebSocket-powered notifications and messaging
 - **Censorship Resistance**: IPFS-based content storage for permanent, decentralized media
 - **Reddit-Style Interface**: Familiar social media layout optimized for Web3 communities
-- **x402 Protocol Integration**: Reduced transaction fees for payments using Coinbase's x402 protocol
+- **x402 Payment Protocol**: Significantly reduced transaction fees for all marketplace purchases using Coinbase's x402 payment protocol
 - **Receipt System**: Comprehensive receipt generation for all purchases
 
 ## 📋 Phase 1 Implementation Summary
@@ -32,7 +32,7 @@ All Phase 1 recommendations have been successfully implemented:
 - **IPFS Integration**: Decentralized content storage and retrieval
 - **AI Services**: OpenAI-powered bots for security, governance, moderation, and social assistance
 - **Reddit-Style UI**: Community-focused interface with familiar navigation patterns
-- **x402 Payment Protocol**: Integrated Coinbase x402 protocol for reduced transaction fees
+- **x402 Payment Protocol**: Integrated Coinbase x402 protocol for significantly reduced transaction fees on all payments
 - **Receipt System**: Automated receipt generation for marketplace and LDAO token purchases
 
 ## 🏗️ Architecture
@@ -114,13 +114,13 @@ LinkDAO/
    npm install
    ```
 
-3. **Configure x402 Payment Protocol**:
+3. **Configure x402 Payment Protocol for Reduced Transaction Fees**:
    ```bash
    # Create a .env.local file in the backend directory
    cd app/backend
    cp .env.local .env.local.example
    
-   # Edit the .env.local file to add your Coinbase API credentials
+   # Edit the .env.local file to add your Coinbase API credentials for x402 protocol
    # COINBASE_API_KEY=your_api_key_here
    # COINBASE_API_SECRET=your_api_secret_here
    ```
@@ -207,6 +207,7 @@ The platform includes comprehensive testing at all levels:
 - [Reddit-Style UI Documentation](REDDIT_STYLE_UI_DOCS.md)
 - [x402 Protocol Integration](X402_PROTOCOL_INTEGRATION.md)
 - [Receipt System Documentation](RECEIPT_SYSTEM.md)
+- [x402 Payment Protocol Guide](X402_PROTOCOL_INTEGRATION.md) - Detailed integration guide for reduced-fee payments
 
 ## 🤝 Contributing
 
