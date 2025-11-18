@@ -3,7 +3,7 @@
  * This version should be placed in _app.tsx after ToastProvider
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -11,11 +11,21 @@ import { WalletLoginBridge } from './WalletLoginBridge';
 
 export const WalletLoginBridgeWithToast: React.FC = () => {
   const { connector } = useAccount();
-  const { addToast } = useToast();
+  const [isToastReady, setIsToastReady] = useState(false);
+  const toastContext = useToast();
+
+  useEffect(() => {
+    // Check if toast context is properly initialized
+    if (toastContext && toastContext.addToast && typeof toastContext.addToast === 'function') {
+      setIsToastReady(true);
+    }
+  }, [toastContext]);
 
   const handleLoginSuccess = (user: any) => {
-    // Check if addToast is available (it will be a no-op function if ToastProvider isn't mounted)
-    if (!addToast || typeof addToast !== 'function') {
+    const { addToast } = toastContext;
+    
+    // Check if addToast is available
+    if (!isToastReady || !addToast || typeof addToast !== 'function') {
       // Fallback to console logging
       const walletName = connector?.name || 'Wallet';
       const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
@@ -41,8 +51,10 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
   };
 
   const handleLoginError = (error: string) => {
-    // Check if addToast is available (it will be a no-op function if ToastProvider isn't mounted)
-    if (!addToast || typeof addToast !== 'function') {
+    const { addToast } = toastContext;
+    
+    // Check if addToast is available
+    if (!isToastReady || !addToast || typeof addToast !== 'function') {
       // Fallback to console logging
       if (error.includes('signature')) {
         console.log('📝 Please sign the message in your wallet to complete login');

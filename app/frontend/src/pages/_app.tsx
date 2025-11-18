@@ -361,14 +361,14 @@ export default function App({ Component, pageProps, router }: AppProps) {
               <Web3Provider>
                 <AuthProvider>
                   <ToastProvider>
-                    {/* Automatic wallet login bridge with toast notifications */}
-                    <WalletLoginBridgeWithToast />
                     <NavigationProvider>
                       <ContactProvider>
                         <EnhancedThemeProvider defaultTheme="system">
                           <AppContent>
                             <Component {...pageProps} />
                           </AppContent>
+                          {/* Automatic wallet login bridge with toast notifications */}
+                          <WalletLoginBridgeWithToast />
                         </EnhancedThemeProvider>
                       </ContactProvider>
                     </NavigationProvider>
