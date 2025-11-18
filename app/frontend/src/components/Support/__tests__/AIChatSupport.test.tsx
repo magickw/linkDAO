@@ -38,10 +38,7 @@ describe('AIChatSupport', () => {
   it('opens the chat modal when toggle button is clicked', () => {
     render(<AIChatSupport />);
     
-    const toggleButton = screen.getByTestId('message-circle-icon').closest('button');
-    if (!toggleButton) {
-      throw new Error('Toggle button not found');
-    }
+    const toggleButton = screen.getByRole('button');
     fireEvent.click(toggleButton);
     
     expect(screen.getByText('LinkDAO Support Assistant')).toBeInTheDocument();
@@ -60,10 +57,7 @@ describe('AIChatSupport', () => {
     fireEvent.change(input, { target: { value: 'How do I stake LDAO tokens?' } });
     
     // Send the message
-    const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (!sendButton) {
-      throw new Error('Send button not found');
-    }
+    const sendButton = screen.getByRole('button', { name: /send/i });
     fireEvent.click(sendButton);
     
     // Wait for the response
@@ -80,10 +74,7 @@ describe('AIChatSupport', () => {
     fireEvent.click(toggleButton);
     
     // Try to send an empty message
-    const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (!sendButton) {
-      throw new Error('Send button not found');
-    }
+    const sendButton = screen.getByRole('button', { name: /send/i });
     fireEvent.click(sendButton);
     
     // Should not add any new messages
@@ -99,17 +90,11 @@ describe('AIChatSupport', () => {
     fireEvent.click(toggleButton);
     
     // Toggle sound off
-    const soundButton = screen.getByTestId('volume2-icon').closest('button');
-    if (!soundButton) {
-      throw new Error('Sound button not found');
-    }
+    const soundButton = screen.getByRole('button', { name: /sound/i });
     fireEvent.click(soundButton);
     
     // Toggle sound back on
-    const muteButton = screen.getByTestId('volume-x-icon').closest('button');
-    if (!muteButton) {
-      throw new Error('Mute button not found');
-    }
+    const muteButton = screen.getByRole('button', { name: /sound/i });
     fireEvent.click(muteButton);
     
     expect(screen.getByTestId('volume2-icon')).toBeInTheDocument();
@@ -126,10 +111,7 @@ describe('AIChatSupport', () => {
     const input = screen.getByPlaceholderText('Type your question here...');
     fireEvent.change(input, { target: { value: 'Hello' } });
     
-    const sendButton = screen.getByTestId('send-icon').closest('button');
-    if (!sendButton) {
-      throw new Error('Send button not found');
-    }
+    const sendButton = screen.getByRole('button', { name: /send/i });
     fireEvent.click(sendButton);
     
     // Wait for response
@@ -138,10 +120,7 @@ describe('AIChatSupport', () => {
     });
     
     // Restart conversation
-    const restartButton = screen.getByTestId('rotate-ccw-icon').closest('button');
-    if (!restartButton) {
-      throw new Error('Restart button not found');
-    }
+    const restartButton = screen.getByRole('button', { name: /restart/i });
     fireEvent.click(restartButton);
     
     // Should reset to initial message
@@ -156,10 +135,7 @@ describe('AIChatSupport', () => {
     fireEvent.click(toggleButton);
     
     // Close the chat
-    const closeButton = screen.getByTestId('x-icon').closest('button');
-    if (!closeButton) {
-      throw new Error('Close button not found');
-    }
+    const closeButton = screen.getByRole('button', { name: /close/i });
     fireEvent.click(closeButton);
     
     // Chat should be closed

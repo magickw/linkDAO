@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ProposalData } from '@/types/enhancedPost';
 
 interface ProposalCreatorProps {
@@ -17,6 +17,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
   const [title, setTitle] = useState(proposal?.title || '');
   const [description, setDescription] = useState(proposal?.description || '');
   const [type, setType] = useState<'governance' | 'funding' | 'parameter' | 'upgrade'>(proposal?.type || 'governance');
+  const isUpdatingRef = useRef(false);
 
   // Sync state with prop changes to prevent stale data
   useEffect(() => {
@@ -25,25 +26,25 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
       setDescription(proposal.description || '');
       setType(proposal.type || 'governance');
     }
-  }, [proposal]);
+  }, [proposal?.title, proposal?.description, proposal?.type]);
 
-  // Create a memoized update function to avoid recreating it on every render
-  const updateProposal = useCallback(() => {
+  // Update proposal when any state changes
+  useEffect(() => {
     // Use proposal-specific parameters based on type, not hardcoded values
     const proposalParams = getProposalParameters(type, proposal);
     
-    onProposalChange({
+    const newProposal = {
       title,
       description,
       type,
       ...proposalParams
-    });
+    };
+    
+    // Only call onProposalChange if the proposal actually changed
+    if (JSON.stringify(newProposal) !== JSON.stringify(proposal)) {
+      onProposalChange(newProposal);
+    }
   }, [title, description, type, proposal, onProposalChange]);
-
-  // Update proposal when any state changes
-  useEffect(() => {
-    updateProposal();
-  }, [updateProposal]);
 
   // Get appropriate parameters based on proposal type
   const getProposalParameters = (proposalType: typeof type, existingProposal?: ProposalData) => {
@@ -139,19 +140,19 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
           <div>
             <div className="text-gray-500 dark:text-gray-400">Voting Period</div>
             <div className="font-medium text-gray-900 dark:text-white">
-              {getDefaultVotingPeriod(type)} days
+              {(proposal?.votingPeriod ?? getDefaultVotingPeriod(type))} days
             </div>
           </div>
           <div>
             <div className="text-gray-500 dark:text-gray-400">Quorum</div>
             <div className="font-medium text-gray-900 dark:text-white">
-              {getDefaultQuorum(type)}%
+              {(proposal?.quorum ?? getDefaultQuorum(type))}%
             </div>
           </div>
           <div>
             <div className="text-gray-500 dark:text-gray-400">Threshold</div>
             <div className="font-medium text-gray-900 dark:text-white">
-              {getDefaultThreshold(type)}%
+              {(proposal?.threshold ?? getDefaultThreshold(type))}%
             </div>
           </div>
         </div>

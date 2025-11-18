@@ -69,7 +69,7 @@ const ReferralSystem: React.FC = () => {
       }
 
       // Load rewards
-      const userRewards = await referralService.getReferralRewards();
+      const userRewards = await referralService.getReferralRewards(address);
       setRewards(userRewards);
 
       // Load leaderboard

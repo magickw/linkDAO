@@ -155,7 +155,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         clearTimeout(timer);
       }
     };
-  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
+  }, [address, isConnected, isAuthenticated, isAuthLoading, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector, isInitialLoad]);
 
   const handleAutoLogin = async () => {
     // Check global auth flag to prevent duplicate authentication

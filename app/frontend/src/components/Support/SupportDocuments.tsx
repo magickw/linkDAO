@@ -340,16 +340,7 @@ const SupportDocuments: React.FC = () => {
     });
   };
 
-  // Persist saved documents on change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('savedDocuments', JSON.stringify(savedDocuments));
-      } catch (error) {
-        console.error('Failed to persist saved documents:', error);
-      }
-    }
-  }, [savedDocuments]);
+
 
   return (
     <div className="max-w-7xl mx-auto p-6">

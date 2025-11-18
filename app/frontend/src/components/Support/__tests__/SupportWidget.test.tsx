@@ -56,7 +56,7 @@ describe('SupportWidget', () => {
   it('navigates to documentation when Documentation option is clicked', () => {
     const mockAssign = jest.fn();
     Object.defineProperty(window, 'location', {
-      value: { href: '', assign: mockAssign },
+      value: { assign: mockAssign },
       writable: true
     });
     
@@ -70,7 +70,7 @@ describe('SupportWidget', () => {
     const docOption = screen.getByText('Documentation').closest('button');
     fireEvent.click(docOption!);
     
-    expect(window.location.href).toBe('/support/documents');
+    expect(mockAssign).toHaveBeenCalledWith('/support/documents');
   });
 
   it('opens community link when Community option is clicked', () => {
@@ -94,7 +94,7 @@ describe('SupportWidget', () => {
   it('navigates to contact page when Contact Us option is clicked', () => {
     const mockAssign = jest.fn();
     Object.defineProperty(window, 'location', {
-      value: { href: '', assign: mockAssign },
+      value: { assign: mockAssign },
       writable: true
     });
     
@@ -108,7 +108,7 @@ describe('SupportWidget', () => {
     const contactOption = screen.getByText('Contact Us').closest('button');
     fireEvent.click(contactOption!);
     
-    expect(window.location.href).toBe('/support/contact');
+    expect(mockAssign).toHaveBeenCalledWith('/support/contact');
   });
 
   it('renders the AI chat support component', () => {

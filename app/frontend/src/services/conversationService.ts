@@ -51,12 +51,16 @@ export class ConversationService {
     // If we get here, all endpoints failed
     // Provide more specific error message based on the last error
     if (lastError) {
-      if (lastError.message.includes('503') || lastError.name === 'ServiceUnavailableError') {
+      // Check error name first (more reliable), then fallback to message content
+      if (lastError.name === 'ServiceUnavailableError' || 
+          (lastError.message && lastError.message.includes('503'))) {
         throw new Error('Messaging service is temporarily unavailable. Please check your connection and try again.');
-      } else if (lastError.message.includes('offline') || lastError.name === 'NetworkError') {
+      } else if (lastError.name === 'NetworkError' || 
+                 lastError.name === 'TypeError' ||
+                 (lastError.message && (lastError.message.includes('offline') || lastError.message.includes('fetch')))) {
         throw new Error('You appear to be offline. Please check your internet connection and try again.');
       } else {
-        throw new Error(`Unable to fetch conversations: ${lastError.message}`);
+        throw new Error(`Unable to fetch conversations: ${lastError.message || 'Unknown error'}`);
       }
     } else {
       throw new Error('Unable to fetch conversations - service unavailable. Please try again later.');

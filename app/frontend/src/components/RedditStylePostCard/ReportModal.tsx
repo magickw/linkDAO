@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Flag, AlertTriangle } from 'lucide-react';
 
@@ -79,9 +79,26 @@ export default function ReportModal({
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [details, setDetails] = useState<string>('');
   const [step, setStep] = useState<'select' | 'details' | 'confirm'>('select');
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  // Focus management
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => {
+        const firstFocusable = modalRef.current?.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        firstFocusable?.focus();
+      }, 100);
+    } else if (previousFocusRef.current) {
+      previousFocusRef.current.focus();
+    }
+  }, [isOpen]);
 
   // Reset form when modal opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       setSelectedReason('');
       setDetails('');
@@ -142,6 +159,7 @@ export default function ReportModal({
           }}
         >
           <motion.div
+            ref={modalRef}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

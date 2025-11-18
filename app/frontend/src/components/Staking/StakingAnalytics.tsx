@@ -244,38 +244,41 @@ export const StakingAnalytics: React.FC<StakingAnalyticsProps> = ({
 
         {/* Simple chart visualization */}
         <div className="space-y-2">
-          {chartData.slice(-10).map((point, index) => {
-            const value = selectedMetric === 'volume' ? point.totalStaked :
-                         selectedMetric === 'stakers' ? point.stakerCount :
-                         point.averageStake;
-            
+          {(() => {
+            // Calculate maxValue once outside the loop for efficiency
             const maxValue = Math.max(...chartData.map(p => 
               selectedMetric === 'volume' ? p.totalStaked :
               selectedMetric === 'stakers' ? p.stakerCount :
               p.averageStake
             ));
             
-            const percentage = (value / maxValue) * 100;
-            
-            return (
-              <div key={index} className="flex items-center space-x-3">
-                <div className="w-16 text-xs text-gray-500 dark:text-gray-400">
-                  {point.timestamp.toLocaleDateString()}
+            return chartData.slice(-10).map((point, index) => {
+              const value = selectedMetric === 'volume' ? point.totalStaked :
+                           selectedMetric === 'stakers' ? point.stakerCount :
+                           point.averageStake;
+              
+              const percentage = (value / maxValue) * 100;
+              
+              return (
+                <div key={index} className="flex items-center space-x-3">
+                  <div className="w-16 text-xs text-gray-500 dark:text-gray-400">
+                    {point.timestamp.toLocaleDateString()}
+                  </div>
+                  
+                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="h-2 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  
+                  <div className="w-20 text-xs text-gray-600 dark:text-gray-400 text-right">
+                    {selectedMetric === 'stakers' ? value.toFixed(0) : formatAmount(value)}
+                  </div>
                 </div>
-                
-                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="h-2 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full transition-all duration-500"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-                
-                <div className="w-20 text-xs text-gray-600 dark:text-gray-400 text-right">
-                  {selectedMetric === 'stakers' ? value.toFixed(0) : formatAmount(value)}
-                </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </div>
 

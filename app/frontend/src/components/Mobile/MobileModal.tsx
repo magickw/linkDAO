@@ -153,7 +153,7 @@ export const MobileModal: React.FC<MobileModalProps> = ({
     }
   };
 
-  const modalContent = !isOpen ? null : (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
       <motion.div

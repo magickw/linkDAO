@@ -228,12 +228,12 @@ const SupportAnalyticsDashboard: React.FC = () => {
     return (
       <div className="h-64">
         <div className="h-48 border-b border-l border-gray-200 pb-4 pl-4 relative">
-          {/* Grid lines */}
+          {/* Grid lines - aligned with data scale */}
           {[0, 25, 50, 75, 100].map((y) => (
             <div
               key={y}
               className="absolute left-0 right-0 h-px bg-gray-100"
-              style={{ bottom: `${y * 0.8}%` }}
+              style={{ bottom: `${y}%` }}
             ></div>
           ))}
 
@@ -246,7 +246,7 @@ const SupportAnalyticsDashboard: React.FC = () => {
               points={chartData.map((data, index) => {
                 const x = chartData.length > 1 ? (index / (chartData.length - 1)) * 90 + 5 : 50;
                 const resolutionRate = data.count > 0 ? (data.resolved / data.count) * 100 : 0;
-                const y = 85 - (resolutionRate * 0.8);
+                const y = 95 - resolutionRate; // Adjusted to match grid alignment
                 return `${x}%,${Math.max(y, 5)}%`;
               }).join(' ')}
             />

@@ -236,7 +236,7 @@ export const CachedContentFallback: React.FC<{
       
       return '[Unsupported data type]';
     } catch (error) {
-      console.warn('Error sanitizing cached data:', error);
+      console.warn('Error sanitizing cached data');
       return '[Error sanitizing data]';
     }
   };

@@ -147,30 +147,31 @@ export const MobileVirtualScrolling = <T,>({
     setPullDistance(0);
   };
 
-  // Keyboard navigation with actual scroll position update
+  // Keyboard navigation - optimized to avoid re-running on every scroll
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!containerRef.current || !scrollElementRef.current) return;
 
       const scrollElement = scrollElementRef.current;
-      let newScrollTop = scrollTop;
+      const currentScrollTop = scrollElement.scrollTop;
+      let newScrollTop = currentScrollTop;
 
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          newScrollTop = Math.min(scrollTop + itemHeight, totalHeight - actualContainerHeight);
+          newScrollTop = Math.min(currentScrollTop + itemHeight, totalHeight - actualContainerHeight);
           break;
         case 'ArrowUp':
           e.preventDefault();
-          newScrollTop = Math.max(scrollTop - itemHeight, 0);
+          newScrollTop = Math.max(currentScrollTop - itemHeight, 0);
           break;
         case 'PageDown':
           e.preventDefault();
-          newScrollTop = Math.min(scrollTop + actualContainerHeight, totalHeight - actualContainerHeight);
+          newScrollTop = Math.min(currentScrollTop + actualContainerHeight, totalHeight - actualContainerHeight);
           break;
         case 'PageUp':
           e.preventDefault();
-          newScrollTop = Math.max(scrollTop - actualContainerHeight, 0);
+          newScrollTop = Math.max(currentScrollTop - actualContainerHeight, 0);
           break;
         case 'Home':
           e.preventDefault();
@@ -182,12 +183,9 @@ export const MobileVirtualScrolling = <T,>({
           break;
       }
 
-      if (newScrollTop !== scrollTop) {
+      if (newScrollTop !== currentScrollTop) {
         scrollElement.scrollTop = newScrollTop;
-        setScrollTop(newScrollTop);
-        // Trigger scroll event to update visible items
-        const event = new Event('scroll', { bubbles: true });
-        scrollElement.dispatchEvent(event);
+        // No need to call setScrollTop or dispatch event - handleScroll will catch it
       }
     };
 
@@ -196,7 +194,7 @@ export const MobileVirtualScrolling = <T,>({
       container.addEventListener('keydown', handleKeyDown);
       return () => container.removeEventListener('keydown', handleKeyDown);
     }
-  }, [itemHeight, totalHeight, actualContainerHeight, scrollTop, handleScroll]);
+  }, [itemHeight, totalHeight, actualContainerHeight]); // Removed scrollTop and handleScroll dependencies
 
   // Error state
   if (error && errorComponent) {

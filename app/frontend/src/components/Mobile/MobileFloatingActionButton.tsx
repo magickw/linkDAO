@@ -97,7 +97,7 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
           fixed z-50 ${getPositionClasses()} ${className}
         `}
         style={{
-          bottom: position.includes('bottom') ? safeAreaInsets.bottom + 24 : undefined,
+          bottom: safeAreaInsets.bottom + 24,
         }}
       >
         {/* Secondary Actions */}
@@ -108,9 +108,9 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               className={`absolute space-y-3 ${
-                position === 'bottom-left' ? 'bottom-16 right-0' :
+                position === 'bottom-left' ? 'bottom-16 left-0' :
                 position === 'bottom-center' ? 'bottom-16 left-1/2 transform -translate-x-1/2' :
-                'bottom-16 left-0'
+                'bottom-16 right-0'
               }`}
             >
               {secondaryActions.map((action, index) => (
@@ -126,13 +126,12 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
                   <div className={`
                     bg-black/80 text-white px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap
                     ${
-                      position === 'bottom-left' ? 'order-2 ml-3' :
+                      position === 'bottom-left' ? 'order-2 mr-3' :
                       position === 'bottom-center' ? 'order-1 mb-2' :
-                      'order-1 mr-3'
+                      'order-1 ml-3'
                     }
                     ${
                       position === 'bottom-center' ? 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2' :
-                      position === 'bottom-left' ? 'relative' :
                       'relative'
                     }
                   `}>

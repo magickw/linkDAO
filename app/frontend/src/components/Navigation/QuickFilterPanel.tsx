@@ -53,24 +53,28 @@ export const QuickFilterPanel: React.FC<QuickFilterPanelProps> = ({
   return (
     <div className={`space-y-2 ${className}`}>
       {defaultQuickFilters.map((filter) => (
-        <button
-          key={filter.id}
-          onClick={() => toggleFilter(filter.id)}
-          className={`
-            w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
-            ${activeFilters.includes(filter.id)
-              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }
-          `}
-          role="switch"
-          aria-checked={activeFilters.includes(filter.id)}
-          aria-label={`Toggle ${filter.label} filter`}
-          aria-describedby={`filter-${filter.id}-desc`}
-        >
-          <span className="mr-2">{filter.icon}</span>
-          {filter.label}
-        </button>
+        <div key={filter.id}>
+          <button
+            onClick={() => toggleFilter(filter.id)}
+            className={`
+              w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+              ${activeFilters.includes(filter.id)
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }
+            `}
+            role="switch"
+            aria-checked={activeFilters.includes(filter.id)}
+            aria-label={`Toggle ${filter.label} filter`}
+            aria-describedby={`filter-${filter.id}-desc`}
+          >
+            <span className="mr-2">{filter.icon}</span>
+            {filter.label}
+          </button>
+          <div id={`filter-${filter.id}-desc`} className="sr-only">
+            Filter posts by {filter.label.toLowerCase()}
+          </div>
+        </div>
       ))}
     </div>
   );

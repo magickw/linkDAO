@@ -423,20 +423,11 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     const url = new URL(request.url);
     let isAuthRequest = false;
     
-    // For API requests that require authentication, try to add auth headers
-    // Note: localStorage is not available in service workers, so we need to check for auth headers in the original request
+    // For API requests that require authentication, check if this is already an authenticated request
     const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth')) {
-      // If there's already an auth header, this is an authenticated request
-      if (authHeader) {
-        isAuthRequest = true;
-      }
-    }
-    
-    // Check if this is already an authenticated request
-    if (!isAuthRequest) {
-      const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-      isAuthRequest = !!authHeader;
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
+      // This is an authenticated request, use the original request as-is
+      isAuthRequest = true;
     }
     
     const networkResponse = await fetch(fetchRequest, {
@@ -460,8 +451,23 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         
         // Don't cache authenticated responses to avoid security issues
         if (!isAuthRequest) {
-          // Cache with TTL metadata for non-authenticated requests
-          await cacheResponseWithTTL(request, responseToCache, cacheName, cacheConfig.ttl);
+          // Check if the request URL scheme is supported for caching
+          if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+            const responseWithTTL = new Response(responseToCache.body, {
+              status: responseToCache.status,
+              statusText: responseToCache.statusText,
+              headers: {
+                ...Object.fromEntries(responseToCache.headers.entries()),
+                'sw-cached-at': Date.now().toString(),
+                'sw-ttl': cacheConfig.ttl.toString()
+              }
+            });
+            
+            // Check if the request URL scheme is supported for caching
+            if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
+              await cache.put(request, responseWithTTL);
+            }
+          }
         }
         
         // Clear failed request record on success
@@ -662,18 +668,7 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
 // Background cache update for critical APIs
 async function updateCacheInBackground(request, cacheName, requestKey) {
   try {
-    // Check if this is an authenticated request and add auth headers if needed
-    let fetchRequest = request;
-    const url = new URL(request.url);
-    
-    // For API requests that require authentication, check if this is already an authenticated request
-    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
-      // This is an authenticated request, use the original request as-is
-      fetchRequest = request;
-    }
-    
-    const networkResponse = await fetch(fetchRequest);
+    const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
       const cacheConfig = getAPICacheConfig(request);
@@ -775,18 +770,7 @@ async function getCachedResponse(request, cacheName) {
 // Navigation handler - for page requests
 async function navigationHandler(request) {
   try {
-    // Check if this is an authenticated request and add auth headers if needed
-    let fetchRequest = request;
-    const url = new URL(request.url);
-    
-    // For API requests that require authentication, check if this is already an authenticated request
-    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
-      // This is an authenticated request, use the original request as-is
-      fetchRequest = request;
-    }
-    
-    const networkResponse = await fetch(fetchRequest);
+    const networkResponse = await fetch(request);
     return networkResponse;
   } catch (error) {
     // Return cached page or offline page
@@ -807,18 +791,7 @@ async function navigationHandler(request) {
 // Background cache update
 async function updateCache(request, cacheName) {
   try {
-    // Check if this is an authenticated request and add auth headers if needed
-    let fetchRequest = request;
-    const url = new URL(request.url);
-    
-    // For API requests that require authentication, check if this is already an authenticated request
-    const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
-    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
-      // This is an authenticated request, use the original request as-is
-      fetchRequest = request;
-    }
-    
-    const networkResponse = await fetch(fetchRequest);
+    const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);

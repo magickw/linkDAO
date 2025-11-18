@@ -275,26 +275,29 @@ export function EnhancedAnalytics() {
     <GlassPanel className="p-6" ref={el => { if (el) chartRefs.current[id] = el; }}>
       <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
       <div className="space-y-2">
-        {data.labels.map((label: string, index: number) => {
-          const value = data.data[index];
+        {(() => {
+          // Calculate maxValue once outside the loop for efficiency
           const maxValue = Math.max(...data.data);
-          const percentage = (value / maxValue) * 100;
-          
-          return (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-gray-400 text-sm w-12">{label}</span>
-              <div className="flex-1 mx-3">
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${color}`}
-                    style={{ width: `${percentage}%` }}
-                  ></div>
+          return data.labels.map((label: string, index: number) => {
+            const value = data.data[index];
+            const percentage = (value / maxValue) * 100;
+            
+            return (
+              <div key={label} className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm w-12">{label}</span>
+                <div className="flex-1 mx-3">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${color}`}
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
                 </div>
+                <span className="text-white text-sm w-16 text-right">{value.toLocaleString()}</span>
               </div>
-              <span className="text-white text-sm w-16 text-right">{value.toLocaleString()}</span>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
     </GlassPanel>
   );

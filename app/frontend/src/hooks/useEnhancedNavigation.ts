@@ -90,8 +90,26 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
         // Ensure we always have an array before mapping
         const trendingList = Array.isArray(trending) ? trending : [];
         
-        // Transform to expected format with proper typing
+        // Transform to expected format with runtime validation
         const communitiesWithIcons: CommunityWithIcons[] = trendingList.map((community) => {
+          // Validate community data structure
+          if (!community || typeof community !== 'object') {
+            console.warn('Invalid community data:', community);
+            return {
+              id: '',
+              name: 'Unknown Community',
+              displayName: 'Unknown Community',
+              memberCount: 0,
+              avatar: '🏛️',
+              icon: '🏛️',
+              unreadCount: 0,
+              lastActivity: new Date(),
+              userRole: { type: 'member' as const, permissions: ['read', 'write'] as const },
+              isJoined: false,
+              activityLevel: 'medium' as const
+            };
+          }
+          
           const communityData = community as {
             id?: string;
             name?: string;

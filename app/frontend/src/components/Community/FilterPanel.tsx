@@ -245,7 +245,7 @@ export default function FilterPanel({
         setActiveSuggestionIndex(-1);
         break;
     }
-  }, [showAuthorSuggestions, authorSuggestions.length, activeSuggestionIndex, authorSuggestions]);
+  }, [showAuthorSuggestions, authorSuggestions, activeSuggestionIndex, handleAuthorAdd]);
 
   // Calculate active filter count
   const activeFilterCount = useMemo(() => {
