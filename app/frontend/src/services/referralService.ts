@@ -90,11 +90,35 @@ export class FrontendReferralService {
 
   async claimRewards(userAddress: string): Promise<{ success: boolean; totalAmount?: number; transactionHash?: string; error?: string }> {
     try {
-  const totalAmount = parseFloat((Math.random() * 100).toFixed(2));
-  const tx = `0x${randomHex(64)}`;
-  return { success: true, totalAmount, transactionHash: tx };
+      // Call the backend API to claim rewards
+      const res = await fetch(`${this.apiBase}/api/referral/claim-rewards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('linkdao_access_token') || localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ userAddress })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to claim rewards' }));
+        return { success: false, error: errorData.error || `Failed to claim rewards (${res.status})` };
+      }
+
+      const data = await res.json();
+
+      if (data.success) {
+        return {
+          success: true,
+          totalAmount: data.totalAmount || data.amount,
+          transactionHash: data.transactionHash || data.txHash
+        };
+      } else {
+        return { success: false, error: data.error || 'Failed to claim rewards' };
+      }
     } catch (err) {
-      return { success: false, error: 'Failed to claim rewards' };
+      console.error('Error claiming rewards:', err);
+      return { success: false, error: 'Network error while claiming rewards' };
     }
   }
 
@@ -107,7 +131,37 @@ export class FrontendReferralService {
   }
 
   async validateReferralCode(referralCode: string): Promise<{ isValid: boolean; referrer?: string; error?: string }> {
-    return { isValid: Math.random() > 0.5, referrer: `0x${Math.random().toString(16).substr(2, 40)}` };
+    try {
+      // Call the backend API to validate the referral code
+      const res = await fetch(`${this.apiBase}/api/referral/validate?code=${encodeURIComponent(referralCode)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to validate referral code' }));
+        return { isValid: false, error: errorData.error || `Validation failed (${res.status})` };
+      }
+
+      const data = await res.json();
+
+      if (data.success && data.valid) {
+        return {
+          isValid: true,
+          referrer: data.referrerId || data.referrer
+        };
+      } else {
+        return {
+          isValid: false,
+          error: data.message || data.error || 'Invalid referral code'
+        };
+      }
+    } catch (err) {
+      console.error('Error validating referral code:', err);
+      return { isValid: false, error: 'Network error while validating referral code' };
+    }
   }
 }
 

@@ -147,6 +147,12 @@ export class FeedService {
         params.append('feedSource', filter.feedSource);
       }
 
+      // CRITICAL: Add userAddress parameter for personalized feed
+      // This is required for 'following' feed to work correctly
+      if (filter.userAddress) {
+        params.append('userAddress', filter.userAddress);
+      }
+
       if (filter.communities && filter.communities.length > 0) {
         filter.communities.forEach(communityId => {
           params.append('communities', communityId);

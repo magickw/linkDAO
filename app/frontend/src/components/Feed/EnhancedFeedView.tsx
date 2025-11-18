@@ -158,7 +158,7 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      // Preserve user's feedSource preference (all or following)
+      // Keep feedSource as 'following' - backend will show user's own posts + followed users
       feedSource: prev.feedSource || 'following',
       userAddress: address || '' // Update user address when it changes
     }));

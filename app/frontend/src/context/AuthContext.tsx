@@ -6,6 +6,7 @@ import { sessionManager } from '@/services/sessionManager';
 import { AuthUser } from '@/types/auth';
 import { UserRole, Permission } from '@/types/auth';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
+import { useToast } from '@/hooks/useToast';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -66,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { validateSession } = useSessionValidation();
+  const { addToast } = useToast();
 
   // Store session data - must be defined before checkStoredSession
   const storeSession = useCallback((token: string, userData: AuthUser) => {
@@ -546,6 +548,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         storeSession(result.token, result.user);
         await loadKYCStatus();
         console.log('✅ Authentication successful for address:', walletAddress);
+        
+        // Show success notification
+        addToast('Successfully authenticated!', 'success', {
+          duration: 3000,
+          position: 'top-right'
+        });
+        
         return { success: true };
       } else {
         console.log('❌ Authentication failed for address:', walletAddress, 'error:', result.error);
@@ -553,7 +562,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error: any) {
       console.error('Login failed for address:', walletAddress, error);
-      return { success: false, error: error.message || 'Login failed' };
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = 'Login failed';
+      let toastType: 'error' | 'warning' | 'info' = 'error';
+      
+      if (error.message) {
+        if (error.message.includes('403')) {
+          errorMessage = 'Authentication blocked. Please try again later.';
+          toastType = 'warning';
+        } else if (error.message.includes('401')) {
+          errorMessage = 'Authentication failed. Please check your wallet connection.';
+        } else if (error.message.includes('429')) {
+          errorMessage = 'Too many authentication attempts. Please wait a moment and try again.';
+          toastType = 'info';
+        } else if (error.message.includes('Network error') || error.message.includes('fetch')) {
+          errorMessage = 'Network connection issue. Some features may be limited.';
+          toastType = 'warning';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      // Show user-friendly notification
+      addToast(errorMessage, toastType, {
+        duration: 5000,
+        position: 'top-right'
+      });
+      
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }

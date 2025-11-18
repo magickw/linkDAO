@@ -50,9 +50,10 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       // 2. No address
       // 3. Already authenticated for this address
       // 4. Currently authenticating
-      // 5. Recently attempted authentication (within 30 seconds)
+      // 5. Recently attempted authentication (within 60 seconds)
       // 6. Already attempted for this address
       // 7. Valid session already exists
+      // 8. Max attempts reached for this session
 
       if (!isConnected || !address || isAuthenticating) {
         return false;
@@ -69,7 +70,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
       }
 
       const now = Date.now();
-      if (now - lastAuthTimeRef.current < 30000) { // 30 seconds cooldown
+      if (now - lastAuthTimeRef.current < 60000) { // 60 seconds cooldown (increased from 30)
         return false;
       }
 
@@ -86,10 +87,13 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
         authAttemptRef.current = address;
         lastAuthTimeRef.current = Date.now();
 
-        // Add a delay to ensure wallet is fully connected
+        // Add a longer delay to ensure wallet is fully connected and prevent rapid retries
         const timeoutId = setTimeout(() => {
-          authenticate();
-        }, 500);
+          authenticate().catch(error => {
+            console.error('Auto-authentication failed:', error);
+            // Don't retry immediately on failure - let the cooldown handle it
+          });
+        }, 2000); // Increased from 500ms to 2 seconds
 
         return () => clearTimeout(timeoutId);
       }

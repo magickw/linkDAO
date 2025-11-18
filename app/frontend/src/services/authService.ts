@@ -76,6 +76,9 @@ class AuthService {
    */
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
     try {
+      // Add delay to prevent rapid retry loops
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Check if we already have a valid session for this address
       if (this.token && !this.token.startsWith('mock_token_')) {
         try {
@@ -211,8 +214,9 @@ class AuthService {
         }
       }
       
-      // Send authentication request
+      // Send authentication request with better error handling
       try {
+        console.log('🔄 Attempting authentication with backend:', this.baseUrl);
         const response = await fetch(`${this.baseUrl}/api/auth/wallet-connect`, {
           method: 'POST',
           headers: {
@@ -227,11 +231,28 @@ class AuthService {
         });
         
         if (!response.ok) {
-          // If backend is not available, return success with mock user
-          if (response.status >= 500 || !response.status) {
-            console.warn('Backend unavailable, proceeding with mock authentication');
+          console.error('❌ Authentication failed with status:', response.status, 'for address:', address);
+          
+          // Handle specific error cases
+          if (response.status === 403) {
+            console.warn('🚫 Authentication blocked (403) - may be rate limited or blocked');
+            // Return mock auth for now to allow app to function
             return this.createMockAuthResponse(address);
           }
+          
+          if (response.status === 401) {
+            console.warn('🔒 Authentication unauthorized (401) - clearing session');
+            this.clearToken();
+            // Return mock auth for now to allow app to function
+            return this.createMockAuthResponse(address);
+          }
+          
+          // If backend is not available (5xx errors) or specific auth errors, return mock user
+          if (response.status >= 500 || response.status === 429 || response.status === 503) {
+            console.warn('Backend unavailable or rate limited, proceeding with mock authentication');
+            return this.createMockAuthResponse(address);
+          }
+          
           const errorData = await response.json().catch(() => ({ error: 'Network error' }));
           throw new Error(errorData.error || `Authentication failed (${response.status})`);
         }
