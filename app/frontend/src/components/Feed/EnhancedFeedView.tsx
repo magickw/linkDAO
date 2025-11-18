@@ -158,20 +158,10 @@ const EnhancedFeedView = React.memo(({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      // Keep feedSource as 'following' - backend will show user's own posts + followed users
-      feedSource: prev.feedSource || 'following',
-      userAddress: address || '' // Update user address when it changes
-    }));
-  }, [currentSort, currentTimeRange, address]);
-
-  // Update filter when user address changes
-  useEffect(() => {
-    setFilter(prev => ({
-      ...prev,
       feedSource: address ? 'following' : 'all',
       userAddress: address || ''
     }));
-  }, [address]);
+  }, [currentSort, currentTimeRange, address]);
 
   // Refresh the feed when user address changes (e.g., when wallet connects/disconnects)
   useEffect(() => {

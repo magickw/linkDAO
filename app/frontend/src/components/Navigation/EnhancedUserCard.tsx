@@ -1,5 +1,6 @@
 import React from 'react';
 import { UserProfile } from '@/models/UserProfile';
+import { useFollowCount } from '@/hooks/useFollow';
 
 interface EnhancedUserCardProps {
   user: UserProfile | null;
@@ -23,6 +24,9 @@ export const EnhancedUserCard: React.FC<EnhancedUserCardProps> = ({
 
   // Get reputation score from profile if available
   const reputationScore = (profile as any)?.reputationScore || null;
+
+  // Get follow counts
+  const { data: followCount } = useFollowCount(address);
 
   return (
     <div
@@ -50,6 +54,12 @@ export const EnhancedUserCard: React.FC<EnhancedUserCardProps> = ({
         {reputationScore !== null && (
           <div className="text-xs text-blue-600 dark:text-blue-400">
             Reputation: {reputationScore}
+          </div>
+        )}
+        {followCount && (
+          <div className="flex text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <span className="mr-2">{followCount.followers} followers</span>
+            <span>{followCount.following} following</span>
           </div>
         )}
       </div>
