@@ -63,14 +63,14 @@ const CreatePostPage: React.FC = () => {
           // If there's a community parameter in the URL, select it
           if (community && typeof community === 'string') {
             // First try to match by id or slug
-            let foundCommunity = allUserCommunities.find((c: any) => 
+            let foundCommunity = userCommunities.find((c: any) => 
               c.id === community || c.slug === community
             );
             
             // If no match found, try strict name matching (normalized)
             if (!foundCommunity) {
               const normalizedCommunity = community.trim().toLowerCase();
-              const nameMatches = allUserCommunities.filter((c: any) => 
+              const nameMatches = userCommunities.filter((c: any) => 
                 c.name && c.name.trim().toLowerCase() === normalizedCommunity
               );
               
@@ -143,7 +143,7 @@ const CreatePostPage: React.FC = () => {
       
       // Redirect based on whether it was a community post or global post
       if (selectedCommunity) {
-        const communityData = allUserCommunities.find(c => c.id === selectedCommunity);
+        const communityData = userCommunities.find(c => c.id === selectedCommunity);
         if (communityData) {
           router.push(`/communities/${communityData.slug || communityData.name || communityData.id}`);
         } else {
