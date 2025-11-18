@@ -1,7 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
-import { useToast } from '@/context/ToastContext';
+import { ToastContext } from '@/context/ToastContext';
+
+// Custom hook to safely access toast context with fallback
+const useToastOrFallback = () => {
+  const context = useContext(ToastContext);
+  
+  if (context) {
+    return context;
+  }
+  
+  // Fallback implementation when no provider is present
+  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
+    console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
+  };
+  
+  return { addToast };
+};
 
 interface ShareOption {
   id: string;
@@ -40,20 +56,9 @@ export default function SharePostModal({
 }: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
   
-  // Get toast function from context, with fallback for portal rendering
-  const addToastFromContext = (() => {
-    try {
-      return useToast().addToast;
-    } catch (error) {
-      // If context is unavailable (e.g., when rendered via portal outside provider tree),
-      // return a fallback function
-      return (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
-        console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
-      };
-    }
-  })();
-  
-  const addToast = providedAddToast || addToastFromContext;
+  const { addToast: contextAddToast } = useToastOrFallback();
+
+  const addToast = providedAddToast || contextAddToast;
 
   const [shareMessage, setShareMessage] = useState('');
   const [isSharing, setIsSharing] = useState(false);

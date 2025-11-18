@@ -30,14 +30,44 @@ const CreatePostPage: React.FC = () => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
         try {
-          const communities = await CommunityService.getUserCommunities(address);
+          // Get user's community membership IDs first
+          const communityIds = await CommunityService.getUserCommunityMemberships();
+          
+          // Then fetch the actual community data for those IDs
+          const communities = [];
+          for (const id of communityIds) {
+            try {
+              const communityData = await CommunityService.getCommunityById(id);
+              if (communityData) {
+                communities.push(communityData);
+              }
+            } catch (err) {
+              console.error(`Error fetching community ${id}:`, err);
+            }
+          }
+          
           setUserCommunities(communities);
           
           // If there's a community parameter in the URL, select it
           if (community && typeof community === 'string') {
-            const foundCommunity = communities.find((c: any) => 
-              c.id === community || c.slug === community || c.name === community
+            // First try to match by id or slug
+            let foundCommunity = communities.find((c: any) => 
+              c.id === community || c.slug === community
             );
+            
+            // If no match found, try strict name matching (normalized)
+            if (!foundCommunity) {
+              const normalizedCommunity = community.trim().toLowerCase();
+              const nameMatches = communities.filter((c: any) => 
+                c.name && c.name.trim().toLowerCase() === normalizedCommunity
+              );
+              
+              // Only accept name match if it's unique
+              if (nameMatches.length === 1) {
+                foundCommunity = nameMatches[0];
+              }
+            }
+            
             if (foundCommunity) {
               setSelectedCommunity(foundCommunity.id);
             }
@@ -129,7 +159,13 @@ const CreatePostPage: React.FC = () => {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => router.back()}
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/');
+                }
+              }}
               className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 mb-4"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -276,7 +312,13 @@ const CreatePostPage: React.FC = () => {
             <div className="flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => router.back()}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.history.length > 1) {
+                    router.back();
+                  } else {
+                    router.push('/');
+                  }
+                }}
                 className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
