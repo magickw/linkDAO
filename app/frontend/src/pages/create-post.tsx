@@ -30,35 +30,30 @@ const CreatePostPage: React.FC = () => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
         try {
-          // Get user's community membership IDs first
-          const communityIds = await CommunityService.getUserCommunityMemberships();
+          // Get all communities first
+          const allCommunities = await CommunityService.getAllCommunities();
           
-          // Then fetch the actual community data for those IDs
-          const communities = [];
-          for (const id of communityIds) {
-            try {
-              const communityData = await CommunityService.getCommunityById(id);
-              if (communityData) {
-                communities.push(communityData);
-              }
-            } catch (err) {
-              console.error(`Error fetching community ${id}:`, err);
-            }
-          }
+          // Then get user's community memberships
+          const userMembershipIds = await CommunityService.getUserCommunityMemberships();
           
-          setUserCommunities(communities);
+          // Filter to only include communities the user is a member of
+          const userCommunities = allCommunities.filter(community => 
+            userMembershipIds.includes(community.id)
+          );
+          
+          setUserCommunities(userCommunities);
           
           // If there's a community parameter in the URL, select it
           if (community && typeof community === 'string') {
             // First try to match by id or slug
-            let foundCommunity = communities.find((c: any) => 
+            let foundCommunity = userCommunities.find((c: any) => 
               c.id === community || c.slug === community
             );
             
             // If no match found, try strict name matching (normalized)
             if (!foundCommunity) {
               const normalizedCommunity = community.trim().toLowerCase();
-              const nameMatches = communities.filter((c: any) => 
+              const nameMatches = userCommunities.filter((c: any) => 
                 c.name && c.name.trim().toLowerCase() === normalizedCommunity
               );
               
