@@ -20,13 +20,18 @@ class ReputationService {
         }
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch user reputation');
+        // Handle 404 by returning a default reputation object
+        if (response.status === 404) {
+          console.warn(`[reputationService] User reputation not found for ${userId}, returning default`);
+          return this.getDefaultUserReputation();
+        }
+        throw new Error(`Failed to fetch user reputation: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
       console.error('Error fetching user reputation:', error);
-      // Return mock data for development
-      return this.getMockUserReputation();
+      // Return default data instead of mock data for production
+      return this.getDefaultUserReputation();
     }
   }
 
@@ -34,13 +39,18 @@ class ReputationService {
     try {
       const response = await fetch(`${this.baseUrl}/users/${userId}/mini-profile`);
       if (!response.ok) {
-        throw new Error('Failed to fetch mini profile data');
+        // Handle 404 by returning a default mini profile object
+        if (response.status === 404) {
+          console.warn(`[reputationService] Mini profile not found for ${userId}, returning default`);
+          return this.getDefaultMiniProfileData();
+        }
+        throw new Error(`Failed to fetch mini profile data: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
       console.error('Error fetching mini profile data:', error);
-      // Return mock data for development
-      return this.getMockMiniProfileData();
+      // Return default data instead of mock data for production
+      return this.getDefaultMiniProfileData();
     }
   }
 
@@ -48,13 +58,18 @@ class ReputationService {
     try {
       const response = await fetch(`${this.baseUrl}/reputation/${userId}/events?limit=${limit}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch reputation events');
+        // Handle 404 by returning empty array
+        if (response.status === 404) {
+          console.warn(`[reputationService] Reputation events not found for ${userId}, returning empty array`);
+          return [];
+        }
+        throw new Error(`Failed to fetch reputation events: ${response.status} ${response.statusText}`);
       }
       return await response.json();
     } catch (error) {
       console.error('Error fetching reputation events:', error);
-      // Return mock data for development
-      return this.getMockReputationEvents();
+      // Return empty array instead of mock data for production
+      return [];
     }
   }
 
@@ -104,7 +119,51 @@ class ReputationService {
     return BADGE_DEFINITIONS;
   }
 
-  // Mock data methods for development
+  // Default data methods for production
+  private getDefaultUserReputation(): UserReputation {
+    const totalScore = 0;
+    const level = this.calculateLevel(totalScore);
+    
+    return {
+      totalScore,
+      level,
+      badges: [],
+      progress: [],
+      breakdown: {
+        posting: 0,
+        governance: 0,
+        community: 0,
+        trading: 0,
+        moderation: 0,
+        total: 0
+      },
+      achievements: []
+    };
+  }
+
+  private getDefaultMiniProfileData(): MiniProfileData {
+    return {
+      user: {
+        id: '',
+        username: '',
+        displayName: '',
+        avatar: '',
+        walletAddress: '',
+        ensName: ''
+      },
+      reputation: this.getDefaultUserReputation(),
+      stats: {
+        followers: 0,
+        following: 0,
+        posts: 0,
+        communities: 0
+      },
+      isFollowing: false,
+      mutualConnections: 0
+    };
+  }
+
+  // Mock data methods for development (kept for backward compatibility)
   private getMockUserReputation(): UserReputation {
     const totalScore = 2750;
     const level = this.calculateLevel(totalScore);

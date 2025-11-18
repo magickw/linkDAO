@@ -212,8 +212,17 @@ export default function Profile() {
       return postContentCache[post.id];
     }
 
+    // If the post has direct content (not a CID), return it
+    if (post.content && typeof post.content === 'string' && !post.content.startsWith('Qm') && !post.content.startsWith('baf')) {
+      return post.content;
+    }
+
     // If no content CID, return empty string
     if (!post.contentCid) {
+      // Try to use post.content if available
+      if (post.content) {
+        return post.content;
+      }
       return '';
     }
 
@@ -228,13 +237,17 @@ export default function Profile() {
           throw new Error('Failed to fetch content');
         })
         .then(data => {
-          const content = data.data?.content || 'Content not available';
+          const content = data.data?.content || data.content || 'Content not available';
           // Cache the content
           setPostContentCache(prev => ({ ...prev, [post.id]: content }));
+          // Force a re-render by updating state
+          setPostContentCache(currentCache => ({ ...currentCache }));
           return content;
         })
         .catch(error => {
           console.error('Error fetching post content:', error);
+          // Cache the error state to prevent repeated fetches
+          setPostContentCache(prev => ({ ...prev, [post.id]: 'Content not available' }));
           return 'Content not available';
         });
       
@@ -243,7 +256,7 @@ export default function Profile() {
     }
     
     // If it's already content (not a CID), return as is
-    return post.contentCid;
+    return post.contentCid || post.content || '';
   }, [postContentCache]);
 
   const handleUnfollow = async () => {

@@ -135,6 +135,7 @@ export class CommunityService {
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
+          console.warn(`[communityService] Community not found with ID: ${id}`);
           return null;
         }
         if (response.status === 401 || response.status === 403) {
@@ -165,7 +166,8 @@ export class CommunityService {
           return null;
         }
         // For other errors, throw to be caught by outer catch
-        throw new Error(`Failed to fetch community: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to fetch community (${response.status} ${response.statusText}): ${errorText}`);
       }
       
       const data = await response.json();
@@ -562,6 +564,7 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
+      
       
       clearTimeout(timeoutId);
       

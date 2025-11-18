@@ -157,6 +157,15 @@ class ChatHistoryService {
                 total: data.total
               };
             }
+          } else if (response.status === 401 || response.status === 403) {
+            // Handle authentication errors gracefully
+            console.warn('[chatHistoryService] Authentication error, clearing cache and returning empty results');
+            try {
+              localStorage.removeItem(this.conversationEndpointCacheKey);
+            } catch (err) {
+              /* ignore */
+            }
+            return { conversations: [], hasMore: false };
           }
         } catch (err) {
           console.warn('[chatHistoryService] Cached conversations endpoint failed, will try candidates', err);
@@ -182,6 +191,12 @@ class ChatHistoryService {
           // Try next candidate
           console.warn(`Conversations endpoint not found at ${url} (404), trying next candidate`);
           continue;
+        }
+
+        // Handle authentication errors
+        if (response.status === 401 || response.status === 403) {
+          console.warn(`Authentication failed for conversations endpoint at ${url} (${response.status}), returning empty results`);
+          return { conversations: [], hasMore: false };
         }
 
         if (!response.ok) {
@@ -219,6 +234,11 @@ class ChatHistoryService {
       } catch (err) {
         // If it's the last candidate rethrow; otherwise continue
         if (path === this.conversationEndpointCandidates[this.conversationEndpointCandidates.length - 1]) {
+          // Handle network errors gracefully by returning empty results instead of throwing
+          if (err instanceof Error && (err.message.includes('Failed to fetch') || err.name === 'TypeError')) {
+            console.warn('[chatHistoryService] Network error fetching conversations, returning empty results');
+            return { conversations: [], hasMore: false };
+          }
           throw err;
         }
         // transient/network errors - log and continue to next candidate

@@ -21,9 +21,7 @@ const CreatePostPage: React.FC = () => {
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [userCommunities, setUserCommunities] = useState<any[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
-  
-  const { address, isConnected } = useWeb3();
-  const { addToast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch user's communities
   useEffect(() => {
@@ -60,7 +58,7 @@ const CreatePostPage: React.FC = () => {
           
           setUserCommunities(allUserCommunities);
           
-          // If there's a community parameter in the URL, select it
+          // If there's a community parameter in the URL, select it ONLY if user is a member
           if (community && typeof community === 'string') {
             // First try to match by id or slug
             let foundCommunity = allUserCommunities.find((c: any) => 
@@ -82,11 +80,14 @@ const CreatePostPage: React.FC = () => {
             
             if (foundCommunity) {
               setSelectedCommunity(foundCommunity.id);
+            } else {
+              // Show error if user tries to post to a community they're not a member of
+              addToast('You must be a member of this community to post', 'error');
             }
           }
         } catch (error) {
           console.error('Error fetching user communities:', error);
-          addToast('Error loading your communities', 'error');
+          addToast('Error loading your communities. You can only post to communities you are a member of.', 'error');
         } finally {
           setLoadingCommunities(false);
         }
@@ -97,6 +98,13 @@ const CreatePostPage: React.FC = () => {
 
     fetchUserCommunities();
   }, [isConnected, address, community, addToast]);
+
+  // Filter communities based on search term
+  const filteredCommunities = userCommunities.filter(community => 
+    (community.displayName || community.name || '')
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -120,6 +128,15 @@ const CreatePostPage: React.FC = () => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to create a post', 'error');
       return;
+    }
+
+    // Additional validation: Ensure user is a member of the selected community
+    if (selectedCommunity) {
+      const isMember = userCommunities.some((c: any) => c.id === selectedCommunity);
+      if (!isMember) {
+        addToast('You must be a member of the selected community to post', 'error');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -195,11 +212,28 @@ const CreatePostPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Community (optional)
                 </label>
+                
+                {/* Search Input for Communities */}
+                {userCommunities.length > 5 && (
+                  <div className="mb-4">
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search communities..."
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {/* Global post option */}
                   <button
                     type="button"
-                    onClick={() => setSelectedCommunity(null)}
+                    onClick={() => {
+                      setSelectedCommunity(null);
+                      setSearchTerm('');
+                    }}
                     className={`p-4 rounded-lg border-2 text-left transition-colors ${
                       selectedCommunity === null
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -216,11 +250,14 @@ const CreatePostPage: React.FC = () => {
                   </button>
                   
                   {/* User communities */}
-                  {userCommunities.map(community => (
+                  {filteredCommunities.map(community => (
                     <button
                       key={community.id}
                       type="button"
-                      onClick={() => setSelectedCommunity(community.id)}
+                      onClick={() => {
+                        setSelectedCommunity(community.id);
+                        setSearchTerm('');
+                      }}
                       className={`p-4 rounded-lg border-2 text-left transition-colors ${
                         selectedCommunity === community.id
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -242,6 +279,13 @@ const CreatePostPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
+                
+                {/* Show message when search yields no results */}
+                {searchTerm && filteredCommunities.length === 0 && (
+                  <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                    No communities found matching "{searchTerm}"
+                  </div>
+                )}
               </div>
             )}
 
