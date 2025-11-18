@@ -2,7 +2,7 @@
  * Toast Context - Simple toast notification system
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
@@ -20,13 +20,16 @@ interface ToastContextType {
   removeToast: (id: string) => void;
 }
 
-export const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const defaultContextValue: ToastContextType = {
+  addToast: () => {},
+  removeToast: () => {}
+};
+
+export const ToastContext = createContext<ToastContextType>(defaultContextValue);
 
 export const useToast = () => {
+  // Always return a valid context value, even if provider is not mounted
   const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
   return context;
 };
 
@@ -69,6 +72,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
+  const contextValue = useMemo(() => ({
+    addToast,
+    removeToast
+  }), [addToast, removeToast]);
+
   const getToastIcon = (type: ToastType) => {
     switch (type) {
       case 'success':
@@ -100,7 +108,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   };
 
   return (
-    <ToastContext.Provider value={{ addToast, removeToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       
       {/* Toast Container - only render on client side */}

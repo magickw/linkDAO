@@ -13,24 +13,34 @@ export default function FollowButton({ targetUserAddress, className = '' }: Foll
   const { addToast } = useToast();
   const { data: isFollowing, isLoading: isStatusLoading } = useFollowStatus(currentUserAddress, targetUserAddress);
   const { follow, unfollow, isLoading: isActionLoading } = useFollow();
+  
+  // Add a safety check for the toast function
+  const safeAddToast = (...args: Parameters<typeof addToast>) => {
+    if (typeof addToast === 'function') {
+      return addToast(...args);
+    } else {
+      // Fallback to console logging
+      console.log(`[Toast Fallback] ${args[1]}: ${args[0]}`);
+    }
+  };
 
   const handleFollowToggle = async () => {
     if (!isConnected || !currentUserAddress) {
-      addToast('Please connect your wallet first', 'error');
+      safeAddToast('Please connect your wallet first', 'error');
       return;
     }
 
     try {
       if (isFollowing) {
         await unfollow({ follower: currentUserAddress, following: targetUserAddress });
-        addToast('Unfollowed user successfully', 'success');
+        safeAddToast('Unfollowed user successfully', 'success');
       } else {
         await follow({ follower: currentUserAddress, following: targetUserAddress });
-        addToast('Followed user successfully', 'success');
+        safeAddToast('Followed user successfully', 'success');
       }
     } catch (error) {
       console.error('Error toggling follow status:', error);
-      addToast('Failed to update follow status. Please try again.', 'error');
+      safeAddToast('Failed to update follow status. Please try again.', 'error');
     }
   };
 
@@ -43,25 +53,18 @@ export default function FollowButton({ targetUserAddress, className = '' }: Foll
       className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 ${
         isFollowing
           ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600'
-          : 'bg-primary-600 text-white hover:bg-primary-700'
-      } ${className} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          : 'bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600'
+      } ${className}`}
     >
       {isLoading ? (
-        'Loading...'
+        <span className="flex items-center">
+          <span className="h-2 w-2 rounded-full bg-current animate-ping mr-1"></span>
+          Loading...
+        </span>
       ) : isFollowing ? (
-        <>
-          <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          Following
-        </>
+        'Unfollow'
       ) : (
-        <>
-          <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Follow
-        </>
+        'Follow'
       )}
     </button>
   );

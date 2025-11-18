@@ -3,38 +3,32 @@
  * This version should be placed in _app.tsx after ToastProvider
  */
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { useAccount } from 'wagmi';
 import { useAuth } from '@/context/AuthContext';
-import { ToastContext } from '@/context/ToastContext';
+import { useToast } from '@/context/ToastContext';
 import { WalletLoginBridge } from './WalletLoginBridge';
-
-// Custom hook to safely access toast context with fallback
-const useToastOrFallback = () => {
-  const context = useContext(ToastContext);
-  
-  // Return a safe fallback if context is not available
-  if (!context) {
-    return {
-      addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
-        // In development, warn about missing context
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('ToastContext not available, using console fallback for message:', message);
-        }
-        // Fallback to console logging
-        console.log(`[${type}] ${message}`);
-      }
-    };
-  }
-  
-  return context;
-};
 
 export const WalletLoginBridgeWithToast: React.FC = () => {
   const { connector } = useAccount();
-  const { addToast } = useToastOrFallback();
+  const { addToast } = useToast();
 
   const handleLoginSuccess = (user: any) => {
+    // Check if addToast is available (it will be a no-op function if ToastProvider isn't mounted)
+    if (!addToast || typeof addToast !== 'function') {
+      // Fallback to console logging
+      const walletName = connector?.name || 'Wallet';
+      const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
+                          connector?.id === 'coinbaseWallet';
+      
+      if (isBaseWallet) {
+        console.log(`🎉 Successfully logged in with ${walletName}! Welcome to Base!`);
+      } else {
+        console.log(`✅ Successfully logged in with ${walletName}!`);
+      }
+      return;
+    }
+    
     const walletName = connector?.name || 'Wallet';
     const isBaseWallet = connector?.name?.toLowerCase().includes('coinbase') || 
                         connector?.id === 'coinbaseWallet';
@@ -47,6 +41,19 @@ export const WalletLoginBridgeWithToast: React.FC = () => {
   };
 
   const handleLoginError = (error: string) => {
+    // Check if addToast is available (it will be a no-op function if ToastProvider isn't mounted)
+    if (!addToast || typeof addToast !== 'function') {
+      // Fallback to console logging
+      if (error.includes('signature')) {
+        console.log('📝 Please sign the message in your wallet to complete login');
+      } else if (error.includes('rejected') || error.includes('denied')) {
+        console.log('❌ Login cancelled. You can connect again anytime.');
+      } else {
+        console.log('🔴 Login failed. Please try connecting your wallet again.');
+      }
+      return;
+    }
+    
     if (error.includes('signature')) {
       addToast('📝 Please sign the message in your wallet to complete login', 'warning');
     } else if (error.includes('rejected') || error.includes('denied')) {

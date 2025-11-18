@@ -391,19 +391,24 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
               <EnhancedPostCard
                 key={post.id}
                 post={post}
-                onReaction={async (postId, reactionType, amount) => {
-                  // Handle reaction
-                  console.log('Reaction:', postId, reactionType, amount);
+                onLike={async (postId) => {
+                  // Handle like
+                  console.log('Like:', postId);
+                }}
+                onComment={async (postId) => {
+                  // Handle comment
+                  console.log('Comment:', postId);
+                }}
+                onShare={async (postId) => {
+                  // Handle share
+                  console.log('Share:', postId);
                 }}
                 onTip={async (postId, amount, token, message) => {
                   // Handle tip
                   console.log('Tip:', postId, amount, token, message);
                 }}
-                onShare={async (postId, shareType, target) => {
-                  // Handle share
-                  console.log('Share:', postId, shareType, target);
-                }}
               />
+
             ))}
           </div>
         </InfiniteScroll>

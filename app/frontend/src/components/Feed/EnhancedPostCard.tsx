@@ -17,22 +17,26 @@ interface EnhancedPostCardProps {
   showPreviews?: boolean;
   showSocialProof?: boolean;
   showTrending?: boolean;
+  onLike?: (postId: string) => Promise<void>;
+  onComment?: (postId: string) => Promise<void>;
+  onShare?: (postId: string) => Promise<void>;
+  onTip?: (postId: string, amount?: string, token?: string, message?: string) => Promise<void>;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
-  onTip?: (postId: string, amount: string, token: string, message?: string) => Promise<void>;
-  onShare?: (postId: string, shareType: string, target?: string) => Promise<void>;
   onExpand?: () => void;
 }
 
-export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
-  post,
+export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({ 
+  post, 
+  onLike, 
+  onComment, 
+  onShare,
+  onTip,
+  onReaction,
+  onExpand,
   className = '',
   showPreviews = true,
   showSocialProof = true,
-  showTrending = true,
-  onReaction,
-  onTip,
-  onShare,
-  onExpand
+  showTrending = true
 }) => {
   const [showTipModal, setShowTipModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -53,6 +57,17 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
+  
+  // Add a safety check for the toast function
+  const safeAddToast = (...args: Parameters<typeof addToast>) => {
+    if (typeof addToast === 'function') {
+      return addToast(...args);
+    } else {
+      // Fallback to console logging
+      console.log(`[Toast Fallback] ${args[1]}: ${args[0]}`);
+    }
+  };
+
   const { invalidateFeedCache, invalidateUserCache, invalidateCommunityCache } = useCacheInvalidation();
 
   // Fetch content from IPFS when component mounts or when post.contentCid changes
@@ -135,16 +150,64 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
     return `${diffInHours}h ago`;
   };
 
-  const handleTip = async (amount: string, token: string, message?: string) => {
-    if (!isConnected) {
-      addToast('Please connect your wallet to tip', 'error');
-      return;
+  const handleLike = async () => {
+    try {
+      if (onLike) {
+        await onLike(post.id);
+        safeAddToast('Post liked successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated like counts
+        await invalidateFeedCache();
+        
+        // Invalidate user cache for like history
+        if (post.author) {
+          await invalidateUserCache(post.author, ['likes', 'earnings']);
+        }
+      }
+    } catch (error) {
+      safeAddToast('Failed to like post', 'error');
     }
+  };
 
+  const handleComment = async () => {
+    try {
+      if (onComment) {
+        await onComment(post.id);
+        safeAddToast('Comment posted successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated comment counts
+        await invalidateFeedCache();
+      }
+    } catch (error) {
+      safeAddToast('Failed to post comment', 'error');
+    }
+  };
+
+  const handleShare = async (shareType?: string, target?: string) => {
+    try {
+      if (onShare) {
+        await onShare(post.id);
+        safeAddToast('Post shared successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated share counts
+        await invalidateFeedCache();
+        
+        // If sharing to a community, invalidate community cache
+        if (post.communityId) {
+          await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
+        }
+      }
+      setShowShareModal(false);
+    } catch (error) {
+      safeAddToast('Failed to share post', 'error');
+    }
+  };
+
+  const handleTip = async (amount?: string, token?: string, message?: string) => {
     try {
       if (onTip) {
         await onTip(post.id, amount, token, message);
-        addToast(`Successfully tipped ${amount} ${token}!`, 'success');
+        safeAddToast('Tip sent successfully!', 'success');
         
         // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
@@ -153,36 +216,21 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         if (post.author) {
           await invalidateUserCache(post.author, ['tips', 'earnings']);
         }
+        
+        // If tipping in a community, invalidate community cache
+        if (post.communityId) {
+          await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
+        }
       }
       setShowTipModal(false);
     } catch (error) {
-      addToast('Failed to send tip', 'error');
-    }
-  };
-
-  const handleShare = async (shareType: string, target?: string) => {
-    try {
-      if (onShare) {
-        await onShare(post.id, shareType, target);
-        addToast('Post shared successfully!', 'success');
-        
-        // Invalidate feed cache to reflect updated share counts
-        await invalidateFeedCache();
-        
-        // If sharing to a community, invalidate community cache
-        if (shareType === 'community' && target) {
-          await invalidateCommunityCache(target, ['posts', 'activity']);
-        }
-      }
-      setShowShareModal(false);
-    } catch (error) {
-      addToast('Failed to share post', 'error');
+      safeAddToast('Failed to send tip', 'error');
     }
   };
 
   const handleBookmark = async () => {
     setIsBookmarked(!isBookmarked);
-    addToast(isBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks', 'success');
+    safeAddToast(isBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks', 'success');
     
     // Invalidate user cache for bookmarks
     try {
@@ -195,7 +243,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const copyToClipboard = async () => {
     const url = `${window.location.origin}/post/${post.id}`;
     await navigator.clipboard.writeText(url);
-    handleShare('external');
+    handleShare();
   };
 
   return (
@@ -395,13 +443,18 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {showTipModal && (
         <div data-testid="tip-modal">
           <h3>Send Tip</h3>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target as HTMLFormElement);
+            const amount = formData.get('amount');
+            const token = formData.get('token');
+            const message = formData.get('message');
+            
+            // Pass the tip data to the handleTip function
             handleTip(
-              formData.get('amount') as string,
-              formData.get('token') as string,
-              formData.get('message') as string
+              amount as string,
+              token as string,
+              message as string
             );
           }}>
             <div>

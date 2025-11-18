@@ -14,13 +14,14 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SupportWidget from '@/components/SupportWidget';
 
 // Lazy load heavy components
-const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar'));
-const CommunityView = lazy(() => import('@/components/CommunityView'));
-const NavigationSidebar = lazy(() => import('@/components/NavigationSidebar'));
+const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
+const CommunityView = lazy(() => import('@/components/CommunityView').catch(() => ({ default: () => <div>Failed to load community view</div> })));
+const NavigationSidebar = lazy(() => import('@/components/NavigationSidebar').catch(() => ({ default: () => <div>Failed to load navigation</div> })));
 const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStylePostComposer'));
-const PostCreationModal = lazy(() => import('@/components/PostCreationModal'));
+const PostCreationModal = lazy(() => import('@/components/PostCreationModal').catch(() => ({ default: () => <div>Failed to load post modal</div> })));
 const BottomSheet = lazy(() => import('@/components/BottomSheet'));
 const EnhancedFeedView = lazy(() => import('@/components/Feed/EnhancedFeedView'));
+
 import SEOHead from '@/components/SEO/SEOHead';
 
 // Loading skeleton components

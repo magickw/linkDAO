@@ -97,7 +97,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
             errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
             errorText.includes('extension id') ||
             errorText.includes('runtime.sendmessage(optional string extensionid') ||
-            errorText.includes('cannot redefine property: ethereum')) { // Add ethereum redefinition check
+            errorText.includes('cannot redefine property: ethereum')) {
           console.debug('🚫 IMMEDIATE: Chrome runtime error blocked');
           event.preventDefault?.();
           event.stopPropagation?.();
@@ -132,7 +132,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'called from a webpage must specify an Extension ID',
         'for its first argument',
         'opfgelmcmbiajamepnmloijbpoleiama',
-        'Cannot redefine property: ethereum' // Add ethereum redefinition check
+        'Cannot redefine property: ethereum'
       ];
       
       // Check all error information
@@ -176,7 +176,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         'must specify an Extension ID',
         'called from a webpage must specify an Extension ID',
         'opfgelmcmbiajamepnmloijbpoleiama',
-        'Cannot redefine property: ethereum' // Add ethereum redefinition check
+        'Cannot redefine property: ethereum'
       ];
       
       const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
@@ -205,7 +205,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       const message = args.join(' ');
       if (message.toLowerCase().includes('chrome.runtime.sendmessage') || 
           message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama') ||
-          message.toLowerCase().includes('cannot redefine property: ethereum')) { // Add ethereum redefinition check
+          message.toLowerCase().includes('cannot redefine property: ethereum')) {
         console.debug('🔇 Console error suppressed (chrome.runtime):', message.substring(0, 200));
         return;
       }
