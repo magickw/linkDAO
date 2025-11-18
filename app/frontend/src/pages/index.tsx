@@ -310,7 +310,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Marketplace</h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Secure transactions with x402 payment protocol support.
+                  Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Secure transactions with low-cost x402 payment protocol for reduced fees.
                 </p>
               </div>
             </div>
