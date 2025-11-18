@@ -30,14 +30,14 @@ const nextConfig = {
     // Add alias for @react-native-async-storage/async-storage to use our fallback
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@react-native-async-storage/async-storage': 
+      '@react-native-async-storage/async-storage':
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
     // Add Workbox webpack plugin for service worker generation
     if (!isServer) {
       const WorkboxPlugin = require('workbox-webpack-plugin');
-      
+
       config.plugins.push(
         new WorkboxPlugin.InjectManifest({
           swSrc: './public/sw-simple.js',
@@ -97,7 +97,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data: https://fonts.gstatic.com",
-              process.env.NODE_ENV === 'development' 
+              process.env.NODE_ENV === 'development'
                 ? "connect-src 'self' https: wss: ws: http://localhost:* ws://localhost:* https://api.stripe.com"
                 : "connect-src 'self' https: wss: ws: https://api.stripe.com",
               "frame-src 'self' https: https://js.stripe.com https://hooks.stripe.com",
@@ -193,15 +193,14 @@ const nextConfig = {
 
   // Optimize for faster builds
   // swcMinify is now enabled by default in Next.js 13+
-  
+
   // Enable experimental features that improve SEO
   experimental: {
     // newNextLinkBehavior is now the default behavior
     // Optimize server-side rendering
     optimizeServerReact: true,
   },
-  // Exclude test files from being treated as pages
-  serverExternalPackages: ["playwright", "@playwright"],
+
   // Custom page resolver to exclude Playwright files
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 };

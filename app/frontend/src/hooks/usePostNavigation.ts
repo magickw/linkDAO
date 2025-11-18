@@ -9,9 +9,9 @@ export const usePostNavigation = () => {
   const sharePost = useCallback(async (postId: string, communityId?: string) => {
     try {
       const baseUrl = window.location.origin;
-      const postUrl = communityId 
-        ? `${baseUrl}/dao/${communityId}?post=${postId}`
-        : `${baseUrl}/dao/?post=${postId}`;
+      const postUrl = communityId
+        ? `${baseUrl}/communities/${communityId}?post=${postId}`
+        : `${baseUrl}/communities/?post=${postId}`;
 
       if (navigator.share) {
         // Use native sharing if available
@@ -36,9 +36,9 @@ export const usePostNavigation = () => {
 
   const getPostUrl = useCallback((postId: string, communityId?: string) => {
     const baseUrl = window.location.origin;
-    return communityId 
-      ? `${baseUrl}/dao/${communityId}?post=${postId}`
-      : `${baseUrl}/dao/?post=${postId}`;
+    return communityId
+      ? `${baseUrl}/communities/${communityId}?post=${postId}`
+      : `${baseUrl}/communities/?post=${postId}`;
   }, []);
 
   return {

@@ -26,12 +26,12 @@ import { ProfileService } from '@/services/profileService';
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
-  
+
   // Check if it's a valid IPFS CID
   if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
     return `https://ipfs.io/ipfs/${profileCid}`;
   }
-  
+
   // Check if it's already a full URL
   try {
     new URL(profileCid);
@@ -47,10 +47,10 @@ export default function Profile() {
   const { address: currentUserAddress, isConnected } = useWeb3();
   const { isAuthenticated, login } = useAuth();
   const { addToast } = useToast();
-  
+
   // Determine which user profile to display based on query parameter
   const targetUserAddress = typeof router.query.user === 'string' ? router.query.user : currentUserAddress;
-  
+
   // Backend profile loading with error handling
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError, refetch, updateProfile: updateBackendProfile } = useProfile(targetUserAddress);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(targetUserAddress);
@@ -137,7 +137,7 @@ export default function Profile() {
         avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Fallback to profileCid for backend compatibility
       });
       setAvatarError(false); // Reset avatar error when loading new profile
-      
+
       // Load addresses from backend profile
       setAddresses({
         billing: {
@@ -250,11 +250,11 @@ export default function Profile() {
           setPostContentCache(prev => ({ ...prev, [post.id]: 'Content not available' }));
           return 'Content not available';
         });
-      
+
       // Return loading state while fetching
       return 'Loading content...';
     }
-    
+
     // If it's already content (not a CID), return as is
     return post.contentCid || post.content || '';
   }, [postContentCache]);
@@ -318,14 +318,14 @@ export default function Profile() {
     try {
       // Import PostService dynamically to avoid SSR issues
       const { PostService } = await import('@/services/postService');
-      
+
       await PostService.deletePost(postId);
-      
+
       // Refresh the posts list
       if (refetchPosts) {
         refetchPosts();
       }
-      
+
       addToast('Post deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -376,7 +376,7 @@ export default function Profile() {
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const [section, field] = name.split('.');
-    
+
     if (section === 'billing' || section === 'shipping') {
       setAddresses(prev => ({
         ...prev,
@@ -397,7 +397,7 @@ export default function Profile() {
         sameAsBilling: checked
       }
     }));
-    
+
     if (checked) {
       // Copy billing address to shipping when same as billing is checked
       setAddresses(prev => ({
@@ -413,21 +413,21 @@ export default function Profile() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      
+
       try {
         // Show loading state
         setIsUpdating(true);
         setUpdateError(null);
-        
+
         // Upload the image using the unified image service
         const uploadResult = await unifiedImageService.uploadImage(file, 'profile');
-        
+
         // Update the profile state with the new avatar URL
         setProfile(prev => ({ ...prev, avatar: uploadResult.cdnUrl }));
         setAvatarError(false); // Reset avatar error after successful upload
-        
+
         addToast('Avatar uploaded successfully!', 'success');
-        
+
         // Automatically save the updated avatar to the backend
         if (backendProfile) {
           try {
@@ -435,13 +435,13 @@ export default function Profile() {
             const updateData: UpdateUserProfileInput = {
               avatarCid: uploadResult.cdnUrl
             };
-            
+
             // Update the backend profile
             await updateBackendProfile(updateData);
-            
+
             // Refresh the backend profile to ensure the changes are reflected
             await refetch();
-            
+
             addToast('Avatar saved to profile!', 'success');
           } catch (saveError) {
             console.error('Failed to save avatar to backend:', saveError);
@@ -629,20 +629,20 @@ export default function Profile() {
     }
 
     // Validate required fields for billing address
-    if (!addresses.billing.firstName.trim() || !addresses.billing.lastName.trim() || 
-        !addresses.billing.address1.trim() || !addresses.billing.city.trim() || 
-        !addresses.billing.state.trim() || !addresses.billing.zipCode.trim() || 
-        !addresses.billing.country.trim()) {
+    if (!addresses.billing.firstName.trim() || !addresses.billing.lastName.trim() ||
+      !addresses.billing.address1.trim() || !addresses.billing.city.trim() ||
+      !addresses.billing.state.trim() || !addresses.billing.zipCode.trim() ||
+      !addresses.billing.country.trim()) {
       addToast('Please fill in all required billing address fields', 'error');
       return;
     }
 
     // Validate shipping address if it's different from billing
     if (!addresses.shipping.sameAsBilling) {
-      if (!addresses.shipping.firstName.trim() || !addresses.shipping.lastName.trim() || 
-          !addresses.shipping.address1.trim() || !addresses.shipping.city.trim() || 
-          !addresses.shipping.state.trim() || !addresses.shipping.zipCode.trim() || 
-          !addresses.shipping.country.trim()) {
+      if (!addresses.shipping.firstName.trim() || !addresses.shipping.lastName.trim() ||
+        !addresses.shipping.address1.trim() || !addresses.shipping.city.trim() ||
+        !addresses.shipping.state.trim() || !addresses.shipping.zipCode.trim() ||
+        !addresses.shipping.country.trim()) {
         addToast('Please fill in all required shipping address fields', 'error');
         return;
       }
@@ -743,7 +743,7 @@ export default function Profile() {
         await ProfileService.createProfile(createData);
         setIsEditing(false);
         addToast('Profile created successfully', 'success');
-        
+
         // Refresh the page to load the new profile
         router.reload();
       }
@@ -989,14 +989,14 @@ export default function Profile() {
 
                   {/* User Stats */}
                   <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div 
+                    <div
                       className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer"
                       onClick={() => setActiveTab('followers')}
                     >
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">{followCount?.followers || 0}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Followers</p>
                     </div>
-                    <div 
+                    <div
                       className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg cursor-pointer"
                       onClick={() => setActiveTab('following')}
                     >
@@ -1024,17 +1024,16 @@ export default function Profile() {
                       {isEditing ? 'Cancel Editing' : 'Edit Profile'}
                     </button>
                   )}
-                  
+
                   {/* Show Follow/Unfollow button when viewing another user's profile */}
                   {currentUserAddress && targetUserAddress && targetUserAddress !== currentUserAddress && (
                     <button
                       onClick={isFollowing ? handleUnfollow : handleFollow}
                       disabled={isFollowLoading || isFollowStatusLoading}
-                      className={`inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105 ${
-                        isFollowing
+                      className={`inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105 ${isFollowing
                           ? 'text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-primary-500'
                           : 'text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:ring-blue-500'
-                      }`}
+                        }`}
                     >
                       {isFollowLoading || isFollowStatusLoading ? (
                         <>
@@ -1061,7 +1060,7 @@ export default function Profile() {
                       )}
                     </button>
                   )}
-                  
+
                   <button className="inline-flex items-center justify-center px-5 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-xl shadow-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105">
                     <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -1098,7 +1097,7 @@ export default function Profile() {
                   </svg>
                   Posts
                 </button>
-                
+
                 <button
                   onClick={() => setActiveTab('proposals')}
                   className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'proposals'
@@ -1172,39 +1171,39 @@ export default function Profile() {
                   Following
                 </button>
                 {isEditing && (
-                <button
-                  onClick={() => setActiveTab('addresses')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                >
-                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Addresses
-                  <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </button>
+                  <button
+                    onClick={() => setActiveTab('addresses')}
+                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Addresses
+                    <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </button>
                 )}
                 {isEditing && (
-                <button
-                  onClick={() => setActiveTab('payments')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                >
-                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
-                  Payment Methods
-                  <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </button>
+                  <button
+                    onClick={() => setActiveTab('payments')}
+                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Payment Methods
+                    <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </button>
                 )}
               </nav>
             </div>
@@ -1285,10 +1284,10 @@ export default function Profile() {
                         <div className="flex-shrink-0">
                           <div className="h-16 w-16 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
                             {profile.avatar && typeof profile.avatar === 'string' && profile.avatar.startsWith('http') ? (
-                              <img 
-                                src={profile.avatar} 
-                                alt="Avatar" 
-                                className="h-16 w-16 object-cover" 
+                              <img
+                                src={profile.avatar}
+                                alt="Avatar"
+                                className="h-16 w-16 object-cover"
                                 onError={() => {
                                   console.error('Avatar image failed to load:', profile.avatar);
                                   setAvatarError(true);
@@ -1368,10 +1367,10 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={`/posts/${post.id}`}>
+                        <Link key={post.id} href={post.communityId || post.dao ? `/communities/${post.communityId || post.dao}` : `/profile?user=${post.author}`}>
                           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <div className="flex justify-between items-start">
-                              <Link href={`/posts/${post.id}`} className="flex-grow">
+                              <Link href={post.communityId || post.dao ? `/communities/${post.communityId || post.dao}` : `/profile?user=${post.author}`} className="flex-grow">
                                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                                   {post.title || 'Untitled Post'}
                                 </h4>
@@ -1605,7 +1604,7 @@ export default function Profile() {
               {activeTab === 'addresses' && isEditing && currentUserAddress && targetUserAddress === currentUserAddress && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Address Information</h3>
-                  
+
                   <form onSubmit={handleAddressSubmit} className="space-y-8">
                     {/* Billing Address Section */}
                     <div>
@@ -1624,7 +1623,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="billing.lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Last Name
@@ -1638,7 +1637,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div className="md:col-span-2">
                           <label htmlFor="billing.company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Company (Optional)
@@ -1652,7 +1651,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div className="md:col-span-2">
                           <label htmlFor="billing.address1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Address Line 1
@@ -1666,7 +1665,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div className="md:col-span-2">
                           <label htmlFor="billing.address2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Address Line 2 (Optional)
@@ -1680,7 +1679,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="billing.city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             City
@@ -1694,7 +1693,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="billing.state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             State/Province
@@ -1708,7 +1707,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="billing.zipCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             ZIP/Postal Code
@@ -1722,7 +1721,7 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="billing.country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Country
@@ -1742,7 +1741,7 @@ export default function Profile() {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="md:col-span-2">
                           <label htmlFor="billing.phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Phone Number
@@ -1758,7 +1757,7 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Shipping Address Section */}
                     <div>
                       <div className="flex items-center mb-4">
@@ -1774,7 +1773,7 @@ export default function Profile() {
                           Shipping address same as billing
                         </label>
                       </div>
-                      
+
                       {!addresses.shipping.sameAsBilling && (
                         <>
                           <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Shipping Address</h4>
@@ -1792,7 +1791,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div>
                               <label htmlFor="shipping.lastName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Last Name
@@ -1806,7 +1805,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div className="md:col-span-2">
                               <label htmlFor="shipping.company" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Company (Optional)
@@ -1820,7 +1819,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div className="md:col-span-2">
                               <label htmlFor="shipping.address1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Address Line 1
@@ -1834,7 +1833,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div className="md:col-span-2">
                               <label htmlFor="shipping.address2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Address Line 2 (Optional)
@@ -1848,7 +1847,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div>
                               <label htmlFor="shipping.city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 City
@@ -1862,7 +1861,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div>
                               <label htmlFor="shipping.state" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 State/Province
@@ -1876,7 +1875,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div>
                               <label htmlFor="shipping.zipCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 ZIP/Postal Code
@@ -1890,7 +1889,7 @@ export default function Profile() {
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                               />
                             </div>
-                            
+
                             <div>
                               <label htmlFor="shipping.country" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Country
@@ -1910,7 +1909,7 @@ export default function Profile() {
                                 ))}
                               </select>
                             </div>
-                            
+
                             <div className="md:col-span-2">
                               <label htmlFor="shipping.phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Phone Number
@@ -1928,7 +1927,7 @@ export default function Profile() {
                         </>
                       )}
                     </div>
-                    
+
                     <div className="flex justify-end">
                       <button
                         type="submit"

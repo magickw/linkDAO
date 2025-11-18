@@ -52,7 +52,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // Provider component
 export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
-  
+
   // Load user preferences from localStorage
   const getDefaultPreferences = (): UserPreferences => {
     if (typeof window !== 'undefined') {
@@ -85,7 +85,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       userProfile: false,
     },
   });
-  
+
   const [userPreferences, setUserPreferences] = useState<UserPreferences>(getDefaultPreferences());
 
   // Save user preferences to localStorage
@@ -99,22 +99,22 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const updateStateFromURL = () => {
       const { pathname, query } = router;
-      
+
       if (pathname === '/') {
         const { view, community, post } = query;
-        
+
         setNavigationState(prev => ({
           ...prev,
           activeView: view === 'community' ? 'community' : 'feed',
           activeCommunity: typeof community === 'string' ? community : undefined,
           activePost: typeof post === 'string' ? post : undefined,
         }));
-      } else if (pathname.startsWith('/dao/')) {
+      } else if (pathname.startsWith('/communities/')) {
         // Extract community ID from path
         const pathParts = pathname.split('/');
         const communityId = pathParts[2];
         const { post } = query;
-        
+
         setNavigationState(prev => ({
           ...prev,
           activeView: 'community',
@@ -264,7 +264,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       const favorites = prev.favoriteCommunities.includes(communityId)
         ? prev.favoriteCommunities.filter(id => id !== communityId)
         : [...prev.favoriteCommunities, communityId];
-      
+
       return {
         ...prev,
         favoriteCommunities: favorites,
