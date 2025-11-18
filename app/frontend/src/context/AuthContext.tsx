@@ -498,12 +498,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.warn('Failed to validate existing enhancedAuthService session:', error);
         }
       }
-      
+
+      // Check validateSession as final check before requesting signature
+      const sessionValidation = await validateSession(walletAddress);
+      if (sessionValidation.isValid && sessionValidation.token) {
+        console.log('✅ Using existing valid session from validateSession for:', walletAddress);
+        // Try to get user data from storage or fetch from backend
+        const storedUserData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+        if (storedUserData) {
+          try {
+            const userData = JSON.parse(storedUserData);
+            setUser(userData);
+            setAccessToken(sessionValidation.token);
+            await loadKYCStatus();
+            return { success: true };
+          } catch (error) {
+            console.warn('Failed to parse stored user data:', error);
+          }
+        }
+
+        // Try to fetch user from backend
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
+            setUser(currentUser);
+            setAccessToken(sessionValidation.token);
+            storeSession(sessionValidation.token, currentUser);
+            await loadKYCStatus();
+            return { success: true };
+          }
+        } catch (error) {
+          console.warn('Failed to fetch user from backend:', error);
+        }
+      }
+
       // Only proceed with wallet signature if no valid session exists
       console.log('📝 No valid session found for address:', walletAddress, 'requesting wallet signature...');
-      
+
       setIsLoading(true);
-      
+
       const result = await authService.authenticateWallet(walletAddress, connector, status);
       
       if (result.success && result.user && result.token) {

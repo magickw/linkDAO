@@ -47,7 +47,7 @@ export const ProposalCreator: React.FC<ProposalCreatorProps> = ({
       previousProposalRef.current = newProposalStr;
       onProposalChange(newProposal);
     }
-  }, [title, description, type]);
+  }, [title, description, type, proposal]);
 
   // Get appropriate parameters based on proposal type
   const getProposalParameters = (proposalType: typeof type, existingProposal?: ProposalData) => {
