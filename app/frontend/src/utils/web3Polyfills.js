@@ -1,3 +1,9 @@
+/**
+ * Web3 Environment Setup and Polyfills
+ * This file should be imported early in your application to ensure
+ * all necessary polyfills are available for Web3 packages
+ */
+
 // Import crypto polyfills first
 import './cryptoPolyfills';
 
@@ -32,17 +38,20 @@ if (typeof global.fetch === 'undefined' && typeof window !== 'undefined' && wind
 
 // Fix for ethereum property redefinition issue
 if (typeof window !== 'undefined') {
-  // Only define ethereum property if it doesn't already exist
-  if (typeof window.ethereum === 'undefined') {
-    try {
+  // Check if ethereum property already exists and is configurable
+  try {
+    const ethereumDescriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+    if (!ethereumDescriptor || ethereumDescriptor.configurable) {
+      // Only define ethereum property if it doesn't exist or is configurable
       Object.defineProperty(window, 'ethereum', {
         value: undefined,
         writable: true,
         configurable: true
       });
-    } catch (e) {
-      console.warn('Could not define ethereum property:', e);
     }
+  } catch (e) {
+    // If we can't define the property, it's likely already defined by an extension
+    console.debug('Ethereum property already defined by extension:', e.message);
   }
 }
 

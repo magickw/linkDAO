@@ -813,6 +813,119 @@ async function navigationHandler(request) {
       return cachedResponse;
     }
     
+    // Return offline page as fallback
+    const offlineResponse = await cache.match('/offline.html');
+    if (offlineResponse) {
+      return offlineResponse;
+    }
+    
+    // Fallback response if offline.html is not available
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>You are offline</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            h1 { color: #333; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>You are offline</h1>
+          <p>Please check your internet connection and try again.</p>
+          <button onclick="window.location.reload()">Retry</button>
+        </body>
+      </html>
+    `, { 
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
+
+// Enhanced fallback mechanisms when caching operations fail
+async function handleCacheFailure(request, error) {
+  console.warn('Cache operation failed:', error);
+  
+  // Try to serve from alternative caches
+  const cacheNames = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
+  
+  for (const cacheName of cacheNames) {
+    try {
+      const cache = await caches.open(cacheName);
+      const response = await cache.match(request);
+      
+      if (response) {
+        console.log(`Served from alternative cache: ${cacheName}`);
+        return response;
+      }
+    } catch (cacheError) {
+      console.warn(`Alternative cache ${cacheName} also failed:`, cacheError);
+    }
+  }
+  
+  // Final fallback - return offline page or error response
+  if (isNavigation(request)) {
+    try {
+      const cache = await caches.open(STATIC_CACHE);
+      const offlineResponse = await cache.match('/offline.html');
+      if (offlineResponse) {
+        return offlineResponse;
+      }
+      
+      // Fallback response if offline.html is not available
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>You are offline</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              h1 { color: #333; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <h1>You are offline</h1>
+            <p>Please check your internet connection and try again.</p>
+            <button onclick="window.location.reload()">Retry</button>
+          </body>
+        </html>
+      `, { 
+        status: 503,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    } catch (offlineError) {
+      return new Response('Service temporarily unavailable', { 
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+  }
+  
+  // Provide more specific error messages for different API endpoints
+  const url = new URL(request.url);
+  let errorMessage = 'Content not available offline';
+  
+  if (url.pathname.includes('/api/messaging')) {
+    errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
+  } else if (url.pathname.includes('/api/communities')) {
+    errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';
+  } else if (url.pathname.includes('/api/feed')) {
+    errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
+  }
+  
+  return new Response(errorMessage, { 
+    status: 503,
+    headers: { 'Content-Type': 'text/plain' }
+  });
+}
+
     // Return dashboard as fallback for SPA
     return cache.match('/dashboard') || 
            cache.match('/') ||
@@ -837,7 +950,7 @@ async function updateCache(request, cacheName) {
   }
 }
 
-// Handle placehold.co requests with local SVG placeholders
+// Handle placehold.co requests with local placeholders
 async function handlePlaceholderRequest(url) {
   try {
     // Parse placehold.co URL

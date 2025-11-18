@@ -9,12 +9,22 @@ import { useAuth } from '@/context/AuthContext';
 import { ToastContext } from '@/context/ToastContext';
 import { WalletLoginBridge } from './WalletLoginBridge';
 
-// Custom hook to safely access toast context with strict provider requirement
+// Custom hook to safely access toast context with fallback
 const useToastOrFallback = () => {
   const context = useContext(ToastContext);
   
+  // Return a safe fallback if context is not available
   if (!context) {
-    throw new Error('useToast must be inside ToastProvider');
+    return {
+      addToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+        // In development, warn about missing context
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('ToastContext not available, using console fallback for message:', message);
+        }
+        // Fallback to console logging
+        console.log(`[${type}] ${message}`);
+      }
+    };
   }
   
   return context;

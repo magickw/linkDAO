@@ -142,12 +142,42 @@ export function createExtensionSafeRejectionHandler(
 ) {
   return (event: PromiseRejectionEvent) => {
     const reason = event.reason || '';
-    const error: ExtensionError = {
-      message: typeof reason === 'string' ? reason : (reason?.message || reason?.toString() || ''),
-      stack: reason?.stack || ''
-    };
+    let message = '';
     
-    if (suppressExtensionError(error)) {
+    if (typeof reason === 'string') {
+      message = reason;
+    } else if (reason && typeof reason === 'object') {
+      message = reason.message || reason.toString() || '';
+    }
+    
+    // Special handling for ethereum redefinition errors
+    if (message.includes('Cannot redefine property: ethereum')) {
+      console.debug('🔇 Ethereum redefinition error suppressed:', message.substring(0, 200));
+      event.preventDefault();
+      return false;
+    }
+    
+    const chromeRuntimePatterns = [
+      'chrome.runtime.sendMessage',
+      'Error in invocation of runtime.sendMessage',
+      'runtime.sendMessage(optional string extensionId',
+      'must specify an Extension ID',
+      'called from a webpage must specify an Extension ID',
+      'opfgelmcmbiajamepnmloijbpoleiama',
+      'Cannot redefine property: ethereum' // Add ethereum redefinition check
+    ];
+    
+    const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
+      message.toLowerCase().includes(pattern.toLowerCase())
+    );
+    
+    if (isChromeRuntimeError) {
+      console.debug('🔇 Chrome runtime promise rejection suppressed:', {
+        reason: message.substring(0, 200),
+        extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
+        timestamp: new Date().toISOString()
+      });
+      
       event.preventDefault();
       return false;
     }

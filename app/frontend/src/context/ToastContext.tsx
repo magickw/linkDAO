@@ -2,7 +2,7 @@
  * Toast Context - Simple toast notification system
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
@@ -36,8 +36,19 @@ interface ToastProviderProps {
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const addToast = useCallback((message: string, type: ToastType, duration: number = 5000) => {
+    // Ensure we don't add toasts when component is not mounted
+    if (!isMountedRef.current) return;
+    
     const id = Math.random().toString(36).substr(2, 9);
     const toast: Toast = { id, message, type, duration };
     
@@ -46,7 +57,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     // Auto remove toast after duration
     if (duration > 0) {
       setTimeout(() => {
-        removeToast(id);
+        // Check if component is still mounted before removing
+        if (isMountedRef.current) {
+          setToasts(prev => prev.filter(t => t.id !== id));
+        }
       }, duration);
     }
   }, []);
@@ -85,51 +99,42 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     }
   };
 
-  // Check if ToastProvider is properly mounted
-  const [isMounted, setIsMounted] = useState(false);
-  
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return <>{children}</>;
-  }
-
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
       
-      {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 300, scale: 0.3 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 300, scale: 0.5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className={`
-                flex items-center gap-3 p-4 rounded-lg border backdrop-blur-sm
-                shadow-lg max-w-sm min-w-[300px]
-                ${getToastStyles(toast.type)}
-              `}
-            >
-              {getToastIcon(toast.type)}
-              <div className="flex-1">
-                <p className="text-sm font-medium">{toast.message}</p>
-              </div>
-              <button
-                onClick={() => removeToast(toast.id)}
-                className="text-current opacity-70 hover:opacity-100 transition-opacity"
+      {/* Toast Container - only render on client side */}
+      {typeof window !== 'undefined' && (
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          <AnimatePresence>
+            {toasts.map((toast) => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 300, scale: 0.3 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 300, scale: 0.5 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className={`
+                  flex items-center gap-3 p-4 rounded-lg border backdrop-blur-sm
+                  shadow-lg max-w-sm min-w-[300px]
+                  ${getToastStyles(toast.type)}
+                `}
               >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+                {getToastIcon(toast.type)}
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{toast.message}</p>
+                </div>
+                <button
+                  onClick={() => removeToast(toast.id)}
+                  className="text-current opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </ToastContext.Provider>
   );
 };
