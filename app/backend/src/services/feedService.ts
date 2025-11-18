@@ -189,7 +189,6 @@ export class FeedService {
     const sortOrder = this.buildSortOrder(sort);
 
     try {
-      try {
       // Build moderation filter - exclude blocked content
       const moderationFilter = sql`(${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked')`;
 
