@@ -425,7 +425,6 @@ export class FeedService {
         }
       };
 
-      
     } catch (error) {
       safeLogger.error('Error getting enhanced feed:', error);
       throw new Error('Failed to retrieve feed');
