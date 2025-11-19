@@ -19,6 +19,7 @@ import { useAccount } from 'wagmi';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import useENSIntegration from '@/hooks/useENSIntegration';
 import { Conversation, Message } from '@/types/messaging';
+import { Contact } from '@/types/contacts';
 import notificationService from '@/services/notificationService';
 import { ContactProvider, useContacts } from '@/contexts/ContactContext';
 import ContactSearch from './Contacts/ContactSearch';
@@ -51,6 +52,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [newRecipientAddress, setNewRecipientAddress] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [pendingContact, setPendingContact] = useState<Contact | null>(null);
 
   // ✅ PHASE 1 FIX: Get loading and error states from hook
   const {
@@ -218,6 +220,49 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       off('user_stopped_typing', handleUserStoppedTyping);
     };
   }, [isWebSocketConnected, isOpen, isMinimized, hookConversations, address, loadConversations, on, off]);
+
+  // Register the startChat callback with the contact context
+  const { setOnStartChat } = useContacts();
+
+  useEffect(() => {
+    const handleStartChat = (contact: Contact) => {
+      setPendingContact(contact);
+      // Make sure the chat widget is open
+      if (!isOpen) {
+        setIsOpen(true);
+        setIsMinimized(false);
+      }
+    };
+
+    setOnStartChat(handleStartChat);
+
+    // Cleanup function
+    return () => {
+      setOnStartChat(null);
+    };
+  }, [setOnStartChat, isOpen]);
+
+  // Handle pending contact to start a chat
+  useEffect(() => {
+    if (pendingContact && address && hookConversations) {
+      // Find an existing conversation with this contact
+      const existingConversation = hookConversations.find(conv => 
+        conv.participants.includes(pendingContact.walletAddress)
+      );
+
+      if (existingConversation) {
+        // If conversation exists, select it
+        handleConversationSelect(existingConversation);
+      } else {
+        // If no conversation exists, start a new one
+        setNewRecipientAddress(pendingContact.walletAddress);
+        setShowNewConversationModal(true);
+      }
+      
+      // Clear the pending contact
+      setPendingContact(null);
+    }
+  }, [pendingContact, address, hookConversations, handleConversationSelect]);
 
   const getPositionClasses = () => {
     const classes = {

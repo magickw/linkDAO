@@ -60,6 +60,7 @@ export interface ContactContextType {
   updateGroup: (id: string, updates: Partial<ContactGroup>) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
   startChat: (contact: Contact) => void;
+  setOnStartChat: (callback: ((contact: Contact) => void) | null) => void;
 }
 
 export const CONTACT_TAGS = [

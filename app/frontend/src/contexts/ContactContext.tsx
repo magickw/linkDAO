@@ -273,11 +273,21 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const startChat = useCallback((contact: Contact) => {
-    // This will be implemented when integrating with messaging system
-    console.log('Starting chat with:', contact.nickname);
-    // TODO: Navigate to messages tab and open chat with contact
+  const [onStartChatCallback, setOnStartChatCallback] = useState<((contact: Contact) => void) | null>(null);
+
+  const setOnStartChat = useCallback((callback: ((contact: Contact) => void) | null) => {
+    setOnStartChatCallback(callback);
   }, []);
+
+  const startChat = useCallback((contact: Contact) => {
+    if (onStartChatCallback) {
+      onStartChatCallback(contact);
+    } else {
+      console.log('No startChat callback set, creating conversation with:', contact.nickname);
+      // Fallback behavior - in a real implementation, this would create a conversation
+      // and notify the FloatingChatWidget
+    }
+  }, [onStartChatCallback]);
 
   const value: ContactContextType = {
     contacts: state.contacts,
@@ -294,7 +304,8 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
     createGroup,
     updateGroup,
     deleteGroup,
-    startChat
+    startChat,
+    setOnStartChat
   };
 
   return (
