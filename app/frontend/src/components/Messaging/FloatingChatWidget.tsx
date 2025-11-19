@@ -44,8 +44,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window !== 'undefined') {
-      const savedOpen = localStorage.getItem('floatingChatWidgetOpen');
-      return savedOpen ? JSON.parse(savedOpen) : false;
+      try {
+        const savedOpen = localStorage.getItem('floatingChatWidgetOpen');
+        return savedOpen ? JSON.parse(savedOpen) : false;
+      } catch {
+        // If JSON parsing fails, default to false
+        return false;
+      }
     }
     return false;
   });
@@ -245,16 +250,21 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   useEffect(() => {
     const handleStartChat = (contact: Contact) => {
       console.log("FloatingChatWidget: startChat called with contact:", contact);
-      setPendingContact(contact);
-      // Make sure the chat widget is open using ref to avoid dependency issues
-      if (!isOpenRef.current) {
-        setIsOpen(true);
-        setIsMinimized(false);
-        localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
-        localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
-        console.log("FloatingChatWidget: Opening chat widget for contact");
+      // Only open the chat widget if we have a valid contact
+      if (contact && contact.walletAddress) {
+        setPendingContact(contact);
+        // Make sure the chat widget is open using ref to avoid dependency issues
+        if (!isOpenRef.current) {
+          setIsOpen(true);
+          setIsMinimized(false);
+          localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
+          localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
+          console.log("FloatingChatWidget: Opening chat widget for contact");
+        } else {
+          console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
+        }
       } else {
-        console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
+        console.log("FloatingChatWidget: Ignoring startChat call with invalid contact:", contact);
       }
     };
 

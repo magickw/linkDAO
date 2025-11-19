@@ -51,7 +51,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
         response = await FeedService.getEnhancedFeed({
           sortBy: currentSort,
           timeRange: currentTimeRange,
-          feedSource: 'all' // Show all posts for home/feed
+          feedSource: 'following' // Show posts from followed users (including self) for home/feed
         }, 1, 20);
       }
       

@@ -130,7 +130,7 @@ export const AdvancedFeedFilters: React.FC<AdvancedFeedFiltersProps> = ({
   // State for UI interactions
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [selectedPostTypes, setSelectedPostTypes] = useState<string[]>([]);
-  const [feedSource, setFeedSource] = useState<'following' | 'all'>('all');
+  const [feedSource, setFeedSource] = useState<'following' | 'all'>('following');
 
   // Initialize state from filter
   useEffect(() => {

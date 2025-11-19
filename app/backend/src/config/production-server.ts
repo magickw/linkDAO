@@ -153,9 +153,9 @@ class ProductionServerManager {
       const { default: contentReportRoutes } = await import('../routes/contentReportRoutes');
 
       // Mount routes
-      this.app.use('/api/marketplace/seller', sellerRoutes);
-      this.app.use('/api/marketplace/listings', listingRoutes);
-      this.app.use('/marketplace/listings', listingRoutes); // Alternative path
+      this.app.use('/api/marketplace', sellerRoutes);
+      this.app.use('/api/marketplace', marketplaceListingsRoutes);
+      this.app.use('/marketplace', marketplaceListingsRoutes); // Alternative path
       this.app.use('/api/auth', authRoutes);
       this.app.use('/marketplace/reputation', reputationRoutes);
       this.app.use('/health', healthRoutes);

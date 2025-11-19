@@ -66,7 +66,7 @@ export class CommunityController {
       res.json(createSuccessResponse(trendingCommunities, {}));
     } catch (error) {
       safeLogger.error('Error getting trending communities:', error);
-      
+
       // Return fallback empty response instead of error
       res.json(createSuccessResponse({
         communities: [],
@@ -84,27 +84,31 @@ export class CommunityController {
     try {
       const { id } = req.params;
       const userAddress = (req as AuthenticatedRequest).user?.address;
-      
+
       // Check if the parameter is a numeric ID or a slug
+      // Check if the parameter is a UUID
+      // The schema uses UUIDs for IDs, so we check for UUID format
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
       let community;
-      if (/^\d+$/.test(id)) {
-        // It's a numeric ID
+      if (isUuid) {
+        // It's a UUID, so it must be an ID
         community = await communityService.getCommunityDetails(id, userAddress);
       } else {
-        // It's a slug
+        // It's not a UUID, so treat it as a slug
         community = await communityService.getCommunityBySlug(id, userAddress);
       }
-      
+
       // Handle service errors gracefully
       if (!community) {
         res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found or unavailable', 404));
         return;
       }
-      
+
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error getting community details:', error);
-      
+
       // Handle service unavailable errors specifically
       if (error.message === 'Service temporarily unavailable') {
         res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again later.', {
@@ -113,7 +117,7 @@ export class CommunityController {
         }));
         return;
       }
-      
+
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }
@@ -135,7 +139,7 @@ export class CommunityController {
       res.json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error getting community by slug:', error);
-      
+
       // Handle service unavailable errors specifically
       if (error.message === 'Service temporarily unavailable') {
         res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Service temporarily unavailable. Please try again later.', {
@@ -144,7 +148,7 @@ export class CommunityController {
         }));
         return;
       }
-      
+
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }
@@ -194,16 +198,16 @@ export class CommunityController {
       res.status(201).json(createSuccessResponse(community, {}));
     } catch (error) {
       safeLogger.error('Error creating community:', error);
-      
+
       // Enhanced error handling with retry guidance
-      const isServiceUnavailable = error.message?.includes('database') || 
-                                  error.message?.includes('connection') ||
-                                  error.message?.includes('timeout') ||
-                                  error.code === 'ECONNREFUSED';
-      
+      const isServiceUnavailable = error.message?.includes('database') ||
+        error.message?.includes('connection') ||
+        error.message?.includes('timeout') ||
+        error.code === 'ECONNREFUSED';
+
       const isRateLimited = error.message?.includes('rate limit') ||
-                           error.status === 429;
-      
+        error.status === 429;
+
       if (error.message.includes('already exists')) {
         res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', {
           retryable: false,
@@ -385,14 +389,14 @@ export class CommunityController {
       }
 
       const { id } = req.params;
-      const { 
-        title, 
-        content, 
-        mediaUrls = [], 
-        tags = [], 
+      const {
+        title,
+        content,
+        mediaUrls = [],
+        tags = [],
         postType,
         aiAction,
-        communityContext 
+        communityContext
       } = req.body;
 
       // Validate required fields
@@ -456,7 +460,7 @@ export class CommunityController {
     try {
       // Get community details for context
       const community = await communityService.getCommunityDetails(data.communityId, data.userAddress);
-      
+
       if (!community) {
         return { success: false, message: 'Community not found' };
       }
@@ -491,7 +495,7 @@ export class CommunityController {
             }
           });
           break;
-          
+
         case 'generate_content':
           if (!data.title) {
             return { success: false, message: 'Title is required to generate content' };
@@ -506,7 +510,7 @@ export class CommunityController {
             }
           });
           break;
-          
+
         case 'generate_tags':
           if (!data.content) {
             return { success: false, message: 'Content is required to generate tags' };
@@ -521,7 +525,7 @@ export class CommunityController {
             }
           });
           break;
-          
+
         case 'improve_content':
           if (!data.content) {
             return { success: false, message: 'Content is required to improve' };
@@ -536,13 +540,13 @@ export class CommunityController {
             }
           });
           break;
-          
+
         default:
           return { success: false, message: 'Invalid AI action' };
       }
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: {
           action: data.aiAction,
           result: aiResponse
@@ -556,7 +560,7 @@ export class CommunityController {
 
   // Call AI insights service
   private async callAIInsightsService(
-    type: string, 
+    type: string,
     context: any
   ): Promise<any> {
     try {
@@ -565,10 +569,10 @@ export class CommunityController {
       if (!validTypes.includes(type)) {
         throw new Error(`Invalid insight type: ${type}`);
       }
-      
-      return await openaiService.generateInsight({ 
-        type: type as 'user_behavior' | 'content_trends' | 'seller_performance' | 'platform_health', 
-        context 
+
+      return await openaiService.generateInsight({
+        type: type as 'user_behavior' | 'content_trends' | 'seller_performance' | 'platform_health',
+        context
       });
     } catch (error) {
       safeLogger.error('Error calling AI insights service:', error);
@@ -1263,7 +1267,7 @@ export class CommunityController {
   async searchAuthors(req: Request, res: Response): Promise<void> {
     try {
       const { q } = req.query;
-      
+
       if (!q || typeof q !== 'string' || q.trim().length < 2) {
         res.json(createSuccessResponse([], {}));
         return;
