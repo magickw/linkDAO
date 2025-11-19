@@ -3,7 +3,7 @@
  * Provides a lightweight, accessible messaging experience that doesn't take over the screen
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle, X, Bell, Minimize2, Maximize2, Send, Plus, Search, MoreVertical,
@@ -223,13 +223,19 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   // Register the startChat callback with the contact context
   const { setOnStartChat } = useContacts();
+  const isOpenRef = useRef(isOpen);
+  
+  // Keep the ref updated with the current isOpen state
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   useEffect(() => {
     const handleStartChat = (contact: Contact) => {
       console.log("FloatingChatWidget: startChat called with contact:", contact);
       setPendingContact(contact);
-      // Make sure the chat widget is open
-      if (!isOpen) {
+      // Make sure the chat widget is open using ref to avoid dependency issues
+      if (!isOpenRef.current) {
         setIsOpen(true);
         setIsMinimized(false);
         console.log("FloatingChatWidget: Opening chat widget for contact");
@@ -246,7 +252,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       console.log("FloatingChatWidget: Removing startChat callback");
       setOnStartChat(null);
     };
-  }, [setOnStartChat, isOpen]);
+  }, [setOnStartChat]); // Removed isOpen from dependencies to prevent re-registration
 
   const getPositionClasses = () => {
     const classes = {

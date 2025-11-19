@@ -126,6 +126,31 @@ class ProductionServerManager {
       const { default: authRoutes } = await import('../routes/authRoutes'); // Changed from authenticationRoutes to authRoutes
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
       const { default: healthRoutes } = await import('../routes/healthRoutes');
+      
+      // Import feed and post API routes
+      const { default: feedRoutes } = await import('../routes/feedRoutes');
+      const { default: postRoutes } = await import('../routes/postRoutes');
+      const { default: quickPostRoutes } = await import('../routes/quickPostRoutes');
+      
+      // Import other essential API routes
+      const { default: userRoutes } = await import('../routes/userRoutes');
+      const { default: commentRoutes } = await import('../routes/commentRoutes');
+      const { default: followRoutes } = await import('../routes/followRoutes');
+      const { default: communityRoutes } = await import('../routes/communityRoutes');
+      const { default: messagingRoutes } = await import('../routes/messagingRoutes');
+      const { default: bookmarkRoutes } = await import('../routes/bookmarkRoutes');
+      const { default: searchRoutes } = await import('../routes/searchRoutes');
+      const { default: tipRoutes } = await import('../routes/tipRoutes');
+      const { default: notificationPreferencesRoutes } = await import('../routes/notificationPreferencesRoutes');
+      const { default: ensRoutes } = await import('../routes/ensRoutes');
+      const { default: ipfsRoutes } = await import('../routes/ipfsRoutes');
+      const { default: moderationRoutes } = await import('../routes/moderationRoutes');
+      const { default: viewRoutes } = await import('../routes/viewRoutes');
+      const { default: shareRoutes } = await import('../routes/shareRoutes');
+      const { default: sessionRoutes } = await import('../routes/sessionRoutes');
+      const { default: userProfileRoutes } = await import('../routes/userProfileRoutes');
+      const { default: communityCommentRoutes } = await import('../routes/communityCommentRoutes');
+      const { default: contentReportRoutes } = await import('../routes/contentReportRoutes');
 
       // Mount routes
       this.app.use('/api/marketplace/seller', sellerRoutes);
@@ -134,6 +159,31 @@ class ProductionServerManager {
       this.app.use('/api/auth', authRoutes);
       this.app.use('/marketplace/reputation', reputationRoutes);
       this.app.use('/health', healthRoutes);
+      
+      // Mount feed and post routes
+      this.app.use('/api/feed', feedRoutes);
+      this.app.use('/api/posts', postRoutes);
+      this.app.use('/api/quick-posts', quickPostRoutes);
+      
+      // Mount other essential routes
+      this.app.use('/api/users', userRoutes);
+      this.app.use('/api/comments', commentRoutes);
+      this.app.use('/api/follow', followRoutes);
+      this.app.use('/api/communities', communityRoutes);
+      this.app.use('/api/messaging', messagingRoutes);
+      this.app.use('/api/bookmarks', bookmarkRoutes);
+      this.app.use('/api/search', searchRoutes);
+      this.app.use('/api/tips', tipRoutes);
+      this.app.use('/api/notifications', notificationPreferencesRoutes);
+      this.app.use('/api/ens', ensRoutes);
+      this.app.use('/api/ipfs', ipfsRoutes);
+      this.app.use('/api/moderation', moderationRoutes);
+      this.app.use('/api/views', viewRoutes);
+      this.app.use('/api/shares', shareRoutes);
+      this.app.use('/api/session', sessionRoutes);
+      this.app.use('/api/user-profile', userProfileRoutes);
+      this.app.use('/api/community-comments', communityCommentRoutes);
+      this.app.use('/api/content-report', contentReportRoutes);
 
       safeLogger.info('✅ Application routes configured');
 

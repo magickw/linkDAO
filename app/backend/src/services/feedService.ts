@@ -127,41 +127,31 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
         
         // Filter posts to show from followed users AND the user's own posts
-        // Since userId is already in followingIds, we can use a simpler filter
-        // But we keep the OR as a safety measure to ensure user's posts are always shown
-        if (followingIds.length > 0) {
-          // Use proper Drizzle ORM or() function for combining conditions
-          followingFilter = or(
-            inArray(posts.authorId, followingIds),
-            eq(posts.authorId, userId) // Always include user's own posts
-          );
-          quickPostFollowingFilter = or(
-            inArray(quickPosts.authorId, followingIds),
-            eq(quickPosts.authorId, userId) // Always include user's own posts
-          );
-          console.log('📋 [BACKEND FEED] Using inArray filter with explicit OR for user posts');
-        } else {
-          // If not following anyone, show only user's own posts
-          followingFilter = eq(posts.authorId, userId);
-          quickPostFollowingFilter = eq(quickPosts.authorId, userId);
-          console.log('📋 [BACKEND FEED] Using simple EQ filter for user posts');
-        }
+        // Always ensure the user sees their own posts by explicitly including them
+        followingFilter = or(
+          inArray(posts.authorId, followingIds), // Posts from followed users
+          eq(posts.authorId, userId) // User's own posts (redundant but safe)
+        );
+        quickPostFollowingFilter = or(
+          inArray(quickPosts.authorId, followingIds), // Quick posts from followed users
+          eq(quickPosts.authorId, userId) // User's own quick posts (redundant but safe)
+        );
+        console.log('📋 [BACKEND FEED] Using OR filter to ensure user always sees their own posts');
       } else {
-        console.log('⚠️ [BACKEND FEED] User not found in database, showing posts by wallet address via join...');
-        // User not found in users table but may have posts
-        // Join with users table to filter by wallet address
-        // This handles cases where user exists in blockchain but not in our users table yet
-        followingFilter = sql`EXISTS (
-          SELECT 1 FROM ${users} 
-          WHERE ${users.id} = ${posts.authorId} 
-          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
-        )`;
-        quickPostFollowingFilter = sql`EXISTS (
-          SELECT 1 FROM ${users} 
-          WHERE ${users.id} = ${quickPosts.authorId} 
-          AND LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})
-        )`;
-        console.log('📋 [BACKEND FEED] Using wallet address filter via users table join');
+        console.log('⚠️ [BACKEND FEED] User not found in database, creating user and showing all posts...');
+        // User not found in users table, create them so future operations work
+        await db.insert(users)
+          .values({
+            walletAddress: normalizedAddress,
+            createdAt: new Date()
+          })
+          .onConflictDoNothing();
+        
+        // For new users, default to showing all posts until they follow someone
+        // This ensures they see the platform content while onboarding
+        followingFilter = sql`1=1`;
+        quickPostFollowingFilter = sql`1=1`;
+        console.log('📋 [BACKEND FEED] New user - showing all posts until they follow someone');
       }
     } else if (feedSource === 'all' && userAddress) {
       // For 'all' feedSource, show all posts (no additional filtering needed)
