@@ -331,7 +331,7 @@ export function useCommunities(params?: any) {
  * Specialized hook for feed data with enhanced resilience
  */
 export function useFeed(params?: any) {
-  const url = '/api/feed/enhanced' + (params ? `?${new URLSearchParams(params).toString()}` : '');
+  const url = '/api/feed' + (params ? `?${new URLSearchParams(params).toString()}` : '');
   
   // Include auth headers to ensure user identification
   const optionsWithAuth = {

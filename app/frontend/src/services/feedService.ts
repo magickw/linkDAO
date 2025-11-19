@@ -167,7 +167,7 @@ export class FeedService {
         params.append('author', filter.author);
       }
 
-      const url = `${BACKEND_API_BASE_URL}/api/feed/enhanced?${params}`;
+      const url = `${BACKEND_API_BASE_URL}/api/feed?${params}`;
 
       // Debug logging
       console.log('🔍 [FEED DEBUG] Fetching feed with params:', {

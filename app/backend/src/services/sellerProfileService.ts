@@ -439,7 +439,13 @@ export class SellerProfileService {
     try {
       // Handle case where links might be a JSON string
       if (typeof links === 'string') {
-        return JSON.parse(links);
+        // Check if it's a non-empty string before parsing
+        if (links.trim()) {
+          return JSON.parse(links);
+        } else {
+          // Return undefined if the string is empty
+          return undefined;
+        }
       }
       
       // If it's already an object, return it
@@ -447,7 +453,11 @@ export class SellerProfileService {
         return links;
       }
     } catch (error) {
-      safeLogger.error('Error parsing social links:', { links, error });
+      safeLogger.error('Error parsing social links:', { 
+        links, 
+        error: error instanceof Error ? error.message : String(error),
+        type: typeof links 
+      });
     }
     
     // Return undefined if parsing fails
@@ -459,7 +469,18 @@ export class SellerProfileService {
       // Handle case where steps might be a JSON string
       let parsedSteps: any = steps;
       if (typeof steps === 'string') {
-        parsedSteps = JSON.parse(steps);
+        // Check if it's a non-empty string before parsing
+        if (steps.trim()) {
+          parsedSteps = JSON.parse(steps);
+        } else {
+          // Return default if the string is empty
+          return {
+            profile_setup: false,
+            verification: false,
+            payout_setup: false,
+            first_listing: false
+          };
+        }
       }
       
       if (typeof parsedSteps === 'object' && parsedSteps !== null) {
@@ -471,7 +492,11 @@ export class SellerProfileService {
         };
       }
     } catch (error) {
-      safeLogger.error('Error parsing onboarding steps:', { steps, error });
+      safeLogger.error('Error parsing onboarding steps:', { 
+        steps, 
+        error: error instanceof Error ? error.message : String(error),
+        type: typeof steps 
+      });
     }
 
     // Return default if parsing fails

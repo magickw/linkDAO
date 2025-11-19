@@ -42,8 +42,20 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const { walletInfo } = useWalletAuth();
   const { address, isConnected } = useAccount();
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedOpen = localStorage.getItem('floatingChatWidgetOpen');
+      return savedOpen ? JSON.parse(savedOpen) : false;
+    }
+    return false;
+  });
+  const [isMinimized, setIsMinimized] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedMinimized = localStorage.getItem('floatingChatWidgetMinimized');
+      return savedMinimized ? JSON.parse(savedMinimized) : false;
+    }
+    return false;
+  });
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [activeTab, setActiveTab] = useState<'messages' | 'contacts' | 'chat'>('messages');
@@ -238,6 +250,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       if (!isOpenRef.current) {
         setIsOpen(true);
         setIsMinimized(false);
+        localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
+        localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
         console.log("FloatingChatWidget: Opening chat widget for contact");
       } else {
         console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
@@ -254,6 +268,15 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     };
   }, [setOnStartChat]); // Removed isOpen from dependencies to prevent re-registration
 
+  // Save state to localStorage whenever isOpen or isMinimized changes
+  useEffect(() => {
+    localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(isOpen));
+  }, [isOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(isMinimized));
+  }, [isMinimized]);
+
   const getPositionClasses = () => {
     const classes = {
       'bottom-right': 'bottom-6 right-6 md:bottom-6 md:right-6',
@@ -269,15 +292,21 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     if (!isOpen) {
       setIsOpen(true);
       setIsMinimized(false);
+      localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(true));
+      localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
     } else {
       // If already open, toggle between minimized and full view
-      setIsMinimized(!isMinimized);
+      const newMinimized = !isMinimized;
+      setIsMinimized(newMinimized);
+      localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(newMinimized));
     }
   };
 
   const closeChat = () => {
     setIsOpen(false);
     setIsMinimized(false);
+    localStorage.setItem('floatingChatWidgetOpen', JSON.stringify(false));
+    localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(false));
     setSelectedConversation(null);
     setActiveTab('messages');
   };
@@ -535,7 +564,11 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                     </button>
                   )}
                   <button
-                    onClick={() => setIsMinimized(!isMinimized)}
+                    onClick={() => {
+                      const newMinimized = !isMinimized;
+                      setIsMinimized(newMinimized);
+                      localStorage.setItem('floatingChatWidgetMinimized', JSON.stringify(newMinimized));
+                    }}
                     className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                     aria-label={isMinimized ? "Maximize chat" : "Minimize chat"}
                   >
