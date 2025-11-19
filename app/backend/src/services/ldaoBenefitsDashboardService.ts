@@ -1,11 +1,12 @@
 import { db } from '../db/index';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { 
+import {
   orders,
   users,
-  earningActivities
+  earningActivities,
+  stakingPositions
 } from '../db/schema';
-import { 
+import {
   marketplaceRewards,
   earningChallenges,
   userChallengeProgress
@@ -136,32 +137,35 @@ class LDAOBenefitsDashboardService {
    */
   private async getLDAOStakingInfo(userId: string): Promise<LDAOStakingInfo> {
     try {
-      // In a real implementation, this would connect to the LDAO token contract
-      // For now, we'll return mock data based on user's activity
-      // This would typically use web3 calls to get actual staking data
-      
-      // Calculate total staked amount from user's marketplace activity as a proxy
-      const [volumeResult] = await db
-        .select({
-          totalVolume: sql<string>`COALESCE(SUM(${marketplaceRewards.transactionAmount}::numeric), '0')`
-        })
-        .from(marketplaceRewards)
-        .where(
-          sql`${marketplaceRewards.buyerId} = ${userId} OR ${marketplaceRewards.sellerId} = ${userId}`
-        );
+      // Get real staking positions from DB
+      const positions = await db
+        .select()
+        .from(stakingPositions)
+        .where(and(
+          eq(stakingPositions.userId, userId),
+          eq(stakingPositions.status, 'active')
+        ));
 
-      // Calculate a staking tier based on transaction volume as a proxy
-      const totalVolume = parseFloat(volumeResult?.totalVolume || '0');
+      // Calculate totals
+      let totalStaked = 0;
+      let totalRewardsEarned = 0;
+
+      for (const pos of positions) {
+        totalStaked += parseFloat(pos.amount);
+        totalRewardsEarned += parseFloat(pos.rewardsEarned);
+      }
+
+      // Determine tier based on staked amount
       let stakingTier = 0;
       let discountPercentage = 0;
 
-      if (totalVolume >= 10000) {
+      if (totalStaked >= 10000) {
         stakingTier = 3; // Platinum tier
         discountPercentage = 1500; // 15% in basis points
-      } else if (totalVolume >= 5000) {
+      } else if (totalStaked >= 5000) {
         stakingTier = 2; // Gold tier
         discountPercentage = 1000; // 10% in basis points
-      } else if (totalVolume >= 1000) {
+      } else if (totalStaked >= 1000) {
         stakingTier = 1; // Silver tier
         discountPercentage = 500; // 5% in basis points
       } else {
@@ -169,15 +173,16 @@ class LDAOBenefitsDashboardService {
         discountPercentage = 0;
       }
 
-      // Voting power would be based on actual staked tokens
-      const votingPower = (totalVolume * 2).toString(); // Mock calculation
+      // Voting power calculation (1 token = 1 vote, plus bonus for longer locks)
+      // This is a simplified calculation
+      const votingPower = totalStaked.toString();
 
       return {
-        totalStaked: totalVolume.toString(),
+        totalStaked: totalStaked.toString(),
         stakingTier,
         votingPower,
-        rewardsEarned: '0',
-        rewardsClaimed: '0',
+        rewardsEarned: totalRewardsEarned.toString(),
+        rewardsClaimed: '0', // We'd need a separate table for claimed rewards history
         nextRewardPayout: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         discountPercentage: discountPercentage / 10, // Convert basis points to percentage
         stakingBenefits: [
@@ -217,8 +222,8 @@ class LDAOBenefitsDashboardService {
    * Get marketplace benefits based on staking tier
    */
   private async getMarketplaceBenefits(
-    userId: string, 
-    stakingInfo: LDAOStakingInfo, 
+    userId: string,
+    stakingInfo: LDAOStakingInfo,
     marketplaceStats: any
   ): Promise<LDAOMarketplaceBenefits> {
     // Determine current tier based on volume
@@ -329,10 +334,12 @@ class LDAOBenefitsDashboardService {
    */
   private async getAcquisitionOptions(userId: string): Promise<LDAOAcquisitionOptions> {
     try {
-      // Get user's current balance (this would normally come from the blockchain)
+      // Get user's current balance from users table
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      
+      const currentBalance = user?.ldaoBalance || '0';
+
       // Calculate potential rewards from available tasks
+      // In a real app, we would check which tasks the user has already completed
       const availableTasks = [
         {
           name: 'Complete Profile',
@@ -363,14 +370,14 @@ class LDAOBenefitsDashboardService {
           maximumPurchase: '10000 LDAO'
         },
         earnThroughActivity: {
-          currentBalance: '150', // Mock value
+          currentBalance: currentBalance.toString(),
           earnableTokens: '200',
           availableTasks
         },
         stakingRewards: {
           currentAPR: '12.5%',
-          estimatedAnnualEarnings: '187.50',
-          claimableRewards: '15.75'
+          estimatedAnnualEarnings: (parseFloat(currentBalance.toString()) * 0.125).toFixed(2),
+          claimableRewards: '0' // This would come from stakingPositions rewards
         }
       };
     } catch (error) {
@@ -403,46 +410,48 @@ class LDAOBenefitsDashboardService {
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       if (!user) return null;
 
-      // Get total transaction volume as a proxy for staking
-      const [volumeResult] = await db
-        .select({
-          totalVolume: sql<string>`COALESCE(SUM(${marketplaceRewards.transactionAmount}::numeric), '0')`
-        })
-        .from(marketplaceRewards)
-        .where(
-          sql`${marketplaceRewards.buyerId} = ${userId} OR ${marketplaceRewards.sellerId} = ${userId}`
-        );
+      // Get total staked amount
+      const positions = await db
+        .select()
+        .from(stakingPositions)
+        .where(and(
+          eq(stakingPositions.userId, userId),
+          eq(stakingPositions.status, 'active')
+        ));
 
-      const totalVolume = parseFloat(volumeResult?.totalVolume || '0');
+      let totalStaked = 0;
+      for (const pos of positions) {
+        totalStaked += parseFloat(pos.amount);
+      }
 
-      // Define milestones based on transaction volume as proxy for staking
+      // Define milestones based on staked amount
       const milestones = [
         {
           name: 'Silver Tier',
-          description: 'Reach $1,000 in transaction volume',
+          description: 'Stake 1,000 LDAO tokens',
           target: 1000,
           reward: '5% discount on LDAO payments'
         },
         {
           name: 'Gold Tier',
-          description: 'Reach $5,000 in transaction volume',
+          description: 'Stake 5,000 LDAO tokens',
           target: 5000,
           reward: '10% discount on LDAO payments'
         },
         {
           name: 'Platinum Tier',
-          description: 'Reach $10,000 in transaction volume',
+          description: 'Stake 10,000 LDAO tokens',
           target: 10000,
           reward: '15% discount on LDAO payments'
         }
       ];
 
       for (const milestone of milestones) {
-        if (totalVolume < milestone.target) {
+        if (totalStaked < milestone.target) {
           return {
             name: milestone.name,
             description: milestone.description,
-            progress: Math.min(100, (totalVolume / milestone.target) * 100),
+            progress: Math.min(100, (totalStaked / milestone.target) * 100),
             reward: milestone.reward
           };
         }
@@ -461,11 +470,11 @@ class LDAOBenefitsDashboardService {
    */
   async getStakingTierDetails(userId: string) {
     const stakingInfo = await this.getLDAOStakingInfo(userId);
-    
+
     const tierDetails = {
       name: stakingInfo.stakingTier === 0 ? 'Bronze' :
-             stakingInfo.stakingTier === 1 ? 'Silver' :
-             stakingInfo.stakingTier === 2 ? 'Gold' : 'Platinum',
+        stakingInfo.stakingTier === 1 ? 'Silver' :
+          stakingInfo.stakingTier === 2 ? 'Gold' : 'Platinum',
       benefits: stakingInfo.stakingBenefits,
       progressToNextTier: stakingInfo.stakingTier < 3 ? 25 : 100
     };

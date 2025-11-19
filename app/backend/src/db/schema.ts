@@ -50,6 +50,9 @@ export const users = pgTable("users", {
   shippingPhone: varchar("shipping_phone", { length: 20 }),
   shippingSameAsBilling: boolean("shipping_same_as_billing").default(true),
 
+  // LDAO Token
+  ldaoBalance: numeric("ldao_balance", { precision: 20, scale: 8 }).default('0'),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });

@@ -656,6 +656,12 @@ class AdminDashboardService {
 
   // OPTIMIZED: Public method to check memory usage
   public getMemoryUsage(): {
+    dashboardConfigs: number;
+    userPreferences: number;
+    alerts: number;
+    usageAnalytics: number;
+    totalEntries: number;
+  } {
     return {
       dashboardConfigs: this.dashboardConfigs.size,
       userPreferences: this.userPreferences.size,
