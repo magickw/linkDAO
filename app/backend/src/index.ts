@@ -159,7 +159,7 @@ async function initializeServices() {
       console.error('Failed to import cacheService:', error);
     }
   }
-  
+
   // Initialize Redis service singleton to ensure it's connected
   try {
     const { redisService } = await import('./services/redisService');
@@ -169,7 +169,7 @@ async function initializeServices() {
   } catch (error) {
     console.warn('⚠️ Redis service singleton connection failed:', error);
   }
-  
+
   if (!cacheWarmingService) {
     try {
       const warmingModule: any = await import('./services/cacheWarmingService');
@@ -187,7 +187,7 @@ async function initializeServices() {
       console.error('Failed to import cacheWarmingService:', error);
     }
   }
-  
+
   return { cacheService, cacheWarmingService };
 }
 
@@ -227,14 +227,14 @@ console.log('   isResourceConstrained:', isResourceConstrained);
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
 // Increase connection pool sizes for Render Standard (2GB RAM)
-const maxConnections = isRenderFree ? dbConfig.maxConnections : 
-                     (isRenderPro ? 5 : 
-                     (isRenderStandard ? 15 : 
-                     (process.env.RENDER ? 3 : 20)));
-const minConnections = isRenderFree ? dbConfig.minConnections : 
-                      (isRenderPro ? 2 : 
-                      (isRenderStandard ? 5 : 
-                      (process.env.RENDER ? 1 : 5)));
+const maxConnections = isRenderFree ? dbConfig.maxConnections :
+  (isRenderPro ? 5 :
+    (isRenderStandard ? 15 :
+      (process.env.RENDER ? 3 : 20)));
+const minConnections = isRenderFree ? dbConfig.minConnections :
+  (isRenderPro ? 2 :
+    (isRenderStandard ? 5 :
+      (process.env.RENDER ? 1 : 5)));
 
 // Initialize optimized database pool
 const dbPool = new Pool({
@@ -242,12 +242,12 @@ const dbPool = new Pool({
   max: maxConnections,
   min: minConnections,
   // Increase timeouts for better performance with more resources
-  idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis : 
-                    (isRenderPro ? 30000 : 
-                    (isRenderStandard ? 60000 : 60000)),
-  connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis : 
-                          (isRenderPro ? 3000 : 
-                          (isRenderStandard ? 5000 : 2000)),
+  idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis :
+    (isRenderPro ? 30000 :
+      (isRenderStandard ? 60000 : 60000)),
+  connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis :
+    (isRenderPro ? 3000 :
+      (isRenderStandard ? 5000 : 2000)),
   // Add connection cleanup and resource management
   allowExitOnIdle: true,
   keepAlive: true,
@@ -265,7 +265,7 @@ dbPool.on('connect', (client) => {
 
 dbPool.on('error', (err, client) => {
   console.error('❌ Database pool error:', err);
-  
+
   // Force garbage collection on database errors in constrained environments
   if (isResourceConstrained && global.gc) {
     setTimeout(() => global.gc && global.gc(), 1000);
@@ -285,12 +285,12 @@ if (process.env.RENDER || isResourceConstrained) {
       waiting: dbPool.waitingCount,
       max: maxConnections
     };
-    
+
     // Log pool stats if there are issues
     if (poolStats.waiting > 0 || poolStats.total > maxConnections * 0.8) {
       console.warn(`⚠️ Database pool status:`, poolStats);
     }
-    
+
     // Force cleanup if pool is at capacity
     if (poolStats.total >= maxConnections && poolStats.idle === 0) {
       console.warn('🚨 Database pool at capacity - forcing cleanup');
@@ -305,23 +305,23 @@ if (process.env.RENDER || isResourceConstrained) {
 if (process.env.RENDER || isResourceConstrained) {
   const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : (isRenderStandard ? 'Standard' : 'Standard'));
   console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
-  
+
   // Start memory monitoring with adaptive intervals
-  const monitoringInterval = isRenderFree ? 30000 : 
-                            (isRenderPro ? 45000 : 
-                            (isRenderStandard ? 40000 : 60000));
+  const monitoringInterval = isRenderFree ? 30000 :
+    (isRenderPro ? 45000 :
+      (isRenderStandard ? 40000 : 60000));
   memoryMonitoringService.startMonitoring(monitoringInterval);
-  
+
   // Log initial memory stats
   const initialStats = memoryMonitoringService.getMemoryStats();
   console.log(`📊 Initial memory: ${initialStats.heapUsed}MB heap / ${initialStats.rss}MB RSS`);
-  
+
   // Add process memory limit monitoring if specified
   if (process.env.MEMORY_LIMIT) {
     const memoryLimitMB = parseInt(process.env.MEMORY_LIMIT);
     console.log(`📏 Process memory limit: ${memoryLimitMB}MB`);
   }
-  
+
   // The memoryMonitoringService handles all memory monitoring and GC operations
   // No additional monitoring needed here
 }
@@ -419,6 +419,8 @@ import securityRoutes from './routes/securityRoutes';
 import searchRoutes from './routes/searchRoutes';
 // Import reputation routes
 import reputationRoutes from './routes/reputationRoutes';
+// Import onboarding routes
+import onboardingRoutes from './routes/onboardingRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
@@ -436,6 +438,8 @@ app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/health', healthRoutes);
+// Onboarding routes for user preferences
+app.use('/api/onboarding', onboardingRoutes);
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {
@@ -445,7 +449,7 @@ app.get('/health', async (req, res) => {
     'Pragma': 'no-cache',
     'Expires': '0'
   });
-  
+
   // Get Redis status
   let redisStatus = { enabled: false, connected: false };
   try {
@@ -460,7 +464,7 @@ app.get('/health', async (req, res) => {
     // Redis service not available
     console.warn('Redis service not available for health check:', error.message);
   }
-  
+
   res.status(200).json({
     success: true,
     status: 'healthy',
@@ -480,7 +484,7 @@ app.get('/health/redis', async (req, res) => {
     const { redisService } = await import('./services/redisService');
     const status = redisService.getRedisStatus();
     const testResult = await redisService.testConnection();
-    
+
     res.status(200).json({
       success: true,
       status: 'Redis health check completed',
@@ -934,7 +938,7 @@ app.use('/api/ipfs', ipfsRoutes);
 app.all('/socket.io/*', (req, res) => {
   // Check if WebSockets should be enabled
   const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' ||
-                           (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
+    (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
 
   if (!webSocketsEnabled) {
     // WebSockets disabled - return 503
@@ -1001,140 +1005,140 @@ httpServer.listen(PORT, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`MakeRange Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
-  
+
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(async ({ cacheService, cacheWarmingService }) => {
-    // Initialize performance monitoring integration (disabled for now - requires Redis)
-    // try {
-    //   const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
-    //   const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, null);
-    //   await performanceMonitoring.initialize();
-    //   console.log('✅ Performance monitoring integration initialized');
-    // } catch (error: any) {
-    //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
-    // }
-    
-    // WebSocket services - enabled for standard tier and above
-    const enableWebSockets = (!isResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
-    
-    if (enableWebSockets) {
-      try {
-        const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
-        console.log('✅ WebSocket service initialized');
-        console.log(`🔌 WebSocket ready for real-time updates`);
-        console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
-      } catch (error) {
-        console.warn('⚠️ WebSocket service initialization failed:', error);
-      }
-    } else {
-      const reason = isRenderFree ? 'Render free tier' : 
-                    isResourceConstrained ? 'resource constraints' : 
-                    'manual disable';
-      console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
-    }
-    
-    // Admin WebSocket service - only on non-constrained environments
-    if (enableWebSockets && !isRenderFree) {
-      try {
-        const adminWebSocketService = initializeAdminWebSocket(httpServer);
-        console.log('✅ Admin WebSocket service initialized');
-        console.log(`🔧 Admin real-time dashboard ready`);
-      } catch (error) {
-        console.warn('⚠️ Admin WebSocket service initialization failed:', error);
-      }
-    } else {
-      console.log('⚠️ Admin WebSocket service disabled for resource optimization');
-    }
-    
-    // Seller WebSocket service - only on non-constrained environments
-    if (enableWebSockets && !isRenderFree) {
-      try {
-        const sellerWebSocketService = initializeSellerWebSocket();
-        console.log('✅ Seller WebSocket service initialized');
-        console.log(`🛒 Seller real-time updates ready`);
-      } catch (error) {
-        console.warn('⚠️ Seller WebSocket service initialization failed:', error);
-      }
-    } else {
-      console.log('⚠️ Seller WebSocket service disabled for resource optimization');
-    }
-    
-    // Initialize cache service
-    try {
-      // Check if cacheService has connect method or if it's already connected
-      if (cacheService) {
-        if (typeof cacheService.connect === 'function') {
-          cacheService.connect().then(() => {
-            console.log('✅ Cache service initialized via connect method');
-          }).catch((error: any) => {
-            console.warn('⚠️ Cache service connection failed:', error);
-          });
-        } else if (cacheService.isConnected) {
-          console.log('✅ Cache service already connected');
-        } else {
-          console.log('⚠️ Cache service available but not connected');
+      // Initialize performance monitoring integration (disabled for now - requires Redis)
+      // try {
+      //   const { createPerformanceMonitoringIntegration } = await import('./services/performanceMonitoringIntegration');
+      //   const performanceMonitoring = createPerformanceMonitoringIntegration(dbPool, null);
+      //   await performanceMonitoring.initialize();
+      //   console.log('✅ Performance monitoring integration initialized');
+      // } catch (error: any) {
+      //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
+      // }
+
+      // WebSocket services - enabled for standard tier and above
+      const enableWebSockets = (!isResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
+
+      if (enableWebSockets) {
+        try {
+          const webSocketService = initializeWebSocket(httpServer, productionConfig.webSocket);
+          console.log('✅ WebSocket service initialized');
+          console.log(`🔌 WebSocket ready for real-time updates`);
+          console.log(`📊 WebSocket config: maxConnections=${productionConfig.webSocket.maxConnections}, memoryThreshold=${productionConfig.webSocket.memoryThreshold}MB`);
+        } catch (error) {
+          console.warn('⚠️ WebSocket service initialization failed:', error);
         }
       } else {
-        console.log('⚠️ Cache service not available');
+        const reason = isRenderFree ? 'Render free tier' :
+          isResourceConstrained ? 'resource constraints' :
+            'manual disable';
+        console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
       }
-      
-      // Cache warming
-      setTimeout(() => {
+
+      // Admin WebSocket service - only on non-constrained environments
+      if (enableWebSockets && !isRenderFree) {
         try {
-          if (cacheWarmingService && typeof cacheWarmingService.performQuickWarmup === 'function') {
-            cacheWarmingService.performQuickWarmup().then(() => {
-              console.log('✅ Initial cache warming completed');
-            }).catch((error: any) => {
-              console.warn('⚠️ Initial cache warming failed:', error);
-            });
-          }
+          const adminWebSocketService = initializeAdminWebSocket(httpServer);
+          console.log('✅ Admin WebSocket service initialized');
+          console.log(`🔧 Admin real-time dashboard ready`);
         } catch (error) {
-          console.warn('⚠️ Initial cache warming failed:', error);
+          console.warn('⚠️ Admin WebSocket service initialization failed:', error);
         }
-      }, 5000);
-      
-    } catch (error) {
-      console.warn('⚠️ Cache service initialization failed:', error);
-      console.log('📝 Server will continue without caching');
-    }
-    
-    // Comprehensive monitoring - disabled on resource-constrained environments
-    const enableMonitoring = !isResourceConstrained && !process.env.DISABLE_MONITORING;
-    
-    if (enableMonitoring) {
-      try {
-        // Use longer intervals on Render Pro to reduce overhead
-        const monitoringInterval = isRenderPro ? 120000 : 60000; // 2min for Pro, 1min for others
-        comprehensiveMonitoringService.startMonitoring(monitoringInterval);
-        console.log('✅ Comprehensive monitoring service started');
-        console.log(`📊 System health monitoring active (${monitoringInterval/1000}s intervals)`);
-      } catch (error) {
-        console.warn('⚠️ Monitoring service initialization failed:', error);
+      } else {
+        console.log('⚠️ Admin WebSocket service disabled for resource optimization');
       }
-    } else {
-      const reason = isRenderFree ? 'Render free tier' : 
-                    isResourceConstrained ? 'resource constraints' : 
-                    'manual disable';
-      console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
-    }
-    
-    // Order event listener - disabled on resource-constrained environments
-    if (enableMonitoring && !isRenderFree) {
-      try {
-        orderEventListenerService.startListening();
-        console.log('✅ Order event listener started');
-        console.log('🔄 Listening for order events to trigger messaging automation');
-      } catch (error) {
-        console.warn('⚠️ Order event listener failed to start:', error);
+
+      // Seller WebSocket service - only on non-constrained environments
+      if (enableWebSockets && !isRenderFree) {
+        try {
+          const sellerWebSocketService = initializeSellerWebSocket();
+          console.log('✅ Seller WebSocket service initialized');
+          console.log(`🛒 Seller real-time updates ready`);
+        } catch (error) {
+          console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+        }
+      } else {
+        console.log('⚠️ Seller WebSocket service disabled for resource optimization');
       }
-    } else {
-      console.log('⚠️ Order event listener disabled for resource optimization');
-    }
-  }).catch((error) => {
-    console.error('Failed to initialize services:', error);
-    console.log('📝 Server will continue without some services');
-  });
+
+      // Initialize cache service
+      try {
+        // Check if cacheService has connect method or if it's already connected
+        if (cacheService) {
+          if (typeof cacheService.connect === 'function') {
+            cacheService.connect().then(() => {
+              console.log('✅ Cache service initialized via connect method');
+            }).catch((error: any) => {
+              console.warn('⚠️ Cache service connection failed:', error);
+            });
+          } else if (cacheService.isConnected) {
+            console.log('✅ Cache service already connected');
+          } else {
+            console.log('⚠️ Cache service available but not connected');
+          }
+        } else {
+          console.log('⚠️ Cache service not available');
+        }
+
+        // Cache warming
+        setTimeout(() => {
+          try {
+            if (cacheWarmingService && typeof cacheWarmingService.performQuickWarmup === 'function') {
+              cacheWarmingService.performQuickWarmup().then(() => {
+                console.log('✅ Initial cache warming completed');
+              }).catch((error: any) => {
+                console.warn('⚠️ Initial cache warming failed:', error);
+              });
+            }
+          } catch (error) {
+            console.warn('⚠️ Initial cache warming failed:', error);
+          }
+        }, 5000);
+
+      } catch (error) {
+        console.warn('⚠️ Cache service initialization failed:', error);
+        console.log('📝 Server will continue without caching');
+      }
+
+      // Comprehensive monitoring - disabled on resource-constrained environments
+      const enableMonitoring = !isResourceConstrained && !process.env.DISABLE_MONITORING;
+
+      if (enableMonitoring) {
+        try {
+          // Use longer intervals on Render Pro to reduce overhead
+          const monitoringInterval = isRenderPro ? 120000 : 60000; // 2min for Pro, 1min for others
+          comprehensiveMonitoringService.startMonitoring(monitoringInterval);
+          console.log('✅ Comprehensive monitoring service started');
+          console.log(`📊 System health monitoring active (${monitoringInterval / 1000}s intervals)`);
+        } catch (error) {
+          console.warn('⚠️ Monitoring service initialization failed:', error);
+        }
+      } else {
+        const reason = isRenderFree ? 'Render free tier' :
+          isResourceConstrained ? 'resource constraints' :
+            'manual disable';
+        console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
+      }
+
+      // Order event listener - disabled on resource-constrained environments
+      if (enableMonitoring && !isRenderFree) {
+        try {
+          orderEventListenerService.startListening();
+          console.log('✅ Order event listener started');
+          console.log('🔄 Listening for order events to trigger messaging automation');
+        } catch (error) {
+          console.warn('⚠️ Order event listener failed to start:', error);
+        }
+      } else {
+        console.log('⚠️ Order event listener disabled for resource optimization');
+      }
+    }).catch((error) => {
+      console.error('Failed to initialize services:', error);
+      console.log('📝 Server will continue without some services');
+    });
   }); // End setImmediate
 });
 
@@ -1151,19 +1155,19 @@ httpServer.on('error', (error: any) => {
 // Enhanced graceful shutdown with proper resource cleanup
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
-  
+
   const shutdownTimeout = isResourceConstrained ? 5000 : 10000; // Shorter timeout for constrained environments
   let shutdownTimer: NodeJS.Timeout;
-  
+
   try {
     // Set force shutdown timer
     shutdownTimer = setTimeout(() => {
       console.error(`Could not close connections in time (${shutdownTimeout}ms), forcefully shutting down`);
       process.exit(1);
     }, shutdownTimeout);
-    
+
     console.log('🔌 Closing WebSocket services...');
-    
+
     // Close WebSocket services with timeout
     try {
       shutdownWebSocket();
@@ -1173,9 +1177,9 @@ const gracefulShutdown = async (signal: string) => {
     } catch (error) {
       console.warn('⚠️ Error closing WebSocket services:', error);
     }
-    
+
     console.log('📊 Stopping monitoring services...');
-    
+
     // Stop memory monitoring service
     try {
       memoryMonitoringService.stopMonitoring();
@@ -1183,7 +1187,7 @@ const gracefulShutdown = async (signal: string) => {
     } catch (error) {
       console.warn('⚠️ Error stopping memory monitoring service:', error);
     }
-    
+
     // Stop comprehensive monitoring service
     try {
       comprehensiveMonitoringService.stopMonitoring();
@@ -1191,9 +1195,9 @@ const gracefulShutdown = async (signal: string) => {
     } catch (error) {
       console.warn('⚠️ Error stopping comprehensive monitoring service:', error);
     }
-    
+
     console.log('⚡ Stopping performance optimizer...');
-    
+
     // Stop performance optimizer
     try {
       performanceOptimizer.stop();
@@ -1201,14 +1205,14 @@ const gracefulShutdown = async (signal: string) => {
     } catch (error) {
       console.warn('⚠️ Error stopping performance optimizer:', error);
     }
-    
+
     console.log('🗄️ Closing database connections...');
-    
+
     // Close database pool with timeout
     try {
       await Promise.race([
         dbPool.end(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Database close timeout')), 3000)
         )
       ]);
@@ -1216,24 +1220,24 @@ const gracefulShutdown = async (signal: string) => {
     } catch (error) {
       console.warn('⚠️ Error closing database pool:', error);
     }
-    
+
     console.log('🌐 Closing HTTP server...');
-    
+
     // Close HTTP server
     httpServer.close(() => {
       console.log('✅ HTTP server closed');
       clearTimeout(shutdownTimer);
-      
+
       // Final memory cleanup
       if (global.gc) {
         console.log('🗑️ Final garbage collection...');
         global.gc();
       }
-      
+
       console.log('🎯 Graceful shutdown completed');
       process.exit(0);
     });
-    
+
   } catch (error) {
     console.error('❌ Error during graceful shutdown:', error);
     clearTimeout(shutdownTimer!);

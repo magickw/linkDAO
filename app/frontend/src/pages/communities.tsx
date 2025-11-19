@@ -158,7 +158,7 @@ const CommunitiesPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Web3 mobile state
   const [walletConnected, setWalletConnected] = useState(false);
   const [userBalance, setUserBalance] = useState(1250);
@@ -181,18 +181,18 @@ const CommunitiesPage: React.FC = () => {
   const [stakingData, setStakingData] = useState<Record<string, any>>({});
   const [governanceProposals, setGovernanceProposals] = useState<any[]>([]);
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
-  
+
   // Hover preview state with debouncing
   const [hoveredPost, setHoveredPost] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
-  
+
   // Quick filter chips state
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
-  
+
   // Keyboard shortcuts state
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
-  
+
   // Create community modal state
   const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
@@ -204,26 +204,26 @@ const CommunitiesPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Load communities with fallback for 503 errors
         const communitiesData = await CommunityService.getAllCommunities({
           isPublic: true,
           limit: 50
         });
-        
+
         setCommunities(communitiesData);
 
         // Load user's community memberships if wallet is connected
         if (address && isConnected) {
           const userMemberships = await CommunityService.getUserCommunityMemberships();
           setJoinedCommunities(userMemberships);
-          
+
           // Set admin roles for communities where user is admin
           const adminRoles: Record<string, string> = {};
           communitiesData.forEach(community => {
             // Check if user is an admin/moderator of this community (based on moderators field)
-            if (community.moderators && Array.isArray(community.moderators) && 
-                address && community.moderators.includes(address)) {
+            if (community.moderators && Array.isArray(community.moderators) &&
+              address && community.moderators.includes(address)) {
               adminRoles[community.id] = 'admin';
             }
           });
@@ -232,7 +232,7 @@ const CommunitiesPage: React.FC = () => {
 
         // Load enhanced Web3 data
         await loadWeb3EnhancedData(communitiesData);
-        
+
       } catch (err) {
         console.error('Error loading communities:', err);
         setError(err instanceof Error ? err.message : 'Failed to load communities');
@@ -252,25 +252,33 @@ const CommunitiesPage: React.FC = () => {
     try {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
-      
+
       // Import FeedService dynamically to avoid circular dependencies
       const { FeedService } = await import('../services/feedService');
-      
+
+      // Determine which communities to show posts from
+      // If user has joined communities, show those. Otherwise show all for discovery.
+      const communitiesToShow = isConnected && joinedCommunities.length > 0
+        ? joinedCommunities
+        : []; // Empty array = show all communities (handled by backend)
+
       const response = await FeedService.getEnhancedFeed({
         sortBy: sortBy,
         timeRange: timeFilter,
-        feedSource: 'all'
+        feedSource: 'all', // Show all posts (not limited to following)
+        communities: communitiesToShow, // Filter by joined communities if any
+        userAddress: address // Pass user address for personalization
       }, pageNum, 20);
-      
+
       // Handle the case where response is not properly structured
       const newPosts = Array.isArray(response) ? response : (response?.posts || []);
-      
+
       if (append) {
         setPosts(prev => [...prev, ...newPosts]);
       } else {
         setPosts(newPosts);
       }
-      
+
       setHasMore(newPosts.length === 20);
       setPage(pageNum);
     } catch (error) {
@@ -287,7 +295,7 @@ const CommunitiesPage: React.FC = () => {
 
   useEffect(() => {
     fetchPosts(1, false);
-  }, [sortBy, timeFilter]);
+  }, [sortBy, timeFilter, joinedCommunities, address]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -315,8 +323,8 @@ const CommunitiesPage: React.FC = () => {
       communitiesData.forEach(community => {
         userRoles[community.id] = 'visitor';
         // Check if user is an admin/moderator of this community (based on moderators field)
-        if (community.moderators && Array.isArray(community.moderators) && 
-            address && community.moderators.includes(address)) {
+        if (community.moderators && Array.isArray(community.moderators) &&
+          address && community.moderators.includes(address)) {
           userRoles[community.id] = 'admin';
           userAdminRoles[community.id] = 'admin'; // Track admin roles separately for MyCommunitiesCard
         }
@@ -507,15 +515,15 @@ const CommunitiesPage: React.FC = () => {
   const handleNavigate = (path: string) => {
     router.push(path);
   };
-  
+
   const handleQuickFilterToggle = (filterId: string) => {
-    setActiveQuickFilters(prev => 
-      prev.includes(filterId) 
+    setActiveQuickFilters(prev =>
+      prev.includes(filterId)
         ? prev.filter(f => f !== filterId)
         : [...prev, filterId]
     );
   };
-  
+
   // Keyboard shortcuts integration
   useKeyboardShortcuts({
     onScrollDown: () => window.scrollBy({ top: 150, behavior: 'smooth' }),
@@ -536,27 +544,27 @@ const CommunitiesPage: React.FC = () => {
   const filteredPosts = posts.filter(post => {
     // Ensure post is a valid object
     if (!post || typeof post !== 'object') return false;
-    
+
     // Posts from joined communities
     if (joinedCommunities.includes(post.communityId)) return true;
-    
+
     // Popular posts (suggested) - ensure upvotes property exists
     if (typeof post.upvotes === 'number' && post.upvotes > 100) return true;
-    
+
     // Interest-based suggestions - ensure tags property exists and is an array
     if (Array.isArray(post.tags) && post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag))) return true;
-    
+
     return false;
   });
 
   // Defensive: normalize communities to array for rendering and filter out invalid entries
-  const communityList: Community[] = Array.isArray(communities) 
+  const communityList: Community[] = Array.isArray(communities)
     ? communities
-        .filter(community => community && typeof community === 'object' && community.id)
-        .map(community => ({
-          ...community,
-          tags: Array.isArray(community.tags) ? community.tags : []
-        }))
+      .filter(community => community && typeof community === 'object' && community.id)
+      .map(community => ({
+        ...community,
+        tags: Array.isArray(community.tags) ? community.tags : []
+      }))
     : [];
 
   // Mobile Web3 community data with defensive checks
@@ -632,7 +640,7 @@ const CommunitiesPage: React.FC = () => {
               />
             </div>
 
-            
+
 
             {/* Collapsible Sidebar */}
             <div className="px-4 mb-4">
@@ -682,7 +690,7 @@ const CommunitiesPage: React.FC = () => {
                     No posts yet
                   </h3>
                   <p className="text-gray-500 mb-6 px-4">
-                    {joinedCommunities.length === 0 
+                    {joinedCommunities.length === 0
                       ? "Join communities to see posts"
                       : "Be the first to post!"
                     }
@@ -700,9 +708,9 @@ const CommunitiesPage: React.FC = () => {
               {filteredPosts.map(post => {
                 // Defensive checks for post data
                 if (!post || typeof post !== 'object') return null;
-                
+
                 const community = communityList.find(c => c.id === post.communityId);
-                
+
                 // Ensure required post properties exist
                 const postId = post.id || `post-${Math.random()}`;
                 const postTitle = post.title || 'Untitled Post';
@@ -715,7 +723,7 @@ const CommunitiesPage: React.FC = () => {
                 const postCreatedAt = post.createdAt || new Date().toISOString();
                 const postType = post.type || 'text';
                 const postIsStaked = !!post.isStaked;
-                
+
                 return (
                   <CompactWeb3PostCard
                     key={postId}
@@ -814,7 +822,7 @@ const CommunitiesPage: React.FC = () => {
             {/* Reddit-style Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
-                
+
 
                 {/* My Communities Card */}
                 <MyCommunitiesCard
@@ -885,11 +893,10 @@ const CommunitiesPage: React.FC = () => {
                       <button
                         key={tab}
                         onClick={() => setSortBy(tab)}
-                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          sortBy === tab
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                        }`}
+                        className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${sortBy === tab
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                          }`}
                       >
                         {tab === 'hot' && <Flame className="w-3.5 h-3.5" />}
                         {tab === 'new' && <Clock className="w-3.5 h-3.5" />}
@@ -902,9 +909,8 @@ const CommunitiesPage: React.FC = () => {
                   <select
                     value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value as any)}
-                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${
-                      sortBy !== 'top' ? 'hidden' : ''
-                    }`}
+                    className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${sortBy !== 'top' ? 'hidden' : ''
+                      }`}
                   >
                     <option value="hour">Past Hour</option>
                     <option value="day">Past Day</option>
@@ -915,7 +921,7 @@ const CommunitiesPage: React.FC = () => {
                   </select>
                 </div>
               </div>
-              
+
               {/* Create Post Card - Reddit Style */}
               <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm border border-t-0 border-gray-200 dark:border-gray-700 mb-4">
                 <div className="p-3">
@@ -987,10 +993,10 @@ const CommunitiesPage: React.FC = () => {
                 {filteredPosts.map(post => {
                   // Defensive checks for post data
                   if (!post || typeof post !== 'object') return null;
-                  
+
                   const community = communityList.find(c => c.id === post.communityId);
                   const stakingInfo = stakingData[post.communityId];
-                  
+
                   // Ensure required post properties exist
                   const postId = post.id || `post-${Math.random()}`;
                   const postTitle = post.title || 'Untitled Post';
@@ -1003,7 +1009,7 @@ const CommunitiesPage: React.FC = () => {
                   const postCreatedAt = post.createdAt || new Date().toISOString();
                   const postIsStaked = !!post.isStaked;
                   const postStakedTokens = typeof post.stakedTokens === 'number' ? post.stakedTokens : 0;
-                  
+
                   return (
                     <Web3SwipeGestureHandler
                       key={postId}
@@ -1015,7 +1021,7 @@ const CommunitiesPage: React.FC = () => {
                       walletConnected={walletConnected}
                       userBalance={userBalance}
                     >
-                      <div 
+                      <div
                         onClick={() => {
                           const communityId = community?.slug || community?.name || post.communityId || 'unknown';
                           router.push(`/communities/${communityId}?post=${postId}`);
@@ -1063,7 +1069,7 @@ const CommunitiesPage: React.FC = () => {
                             >
                               <ArrowDown className="w-5 h-5" />
                             </button>
-                            
+
                             {/* Staking Indicator */}
                             {postIsStaked && (
                               <div className="mt-1">
@@ -1114,21 +1120,21 @@ const CommunitiesPage: React.FC = () => {
 
                             {/* Action Bar - Reddit Style */}
                             <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                              <button 
+                              <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                               >
                                 <MessageCircle className="w-4 h-4" />
                                 <span>{postComments}</span>
                               </button>
-                              <button 
+                              <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                               >
                                 <Share className="w-4 h-4" />
                                 <span>Share</span>
                               </button>
-                              <button 
+                              <button
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                               >
@@ -1136,7 +1142,7 @@ const CommunitiesPage: React.FC = () => {
                                 <span>Save</span>
                               </button>
                               {walletConnected && (
-                                <button 
+                                <button
                                   onClick={(e) => e.stopPropagation()}
                                   className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all"
                                 >
@@ -1189,7 +1195,7 @@ const CommunitiesPage: React.FC = () => {
                     Create Community
                   </button>
                 </div>
-                
+
                 {/* Trending Today */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -1222,7 +1228,7 @@ const CommunitiesPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Governance Activity */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="p-3 border-b border-gray-200 dark:border-gray-700">
@@ -1231,7 +1237,7 @@ const CommunitiesPage: React.FC = () => {
                     </h3>
                   </div>
                   <div className="p-2">
-                    <GovernanceActivityPulse 
+                    <GovernanceActivityPulse
                       activeProposals={governanceProposals.length}
                       showLabel={true}
                     />
@@ -1259,13 +1265,13 @@ const CommunitiesPage: React.FC = () => {
               position={hoverPosition}
             />
           )}
-          
+
           {/* Keyboard Shortcuts Modal */}
           <KeyboardShortcutsModal
             isOpen={showKeyboardHelp}
             onClose={() => setShowKeyboardHelp(false)}
           />
-          
+
           {/* Create Community Modal */}
           <CreateCommunityModal
             isOpen={showCreateCommunityModal}

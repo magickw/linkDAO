@@ -91,186 +91,188 @@ interface AnalyticsData {
 class SellerDashboardService {
   /**
    * Get comprehensive dashboard statistics for a seller
+   * FIXED: Wrapped in transaction to prevent connection leaks
    */
   async getDashboardStats(walletAddress: string): Promise<DashboardStats> {
-    // Verify seller exists
-    const seller = await db.query.sellers.findFirst({
-      where: eq(sellers.walletAddress, walletAddress),
+    // Use transaction to execute all queries efficiently and prevent connection leaks
+    return await db.transaction(async (tx) => {
+      // Verify seller exists
+      const seller = await tx.query.sellers.findFirst({
+        where: eq(sellers.walletAddress, walletAddress),
+      });
+
+      if (!seller) {
+        throw new Error('Seller not found');
+      }
+
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      // Execute all queries in parallel within the transaction for maximum efficiency
+      const [
+        todaySalesResult,
+        weekSalesResult,
+        monthSalesResult,
+        totalSalesResult,
+        orderCounts,
+        listingCounts,
+        availableBalanceResult,
+        pendingBalanceResult,
+        escrowBalanceResult,
+        unreadCountResult
+      ] = await Promise.all([
+        // Sales queries
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            gte(orders.createdAt, todayStart),
+            eq(orders.status, 'completed')
+          ))
+          .limit(1),
+
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            gte(orders.createdAt, weekStart),
+            eq(orders.status, 'completed')
+          ))
+          .limit(1),
+
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            gte(orders.createdAt, monthStart),
+            eq(orders.status, 'completed')
+          ))
+          .limit(1),
+
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            eq(orders.status, 'completed')
+          ))
+          .limit(1),
+
+        // Order counts by status
+        tx.select({
+          status: orders.status,
+          count: count(),
+        })
+          .from(orders)
+          .where(eq(orders.sellerId, seller.id as any))
+          .groupBy(orders.status),
+
+        // Listing counts by status
+        tx.select({
+          status: products.status,
+          count: count(),
+        })
+          .from(products)
+          .where(eq(products.sellerId, seller.id as any))
+          .groupBy(products.status),
+
+        // Balance queries
+        tx.select({ total: sql<string>`COALESCE(SUM(${sellerTransactions.amount}), 0)` })
+          .from(sellerTransactions)
+          .where(and(
+            eq(sellerTransactions.sellerWalletAddress, walletAddress),
+            eq(sellerTransactions.transactionType, 'sale')
+          ))
+          .limit(1),
+
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            eq(orders.status, 'processing')
+          ))
+          .limit(1),
+
+        tx.select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
+          .from(orders)
+          .where(and(
+            eq(orders.sellerId, seller.id as any),
+            eq(orders.status, 'pending')
+          ))
+          .limit(1),
+
+        // Unread notifications
+        tx.select({ count: count() })
+          .from(notifications)
+          .where(and(
+            eq(notifications.userAddress, walletAddress),
+            eq(notifications.read, false)
+          ))
+          .limit(1)
+      ]);
+
+      // Process order stats
+      const orderStats = {
+        pending: 0,
+        processing: 0,
+        completed: 0,
+        total: 0,
+      };
+
+      orderCounts.forEach((item) => {
+        const status = item.status as string;
+        const cnt = Number(item.count);
+        orderStats.total += cnt;
+        if (status === 'pending') orderStats.pending = cnt;
+        if (status === 'processing') orderStats.processing = cnt;
+        if (status === 'completed') orderStats.completed = cnt;
+      });
+
+      // Process listing stats
+      const listingStats = {
+        active: 0,
+        draft: 0,
+        soldOut: 0,
+        total: 0,
+      };
+
+      listingCounts.forEach((item) => {
+        const status = item.status as string;
+        const cnt = Number(item.count);
+        listingStats.total += cnt;
+        if (status === 'active') listingStats.active = cnt;
+        if (status === 'draft') listingStats.draft = cnt;
+        if (status === 'sold_out') listingStats.soldOut = cnt;
+      });
+
+      return {
+        sales: {
+          today: todaySalesResult[0]?.total || '0',
+          week: weekSalesResult[0]?.total || '0',
+          month: monthSalesResult[0]?.total || '0',
+          total: totalSalesResult[0]?.total || '0',
+        },
+        orders: orderStats,
+        listings: listingStats,
+        balance: {
+          available: availableBalanceResult[0]?.total || '0',
+          pending: pendingBalanceResult[0]?.total || '0',
+          escrow: escrowBalanceResult[0]?.total || '0',
+          total: String(
+            Number(availableBalanceResult[0]?.total || '0') +
+            Number(pendingBalanceResult[0]?.total || '0') +
+            Number(escrowBalanceResult[0]?.total || '0')
+          ),
+        },
+        reputation: {
+          score: 0, // TODO: Implement reputation calculation
+          totalReviews: 0,
+          averageRating: 0,
+        },
+        unreadNotifications: Number(unreadCountResult[0]?.count || 0),
+      };
     });
-
-    if (!seller) {
-      throw new Error('Seller not found');
-    }
-
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    // Get sales data
-    const [todaySales] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          gte(orders.createdAt, todayStart),
-          eq(orders.status, 'completed')
-        )
-      );
-
-    const [weekSales] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          gte(orders.createdAt, weekStart),
-          eq(orders.status, 'completed')
-        )
-      );
-
-    const [monthSales] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          gte(orders.createdAt, monthStart),
-          eq(orders.status, 'completed')
-        )
-      );
-
-    const [totalSales] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          eq(orders.status, 'completed')
-        )
-      );
-
-    // Get order counts by status
-    const orderCounts = await db
-      .select({
-        status: orders.status,
-        count: count(),
-      })
-      .from(orders)
-      .where(eq(orders.sellerId, seller.id as any))
-      .groupBy(orders.status);
-
-    const orderStats = {
-      pending: 0,
-      processing: 0,
-      completed: 0,
-      total: 0,
-    };
-
-    orderCounts.forEach((item) => {
-      const status = item.status as string;
-      const cnt = Number(item.count);
-      orderStats.total += cnt;
-      if (status === 'pending') orderStats.pending = cnt;
-      if (status === 'processing') orderStats.processing = cnt;
-      if (status === 'completed') orderStats.completed = cnt;
-    });
-
-    // Get listing counts by status
-    const listingCounts = await db
-      .select({
-        status: products.status,
-        count: count(),
-      })
-      .from(products)
-      .where(eq(products.sellerId, seller.id as any))
-      .groupBy(products.status);
-
-    const listingStats = {
-      active: 0,
-      draft: 0,
-      soldOut: 0,
-      total: 0,
-    };
-
-    listingCounts.forEach((item) => {
-      const status = item.status as string;
-      const cnt = Number(item.count);
-      listingStats.total += cnt;
-      if (status === 'active') listingStats.active = cnt;
-      if (status === 'draft') listingStats.draft = cnt;
-      if (status === 'sold_out') listingStats.soldOut = cnt;
-    });
-
-    // Get balance data from seller transactions
-    const [availableBalance] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${sellerTransactions.amount}), 0)` })
-      .from(sellerTransactions)
-      .where(
-        and(
-          eq(sellerTransactions.sellerWalletAddress, walletAddress),
-          eq(sellerTransactions.transactionType, 'sale')
-        )
-      );
-
-    const [pendingBalance] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          eq(orders.status, 'processing')
-        )
-      );
-
-    const [escrowBalance] = await db
-      .select({ total: sql<string>`COALESCE(SUM(${orders.amount}), 0)` })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.sellerId, seller.id as any),
-          eq(orders.status, 'pending')
-        )
-      );
-
-    // Get unread notification count
-    const [unreadCount] = await db
-      .select({ count: count() })
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.userAddress, walletAddress),
-          eq(notifications.read, false)
-        )
-      );
-
-    return {
-      sales: {
-        today: todaySales?.total || '0',
-        week: weekSales?.total || '0',
-        month: monthSales?.total || '0',
-        total: totalSales?.total || '0',
-      },
-      orders: orderStats,
-      listings: listingStats,
-      balance: {
-        available: availableBalance?.total || '0',
-        pending: pendingBalance?.total || '0',
-        escrow: escrowBalance?.total || '0',
-        total: String(
-          Number(availableBalance?.total || '0') +
-          Number(pendingBalance?.total || '0') +
-          Number(escrowBalance?.total || '0')
-        ),
-      },
-      reputation: {
-        score: 0, // TODO: Implement reputation calculation
-        totalReviews: 0,
-        averageRating: 0,
-      },
-      unreadNotifications: Number(unreadCount?.count || 0),
-    };
   }
 
   /**
@@ -337,6 +339,7 @@ class SellerDashboardService {
 
   /**
    * Get analytics data for a seller
+   * FIXED: Added query limits to prevent unbounded result sets
    */
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<AnalyticsData> {
     // Verify seller exists
@@ -348,8 +351,9 @@ class SellerDashboardService {
       throw new Error('Seller not found');
     }
 
-    // Parse period (e.g., '7d', '30d', '90d')
-    const days = parseInt(period.replace('d', '')) || 30;
+    // Parse period (e.g., '7d', '30d', '90d') with maximum limit of 90 days
+    const requestedDays = parseInt(period.replace('d', '')) || 30;
+    const days = Math.min(requestedDays, 90); // Hard limit to prevent unbounded queries
     const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // Get total revenue for period
@@ -362,9 +366,10 @@ class SellerDashboardService {
           gte(orders.createdAt, periodStart),
           eq(orders.status, 'completed')
         )
-      );
+      )
+      .limit(1);
 
-    // Get revenue by day
+    // Get revenue by day (limited to max 90 results)
     const revenueByDay = await db
       .select({
         date: sql<string>`DATE(${orders.createdAt})`,
@@ -379,7 +384,8 @@ class SellerDashboardService {
         )
       )
       .groupBy(sql`DATE(${orders.createdAt})`)
-      .orderBy(sql`DATE(${orders.createdAt})`);
+      .orderBy(sql`DATE(${orders.createdAt})`)
+      .limit(90); // Prevent unbounded result sets
 
     // Get order counts
     const [orderCountResult] = await db
@@ -390,7 +396,8 @@ class SellerDashboardService {
           eq(orders.sellerId, seller.id as any),
           gte(orders.createdAt, periodStart)
         )
-      );
+      )
+      .limit(1);
 
     // Get orders by status
     const ordersByStatus = await db
@@ -405,14 +412,15 @@ class SellerDashboardService {
           gte(orders.createdAt, periodStart)
         )
       )
-      .groupBy(orders.status);
+      .groupBy(orders.status)
+      .limit(10); // Limit to prevent unbounded results
 
     const orderStatusMap: Record<string, number> = {};
     ordersByStatus.forEach((item) => {
       orderStatusMap[item.status as string] = Number(item.count);
     });
 
-    // Get orders by day
+    // Get orders by day (limited to max 90 results)
     const ordersByDay = await db
       .select({
         date: sql<string>`DATE(${orders.createdAt})`,
@@ -426,7 +434,8 @@ class SellerDashboardService {
         )
       )
       .groupBy(sql`DATE(${orders.createdAt})`)
-      .orderBy(sql`DATE(${orders.createdAt})`);
+      .orderBy(sql`DATE(${orders.createdAt})`)
+      .limit(90); // Prevent unbounded result sets
 
     // Calculate performance metrics
     const totalRevenue = Number(revenueResult?.total || 0);
@@ -434,7 +443,7 @@ class SellerDashboardService {
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return {
-      period,
+      period: `${days}d`, // Return actual period used (respecting 90-day limit)
       revenue: {
         total: revenueResult?.total || '0',
         byDay: revenueByDay.map((item) => ({

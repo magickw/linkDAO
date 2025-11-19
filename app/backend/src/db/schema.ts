@@ -12,10 +12,10 @@ export const users = pgTable("users", {
   bioCid: text("bio_cid"), // Bio text (public)
   profileCid: text("profile_cid"), // Legacy IPFS metadata (deprecated)
   physicalAddress: text("physical_address"), // JSON object for encrypted private data (addresses, names, etc.)
-  
+
   // Role field for admin functionality
   role: varchar("role", { length: 32 }).default('user'),
-  
+
   // Admin credentials fields
   email: varchar("email", { length: 255 }).unique(),
   passwordHash: varchar("password_hash", { length: 255 }),
@@ -24,7 +24,7 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   loginAttempts: integer("login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
-  
+
   // Billing address fields
   billingFirstName: varchar("billing_first_name", { length: 100 }),
   billingLastName: varchar("billing_last_name", { length: 100 }),
@@ -36,7 +36,7 @@ export const users = pgTable("users", {
   billingZipCode: varchar("billing_zip_code", { length: 20 }),
   billingCountry: varchar("billing_country", { length: 2 }),
   billingPhone: varchar("billing_phone", { length: 20 }),
-  
+
   // Shipping address fields
   shippingFirstName: varchar("shipping_first_name", { length: 100 }),
   shippingLastName: varchar("shipping_last_name", { length: 100 }),
@@ -49,7 +49,7 @@ export const users = pgTable("users", {
   shippingCountry: varchar("shipping_country", { length: 2 }),
   shippingPhone: varchar("shipping_phone", { length: 20 }),
   shippingSameAsBilling: boolean("shipping_same_as_billing").default(true),
-  
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -418,6 +418,25 @@ export const follows = pgTable("follows", {
   }),
   followingFk: foreignKey({
     columns: [t.followingId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// User Onboarding Preferences
+export const userOnboardingPreferences = pgTable("user_onboarding_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  preferredCategories: text("preferred_categories").array(), // e.g. ['defi', 'nft', 'dao', 'gaming']
+  preferredTags: text("preferred_tags").array(), // e.g. ['ethereum', 'trading', 'governance', 'art']
+  onboardingCompleted: boolean("onboarding_completed").default(false).notNull(),
+  skipOnboarding: boolean("skip_onboarding").default(false).notNull(), // If user skipped onboarding
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_user_onboarding_user_id").on(t.userId),
+  onboardingCompletedIdx: index("idx_user_onboarding_completed").on(t.onboardingCompleted),
+  userFk: foreignKey({
+    columns: [t.userId],
     foreignColumns: [users.id]
   })
 }));
@@ -2106,17 +2125,17 @@ export const timeTracking = pgTable("time_tracking", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   providerFk: foreignKey({
     columns: [table.providerId],
     foreignColumns: [users.id],
-  
+
   }),
   bookingIdx: index("time_tracking_booking_id_idx").on(table.bookingId),
   providerIdx: index("time_tracking_provider_id_idx").on(table.providerId),
@@ -2148,12 +2167,12 @@ export const projectDeliverables = pgTable("project_deliverables", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   bookingIdx: index("project_deliverables_booking_id_idx").on(table.bookingId),
   milestoneIdx: index("project_deliverables_milestone_id_idx").on(table.milestoneId),
@@ -2179,12 +2198,12 @@ export const milestonePayments = pgTable("milestone_payments", {
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneIdx: index("milestone_payments_milestone_id_idx").on(table.milestoneId),
   statusIdx: index("milestone_payments_status_idx").on(table.status),
@@ -2204,17 +2223,17 @@ export const projectThreads = pgTable("project_threads", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   createdByFk: foreignKey({
     columns: [table.createdBy],
     foreignColumns: [users.id],
-  
+
   }),
   bookingIdx: index("project_threads_booking_id_idx").on(table.bookingId),
 }));
@@ -2297,17 +2316,17 @@ export const projectActivities = pgTable("project_activities", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   userFk: foreignKey({
     columns: [table.userId],
     foreignColumns: [users.id],
-  
+
   }),
   bookingIdx: index("project_activities_booking_id_idx").on(table.bookingId),
   createdAtIdx: index("project_activities_created_at_idx").on(table.createdAt),
@@ -2332,22 +2351,22 @@ export const projectFiles = pgTable("project_files", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-  
+
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-  
+
   }),
   deliverableFk: foreignKey({
     columns: [table.deliverableId],
     foreignColumns: [projectDeliverables.id],
-  
+
   }),
   uploaderFk: foreignKey({
     columns: [table.uploaderId],
     foreignColumns: [users.id],
-  
+
   }),
   bookingIdx: index("project_files_booking_id_idx").on(table.bookingId),
   fileHashIdx: index("project_files_file_hash_idx").on(table.fileHash),
@@ -3245,7 +3264,7 @@ export const conversations = pgTable("conversations", {
   unreadCount: integer("unread_count").default(0),
   archivedBy: jsonb("archived_by").default("[]"),
   createdAt: timestamp("created_at").defaultNow(),
-  
+
   // Marketplace context columns
   conversationType: varchar("conversation_type", { length: 32 }).default("general"),
   orderId: integer("order_id"),
@@ -3258,7 +3277,7 @@ export const conversations = pgTable("conversations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
-  
+
   // Marketplace indexes
   orderIdIdx: index("idx_conversations_order_id").on(t.orderId),
   productIdIdx: index("idx_conversations_product_id").on(t.productId),
@@ -3767,23 +3786,23 @@ export const cartItems = pgTable("cart_items", {
 export const paymentMethodPreferences = pgTable("payment_method_preferences", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  
+
   // Encrypted preference data
   encryptedPreferences: text("encrypted_preferences").notNull(), // JSON encrypted with user-specific key
-  
+
   // Quick access fields for performance (non-encrypted)
   preferredMethods: jsonb("preferred_methods").default("[]"), // Array of preferred payment method types in order
   avoidedMethods: jsonb("avoided_methods").default("[]"), // Array of avoided payment method types
   maxGasFeeThreshold: numeric("max_gas_fee_threshold", { precision: 10, scale: 2 }).default("50.00"), // Maximum acceptable gas fee in USD
   preferStablecoins: boolean("prefer_stablecoins").default(true),
   preferFiat: boolean("prefer_fiat").default(false),
-  
+
   // Learning algorithm data
   totalTransactions: integer("total_transactions").default(0),
   methodUsageCounts: jsonb("method_usage_counts").default("{}"), // Count of usage per payment method
   lastUsedMethods: jsonb("last_used_methods").default("[]"), // Recent payment methods with timestamps
   preferenceScores: jsonb("preference_scores").default("{}"), // Calculated preference scores per method
-  
+
   // Metadata
   learningEnabled: boolean("learning_enabled").default(true),
   lastPreferenceUpdate: timestamp("last_preference_update").defaultNow(),
