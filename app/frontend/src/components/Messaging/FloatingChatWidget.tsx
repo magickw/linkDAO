@@ -226,18 +226,24 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   useEffect(() => {
     const handleStartChat = (contact: Contact) => {
+      console.log("FloatingChatWidget: startChat called with contact:", contact);
       setPendingContact(contact);
       // Make sure the chat widget is open
       if (!isOpen) {
         setIsOpen(true);
         setIsMinimized(false);
+        console.log("FloatingChatWidget: Opening chat widget for contact");
+      } else {
+        console.log("FloatingChatWidget: Chat widget already open, setting pending contact");
       }
     };
 
+    console.log("FloatingChatWidget: Registering startChat callback");
     setOnStartChat(handleStartChat);
 
     // Cleanup function
     return () => {
+      console.log("FloatingChatWidget: Removing startChat callback");
       setOnStartChat(null);
     };
   }, [setOnStartChat, isOpen]);
@@ -271,12 +277,16 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   };
 
   const handleConversationSelect = async (conversation: Conversation) => {
+    console.log("FloatingChatWidget: handleConversationSelect called with conversation:", conversation);
     setSelectedConversation(conversation);
     setActiveTab('chat');
 
     // Join conversation room
     if (isWebSocketConnected && conversation.id) {
+      console.log("FloatingChatWidget: Joining conversation room:", conversation.id);
       joinConversation(conversation.id);
+    } else {
+      console.log("FloatingChatWidget: WebSocket not connected or conversation ID missing");
     }
 
     // ✅ PHASE 2: Mark messages as read when conversation is opened
@@ -285,10 +295,13 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       // For now, we'll just mark the conversation as read
       try {
         await markAsRead(conversation.id, []);
+        console.log("FloatingChatWidget: Marked conversation as read:", conversation.id);
       } catch (error) {
         console.error('Failed to mark as read:', error);
       }
     }
+    
+    console.log("FloatingChatWidget: Conversation selected, activeTab set to 'chat'");
   };
 
   const handleBackToList = () => {
@@ -304,12 +317,17 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   // Handle pending contact to start a chat
   useEffect(() => {
     if (pendingContact && address) {
+      console.log("FloatingChatWidget: Processing pending contact:", pendingContact);
+      
       // If hookConversations is not loaded yet, we might need to load them first
       if (!hookConversations) {
-        // Try to load conversations first
+        console.log("FloatingChatWidget: Conversations not loaded yet, loading...");
         loadConversations();
         return; // Wait for the next render when conversations are loaded
       }
+      
+      console.log("FloatingChatWidget: Looking for existing conversation with:", pendingContact.walletAddress);
+      console.log("FloatingChatWidget: Available conversations:", hookConversations);
       
       // Find an existing conversation with this contact (case-insensitive address matching)
       const normalizedContactAddress = pendingContact.walletAddress.toLowerCase();
@@ -317,17 +335,22 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         conv.participants.some(participant => participant.toLowerCase() === normalizedContactAddress)
       );
 
+      console.log("FloatingChatWidget: Found existing conversation:", existingConversation);
+
       if (existingConversation) {
         // If conversation exists, select it
+        console.log("FloatingChatWidget: Selecting existing conversation:", existingConversation);
         handleConversationSelect(existingConversation);
       } else {
         // If no conversation exists, start a new one
+        console.log("FloatingChatWidget: No existing conversation found, opening new conversation modal with address:", pendingContact.walletAddress);
         setNewRecipientAddress(pendingContact.walletAddress);
         setShowNewConversationModal(true);
       }
       
       // Clear the pending contact
       setPendingContact(null);
+      console.log("FloatingChatWidget: Cleared pending contact");
     }
   }, [pendingContact, address, hookConversations, handleConversationSelect, loadConversations]);
 
@@ -348,7 +371,11 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   };
 
   const startNewConversation = async () => {
-    if (!newRecipientAddress.trim() || !address) return;
+    console.log("FloatingChatWidget: startNewConversation called with address:", newRecipientAddress.trim(), "from user:", address);
+    if (!newRecipientAddress.trim() || !address) {
+      console.log("FloatingChatWidget: Missing recipient address or user address");
+      return;
+    }
     
     try {
       const response = await fetch('/api/conversations', {
@@ -364,11 +391,14 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
       if (response.ok) {
         const newConversation = await response.json();
+        console.log("FloatingChatWidget: New conversation created:", newConversation);
         setSelectedConversation(newConversation);
         setActiveTab('chat');
         setShowNewConversationModal(false);
         setNewRecipientAddress('');
         loadConversations(); // Refresh conversation list
+      } else {
+        console.error('Failed to create conversation:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to start new conversation:', error);

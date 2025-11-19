@@ -276,14 +276,17 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
   const [onStartChatCallback, setOnStartChatCallback] = useState<((contact: Contact) => void) | null>(null);
 
   const setOnStartChat = useCallback((callback: ((contact: Contact) => void) | null) => {
+    console.log("ContactContext: setOnStartChat called with callback:", !!callback);
     setOnStartChatCallback(callback);
   }, []);
 
   const startChat = useCallback((contact: Contact) => {
+    console.log("ContactContext: startChat called with contact:", contact);
     if (onStartChatCallback) {
+      console.log("ContactContext: Calling onStartChatCallback with contact:", contact);
       onStartChatCallback(contact);
     } else {
-      console.log('No startChat callback set, creating conversation with:', contact.nickname);
+      console.log('ContactContext: No startChat callback set, unable to initiate chat with:', contact.nickname);
       // Fallback behavior - in a real implementation, this would create a conversation
       // and notify the FloatingChatWidget
     }
