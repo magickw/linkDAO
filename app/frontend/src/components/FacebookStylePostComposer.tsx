@@ -82,7 +82,7 @@ const FacebookStylePostComposer = React.memo(({
       if (linkUrl) finalContent += ` ${linkUrl}`;
 
       const postData: CreatePostInput = {
-        author: '', // This will be overridden by the parent component
+        author: userName || '', // Use the userName prop as author
         content: finalContent,
         tags: tagArray,
         media: selectedFiles.length > 0 ? ['https://placehold.co/300'] : undefined

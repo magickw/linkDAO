@@ -38,8 +38,15 @@ export class PostService {
 
   static async createPost(data: CreatePostInput): Promise<Post> {
     try {
+      // Posts must be created within a community
+      if (!data.communityId && !data.dao) {
+        throw new Error('Community ID is required to create a post');
+      }
+
+      const communityId = data.communityId || data.dao;
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts`, {
+
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,9 +54,13 @@ export class PostService {
         },
         body: JSON.stringify({
           content: data.content,
-          communityId: data.dao,
-          mediaUrls: data.media,
+          author: data.author,
+          type: 'text', // Default post type
+          visibility: 'public', // Default visibility
           tags: data.tags,
+          media: data.media,
+          parentId: data.parentId,
+          onchainRef: data.onchainRef,
           title: data.title,
           pollData: data.poll,
           proposalData: data.proposal
