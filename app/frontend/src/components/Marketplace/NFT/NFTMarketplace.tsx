@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { 
-  MagnifyingGlassIcon, 
-  FunnelIcon, 
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
   HeartIcon,
   ShareIcon,
   EyeIcon,
@@ -54,10 +54,10 @@ interface NFTMarketplaceProps {
   onShare?: (nft: NFT) => void;
 }
 
-export default function NFTMarketplace({ 
-  onNFTClick, 
-  onLike, 
-  onShare 
+export default function NFTMarketplace({
+  onNFTClick,
+  onLike,
+  onShare
 }: NFTMarketplaceProps) {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,85 +86,97 @@ export default function NFTMarketplace({
   ];
 
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchNFTs = async () => {
+      try {
+        setLoading(true);
+        // Mock data for now - replace with actual API call
+        const mockNFTs: NFT[] = [
+          {
+            id: '1',
+            name: 'Cosmic Wanderer #1234',
+            description: 'A beautiful cosmic wanderer exploring the digital universe.',
+            imageUrl: 'https://via.placeholder.com/400x400/6366f1/ffffff?text=NFT+1',
+            price: '2.5',
+            currency: 'ETH',
+            creator: {
+              id: 'creator1',
+              handle: 'cosmicartist',
+              walletAddress: '0x1234...5678',
+            },
+            collection: {
+              id: 'collection1',
+              name: 'Cosmic Wanderers',
+              verified: true,
+            },
+            attributes: [
+              { trait_type: 'Background', value: 'Nebula' },
+              { trait_type: 'Rarity', value: 'Legendary' },
+            ],
+            isVerified: true,
+            isLiked: false,
+            likes: 42,
+            views: 1234,
+            listingType: 'fixed',
+          },
+          {
+            id: '2',
+            name: 'Digital Dreams #0567',
+            description: 'An abstract representation of digital consciousness.',
+            imageUrl: 'https://via.placeholder.com/400x400/8b5cf6/ffffff?text=NFT+2',
+            price: '1.8',
+            currency: 'ETH',
+            creator: {
+              id: 'creator2',
+              handle: 'dreamweaver',
+              walletAddress: '0x5678...9012',
+            },
+            attributes: [
+              { trait_type: 'Style', value: 'Abstract' },
+              { trait_type: 'Color Scheme', value: 'Purple' },
+            ],
+            isVerified: false,
+            isLiked: true,
+            likes: 28,
+            views: 892,
+            listingType: 'auction',
+            auctionEndTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+            currentBid: '1.2',
+          },
+          // Add more mock NFTs...
+        ];
+
+        if (isMounted) {
+          setNfts(mockNFTs);
+        }
+      } catch (error) {
+        console.error('Error fetching NFTs:', error);
+        if (isMounted) {
+          toast.error('Failed to load NFTs');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchNFTs();
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedCategory, sortBy, searchQuery]);
 
-  const fetchNFTs = async () => {
-    try {
-      setLoading(true);
-      // Mock data for now - replace with actual API call
-      const mockNFTs: NFT[] = [
-        {
-          id: '1',
-          name: 'Cosmic Wanderer #1234',
-          description: 'A beautiful cosmic wanderer exploring the digital universe.',
-          imageUrl: 'https://via.placeholder.com/400x400/6366f1/ffffff?text=NFT+1',
-          price: '2.5',
-          currency: 'ETH',
-          creator: {
-            id: 'creator1',
-            handle: 'cosmicartist',
-            walletAddress: '0x1234...5678',
-          },
-          collection: {
-            id: 'collection1',
-            name: 'Cosmic Wanderers',
-            verified: true,
-          },
-          attributes: [
-            { trait_type: 'Background', value: 'Nebula' },
-            { trait_type: 'Rarity', value: 'Legendary' },
-          ],
-          isVerified: true,
-          isLiked: false,
-          likes: 42,
-          views: 1234,
-          listingType: 'fixed',
-        },
-        {
-          id: '2',
-          name: 'Digital Dreams #0567',
-          description: 'An abstract representation of digital consciousness.',
-          imageUrl: 'https://via.placeholder.com/400x400/8b5cf6/ffffff?text=NFT+2',
-          price: '1.8',
-          currency: 'ETH',
-          creator: {
-            id: 'creator2',
-            handle: 'dreamweaver',
-            walletAddress: '0x5678...9012',
-          },
-          attributes: [
-            { trait_type: 'Style', value: 'Abstract' },
-            { trait_type: 'Color Scheme', value: 'Purple' },
-          ],
-          isVerified: false,
-          isLiked: true,
-          likes: 28,
-          views: 892,
-          listingType: 'auction',
-          auctionEndTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          currentBid: '1.2',
-        },
-        // Add more mock NFTs...
-      ];
-      
-      setNfts(mockNFTs);
-    } catch (error) {
-      console.error('Error fetching NFTs:', error);
-      toast.error('Failed to load NFTs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLike = (nftId: string) => {
-    setNfts(prev => prev.map(nft => 
-      nft.id === nftId 
-        ? { 
-            ...nft, 
-            isLiked: !nft.isLiked,
-            likes: nft.isLiked ? nft.likes - 1 : nft.likes + 1
-          }
+    setNfts(prev => prev.map(nft =>
+      nft.id === nftId
+        ? {
+          ...nft,
+          isLiked: !nft.isLiked,
+          likes: nft.isLiked ? nft.likes - 1 : nft.likes + 1
+        }
         : nft
     ));
     onLike?.(nftId);
@@ -174,20 +186,20 @@ export default function NFTMarketplace({
     const now = new Date().getTime();
     const end = new Date(endTime).getTime();
     const diff = end - now;
-    
+
     if (diff <= 0) return 'Ended';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
 
   const NFTCard = ({ nft }: { nft: NFT }) => (
-    <div 
+    <div
       className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
       onClick={() => onNFTClick?.(nft)}
     >
@@ -198,7 +210,7 @@ export default function NFTMarketplace({
           alt={nft.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        
+
         {/* Overlay Actions */}
         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
           <div className="flex space-x-2">
@@ -295,7 +307,7 @@ export default function NFTMarketplace({
               </div>
             )}
           </div>
-          
+
           {nft.lastSale && (
             <div className="text-right">
               <p className="text-xs text-gray-500 dark:text-gray-400">Last sale</p>
@@ -318,7 +330,7 @@ export default function NFTMarketplace({
               {nft.views}
             </div>
           </div>
-          
+
           {nft.listingType === 'auction' && (
             <div className="flex items-center text-red-500">
               <FireIcon className="h-4 w-4 mr-1" />
@@ -364,11 +376,10 @@ export default function NFTMarketplace({
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategory === category.id
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category.id
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
+                  }`}
               >
                 {category.name} ({category.count})
               </button>

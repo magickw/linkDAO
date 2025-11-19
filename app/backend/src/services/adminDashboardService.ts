@@ -17,6 +17,8 @@ interface LayoutConfig {
   minimized?: boolean;
 }
 
+import { cacheService } from './cacheService';
+
 interface NotificationPreferences {
   enabled: boolean;
   categories: string[];
@@ -83,15 +85,73 @@ interface AdminAlert {
 }
 
 class AdminDashboardService {
-  // In-memory storage for demo purposes
+  // OPTIMIZED: In-memory storage with size limits and cleanup
   // In production, this would use a database
   private dashboardConfigs: Map<string, DashboardConfig> = new Map();
   private userPreferences: Map<string, UserPreferences> = new Map();
   private alerts: Map<string, AdminAlert> = new Map();
   private usageAnalytics: Map<string, any> = new Map();
+  
+  // OPTIMIZED: Cleanup intervals and size limits
+  private maxMapSize = 1000;
+  private cleanupInterval: NodeJS.Timeout;
+  private actionHistoryLimit = 100;
 
   constructor() {
     this.initializeDefaultData();
+    this.setupPeriodicCleanup();
+  }
+
+  private setupPeriodicCleanup(): void {
+    // Clean up every 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupExpiredData();
+    }, 5 * 60 * 1000);
+  }
+
+  private cleanupExpiredData(): void {
+    try {
+      // Clean up old alerts (older than 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const alertsToDelete = Array.from(this.alerts.entries())
+        .filter(([_, alert]) => alert.timestamp < sevenDaysAgo)
+        .map(([id, _]) => id);
+      
+      alertsToDelete.forEach(id => this.alerts.delete(id));
+      
+      // Clean up old analytics (older than 30 days)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const analyticsToDelete = Array.from(this.usageAnalytics.entries())
+        .filter(([_, analytics]) => analytics.lastActive < thirtyDaysAgo)
+        .map(([id, _]) => id);
+      
+      analyticsToDelete.forEach(id => this.usageAnalytics.delete(id));
+      
+      // Enforce size limits
+      this.enforceMapSizeLimits();
+      
+      if (alertsToDelete.length > 0 || analyticsToDelete.length > 0) {
+        console.log(`Cleaned up ${alertsToDelete.length} alerts and ${analyticsToDelete.length} analytics records`);
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    }
+  }
+
+  private enforceMapSizeLimits(): void {
+    // Clean up oldest entries if maps get too large
+    const cleanupMap = <K, V>(map: Map<K, V>, maxSize: number) => {
+      if (map.size > maxSize) {
+        const entries = Array.from(map.entries());
+        const toDelete = entries.slice(0, entries.length - maxSize);
+        toDelete.forEach(([key]) => map.delete(key));
+      }
+    };
+
+    cleanupMap(this.dashboardConfigs, this.maxMapSize);
+    cleanupMap(this.userPreferences, this.maxMapSize);
+    cleanupMap(this.alerts, this.maxMapSize);
+    cleanupMap(this.usageAnalytics, this.maxMapSize);
   }
 
   private initializeDefaultData() {
@@ -154,6 +214,16 @@ class AdminDashboardService {
     const updatedConfig = { ...currentConfig, ...configUpdates };
     
     this.dashboardConfigs.set(adminId, updatedConfig);
+    
+    // OPTIMIZED: Invalidate related caches
+    const cacheKeys = [
+      `admin:dashboard:metrics:${adminId}:*`,
+      `admin:dashboard:alerts:${adminId}:*`
+    ];
+    
+    for (const key of cacheKeys) {
+      await cacheService.invalidatePattern(key);
+    }
     
     // Log the update for analytics
     this.logConfigUpdate(adminId, 'dashboard_config', configUpdates);
@@ -312,12 +382,20 @@ class AdminDashboardService {
     this.logConfigUpdate(adminId, 'widget_remove', { widgetId });
   }
 
-  // Dashboard data methods
+  // OPTIMIZED: Dashboard data methods with caching
   async getDashboardMetrics(adminId: string, options: {
     timeRange?: string;
     categories?: string[];
   } = {}): Promise<DashboardMetrics> {
-    // Simulate real-time metrics
+    // OPTIMIZED: Check cache first
+    const cacheKey = `admin:dashboard:metrics:${adminId}:${JSON.stringify(options)}`;
+    const cachedMetrics = await cacheService.get<DashboardMetrics>(cacheKey);
+    
+    if (cachedMetrics) {
+      return cachedMetrics;
+    }
+
+    // Generate metrics (in production, this would query actual database)
     const metrics: DashboardMetrics = {
       systemMetrics: {
         cpu: Math.random() * 100,
@@ -355,9 +433,15 @@ class AdminDashboardService {
           filteredMetrics[category] = metrics[category as keyof DashboardMetrics];
         }
       });
+      
+      // Cache filtered metrics with shorter TTL
+      await cacheService.set(cacheKey, filteredMetrics, 30);
       return filteredMetrics;
     }
 
+    // Cache full metrics for 1 minute
+    await cacheService.set(cacheKey, metrics, 60);
+    
     return metrics;
   }
 
@@ -366,27 +450,8 @@ class AdminDashboardService {
     acknowledged?: boolean;
     limit?: number;
   } = {}): Promise<AdminAlert[]> {
-    let alerts = Array.from(this.alerts.values());
-
-    // Filter by severity
-    if (options.severity) {
-      alerts = alerts.filter(alert => alert.severity === options.severity);
-    }
-
-    // Filter by acknowledged status
-    if (options.acknowledged !== undefined) {
-      alerts = alerts.filter(alert => alert.acknowledged === options.acknowledged);
-    }
-
-    // Sort by timestamp (newest first)
-    alerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-    // Apply limit
-    if (options.limit) {
-      alerts = alerts.slice(0, options.limit);
-    }
-
-    return alerts;
+    // OPTIMIZED: Use memory-managed alert retrieval
+    return this.getAlertsWithMemoryManagement(options);
   }
 
   async acknowledgeAlert(adminId: string, alertId: string): Promise<void> {
@@ -576,21 +641,62 @@ class AdminDashboardService {
       timestamp: new Date()
     });
 
-    // Keep only last 100 actions
-    if (currentAnalytics.actions.length > 100) {
-      currentAnalytics.actions = currentAnalytics.actions.slice(-100);
+    // OPTIMIZED: Enforce action history limit
+    if (currentAnalytics.actions.length > this.actionHistoryLimit) {
+      currentAnalytics.actions = currentAnalytics.actions.slice(-this.actionHistoryLimit);
     }
 
     this.usageAnalytics.set(adminId, currentAnalytics);
   }
 
-  // Public method to add alerts (for testing/demo purposes)
+  // OPTIMIZED: Public cleanup method for manual cleanup
+  public cleanupExpiredData(): void {
+    this.cleanupExpiredData();
+  }
+
+  // OPTIMIZED: Public method to check memory usage
+  public getMemoryUsage(): {
+    return {
+      dashboardConfigs: this.dashboardConfigs.size,
+      userPreferences: this.userPreferences.size,
+      alerts: this.alerts.size,
+      usageAnalytics: this.usageAnalytics.size,
+      totalEntries: this.dashboardConfigs.size + this.userPreferences.size + this.alerts.size + this.usageAnalytics.size
+    };
+  }
+
+  // OPTIMIZED: Graceful shutdown
+  public shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    this.cleanupExpiredData();
+    console.log('AdminDashboardService shutdown completed');
+  }
+
+  // OPTIMIZED: Add alert with memory management
   public addAlert(alert: AdminAlert): void {
+    // Check if we're approaching the limit
+    if (this.alerts.size >= this.maxMapSize) {
+      // Remove oldest alerts to make space
+      const oldestAlerts = Array.from(this.alerts.entries())
+        .sort((a, b) => a[1].timestamp.getTime() - b[1].timestamp.getTime())
+        .slice(0, 100); // Remove oldest 100
+      
+      oldestAlerts.forEach(([id]) => this.alerts.delete(id));
+      console.log(`Removed ${oldestAlerts.length} old alerts to make space for new alert`);
+    }
+    
     this.alerts.set(alert.id, alert);
   }
 
-  // Public method to generate sample data
+  // OPTIMIZED: Generate sample alert with memory management
   public generateSampleAlert(): AdminAlert {
+    // Check memory usage before generating
+    if (this.alerts.size >= this.maxMapSize) {
+      throw new Error('Alert limit reached. Please clean up expired alerts first.');
+    }
+
     const alertTypes = ['anomaly', 'threshold', 'security', 'system', 'business'] as const;
     const severities = ['low', 'medium', 'high', 'critical'] as const;
     
@@ -636,6 +742,47 @@ class AdminDashboardService {
       timestamp: new Date(),
       acknowledged: false
     };
+  }
+
+  // OPTIMIZED: Bulk alert management
+  public addAlerts(alerts: AdminAlert[]): void {
+    alerts.forEach(alert => {
+      try {
+        this.addAlert(alert);
+      } catch (error) {
+        console.error('Failed to add alert:', error);
+      }
+    });
+  }
+
+  // OPTIMIZED: Get alerts with memory management
+  public getAlertsWithMemoryManagement(options: {
+    severity?: string;
+    acknowledged?: boolean;
+    limit?: number;
+  } = {}): Promise<AdminAlert[]> {
+    // Enforce maximum limit regardless of options
+    const maxLimit = Math.min(options.limit || 50, 200); // Max 200 alerts
+    
+    let alerts = Array.from(this.alerts.values());
+
+    // Filter by severity
+    if (options.severity) {
+      alerts = alerts.filter(alert => alert.severity === options.severity);
+    }
+
+    // Filter by acknowledged status
+    if (options.acknowledged !== undefined) {
+      alerts = alerts.filter(alert => alert.acknowledged === options.acknowledged);
+    }
+
+    // Sort by timestamp (newest first)
+    alerts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    // Apply limit
+    alerts = alerts.slice(0, maxLimit);
+
+    return alerts;
   }
 }
 

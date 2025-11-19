@@ -4,10 +4,10 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  marketplaceDataManager, 
-  type DataChangeEvent, 
-  type PriceData 
+import {
+  marketplaceDataManager,
+  type DataChangeEvent,
+  type PriceData
 } from '@/services/marketplaceDataManager';
 import { type Product, type SellerInfo } from '@/services/marketplaceService';
 
@@ -65,7 +65,7 @@ export function useProduct(productId: string | null): UseProductReturn {
 
     try {
       const productData = await marketplaceDataManager.getProduct(id, forceRefresh);
-      
+
       // Only update if this is still the current product being requested
       if (currentProductId.current === id) {
         setProduct(productData);
@@ -151,7 +151,7 @@ export function useSeller(sellerId: string | null): UseSellerReturn {
 
     try {
       const sellerData = await marketplaceDataManager.getSeller(id, forceRefresh);
-      
+
       // Only update if this is still the current seller being requested
       if (currentSellerId.current === id) {
         setSeller(sellerData);
@@ -235,7 +235,7 @@ export function usePrice(productId: string | null): UsePriceReturn {
 
     try {
       const price = await marketplaceDataManager.getPrice(id, forceRefresh);
-      
+
       // Only update if this is still the current product being requested
       if (currentProductId.current === id) {
         setPriceData(price);
@@ -303,6 +303,15 @@ export function useProducts(filters?: any): UseProductsReturn {
   const [page, setPage] = useState(1);
   const filtersRef = useRef(filters);
 
+  const isMounted = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   const loadProducts = useCallback(async (newFilters?: any, reset = false) => {
     setLoading(true);
     setError(null);
@@ -316,7 +325,9 @@ export function useProducts(filters?: any): UseProductsReturn {
       };
 
       const newProducts = await marketplaceDataManager.getProducts(searchFilters);
-      
+
+      if (!isMounted.current) return;
+
       if (reset) {
         setProducts(newProducts);
         setPage(2);
@@ -327,9 +338,13 @@ export function useProducts(filters?: any): UseProductsReturn {
 
       setHasMore(newProducts.length === 20); // Has more if we got a full page
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load products');
+      if (isMounted.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load products');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   }, [page]);
 
@@ -355,11 +370,11 @@ export function useProducts(filters?: any): UseProductsReturn {
   useEffect(() => {
     const unsubscribe = marketplaceDataManager.subscribe((event: DataChangeEvent) => {
       if (event.type === 'product_updated') {
-        setProducts(prev => 
+        setProducts(prev =>
           prev.map(p => p.id === event.productId ? event.data : p)
         );
       } else if (event.type === 'product_deleted') {
-        setProducts(prev => 
+        setProducts(prev =>
           prev.filter(p => p.id !== event.productId)
         );
       } else if (event.type === 'cache_invalidated' && event.entityType === 'product') {
@@ -414,15 +429,15 @@ export function useDataConsistency() {
 
   const validateConsistency = useCallback(() => {
     const issues: string[] = [];
-    
+
     // This would run validation checks across cached data
     // For now, we'll just return the cache stats
     const stats = marketplaceDataManager.getCacheStats();
-    
+
     if (stats.products.hitRate < 0.7) {
       issues.push('Low product cache hit rate');
     }
-    
+
     if (stats.sellers.hitRate < 0.7) {
       issues.push('Low seller cache hit rate');
     }
