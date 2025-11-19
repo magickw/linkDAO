@@ -54,7 +54,7 @@ export function convertBackendPostToPost(backendPost: any): Post {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
     parentId: backendPost.parentId ? backendPost.parentId.toString() : null,
-    title: backendPost.title || '', // Optional for quickPosts
+    title: backendPost.title || '',
     content: content, // Use parsed content
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
@@ -64,8 +64,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),
-    dao: backendPost.dao || '', // Optional for quickPosts
-    
+    dao: backendPost.communityId || '', // Map communityId to dao for backward compatibility
+
     // Engagement data (will be populated by services)
     reactions: [] as Reaction[],
     tips: [] as Tip[],
@@ -73,16 +73,16 @@ export function convertBackendPostToPost(backendPost: any): Post {
     shares: backendPost.shareCount || 0,
     views: backendPost.viewCount || 0,
     engagementScore: backendPost.engagementScore || 0,
-    
+
     // Enhanced features (will be populated by services)
     previews: [] as ContentPreview[],
     socialProof: undefined,
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,
     isBookmarked: false,
-    communityId: backendPost.dao || backendPost.communityId,
+    communityId: backendPost.communityId,
     contentType: detectContentType(backendPost),
-    
+
     // Add author profile information including avatar
     authorProfile: {
       handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
@@ -90,12 +90,12 @@ export function convertBackendPostToPost(backendPost: any): Post {
       avatar: getAvatarUrl(backendPost.profileCid),  // Use profileCid as avatar if available
       reputationTier: undefined
     },
-    
+
     // Add media property for frontend Post interface
     media: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
-    
-    // Flag to distinguish quickPosts from regular posts
-    isQuickPost: !backendPost.title && !backendPost.dao && !backendPost.communityId
+
+    // All posts now belong to a community
+    isQuickPost: false
   };
 }
 
@@ -127,9 +127,8 @@ export interface CreatePostInput {
   media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
   tags?: string[];
   onchainRef?: string;
-  title?: string; // Optional for quickPosts
-  dao?: string; // Optional for quickPosts (legacy, use communityId instead)
-  communityId?: string; // Community ID where the post will be created
+  title?: string;
+  communityId: string; // Community ID where the post will be created (required)
   poll?: any; // Poll data for poll posts
   proposal?: any; // Proposal data for governance posts
 }
@@ -137,7 +136,7 @@ export interface CreatePostInput {
 export interface UpdatePostInput {
   title?: string;
   content?: string;
-  dao?: string;
+  communityId?: string;
   tags?: string[];
   media?: string[];
 }
