@@ -128,7 +128,8 @@ export interface CreatePostInput {
   tags?: string[];
   onchainRef?: string;
   title?: string; // Optional for quickPosts
-  dao?: string; // Optional for quickPosts
+  dao?: string; // Optional for quickPosts (legacy, use communityId instead)
+  communityId?: string; // Community ID where the post will be created
   poll?: any; // Poll data for poll posts
   proposal?: any; // Proposal data for governance posts
 }
