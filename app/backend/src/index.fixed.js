@@ -369,31 +369,90 @@ app.post('/api/auth/wallet-connect', (req, res) => {
 });
 
 // Posts routes
-app.get('/api/posts', (req, res) => {
-  const { page = 1, limit = 10, author, tag } = req.query;
-  
-  // Mock posts data
-  const mockPosts = Array.from({ length: parseInt(limit) }, (_, i) => ({
-    id: `post-${page}-${i + 1}`,
-    title: `Sample Post ${i + 1}`,
-    content: `This is sample content for post ${i + 1}`,
-    author: author || `0x${Math.random().toString(16).substr(2, 40)}`,
-    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-    tags: tag ? [tag] : ['sample', 'demo'],
-    likes: Math.floor(Math.random() * 100),
-    comments: Math.floor(Math.random() * 20)
-  }));
-  
-  res.json({
-    success: true,
-    data: mockPosts,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: 100,
-      pages: 10
+app.get('/api/posts', async (req, res) => {
+  try {
+    const { page = 1, limit = 10, author, tag } = req.query;
+
+    const validatedLimit = validateLimit(limit);
+    const validatedPage = validatePage(page);
+    const offset = (validatedPage - 1) * validatedLimit;
+
+    // Build query with optional filters
+    let query = `
+      SELECT
+        p.id, p.title, p.content_cid, p.media_cids, p.tags,
+        p.staked_value, p.reputation_score, p.created_at,
+        u.wallet_address, u.handle, u.profile_cid
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+    `;
+
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (author) {
+      conditions.push(`u.wallet_address = $${paramIndex++}`);
+      params.push(author.toLowerCase());
     }
-  });
+
+    if (tag) {
+      conditions.push(`$${paramIndex++} = ANY(SELECT jsonb_array_elements_text(p.tags::jsonb))`);
+      params.push(tag);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    query += ` ORDER BY p.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+    params.push(validatedLimit, offset);
+
+    const result = await pool.query(query, params);
+
+    // Get total count
+    let countQuery = 'SELECT COUNT(*) FROM posts p LEFT JOIN users u ON p.author_id = u.id';
+    const countParams = [];
+    let countParamIndex = 1;
+
+    if (author) {
+      countParams.push(author.toLowerCase());
+      countQuery += ` WHERE u.wallet_address = $${countParamIndex++}`;
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].count);
+
+    // Transform results
+    const posts = result.rows.map(post => ({
+      id: post.id.toString(),
+      title: post.title || '',
+      content: post.content_cid || '',
+      author: post.wallet_address,
+      timestamp: post.created_at,
+      tags: JSON.parse(post.tags || '[]'),
+      mediaCids: JSON.parse(post.media_cids || '[]'),
+      stakedValue: parseFloat(post.staked_value || 0),
+      reputationScore: parseInt(post.reputation_score || 0)
+    }));
+
+    res.json({
+      success: true,
+      data: posts,
+      pagination: {
+        page: validatedPage,
+        limit: validatedLimit,
+        total,
+        pages: Math.ceil(total / validatedLimit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch posts: ' + error.message
+    });
+  }
 });
 
 app.post('/api/posts', async (req, res) => {
@@ -981,36 +1040,70 @@ app.get('/api/messaging/conversations', async (req, res) => {
 });
 
 // Posts feed route
-app.get('/api/posts/feed', (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  
-  const mockPosts = Array.from({ length: parseInt(limit) }, (_, i) => ({
-    id: `feed-post-${page}-${i + 1}`,
-    title: `Feed Post ${i + 1}`,
-    content: `This is content for feed post ${i + 1}`,
-    author: {
-      address: `0x${Math.random().toString(16).substr(2, 40)}`,
-      username: `author${i + 1}`,
-      displayName: `Author ${i + 1}`,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=author${i + 1}`
-    },
-    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-    tags: ['feed', 'community', 'linkdao'],
-    likes: Math.floor(Math.random() * 100),
-    comments: Math.floor(Math.random() * 20),
-    shares: Math.floor(Math.random() * 10)
-  }));
-  
-  res.json({
-    success: true,
-    data: mockPosts,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: 200,
-      pages: 20
-    }
-  });
+app.get('/api/posts/feed', async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const validatedLimit = validateLimit(limit);
+    const validatedPage = validatePage(page);
+    const offset = (validatedPage - 1) * validatedLimit;
+
+    // Query posts with author information
+    const query = `
+      SELECT
+        p.id, p.title, p.content_cid, p.media_cids, p.tags,
+        p.staked_value, p.reputation_score, p.created_at,
+        u.wallet_address, u.handle, u.profile_cid
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      ORDER BY p.created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const result = await pool.query(query, [validatedLimit, offset]);
+
+    // Get total count
+    const countResult = await pool.query('SELECT COUNT(*) FROM posts');
+    const total = parseInt(countResult.rows[0].count);
+
+    // Transform results to match feed format with author object
+    const posts = result.rows.map(post => ({
+      id: post.id.toString(),
+      title: post.title || '',
+      content: post.content_cid || '',
+      author: {
+        address: post.wallet_address,
+        username: post.handle || post.wallet_address?.slice(0, 8),
+        displayName: post.handle || post.wallet_address?.slice(0, 8),
+        avatar: post.profile_cid ? `https://ipfs.io/ipfs/${post.profile_cid}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.wallet_address}`
+      },
+      timestamp: post.created_at,
+      tags: JSON.parse(post.tags || '[]'),
+      mediaCids: JSON.parse(post.media_cids || '[]'),
+      stakedValue: parseFloat(post.staked_value || 0),
+      reputationScore: parseInt(post.reputation_score || 0),
+      likes: 0, // TODO: Implement likes counting
+      comments: 0, // TODO: Implement comments counting
+      shares: 0 // TODO: Implement shares counting
+    }));
+
+    res.json({
+      success: true,
+      data: posts,
+      pagination: {
+        page: validatedPage,
+        limit: validatedLimit,
+        total,
+        pages: Math.ceil(total / validatedLimit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching posts feed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch posts feed: ' + error.message
+    });
+  }
 });
 
 // Enhanced feed route (matches frontend expectations)
