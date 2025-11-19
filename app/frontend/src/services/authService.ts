@@ -889,7 +889,10 @@ class AuthService {
     // In production, do not allow mock authentication
     if (process.env.NODE_ENV === 'production') {
       console.warn('Mock authentication attempted in production - blocking');
-      throw new Error('Authentication failed');
+      return {
+        success: false,
+        error: 'Authentication failed: mock auth blocked in production'
+      };
     }
 
     const mockToken = `mock_token_${address}_${Date.now()}`;

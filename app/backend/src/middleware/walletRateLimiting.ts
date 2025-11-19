@@ -82,10 +82,10 @@ export const walletGeneralRateLimit = walletRateLimit({
   message: 'Too many API requests from this wallet. Please try again in 15 minutes.'
 });
 
-// Authentication rate limit: 5 login attempts per 15 minutes per wallet
+// Authentication rate limit: 20 login attempts per 15 minutes per wallet
 export const walletAuthRateLimit = walletRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // Increased for debugging
+  maxRequests: 20, // 20 login attempts per 15 minutes
   message: 'Too many authentication attempts. Please try again in 15 minutes.',
   skipSuccessfulRequests: true // Don't count successful logins
 });

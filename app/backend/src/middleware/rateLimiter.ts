@@ -8,10 +8,10 @@ const isAuthenticated = (req: Request): boolean => {
   return !!(req.headers.authorization || (req as any).session?.userId);
 };
 
-// General rate limiter for all requests
+// General rate limiter for all requests - environment-aware
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // Increased for debugging
+  max: process.env.NODE_ENV === 'development' ? 10000 : 2000, // Higher for development, safe for production
   message: {
     error: 'Too many requests',
     message: 'Too many requests from this IP, please try again later.',

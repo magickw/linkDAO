@@ -926,12 +926,7 @@ async function handleCacheFailure(request, error) {
   });
 }
 
-// Return dashboard as fallback for SPA
-return cache.match('/dashboard') ||
-  cache.match('/') ||
-  new Response('Offline', { status: 503 });
-  }
-}
+
 
 // Background cache update
 async function updateCache(request, cacheName) {
@@ -1801,7 +1796,7 @@ async function gracefulCacheAddAll(cache, assets) {
 async function performCacheCleanup() {
   try {
     const cacheNames = await caches.keys();
-    const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE, PERFORMANCE_CACHE];
+    const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
 
     // Delete old cache versions
     const deletePromises = cacheNames
@@ -1850,48 +1845,7 @@ async function cleanupOversizedCaches() {
   }
 }
 
-// Enhanced fallback mechanisms when caching operations fail
-async function handleCacheFailure(request, error) {
-  console.warn('Cache operation failed:', error);
 
-  // Try to serve from alternative caches
-  const cacheNames = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
-
-  for (const cacheName of cacheNames) {
-    try {
-      const cache = await caches.open(cacheName);
-      const response = await cache.match(request);
-
-      if (response) {
-        console.log(`Served from alternative cache: ${cacheName}`);
-        return response;
-      }
-    } catch (cacheError) {
-      console.warn(`Alternative cache ${cacheName} also failed:`, cacheError);
-    }
-  }
-
-  // Final fallback - return offline page or error response
-  if (isNavigation(request)) {
-    try {
-      return await caches.match('/offline.html') ||
-        new Response('You are offline', {
-          status: 503,
-          headers: { 'Content-Type': 'text/html' }
-        });
-    } catch (offlineError) {
-      return new Response('Service temporarily unavailable', {
-        status: 503,
-        headers: { 'Content-Type': 'text/plain' }
-      });
-    }
-  }
-
-  return new Response('Content not available', {
-    status: 503,
-    headers: { 'Content-Type': 'text/plain' }
-  });
-}
 
 // Storage quota management
 async function checkStorageQuota() {
