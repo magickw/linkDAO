@@ -52,7 +52,7 @@ export class CommunityPostService {
       content: data.content,
       tags: data.tags || [],
       author: data.author,
-      dao: data.communityId
+      communityId: data.communityId
     });
   }
 
