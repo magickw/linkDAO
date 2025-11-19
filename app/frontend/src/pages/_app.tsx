@@ -30,11 +30,6 @@ import '../styles/design-polish.css';
 import '../styles/tiptap.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
-// Development authentication helper
-if (process.env.NODE_ENV === 'development') {
-  import('@/utils/devAuth');
-}
-
 const queryClient = new QueryClient();
 
 function AppContent({ children }: { children: React.ReactNode }) {

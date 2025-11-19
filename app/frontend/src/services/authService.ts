@@ -276,33 +276,23 @@ class AuthService {
 
           // Handle specific error cases
           if (response.status === 403) {
-            console.warn('🚫 Authentication blocked (403) - may be rate limited or blocked');
+            console.error('🚫 Authentication blocked (403) - may be rate limited or blocked');
             this.authAttemptCount++;
-            // Check if this is the admin address, if so, force mock auth with admin privileges
-            if (this.isAdminAddress(address)) {
-              console.log('⚠️ Admin blocked by 403, forcing mock admin login');
-              return this.createMockAuthResponse(address);
-            }
-            return this.createMockAuthResponse(address);
+            throw new Error('Authentication blocked (403). Please try again later.');
           }
 
           if (response.status === 401) {
-            console.warn('🔒 Authentication unauthorized (401) - clearing session');
+            console.error('🔒 Authentication unauthorized (401)');
             this.clearToken();
             this.authAttemptCount++;
-            // Check if this is the admin address, if so, force mock auth with admin privileges
-            if (this.isAdminAddress(address)) {
-              console.log('⚠️ Admin blocked by 401, forcing mock admin login');
-              return this.createMockAuthResponse(address);
-            }
-            return this.createMockAuthResponse(address);
+            throw new Error('Authentication unauthorized (401). Invalid credentials.');
           }
 
-          // If backend is not available (5xx errors) or specific auth errors, return mock user
+          // If backend is not available (5xx errors) or rate limited
           if (response.status >= 500 || response.status === 429 || response.status === 503) {
-            console.warn('Backend unavailable or rate limited, proceeding with mock authentication');
+            console.error('Backend unavailable or rate limited');
             this.authAttemptCount++;
-            return this.createMockAuthResponse(address);
+            throw new Error(`Backend unavailable (${response.status}). Please try again later.`);
           }
 
           // Try to parse error message safely
@@ -392,7 +382,7 @@ class AuthService {
         // Increment authentication attempt count on failure
         this.authAttemptCount++;
 
-        // If fetch fails (network error, backend down), use mock authentication
+        // If fetch fails (network error, backend down), throw error
         let fetchErrorMessage = 'Network error';
 
         if (fetchError && typeof fetchError === 'object') {
@@ -403,11 +393,6 @@ class AuthService {
           }
         } else if (typeof fetchError === 'string') {
           fetchErrorMessage = fetchError;
-        }
-
-        if (fetchError.name === 'TypeError' || fetchErrorMessage.includes('fetch')) {
-          console.warn('Backend unavailable, proceeding with mock authentication');
-          return this.createMockAuthResponse(address);
         }
 
         // Re-throw with proper error message
@@ -880,47 +865,6 @@ class AuthService {
       console.log(`[AuthService] Admin address match confirmed for ${address}`);
     }
     return isMatch;
-  }
-
-  /**
-   * Create mock authentication response for offline mode
-   */
-  private createMockAuthResponse(address: string): AuthResponse {
-    // In production, do not allow mock authentication
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('Mock authentication attempted in production - blocking');
-      return {
-        success: false,
-        error: 'Authentication failed: mock auth blocked in production'
-      };
-    }
-
-    const mockToken = `mock_token_${address}_${Date.now()}`;
-    const isAdmin = this.isAdminAddress(address);
-
-    const mockUser: AuthUser = {
-      id: `mock_${address}`,
-      address: address,
-      handle: `user_${address.slice(0, 6)}`,
-      ens: undefined,
-      email: undefined,
-      kycStatus: 'none',
-      role: (isAdmin ? 'admin' : 'user') as UserRole,
-      permissions: isAdmin ? ['admin_access', 'manage_users', 'manage_content'] : [],
-      isActive: true,
-      isSuspended: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.setToken(mockToken);
-    console.log(`Mock authentication successful for address: ${address} (Admin: ${isAdmin})`);
-
-    return {
-      success: true,
-      token: mockToken,
-      user: mockUser,
-    };
   }
 
   /**

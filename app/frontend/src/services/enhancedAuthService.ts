@@ -436,11 +436,6 @@ class EnhancedAuthService {
           user: userData,
           refreshToken: refreshToken
         };
-      },
-      async () => {
-        // Fallback authentication for offline mode
-        console.warn('Backend unavailable, using mock authentication');
-        return this.createMockAuthResponse(address);
       }
     );
   }
@@ -468,20 +463,6 @@ class EnhancedAuthService {
     };
   }
 
-  /**
-   * Create mock authentication response for offline mode
-   */
-  private createMockAuthResponse(address: string): { success: true; token: string; user: AuthUser; refreshToken: string } {
-    const mockToken = `mock_token_${address}_${Date.now()}`;
-    const mockUser = this.createUserData(address);
-
-    return {
-      success: true,
-      token: mockToken,
-      user: mockUser,
-      refreshToken: `mock_refresh_${address}_${Date.now()}`
-    };
-  }
 
   /**
    * Check if current session is valid for the given address
