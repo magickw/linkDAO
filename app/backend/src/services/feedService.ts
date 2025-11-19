@@ -85,6 +85,9 @@ export class FeedService {
       communityFilter = inArray(posts.dao, filterCommunities);
     }
 
+    // Declare user variable in outer scope so it's accessible to later queries
+    let user: any[] = [];
+    
     // Build following filter if feedSource is 'following'
     let followingFilter = sql`1=1`;
     let quickPostFollowingFilter = sql`1=1`; // Separate filter for quick posts
@@ -94,7 +97,7 @@ export class FeedService {
       
       console.log('🔍 [BACKEND FEED] Building following filter for user:', normalizedAddress);
       
-      const user = await db.select({ id: users.id })
+      user = await db.select({ id: users.id })
         .from(users)
         .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
@@ -117,7 +120,7 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] User is following:', followingIds.length, 'users');
         
         // Always include the user's own posts in the following feed
-        // Only add if not already included to avoid duplicates
+        // Add the user's own ID to ensure they see their own posts
         if (!followingIds.includes(userId)) {
           followingIds.push(userId);
           console.log('📋 [BACKEND FEED] Added user\'s own ID to following list');
@@ -126,17 +129,18 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
         
-        // Filter posts to show from followed users AND the user's own posts
-        // Always ensure the user sees their own posts by explicitly including them
-        followingFilter = or(
-          inArray(posts.authorId, followingIds), // Posts from followed users
-          eq(posts.authorId, userId) // User's own posts (redundant but safe)
-        );
-        quickPostFollowingFilter = or(
-          inArray(quickPosts.authorId, followingIds), // Quick posts from followed users
-          eq(quickPosts.authorId, userId) // User's own quick posts (redundant but safe)
-        );
-        console.log('📋 [BACKEND FEED] Using OR filter to ensure user always sees their own posts');
+        // Ensure we always include the user's own posts, even if followingIds is empty
+        if (followingIds.length === 0) {
+          // If user follows no one (except themselves), just show their own posts
+          followingFilter = eq(posts.authorId, userId);
+          quickPostFollowingFilter = eq(quickPosts.authorId, userId);
+        } else {
+          // Filter posts to show from followed users AND the user's own posts
+          followingFilter = inArray(posts.authorId, followingIds);
+          quickPostFollowingFilter = inArray(quickPosts.authorId, followingIds);
+        }
+        
+        console.log('📋 [BACKEND FEED] Following filter applied');
       } else {
         console.log('⚠️ [BACKEND FEED] User not found in database, creating user and showing all posts...');
         // User not found in users table, create them so future operations work
@@ -189,6 +193,17 @@ export class FeedService {
         moderationFilter: moderationFilter.toString()
       });
 
+      // For following feed, make sure to include user's own posts 
+      let finalFollowingFilter = followingFilter;
+      if (feedSource === 'following' && userAddress && user && user.length > 0) {
+        // When feedSource is 'following', always include user's own posts
+        // Use OR to ensure user sees their own posts regardless of following status
+        finalFollowingFilter = or(
+          followingFilter,  // Posts from followed users (including self if added to followingIds)
+          eq(posts.authorId, user[0].id)  // User's own posts
+        );
+      }
+
       // Get regular posts with engagement metrics
       const regularPosts = await db
         .select({
@@ -215,7 +230,7 @@ export class FeedService {
         .where(and(
           timeFilter,
           communityFilter,
-          followingFilter,
+          finalFollowingFilter,
           moderationFilter, // Add moderation filter
           isNull(posts.parentId) // Only show top-level posts, not comments
         ));
@@ -235,6 +250,17 @@ export class FeedService {
         timeFilter: timeFilter.toString(),
         quickPostFollowingFilter: quickPostFollowingFilter.toString()
       });
+
+      // For following feed, make sure to include user's own quick posts 
+      let finalQuickPostFollowingFilter = quickPostFollowingFilter;
+      if (feedSource === 'following' && userAddress && user && user.length > 0) {
+        // When feedSource is 'following', always include user's own quick posts
+        // Use OR to ensure user sees their own quick posts regardless of following status
+        finalQuickPostFollowingFilter = or(
+          quickPostFollowingFilter,  // Quick posts from followed users (including self if added to followingIds)
+          eq(quickPosts.authorId, user[0].id)  // User's own quick posts
+        );
+      }
 
       const quickPostsResults = await db
         .select({
@@ -259,7 +285,7 @@ export class FeedService {
         .leftJoin(users, eq(quickPosts.authorId, users.id))
         .where(and(
           timeFilter,
-          quickPostFollowingFilter, // Use the correct filter for quick posts
+          finalQuickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only show top-level posts, not comments
         ));
@@ -378,7 +404,7 @@ export class FeedService {
         .where(and(
           timeFilter,
           communityFilter,
-          followingFilter,
+          finalFollowingFilter,
           moderationFilter, // Include moderation filter in count
           isNull(posts.parentId) // Only count top-level posts
         ));
@@ -388,7 +414,7 @@ export class FeedService {
         .from(quickPosts)
         .where(and(
           timeFilter,
-          quickPostFollowingFilter, // Use the correct filter for quick posts
+          finalQuickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only count top-level posts
         ));

@@ -121,7 +121,14 @@ class ProductionServerManager {
       // Health check routes are already set up by gatewayManager
       
       // Import marketplace API routes
-      const { default: sellerRoutes } = await import('../routes/sellerProfileRoutes');
+      const { default: marketplaceSellerRoutes } = await import('../routes/marketplaceSellerRoutes');
+      const { default: sellerProfileRoutes } = await import('../routes/sellerProfileRoutes');
+      const { default: sellerDashboardRoutes } = await import('../routes/sellerDashboardRoutes');
+      const { default: sellerOrderRoutes } = await import('../routes/sellerOrderRoutes');
+      const { default: sellerListingRoutes } = await import('../routes/sellerListingRoutes');
+      const { default: sellerImageUploadRoutes } = await import('../routes/sellerImageUploadRoutes');
+      const { default: sellerVerificationRoutes } = await import('../routes/sellerVerificationRoutes');
+      const { default: sellerImageRoutes } = await import('../routes/sellerImageRoutes');
       const { default: listingRoutes } = await import('../routes/marketplaceListingsRoutes');
       const { default: authRoutes } = await import('../routes/authRoutes'); // Changed from authenticationRoutes to authRoutes
       const { default: reputationRoutes } = await import('../routes/reputationRoutes');
@@ -137,6 +144,8 @@ class ProductionServerManager {
       const { default: commentRoutes } = await import('../routes/commentRoutes');
       const { default: followRoutes } = await import('../routes/followRoutes');
       const { default: communityRoutes } = await import('../routes/communityRoutes');
+      const { default: communityTreasuryRoutes } = await import('../routes/communityTreasuryRoutes');
+      const { default: communityCommentRoutes } = await import('../routes/communityCommentRoutes');
       const { default: messagingRoutes } = await import('../routes/messagingRoutes');
       const { default: bookmarkRoutes } = await import('../routes/bookmarkRoutes');
       const { default: searchRoutes } = await import('../routes/searchRoutes');
@@ -153,9 +162,16 @@ class ProductionServerManager {
       const { default: contentReportRoutes } = await import('../routes/contentReportRoutes');
 
       // Mount routes
-      this.app.use('/api/marketplace', sellerRoutes);
-      this.app.use('/api/marketplace', marketplaceListingsRoutes);
-      this.app.use('/marketplace', marketplaceListingsRoutes); // Alternative path
+      this.app.use('/api/marketplace', marketplaceSellerRoutes);
+      this.app.use('/api/marketplace', sellerProfileRoutes);
+      this.app.use('/api/marketplace', sellerDashboardRoutes);
+      this.app.use('/api/marketplace', sellerOrderRoutes);
+      this.app.use('/api/marketplace', sellerListingRoutes);
+      this.app.use('/api/marketplace', sellerImageUploadRoutes);
+      this.app.use('/api/marketplace', sellerVerificationRoutes);
+      this.app.use('/api/marketplace/seller/images', sellerImageRoutes);
+      this.app.use('/api/marketplace', listingRoutes);
+      this.app.use('/marketplace', listingRoutes); // Alternative path
       this.app.use('/api/auth', authRoutes);
       this.app.use('/marketplace/reputation', reputationRoutes);
       this.app.use('/health', healthRoutes);
@@ -170,6 +186,9 @@ class ProductionServerManager {
       this.app.use('/api/comments', commentRoutes);
       this.app.use('/api/follow', followRoutes);
       this.app.use('/api/communities', communityRoutes);
+      this.app.use('/communities', communityRoutes); // Alternative path for frontend compatibility
+      this.app.use('/api/communities', communityTreasuryRoutes);
+      this.app.use('/api/communities', communityCommentRoutes);
       this.app.use('/api/messaging', messagingRoutes);
       this.app.use('/api/bookmarks', bookmarkRoutes);
       this.app.use('/api/search', searchRoutes);
