@@ -6,6 +6,36 @@ import { authService } from './authService';
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 
 export class PostService {
+  private static async handleResponse(response: Response, context: string): Promise<any> {
+    if (!response.ok) {
+      let errorMessage = `${context}: ${response.statusText} (${response.status})`;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          if (error.error) errorMessage = error.error;
+          else if (error.message) errorMessage = error.message;
+        } else {
+          const text = await response.text();
+          // Only use text if it's not HTML and reasonably short
+          if (text && text.length < 200 && !text.trim().startsWith('<')) {
+            errorMessage = text;
+          }
+        }
+      } catch (e) {
+        // Fallback to default error message
+      }
+      throw new Error(errorMessage);
+    }
+
+    try {
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      throw new Error(`${context}: Invalid JSON response`);
+    }
+  }
+
   static async createPost(data: CreatePostInput): Promise<Post> {
     try {
       const authHeaders = authService.getAuthHeaders();
@@ -26,13 +56,7 @@ export class PostService {
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to create post: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to create post');
     } catch (error) {
       console.error('Error creating post:', error);
       throw error;
@@ -50,16 +74,11 @@ export class PostService {
         }
       });
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch post: ${response.statusText}`);
+      if (response.status === 404) {
+        return null;
       }
 
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to fetch post');
     } catch (error) {
       console.error('Error fetching post:', error);
       throw error;
@@ -83,13 +102,7 @@ export class PostService {
         body: JSON.stringify(data)
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to update post: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to update post');
     } catch (error) {
       console.error('Error updating post:', error);
       throw error;
@@ -107,11 +120,7 @@ export class PostService {
         }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to delete post: ${response.statusText}`);
-      }
-
+      await this.handleResponse(response, 'Failed to delete post');
       return true;
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -138,13 +147,7 @@ export class PostService {
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to add reaction: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to add reaction');
     } catch (error) {
       console.error('Error adding reaction to post:', error);
       throw error;
@@ -172,13 +175,7 @@ export class PostService {
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to send tip: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to send tip');
     } catch (error) {
       console.error('Error sending tip to post:', error);
       throw error;
@@ -207,13 +204,7 @@ export class PostService {
         }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch comments: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to fetch comments');
     } catch (error) {
       console.error('Error fetching post comments:', error);
       throw error;
@@ -239,13 +230,7 @@ export class PostService {
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to add comment: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to add comment');
     } catch (error) {
       console.error('Error adding comment to post:', error);
       throw error;
@@ -274,13 +259,7 @@ export class PostService {
         }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch community posts: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to fetch community posts');
     } catch (error) {
       console.error('Error fetching community posts:', error);
       throw error;
@@ -319,13 +298,7 @@ export class PostService {
         }
       );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch feed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to fetch feed');
     } catch (error) {
       console.error('Error fetching feed:', error);
       throw error;
@@ -346,13 +319,7 @@ export class PostService {
         }
       );
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `Failed to fetch posts by author: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result.data || result;
+      return this.handleResponse(response, 'Failed to fetch posts by author');
     } catch (error) {
       console.error('Error fetching posts by author:', error);
       throw error;

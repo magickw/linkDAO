@@ -86,7 +86,7 @@ export default function Profile() {
     bio: '',
     avatar: '',
   });
-  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments' | 'edit'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [addresses, setAddresses] = useState({
     billing: {
@@ -230,9 +230,16 @@ export default function Profile() {
     if (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('baf')) {
       // Fetch content from backend API that proxies IPFS
       fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/feed/content/${post.contentCid}`)
-        .then(response => {
+        .then(async response => {
           if (response.ok) {
-            return response.json();
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              return response.json();
+            } else {
+              // Handle text response
+              const text = await response.text();
+              return { content: text };
+            }
           }
           throw new Error('Failed to fetch content');
         })
@@ -1015,13 +1022,21 @@ export default function Profile() {
                   {/* Show Edit Profile button only for current user's profile */}
                   {currentUserAddress && targetUserAddress === currentUserAddress && (
                     <button
-                      onClick={() => setIsEditing(!isEditing)}
+                      onClick={() => {
+                        if (activeTab === 'edit') {
+                          setActiveTab('posts');
+                          setIsEditing(false);
+                        } else {
+                          setActiveTab('edit');
+                          setIsEditing(true);
+                        }
+                      }}
                       className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105"
                     >
                       <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
-                      {isEditing ? 'Cancel Editing' : 'Edit Profile'}
+                      {activeTab === 'edit' ? 'Cancel Editing' : 'Edit Profile'}
                     </button>
                   )}
 
@@ -1031,8 +1046,8 @@ export default function Profile() {
                       onClick={isFollowing ? handleUnfollow : handleFollow}
                       disabled={isFollowLoading || isFollowStatusLoading}
                       className={`inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all transform hover:scale-105 ${isFollowing
-                          ? 'text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-primary-500'
-                          : 'text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:ring-blue-500'
+                        ? 'text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-primary-500'
+                        : 'text-white bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:ring-blue-500'
                         }`}
                     >
                       {isFollowLoading || isFollowStatusLoading ? (
@@ -1170,7 +1185,24 @@ export default function Profile() {
                   </svg>
                   Following
                 </button>
-                {isEditing && (
+
+                {/* Edit Profile Tab - Visible only when editing */}
+                {(activeTab === 'edit' || isEditing) && (
+                  <button
+                    onClick={() => setActiveTab('edit')}
+                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'edit'
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit Profile
+                  </button>
+                )}
+
+                {(activeTab === 'edit' || isEditing) && (
                   <button
                     onClick={() => setActiveTab('addresses')}
                     className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
@@ -1188,7 +1220,7 @@ export default function Profile() {
                     </svg>
                   </button>
                 )}
-                {isEditing && (
+                {(activeTab === 'edit' || isEditing) && (
                   <button
                     onClick={() => setActiveTab('payments')}
                     className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
@@ -1212,8 +1244,9 @@ export default function Profile() {
           {/* Tab Content */}
           {!isLoading && !hasError && (
             <div>
-              {activeTab === 'posts' && (
-                <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${isEditing && currentUserAddress && targetUserAddress === currentUserAddress ? '' : 'hidden'}`}>
+              {activeTab === 'edit' && (
+                <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${currentUserAddress && targetUserAddress === currentUserAddress ? '' : 'hidden'}`}>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Edit Profile</h3>
                   <form onSubmit={saveProfile}>
                     <div className="mb-6">
                       <label htmlFor="handle" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1349,7 +1382,7 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'posts' && !isEditing && (
+              {activeTab === 'posts' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Posts</h3>
                   {isPostsLoading ? (
