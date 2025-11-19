@@ -12,6 +12,8 @@ import type { CommunityMembership } from '@/models/CommunityMembership';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import SEOHead from '@/components/SEO/SEOHead';
 
+import { ENV_CONFIG } from '@/config/environment';
+
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
 });
@@ -43,7 +45,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const touchStart = useRef<number>(0);
 
   // Check if we're on the home/feed page
@@ -54,9 +56,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     const handleToggleMenu = () => {
       setIsMenuOpen(prev => !prev);
     };
-    
+
     window.addEventListener('toggle-mobile-menu', handleToggleMenu);
-    
+
     return () => {
       window.removeEventListener('toggle-mobile-menu', handleToggleMenu);
     };
@@ -73,8 +75,10 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     if (isConnected && address) {
       // This is a placeholder - in a real app, you would check admin status via backend
       // For demo, we'll use a specific address as admin
-      const adminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS?.toLowerCase();
+      const adminAddress = ENV_CONFIG.ADMIN_ADDRESS?.toLowerCase();
       setIsAdmin(address.toLowerCase() === adminAddress);
+    } else {
+      setIsAdmin(false);
     }
   }, [address, isConnected]);
 
@@ -179,7 +183,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         }
       }
     };
-    
+
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
@@ -204,7 +208,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
     document.addEventListener('touchstart', handleTouchStart);
     document.addEventListener('touchend', handleTouchEnd);
-    
+
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchend', handleTouchEnd);
@@ -225,97 +229,120 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         ogSiteName="LinkDAO"
       />
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      
 
-      <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
-            <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
-            <span>LinkDAO</span>
-          </Link>
 
-          {/* Global Search (Desktop) */}
-          {isConnected && (
-            <div className="hidden md:flex flex-1 max-w-xl">
-              <div className="relative w-full">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <path d="m21 21-4.3-4.3"></path>
-                  </svg>
-                </span>
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-                    }
-                  }}
-                  placeholder="Search"
-                  className="w-full rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-9 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  aria-label="Global search"
-                />
+        <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
+              <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
+              <span>LinkDAO</span>
+            </Link>
+
+            {/* Global Search (Desktop) */}
+            {isConnected && (
+              <div className="hidden md:flex flex-1 max-w-xl">
+                <div className="relative w-full">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                  </span>
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim()) {
+                        router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                      }
+                    }}
+                    placeholder="Search"
+                    className="w-full rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-9 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label="Global search"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4 ml-auto">
-            <nav>
-              <ul className="flex space-x-2">
-                {allNavItems.map((item) => {
-                  const isActive = router.pathname === item.href || 
-                    (item.href === '/communities' && router.pathname.startsWith('/communities/'));
-                  const dynamicBadge = item.badge ?? (item.href === '/governance' ? governancePending : 0);
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={`group relative flex items-center px-33 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${isActive
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4 ml-auto">
+              <nav>
+                <ul className="flex space-x-2">
+                  {allNavItems.map((item) => {
+                    const isActive = router.pathname === item.href ||
+                      (item.href === '/communities' && router.pathname.startsWith('/communities/'));
+                    const dynamicBadge = item.badge ?? (item.href === '/governance' ? governancePending : 0);
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={`group relative flex items-center px-33 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${isActive
                             ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                             : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
+                            } hover:scale-[1.03]`}
+                        >
+                          <span className="flex flex-col items-center leading-4">
+                            <span className="text-base">{item.icon}</span>
+                            <span className="text-[11px] mt-0.5">{item.name}</span>
+                          </span>
+                          {dynamicBadge > 0 && (
+                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-[10px] px-1.5 py-0.5 leading-none shadow">
+                              {dynamicBadge > 99 ? '99+' : dynamicBadge}
+                            </span>
+                          )}
+                          {isActive && (
+                            <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                  {isConnected && isAdmin && (
+                    <li>
+                      <Link
+                        href="/admin"
+                        className={`group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${router.pathname === '/admin'
+                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                          : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
                           } hover:scale-[1.03]`}
                       >
-                        <span className="flex flex-col items-center leading-4">
-                          <span className="text-base">{item.icon}</span>
-                          <span className="text-[11px] mt-0.5">{item.name}</span>
-                        </span>
-                        {dynamicBadge > 0 && (
-                          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-[10px] px-1.5 py-0.5 leading-none shadow">
-                            {dynamicBadge > 99 ? '99+' : dynamicBadge}
-                          </span>
-                        )}
-                        {isActive && (
+                        <span className="mr-1">🔒</span>
+                        Admin
+                        {router.pathname === '/admin' && (
                           <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
                         )}
                       </Link>
                     </li>
-                  );
-                })}
-                {isAdmin && (
-                  <li>
-                    <Link
-                      href="/admin"
-                      className={`group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${router.pathname === '/admin'
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
-                        } hover:scale-[1.03]`}
-                    >
-                      <span className="mr-1">🔒</span>
-                      Admin
-                      {router.pathname === '/admin' && (
-                        <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
-                      )}
-                    </Link>
-                  </li>
-                )}
+                  )}
 
-              </ul>
-            </nav>
+                </ul>
+              </nav>
 
 
-            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
+                {/* Dark mode toggle */}
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 rounded-full text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none"
+                  aria-label="Toggle dark mode"
+                >
+                  {darkMode ? (
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                    </svg>
+                  )}
+                </button>
+
+                <ConnectButton />
+              </div>
+            </div>
+
+            {/* Mobile Navigation */}
+            <div className="md:hidden flex items-center space-x-2">
               {/* Dark mode toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -334,189 +361,166 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
               </button>
 
               <ConnectButton />
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+                className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {isMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                  )}
+                </svg>
+              </button>
             </div>
           </div>
 
-          {/* Mobile Navigation */}
-          <div className="md:hidden flex items-center space-x-2">
-            {/* Dark mode toggle */}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-full text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white focus:outline-none"
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? (
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
-              )}
-            </button>
-
-            <ConnectButton />
-
-            <button
-              onClick={() => {
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                {isMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                )}
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
-            <nav className="px-2 pt-2 pb-4 space-y-1">
-              <ul className="space-y-1">
-                {allNavItems.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href || 
-                        (item.href === '/communities' && router.pathname.startsWith('/communities/'))
+          {/* Mobile Menu */}
+          {isMenuOpen && (
+            <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
+              <nav className="px-2 pt-2 pb-4 space-y-1">
+                <ul className="space-y-1">
+                  {allNavItems.map((item) => (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href ||
+                          (item.href === '/communities' && router.pathname.startsWith('/communities/'))
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                        }`}
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      <span className="mr-2">{item.icon}</span>
-                      <span className="flex-1">{item.name}</span>
-                      {item.badge !== undefined && item.badge > 0 && (
-                        <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
-                          {item.badge > 99 ? '99+' : item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
+                          }`}
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                        }}
+                      >
+                        <span className="mr-2">{item.icon}</span>
+                        <span className="flex-1">{item.name}</span>
+                        {item.badge !== undefined && item.badge > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
 
-                {isAdmin && (
-                  <li>
-                    <Link
-                      href="/admin"
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === '/admin'
+                  {isConnected && isAdmin && (
+                    <li>
+                      <Link
+                        href="/admin"
+                        className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === '/admin'
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                        }`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <span className="mr-2">🔒</span>
-                      Admin
-                    </Link>
-                  </li>
-                )}
-              </ul>
-            </nav>
-          </div>
+                          }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <span className="mr-2">🔒</span>
+                        Admin
+                      </Link>
+                    </li>
+                  )}
+                </ul>
+              </nav>
+            </div>
+          )}
+        </header>
+
+        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
+          {children}
+        </main>
+
+        {!hideFooter && (
+          <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+            <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-2 mb-8">
+                <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
+                <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+                {/* Quick Links */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
+                  <ul className="space-y-2">
+                    <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
+                    <li><Link href="/communities" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
+                    <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
+                    <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
+                  </ul>
+                </div>
+
+                {/* Resources */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resources</h3>
+                  <ul className="space-y-2">
+                    <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
+                    <li><Link href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</Link></li>
+                    <li><Link href="/blog" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Blog</Link></li>
+                  </ul>
+                </div>
+
+                {/* Social Links */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Connect</h3>
+                  <ul className="space-y-2">
+                    <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Twitter</a></li>
+                    <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Discord</a></li>
+                    <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Telegram</a></li>
+                    <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">GitHub</a></li>
+                  </ul>
+                </div>
+
+                {/* Legal Links */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Legal</h3>
+                  <ul className="space-y-2">
+                    <li><Link href="/terms" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Terms of Service</Link></li>
+                    <li><Link href="/privacy" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Privacy Policy</Link></li>
+                  </ul>
+                </div>
+
+                {/* Newsletter Subscription */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
+                  <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
+                  <form className="flex flex-col sm:flex-row">
+                    <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
+                    <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
+                  </form>
+                </div>
+              </div>
+
+              <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
+                <p className="text-base text-gray-500 dark:text-gray-400 text-center">
+                  © {new Date().getFullYear()} LinkDAO. All rights reserved.
+                </p>
+                <p className="text-base text-gray-500 dark:text-gray-400 text-center">
+                  Designed and powered by{" "}
+                  <a
+                    href="https://bytestitch.us/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    ByteStitch
+                  </a>
+                </p>
+              </div>
+            </div>
+            <Analytics />
+          </footer>
         )}
-      </header>
 
-      <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
-        {children}
-      </main>
+        {/* {isConnected && <NotificationSystem />} */}
 
-      {!hideFooter && (
-        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-2 mb-8">
-              <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
-              <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-              {/* Quick Links */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
-                  <li><Link href="/communities" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
-                  <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
-                  <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
-                </ul>
-              </div>
+        {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
+        {isConnected && <FloatingChatWidget />} {/* Changed from MessagingWidget to FloatingChatWidget */}
 
-              {/* Resources */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resources</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
-                  <li><Link href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</Link></li>
-                  <li><Link href="/blog" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Blog</Link></li>
-                </ul>
-              </div>
 
-              {/* Social Links */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Connect</h3>
-                <ul className="space-y-2">
-                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Twitter</a></li>
-                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Discord</a></li>
-                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Telegram</a></li>
-                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">GitHub</a></li>
-                </ul>
-              </div>
-
-              {/* Legal Links */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Legal</h3>
-                <ul className="space-y-2">
-                  <li><Link href="/terms" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Terms of Service</Link></li>
-                  <li><Link href="/privacy" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Privacy Policy</Link></li>
-                </ul>
-              </div>
-
-              {/* Newsletter Subscription */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
-                <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
-                <form className="flex flex-col sm:flex-row">
-                  <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
-                  <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
-                </form>
-              </div>
-            </div>
-
-            <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
-              <p className="text-base text-gray-500 dark:text-gray-400 text-center">
-                © {new Date().getFullYear()} LinkDAO. All rights reserved.
-              </p>
-              <p className="text-base text-gray-500 dark:text-gray-400 text-center">
-                Designed and powered by{" "}
-                <a
-                  href="https://bytestitch.us/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  ByteStitch
-                </a>
-              </p>
-            </div>
-          </div>
-          <Analytics />
-        </footer>
-      )}
-
-      {/* {isConnected && <NotificationSystem />} */}
-
-      {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
-      {isConnected && <FloatingChatWidget />} {/* Changed from MessagingWidget to FloatingChatWidget */}
-      
-
-    </div>
+      </div>
     </>
   );
 }

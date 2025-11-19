@@ -1176,7 +1176,7 @@ function isCriticalRequest(request) {
     url.pathname.startsWith('/api/auth') ||
     url.pathname.startsWith('/api/profiles') ||
     url.pathname.startsWith('/api/users') ||
-    url.pathname.includes('/feed/enhanced') ||
+    url.pathname.includes('/feed') ||
     url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
     url.pathname.includes('/conversations') || // Don't coalesce conversation requests as they may have different responses
     url.searchParams.has('timestamp') ||

@@ -11,7 +11,7 @@ const BACKEND_URL = 'https://linkdao-backend.onrender.com';
 const TEST_ENDPOINTS = [
   '/health',
   '/api/communities',
-  '/api/feed/enhanced?page=1&limit=20&sort=hot&timeRange=day',
+  '/api/feed?page=1&limit=20&sort=hot&timeRange=day',
   '/api/governance/proposals/active'
 ];
 

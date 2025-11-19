@@ -64,7 +64,7 @@ export default function Home() {
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { profile } = useProfile(address);
   const { navigationState, openModal, closeModal } = useNavigation();
-  
+
   const [mounted, setMounted] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
@@ -89,7 +89,7 @@ export default function Home() {
       if (e.ctrlKey && e.altKey && e.key === 'c') {
         mainContentRef.current?.focus();
       }
-      
+
       // Refresh feed with Ctrl+Alt+R
       if (e.ctrlKey && e.altKey && e.key === 'r') {
         handleRefreshFeed();
@@ -207,499 +207,499 @@ export default function Home() {
           ]}
         />
         <Layout title="LinkDAO - The Web3 Social Network" fullWidth={true}>
-        {/* Skip to content link for accessibility */}
-        <a 
-          ref={skipToContentRef}
-          href="#main-content" 
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
-        >
-          Skip to main content
-        </a>
-        
-        {/* Hero Section */}
-        <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
-          {/* Background with glassmorphism shapes */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
-            <div className="absolute inset-0 bg-black/20"></div>
-            {/* Floating glassmorphism shapes */}
-            <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 backdrop-blur-lg rounded-full animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/5 backdrop-blur-lg rounded-full animate-pulse delay-1000"></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/15 backdrop-blur-lg rounded-full animate-pulse delay-500"></div>
-          </div>
-          
-          <div className="relative z-10 text-center py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
-              LinkDAO — The Web3 Social Network where Identity, Money, and Governance are Yours.
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto">
-              Join the future of social networking. Own your data, earn from your content, and shape the platform through decentralized governance.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row justify-center gap-6">
-              <ConnectButton.Custom>
-                {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
-                  const ready = rainbowMounted && authenticationStatus !== 'loading';
-                  return (
-                    <button
-                      onClick={openConnectModal}
-                      disabled={!ready}
-                      className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-white/20 backdrop-blur-lg border border-white/30 hover:bg-white/30 transition-all duration-300 disabled:opacity-50"
-                    >
-                      🚀 Get Started
-                    </button>
-                  );
-                }}
-              </ConnectButton.Custom>
-              
-              <button
-                onClick={scrollToFeatures}
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-transparent border-2 border-white/50 hover:bg-white/10 transition-all duration-300"
-              >
-                📖 Learn More
-              </button>
-            </div>
-          </div>
-        </div>
+          {/* Skip to content link for accessibility */}
+          <a
+            ref={skipToContentRef}
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
+          >
+            Skip to main content
+          </a>
 
-        {/* Key Features Grid */}
-        <div id="features" className="py-16 md:py-24 bg-white dark:bg-gray-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Why Choose LinkDAO?
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Experience the next generation of social networking with true ownership and decentralized governance.
-              </p>
+          {/* Hero Section */}
+          <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
+            {/* Background with glassmorphism shapes */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
+              <div className="absolute inset-0 bg-black/20"></div>
+              {/* Floating glassmorphism shapes */}
+              <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 backdrop-blur-lg rounded-full animate-pulse"></div>
+              <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/5 backdrop-blur-lg rounded-full animate-pulse delay-1000"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/15 backdrop-blur-lg rounded-full animate-pulse delay-500"></div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="group p-8 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Social</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Post, follow, and build your own Web3-native community without ads or censorship. Your content, your rules.
-                </p>
-              </div>
-              
-              <div className="group p-8 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Send className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Wallet</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Send and receive payments in ETH and stablecoins directly inside the platform. Seamless crypto transactions.
-                </p>
-              </div>
-              
-              <div className="group p-8 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Vote className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Governance</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Create and vote on proposals that shape the community and treasury. True democratic participation.
-                </p>
-              </div>
-              
-              <div className="group p-8 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
-                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Marketplace</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Powered by x402 payment protocol for reduced transaction fees and seamless checkout.
-                </p>
+
+            <div className="relative z-10 text-center py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+              <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
+                LinkDAO — The Web3 Social Network where Identity, Money, and Governance are Yours.
+              </h1>
+              <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto">
+                Join the future of social networking. Own your data, earn from your content, and shape the platform through decentralized governance.
+              </p>
+
+              <div className="flex flex-col sm:flex-row justify-center gap-6">
+                <ConnectButton.Custom>
+                  {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
+                    const ready = rainbowMounted && authenticationStatus !== 'loading';
+                    return (
+                      <button
+                        onClick={openConnectModal}
+                        disabled={!ready}
+                        className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-white/20 backdrop-blur-lg border border-white/30 hover:bg-white/30 transition-all duration-300 disabled:opacity-50"
+                      >
+                        🚀 Get Started
+                      </button>
+                    );
+                  }}
+                </ConnectButton.Custom>
+
+                <button
+                  onClick={scrollToFeatures}
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-transparent border-2 border-white/50 hover:bg-white/10 transition-all duration-300"
+                >
+                  📖 Learn More
+                </button>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Why LinkDAO Section */}
-        <div className="py-24 bg-gray-50 dark:bg-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Own Your Digital Life
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Break free from traditional social media limitations and embrace true digital ownership.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl">🔐</span>
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Own Your Identity</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  No email logins, just your wallet. Your identity is truly yours, portable across the entire Web3 ecosystem.
+          {/* Key Features Grid */}
+          <div id="features" className="py-16 md:py-24 bg-white dark:bg-gray-900">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Why Choose LinkDAO?
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Experience the next generation of social networking with true ownership and decentralized governance.
                 </p>
               </div>
-              
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl">🌍</span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="group p-8 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Social</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Post, follow, and build your own Web3-native community without ads or censorship. Your content, your rules.
+                  </p>
                 </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Global Payments</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Crypto-native, borderless, and instant. Send value to anyone, anywhere, without traditional banking limitations.
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <span className="text-3xl">🗳️</span>
+
+                <div className="group p-8 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Send className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Wallet</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Send and receive payments in ETH and stablecoins directly inside the platform. Seamless crypto transactions.
+                  </p>
                 </div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Community-Driven</h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  You decide how the platform evolves. Participate in governance and shape the future of social networking.
-                </p>
+
+                <div className="group p-8 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <Vote className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Governance</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Create and vote on proposals that shape the community and treasury. True democratic participation.
+                  </p>
+                </div>
+
+                <div className="group p-8 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-2xl hover:shadow-xl transition-all duration-300">
+                  <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Marketplace</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Buy & sell digital + physical goods with crypto and NFT-based trust certificates. Powered by x402 payment protocol for reduced transaction fees and seamless checkout.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* How It Works Section */}
-        <div className="py-24 bg-white dark:bg-gray-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Get Started in Minutes
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Join LinkDAO in four simple steps and start experiencing the future of social networking.
-              </p>
+          {/* Why LinkDAO Section */}
+          <div className="py-24 bg-gray-50 dark:bg-gray-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Own Your Digital Life
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Break free from traditional social media limitations and embrace true digital ownership.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <span className="text-3xl">🔐</span>
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Own Your Identity</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    No email logins, just your wallet. Your identity is truly yours, portable across the entire Web3 ecosystem.
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <span className="text-3xl">🌍</span>
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Global Payments</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    Crypto-native, borderless, and instant. Send value to anyone, anywhere, without traditional banking limitations.
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <span className="text-3xl">🗳️</span>
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Community-Driven</h3>
+                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    You decide how the platform evolves. Participate in governance and shape the future of social networking.
+                  </p>
+                </div>
+              </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="text-center">
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-2xl font-bold text-white">1</span>
-                  </div>
-                  <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-600"></div>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Connect Wallet</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Use MetaMask, WalletConnect, or any Web3 wallet to get started instantly.
+          </div>
+
+          {/* How It Works Section */}
+          <div className="py-24 bg-white dark:bg-gray-900">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Get Started in Minutes
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Join LinkDAO in four simple steps and start experiencing the future of social networking.
                 </p>
               </div>
-              
-              <div className="text-center">
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-2xl font-bold text-white">2</span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+                      <span className="text-2xl font-bold text-white">1</span>
+                    </div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-600"></div>
                   </div>
-                  <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-purple-500 to-pink-600"></div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Connect Wallet</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Use MetaMask, WalletConnect, or any Web3 wallet to get started instantly.
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Create Profile</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Set up your decentralized profile with ENS domains and IPFS storage.
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="relative">
-                  <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span className="text-2xl font-bold text-white">3</span>
+
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+                      <span className="text-2xl font-bold text-white">2</span>
+                    </div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-purple-500 to-pink-600"></div>
                   </div>
-                  <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-pink-500 to-orange-600"></div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Create Profile</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Set up your decentralized profile with ENS domains and IPFS storage.
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Join Communities</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Discover DAOs, list products, and connect with like-minded individuals.
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+                      <span className="text-2xl font-bold text-white">3</span>
+                    </div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-pink-500 to-orange-600"></div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Join Communities</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Discover DAOs, list products, and connect with like-minded individuals.
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
                     <span className="text-2xl font-bold text-white">4</span>
                   </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Participate in DAO</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Vote on proposals, earn rewards, and help shape the platform's future.
-                </p>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Participate in DAO</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Vote on proposals, earn rewards, and help shape the platform's future.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Trust & Transparency Section */}
-        <div className="py-24 bg-gray-50 dark:bg-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Built for Trust & Transparency
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Our Web3 marketplace ensures secure, transparent transactions with cutting-edge blockchain technology.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl">🔒</span>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">On-chain Escrow</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Smart contract escrow ensures safe payments. Funds are only released when both parties are satisfied.
+          {/* Trust & Transparency Section */}
+          <div className="py-24 bg-gray-50 dark:bg-gray-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Built for Trust & Transparency
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Our Web3 marketplace ensures secure, transparent transactions with cutting-edge blockchain technology.
                 </p>
               </div>
-              
-              <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl">🎫</span>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
+                  <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-6">
+                    <span className="text-2xl">🔒</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">On-chain Escrow</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Smart contract escrow ensures safe payments. Funds are only released when both parties are satisfied.
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">x402 Payment Protocol</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Reduced transaction fees for purchases using Coinbase's x402 payment protocol.
-                </p>
-              </div>
-              
-              <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-6">
-                  <span className="text-2xl">🏛️</span>
+
+                <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
+                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-6">
+                    <span className="text-2xl">🎫</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">x402 Payment Protocol</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Reduced transaction fees for purchases using Coinbase's x402 payment protocol.
+                  </p>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Transparent DAO</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  All governance decisions are recorded on-chain. Complete transparency in platform evolution.
-                </p>
+
+                <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-lg">
+                  <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-6">
+                    <span className="text-2xl">🏛️</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Transparent DAO</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    All governance decisions are recorded on-chain. Complete transparency in platform evolution.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Support Center Section */}
-        <div className="py-24 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Need Help? We've Got You Covered
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Comprehensive support for LDAO tokens, marketplace features, and platform guidance. Get help 24/7.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-              <Link
-                href="/support"
-                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <MessageCircle className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Help Center</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  Browse FAQs, guides, and documentation for all platform features
+          {/* Support Center Section */}
+          <div className="py-24 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Need Help? We've Got You Covered
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Comprehensive support for LDAO tokens, marketplace features, and platform guidance. Get help 24/7.
                 </p>
-              </Link>
-              
-              <Link
-                href="/support/guides/ldao-complete-guide"
-                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Award className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">LDAO Guide</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  Complete guide to acquiring, staking, and using LDAO tokens
-                </p>
-              </Link>
-              
-              <Link
-                href="/support/tutorials/first-ldao-purchase"
-                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Video className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Tutorials</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  Step-by-step video tutorials for getting started
-                </p>
-              </Link>
-              
-              <a
-                href="mailto:support@linkdao.io"
-                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Mail className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Contact Us</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">
-                  Direct email support with 4-hour response time
-                </p>
-              </a>
-            </div>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-white" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Community Support</h4>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                    Connect with other users in our Discord and Telegram communities
-                  </p>
-                  <div className="flex justify-center space-x-3">
-                    <a
-                      href="https://discord.gg/linkdao"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                    >
-                      Discord
-                    </a>
-                    <a
-                      href="https://t.me/LinkDAO_web3"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition-colors"
-                    >
-                      Telegram
-                    </a>
-                  </div>
-                </div>
-                
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Shield className="w-8 h-8 text-white" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Security</h4>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                    Learn how to keep your wallet and assets safe on our platform.
-                  </p>
-                  <Link
-                    href="/docs/support/security-guide"
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
-                  >
-                    Security Guide →
-                  </Link>
-                </div>
-                
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-white" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Live Chat</h4>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
-                    Get instant help from our support team. Available 24/7.
-                  </p>
-                  <Link
-                    href="/support/live-chat"
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all"
-                  >
-                    Start Chat
-                  </Link>
-                </div>
               </div>
-            </div>
-            
-            <div className="mt-12 text-center">
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Popular Support Topics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-                {[
-                  { title: "Getting Started", href: "/docs/getting-started", icon: "🚀" },
-                  { title: "LDAO Token Acquisition", href: "/docs/ldao-token-guide", icon: "💰" },
-                  { title: "Wallet Setup", href: "/docs/wallet-setup", icon: "💳" },
-                  { title: "Marketplace Guide", href: "/docs/marketplace-guide", icon: "🏪" },
-                  { title: "Governance Participation", href: "/docs/governance-guide", icon: "🏛️" },
-                  { title: "Troubleshooting", href: "/docs/troubleshooting", icon: "🔧" }
-                ].map((topic) => (
-                  <Link
-                    key={topic.title}
-                    href={topic.href}
-                    className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all border border-gray-200 dark:border-gray-700 group"
-                  >
-                    <span className="text-2xl mr-3">{topic.icon}</span>
-                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                      {topic.title}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Community & Growth Section */}
-        <div className="py-24 bg-white dark:bg-gray-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                Join Our Growing Community
-              </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                Be part of the Web3 social revolution. Connect with innovators, creators, and builders.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600 mb-2">1,200+</div>
-                <div className="text-gray-600 dark:text-gray-300">Active Users</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600 mb-2">300+</div>
-                <div className="text-gray-600 dark:text-gray-300">Marketplace Listings</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600 mb-2">50+</div>
-                <div className="text-gray-600 dark:text-gray-300">Active DAOs</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold text-primary-600 mb-2">$2M+</div>
-                <div className="text-gray-600 dark:text-gray-300">Volume Traded</div>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="flex flex-col sm:flex-row justify-center gap-6 mb-8">
-                <a
-                  href="https://discord.gg/linkdao"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <Link
+                  href="/support"
+                  className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
                 >
-                  Join our Discord
-                </a>
-                <a
-                  href="https://twitter.com/linkdao"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <MessageCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Help Center</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    Browse FAQs, guides, and documentation for all platform features
+                  </p>
+                </Link>
+
+                <Link
+                  href="/support/guides/ldao-complete-guide"
+                  className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
                 >
-                  Follow us on X
+                  <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Award className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">LDAO Guide</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    Complete guide to acquiring, staking, and using LDAO tokens
+                  </p>
+                </Link>
+
+                <Link
+                  href="/support/tutorials/first-ldao-purchase"
+                  className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Video className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Tutorials</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    Step-by-step video tutorials for getting started
+                  </p>
+                </Link>
+
+                <a
+                  href="mailto:support@linkdao.io"
+                  className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Contact Us</h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    Direct email support with 4-hour response time
+                  </p>
                 </a>
               </div>
-              
-              <ConnectButton.Custom>
-                {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
-                  const ready = rainbowMounted && authenticationStatus !== 'loading';
-                  return (
-                    <button
-                      onClick={openConnectModal}
-                      disabled={!ready}
-                      className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
+
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Community Support</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                      Connect with other users in our Discord and Telegram communities
+                    </p>
+                    <div className="flex justify-center space-x-3">
+                      <a
+                        href="https://discord.gg/linkdao"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                      >
+                        Discord
+                      </a>
+                      <a
+                        href="https://t.me/LinkDAO_web3"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition-colors"
+                      >
+                        Telegram
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Shield className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Security</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                      Learn how to keep your wallet and assets safe on our platform.
+                    </p>
+                    <Link
+                      href="/docs/support/security-guide"
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
                     >
-                      🚀 Start Your Web3 Journey
-                    </button>
-                  );
-                }}
-              </ConnectButton.Custom>
+                      Security Guide →
+                    </Link>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Zap className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Live Chat</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                      Get instant help from our support team. Available 24/7.
+                    </p>
+                    <Link
+                      href="/support/live-chat"
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all"
+                    >
+                      Start Chat
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-12 text-center">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Popular Support Topics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                  {[
+                    { title: "Getting Started", href: "/docs/getting-started", icon: "🚀" },
+                    { title: "LDAO Token Acquisition", href: "/docs/ldao-token-guide", icon: "💰" },
+                    { title: "Wallet Setup", href: "/docs/wallet-setup", icon: "💳" },
+                    { title: "Marketplace Guide", href: "/docs/marketplace-guide", icon: "🏪" },
+                    { title: "Governance Participation", href: "/docs/governance-guide", icon: "🏛️" },
+                    { title: "Troubleshooting", href: "/docs/troubleshooting", icon: "🔧" }
+                  ].map((topic) => (
+                    <Link
+                      key={topic.title}
+                      href={topic.href}
+                      className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all border border-gray-200 dark:border-gray-700 group"
+                    >
+                      <span className="text-2xl mr-3">{topic.icon}</span>
+                      <span className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        {topic.title}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </Layout>
+
+          {/* Community & Growth Section */}
+          <div className="py-24 bg-white dark:bg-gray-900">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Join Our Growing Community
+                </h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                  Be part of the Web3 social revolution. Connect with innovators, creators, and builders.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-16">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-primary-600 mb-2">1,200+</div>
+                  <div className="text-gray-600 dark:text-gray-300">Active Users</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-primary-600 mb-2">300+</div>
+                  <div className="text-gray-600 dark:text-gray-300">Marketplace Listings</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-primary-600 mb-2">50+</div>
+                  <div className="text-gray-600 dark:text-gray-300">Active DAOs</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-primary-600 mb-2">$2M+</div>
+                  <div className="text-gray-600 dark:text-gray-300">Volume Traded</div>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="flex flex-col sm:flex-row justify-center gap-6 mb-8">
+                  <a
+                    href="https://discord.gg/linkdao"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                  >
+                    Join our Discord
+                  </a>
+                  <a
+                    href="https://twitter.com/linkdao"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Follow us on X
+                  </a>
+                </div>
+
+                <ConnectButton.Custom>
+                  {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
+                    const ready = rainbowMounted && authenticationStatus !== 'loading';
+                    return (
+                      <button
+                        onClick={openConnectModal}
+                        disabled={!ready}
+                        className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50"
+                      >
+                        🚀 Start Your Web3 Journey
+                      </button>
+                    );
+                  }}
+                </ConnectButton.Custom>
+              </div>
+            </div>
+          </div>
+        </Layout>
       </>
     );
   }
@@ -716,124 +716,124 @@ export default function Home() {
         noIndex={true}
       />
       <Layout title="LinkDAO - Home">
-      {/* Skip to content link for accessibility */}
-      <a 
-        href="#main-feed-content" 
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
-      >
-        Skip to feed content
-      </a>
-      
-      <div className="flex bg-gray-50 dark:bg-gray-900">
-        {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
-        <div className="hidden lg:flex lg:flex-shrink-0">
-          <div className="flex flex-col w-64">
-            <Suspense fallback={<SidebarSkeleton />}>
-              <NavigationSidebar className="h-full" />
-            </Suspense>
-          </div>
-        </div>
+        {/* Skip to content link for accessibility */}
+        <a
+          href="#main-feed-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
+        >
+          Skip to feed content
+        </a>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-screen">
-          {/* Main Feed Content */}
-          <div className="flex-1 flex">
-            {/* Center Feed */}
-            <div 
-              id="main-feed-content"
-              ref={mainContentRef}
-              tabIndex={-1}
-              className="flex-1 overflow-y-auto pb-24 md:pb-6 focus:outline-none"
-            >
-              <div className="max-w-2xl mx-auto py-6 px-4">
-                {/* Post Composer - Inline Facebook-style */}
-                <div className="mb-6">
+        <div className="flex bg-gray-50 dark:bg-gray-900">
+          {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
+          <div className="hidden lg:flex lg:flex-shrink-0">
+            <div className="flex flex-col w-64">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <NavigationSidebar className="h-full" />
+              </Suspense>
+            </div>
+          </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col min-h-screen">
+            {/* Main Feed Content */}
+            <div className="flex-1 flex">
+              {/* Center Feed */}
+              <div
+                id="main-feed-content"
+                ref={mainContentRef}
+                tabIndex={-1}
+                className="flex-1 overflow-y-auto pb-24 md:pb-6 focus:outline-none"
+              >
+                <div className="max-w-2xl mx-auto py-6 px-4">
+                  {/* Post Composer - Inline Facebook-style */}
+                  <div className="mb-6">
+                    <Suspense fallback={<FeedSkeleton />}>
+                      <FacebookStylePostComposer
+                        onSubmit={handlePostSubmit}
+                        isLoading={isCreatingPost}
+                        userAvatar={(profile as any)?.avatar}
+                        userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                      />
+                    </Suspense>
+                  </div>
+
+                  {/* New Posts Banner - Real-time Update Indicator */}
+                  {hasNewPosts && (
+                    <div className="mb-4">
+                      <button
+                        onClick={handleRefreshFeed}
+                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                        aria-label="Refresh feed to see new posts"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        New posts available - Click to refresh
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Enhanced Feed View with Advanced Features */}
                   <Suspense fallback={<FeedSkeleton />}>
-                    <FacebookStylePostComposer
-                      onSubmit={handlePostSubmit}
-                      isLoading={isCreatingPost}
-                      userAvatar={(profile as any)?.avatar}
-                      userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                    />
+                    {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
+                      <CommunityView communitySlug={navigationState.activeCommunity} />
+                    ) : (
+                      <EnhancedFeedView
+                        externalRefreshKey={feedRefreshKey}
+                        communityId={navigationState.activeCommunity}
+                        showCommunityMetrics={false}
+                        className=""
+                      />
+                    )}
                   </Suspense>
                 </div>
-
-                {/* New Posts Banner - Real-time Update Indicator */}
-                {hasNewPosts && (
-                  <div className="mb-4">
-                    <button
-                      onClick={handleRefreshFeed}
-                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                      aria-label="Refresh feed to see new posts"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      New posts available - Click to refresh
-                    </button>
-                  </div>
-                )}
-
-                {/* Enhanced Feed View with Advanced Features */}
-                <Suspense fallback={<FeedSkeleton />}>
-                  {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
-                    <CommunityView communitySlug={navigationState.activeCommunity} />
-                  ) : (
-                    <EnhancedFeedView
-                      externalRefreshKey={feedRefreshKey}
-                      communityId={navigationState.activeCommunity}
-                      showCommunityMetrics={false}
-                      className=""
-                    />
-                  )}
-                </Suspense>
               </div>
-            </div>
 
-            {/* Right Sidebar - Activity & Notifications */}
-            <div className="hidden xl:flex xl:flex-shrink-0">
-              <div className="flex flex-col w-80">
-                <Suspense fallback={<SidebarSkeleton />}>
-                  <SmartRightSidebar context="feed" />
-                </Suspense>
+              {/* Right Sidebar - Activity & Notifications */}
+              <div className="hidden xl:flex xl:flex-shrink-0">
+                <div className="flex flex-col w-80">
+                  <Suspense fallback={<SidebarSkeleton />}>
+                    <SmartRightSidebar context="feed" />
+                  </Suspense>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Post Creation Modal */}
-      <Suspense fallback={null}>
-        <PostCreationModal
-          isOpen={navigationState.modalState.postCreation}
-          onClose={() => closeModal('postCreation')}
-          onSubmit={handlePostSubmit}
-          isLoading={isCreatingPost}
-        />
-      </Suspense>
+        {/* Post Creation Modal */}
+        <Suspense fallback={null}>
+          <PostCreationModal
+            isOpen={navigationState.modalState.postCreation}
+            onClose={() => closeModal('postCreation')}
+            onSubmit={handlePostSubmit}
+            isLoading={isCreatingPost}
+          />
+        </Suspense>
 
-      {/* Support Widget - Floating */}
-      <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />
+        {/* Support Widget - Floating */}
+        <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />
 
-      {/* Wallet Sheet Modal */}
-      <Suspense fallback={null}>
-        <BottomSheet
-          isOpen={isWalletSheetOpen}
-          onClose={() => setIsWalletSheetOpen(false)}
-          title="Send Tokens"
-        >
-          <div className="p-4">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Wallet-to-wallet token sending feature coming soon!
-            </p>
-            <button
-              onClick={() => setIsWalletSheetOpen(false)}
-              className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </BottomSheet>
-      </Suspense>
-    </Layout>
+        {/* Wallet Sheet Modal */}
+        <Suspense fallback={null}>
+          <BottomSheet
+            isOpen={isWalletSheetOpen}
+            onClose={() => setIsWalletSheetOpen(false)}
+            title="Send Tokens"
+          >
+            <div className="p-4">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Wallet-to-wallet token sending feature coming soon!
+              </p>
+              <button
+                onClick={() => setIsWalletSheetOpen(false)}
+                className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </BottomSheet>
+        </Suspense>
+      </Layout>
     </>
   );
 }

@@ -22,7 +22,7 @@ const testEndpoints = [
   { path: '/api/health', description: 'API Health' },
   { path: '/api/auth/kyc/status', description: 'KYC Status (Mock)' },
   { path: '/api/profiles/address/0xCf4363d84f4A48486dD414011aB71ee7811eDD55', description: 'Profile Endpoint (Mock)' },
-  { path: '/api/feed/enhanced?page=1&limit=20', description: 'Feed Endpoint (Mock)' },
+  { path: '/api/feed?page=1&limit=20', description: 'Feed Endpoint (Mock)' },
   { path: '/api/marketplace/categories', description: 'Marketplace Categories (Mock)' },
   { path: '/marketplace/listings?limit=24', description: 'Marketplace Listings (Mock)' }
 ];

@@ -23,4 +23,4 @@ console.log(token);
 console.log('\nUse this token in your requests:');
 console.log(`Authorization: Bearer ${token}`);
 console.log('\nTest with curl:');
-console.log(`curl -H "Authorization: Bearer ${token}" "http://localhost:10000/api/feed/enhanced?page=1&limit=20&sort=hot&timeRange=day"`);
+console.log(`curl -H "Authorization: Bearer ${token}" "http://localhost:10000/api/feed?page=1&limit=20&sort=hot&timeRange=day"`);

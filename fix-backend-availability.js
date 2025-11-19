@@ -101,7 +101,7 @@ router.get('/api/profiles/address/:address', (req: Request, res: Response) => {
 });
 
 // Feed endpoint (mock response to prevent errors)
-router.get('/api/feed/enhanced', (req: Request, res: Response) => {
+router.get('/api/feed', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     data: {

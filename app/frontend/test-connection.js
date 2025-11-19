@@ -8,7 +8,7 @@ async function testConnection() {
     console.log('Backend health check:', data);
     
     // Test the feed endpoint (should return 401 since it requires auth)
-    const feedResponse = await fetch('http://localhost:10000/api/feed/enhanced');
+    const feedResponse = await fetch('http://localhost:10000/api/feed');
     console.log('Feed endpoint status:', feedResponse.status);
     
     // Test the frontend environment variable

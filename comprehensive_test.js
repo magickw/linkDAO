@@ -60,7 +60,7 @@ async function comprehensiveTest() {
   // Test 6: Additional endpoints
   try {
     console.log('\n6. Testing Additional endpoints...');
-    const feed = await axios.get(`${baseURL}/api/feed/enhanced`);
+    const feed = await axios.get(`${baseURL}/api/feed`);
     console.log(`   ✅ Feed: ${feed.status} - Accessible (auth may be required)`);
   } catch (error) {
     if (error.response?.status === 401) {
