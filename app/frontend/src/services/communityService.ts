@@ -402,10 +402,10 @@ export class CommunityService {
   static async getMyCommunities(page: number = 1, limit: number = 100): Promise<{ communities: Community[]; pagination: any }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetchWithRetry(
-        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/my`,
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/user/memberships?page=${page}&limit=${limit}`,
         {
           method: 'GET',
           headers: {
@@ -416,15 +416,20 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       const json = await safeJson(response);
-      
+
       if (!response.ok) {
+        // If 401, user is not authenticated - return empty list instead of throwing
+        if (response.status === 401) {
+          console.warn('User not authenticated, returning empty community list');
+          return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+        }
         throw new Error((json && (json.error || json.message)) || 'Failed to fetch my communities');
       }
-      
+
       // Normalize payload to expected structure
       if (json && typeof json === 'object' && Array.isArray(json.communities)) {
         return json as { communities: Community[]; pagination: any };
@@ -435,11 +440,11 @@ export class CommunityService {
       return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
