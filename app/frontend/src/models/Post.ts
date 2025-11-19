@@ -128,7 +128,7 @@ export interface CreatePostInput {
   tags?: string[];
   onchainRef?: string;
   title?: string;
-  communityId: string; // Community ID where the post will be created (required)
+  communityId?: string; // Optional - for quick posts on timeline, can be added later
   poll?: any; // Poll data for poll posts
   proposal?: any; // Proposal data for governance posts
 }

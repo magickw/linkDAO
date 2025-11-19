@@ -38,14 +38,15 @@ export class PostService {
 
   static async createPost(data: CreatePostInput): Promise<Post> {
     try {
-      // Posts must be created within a community
-      if (!data.communityId) {
-        throw new Error('Community ID is required to create a post');
-      }
-
       const authHeaders = authService.getAuthHeaders();
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`, {
+      // If communityId is provided, create post in community
+      // Otherwise, create a quick post on user's timeline
+      const endpoint = data.communityId
+        ? `${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`
+        : `${BACKEND_API_BASE_URL}/api/posts`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
