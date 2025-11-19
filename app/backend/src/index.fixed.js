@@ -1014,119 +1014,105 @@ app.get('/api/posts/feed', (req, res) => {
 });
 
 // Enhanced feed route (matches frontend expectations)
-app.get('/api/feed/enhanced', (req, res) => {
-  const { page = 1, limit = 20, sort = 'hot', timeRange = 'all', feedSource = 'all' } = req.query;
-  
-  // Validate and sanitize limit parameter
-  const validatedLimit = validateLimit(limit);
-  const validatedPage = validatePage(page);
-  
-  console.log(`🔍 Enhanced feed request - page: ${validatedPage}, limit: ${validatedLimit}, sort: ${sort}, source: ${feedSource}`);
-  
-  // Enhanced mock posts with more detailed data structure matching frontend expectations
-  const enhancedPosts = Array.from({ length: validatedLimit }, (_, i) => {
-    const postId = `enhanced-post-${page}-${i + 1}`;
-    const authorAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
-    
-    return {
-      id: postId,
-      title: `Enhanced Feed Post ${i + 1}`,
-      content: '', // Empty content - frontend loads from IPFS
-      excerpt: `This is an excerpt for enhanced feed post ${i + 1}. It provides a preview of the full content.`,
-      contentCid: `QmXy${Math.random().toString(36).substr(2, 44)}`, // IPFS content identifier
-      handle: `user${i + 1}`,
-      author: {
-        address: authorAddress,
-        username: `user${i + 1}`,
-        displayName: `User ${i + 1}`,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=user${i + 1}`,
-        ens: null,
-        reputation: Math.floor(Math.random() * 1000),
-        verified: Math.random() > 0.8
-      },
-      createdAt: new Date(Date.now() - i * 3600000).toISOString(),
-      updatedAt: new Date(Date.now() - i * 1800000).toISOString(),
+app.get('/api/feed/enhanced', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, sort = 'new', timeRange = 'all', feedSource = 'all', userAddress } = req.query;
+
+    // Validate and sanitize parameters
+    const validatedLimit = validateLimit(limit);
+    const validatedPage = validatePage(page);
+    const offset = (validatedPage - 1) * validatedLimit;
+
+    console.log(`🔍 Enhanced feed request - page: ${validatedPage}, limit: ${validatedLimit}, sort: ${sort}, source: ${feedSource}`);
+
+    // Query posts from database with author information
+    const query = `
+      SELECT
+        p.id,
+        p.title,
+        p.content_cid,
+        p.media_cids,
+        p.tags,
+        p.staked_value,
+        p.reputation_score,
+        p.created_at,
+        p.parent_id,
+        p.onchain_ref,
+        p.community_id,
+        u.wallet_address,
+        u.handle,
+        u.profile_cid
+      FROM posts p
+      LEFT JOIN users u ON p.author_id = u.id
+      ORDER BY p.created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const result = await pool.query(query, [validatedLimit, offset]);
+
+    // Get total count for pagination
+    const countResult = await pool.query('SELECT COUNT(*) FROM posts');
+    const totalPosts = parseInt(countResult.rows[0].count);
+
+    // Transform database posts to match frontend expectations
+    const enhancedPosts = result.rows.map(post => ({
+      id: post.id.toString(),
+      title: post.title || '',
+      content: post.content_cid || '',
+      contentCid: post.content_cid || '',
+      walletAddress: post.wallet_address,
+      handle: post.handle || post.wallet_address?.slice(0, 8),
+      profileCid: post.profile_cid,
+      author: post.wallet_address,
+      tags: JSON.parse(post.tags || '[]'),
+      mediaCids: JSON.parse(post.media_cids || '[]'),
+      stakedValue: parseFloat(post.staked_value || 0),
+      reputationScore: parseInt(post.reputation_score || 0),
+      createdAt: post.created_at,
+      updatedAt: post.created_at,
+      parentId: post.parent_id,
+      onchainRef: post.onchain_ref,
+      communityId: post.community_id,
+      dao: post.community_id, // Backward compatibility
       contentType: 'text',
-      tags: ['defi', 'nft', 'community', 'governance'].slice(0, Math.floor(Math.random() * 3) + 1),
-      likes: Math.floor(Math.random() * 150),
-      comments: Math.floor(Math.random() * 30),
-      shares: Math.floor(Math.random() * 15),
-      views: Math.floor(Math.random() * 500),
-      reactions: {
-        likes: Math.floor(Math.random() * 150),
-        loves: Math.floor(Math.random() * 20),
-        laughs: Math.floor(Math.random() * 10),
-        angry: Math.floor(Math.random() * 5),
-        sad: Math.floor(Math.random() * 5)
-      },
-      engagement: {
-        likes: Math.floor(Math.random() * 150),
-        comments: Math.floor(Math.random() * 30),
-        shares: Math.floor(Math.random() * 15),
-        bookmarks: Math.floor(Math.random() * 20)
-      },
-      metadata: {
-        isPinned: Math.random() > 0.9,
-        isFeatured: Math.random() > 0.95,
-        priority: Math.random() > 0.7 ? 'high' : 'normal',
-        source: feedSource
-      },
-      mediaCids: Math.random() > 0.6 ? [`QmMedia${Math.random().toString(36).substr(2, 44)}`] : [],
-      previews: Math.random() > 0.5 ? [{
-        id: `preview-${postId}`,
-        type: 'link',
-        url: `https://example.com/preview-${i + 1}`,
-        data: { title: `Preview ${i + 1}`, description: 'Preview description' },
-        metadata: { siteName: 'Example', favicon: '/favicon.ico' },
-        cached: true,
-        securityStatus: 'safe'
-      }] : [],
-      profileCid: `QmProfile${Math.random().toString(36).substr(2, 44)}`,
-      communityId: `community-${Math.floor(Math.random() * 10) + 1}`,
-      dao: `community-${Math.floor(Math.random() * 10) + 1}`, // Alternative field name
-      community: {
-        id: `community-${Math.floor(Math.random() * 10) + 1}`,
-        name: `Community ${Math.floor(Math.random() * 10) + 1}`,
-        slug: `community-${Math.floor(Math.random() * 10) + 1}`,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=community${Math.floor(Math.random() * 10) + 1}`
-      },
-      permissions: {
-        canEdit: false,
-        canDelete: false,
-        canModerate: false
-      },
-      userInteraction: {
-        hasLiked: Math.random() > 0.7,
-        hasBookmarked: Math.random() > 0.8,
-        hasShared: Math.random() > 0.9
-      },
-      lastActivity: new Date(Date.now() - i * 1800000).toISOString(),
-      socialProof: {
-        followedUsersWhoEngaged: [],
-        totalEngagementFromFollowed: 0,
-        communityLeadersWhoEngaged: [],
-        verifiedUsersWhoEngaged: []
-      },
-      trendingStatus: Math.random() > 0.8 ? 'trending' : 'normal',
-      engagementScore: Math.floor(Math.random() * 100)
-    };
-  });
-  
-  res.json({
-    success: true,
-    data: {
-      posts: enhancedPosts,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 500,
-        totalPages: 25,
-        hasMore: parseInt(page) < 25,
-        nextPage: parseInt(page) + 1
+      reactions: [],
+      tips: [],
+      comments: 0,
+      shares: 0,
+      views: 0,
+      engagementScore: 0,
+      authorProfile: {
+        handle: post.handle || post.wallet_address?.slice(0, 8),
+        verified: false,
+        avatar: post.profile_cid ? `https://ipfs.io/ipfs/${post.profile_cid}` : undefined
       }
-    },
-    timestamp: new Date().toISOString()
-  });
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        posts: enhancedPosts,
+        pagination: {
+          page: validatedPage,
+          limit: validatedLimit,
+          total: totalPosts,
+          totalPages: Math.ceil(totalPosts / validatedLimit),
+          hasMore: validatedPage < Math.ceil(totalPosts / validatedLimit),
+          nextPage: validatedPage + 1
+        },
+        postsCount: enhancedPosts.length,
+        totalPosts: totalPosts,
+        hasMore: validatedPage < Math.ceil(totalPosts / validatedLimit)
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching enhanced feed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch feed: ' + error.message
+    });
+  }
 });
 
 // Error handling middleware
