@@ -303,10 +303,18 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   // Handle pending contact to start a chat
   useEffect(() => {
-    if (pendingContact && address && hookConversations) {
-      // Find an existing conversation with this contact
+    if (pendingContact && address) {
+      // If hookConversations is not loaded yet, we might need to load them first
+      if (!hookConversations) {
+        // Try to load conversations first
+        loadConversations();
+        return; // Wait for the next render when conversations are loaded
+      }
+      
+      // Find an existing conversation with this contact (case-insensitive address matching)
+      const normalizedContactAddress = pendingContact.walletAddress.toLowerCase();
       const existingConversation = hookConversations.find(conv => 
-        conv.participants.includes(pendingContact.walletAddress)
+        conv.participants.some(participant => participant.toLowerCase() === normalizedContactAddress)
       );
 
       if (existingConversation) {
@@ -321,7 +329,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       // Clear the pending contact
       setPendingContact(null);
     }
-  }, [pendingContact, address, hookConversations, handleConversationSelect]);
+  }, [pendingContact, address, hookConversations, handleConversationSelect, loadConversations]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !selectedConversation || !address) return;
