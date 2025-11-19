@@ -163,7 +163,7 @@ const FacebookStylePostComposer = React.memo(({
   // Memoized hashtag preview
   const hashtagPreview = useMemo(() => {
     if (!isExpanded || extractHashtags(content).length === 0) return null;
-    
+
     return (
       <div className="mt-2 flex flex-wrap gap-1">
         {extractHashtags(content).map((tag, index) => (
@@ -218,35 +218,35 @@ const FacebookStylePostComposer = React.memo(({
   }, [previews, selectedFiles, removeFile]);
 
   return (
-    <div className={`group rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent bg-gradient-to-r from-transparent to-transparent focus-within:from-primary-500/10 focus-within:to-purple-500/10`}>
+    <div className={`group rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-all duration-300 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500/50`}>
       <form onSubmit={handleSubmit}>
         {/* Main composer area */}
         <div className="p-4">
-          <div className="flex space-x-3">
+          <div className="flex space-x-4">
             {/* User avatar */}
             <div className="flex-shrink-0">
               {userAvatar ? (
                 <img
                   src={userAvatar}
                   alt={userName || 'User'}
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="w-12 h-12 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700"
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
                   {userName ? userName.charAt(0).toUpperCase() : '?'}
                 </div>
               )}
             </div>
 
             {/* Text input area */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={handleFocus}
                 placeholder={content.length ? '' : HINTS[hintIdx]}
-                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
+                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-lg leading-relaxed"
                 rows={isExpanded ? 3 : 1}
                 disabled={isLoading}
                 style={{ minHeight: isExpanded ? '80px' : '40px' }}
@@ -260,18 +260,21 @@ const FacebookStylePostComposer = React.memo(({
 
               {/* Additional inputs when expanded */}
               {isExpanded && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-4 space-y-3 animate-fade-in">
                   {/* Feeling input */}
                   {showFeelingInput && (
-                    <div className="flex items-center space-x-2">
-                      <Smile className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                        <Smile className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                      </div>
                       <input
                         type="text"
                         value={feeling}
                         onChange={(e) => setFeeling(e.target.value)}
                         placeholder="How are you feeling?"
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
                         disabled={isLoading}
+                        autoFocus
                       />
                       <button
                         type="button"
@@ -279,7 +282,7 @@ const FacebookStylePostComposer = React.memo(({
                           setShowFeelingInput(false);
                           setFeeling('');
                         }}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -288,15 +291,18 @@ const FacebookStylePostComposer = React.memo(({
 
                   {/* Location input */}
                   {showLocationInput && (
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
+                      <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <MapPin className="w-5 h-5 text-red-600 dark:text-red-400" />
+                      </div>
                       <input
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="Where are you?"
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
                         disabled={isLoading}
+                        autoFocus
                       />
                       <button
                         type="button"
@@ -304,7 +310,7 @@ const FacebookStylePostComposer = React.memo(({
                           setShowLocationInput(false);
                           setLocation('');
                         }}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -313,15 +319,18 @@ const FacebookStylePostComposer = React.memo(({
 
                   {/* Link input */}
                   {showLinkInput && (
-                    <div className="flex items-center space-x-2">
-                      <LinkIcon className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <LinkIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      </div>
                       <input
                         type="url"
                         value={linkUrl}
                         onChange={(e) => setLinkUrl(e.target.value)}
                         placeholder="Add a link..."
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-gray-900 dark:text-white placeholder-gray-500"
                         disabled={isLoading}
+                        autoFocus
                       />
                       <button
                         type="button"
@@ -329,7 +338,7 @@ const FacebookStylePostComposer = React.memo(({
                           setShowLinkInput(false);
                           setLinkUrl('');
                         }}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -343,67 +352,69 @@ const FacebookStylePostComposer = React.memo(({
 
         {/* Action buttons */}
         {isExpanded && (
-          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="border-t border-gray-100 dark:border-gray-700/50 px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl">
             <div className="flex items-center justify-between">
               {/* Media and action buttons */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                  className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all"
+                  title="Add Photo"
                   disabled={isLoading}
                 >
                   <Image className="w-5 h-5" />
-                  <span className="text-sm font-medium">Photo</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                  className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all"
+                  title="Add Video"
                   disabled={isLoading}
                 >
                   <Video className="w-5 h-5" />
-                  <span className="text-sm font-medium">Video</span>
                 </button>
+
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
 
                 <button
                   type="button"
                   onClick={() => setShowLinkInput(!showLinkInput)}
-                  className={`flex items-center space-x-2 transition-colors ${showLinkInput
-                      ? 'text-primary-600 dark:text-primary-400'
-                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                  className={`p-2 rounded-lg transition-all ${showLinkInput
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                    : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                     }`}
+                  title="Add Link"
                   disabled={isLoading}
                 >
                   <LinkIcon className="w-5 h-5" />
-                  <span className="text-sm font-medium">Link</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowFeelingInput(!showFeelingInput)}
-                  className={`flex items-center space-x-2 transition-colors ${showFeelingInput
-                      ? 'text-primary-600 dark:text-primary-400'
-                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                  className={`p-2 rounded-lg transition-all ${showFeelingInput
+                    ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20'
+                    : 'text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
                     }`}
+                  title="Add Feeling"
                   disabled={isLoading}
                 >
                   <Smile className="w-5 h-5" />
-                  <span className="text-sm font-medium">Feeling</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowLocationInput(!showLocationInput)}
-                  className={`flex items-center space-x-2 transition-colors ${showLocationInput
-                      ? 'text-primary-600 dark:text-primary-400'
-                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                  className={`p-2 rounded-lg transition-all ${showLocationInput
+                    ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                    : 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
                     }`}
+                  title="Add Location"
                   disabled={isLoading}
                 >
                   <MapPin className="w-5 h-5" />
-                  <span className="text-sm font-medium">Location</span>
                 </button>
               </div>
 
@@ -420,7 +431,7 @@ const FacebookStylePostComposer = React.memo(({
                 <button
                   type="submit"
                   disabled={!content.trim() || isLoading}
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white text-sm font-semibold rounded-lg shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 disabled:transform-none disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Posting...' : 'Post'}
                 </button>
@@ -431,9 +442,9 @@ const FacebookStylePostComposer = React.memo(({
 
         {/* Character count (when expanded) */}
         {isExpanded && (
-          <div className="px-4 pb-2">
+          <div className="px-4 pb-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-b-xl -mt-2">
             <div className="text-right">
-              <span className={`text-xs ${content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
+              <span className={`text-xs font-medium ${content.length > 280 ? 'text-red-500' : 'text-gray-400'}`}>
                 {content.length}/280
               </span>
             </div>

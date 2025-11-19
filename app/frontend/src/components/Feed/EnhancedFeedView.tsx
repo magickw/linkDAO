@@ -18,12 +18,12 @@ import { CommunityMembershipService } from '@/services/communityMembershipServic
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
   if (!profileCid) return undefined;
-  
+
   // Check if it's a valid IPFS CID
   if (profileCid.startsWith('Qm') || profileCid.startsWith('bafy')) {
     return `https://ipfs.io/ipfs/${profileCid}`;
   }
-  
+
   // Check if it's already a full URL
   try {
     new URL(profileCid);
@@ -48,14 +48,14 @@ interface EnhancedPost {
   };
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Enhanced content
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
   media?: string[];
   previews: any[];
   hashtags: string[];
   mentions: string[];
-  
+
   // Engagement data
   reactions: any[];
   tips: any[];
@@ -63,12 +63,12 @@ interface EnhancedPost {
   shares: number;
   views: number;
   engagementScore: number;
-  
+
   // Social proof
   socialProof: any;
   trendingStatus?: any;
   pinnedUntil?: Date;
-  
+
   // Community context
   communityId?: string;
   communityName?: string;
@@ -127,9 +127,9 @@ const EnhancedFeedView = React.memo(({
       if (Array.isArray(parsed)) {
         setUserInterestTags(parsed.map((t: string) => t.toLowerCase()));
       }
-    } catch {}
+    } catch { }
   }, []);
-  
+
   // Preferences hooks - now defaults to following feed with newest posts
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
   const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage } = useDisplayPreferences();
@@ -207,7 +207,7 @@ const EnhancedFeedView = React.memo(({
   const convertFeedPostToCardPost = useCallback((feedPost: FeedEnhancedPost): EnhancedPost => {
     return {
       id: feedPost.id,
-      title: feedPost.title || '', 
+      title: feedPost.title || '',
       content: '', // Will be loaded from IPFS using contentCid
       contentCid: feedPost.contentCid, // Add the missing contentCid field
       author: feedPost.author,
@@ -303,7 +303,7 @@ const EnhancedFeedView = React.memo(({
   const handleError = useCallback((error: FeedError) => {
     setError(error);
     addToast(error.message, 'error');
-    
+
     // Track error with analytics
     analyticsService.trackUserEvent('feed_view_error', {
       error: error.message,
@@ -313,7 +313,7 @@ const EnhancedFeedView = React.memo(({
       filter: filter,
       communityId: communityId
     });
-    
+
     // Log to console for debugging
     console.error('Feed error:', error);
   }, [addToast, filter, communityId]);
@@ -321,14 +321,14 @@ const EnhancedFeedView = React.memo(({
   // Enhanced retry function with analytics - memoized
   const handleRetry = useCallback(() => {
     setRefreshKey(prev => prev + 1);
-    
+
     // Track retry attempt
     analyticsService.trackUserEvent('feed_retry_attempt', {
       filter: filter,
       communityId: communityId,
       timestamp: new Date()
     });
-    
+
     // Log retry attempt
     console.log('Feed retry attempt', { filter, communityId });
   }, [filter, communityId]);
@@ -367,11 +367,10 @@ const EnhancedFeedView = React.memo(({
           <button
             key={option.value}
             onClick={() => handleSortChange(option.value)}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${
-              filter.sortBy === option.value
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${filter.sortBy === option.value
                 ? 'text-primary-600 dark:text-primary-400'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
+              }`}
             title={option.desc}
           >
             {option.label}
@@ -387,7 +386,7 @@ const EnhancedFeedView = React.memo(({
   // Memoized community metrics
   const communityMetrics = useMemo(() => {
     if (!showCommunityMetrics || !communityId) return null;
-    
+
     return (
       <div className="mb-4">
         <CommunityEngagementMetrics
@@ -411,11 +410,11 @@ const EnhancedFeedView = React.memo(({
   // Memoized error state
   const errorState = useMemo(() => {
     if (!error) return null;
-    
+
     return (
-      <ErrorState 
-        error={error} 
-        onRetry={handleRetry} 
+      <ErrorState
+        error={error}
+        onRetry={handleRetry}
       />
     );
   }, [error, handleRetry]);
@@ -453,8 +452,8 @@ const EnhancedFeedView = React.memo(({
 
               {/* Error state */}
               {scrollState.error && (
-                <FeedErrorState 
-                  error={scrollState.error} 
+                <FeedErrorState
+                  error={scrollState.error}
                   onRetry={(scrollState as any).retry}
                 />
               )}
@@ -535,34 +534,38 @@ function EmptyFeedState({ filter }: EmptyFeedStateProps) {
   };
 
   return (
-    <div className="text-center py-12">
-      <div className="text-6xl mb-4">📭</div>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+    <div className="text-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="w-24 h-24 mx-auto mb-6 bg-gray-50 dark:bg-gray-700 rounded-full flex items-center justify-center">
+        <span className="text-5xl">📭</span>
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
         No {getSortDescription(filter.sortBy)} found
       </h3>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
-        {filter.communityId 
-          ? 'This community doesn\'t have any posts matching your criteria yet.'
-          : 'Try adjusting your filters or check back later for new content.'
+      <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto leading-relaxed">
+        {filter.communityId
+          ? 'This community is quiet right now. Be the first to start a conversation!'
+          : 'Your feed is looking a bit empty. Try adjusting your filters or follow more people to see their content here.'
         }
       </p>
-      <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
-        <p>Current filters:</p>
-        <div className="flex items-center justify-center space-x-4 flex-wrap">
-          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-            Sort: {filter.sortBy}
+
+      <div className="flex flex-col items-center space-y-6">
+        <div className="flex items-center justify-center space-x-3 flex-wrap gap-y-2">
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Active Filters:</span>
+          <span className="px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium border border-primary-100 dark:border-primary-800">
+            {filter.sortBy}
           </span>
           {filter.timeRange && (
-            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-              Time: {filter.timeRange}
-            </span>
-          )}
-          {filter.communityId && (
-            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-              Community: {filter.communityId}
+            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium border border-gray-200 dark:border-gray-600">
+              {filter.timeRange}
             </span>
           )}
         </div>
+
+        {!filter.communityId && (
+          <button className="px-6 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors shadow-sm">
+            Explore Communities
+          </button>
+        )}
       </div>
     </div>
   );
@@ -620,28 +623,34 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
   }, [error]);
 
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-      <div className="text-red-600 dark:text-red-400 mb-4">
-        <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-xl p-8 text-center shadow-sm">
+      <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+        <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
-        <h3 className="text-lg font-medium">Something went wrong</h3>
-        <p className="text-sm mt-1">{error.message}</p>
-        {error.code && (
-          <p className="text-xs mt-1 opacity-75">Error code: {error.code}</p>
-        )}
       </div>
-      
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
+
+      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Unable to load feed</h3>
+      <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md mx-auto">
+        {error.message || "We encountered an unexpected issue while fetching the latest posts."}
+      </p>
+
+      {error.code && (
+        <div className="mb-6 inline-block px-3 py-1 bg-red-100 dark:bg-red-900/40 rounded text-xs font-mono text-red-700 dark:text-red-300">
+          Error Code: {error.code}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
         {error.retryable && (
           <button
             onClick={onRetry}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
           >
             Try Again
           </button>
         )}
-        
+
         <button
           onClick={() => {
             analyticsService.trackUserEvent('feed_refresh_page', {
@@ -650,15 +659,15 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
             });
             window.location.reload();
           }}
-          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+          className="px-6 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors shadow-sm"
         >
           Refresh Page
         </button>
       </div>
-      
+
       {!error.retryable && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-          This error may require administrator attention. Please try again later.
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-6 border-t border-red-100 dark:border-red-800/30 pt-4">
+          If this persists, please contact support or check our status page.
         </p>
       )}
     </div>
@@ -695,7 +704,7 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
       const { FeedService } = await import('../../services/feedService');
       const response = await FeedService.getEnhancedFeed(filter, page, postsPerPage);
       const convertedPosts = response.posts.map(convertPost);
-      
+
       setPosts(convertedPosts);
       setTotalPages(response.totalPages);
       onPostsUpdate(convertedPosts);
@@ -738,11 +747,11 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
           >
             Previous
           </button>
-          
+
           <span className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
             Page {currentPage} of {totalPages}
           </span>
-          
+
           <button
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages || loading}

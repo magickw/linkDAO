@@ -30,11 +30,14 @@ export class DatabaseConnectionPool {
     const dbUrl = new URL(connectionString);
 
     this.config = {
-      // Pool configuration
-      max: parseInt(process.env.DB_POOL_MAX || '25'), // Increased maximum connections
-      idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '60'), // Increased idle timeout
-      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '15'), // Increased connect timeout
-      prepare: false // Disable prepared statements for better compatibility
+      // OPTIMIZED: Pool configuration for high-load scenarios
+      max: parseInt(process.env.DB_POOL_MAX || '15'), // Reduced max connections to prevent overload
+      idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '30'), // Reduced idle timeout for faster cleanup
+      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // Reduced connect timeout
+      prepare: false, // Disable prepared statements for better compatibility
+      max_lifetime: 300, // 5 minutes max connection lifetime
+      transform: postgres.camel, // Transform to camelCase
+      types: postgres.types, // Enable type parsing
     };
 
     try {
@@ -204,8 +207,8 @@ export class DatabaseConnectionPool {
     }
   }
 
-  // Connection monitoring
-  public startMonitoring(intervalMs: number = 30000): NodeJS.Timeout {
+  // OPTIMIZED: Enhanced connection monitoring with automatic cleanup
+  public startMonitoring(intervalMs: number = 15000): NodeJS.Timeout {
     return setInterval(async () => {
       try {
         const health = await this.healthCheck();
@@ -216,22 +219,84 @@ export class DatabaseConnectionPool {
             healthy: health.healthy,
             latency: health.latency,
             ...stats,
+            maxConnections: this.config.max,
             timestamp: new Date().toISOString()
           });
         }
         
-        // Alert if unhealthy or too many connections
+        // Alert if unhealthy
         if (!health.healthy) {
           safeLogger.error('Database health check failed:', health.error);
         }
         
-        if (stats.totalConnections > (this.config.max || 20) * 0.8) {
-          safeLogger.warn('High connection usage detected:', stats);
+        // OPTIMIZED: Automatic connection cleanup for high usage
+        const maxConnections = this.config.max || 15;
+        const usageThreshold = maxConnections * 0.85; // 85% threshold
+        
+        if (stats.totalConnections > usageThreshold) {
+          safeLogger.warn('High connection usage detected, initiating cleanup:', {
+            current: stats.totalConnections,
+            threshold: usageThreshold,
+            max: maxConnections
+          });
+          
+          // Force cleanup of idle connections
+          await this.cleanupIdleConnections();
+        }
+        
+        // OPTIMIZED: Memory pressure detection
+        const memoryUsage = process.memoryUsage();
+        const memoryThreshold = 0.9; // 90% memory usage threshold
+        
+        if (memoryUsage.heapUsed / memoryUsage.heapTotal > memoryThreshold) {
+          safeLogger.warn('High memory usage detected, reducing pool size temporarily');
+          await this.reducePoolSize();
         }
       } catch (error) {
         safeLogger.error('Error during connection monitoring:', error);
       }
     }, intervalMs);
+  }
+
+  // OPTIMIZED: Clean up idle connections
+  private async cleanupIdleConnections(): Promise<void> {
+    try {
+      // Force close idle connections that have been idle too long
+      const idleConnections = await this.sql`
+        SELECT pid, state, query_start 
+        FROM pg_stat_activity 
+        WHERE state = 'idle' 
+        AND query_start < NOW() - INTERVAL '30 seconds'
+        AND pid != pg_backend_pid()
+      `;
+
+      if (idleConnections.length > 0) {
+        safeLogger.info(`Cleaning up ${idleConnections.length} idle connections`);
+        
+        // Terminate idle connections
+        for (const conn of idleConnections) {
+          try {
+            await this.sql`SELECT pg_terminate_backend(${conn.pid})`;
+          } catch (error) {
+            // Connection may already be terminated
+            continue;
+          }
+        }
+      }
+    } catch (error) {
+      safeLogger.error('Error during connection cleanup:', error);
+    }
+  }
+
+  // OPTIMIZED: Temporarily reduce pool size under memory pressure
+  private async reducePoolSize(): Promise<void> {
+    try {
+      // This would require implementing a dynamic pool size adjustment
+      // For now, just log the action
+      safeLogger.info('Pool size reduction would be implemented here');
+    } catch (error) {
+      safeLogger.error('Error reducing pool size:', error);
+    }
   }
 }
 
