@@ -886,6 +886,12 @@ class AuthService {
    * Create mock authentication response for offline mode
    */
   private createMockAuthResponse(address: string): AuthResponse {
+    // In production, do not allow mock authentication
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('Mock authentication attempted in production - blocking');
+      throw new Error('Authentication failed');
+    }
+
     const mockToken = `mock_token_${address}_${Date.now()}`;
     const isAdmin = this.isAdminAddress(address);
 

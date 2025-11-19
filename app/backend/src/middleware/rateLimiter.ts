@@ -11,7 +11,7 @@ const isAuthenticated = (req: Request): boolean => {
 // General rate limiter for all requests
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 2000, // Increased from 1000 to 2000 for better UX
+  max: 10000, // Increased for debugging
   message: {
     error: 'Too many requests',
     message: 'Too many requests from this IP, please try again later.',

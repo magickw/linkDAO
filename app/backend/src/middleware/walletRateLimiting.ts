@@ -85,7 +85,7 @@ export const walletGeneralRateLimit = walletRateLimit({
 // Authentication rate limit: 5 login attempts per 15 minutes per wallet
 export const walletAuthRateLimit = walletRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 20, // Increased from 5 to 20 for development
+  maxRequests: 100, // Increased for debugging
   message: 'Too many authentication attempts. Please try again in 15 minutes.',
   skipSuccessfulRequests: true // Don't count successful logins
 });
@@ -176,7 +176,7 @@ export class RedisWalletRateLimiter {
 
         // Add current request to the sorted set
         await redisClient.zadd(key, now, `${now}:${Math.random()}`);
-        
+
         // Set expiration to clean up old keys
         await redisClient.expire(key, windowSeconds);
 
@@ -195,7 +195,7 @@ export class RedisWalletRateLimiter {
           key,
           walletAddress
         });
-        
+
         // Fallback to allowing if Redis operation fails
         return {
           allowed: true,

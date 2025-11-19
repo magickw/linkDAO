@@ -122,20 +122,20 @@ const maxQueueSize = 100;
 // Install event - cache static assets with graceful failure handling
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
-  
+
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(async (cache) => {
         console.log('Caching static assets');
-        
+
         // Verify resource availability before caching
         const verifiedAssets = await verifyResourceAvailability(STATIC_ASSETS);
-        
+
         if (verifiedAssets.length === 0) {
           console.warn('No static assets available for caching');
           return;
         }
-        
+
         // Use graceful cache.addAll with individual fallbacks
         return gracefulCacheAddAll(cache, verifiedAssets);
       })
@@ -153,15 +153,15 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...');
-  
+
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && 
-                cacheName !== DYNAMIC_CACHE && 
-                cacheName !== IMAGE_CACHE) {
+            if (cacheName !== STATIC_CACHE &&
+              cacheName !== DYNAMIC_CACHE &&
+              cacheName !== IMAGE_CACHE) {
               console.log('Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
@@ -221,7 +221,7 @@ async function cacheFirst(request, cacheName) {
   try {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
-    
+
     if (cachedResponse) {
       // Update cache in background (non-blocking)
       updateCache(request, cacheName).catch(error => {
@@ -229,9 +229,9 @@ async function cacheFirst(request, cacheName) {
       });
       return cachedResponse;
     }
-    
+
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       try {
         // Check if the request URL scheme is supported for caching
@@ -244,17 +244,17 @@ async function cacheFirst(request, cacheName) {
         // Continue serving the response even if caching fails
       }
     }
-    
+
     return networkResponse;
   } catch (error) {
     console.error('Cache first strategy failed:', error);
-    
+
     // Try fallback mechanisms
     try {
       return await handleCacheFailure(request, error);
     } catch (fallbackError) {
       console.error('All fallback mechanisms failed:', fallbackError);
-      return new Response('Service temporarily unavailable', { 
+      return new Response('Service temporarily unavailable', {
         status: 503,
         headers: { 'Content-Type': 'text/plain' }
       });
@@ -268,14 +268,14 @@ async function networkFirst(request, cacheName) {
   const now = Date.now();
   const cacheConfig = getAPICacheConfig(request);
   const serviceKey = getServiceKey(request);
-  
+
   // Check circuit breaker state for this service
   const circuitState = getCircuitBreakerState(serviceKey);
   if (circuitState === 'OPEN') {
     console.log('Circuit breaker is OPEN for service:', serviceKey);
     return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
   }
-  
+
   // Check if we have fresh cached data first for critical APIs
   if (isCriticalAPI(request)) {
     const cachedResponse = await getCachedResponseWithTTL(request, cacheName, cacheConfig.ttl);
@@ -285,13 +285,13 @@ async function networkFirst(request, cacheName) {
       return cachedResponse;
     }
   }
-  
+
   // Rate limiting check
   if (!checkRateLimit(requestKey, now)) {
     console.log('Rate limit exceeded for:', requestKey);
     return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
   }
-  
+
   // Check if request recently failed with exponential backoff
   const failureInfo = failedRequests.get(requestKey);
   if (failureInfo) {
@@ -299,18 +299,18 @@ async function networkFirst(request, cacheName) {
     const url = new URL(request.url);
     const isCommunityRequest = url.pathname.includes('/api/communities');
     const baseBackoffTime = isCommunityRequest ? 10000 : 30000; // 10s for communities, 30s for others
-    
+
     const backoffTime = Math.min(
       baseBackoffTime * Math.pow(BACKOFF_MULTIPLIER, failureInfo.attempts - 1),
       MAX_BACKOFF_TIME
     );
-    
+
     if (now - failureInfo.lastFailure < backoffTime) {
       console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
       return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }
-  
+
   // Check if request is already pending (request coalescing)
   // Only coalesce non-critical requests to avoid blocking important operations
   if (pendingRequests.has(requestKey) && !isCriticalRequest(request)) {
@@ -323,13 +323,13 @@ async function networkFirst(request, cacheName) {
       } else {
         // Wait for the existing promise to resolve
         const sharedResponse = await sharedPromise;
-        
+
         // Check if response body has been consumed
         if (sharedResponse.bodyUsed) {
           console.warn('Shared response body already consumed, falling back to cache');
           return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
         }
-        
+
         // Clone the response to avoid bodyUsed issues
         const responseClone = sharedResponse.clone();
         return responseClone;
@@ -341,7 +341,7 @@ async function networkFirst(request, cacheName) {
       // Continue to normal request handling below
     }
   }
-  
+
   // Special handling for geolocation requests - try fallback services
   const url = new URL(request.url);
   // Skip ip-api.com due to rate limiting - use alternatives directly
@@ -351,9 +351,9 @@ async function networkFirst(request, cacheName) {
   }
 
   if (url.hostname.includes('ipify.org') ||
-      url.hostname.includes('ipapi.co') ||
-      url.hostname.includes('ipinfo.io')) {
-    
+    url.hostname.includes('ipapi.co') ||
+    url.hostname.includes('ipinfo.io')) {
+
     // Create promise for this request with fallback
     const requestPromise = (async () => {
       try {
@@ -371,9 +371,9 @@ async function networkFirst(request, cacheName) {
         return await tryAlternativeGeolocationServices(request);
       }
     })();
-    
+
     pendingRequests.set(requestKey, requestPromise);
-    
+
     // Add timeout to prevent hanging requests
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
@@ -381,7 +381,7 @@ async function networkFirst(request, cacheName) {
         reject(new Error('Geolocation request timeout'));
       }, 30000); // 30 second timeout
     });
-    
+
     try {
       const result = await Promise.race([requestPromise, timeoutPromise]);
       pendingRequests.delete(requestKey);
@@ -391,11 +391,11 @@ async function networkFirst(request, cacheName) {
       throw error;
     }
   }
-  
+
   // Create promise for this request (normal handling)
   const requestPromise = performNetworkRequestWithCircuitBreaker(request, cacheName, requestKey, cacheConfig, serviceKey);
   pendingRequests.set(requestKey, requestPromise);
-  
+
   // Add timeout to prevent hanging requests
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
@@ -403,7 +403,7 @@ async function networkFirst(request, cacheName) {
       reject(new Error('Request timeout'));
     }, 30000); // 30 second timeout
   });
-  
+
   try {
     const result = await Promise.race([requestPromise, timeoutPromise]);
     pendingRequests.delete(requestKey);
@@ -422,12 +422,12 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     // but still apply timeout protection
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     try {
       const networkResponse = await fetch(request, {
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
       return networkResponse;
     } catch (error) {
@@ -437,35 +437,35 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       return await getCachedResponse(request, cacheName);
     }
   }
-  
+
   try {
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
+
     // Check if this is an authenticated request and add auth headers if needed
     let fetchRequest = request;
     const url = new URL(request.url);
     let isAuthRequest = false;
-    
+
     // For API requests that require authentication, check if this is already an authenticated request
     const authHeader = request.headers.get('Authorization') || request.headers.get('authorization');
     if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth') && authHeader) {
       // This is an authenticated request, use the original request as-is
       isAuthRequest = true;
     }
-    
+
     const networkResponse = await fetch(fetchRequest, {
       signal: controller.signal
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     // Treat opaque responses (status 0) as non-fatal and return as-is
     if (networkResponse.type === 'opaque') {
       return networkResponse;
     }
-    
+
     if (networkResponse.ok) {
       // Clone response before consuming it for caching
       let responseToCache;
@@ -497,7 +497,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         failedRequests.delete(requestKey);
         // Reset rate limit counter on success
         requestCounts.delete(requestKey);
-        
+
         return responseToReturn;
       } catch (cacheError) {
         console.warn('Failed to cache response:', cacheError);
@@ -507,7 +507,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     } else {
       // Special handling for specific error cases
       const url = new URL(request.url);
-      
+
       // Handle WebSocket connection failures
       if (url.pathname.includes('socket.io')) {
         console.warn('WebSocket endpoint failed:', networkResponse.status, requestKey);
@@ -574,15 +574,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
       }
-      
+
       console.warn(`Request failed with status ${networkResponse.status}:`, requestKey);
-      
+
       // In development, don't aggressively cache 503 errors
       if (isDevelopment && networkResponse.status === 503) {
         return networkResponse;
       }
     }
-    
+
     // Return a clone to ensure the original can be used by other callers
     try {
       return networkResponse.clone();
@@ -592,14 +592,14 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     }
   } catch (error) {
     console.log('Network failed, trying cache:', error.message);
-    
+
     // Clear the pending request on network failure to allow retry
     pendingRequests.delete(requestKey);
-    
+
     // Special handling for different error types
     const url = new URL(request.url);
-    const requestKey = `${request.method}:${request.url}`;
-    
+    // requestKey is already available from arguments
+
     // Handle WebSocket connection failures
     if (url.pathname.includes('socket.io')) {
       console.warn('WebSocket connection failed, falling back to polling:', error.message);
@@ -635,7 +635,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
     }
-    
+
     return await getCachedResponse(request, cacheName);
   }
 }
@@ -645,7 +645,7 @@ async function cacheResponseWithTTL(request, response, cacheName, ttl) {
   try {
     const cache = await caches.open(cacheName);
     const now = Date.now();
-    
+
     // Add TTL metadata to response headers
     const responseWithTTL = new Response(response.body, {
       status: response.status,
@@ -656,7 +656,7 @@ async function cacheResponseWithTTL(request, response, cacheName, ttl) {
         'sw-ttl': ttl.toString()
       }
     });
-    
+
     // Check if the request URL scheme is supported for caching
     if (request.url.startsWith('http://') || request.url.startsWith('https://')) {
       await cache.put(request, responseWithTTL);
@@ -671,25 +671,25 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
   try {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
-    
+
     if (!cachedResponse) {
       return null;
     }
-    
+
     const cachedAt = cachedResponse.headers.get('sw-cached-at');
     const responseTTL = cachedResponse.headers.get('sw-ttl');
-    
+
     if (cachedAt && responseTTL) {
       const age = Date.now() - parseInt(cachedAt);
       const maxAge = parseInt(responseTTL);
-      
+
       if (age > maxAge) {
         // Cache expired, remove it
         await cache.delete(request);
         return null;
       }
     }
-    
+
     return cachedResponse;
   } catch (error) {
     console.warn('Failed to get cached response with TTL:', error);
@@ -701,7 +701,7 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
 async function updateCacheInBackground(request, cacheName, requestKey) {
   try {
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       const cacheConfig = getAPICacheConfig(request);
       await cacheResponseWithTTL(request, networkResponse, cacheName, cacheConfig.ttl);
@@ -716,22 +716,22 @@ async function getCachedResponse(request, cacheName) {
   try {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
-    
+
     if (cachedResponse) {
       // Return cached response directly without modifying headers
       // to avoid response body locked errors
       return cachedResponse;
     }
-    
+
     // Try alternative caches
     const alternativeCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE]
       .filter(name => name !== cacheName);
-    
+
     for (const altCacheName of alternativeCaches) {
       try {
         const altCache = await caches.open(altCacheName);
         const altResponse = await altCache.match(request);
-        
+
         if (altResponse) {
           console.log(`Found in alternative cache: ${altCacheName}`);
           return altResponse;
@@ -740,7 +740,7 @@ async function getCachedResponse(request, cacheName) {
         console.warn(`Alternative cache ${altCacheName} failed:`, altError);
       }
     }
-    
+
     // Return offline page for navigation requests
     if (isNavigation(request)) {
       try {
@@ -751,7 +751,7 @@ async function getCachedResponse(request, cacheName) {
       } catch (offlineError) {
         console.warn('Failed to load offline page:', offlineError);
       }
-      
+
       return new Response(`
         <!DOCTYPE html>
         <html>
@@ -771,16 +771,16 @@ async function getCachedResponse(request, cacheName) {
             <button onclick="window.location.reload()">Retry</button>
           </body>
         </html>
-      `, { 
+      `, {
         status: 503,
         headers: { 'Content-Type': 'text/html' }
       });
     }
-    
+
     // Provide more specific error messages for different API endpoints
     const url = new URL(request.url);
     let errorMessage = 'Content not available offline';
-    
+
     if (url.pathname.includes('/api/messaging')) {
       errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
     } else if (url.pathname.includes('/api/communities')) {
@@ -788,8 +788,8 @@ async function getCachedResponse(request, cacheName) {
     } else if (url.pathname.includes('/api/feed')) {
       errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
     }
-    
-    return new Response(errorMessage, { 
+
+    return new Response(errorMessage, {
       status: 503,
       headers: { 'Content-Type': 'text/plain' }
     });
@@ -808,17 +808,17 @@ async function navigationHandler(request) {
     // Return cached page or offline page
     const cache = await caches.open(STATIC_CACHE);
     const cachedResponse = await cache.match(request);
-    
+
     if (cachedResponse) {
       return cachedResponse;
     }
-    
+
     // Return offline page as fallback
     const offlineResponse = await cache.match('/offline.html');
     if (offlineResponse) {
       return offlineResponse;
     }
-    
+
     // Fallback response if offline.html is not available
     return new Response(`
       <!DOCTYPE html>
@@ -839,7 +839,7 @@ async function navigationHandler(request) {
           <button onclick="window.location.reload()">Retry</button>
         </body>
       </html>
-    `, { 
+    `, {
       status: 503,
       headers: { 'Content-Type': 'text/html' }
     });
@@ -849,15 +849,15 @@ async function navigationHandler(request) {
 // Enhanced fallback mechanisms when caching operations fail
 async function handleCacheFailure(request, error) {
   console.warn('Cache operation failed:', error);
-  
+
   // Try to serve from alternative caches
   const cacheNames = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
-  
+
   for (const cacheName of cacheNames) {
     try {
       const cache = await caches.open(cacheName);
       const response = await cache.match(request);
-      
+
       if (response) {
         console.log(`Served from alternative cache: ${cacheName}`);
         return response;
@@ -866,7 +866,7 @@ async function handleCacheFailure(request, error) {
       console.warn(`Alternative cache ${cacheName} also failed:`, cacheError);
     }
   }
-  
+
   // Final fallback - return offline page or error response
   if (isNavigation(request)) {
     try {
@@ -875,7 +875,7 @@ async function handleCacheFailure(request, error) {
       if (offlineResponse) {
         return offlineResponse;
       }
-      
+
       // Fallback response if offline.html is not available
       return new Response(`
         <!DOCTYPE html>
@@ -896,22 +896,22 @@ async function handleCacheFailure(request, error) {
             <button onclick="window.location.reload()">Retry</button>
           </body>
         </html>
-      `, { 
+      `, {
         status: 503,
         headers: { 'Content-Type': 'text/html' }
       });
     } catch (offlineError) {
-      return new Response('Service temporarily unavailable', { 
+      return new Response('Service temporarily unavailable', {
         status: 503,
         headers: { 'Content-Type': 'text/plain' }
       });
     }
   }
-  
+
   // Provide more specific error messages for different API endpoints
   const url = new URL(request.url);
   let errorMessage = 'Content not available offline';
-  
+
   if (url.pathname.includes('/api/messaging')) {
     errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
   } else if (url.pathname.includes('/api/communities')) {
@@ -919,17 +919,17 @@ async function handleCacheFailure(request, error) {
   } else if (url.pathname.includes('/api/feed')) {
     errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
   }
-  
-  return new Response(errorMessage, { 
+
+  return new Response(errorMessage, {
     status: 503,
     headers: { 'Content-Type': 'text/plain' }
   });
 }
 
-    // Return dashboard as fallback for SPA
-    return cache.match('/dashboard') || 
-           cache.match('/') ||
-           new Response('Offline', { status: 503 });
+// Return dashboard as fallback for SPA
+return cache.match('/dashboard') ||
+  cache.match('/') ||
+  new Response('Offline', { status: 503 });
   }
 }
 
@@ -937,7 +937,7 @@ async function handleCacheFailure(request, error) {
 async function updateCache(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
       // Check if the request URL scheme is supported for caching
@@ -955,15 +955,15 @@ async function handlePlaceholderRequest(url) {
   try {
     // Parse placehold.co URL
     const pathParts = url.pathname.split('/').filter(Boolean);
-    
+
     if (pathParts.length < 1) {
       return generatePlaceholderSVG(40, 40, '?');
     }
-    
+
     const dimensions = pathParts[0];
     let width = 40;
     let height = 40;
-    
+
     if (dimensions.includes('x')) {
       const [w, h] = dimensions.split('x').map(Number);
       width = w || 40;
@@ -971,16 +971,16 @@ async function handlePlaceholderRequest(url) {
     } else {
       width = height = Number(dimensions) || 40;
     }
-    
+
     // Extract background color if present
     let backgroundColor;
     if (pathParts.length > 1) {
       backgroundColor = `#${pathParts[1]}`;
     }
-    
+
     // Extract text from query params
     const text = url.searchParams.get('text')?.replace(/\+/g, ' ');
-    
+
     return generatePlaceholderSVG(width, height, text, backgroundColor);
   } catch (error) {
     console.warn('Failed to generate placeholder:', error);
@@ -1000,11 +1000,11 @@ function generatePlaceholderSVG(width, height, text, backgroundColor) {
     const hue = Math.abs(hash) % 360;
     backgroundColor = `hsl(${hue}, 65%, 50%)`;
   }
-  
+
   const textColor = '#ffffff';
   const displayText = text || `${width}×${height}`;
   const fontSize = Math.min(width, height) * 0.2;
-  
+
   const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="${backgroundColor}"/>
     <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="${fontSize}" 
@@ -1012,7 +1012,7 @@ function generatePlaceholderSVG(width, height, text, backgroundColor) {
       ${displayText}
     </text>
   </svg>`;
-  
+
   return new Response(svg, {
     status: 200,
     headers: {
@@ -1028,18 +1028,18 @@ function generatePlaceholderSVG(width, height, text, backgroundColor) {
 function getServiceKey(request) {
   const url = new URL(request.url);
   const hostname = url.hostname;
-  
+
   // Special handling for different service types
   if (hostname.includes('socket.io') || hostname.includes('websocket')) {
     return 'websocket';
   }
-  
+
   if (hostname.includes('ip-api.com') || hostname.includes('ipify.org') || hostname.includes('ipinfo.io')) {
     return 'geolocation';
   }
-  
+
   const pathParts = url.pathname.split('/');
-  
+
   if (pathParts[1] === 'api' && pathParts[2]) {
     // Return specific service key for different API types
     if (pathParts[2] === 'messaging') {
@@ -1054,7 +1054,7 @@ function getServiceKey(request) {
       return pathParts[2]; // e.g., 'profiles', 'users', 'search', etc.
     }
   }
-  
+
   return 'default';
 }
 
@@ -1070,23 +1070,23 @@ function getCircuitBreakerState(serviceKey) {
     });
     return 'CLOSED';
   }
-  
+
   const now = Date.now();
-  
+
   // Check if circuit should transition from OPEN to HALF_OPEN
   if (state.state === 'OPEN' && now - state.lastFailure > CIRCUIT_BREAKER_CONFIG.recoveryTimeout) {
     state.state = 'HALF_OPEN';
     state.halfOpenCalls = 0;
     console.log(`Circuit breaker for ${serviceKey} transitioning to HALF_OPEN`);
   }
-  
+
   return state.state;
 }
 
 function recordCircuitBreakerSuccess(serviceKey) {
   const state = circuitBreakerStates.get(serviceKey);
   if (!state) return;
-  
+
   if (state.state === 'HALF_OPEN') {
     state.halfOpenCalls++;
     if (state.halfOpenCalls >= CIRCUIT_BREAKER_CONFIG.halfOpenMaxCalls) {
@@ -1107,23 +1107,23 @@ function recordCircuitBreakerFailure(serviceKey, error) {
     lastFailure: 0,
     halfOpenCalls: 0
   };
-  
-  const isServiceFailure = error?.status >= 500 || 
-                          error?.status === 503 ||
-                          error?.message?.includes('fetch') ||
-                          error?.message?.includes('timeout');
-  
+
+  const isServiceFailure = error?.status >= 500 ||
+    error?.status === 503 ||
+    error?.message?.includes('fetch') ||
+    error?.message?.includes('timeout');
+
   if (isServiceFailure) {
     state.failures++;
     state.lastFailure = Date.now();
-    
-    if (state.state === 'HALF_OPEN' || 
-        (state.state === 'CLOSED' && state.failures >= CIRCUIT_BREAKER_CONFIG.failureThreshold)) {
+
+    if (state.state === 'HALF_OPEN' ||
+      (state.state === 'CLOSED' && state.failures >= CIRCUIT_BREAKER_CONFIG.failureThreshold)) {
       state.state = 'OPEN';
       state.halfOpenCalls = 0;
       console.warn(`Circuit breaker for ${serviceKey} opened due to ${state.failures} failures`);
     }
-    
+
     circuitBreakerStates.set(serviceKey, state);
   }
 }
@@ -1145,7 +1145,7 @@ async function getCachedResponseWithFallback(request, cacheName, cacheConfig) {
   if (freshCache) {
     return freshCache;
   }
-  
+
   // Try stale cache
   const staleCache = await getCachedResponseWithTTL(request, cacheName, cacheConfig.staleTTL || cacheConfig.ttl * 10);
   if (staleCache) {
@@ -1161,7 +1161,7 @@ async function getCachedResponseWithFallback(request, cacheName, cacheConfig) {
     });
     return staleResponse;
   }
-  
+
   // Final fallback
   return await getCachedResponse(request, cacheName);
 }
@@ -1174,22 +1174,22 @@ function isStaticAsset(request) {
 
 function isCriticalRequest(request) {
   const url = new URL(request.url);
-  
+
   // Consider WebSocket, authentication, and profile requests as critical
   // Also consider requests with unique parameters that shouldn't be coalesced
-  if (url.pathname.includes('socket.io') || 
-      url.pathname.startsWith('/api/auth') ||
-      url.pathname.startsWith('/api/profiles') ||
-      url.pathname.startsWith('/api/users') ||
-      url.pathname.includes('/feed/enhanced') ||
-      url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
-      url.pathname.includes('/conversations') || // Don't coalesce conversation requests as they may have different responses
-      url.searchParams.has('timestamp') ||
-      url.searchParams.has('nonce') ||
-      url.searchParams.has('_t')) {
+  if (url.pathname.includes('socket.io') ||
+    url.pathname.startsWith('/api/auth') ||
+    url.pathname.startsWith('/api/profiles') ||
+    url.pathname.startsWith('/api/users') ||
+    url.pathname.includes('/feed/enhanced') ||
+    url.pathname.includes('/communities/') || // Don't coalesce community requests as they may have different responses
+    url.pathname.includes('/conversations') || // Don't coalesce conversation requests as they may have different responses
+    url.searchParams.has('timestamp') ||
+    url.searchParams.has('nonce') ||
+    url.searchParams.has('_t')) {
     return true;
   }
-  
+
   return false;
 }
 
@@ -1200,8 +1200,8 @@ function isImage(request) {
 
 function isAPI(request) {
   const url = new URL(request.url);
-  return url.pathname.startsWith('/api/') || 
-         Object.keys(CACHEABLE_APIS).some(api => url.pathname.startsWith(api));
+  return url.pathname.startsWith('/api/') ||
+    Object.keys(CACHEABLE_APIS).some(api => url.pathname.startsWith(api));
 }
 
 function getAPICacheConfig(request) {
@@ -1220,23 +1220,23 @@ function isCriticalAPI(request) {
 }
 
 function isNavigation(request) {
-  return request.mode === 'navigate' || 
-         (request.method === 'GET' && request.headers.get('accept').includes('text/html'));
+  return request.mode === 'navigate' ||
+    (request.method === 'GET' && request.headers.get('accept').includes('text/html'));
 }
 
 // Message handler for offline actions
 self.addEventListener('message', (event) => {
   const { type, data } = event.data;
-  
+
   switch (type) {
     case 'QUEUE_OFFLINE_ACTION':
       queueOfflineAction(data);
       event.ports[0].postMessage({ success: true });
       break;
     case 'GET_OFFLINE_STATUS':
-      event.ports[0].postMessage({ 
+      event.ports[0].postMessage({
         isOnline: navigator.onLine,
-        queueSize: offlineActionQueue.length 
+        queueSize: offlineActionQueue.length
       });
       break;
     case 'SYNC_OFFLINE_ACTIONS':
@@ -1255,18 +1255,18 @@ function queueOfflineAction(action) {
     // Remove oldest action to make room
     offlineActionQueue.shift();
   }
-  
+
   const queuedAction = {
     id: generateActionId(),
     timestamp: Date.now(),
     ...action
   };
-  
+
   offlineActionQueue.push(queuedAction);
-  
+
   // Store in IndexedDB for persistence
   storeOfflineAction(queuedAction);
-  
+
   console.log('Queued offline action:', queuedAction.type);
 }
 
@@ -1290,7 +1290,7 @@ async function storeOfflineAction(action) {
 // Background sync for offline actions
 self.addEventListener('sync', (event) => {
   console.log('Background sync triggered:', event.tag);
-  
+
   if (event.tag === 'offline-actions-sync') {
     event.waitUntil(syncOfflineActions());
   } else if (event.tag === 'post-sync') {
@@ -1305,7 +1305,7 @@ async function syncOfflineActions() {
   try {
     const db = await openDB();
     const actions = await getOfflineActions(db);
-    
+
     for (const action of actions) {
       try {
         const success = await syncSingleAction(action);
@@ -1322,7 +1322,7 @@ async function syncOfflineActions() {
         console.error('Failed to sync action:', action.id, error);
       }
     }
-    
+
     // Notify clients about sync completion
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
@@ -1366,7 +1366,7 @@ async function syncCreatePost(action) {
       },
       body: JSON.stringify(action.data)
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error('Failed to sync create post:', error);
@@ -1385,7 +1385,7 @@ async function syncCreateComment(action) {
       },
       body: JSON.stringify(action.data)
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error('Failed to sync create comment:', error);
@@ -1404,7 +1404,7 @@ async function syncReaction(action) {
       },
       body: JSON.stringify(action.data)
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error('Failed to sync reaction:', error);
@@ -1423,7 +1423,7 @@ async function syncJoinCommunity(action) {
       },
       body: JSON.stringify(action.data)
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error('Failed to sync join community:', error);
@@ -1442,7 +1442,7 @@ async function syncFollowUser(action) {
       },
       body: JSON.stringify(action.data)
     });
-    
+
     return response.ok;
   } catch (error) {
     console.error('Failed to sync follow user:', error);
@@ -1455,7 +1455,7 @@ async function syncPosts() {
   try {
     const db = await openDB();
     const offlinePosts = await getOfflinePosts(db);
-    
+
     for (const post of offlinePosts) {
       try {
         const response = await fetch('/api/posts', {
@@ -1465,7 +1465,7 @@ async function syncPosts() {
           },
           body: JSON.stringify(post.data)
         });
-        
+
         if (response.ok) {
           await removeOfflinePost(db, post.id);
           console.log('Synced offline post:', post.id);
@@ -1484,7 +1484,7 @@ async function syncReactions() {
   try {
     const db = await openDB();
     const offlineReactions = await getOfflineReactions(db);
-    
+
     for (const reaction of offlineReactions) {
       try {
         const response = await fetch(`/api/posts/${reaction.postId}/reactions`, {
@@ -1494,7 +1494,7 @@ async function syncReactions() {
           },
           body: JSON.stringify(reaction.data)
         });
-        
+
         if (response.ok) {
           await removeOfflineReaction(db, reaction.id);
           console.log('Synced offline reaction:', reaction.id);
@@ -1512,21 +1512,21 @@ async function syncReactions() {
 async function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('OfflineData', 2);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
-    
+
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      
+
       if (!db.objectStoreNames.contains('posts')) {
         db.createObjectStore('posts', { keyPath: 'id', autoIncrement: true });
       }
-      
+
       if (!db.objectStoreNames.contains('reactions')) {
         db.createObjectStore('reactions', { keyPath: 'id', autoIncrement: true });
       }
-      
+
       if (!db.objectStoreNames.contains('actions')) {
         const actionStore = db.createObjectStore('actions', { keyPath: 'id' });
         actionStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -1541,7 +1541,7 @@ async function getOfflinePosts(db) {
     const transaction = db.transaction(['posts'], 'readonly');
     const store = transaction.objectStore('posts');
     const request = store.getAll();
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
   });
@@ -1552,7 +1552,7 @@ async function getOfflineReactions(db) {
     const transaction = db.transaction(['reactions'], 'readonly');
     const store = transaction.objectStore('reactions');
     const request = store.getAll();
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
   });
@@ -1563,7 +1563,7 @@ async function removeOfflinePost(db, id) {
     const transaction = db.transaction(['posts'], 'readwrite');
     const store = transaction.objectStore('posts');
     const request = store.delete(id);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve();
   });
@@ -1574,7 +1574,7 @@ async function removeOfflineReaction(db, id) {
     const transaction = db.transaction(['reactions'], 'readwrite');
     const store = transaction.objectStore('reactions');
     const request = store.delete(id);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve();
   });
@@ -1585,7 +1585,7 @@ async function getOfflineActions(db) {
     const transaction = db.transaction(['actions'], 'readonly');
     const store = transaction.objectStore('actions');
     const request = store.getAll();
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
   });
@@ -1596,7 +1596,7 @@ async function removeOfflineAction(db, id) {
     const transaction = db.transaction(['actions'], 'readwrite');
     const store = transaction.objectStore('actions');
     const request = store.delete(id);
-    
+
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve();
   });
@@ -1605,9 +1605,9 @@ async function removeOfflineAction(db, id) {
 // Push notification handler
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  
+
   const data = event.data.json();
-  
+
   const options = {
     body: data.body,
     icon: '/icon-192x192.png',
@@ -1616,7 +1616,7 @@ self.addEventListener('push', (event) => {
     data: data.data || {},
     actions: data.actions || []
   };
-  
+
   event.waitUntil(
     self.registration.showNotification(data.title, options)
   );
@@ -1625,10 +1625,10 @@ self.addEventListener('push', (event) => {
 // Notification click handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+
   const data = event.notification.data;
   let url = '/communities';
-  
+
   if (data.postId && data.communityId) {
     url = `/dao/${data.communityId}?post=${data.postId}`;
   } else if (data.communityId) {
@@ -1637,7 +1637,7 @@ self.addEventListener('notificationclick', (event) => {
     // Fallback - try to find a community context or go to communities page
     url = '/communities';
   }
-  
+
   event.waitUntil(
     clients.openWindow(url)
   );
@@ -1657,17 +1657,17 @@ function checkRateLimit(requestKey, now) {
   if (endpoint.includes('/api/placeholder')) {
     return true;
   }
-  
+
   // Skip rate limiting for WebSocket endpoints
   if (url.pathname.includes('socket.io')) {
     return true;
   }
-  
+
   // Skip rate limiting for critical endpoints (authentication, profiles, etc.)
   if (isCriticalRequest({ url: url })) {
     return true;
   }
-  
+
   // Apply rate limiting to geolocation services to prevent excessive requests
   // but allow reasonable fallback attempts between different providers
   if (url.hostname.includes('ip-api.com') || url.hostname.includes('ipify.org') || url.hostname.includes('ipinfo.io')) {
@@ -1723,14 +1723,14 @@ function checkRateLimit(requestKey, now) {
 // Cleanup old entries periodically
 setInterval(() => {
   const now = Date.now();
-  
+
   // Clean up old failed requests (older than max backoff time)
   for (const [key, failureInfo] of failedRequests.entries()) {
     if (now - failureInfo.lastFailure > MAX_BACKOFF_TIME) {
       failedRequests.delete(key);
     }
   }
-  
+
   // Clean up old rate limit counters
   for (const [key, requestInfo] of requestCounts.entries()) {
     if (now - requestInfo.windowStart > RATE_LIMIT_WINDOW * 2) {
@@ -1742,14 +1742,14 @@ setInterval(() => {
 // Resource availability verification
 async function verifyResourceAvailability(assets) {
   const verifiedAssets = [];
-  
+
   for (const asset of assets) {
     try {
-      const response = await fetch(asset, { 
+      const response = await fetch(asset, {
         method: 'HEAD',
         cache: 'no-cache'
       });
-      
+
       if (response.ok) {
         verifiedAssets.push(asset);
       } else {
@@ -1759,7 +1759,7 @@ async function verifyResourceAvailability(assets) {
       console.warn(`Failed to verify asset: ${asset}`, error.message);
     }
   }
-  
+
   return verifiedAssets;
 }
 
@@ -1768,7 +1768,7 @@ async function gracefulCacheAddAll(cache, assets) {
   const cachePromises = assets.map(async (asset) => {
     try {
       const response = await fetch(asset);
-      
+
       if (response.ok) {
         // Check if the asset URL scheme is supported for caching
         if (asset.startsWith('http://') || asset.startsWith('https://')) {
@@ -1785,14 +1785,14 @@ async function gracefulCacheAddAll(cache, assets) {
       return { asset, success: false, error: error.message };
     }
   });
-  
+
   const results = await Promise.allSettled(cachePromises);
-  const successful = results.filter(result => 
+  const successful = results.filter(result =>
     result.status === 'fulfilled' && result.value.success
   ).length;
-  
+
   console.log(`Cached ${successful}/${assets.length} static assets`);
-  
+
   // Don't throw error if some assets fail - continue with partial cache
   return results;
 }
@@ -1802,7 +1802,7 @@ async function performCacheCleanup() {
   try {
     const cacheNames = await caches.keys();
     const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE, PERFORMANCE_CACHE];
-    
+
     // Delete old cache versions
     const deletePromises = cacheNames
       .filter(cacheName => !currentCaches.includes(cacheName))
@@ -1810,12 +1810,12 @@ async function performCacheCleanup() {
         console.log('Deleting old cache:', cacheName);
         return caches.delete(cacheName);
       });
-    
+
     await Promise.all(deletePromises);
-    
+
     // Clean up oversized caches
     await cleanupOversizedCaches();
-    
+
     console.log('Cache cleanup completed');
   } catch (error) {
     console.error('Cache cleanup failed:', error);
@@ -1826,22 +1826,22 @@ async function performCacheCleanup() {
 async function cleanupOversizedCaches() {
   const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB per cache
   const MAX_CACHE_ENTRIES = 1000;
-  
+
   const cacheNames = [DYNAMIC_CACHE, IMAGE_CACHE];
-  
+
   for (const cacheName of cacheNames) {
     try {
       const cache = await caches.open(cacheName);
       const keys = await cache.keys();
-      
+
       if (keys.length > MAX_CACHE_ENTRIES) {
         // Remove oldest entries (simple FIFO approach)
         const entriesToRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
-        
+
         for (const key of entriesToRemove) {
           await cache.delete(key);
         }
-        
+
         console.log(`Cleaned up ${entriesToRemove.length} entries from ${cacheName}`);
       }
     } catch (error) {
@@ -1853,15 +1853,15 @@ async function cleanupOversizedCaches() {
 // Enhanced fallback mechanisms when caching operations fail
 async function handleCacheFailure(request, error) {
   console.warn('Cache operation failed:', error);
-  
+
   // Try to serve from alternative caches
   const cacheNames = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
-  
+
   for (const cacheName of cacheNames) {
     try {
       const cache = await caches.open(cacheName);
       const response = await cache.match(request);
-      
+
       if (response) {
         console.log(`Served from alternative cache: ${cacheName}`);
         return response;
@@ -1870,24 +1870,24 @@ async function handleCacheFailure(request, error) {
       console.warn(`Alternative cache ${cacheName} also failed:`, cacheError);
     }
   }
-  
+
   // Final fallback - return offline page or error response
   if (isNavigation(request)) {
     try {
-      return await caches.match('/offline.html') || 
-             new Response('You are offline', { 
-               status: 503,
-               headers: { 'Content-Type': 'text/html' }
-             });
+      return await caches.match('/offline.html') ||
+        new Response('You are offline', {
+          status: 503,
+          headers: { 'Content-Type': 'text/html' }
+        });
     } catch (offlineError) {
-      return new Response('Service temporarily unavailable', { 
+      return new Response('Service temporarily unavailable', {
         status: 503,
         headers: { 'Content-Type': 'text/plain' }
       });
     }
   }
-  
-  return new Response('Content not available', { 
+
+  return new Response('Content not available', {
     status: 503,
     headers: { 'Content-Type': 'text/plain' }
   });
@@ -1901,22 +1901,22 @@ async function checkStorageQuota() {
       const usedMB = (estimate.usage || 0) / (1024 * 1024);
       const quotaMB = (estimate.quota || 0) / (1024 * 1024);
       const usagePercent = (usedMB / quotaMB) * 100;
-      
+
       console.log(`Storage usage: ${usedMB.toFixed(2)}MB / ${quotaMB.toFixed(2)}MB (${usagePercent.toFixed(1)}%)`);
-      
+
       // Trigger cleanup if usage is high
       if (usagePercent > 80) {
         console.log('High storage usage detected, triggering cleanup');
         await performCacheCleanup();
       }
-      
+
       return { usedMB, quotaMB, usagePercent };
     } catch (error) {
       console.error('Failed to check storage quota:', error);
       return null;
     }
   }
-  
+
   return null;
 }
 
@@ -1934,7 +1934,7 @@ setInterval(async () => {
 self.addEventListener('online', () => {
   console.log('Connection restored, syncing offline actions');
   syncOfflineActions();
-  
+
   // Notify all clients about online status
   self.clients.matchAll().then(clients => {
     clients.forEach(client => {
@@ -1949,7 +1949,7 @@ self.addEventListener('online', () => {
 
 self.addEventListener('offline', () => {
   console.log('Connection lost, entering offline mode');
-  
+
   // Notify all clients about offline status
   self.clients.matchAll().then(clients => {
     clients.forEach(client => {
@@ -2042,7 +2042,7 @@ async function tryAlternativeGeolocationServices(originalRequest) {
       if (response.ok) {
         const data = await response.json();
         let parsedData;
-        
+
         if (typeof service.parser === 'function') {
           parsedData = await service.parser(data);
         } else {
@@ -2075,7 +2075,7 @@ async function tryAlternativeGeolocationServices(originalRequest) {
 setInterval(() => {
   const now = Date.now();
   const timeout = 60000; // 1 minute timeout
-  
+
   for (const [key, promise] of pendingRequests.entries()) {
     // We can't directly check when a promise was created, so we'll use a heuristic
     // If we have too many pending requests, start cleaning up older ones
