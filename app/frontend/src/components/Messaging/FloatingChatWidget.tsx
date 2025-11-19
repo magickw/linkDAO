@@ -242,28 +242,6 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     };
   }, [setOnStartChat, isOpen]);
 
-  // Handle pending contact to start a chat
-  useEffect(() => {
-    if (pendingContact && address && hookConversations) {
-      // Find an existing conversation with this contact
-      const existingConversation = hookConversations.find(conv => 
-        conv.participants.includes(pendingContact.walletAddress)
-      );
-
-      if (existingConversation) {
-        // If conversation exists, select it
-        handleConversationSelect(existingConversation);
-      } else {
-        // If no conversation exists, start a new one
-        setNewRecipientAddress(pendingContact.walletAddress);
-        setShowNewConversationModal(true);
-      }
-      
-      // Clear the pending contact
-      setPendingContact(null);
-    }
-  }, [pendingContact, address, hookConversations, handleConversationSelect]);
-
   const getPositionClasses = () => {
     const classes = {
       'bottom-right': 'bottom-6 right-6 md:bottom-6 md:right-6',
@@ -322,6 +300,28 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       leaveConversation(selectedConversation.id);
     }
   };
+
+  // Handle pending contact to start a chat
+  useEffect(() => {
+    if (pendingContact && address && hookConversations) {
+      // Find an existing conversation with this contact
+      const existingConversation = hookConversations.find(conv => 
+        conv.participants.includes(pendingContact.walletAddress)
+      );
+
+      if (existingConversation) {
+        // If conversation exists, select it
+        handleConversationSelect(existingConversation);
+      } else {
+        // If no conversation exists, start a new one
+        setNewRecipientAddress(pendingContact.walletAddress);
+        setShowNewConversationModal(true);
+      }
+      
+      // Clear the pending contact
+      setPendingContact(null);
+    }
+  }, [pendingContact, address, hookConversations, handleConversationSelect]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !selectedConversation || !address) return;
