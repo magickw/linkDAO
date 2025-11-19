@@ -396,31 +396,87 @@ app.get('/api/posts', (req, res) => {
   });
 });
 
-app.post('/api/posts', (req, res) => {
-  const { title, content, author, tags } = req.body;
-  
-  if (!title || !content || !author) {
-    return res.status(400).json({
+app.post('/api/posts', async (req, res) => {
+  try {
+    const { title, content, author, tags, media, type, visibility } = req.body;
+
+    if (!content || !author) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: content, author'
+      });
+    }
+
+    // Get or create user profile
+    let authorId;
+    const userQuery = await pool.query(
+      'SELECT id FROM users WHERE wallet_address = $1',
+      [author.toLowerCase()]
+    );
+
+    if (userQuery.rows.length === 0) {
+      // Create user if doesn't exist
+      const createUserResult = await pool.query(
+        'INSERT INTO users (wallet_address, handle, created_at) VALUES ($1, $2, NOW()) RETURNING id',
+        [author.toLowerCase(), author.slice(0, 8)]
+      );
+      authorId = createUserResult.rows[0].id;
+    } else {
+      authorId = userQuery.rows[0].id;
+    }
+
+    // Insert post into database
+    const insertQuery = `
+      INSERT INTO posts (
+        author_id,
+        title,
+        content_cid,
+        media_cids,
+        tags,
+        staked_value,
+        reputation_score,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING *
+    `;
+
+    const result = await pool.query(insertQuery, [
+      authorId,
+      title || '',
+      content, // content stored directly for now (could be IPFS CID later)
+      JSON.stringify(media || []),
+      JSON.stringify(tags || []),
+      0, // initial staked value
+      0  // initial reputation score
+    ]);
+
+    const newPost = result.rows[0];
+
+    // Return post with author information
+    res.status(201).json({
+      success: true,
+      data: {
+        id: newPost.id.toString(),
+        title: newPost.title,
+        content: newPost.content_cid,
+        author,
+        walletAddress: author,
+        tags: JSON.parse(newPost.tags || '[]'),
+        mediaCids: JSON.parse(newPost.media_cids || '[]'),
+        stakedValue: newPost.staked_value,
+        reputationScore: newPost.reputation_score,
+        createdAt: newPost.created_at,
+        updatedAt: newPost.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({
       success: false,
-      error: 'Missing required fields: title, content, author'
+      error: 'Failed to create post: ' + error.message
     });
   }
-  
-  const newPost = {
-    id: `post-${Date.now()}`,
-    title,
-    content,
-    author,
-    tags: tags || [],
-    timestamp: new Date().toISOString(),
-    likes: 0,
-    comments: 0
-  };
-  
-  res.status(201).json({
-    success: true,
-    data: newPost
-  });
 });
 
 // --- Chat API stubs (development) ---
