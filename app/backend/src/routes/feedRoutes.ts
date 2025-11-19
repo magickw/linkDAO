@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(feedRateLimit);
 
 // Get personalized feed with filtering (optional authentication for personalization)
-router.get('/enhanced', 
+router.get('/', 
   // Use optional auth - if user is authenticated, personalize feed; if not, show public feed
   (req, res, next) => {
     // Try to authenticate but don't fail if no token
