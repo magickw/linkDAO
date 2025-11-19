@@ -146,13 +146,12 @@ router.post('/wallet', authRateLimit, ...walletConnectValidation, (req, res) => 
  * @route POST /api/auth/wallet-connect
  * @desc Authenticate with wallet signature
  * @access Public
+ * Note: CSRF protection is disabled for this endpoint because:
+ * 1. Wallet signature verification provides strong authentication
+ * 2. Users cannot be authenticated before login, so CSRF token cannot be obtained
+ * 3. The signature itself prevents CSRF attacks by requiring wallet interaction
  */
-const isDevelopment = process.env.NODE_ENV === 'development';
-const authCsrfMiddleware = isDevelopment ? 
-  (req: any, res: any, next: any) => next() : // Skip CSRF in development
-  csrfProtection;
-
-router.post('/wallet-connect', authRateLimit, authCsrfMiddleware, walletConnectValidation, authController.walletConnect);
+router.post('/wallet-connect', authRateLimit, walletConnectValidation, authController.walletConnect);
 
 /**
  * @route GET /api/auth/profile

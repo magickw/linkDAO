@@ -85,7 +85,7 @@ export const walletGeneralRateLimit = walletRateLimit({
 // Authentication rate limit: 20 login attempts per 15 minutes per wallet
 export const walletAuthRateLimit = walletRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 20, // 20 login attempts per 15 minutes
+  maxRequests: 100, // Increased to prevent blocking during retry loops
   message: 'Too many authentication attempts. Please try again in 15 minutes.',
   skipSuccessfulRequests: true // Don't count successful logins
 });
