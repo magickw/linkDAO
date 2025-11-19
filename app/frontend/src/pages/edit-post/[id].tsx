@@ -41,7 +41,7 @@ const EditPostPage: React.FC = () => {
       // Populate form fields with existing post data
       setTitle(postData.title || '');
       setContent(postData.contentCid || '');
-      setSelectedCommunity(postData.dao || postData.communityId || '');
+      setSelectedCommunity(postData.communityId || '');
       
       // Parse tags if they exist
       if (Array.isArray(postData.tags)) {
@@ -107,7 +107,7 @@ const EditPostPage: React.FC = () => {
       await PostService.updatePost(id as string, {
         title: title.trim(),
         content: content.trim(),
-        dao: selectedCommunity,
+        communityId: selectedCommunity,
         tags
       });
 
@@ -115,10 +115,10 @@ const EditPostPage: React.FC = () => {
       window.dispatchEvent(new CustomEvent('postUpdated'));
 
       addToast('Post updated successfully!', 'success');
-      
+
       // Redirect back to the community page where the post was originally created
-      if (post?.dao || post?.communityId) {
-        router.push(`/communities/${post.dao || post.communityId}`);
+      if (post?.communityId) {
+        router.push(`/communities/${post.communityId}`);
       } else {
         router.push(`/communities/${selectedCommunity}`);
       }
@@ -158,8 +158,8 @@ const EditPostPage: React.FC = () => {
             <button
               onClick={() => {
                 // Go back to the previous page or to the community page
-                if (post?.dao || post?.communityId) {
-                  router.push(`/communities/${post.dao || post.communityId}`);
+                if (post?.communityId) {
+                  router.push(`/communities/${post.communityId}`);
                 } else {
                   router.back();
                 }
@@ -277,8 +277,8 @@ const EditPostPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   // Go back to the previous page or to the community page
-                  if (post?.dao || post?.communityId) {
-                    router.push(`/communities/${post.dao || post.communityId}`);
+                  if (post?.communityId) {
+                    router.push(`/communities/${post.communityId}`);
                   } else {
                     router.back();
                   }
