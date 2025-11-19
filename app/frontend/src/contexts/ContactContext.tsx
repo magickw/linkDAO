@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react';
 import { Contact, ContactGroup, ContactFormData, ContactSearchFilters, ContactContextType } from '@/types/contacts';
 
 // Contact reducer actions
