@@ -83,24 +83,33 @@ export function AdminDashboard() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const webSocketManagerRef = useRef<any>(null);
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (!isAdmin()) {
       router.push('/');
       return;
     }
-    
+
     loadStats();
-    
+
     // Initialize WebSocket connection
     initializeWebSocket();
-    
+
     // Set up periodic refresh as fallback
     const interval = setInterval(() => {
       if (connectionStatus !== 'connected') {
         loadStats();
       }
     }, 30000); // Refresh every 30 seconds if WebSocket is not available
-    
+
     return () => {
       clearInterval(interval);
       // Clean up WebSocket connection
@@ -108,7 +117,8 @@ export function AdminDashboard() {
         webSocketManagerRef.current.disconnect();
       }
     };
-  }, [isAdmin, router, connectionStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, router]);
 
   // Session timeout monitoring
   useEffect(() => {
@@ -148,10 +158,10 @@ export function AdminDashboard() {
 
   const initializeWebSocket = async () => {
     if (!user) return;
-    
+
     try {
       setConnectionStatus('connecting');
-      
+
       // Create admin user object for WebSocket service
       // Map user role to valid admin roles for WebSocket service
       const roleMap: Record<string, 'super_admin' | 'admin' | 'moderator' | 'analyst'> = {
@@ -161,7 +171,7 @@ export function AdminDashboard() {
         'analyst': 'analyst',
         'user': 'admin' // Default to admin for regular users with admin access
       };
-      
+
       const adminUser: {
         adminId: string;
         email: string;
@@ -173,19 +183,19 @@ export function AdminDashboard() {
         role: roleMap[user.role] || 'admin',
         permissions: user.permissions || []
       };
-      
+
       // Initialize WebSocket manager with error handling
       try {
         const manager = await initializeAdminWebSocketManager(adminUser);
         webSocketManagerRef.current = manager;
-        
+
         // Set up event listeners for real-time updates
         manager.on('dashboard_update', (data) => {
           if (data.data && activeTab === 'overview') {
             // Update stats with real-time data
             setStats(prevStats => {
               if (!prevStats) return prevStats;
-              
+
               return {
                 ...prevStats,
                 pendingModerations: data.data.systemMetrics?.pendingModerations || prevStats.pendingModerations,
@@ -196,24 +206,24 @@ export function AdminDashboard() {
                 totalSellers: data.data.businessMetrics?.totalSellers || prevStats.totalSellers
               };
             });
-            
+
             setLastUpdated(new Date());
           }
         });
-        
+
         manager.on('admin_alert', (alert) => {
           // Handle real-time alerts
           console.log('New admin alert:', alert);
           // Could show a notification or update UI based on alert type
         });
-        
+
         manager.onConnection((connected, health) => {
           setConnectionStatus(connected ? 'connected' : 'disconnected');
           if (connected) {
             setLastUpdated(new Date());
           }
         });
-        
+
         console.log('Admin WebSocket connected successfully');
         setConnectionStatus('connected');
         addToast('Real-time updates connected', 'success', 2000);
@@ -233,18 +243,24 @@ export function AdminDashboard() {
     try {
       setLoading(true);
       const result = await enhancedAdminService.getAdminStats();
-      if (result.success) {
-        setStats(result.data);
-        setLastUpdated(new Date());
-      } else {
-        console.error('Failed to load admin stats:', result.error);
-        addToast('Failed to load dashboard statistics', 'error');
+      if (isMounted.current) {
+        if (result.success) {
+          setStats(result.data);
+          setLastUpdated(new Date());
+        } else {
+          console.error('Failed to load admin stats:', result.error);
+          addToast('Failed to load dashboard statistics', 'error');
+        }
       }
     } catch (error) {
-      console.error('Failed to load admin stats:', error);
-      addToast('Network error loading statistics', 'error');
+      if (isMounted.current) {
+        console.error('Failed to load admin stats:', error);
+        addToast('Network error loading statistics', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -467,11 +483,10 @@ export function AdminDashboard() {
                 {index > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
                 <button
                   onClick={() => setActiveTab(crumb.tab)}
-                  className={`flex items-center gap-1 ${
-                    crumb.tab === activeTab
-                      ? 'text-purple-400 font-medium'
-                      : 'text-gray-400 hover:text-white'
-                  } transition-colors`}
+                  className={`flex items-center gap-1 ${crumb.tab === activeTab
+                    ? 'text-purple-400 font-medium'
+                    : 'text-gray-400 hover:text-white'
+                    } transition-colors`}
                 >
                   {index === 0 && <Home className="w-4 h-4" />}
                   {crumb.label}
@@ -495,11 +510,10 @@ export function AdminDashboard() {
                     <p className="text-white font-semibold text-sm">
                       {user?.handle || user?.address?.slice(0, 6) + '...' + user?.address?.slice(-4) || 'Admin'}
                     </p>
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${
-                      user?.role === 'super_admin' ? 'bg-red-500/20 text-red-300 border border-red-500/50' :
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${user?.role === 'super_admin' ? 'bg-red-500/20 text-red-300 border border-red-500/50' :
                       user?.role === 'admin' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50' :
-                      'bg-blue-500/20 text-blue-300 border border-blue-500/50'
-                    }`}>
+                        'bg-blue-500/20 text-blue-300 border border-blue-500/50'
+                      }`}>
                       {user?.role?.replace('_', ' ').toUpperCase() || 'ADMIN'}
                     </span>
                   </div>
@@ -534,21 +548,21 @@ export function AdminDashboard() {
                 <span className="hidden xs:inline">Disconnect</span>
               </Button>
               <div className="flex items-center gap-2 text-sm">{connectionStatus === 'connected' ? (
-                  <>
-                    <Wifi className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400">Real-time</span>
-                  </>
-                ) : connectionStatus === 'connecting' ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-yellow-400">Connecting</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4 text-red-400" />
-                    <span className="text-red-400">Offline</span>
-                  </>
-                )}
+                <>
+                  <Wifi className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400">Real-time</span>
+                </>
+              ) : connectionStatus === 'connecting' ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-yellow-400">Connecting</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                  <span className="text-red-400">Offline</span>
+                </>
+              )}
               </div>
             </div>
           </div>
@@ -567,11 +581,10 @@ export function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
-                  activeTab === tab.id
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                }`}
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${activeTab === tab.id
+                  ? 'bg-purple-600 text-white shadow-lg'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  }`}
               >
                 <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">{tab.label}</span>
@@ -844,7 +857,7 @@ export function AdminDashboard() {
         {activeTab === 'notifications' && (
           <NotificationCenter />
         )}
-        
+
         {activeTab === 'push-setup' && (
           <MobilePushSetup />
         )}
@@ -868,15 +881,15 @@ export function AdminDashboard() {
         {activeTab === 'analytics' && hasPermission('system.analytics') && (
           <AdminAnalytics />
         )}
-        
+
         {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
           <EnhancedAnalytics />
         )}
-        
+
         {activeTab === 'workflows' && (
           <WorkflowAutomationDashboard />
         )}
-        
+
         {activeTab === 'onboarding' && (
           <AdminOnboarding />
         )}

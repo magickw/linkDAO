@@ -650,7 +650,7 @@ class AdminDashboardService {
   }
 
   // OPTIMIZED: Public cleanup method for manual cleanup
-  public cleanupExpiredData(): void {
+  public performCleanup(): void {
     this.cleanupExpiredData();
   }
 

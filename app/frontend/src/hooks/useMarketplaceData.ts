@@ -53,30 +53,33 @@ export function useProduct(productId: string | null): UseProductReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentProductId = useRef<string | null>(null);
+  const isMounted = useRef(true);
 
   const loadProduct = useCallback(async (id: string, forceRefresh = false) => {
     if (currentProductId.current === id && product && !forceRefresh) {
       return; // Already loaded
     }
 
-    setLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setLoading(true);
+      setError(null);
+    }
     currentProductId.current = id;
 
     try {
       const productData = await marketplaceDataManager.getProduct(id, forceRefresh);
 
-      // Only update if this is still the current product being requested
-      if (currentProductId.current === id) {
+      // Only update if this is still the current product being requested and component is mounted
+      if (currentProductId.current === id && isMounted.current) {
         setProduct(productData);
       }
     } catch (err) {
-      if (currentProductId.current === id) {
+      if (currentProductId.current === id && isMounted.current) {
         setError(err instanceof Error ? err.message : 'Failed to load product');
         setProduct(null);
       }
     } finally {
-      if (currentProductId.current === id) {
+      if (currentProductId.current === id && isMounted.current) {
         setLoading(false);
       }
     }
@@ -94,14 +97,23 @@ export function useProduct(productId: string | null): UseProductReturn {
     }
   }, [productId, product]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Load product when productId changes
   useEffect(() => {
     if (productId) {
       loadProduct(productId);
     } else {
-      setProduct(null);
-      setError(null);
-      setLoading(false);
+      if (isMounted.current) {
+        setProduct(null);
+        setError(null);
+        setLoading(false);
+      }
       currentProductId.current = null;
     }
   }, [productId, loadProduct]);
@@ -139,30 +151,33 @@ export function useSeller(sellerId: string | null): UseSellerReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentSellerId = useRef<string | null>(null);
+  const isMounted = useRef(true);
 
   const loadSeller = useCallback(async (id: string, forceRefresh = false) => {
     if (currentSellerId.current === id && seller && !forceRefresh) {
       return; // Already loaded
     }
 
-    setLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setLoading(true);
+      setError(null);
+    }
     currentSellerId.current = id;
 
     try {
       const sellerData = await marketplaceDataManager.getSeller(id, forceRefresh);
 
-      // Only update if this is still the current seller being requested
-      if (currentSellerId.current === id) {
+      // Only update if this is still the current seller being requested and component is mounted
+      if (currentSellerId.current === id && isMounted.current) {
         setSeller(sellerData);
       }
     } catch (err) {
-      if (currentSellerId.current === id) {
+      if (currentSellerId.current === id && isMounted.current) {
         setError(err instanceof Error ? err.message : 'Failed to load seller');
         setSeller(null);
       }
     } finally {
-      if (currentSellerId.current === id) {
+      if (currentSellerId.current === id && isMounted.current) {
         setLoading(false);
       }
     }
@@ -180,14 +195,23 @@ export function useSeller(sellerId: string | null): UseSellerReturn {
     }
   }, [sellerId, seller]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Load seller when sellerId changes
   useEffect(() => {
     if (sellerId) {
       loadSeller(sellerId);
     } else {
-      setSeller(null);
-      setError(null);
-      setLoading(false);
+      if (isMounted.current) {
+        setSeller(null);
+        setError(null);
+        setLoading(false);
+      }
       currentSellerId.current = null;
     }
   }, [sellerId, loadSeller]);
@@ -223,30 +247,33 @@ export function usePrice(productId: string | null): UsePriceReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentProductId = useRef<string | null>(null);
+  const isMounted = useRef(true);
 
   const loadPrice = useCallback(async (id: string, forceRefresh = false) => {
     if (currentProductId.current === id && priceData && !forceRefresh) {
       return; // Already loaded
     }
 
-    setLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setLoading(true);
+      setError(null);
+    }
     currentProductId.current = id;
 
     try {
       const price = await marketplaceDataManager.getPrice(id, forceRefresh);
 
-      // Only update if this is still the current product being requested
-      if (currentProductId.current === id) {
+      // Only update if this is still the current product being requested and component is mounted
+      if (currentProductId.current === id && isMounted.current) {
         setPriceData(price);
       }
     } catch (err) {
-      if (currentProductId.current === id) {
+      if (currentProductId.current === id && isMounted.current) {
         setError(err instanceof Error ? err.message : 'Failed to load price data');
         setPriceData(null);
       }
     } finally {
-      if (currentProductId.current === id) {
+      if (currentProductId.current === id && isMounted.current) {
         setLoading(false);
       }
     }
@@ -258,14 +285,23 @@ export function usePrice(productId: string | null): UsePriceReturn {
     }
   }, [productId, loadPrice]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Load price when productId changes
   useEffect(() => {
     if (productId) {
       loadPrice(productId);
     } else {
-      setPriceData(null);
-      setError(null);
-      setLoading(false);
+      if (isMounted.current) {
+        setPriceData(null);
+        setError(null);
+        setLoading(false);
+      }
       currentProductId.current = null;
     }
   }, [productId, loadPrice]);
