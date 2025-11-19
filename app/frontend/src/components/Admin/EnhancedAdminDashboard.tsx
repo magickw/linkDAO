@@ -86,25 +86,26 @@ export function EnhancedAdminDashboard() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const webSocketManagerRef = useRef<any>(null);
+  const [statsAvailable, setStatsAvailable] = useState(true); // Track if stats endpoint is available
 
   useEffect(() => {
     if (!isAdmin()) {
       router.push('/');
       return;
     }
-    
+
     loadStats();
     loadFavorites();
-    
+
     // Initialize WebSocket connection
     initializeWebSocket();
-    
-    // Set up periodic refresh as fallback
+
+    // Set up periodic refresh as fallback - only if stats endpoint is available
     const interval = setInterval(() => {
-      if (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected) {
+      if (statsAvailable && (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected)) {
         loadStats();
       }
-    }, 30000); // Refresh every 30 seconds if WebSocket is not available
+    }, 60000); // Refresh every 60 seconds (increased from 30s) if WebSocket is not available
     
     return () => {
       clearInterval(interval);
@@ -183,8 +184,15 @@ export function EnhancedAdminDashboard() {
     try {
       const data = await adminService.getAdminStats();
       setStats(data);
-    } catch (error) {
+      setStatsAvailable(true); // Endpoint is available
+    } catch (error: any) {
       console.error('Failed to load admin stats:', error);
+
+      // If endpoint returns 404, stop polling
+      if (error?.message?.includes('404')) {
+        console.warn('Admin stats endpoint not available (404), disabling polling');
+        setStatsAvailable(false);
+      }
     } finally {
       setLoading(false);
     }
