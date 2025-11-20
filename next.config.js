@@ -291,11 +291,6 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
-      {
-        source: '/web3-social',
-        destination: '/',
-        permanent: true,
-      },
     ];
   },
   

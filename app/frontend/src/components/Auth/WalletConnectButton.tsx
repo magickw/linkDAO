@@ -2,11 +2,8 @@ import React from 'react';
 import { useAccount, useConnect } from 'wagmi';
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
 import { useAuth } from '@/context/AuthContext';
-<<<<<<< Updated upstream
 import { useWalletAuth } from '@/hooks/useWalletAuth';
-=======
 import { NetworkSwitcher } from '@/components/Web3/NetworkSwitcher';
->>>>>>> Stashed changes
 
 interface WalletConnectButtonProps {
   onSuccess?: () => void;

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 
 interface MigrationGuideProps {
   onClose: () => void;
-  fromPage: 'social' | 'web3-social' | 'dashboard';
+  fromPage: 'social' | 'dashboard'; // Removed 'web3-social' as the page is deleted
 }
 
 export default function MigrationGuide({ onClose, fromPage }: MigrationGuideProps) {
@@ -17,7 +17,7 @@ export default function MigrationGuide({ onClose, fromPage }: MigrationGuideProp
         <div className="space-y-4">
           <p className="text-gray-700 dark:text-gray-300">
             We've redesigned your social experience to be more integrated and powerful. 
-            Your {fromPage === 'social' ? 'social feed' : fromPage === 'web3-social' ? 'Web3 social features' : 'dashboard'} 
+            Your {fromPage === 'social' ? 'social feed' : 'dashboard'} 
             is now part of a unified platform.
           </p>
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">

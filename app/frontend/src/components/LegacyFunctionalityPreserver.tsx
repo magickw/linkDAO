@@ -14,13 +14,12 @@ export default function LegacyFunctionalityPreserver() {
   const { isConnected } = useWeb3();
 
   useEffect(() => {
-    // Handle legacy URL redirects
     const handleLegacyRoutes = () => {
       const currentPath = router.pathname;
       const query = router.query;
 
       // Redirect old social pages to dashboard
-      if ((currentPath === '/social' || currentPath === '/web3-social') && isConnected) {
+      if (currentPath === '/social' && isConnected) {
         // Preserve any query parameters and redirect to dashboard with feed view
         const preservedQuery = { ...query, view: 'feed' };
         router.replace({
@@ -61,18 +60,18 @@ export default function LegacyFunctionalityPreserver() {
     const preserveLegacyData = () => {
       // Migrate old user preferences from multiple sources
       const oldSocialPreferences = localStorage.getItem('social-preferences');
-      const oldWeb3SocialPreferences = localStorage.getItem('web3-social-preferences');
+      // const oldWeb3SocialPreferences = localStorage.getItem('web3-social-preferences'); // Removed as web3-social is deleted
       
-      if ((oldSocialPreferences || oldWeb3SocialPreferences) && !localStorage.getItem('dashboard-preferences')) {
+      if (oldSocialPreferences && !localStorage.getItem('dashboard-preferences')) {
         try {
           const socialPrefs = oldSocialPreferences ? JSON.parse(oldSocialPreferences) : {};
-          const web3SocialPrefs = oldWeb3SocialPreferences ? JSON.parse(oldWeb3SocialPreferences) : {};
+          // const web3SocialPrefs = oldWeb3SocialPreferences ? JSON.parse(oldWeb3SocialPreferences) : {}; // Removed as web3-social is deleted
           
-          // Merge preferences with web3-social taking priority
+          // Merge preferences - web3-social preferences removed
           const mergedPreferences = {
             ...socialPrefs,
-            ...web3SocialPrefs,
-            migratedFrom: oldWeb3SocialPreferences ? 'web3-social-page' : 'social-page',
+            // ...web3SocialPrefs, // Removed as web3-social is deleted
+            migratedFrom: 'social-page', // Simplified since web3-social is deleted
             migrationDate: new Date().toISOString()
           };
           
@@ -225,34 +224,47 @@ export default function LegacyFunctionalityPreserver() {
     };
   }, [router.pathname]);
 
-  // Handle legacy API compatibility
+  // Handle API compatibility for legacy endpoints
   useEffect(() => {
-    // Ensure backward compatibility with old API calls
-    const originalFetch = window.fetch;
+    const handleApiCompatibility = () => {
+      // Intercept and redirect legacy API calls
+      const originalFetch = window.fetch;
+      
+      window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        // Convert input to string URL for easier manipulation
+        let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        
+        // Redirect legacy social API endpoints
+        if (url.includes('/api/social/')) {
+          url = url.replace('/api/social/', '/api/dashboard/');
+        }
+        
+        // Redirect legacy feed API endpoints
+        if (url.includes('/api/feed/')) {
+          url = url.replace('/api/feed/', '/api/dashboard/feed/');
+        }
+        
+        // Removed web3-social API redirect as the page is deleted
+        // if (url.includes('/api/web3-social/')) {
+        //   url = url.replace('/api/web3-social/', '/api/dashboard/');
+        // }
+        
+        // Convert back to the appropriate type
+        const newInput = typeof input === 'string' ? url : 
+                        input instanceof URL ? new URL(url) : 
+                        { ...input, url };
+        
+        return originalFetch(newInput, init);
+      } as typeof window.fetch;
+      
+      // Cleanup function to restore original fetch
+      return () => {
+        window.fetch = originalFetch;
+      };
+    };
     
-    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      let url = typeof input === 'string' ? input : input.toString();
-      
-      // Redirect old API endpoints to new ones
-      if (url.includes('/api/social/')) {
-        url = url.replace('/api/social/', '/api/dashboard/');
-      }
-      
-      if (url.includes('/api/feed/')) {
-        url = url.replace('/api/feed/', '/api/dashboard/feed/');
-      }
-      
-      if (url.includes('/api/web3-social/')) {
-        url = url.replace('/api/web3-social/', '/api/dashboard/');
-      }
-      
-      return originalFetch(url, init);
-    };
-
-    // Cleanup
-    return () => {
-      window.fetch = originalFetch;
-    };
+    const cleanup = handleApiCompatibility();
+    return cleanup;
   }, []);
 
   // This component doesn't render anything visible

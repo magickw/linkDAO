@@ -11,7 +11,6 @@ const path = require('path');
 const filesToProcess = [
   'app/backend/src/services/enhancedSearchService.ts',
   'app/frontend/src/components/FacebookStylePostComposer.tsx',
-  'app/frontend/src/pages/web3-social.tsx',
   'app/frontend/src/pages/communities.tsx',
   'app/frontend/src/pages/profile.tsx',
   'app/frontend/src/pages/dao/[community].tsx',

@@ -37,7 +37,7 @@ The service worker now intercepts placehold.co requests and serves local SVG pla
 ### Step 2: Replace Components
 Update your components to use the new safe image components:
 
-```tsx
+``tsx
 // Before
 <img src="https://placehold.co/40" alt="Avatar" />
 
@@ -49,7 +49,7 @@ import { SafeAvatar } from '../components/SafeImage';
 ### Step 3: Update Mock Data
 Replace hardcoded placehold.co URLs in your mock data:
 
-```typescript
+``typescript
 // Before
 avatar: 'https://placehold.co/40'
 
@@ -71,7 +71,6 @@ avatar: COMMON_PLACEHOLDERS.AVATAR_40
 Based on the grep search, these files contain placehold.co URLs:
 
 ### Frontend Components
-- `app/frontend/src/pages/web3-social.tsx`
 - `app/frontend/src/pages/communities.tsx`
 - `app/frontend/src/pages/profile.tsx`
 - `app/frontend/src/pages/dao/[community].tsx`

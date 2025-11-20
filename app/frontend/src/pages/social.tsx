@@ -383,7 +383,6 @@ export default function SocialFeed() {
                         <Web3SocialPostCard 
                           key={post.id} 
                           post={post} 
-                          profile={authorProfile} 
                           onTip={handleTip}
                         />
                       );

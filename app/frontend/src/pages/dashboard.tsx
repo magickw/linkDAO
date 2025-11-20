@@ -523,7 +523,7 @@ export default function Dashboard() {
             currentView={navigationState.activeView}
             views={{
               feed: <FeedView />,
-              community: navigationState.activeCommunity ? <CommunityView communityId={navigationState.activeCommunity} /> : <div>Select a community</div>,
+              community: navigationState.activeCommunity ? <CommunityView communitySlug={navigationState.activeCommunity} /> : <div>Select a community</div>,
               fallback: (
             /* Fallback to legacy dashboard content */
             <div>
@@ -599,7 +599,6 @@ export default function Dashboard() {
                             }`}>
                             <Web3SocialPostCard
                               post={post}
-                              profile={authorProfile}
                               onReaction={handleReaction}
                               onTip={handleTip}
                             />
@@ -631,7 +630,6 @@ export default function Dashboard() {
                           }`}>
                           <Web3SocialPostCard
                             post={post}
-                            profile={authorProfile}
                             onReaction={handleReaction}
                             onTip={handleTip}
                           />
