@@ -16,6 +16,7 @@ import { databaseService } from './databaseService'; // Import the singleton ins
 import { UserProfileService } from './userProfileService';
 import { listings } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { safeLogger } from '../utils/safeLogger';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -80,24 +81,11 @@ export class BlockchainMarketplaceService {
   }
 
   async getListingById(id: string): Promise<MarketplaceListing | null> {
-    // Handle both numeric and string IDs
-    const numericId = /^\d+$/.test(id) ? parseInt(id) : null;
+    // First try to get listing by UUID directly
+    let dbListing = await databaseService.getListingById(id);
     
-    // If it's not a numeric ID, try to find by product_id
-    let dbListing;
-    if (numericId !== null) {
-      dbListing = await databaseService.getListingById(numericId);
-    } else if (id.startsWith('prod_')) {
-      // For product IDs (prod_001, prod_002, etc.), check the products table
-      const db = databaseService.getDatabase();
-      const [product] = await db
-        .select()
-        .from(listings)
-        .where(eq(listings.productId, id))
-        .limit(1);
-      dbListing = product;
-    } else {
-      // Try to find by product_id field
+    // If not found and ID looks like a product ID, try to find by productId field
+    if (!dbListing && (id.startsWith('prod_') || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) {
       const db = databaseService.getDatabase();
       const [listing] = await db
         .select()
@@ -105,6 +93,51 @@ export class BlockchainMarketplaceService {
         .where(eq(listings.productId, id))
         .limit(1);
       dbListing = listing;
+    }
+    
+    // Also check if the ID might be in the marketplaceListings table (newer schema)
+    if (!dbListing) {
+      try {
+        // Try to get from marketplaceListings table
+        const { db } = await import('../db');
+        const { marketplaceListings } = await import('../db/schema');
+        
+        const [marketplaceListing] = await db
+          .select()
+          .from(marketplaceListings)
+          .where(eq(marketplaceListings.id, id))
+          .limit(1);
+        
+        if (marketplaceListing) {
+          // Convert marketplaceListing to the expected format
+          const now = new Date().toISOString();
+          return {
+            id: marketplaceListing.id,
+            sellerWalletAddress: marketplaceListing.sellerAddress,
+            tokenAddress: '', // Not applicable for marketplaceListings
+            price: marketplaceListing.price.toString(),
+            quantity: 1, // Default quantity
+            itemType: 'DIGITAL', // Default type
+            listingType: 'FIXED_PRICE', // Default type
+            status: marketplaceListing.isActive ? 'ACTIVE' : 'CANCELLED',
+            startTime: marketplaceListing.createdAt?.toISOString() || now,
+            endTime: undefined,
+            highestBid: undefined,
+            highestBidderWalletAddress: undefined,
+            metadataURI: '', // Not applicable
+            isEscrowed: false,
+            nftStandard: undefined,
+            tokenId: undefined,
+            reservePrice: undefined,
+            minIncrement: undefined,
+            reserveMet: false,
+            createdAt: marketplaceListing.createdAt?.toISOString() || now,
+            updatedAt: marketplaceListing.updatedAt?.toISOString() || now
+          };
+        }
+      } catch (error) {
+        safeLogger.warn('Failed to check marketplaceListings table:', error);
+      }
     }
     
     if (!dbListing) return null;

@@ -149,14 +149,8 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
 
   // Mock activity indicators - replace with real data
   useEffect(() => {
-    const indicators = [
-      createActivityIndicator('notification', 5, 'bg-blue-500'),
-      createActivityIndicator('transaction', 2, 'bg-green-500'),
-      createActivityIndicator('community', 8, 'bg-purple-500'),
-      createActivityIndicator('governance', 1, 'bg-red-500')
-    ];
-    
-    setActivityIndicators(indicators);
+    // Set empty activity indicators to remove mock data
+    setActivityIndicators([]);
   }, []);
 
   // Update filter counts based on real data

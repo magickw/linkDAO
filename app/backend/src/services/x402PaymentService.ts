@@ -1,16 +1,23 @@
-// Use dynamic import to handle missing dependencies gracefully
+// Use dynamic import to handle ES modules gracefully
 let CdpClient: any = null;
 let cdpSdk: any = null;
 
-try {
-  // Simple direct import - this should work based on our test
-  cdpSdk = require('@coinbase/cdp-sdk');
-  CdpClient = cdpSdk.CdpClient;
-  console.log('✅ CDP SDK loaded successfully with direct import');
-} catch (error) {
-  console.warn('⚠️ CDP SDK not available, x402 payments will use mock implementation:', error);
-  console.warn('📝 This is not an error - falling back to mock implementation for x402 payments');
+// Initialize CDP SDK asynchronously
+let cdpInitialization: Promise<void>;
+
+async function initializeCdpSdk() {
+  try {
+    // Use dynamic import for ES module compatibility
+    cdpSdk = await import('@coinbase/cdp-sdk');
+    CdpClient = cdpSdk.CdpClient;
+    console.log('✅ CDP SDK loaded successfully with dynamic import');
+  } catch (error) {
+    console.warn('⚠️ CDP SDK not available, x402 payments will use mock implementation:', error);
+    console.warn('📝 This is not an error - falling back to mock implementation for x402 payments');
+  }
 }
+
+cdpInitialization = initializeCdpSdk();
 
 import { safeLogger } from '../utils/safeLogger';
 
@@ -34,10 +41,19 @@ export interface X402PaymentResult {
 export class X402PaymentService {
   private cdpClient: any | null = null;
   private isCdpAvailable: boolean = false;
+  private initialized: boolean = false;
 
   constructor() {
-    // Initialize CDP client with API key and secret from environment variables
+    // Initialize asynchronously - don't block constructor
+    this.initializeAsync();
+  }
+
+  private async initializeAsync() {
     try {
+      // Wait for CDP SDK to be initialized
+      await cdpInitialization;
+      
+      // Initialize CDP client with API key and secret from environment variables
       if (CdpClient && cdpSdk) {
         const apiKeyId = process.env.CDP_API_KEY_ID || process.env.COINBASE_API_KEY;
         const apiKeySecret = process.env.CDP_API_KEY_SECRET || process.env.COINBASE_API_SECRET;
@@ -50,6 +66,7 @@ export class X402PaymentService {
             apiKeySecret,
           });
           this.isCdpAvailable = true;
+          this.initialized = true;
           safeLogger.info('✅ CDP client initialized successfully');
           console.log('✅ CDP client initialized successfully');
         } else {
@@ -57,18 +74,28 @@ export class X402PaymentService {
           console.log('⚠️ CDP API credentials not found. x402 payments will use mock implementation.');
           this.cdpClient = null;
           this.isCdpAvailable = false;
+          this.initialized = true;
         }
       } else {
         safeLogger.warn('⚠️ CDP SDK not available. x402 payments will use mock implementation.');
         console.log('⚠️ CDP SDK not available. x402 payments will use mock implementation.');
         this.cdpClient = null;
         this.isCdpAvailable = false;
+        this.initialized = true;
       }
     } catch (error) {
       safeLogger.warn('⚠️ Failed to initialize CDP client. x402 payments will use mock implementation.', error);
       console.warn('⚠️ Failed to initialize CDP client. x402 payments will use mock implementation.', error);
       this.cdpClient = null;
       this.isCdpAvailable = false;
+      this.initialized = true;
+    }
+  }
+
+  private async waitForInitialization() {
+    if (!this.initialized) {
+      // Wait a short time for async initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
@@ -77,6 +104,9 @@ export class X402PaymentService {
    */
   async processPayment(request: X402PaymentRequest): Promise<X402PaymentResult> {
     try {
+      // Wait for async initialization to complete
+      await this.waitForInitialization();
+
       // Validate required fields
       if (!request.orderId || !request.amount || !request.currency || 
           !request.buyerAddress || !request.sellerAddress || !request.listingId) {
@@ -159,7 +189,9 @@ export class X402PaymentService {
    */
   async checkPaymentStatus(transactionId: string): Promise<X402PaymentResult> {
     try {
-      // Validate transaction ID
+      // Wait for async initialization to complete
+      await this.waitForInitialization();
+
       if (!transactionId) {
         throw new Error('Transaction ID is required to check payment status');
       }
@@ -207,7 +239,9 @@ export class X402PaymentService {
    */
   async refundPayment(transactionId: string): Promise<X402PaymentResult> {
     try {
-      // Validate transaction ID
+      // Wait for async initialization to complete
+      await this.waitForInitialization();
+
       if (!transactionId) {
         throw new Error('Transaction ID is required to process refund');
       }
