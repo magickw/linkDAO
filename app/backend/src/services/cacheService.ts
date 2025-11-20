@@ -46,10 +46,16 @@ export class CacheService {
   };
 
   constructor() {
-    // Check if Redis is disabled
-    if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0') {
+    // Check if Redis is disabled or if we're in a memory-critical environment
+    const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+    
+    if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0' || isMemoryCritical) {
       this.useRedis = false;
-      safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
+      if (isMemoryCritical) {
+        safeLogger.warn('Redis functionality is disabled due to memory-critical environment (<512MB)');
+      } else {
+        safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable');
+      }
     } else {
       this.config = this.loadConfig();
       this.initializeRedis();
@@ -567,6 +573,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, allowing rate limit check for key:', key);
       return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
     }
+    
     
     try {
       if (!this.isConnected) {

@@ -71,4 +71,11 @@ router.get('/generate-code', referralController.generateReferralCode.bind(referr
  */
 router.get('/analytics', referralController.getReferralAnalytics.bind(referralController));
 
+/**
+ * @route POST /api/referrals/claim-rewards
+ * @desc Claim referral rewards
+ * @access Private
+ */
+router.post('/claim-rewards', csrfProtection, referralController.claimRewards.bind(referralController));
+
 export default router;

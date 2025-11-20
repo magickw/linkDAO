@@ -15,4 +15,7 @@ router.get('/recommendations', MarketplaceSearchController.getProductRecommendat
 // Product comparison
 router.get('/compare', MarketplaceSearchController.compareProducts);
 
+// Enhanced search suggestions
+router.get('/suggestions/enhanced', MarketplaceSearchController.getEnhancedSearchSuggestions);
+
 export default router;

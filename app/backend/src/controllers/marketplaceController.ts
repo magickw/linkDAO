@@ -646,6 +646,115 @@ export class MarketplaceController {
       });
     }
   }
+
+  /**
+   * GET /api/marketplace/search-suggestions
+   * Get search suggestions for marketplace
+   */
+  async getSearchSuggestions(req: Request, res: Response) {
+    try {
+      const { q, limit = 10 } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+
+      // Get active listings and filter by title/description containing the query
+      const allListings = await marketplaceService.getActiveListings();
+      
+      // Simple text matching for suggestions (in a real implementation, this would use a proper search service)
+      const suggestions = allListings
+        .filter(listing => 
+          listing.id.toLowerCase().includes(q.toLowerCase()) ||
+          listing.itemType.toLowerCase().includes(q.toLowerCase())
+        )
+        .slice(0, Number(limit))
+        .map(listing => ({
+          id: listing.id,
+          title: `Listing ${listing.id}`,
+          category: listing.itemType,
+          price: Number(listing.price),
+          type: 'product'
+        }));
+
+      return res.json({
+        success: true,
+        data: suggestions
+      });
+    } catch (error) {
+      safeLogger.error('Error getting search suggestions:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to get search suggestions'
+        }
+      });
+    }
+  }
+
+  /**
+   * GET /api/marketplace/auctions/active
+   * Get active auctions
+   */
+  async getActiveAuctions(req: Request, res: Response) {
+    try {
+      const { limit = 20, offset = 0 } = req.query;
+
+      // Get active listings that could be auctions
+      const allListings = await marketplaceService.getActiveListings();
+      
+      // For now, return all active listings as auction-like items
+      // In a real implementation, this would filter for actual auction listings
+      const auctions = allListings
+        .slice(Number(offset), Number(offset) + Number(limit))
+        .map(listing => ({
+          id: listing.id,
+          title: `Auction ${listing.id}`,
+          description: `Description for auction ${listing.id}`,
+          currentBid: Number(listing.price),
+          startingBid: Number(listing.price),
+          reservePrice: Number(listing.price) * 1.2, // 20% higher than current price
+          endTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+          seller: {
+            id: listing.sellerWalletAddress,
+            walletAddress: listing.sellerWalletAddress,
+            displayName: `Seller ${listing.sellerWalletAddress.substring(0, 6)}`
+          },
+          nft: listing.nftStandard ? {
+            standard: listing.nftStandard,
+            tokenId: listing.tokenId
+          } : null,
+          status: 'active',
+          bidCount: 0,
+          createdAt: listing.createdAt
+        }));
+
+      return res.json({
+        success: true,
+        data: auctions,
+        pagination: {
+          total: allListings.length,
+          page: Math.floor(Number(offset) / Number(limit)) + 1,
+          limit: Number(limit)
+        }
+      });
+    } catch (error) {
+      safeLogger.error('Error getting active auctions:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to get active auctions'
+        }
+      });
+    }
+  }
 }
 
 // Create a singleton instance

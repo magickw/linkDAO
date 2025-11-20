@@ -58,12 +58,18 @@ export const productionConfig = {
   
   // Memory management
   memory: {
-    thresholdWarning: process.env.RENDER_SERVICE_TYPE === 'free' ? 300 : 
-                      (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1600 : 600), // MB - Standard tier has 2GB RAM
-    thresholdCritical: process.env.RENDER_SERVICE_TYPE === 'free' ? 400 : 
-                       (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1800 : 800), // MB - Critical at 90% of 2GB
-    gcThreshold: process.env.RENDER_SERVICE_TYPE === 'free' ? 250 : 
-                 (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1200 : 500) // MB - GC at 60% of 2GB
+    thresholdWarning: process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512 ? 100 : // More conservative for <512MB
+      (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 ? 200 : // For <1GB
+        (process.env.RENDER_SERVICE_TYPE === 'free' ? 300 : 
+          (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1600 : 600))), // MB - Standard tier has 2GB RAM
+    thresholdCritical: process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512 ? 150 : // More conservative for <512MB
+      (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 ? 300 : // For <1GB
+        (process.env.RENDER_SERVICE_TYPE === 'free' ? 400 : 
+          (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1800 : 800))), // MB - Critical at 90% of 2GB
+    gcThreshold: process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512 ? 80 : // More conservative for <512MB
+      (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 ? 150 : // For <1GB
+        (process.env.RENDER_SERVICE_TYPE === 'free' ? 250 : 
+          (process.env.RENDER_SERVICE_TYPE === 'standard' ? 1200 : 500))) // MB - GC at 60% of 2GB
   },
   
   // External service timeouts

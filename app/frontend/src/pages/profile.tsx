@@ -163,7 +163,7 @@ export default function Profile() {
           zipCode: backendProfile.shippingZipCode || '',
           country: backendProfile.shippingCountry || '',
           phone: backendProfile.shippingPhone || '',
-          sameAsBilling: true // Default to true, will be updated when we have actual data
+          sameAsBilling: backendProfile.shippingSameAsBilling ?? true // Use actual value from backend, default to true
         }
       });
     } else if (contractProfileData && contractProfileData.handle) {

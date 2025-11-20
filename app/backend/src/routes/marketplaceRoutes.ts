@@ -138,4 +138,10 @@ router.get('/test/db', async (req, res) => {
   }
 });
 
+// GET /api/marketplace/search-suggestions - Legacy search suggestions endpoint
+router.get('/search-suggestions', marketplaceController.getSearchSuggestions);
+
+// GET /api/marketplace/auctions/active - Get active auctions
+router.get('/auctions/active', marketplaceController.getActiveAuctions);
+
 export default router;

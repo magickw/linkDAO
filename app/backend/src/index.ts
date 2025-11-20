@@ -212,6 +212,10 @@ const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
 const isRenderStandard = process.env.RENDER && (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_PLAN === 'standard');
 const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024 && !isRenderStandard);
 
+// More aggressive resource constraints for memory-critical environments
+const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+const isSevereResourceConstrained = isRenderFree || isMemoryCritical || (process.env.RENDER && !isRenderStandard);
+
 // Debug Render configuration
 console.log('🔍 RENDER ENVIRONMENT DEBUG:');
 console.log('   RENDER:', process.env.RENDER);
@@ -223,18 +227,22 @@ console.log('   isRenderFree:', isRenderFree);
 console.log('   isRenderPro:', isRenderPro);
 console.log('   isRenderStandard:', isRenderStandard);
 console.log('   isResourceConstrained:', isResourceConstrained);
+console.log('   isMemoryCritical:', isMemoryCritical);
+console.log('   isSevereResourceConstrained:', isSevereResourceConstrained);
 
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
-// Increase connection pool sizes for Render Standard (2GB RAM)
-const maxConnections = isRenderFree ? dbConfig.maxConnections :
-  (isRenderPro ? 5 :
-    (isRenderStandard ? 15 :
-      (process.env.RENDER ? 3 : 20)));
-const minConnections = isRenderFree ? dbConfig.minConnections :
-  (isRenderPro ? 2 :
-    (isRenderStandard ? 5 :
-      (process.env.RENDER ? 1 : 5)));
+// More conservative connection pool sizes for memory-critical environments
+const maxConnections = isMemoryCritical ? 1 :
+  (isRenderFree ? dbConfig.maxConnections :
+    (isRenderPro ? 5 :
+      (isRenderStandard ? 10 : // Reduced from 15
+        (process.env.RENDER ? 3 : 20))));
+const minConnections = isMemoryCritical ? 1 :
+  (isRenderFree ? dbConfig.minConnections :
+    (isRenderPro ? 2 :
+      (isRenderStandard ? 3 : // Reduced from 5
+        (process.env.RENDER ? 1 : 5))));
 
 // Initialize optimized database pool
 const dbPool = new Pool({
@@ -306,10 +314,11 @@ if (process.env.RENDER || isResourceConstrained) {
   const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : (isRenderStandard ? 'Standard' : 'Standard'));
   console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
 
-  // Start memory monitoring with adaptive intervals
-  const monitoringInterval = isRenderFree ? 30000 :
-    (isRenderPro ? 45000 :
-      (isRenderStandard ? 40000 : 60000));
+  // Start memory monitoring with more frequent intervals for critical environments
+  const monitoringInterval = isMemoryCritical ? 15000 : // Every 15 seconds for critical
+    (isRenderFree ? 30000 :
+      (isRenderPro ? 45000 :
+        (isRenderStandard ? 40000 : 60000)));
   memoryMonitoringService.startMonitoring(monitoringInterval);
 
   // Log initial memory stats
@@ -916,6 +925,11 @@ app.use('/api/content-performance', contentPerformanceRoutes);
 import marketplaceMessagingRoutes from './routes/marketplaceMessagingRoutes';
 app.use('/api/marketplace/messaging', marketplaceMessagingRoutes);
 
+// Referral routes
+import referralRoutes from './routes/referralRoutes';
+app.use('/api/referrals', referralRoutes);
+app.use('/api/referral', referralRoutes); // Also support singular form for compatibility
+
 // Report builder routes
 import reportBuilderRoutes from './routes/reportBuilderRoutes';
 app.use('/api/admin/report-builder', reportBuilderRoutes);
@@ -1025,8 +1039,8 @@ httpServer.listen(PORT, () => {
       //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
       // }
 
-      // WebSocket services - enabled for standard tier and above
-      const enableWebSockets = (!isResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
+      // WebSocket services - more conservative for memory-critical environments
+      const enableWebSockets = (!isSevereResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
 
       if (enableWebSockets) {
         try {
@@ -1039,13 +1053,14 @@ httpServer.listen(PORT, () => {
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
-          isResourceConstrained ? 'resource constraints' :
-            'manual disable';
+          isMemoryCritical ? 'memory critical (<512MB)' : // More specific reason
+            isResourceConstrained ? 'resource constraints' :
+              'manual disable';
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
       }
 
       // Admin WebSocket service - only on non-constrained environments
-      if (enableWebSockets && !isRenderFree) {
+      if (enableWebSockets && !isSevereResourceConstrained) { // Changed from !isRenderFree
         try {
           const adminWebSocketService = initializeAdminWebSocket(httpServer);
           console.log('✅ Admin WebSocket service initialized');
@@ -1058,7 +1073,7 @@ httpServer.listen(PORT, () => {
       }
 
       // Seller WebSocket service - only on non-constrained environments
-      if (enableWebSockets && !isRenderFree) {
+      if (enableWebSockets && !isSevereResourceConstrained) { // Changed from !isRenderFree
         try {
           const sellerWebSocketService = initializeSellerWebSocket();
           console.log('✅ Seller WebSocket service initialized');
@@ -1110,7 +1125,7 @@ httpServer.listen(PORT, () => {
       }
 
       // Comprehensive monitoring - disabled on resource-constrained environments
-      const enableMonitoring = !isResourceConstrained && !process.env.DISABLE_MONITORING;
+      const enableMonitoring = !isSevereResourceConstrained && !process.env.DISABLE_MONITORING; // Changed to isSevereResourceConstrained
 
       if (enableMonitoring) {
         try {
@@ -1124,13 +1139,14 @@ httpServer.listen(PORT, () => {
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
-          isResourceConstrained ? 'resource constraints' :
-            'manual disable';
+          isMemoryCritical ? 'memory critical (<512MB)' : // More specific reason
+            isResourceConstrained ? 'resource constraints' :
+              'manual disable';
         console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
       }
 
       // Order event listener - disabled on resource-constrained environments
-      if (enableMonitoring && !isRenderFree) {
+      if (enableMonitoring && !isSevereResourceConstrained) { // Changed to isSevereResourceConstrained
         try {
           orderEventListenerService.startListening();
           console.log('✅ Order event listener started');

@@ -106,10 +106,10 @@ const CACHEABLE_APIS = {
   '/api/marketplace': { ttl: 60000, priority: 'medium', staleTTL: 600000 }, // 1min fresh, 10min stale
   '/api/governance': { ttl: 180000, priority: 'medium', staleTTL: 900000 }, // 3min fresh, 15min stale
   '/api/messaging': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
-  '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
-  '/api/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
-  '/api/messages/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
-  '/api/messaging/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
+  '/api/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
+  '/api/messages/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
+  '/api/messaging/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000, skipCacheOnError: true }, // 30s fresh, 2min stale
   '/api/cart': { ttl: 30000, priority: 'medium', staleTTL: 120000 } // 30s fresh, 2min stale
 };
 
@@ -546,6 +546,18 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         console.warn('Authentication failed (401):', networkResponse.status, requestKey);
         // Don't backoff authentication failures, they may be resolved by user login
         failedRequests.delete(requestKey);
+        
+        // Clear cached response for this endpoint if skipCacheOnError is enabled
+        if (cacheConfig.skipCacheOnError) {
+          try {
+            const cache = await caches.open(cacheName);
+            await cache.delete(request);
+            console.log('Cleared cached response for auth error endpoint:', requestKey);
+          } catch (clearError) {
+            console.warn('Failed to clear cached response:', clearError);
+          }
+        }
+        
         // Don't cache 401 responses
         // Return a more descriptive error for messaging endpoints
         if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations')) {
@@ -723,6 +735,14 @@ async function getCachedResponseWithTTL(request, cacheName, ttl) {
     const cachedResponse = await cache.match(request);
 
     if (!cachedResponse) {
+      return null;
+    }
+
+    // Check if this endpoint has skipCacheOnError enabled and if the cached response is an auth error
+    const cacheConfig = getAPICacheConfig(request);
+    if (cacheConfig.skipCacheOnError && (cachedResponse.status === 401 || cachedResponse.status === 403)) {
+      console.log('Skipping cached auth error response for endpoint with skipCacheOnError:', request.url);
+      await cache.delete(request);
       return null;
     }
 

@@ -168,8 +168,9 @@ export class UserProfileService {
       shippingZipCode: additionalData.shippingZipCode || '',
       shippingCountry: additionalData.shippingCountry || '',
       shippingPhone: additionalData.shippingPhone || '',
+      shippingSameAsBilling: dbUser.shippingSameAsBilling !== null && dbUser.shippingSameAsBilling !== undefined ? dbUser.shippingSameAsBilling : (additionalData.shippingSameAsBilling ?? true),
       createdAt,
-      updatedAt: createdAt
+      updatedAt
     };
     
     // Make the user follow themselves to ensure their own posts appear in their following feed
@@ -218,28 +219,28 @@ export class UserProfileService {
       bioCid: dbUser.bioCid || '', // Bio is now stored in database column
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
-      // Billing Address - read from encrypted data for security
-      billingFirstName: additionalData.billingFirstName || '',
-      billingLastName: additionalData.billingLastName || '',
-      billingCompany: additionalData.billingCompany || '',
-      billingAddress1: additionalData.billingAddress1 || '',
-      billingAddress2: additionalData.billingAddress2 || '',
-      billingCity: additionalData.billingCity || '',
-      billingState: additionalData.billingState || '',
-      billingZipCode: additionalData.billingZipCode || '',
-      billingCountry: additionalData.billingCountry || '',
-      billingPhone: additionalData.billingPhone || '',
-      // Shipping Address - read from encrypted data for security
-      shippingFirstName: additionalData.shippingFirstName || '',
-      shippingLastName: additionalData.shippingLastName || '',
-      shippingCompany: additionalData.shippingCompany || '',
-      shippingAddress1: additionalData.shippingAddress1 || '',
-      shippingAddress2: additionalData.shippingAddress2 || '',
-      shippingCity: additionalData.shippingCity || '',
-      shippingState: additionalData.shippingState || '',
-      shippingZipCode: additionalData.shippingZipCode || '',
-      shippingCountry: additionalData.shippingCountry || '',
-      shippingPhone: additionalData.shippingPhone || '',
+      // Billing Address - read from database columns
+      billingFirstName: dbUser.billingFirstName || additionalData.billingFirstName || '',
+      billingLastName: dbUser.billingLastName || additionalData.billingLastName || '',
+      billingCompany: dbUser.billingCompany || additionalData.billingCompany || '',
+      billingAddress1: dbUser.billingAddress1 || additionalData.billingAddress1 || '',
+      billingAddress2: dbUser.billingAddress2 || additionalData.billingAddress2 || '',
+      billingCity: dbUser.billingCity || additionalData.billingCity || '',
+      billingState: dbUser.billingState || additionalData.billingState || '',
+      billingZipCode: dbUser.billingZipCode || additionalData.billingZipCode || '',
+      billingCountry: dbUser.billingCountry || additionalData.billingCountry || '',
+      billingPhone: dbUser.billingPhone || additionalData.billingPhone || '',
+      // Shipping Address - read from database columns
+      shippingFirstName: dbUser.shippingFirstName || additionalData.shippingFirstName || '',
+      shippingLastName: dbUser.shippingLastName || additionalData.shippingLastName || '',
+      shippingCompany: dbUser.shippingCompany || additionalData.shippingCompany || '',
+      shippingAddress1: dbUser.shippingAddress1 || additionalData.shippingAddress1 || '',
+      shippingAddress2: dbUser.shippingAddress2 || additionalData.shippingAddress2 || '',
+      shippingCity: dbUser.shippingCity || additionalData.shippingCity || '',
+      shippingState: dbUser.shippingState || additionalData.shippingState || '',
+      shippingZipCode: dbUser.shippingZipCode || additionalData.shippingZipCode || '',
+      shippingCountry: dbUser.shippingCountry || additionalData.shippingCountry || '',
+      shippingPhone: dbUser.shippingPhone || additionalData.shippingPhone || '',
       createdAt,
       updatedAt
     };
@@ -285,28 +286,28 @@ export class UserProfileService {
         lastLogin: dbUser.lastLogin ? new Date(dbUser.lastLogin) : undefined,
         loginAttempts: dbUser.loginAttempts || 0,
         lockedUntil: dbUser.lockedUntil ? new Date(dbUser.lockedUntil) : undefined,
-        // Read billing/shipping fields from decryptedData, not dbUser
-        billingFirstName: decryptedData.billingFirstName || '',
-        billingLastName: decryptedData.billingLastName || '',
-        billingCompany: decryptedData.billingCompany || '',
-        billingAddress1: decryptedData.billingAddress1 || '',
-        billingAddress2: decryptedData.billingAddress2 || '',
-        billingCity: decryptedData.billingCity || '',
-        billingState: decryptedData.billingState || '',
-        billingZipCode: decryptedData.billingZipCode || '',
-        billingCountry: decryptedData.billingCountry || '',
-        billingPhone: decryptedData.billingPhone || '',
-        shippingFirstName: decryptedData.shippingFirstName || '',
-        shippingLastName: decryptedData.shippingLastName || '',
-        shippingCompany: decryptedData.shippingCompany || '',
-        shippingAddress1: decryptedData.shippingAddress1 || '',
-        shippingAddress2: decryptedData.shippingAddress2 || '',
-        shippingCity: decryptedData.shippingCity || '',
-        shippingState: decryptedData.shippingState || '',
-        shippingZipCode: decryptedData.shippingZipCode || '',
-        shippingCountry: decryptedData.shippingCountry || '',
-        shippingPhone: decryptedData.shippingPhone || '',
-        shippingSameAsBilling: decryptedData.shippingSameAsBilling ?? true,
+        // Read billing/shipping fields from database columns with fallback to decryptedData
+        billingFirstName: dbUser.billingFirstName || decryptedData.billingFirstName || '',
+        billingLastName: dbUser.billingLastName || decryptedData.billingLastName || '',
+        billingCompany: dbUser.billingCompany || decryptedData.billingCompany || '',
+        billingAddress1: dbUser.billingAddress1 || decryptedData.billingAddress1 || '',
+        billingAddress2: dbUser.billingAddress2 || decryptedData.billingAddress2 || '',
+        billingCity: dbUser.billingCity || decryptedData.billingCity || '',
+        billingState: dbUser.billingState || decryptedData.billingState || '',
+        billingZipCode: dbUser.billingZipCode || decryptedData.billingZipCode || '',
+        billingCountry: dbUser.billingCountry || decryptedData.billingCountry || '',
+        billingPhone: dbUser.billingPhone || decryptedData.billingPhone || '',
+        shippingFirstName: dbUser.shippingFirstName || decryptedData.shippingFirstName || '',
+        shippingLastName: dbUser.shippingLastName || decryptedData.shippingLastName || '',
+        shippingCompany: dbUser.shippingCompany || decryptedData.shippingCompany || '',
+        shippingAddress1: dbUser.shippingAddress1 || decryptedData.shippingAddress1 || '',
+        shippingAddress2: dbUser.shippingAddress2 || decryptedData.shippingAddress2 || '',
+        shippingCity: dbUser.shippingCity || decryptedData.shippingCity || '',
+        shippingState: dbUser.shippingState || decryptedData.shippingState || '',
+        shippingZipCode: dbUser.shippingZipCode || decryptedData.shippingZipCode || '',
+        shippingCountry: dbUser.shippingCountry || decryptedData.shippingCountry || '',
+        shippingPhone: dbUser.shippingPhone || decryptedData.shippingPhone || '',
+        shippingSameAsBilling: dbUser.shippingSameAsBilling !== null && dbUser.shippingSameAsBilling !== undefined ? dbUser.shippingSameAsBilling : (decryptedData.shippingSameAsBilling ?? true),
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt) : new Date(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
       };
@@ -366,7 +367,8 @@ export class UserProfileService {
       shippingState: input.shippingState || existingAdditionalData.shippingState,
       shippingZipCode: input.shippingZipCode || existingAdditionalData.shippingZipCode,
       shippingCountry: input.shippingCountry || existingAdditionalData.shippingCountry,
-      shippingPhone: input.shippingPhone || existingAdditionalData.shippingPhone
+      shippingPhone: input.shippingPhone || existingAdditionalData.shippingPhone,
+      shippingSameAsBilling: input.shippingSameAsBilling !== undefined ? input.shippingSameAsBilling : existingAdditionalData.shippingSameAsBilling
     };
 
     // Encrypt updated address data
@@ -380,6 +382,29 @@ export class UserProfileService {
         ens: input.ens !== undefined ? input.ens : existingProfile.ens, // ENS is public
         avatarCid: input.avatarCid !== undefined ? input.avatarCid : existingProfile.avatarCid, // Avatar is public
         bioCid: input.bioCid !== undefined ? input.bioCid : existingProfile.bioCid, // Bio is public
+        // Billing address fields
+        billingFirstName: input.billingFirstName !== undefined ? input.billingFirstName : existingProfile.billingFirstName,
+        billingLastName: input.billingLastName !== undefined ? input.billingLastName : existingProfile.billingLastName,
+        billingCompany: input.billingCompany !== undefined ? input.billingCompany : existingProfile.billingCompany,
+        billingAddress1: input.billingAddress1 !== undefined ? input.billingAddress1 : existingProfile.billingAddress1,
+        billingAddress2: input.billingAddress2 !== undefined ? input.billingAddress2 : existingProfile.billingAddress2,
+        billingCity: input.billingCity !== undefined ? input.billingCity : existingProfile.billingCity,
+        billingState: input.billingState !== undefined ? input.billingState : existingProfile.billingState,
+        billingZipCode: input.billingZipCode !== undefined ? input.billingZipCode : existingProfile.billingZipCode,
+        billingCountry: input.billingCountry !== undefined ? input.billingCountry : existingProfile.billingCountry,
+        billingPhone: input.billingPhone !== undefined ? input.billingPhone : existingProfile.billingPhone,
+        // Shipping address fields
+        shippingFirstName: input.shippingFirstName !== undefined ? input.shippingFirstName : existingProfile.shippingFirstName,
+        shippingLastName: input.shippingLastName !== undefined ? input.shippingLastName : existingProfile.shippingLastName,
+        shippingCompany: input.shippingCompany !== undefined ? input.shippingCompany : existingProfile.shippingCompany,
+        shippingAddress1: input.shippingAddress1 !== undefined ? input.shippingAddress1 : existingProfile.shippingAddress1,
+        shippingAddress2: input.shippingAddress2 !== undefined ? input.shippingAddress2 : existingProfile.shippingAddress2,
+        shippingCity: input.shippingCity !== undefined ? input.shippingCity : existingProfile.shippingCity,
+        shippingState: input.shippingState !== undefined ? input.shippingState : existingProfile.shippingState,
+        shippingZipCode: input.shippingZipCode !== undefined ? input.shippingZipCode : existingProfile.shippingZipCode,
+        shippingCountry: input.shippingCountry !== undefined ? input.shippingCountry : existingProfile.shippingCountry,
+        shippingPhone: input.shippingPhone !== undefined ? input.shippingPhone : existingProfile.shippingPhone,
+        shippingSameAsBilling: input.shippingSameAsBilling !== undefined ? input.shippingSameAsBilling : existingProfile.shippingSameAsBilling,
         physicalAddress: encryptedAddressData, // All encrypted private data
         updatedAt: new Date()
       })

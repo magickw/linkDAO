@@ -279,4 +279,78 @@ export class MarketplaceSearchController {
       return res.status(500).json({ error: 'Failed to compare products' });
     }
   }
+
+  /**
+   * Enhanced search suggestions with autocomplete and trending suggestions
+   */
+  static async getEnhancedSearchSuggestions(req: Request, res: Response) {
+    try {
+      const { q, limit = 8, includeTrending = false } = req.query;
+
+      if (!q || typeof q !== 'string') {
+        return res.json({
+          success: true,
+          data: {
+            suggestions: [],
+            trending: includeTrending ? await this.getTrendingSearches() : []
+          }
+        });
+      }
+
+      // Get basic suggestions using the existing search service
+      const basicSuggestions = await MarketplaceSearchController.searchService.getSearchSuggestions(
+        q as string,
+        Number(limit)
+      );
+
+      // Enhance suggestions with additional metadata
+      const enhancedSuggestions = basicSuggestions.map((suggestion: any) => ({
+        ...suggestion,
+        highlight: this.highlightQuery(suggestion.title || suggestion.name, q as string),
+        category: suggestion.category || 'general',
+        popularity: Math.floor(Math.random() * 100) + 1, // Mock popularity score
+        type: suggestion.type || 'product'
+      }));
+
+      const result = {
+        suggestions: enhancedSuggestions,
+        trending: includeTrending ? await this.getTrendingSearches() : []
+      };
+
+      return res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      safeLogger.error('Enhanced search suggestions error:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch enhanced search suggestions' 
+      });
+    }
+  }
+
+  /**
+   * Helper method to highlight query in suggestions
+   */
+  private static highlightQuery(text: string, query: string): string {
+    if (!text || !query) return text;
+    
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  /**
+   * Get trending searches (mock implementation)
+   */
+  private static async getTrendingSearches(): Promise<any[]> {
+    // Mock trending searches - in a real implementation, this would come from analytics
+    return [
+      { query: 'electronics', count: 1250, trend: 'up' },
+      { query: 'nft art', count: 980, trend: 'up' },
+      { query: 'gaming', count: 756, trend: 'stable' },
+      { query: 'collectibles', count: 623, trend: 'down' },
+      { query: 'digital art', count: 512, trend: 'up' }
+    ];
+  }
 }

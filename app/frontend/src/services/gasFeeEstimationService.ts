@@ -97,7 +97,16 @@ export class GasFeeEstimationService {
 
     try {
       const gasPrices = await this.getGasPrices(chainId);
-      const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
+      let gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
+
+      // Ensure gas limit doesn't exceed security or network limits
+      const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+      const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+      const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+      if (gasLimit > maxGasLimit) {
+        console.warn(`Gas limit ${gasLimit} exceeds maximum ${maxGasLimit}, reducing to maximum`);
+        gasLimit = maxGasLimit;
+      }
 
       // Check if we have any gas prices
       if (!gasPrices || gasPrices.length === 0) {
@@ -651,6 +660,12 @@ export class GasFeeEstimationService {
   ): GasEstimate {
     const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
     
+    // Ensure gas limit doesn't exceed security or network limits
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    const safeGasLimit = gasLimit > maxGasLimit ? maxGasLimit : gasLimit;
+
     // Fallback gas prices (in gwei)
     const fallbackGasPrices: Record<number, bigint> = {
       1: 30n * 1000000000n, // 30 gwei for mainnet
@@ -660,10 +675,10 @@ export class GasFeeEstimationService {
     };
 
     const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];
-    const totalCost = gasLimit * gasPrice;
+    const totalCost = safeGasLimit * gasPrice;
 
     return {
-      gasLimit,
+      gasLimit: safeGasLimit,
       gasPrice,
       totalCost,
       totalCostUSD: this.getFallbackUSDPrice(totalCost, chainId),

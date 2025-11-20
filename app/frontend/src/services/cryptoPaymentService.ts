@@ -132,6 +132,15 @@ export class CryptoPaymentService {
   ): Promise<Hash> {
     const { token, amount, recipient, orderId, chainId } = request;
 
+    // Validate gas limit against network and security constraints before executing transaction
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    
+    if (gasEstimate.gasLimit > maxGasLimit) {
+      throw new Error(`Gas limit ${gasEstimate.gasLimit} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
+    }
+
     if (!this.walletClient) {
       throw new Error('Wallet client not initialized');
     }
@@ -162,6 +171,7 @@ export class CryptoPaymentService {
         resolutionMethod,
       ],
       value: token.isNative ? amount : 0n,
+      gas: gasEstimate.gasLimit,
       chain: undefined,
       account: buyerAddress,
     });
@@ -180,11 +190,23 @@ export class CryptoPaymentService {
       throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
     }
 
+    // Estimate gas for the release transaction to ensure it's within limits
+    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x');
+    // Validate gas limit against network and security constraints
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    
+    if (gasEstimate > maxGasLimit) {
+      throw new Error(`Gas limit ${gasEstimate} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
+    }
+
     await this.walletClient.writeContract({
       address: escrowAddress as `0x${string}`,
       abi: enhancedEscrowABI,
       functionName: "confirmDelivery",
       args: [BigInt(escrowId), "Delivery confirmed"],
+      gas: gasEstimate,
       chain: undefined,
       account: undefined,
     });
@@ -203,11 +225,23 @@ export class CryptoPaymentService {
       throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
     }
 
+    // Estimate gas for the refund transaction to ensure it's within limits
+    const gasEstimate = await this.estimateGasLimit(escrowAddress, '0x');
+    // Validate gas limit against network and security constraints
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    
+    if (gasEstimate > maxGasLimit) {
+      throw new Error(`Gas limit ${gasEstimate} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
+    }
+
     await this.walletClient.writeContract({
       address: escrowAddress as `0x${string}`,
       abi: enhancedEscrowABI,
       functionName: "executeEmergencyRefund",
       args: [BigInt(escrowId)],
+      gas: gasEstimate,
       chain: undefined,
       account: undefined,
     });
@@ -221,6 +255,15 @@ export class CryptoPaymentService {
     gasEstimate: GasFeeEstimate
   ): Promise<Hash> {
     const { token, amount, recipient } = request;
+
+    // Validate gas limit against network and security constraints before executing transaction
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    
+    if (gasEstimate.gasLimit > maxGasLimit) {
+      throw new Error(`Gas limit ${gasEstimate.gasLimit} exceeds maximum allowable limit of ${maxGasLimit}. Please try again.`);
+    }
 
     if (token.isNative) {
       // Native token transfer (ETH, MATIC, etc.)
@@ -570,12 +613,68 @@ export class CryptoPaymentService {
     
     const { token, amount, recipient } = request;
 
+    let gasEstimate;
     if (token.isNative) {
-      return await this.gasFeeService.estimateGasFees(recipient, '0x', amount);
+      gasEstimate = await this.gasFeeService.estimateGasFees(recipient, '0x', amount);
     } else {
       // ERC-20 transfer data
       const transferData = `0xa9059cbb${recipient.slice(2).padStart(64, '0')}${amount.toString(16).padStart(64, '0')}`;
-      return await this.gasFeeService.estimateGasFees(token.address, transferData);
+      gasEstimate = await this.gasFeeService.estimateGasFees(token.address, transferData);
+    }
+
+    // Ensure gas limit doesn't exceed security or network limits
+    const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+    const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+    const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+    
+    if (gasEstimate.gasLimit > maxGasLimit) {
+      console.warn(`Gas limit ${gasEstimate.gasLimit} exceeds maximum ${maxGasLimit}, reducing to maximum`);
+      gasEstimate.gasLimit = maxGasLimit;
+      gasEstimate.totalCost = maxGasLimit * gasEstimate.gasPrice;
+    }
+
+    return gasEstimate;
+  }
+
+  /**
+   * Estimate gas limit for a transaction
+   */
+  private async estimateGasLimit(to: string, data: string, value: bigint = 0n): Promise<bigint> {
+    if (!this.publicClient) {
+      throw new Error('Public client not initialized');
+    }
+
+    try {
+      const gasEstimate = await this.publicClient.estimateGas({
+        to: to as `0x${string}`,
+        data: data as `0x${string}`,
+        value
+      });
+
+      // Add buffer to gas estimate but ensure it doesn't exceed the block gas limit
+      let gasLimitWithBuffer = BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
+      
+      // Ensure gas limit doesn't exceed the network's block gas limit (16,777,216 on most Ethereum networks)
+      const maxGasLimit = 16777215n; // Just under the limit to be safe
+      
+      if (gasLimitWithBuffer > maxGasLimit) {
+        console.warn(`Gas limit ${gasLimitWithBuffer} exceeds maximum ${maxGasLimit}, reducing to maximum`);
+        return maxGasLimit;
+      }
+      
+      return gasLimitWithBuffer;
+    } catch (error) {
+      console.error('Gas limit estimation failed:', error);
+      // Return a reasonable default for simple transfers
+      let defaultGasLimit = BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
+      
+      // Ensure default doesn't exceed the network's block gas limit
+      const maxGasLimit = 16777215n;
+      if (defaultGasLimit > maxGasLimit) {
+        defaultGasLimit = maxGasLimit;
+      }
+      
+      return defaultGasLimit;
     }
   }
 

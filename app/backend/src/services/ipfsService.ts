@@ -39,8 +39,12 @@ export class IPFSService {
   private client: IPFSHTTPClient | null = null;
   private gatewayUrl: string;
   private defaultPinning: boolean;
+  private isMemoryConstrained: boolean; // New field
 
   constructor(config?: IPFSConnectionConfig) {
+    // Check if we're in a memory-constrained environment
+    this.isMemoryConstrained = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+    
     // Use environment variables for configuration
     let apiUrl = config?.url || process.env.IPFS_API_URL;
     
@@ -58,7 +62,7 @@ export class IPFSService {
     }
     
     this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
-    this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false';
+    this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false' && !this.isMemoryConstrained; // Disable pinning in constrained environments
 
     try {
       // Create IPFS client with explicit configuration for Pinata
@@ -89,9 +93,14 @@ export class IPFSService {
         };
       }
       
-      this.client = create(ipfsConfig);
-      
-      safeLogger.info('IPFS service initialized successfully', { apiUrl, gatewayUrl: this.gatewayUrl, authProvided: !!authHeader });
+      // Only create client if not in memory-constrained environment
+      if (!this.isMemoryConstrained) {
+        this.client = create(ipfsConfig);
+        safeLogger.info('IPFS service initialized successfully', { apiUrl, gatewayUrl: this.gatewayUrl, authProvided: !!authHeader });
+      } else {
+        safeLogger.warn('IPFS client disabled due to memory-constrained environment (<512MB)');
+        this.client = null;
+      }
     } catch (error) {
       safeLogger.error('Failed to initialize IPFS service:', error);
       // Don't throw the error here - we want the service to be created even if initialization fails
@@ -223,10 +232,49 @@ export class IPFSService {
   }
 
   /**
-   * Download file from IPFS
+   * Download file from IPFS with memory optimization
    */
   async downloadFile(ipfsHash: string): Promise<IPFSDownloadResult> {
     if (!this.client) {
+      // In memory-constrained environments, use direct gateway access
+      if (this.isMemoryConstrained) {
+        try {
+          const startTime = Date.now();
+          safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
+          
+          // Use axios directly to avoid loading IPFS client
+          const response = await axios.get(`${this.gatewayUrl}/${ipfsHash}`, {
+            timeout: 10000,
+            responseType: 'arraybuffer' // More memory efficient
+          });
+          
+          const content = Buffer.from(response.data);
+          const size = content.length;
+          
+          // Create metadata
+          const metadata: IPFSFileMetadata = {
+            id: ipfsHash,
+            name: `file-${ipfsHash.slice(0, 8)}`,
+            size: size,
+            createdAt: new Date(),
+            ipfsHash: ipfsHash,
+            gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
+          };
+          
+          const endTime = Date.now();
+          safeLogger.info(`IPFS download completed via gateway`, {
+            hash: ipfsHash,
+            size: size,
+            duration: endTime - startTime
+          });
+          
+          return { content, metadata };
+        } catch (error) {
+          safeLogger.error(`IPFS gateway download failed for ${ipfsHash}:`, error);
+          throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
       throw new Error('IPFS client not initialized');
     }
 

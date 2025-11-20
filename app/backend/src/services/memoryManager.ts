@@ -5,8 +5,19 @@ export class MemoryManager {
   private isMonitoring = false;
   private memoryHistory: number[] = [];
   private maxHistorySize = 20;
+  private isMemoryCritical: boolean; // New field
 
   constructor() {
+    // Check if we're in a memory-critical environment
+    this.isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
+    
+    // Adjust thresholds for memory-critical environments
+    if (this.isMemoryCritical) {
+      this.memoryThreshold = 0.60; // 60% for critical environments
+      this.criticalThreshold = 0.75; // 75% for critical environments
+      this.checkInterval = 3000; // Check more frequently
+    }
+    
     this.startMonitoring();
   }
 
@@ -14,7 +25,12 @@ export class MemoryManager {
     if (this.isMonitoring) return;
     
     this.isMonitoring = true;
-    console.log('🔍 Memory monitoring started');
+    console.log('🔍 Memory monitoring started', {
+      memoryThreshold: `${(this.memoryThreshold * 100).toFixed(1)}%`,
+      criticalThreshold: `${(this.criticalThreshold * 100).toFixed(1)}%`,
+      checkInterval: `${this.checkInterval}ms`,
+      isMemoryCritical: this.isMemoryCritical
+    });
 
     setInterval(() => {
       this.checkMemoryUsage();
@@ -96,7 +112,8 @@ export class MemoryManager {
       }
     }, 10000);
   }  
-private clearRequireCache(aggressive = false) {
+  
+  private clearRequireCache(aggressive = false) {
     const beforeCount = Object.keys(require.cache).length;
     
     // Clear non-essential modules from require cache
@@ -133,7 +150,7 @@ private clearRequireCache(aggressive = false) {
     }
 
     // Normal mode - only clear test and development modules
-    const clearablePaths = ['/tests/', '/__tests__/', '/test/', '/dev/'];
+    const clearablePaths = ['/tests/', '/__tests__/', '/test/', '/dev/', '/node_modules/.cache/'];
     return clearablePaths.some(path => moduleId.includes(path));
   }
 
@@ -158,7 +175,8 @@ private clearRequireCache(aggressive = false) {
       memoryPercent: Math.round(memoryPercent * 10000) / 100,
       trend: Math.round(trend * 10000) / 100,
       status: this.getMemoryStatus(memoryPercent),
-      history: [...this.memoryHistory]
+      history: [...this.memoryHistory],
+      isMemoryCritical: this.isMemoryCritical
     };
   }
 

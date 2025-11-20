@@ -21,12 +21,21 @@ const ARWEAVE_CONFIG = {
 
 export class MetadataService {
   private ipfsClientPromise: Promise<any | null>;
+  private isMemoryConstrained: boolean; // New field
 
   constructor() {
+    // Check if we're in a memory-constrained environment
+    this.isMemoryConstrained = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
     this.ipfsClientPromise = this.initializeIpfsClient();
   }
 
   private async initializeIpfsClient(): Promise<any | null> {
+    // Don't initialize IPFS client in memory-constrained environments
+    if (this.isMemoryConstrained) {
+      safeLogger.warn('IPFS client initialization skipped due to memory-constrained environment (<512MB)');
+      return null;
+    }
+    
     try {
       // Use require instead of import for CommonJS compatibility
       let create;
@@ -160,14 +169,15 @@ export class MetadataService {
   }
 
   /**
-   * Retrieve content from IPFS
+   * Retrieve content from IPFS with memory optimization
    * @param cid The IPFS CID of the content
    * @returns The content
    */
   async getFromIPFS(cid: string): Promise<string> {
     const ipfsClient = await this.ipfsClientPromise;
     try {
-      if (!ipfsClient) {
+      // In memory-constrained environments, use direct gateway access only
+      if (this.isMemoryConstrained || !ipfsClient) {
         // Try to retrieve from public gateways as fallback
         const gateways = [
           `https://gateway.pinata.cloud/ipfs/${cid}`,
@@ -178,12 +188,16 @@ export class MetadataService {
         
         for (const gateway of gateways) {
           try {
-            safeLogger.info(`Attempting to fetch content from gateway: ${gateway}`);
+            safeLogger.info(`Attempting to fetch content from gateway (memory-constrained): ${gateway}`);
             const response = await axios.get(gateway, {
-              timeout: 15000, // Increase timeout
+              timeout: 10000, // Reduced timeout for memory-constrained environments
               headers: {
                 'User-Agent': 'LinkDAO/1.0'
-              }
+              },
+              // More memory-efficient configuration
+              maxContentLength: 10 * 1024 * 1024, // 10MB max
+              maxBodyLength: 10 * 1024 * 1024, // 10MB max
+              responseType: 'text'
             });
 
             // Extract only the data we need to avoid circular reference issues
@@ -232,11 +246,14 @@ export class MetadataService {
         try {
           safeLogger.info(`Attempting to fetch content from Pinata gateway for CID: ${cid}`);
           const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${cid}`, {
-            timeout: 15000, // Increase timeout
+            timeout: 10000, // Reduced timeout
             headers: {
               'Authorization': `Bearer ${IPFS_CONFIG.projectId}`,
               'User-Agent': 'LinkDAO/1.0'
-            }
+            },
+            maxContentLength: 10 * 1024 * 1024, // 10MB max
+            maxBodyLength: 10 * 1024 * 1024, // 10MB max
+            responseType: 'text'
           });
 
           // Extract only the data we need to avoid circular reference issues
@@ -285,10 +302,13 @@ export class MetadataService {
           try {
             safeLogger.info(`Attempting to fetch content from fallback gateway: ${gateway}`);
             const response = await axios.get(gateway, {
-              timeout: 15000, // Increase timeout
+              timeout: 10000, // Reduced timeout
               headers: {
                 'User-Agent': 'LinkDAO/1.0'
-              }
+              },
+              maxContentLength: 10 * 1024 * 1024, // 10MB max
+              maxBodyLength: 10 * 1024 * 1024, // 10MB max
+              responseType: 'text'
             });
 
             // Extract only the data we need to avoid circular reference issues

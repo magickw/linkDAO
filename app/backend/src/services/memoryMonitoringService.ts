@@ -26,10 +26,10 @@ export class MemoryMonitoringService {
     isResourceConstrained: boolean = false
   ) {
     this.thresholds = thresholds;
-    this.isResourceConstrained = isResourceConstrained;
+    this.isResourceConstrained = isResourceConstrained || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512);
     
     // Adjust GC cooldown for resource-constrained environments
-    if (isResourceConstrained) {
+    if (this.isResourceConstrained) {
       this.gcCooldown = 15000; // 15 seconds for constrained environments
     }
   }
@@ -191,6 +191,16 @@ export class MemoryMonitoringService {
           this.performEmergencyCleanup();
         }
       }
+      
+      // More aggressive warning for severe memory constraints
+      if (memoryLimitMB < 512 && rss > memoryLimitMB * 0.75) {
+        safeLogger.warn(`⚠️ High memory usage for constrained environment: ${rss}MB / ${memoryLimitMB}MB`);
+        
+        // Force cleanup more aggressively
+        if (global.gc) {
+          global.gc();
+        }
+      }
     }
   }
 }
@@ -201,7 +211,8 @@ export function createMemoryMonitoringService(): MemoryMonitoringService {
   const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
   const isRenderStandard = process.env.RENDER && process.env.RENDER_SERVICE_TYPE === 'standard';
   const isResourceConstrained = isRenderFree || (process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 1024);
-
+  const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512; // New check
+  
   // Import production config to get memory thresholds
   const { productionConfig } = require('../config/productionConfig');
   
@@ -212,7 +223,7 @@ export function createMemoryMonitoringService(): MemoryMonitoringService {
     gc: productionConfig.memory.gcThreshold
   };
 
-  return new MemoryMonitoringService(thresholds, isResourceConstrained);
+  return new MemoryMonitoringService(thresholds, isResourceConstrained || isMemoryCritical); // Include memory critical check
 }
 
 // Export singleton instance

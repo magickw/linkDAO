@@ -215,7 +215,7 @@ export const PAYMENT_CONFIG = {
   MIN_CONFIRMATION_TIME: 30000, // 30 seconds
   
   // Gas limit buffers
-  GAS_LIMIT_BUFFER: 1.2, // 20% buffer
+  GAS_LIMIT_BUFFER: 1.1, // 10% buffer (reduced from 20% to prevent exceeding block limits)
   
   // Slippage tolerance for gas price estimation
   GAS_PRICE_SLIPPAGE: 0.1 // 10%

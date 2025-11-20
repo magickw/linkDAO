@@ -79,12 +79,34 @@ export class GasFeeService {
         value
       });
 
-      // Add buffer to gas estimate
-      return BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
+      // Add buffer to gas estimate but ensure it doesn't exceed the block gas limit
+      let gasLimitWithBuffer = BigInt(Math.floor(Number(gasEstimate) * PAYMENT_CONFIG.GAS_LIMIT_BUFFER));
+      
+      // Ensure gas limit doesn't exceed security or network limits
+      const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+      const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+      const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+      
+      if (gasLimitWithBuffer > maxGasLimit) {
+        console.warn(`Gas limit ${gasLimitWithBuffer} exceeds maximum ${maxGasLimit}, reducing to maximum`);
+        return maxGasLimit;
+      }
+      
+      return gasLimitWithBuffer;
     } catch (error) {
       console.error('Gas limit estimation failed:', error);
       // Return a reasonable default for simple transfers
-      return BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
+      let defaultGasLimit = BigInt(21000 * PAYMENT_CONFIG.GAS_LIMIT_BUFFER);
+      
+      // Ensure default doesn't exceed security or network limits
+      const securityMaxGasLimit = 500000n; // Security limit from token transaction security config
+      const networkMaxGasLimit = 16777215n; // Maximum safe gas limit (just under 16,777,216 block limit)
+      const maxGasLimit = securityMaxGasLimit < networkMaxGasLimit ? securityMaxGasLimit : networkMaxGasLimit;
+      if (defaultGasLimit > maxGasLimit) {
+        defaultGasLimit = maxGasLimit;
+      }
+      
+      return defaultGasLimit;
     }
   }
 
