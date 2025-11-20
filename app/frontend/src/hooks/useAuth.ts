@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useAuth as useAuthContext } from '@/context/AuthContext';
 import { UserRole, ROLE_PERMISSIONS } from '@/types/auth';
 
@@ -7,56 +8,56 @@ export const useAuth = () => {
 
 export const usePermissions = () => {
   const { user } = useAuth();
-  
-  const hasPermission = (permission: string): boolean => {
+
+  const hasPermission = useCallback((permission: string): boolean => {
     if (!user) return false;
     return user.permissions?.includes(permission) || false;
-  };
-  
-  const hasRole = (role: UserRole): boolean => {
+  }, [user]);
+
+  const hasRole = useCallback((role: UserRole): boolean => {
     if (!user) return false;
     return user.role === role;
-  };
-  
-  const hasAnyRole = (roles: UserRole[]): boolean => {
+  }, [user]);
+
+  const hasAnyRole = useCallback((roles: UserRole[]): boolean => {
     if (!user) return false;
     return roles.includes(user.role);
-  };
-  
-  const isAdmin = (): boolean => {
+  }, [user]);
+
+  const isAdmin = useCallback((): boolean => {
     return hasAnyRole(['admin', 'super_admin']);
-  };
-  
-  const isModerator = (): boolean => {
+  }, [hasAnyRole]);
+
+  const isModerator = useCallback((): boolean => {
     return hasAnyRole(['moderator', 'admin', 'super_admin']);
-  };
-  
-  const canModerateContent = (): boolean => {
+  }, [hasAnyRole]);
+
+  const canModerateContent = useCallback((): boolean => {
     return hasPermission('content.moderate');
-  };
-  
-  const canManageUsers = (): boolean => {
+  }, [hasPermission]);
+
+  const canManageUsers = useCallback((): boolean => {
     return hasPermission('users.suspend') || hasPermission('users.ban');
-  };
-  
-  const canResolveDisputes = (): boolean => {
+  }, [hasPermission]);
+
+  const canResolveDisputes = useCallback((): boolean => {
     return hasPermission('disputes.resolve');
-  };
-  
-  const canReviewSellers = (): boolean => {
+  }, [hasPermission]);
+
+  const canReviewSellers = useCallback((): boolean => {
     return hasPermission('marketplace.seller_review');
-  };
-  
-  const getUserPermissions = (): string[] => {
+  }, [hasPermission]);
+
+  const getUserPermissions = useCallback((): string[] => {
     if (!user) return [];
     return user.permissions || [];
-  };
-  
-  const getRolePermissions = (role: UserRole): string[] => {
+  }, [user]);
+
+  const getRolePermissions = useCallback((role: UserRole): string[] => {
     const roleConfig = ROLE_PERMISSIONS.find(r => r.role === role);
     return roleConfig?.permissions || [];
-  };
-  
+  }, []);
+
   return {
     user,
     hasPermission,
