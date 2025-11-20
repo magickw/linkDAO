@@ -50,26 +50,99 @@ export class FrontendReferralService {
   }
 
   async getReferralInfo(userAddress: string): Promise<ReferralInfo | null> {
-    const codeRes = await this.generateReferralCode(userAddress);
-    if (!codeRes.success) return null;
-    return {
-      referrer: userAddress,
-      referralCode: codeRes.referralCode!,
-      referralLink: codeRes.referralLink!,
-      totalReferrals: Math.floor(Math.random() * 10),
-      totalRewards: parseFloat((Math.random() * 500).toFixed(2)),
-      pendingRewards: parseFloat((Math.random() * 100).toFixed(2))
-    };
+    try {
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
+      }
+
+      const res = await fetch(`${this.apiBase}/api/referrals/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get referral stats' }));
+        console.error('Error getting referral stats:', errorData);
+        return null;
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        return null;
+      }
+
+      const stats = data.data;
+      const codeRes = await this.generateReferralCode(userAddress);
+      if (!codeRes.success) return null;
+
+      return {
+        referrer: userAddress,
+        referralCode: codeRes.referralCode!,
+        referralLink: codeRes.referralLink!,
+        totalReferrals: stats.totalReferrals || 0,
+        totalRewards: stats.totalEarned || 0,
+        pendingRewards: stats.pendingRewards || 0
+      };
+    } catch (err) {
+      console.error('Error getting referral info:', err);
+      return null;
+    }
   }
 
   async getReferralRewards(userAddress: string): Promise<ReferralReward[]> {
-    // Try to fetch from backend if available, otherwise return empty array
     try {
-      const res = await fetch(`${this.apiBase}/ldao/referral/rewards?address=${userAddress}`);
-      if (!res.ok) return [];
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
+      }
+
+      const res = await fetch(`${this.apiBase}/api/referrals/history`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get referral rewards' }));
+        console.error('Error getting referral rewards:', errorData);
+        return [];
+      }
+
       const data = await res.json();
-      return Array.isArray(data.rewards) ? data.rewards : [];
+      if (!data.success || !data.data) {
+        return [];
+      }
+
+      // Transform the backend response format to match ReferralReward interface
+      const referrals = data.data.referrals || [];
+      const rewards: ReferralReward[] = [];
+
+      for (const referral of referrals) {
+        // If the referral has reward data, add it to the rewards list
+        if (referral.id && referral.refereeId && referral.tokensEarned !== undefined) {
+          rewards.push({
+            id: referral.id,
+            referrer: referral.referrerId || userAddress,
+            referredUser: referral.refereeId,
+            amount: referral.tokensEarned || referral.amount || 0,
+            timestamp: new Date(referral.createdAt || Date.now()).getTime(),
+            status: referral.status || 'claimed', // Default status to claimed if not specified
+            transactionHash: referral.transactionHash || referral.txHash
+          });
+        }
+      }
+
+      return rewards;
     } catch (err) {
+      console.error('Error getting referral rewards:', err);
       return [];
     }
   }
@@ -147,11 +220,36 @@ export class FrontendReferralService {
   }
 
   async getReferralLeaderboard(limit = 10): Promise<Array<{ user: string; referrals: number; rewards: number }>> {
-    const list: Array<{ user: string; referrals: number; rewards: number }> = [];
-    for (let i = 0; i < Math.min(limit, 10); i++) {
-      list.push({ user: `0x${Math.random().toString(16).substr(2, 40)}`, referrals: Math.floor(Math.random() * 50), rewards: parseFloat((Math.random() * 500).toFixed(2)) });
+    try {
+      const res = await fetch(`${this.apiBase}/api/referrals/leaderboard?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get referral leaderboard' }));
+        console.error('Error getting referral leaderboard:', errorData);
+        return [];
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        return [];
+      }
+
+      // Transform the backend response format to match the expected format
+      const leaderboard = data.data.leaderboard || [];
+      return leaderboard.map((item: any) => ({
+        user: item.userId || item.user || item.referrerId || item.walletAddress || item.userAddress,
+        referrals: item.totalReferrals || item.referralCount || 0,
+        rewards: item.totalEarned || item.totalRewards || item.totalTokensEarned || 0
+      }));
+    } catch (err) {
+      console.error('Error getting referral leaderboard:', err);
+      return [];
     }
-    return list.sort((a, b) => b.referrals - a.referrals);
   }
 
   async validateReferralCode(referralCode: string): Promise<{ isValid: boolean; referrer?: string; error?: string }> {

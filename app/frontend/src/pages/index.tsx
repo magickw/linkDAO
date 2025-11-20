@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense, useRef } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
@@ -71,9 +71,17 @@ export default function Home() {
   const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
 
-  // Refs for accessibility
+  // Refs for accessibility and memory leak prevention
   const mainContentRef = useRef<HTMLDivElement>(null);
   const skipToContentRef = useRef<HTMLAnchorElement>(null);
+  const isMounted = useRef(true);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Initialize WebSocket for real-time updates
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
@@ -81,6 +89,13 @@ export default function Home() {
     autoConnect: isConnected && !!address,
     autoReconnect: true
   });
+
+  // Handle feed refresh with useCallback for stable reference
+  const handleRefreshFeed = useCallback(() => {
+    if (!isMounted.current) return;
+    setHasNewPosts(false);
+    setFeedRefreshKey(prev => prev + 1);
+  }, []);
 
   // Keyboard navigation support
   useEffect(() => {
@@ -98,7 +113,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleRefreshFeed]);
 
   useEffect(() => {
     setMounted(true);
@@ -112,8 +127,9 @@ export default function Home() {
         eventTypes: ['feed_update', 'new_post']
       });
 
-      // Listen for new posts
+      // Listen for new posts with stable callback
       const handleFeedUpdate = (data: any) => {
+        if (!isMounted.current) return;
         console.log('New post received:', data);
         // Add the new post to the feed immediately
         setFeedRefreshKey(prev => prev + 1);
@@ -128,8 +144,8 @@ export default function Home() {
     }
   }, [wsConnected, address, subscribe, on, off, addToast]);
 
-  // Handle post creation
-  const handlePostSubmit = async (postData: CreatePostInput) => {
+  // Handle post creation with useCallback and mount check
+  const handlePostSubmit = useCallback(async (postData: CreatePostInput) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to post', 'error');
       return;
@@ -137,6 +153,10 @@ export default function Home() {
 
     try {
       const newPost = await createPost({ ...postData, author: address.toLowerCase() });
+
+      // Check if component is still mounted before updating state
+      if (!isMounted.current) return;
+
       addToast('Post created successfully!', 'success');
       closeModal('postCreation');
       // Force feed refresh to show the new post
@@ -145,15 +165,10 @@ export default function Home() {
       setHasNewPosts(true);
     } catch (error) {
       console.error('Error creating post:', error);
+      if (!isMounted.current) return;
       addToast('Failed to create post', 'error');
     }
-  };
-
-  // Handle feed refresh
-  const handleRefreshFeed = () => {
-    setHasNewPosts(false);
-    setFeedRefreshKey(prev => prev + 1);
-  };
+  }, [isConnected, address, createPost, addToast, closeModal]);
 
   // If not connected, show enhanced landing page
   if (!mounted || !isConnected) {
@@ -230,7 +245,7 @@ export default function Home() {
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
             <div className="absolute inset-0 bg-grid-white/[0.05] bg-[length:30px_30px]"></div>
 
-            <div className="relative z-10 max-w-screen-xl mx-auto px-6 sm:px-8 lg:px-16 xl:px-24 pt-20 pb-16 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-20">
+            <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-20 pb-16 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-12">
               <div className="lg:w-1/2 xl:w-5/12">
                 <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-300 text-sm font-medium mb-6 backdrop-blur-sm">
                   <span className="flex h-2 w-2 rounded-full bg-primary-400 mr-2 animate-pulse"></span>

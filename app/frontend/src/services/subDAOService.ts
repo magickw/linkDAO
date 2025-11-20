@@ -1,8 +1,5 @@
 import { ethers } from 'ethers';
-import WebSocketService from './webSocketService';
-
-// Create an instance of the WebSocket service
-const webSocketService = new WebSocketService();
+import { webSocketService } from './webSocketService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';

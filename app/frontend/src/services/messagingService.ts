@@ -7,7 +7,7 @@ import { ethers } from 'ethers';
 import { OfflineMessageQueueService } from './offlineMessageQueueService';
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-import WebSocketService from './webSocketService';
+import { WebSocketService, webSocketService } from './webSocketService';
 import { 
   Message, 
   Conversation, 
@@ -17,7 +17,7 @@ import {
 } from '../types/messaging';
 
 // Create an instance of the WebSocket service
-const webSocketService = new WebSocketService();
+const webSocketServiceInstance = new WebSocketService();
 
 export interface ChatMessage {
   id: string;
@@ -149,12 +149,22 @@ class MessagingService {
   // Events
   private listeners: Map<string, Function[]> = new Map();
 
+  // MEMORY OPTIMIZATION: Size limits and cleanup
+  private readonly MAX_CONVERSATIONS = 100;
+  private readonly MAX_MESSAGES_PER_CONVERSATION = 200;
+  private readonly MAX_LISTENERS_PER_EVENT = 10;
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
   constructor() {
     this.initializeWebSocketListeners();
     // Only initialize offline queue service in browser environment
     if (typeof window !== 'undefined') {
       this.offlineQueueService = OfflineMessageQueueService.getInstance();
     }
+    
+    // MEMORY OPTIMIZATION: Start periodic cleanup
+    this.startPeriodicCleanup();
   }
 
   /**
@@ -182,8 +192,8 @@ class MessagingService {
       await this.initializeEncryption();
 
       // Connect to WebSocket and authenticate
-      await webSocketService.connect();
-      webSocketService.send('authenticate', { walletAddress: this.currentAddress });
+      await webSocketServiceInstance.connect();
+      webSocketServiceInstance.send('authenticate', { walletAddress: this.currentAddress });
 
       // Load existing data
       await this.loadConversations();
@@ -491,7 +501,7 @@ class MessagingService {
       message.signature = await this.signMessage(message);
 
       // Send via WebSocket
-      webSocketService.send('send_message', message);
+      webSocketServiceInstance.send('send_message', message);
 
       // Add to local storage
       this.addMessageToConversation(message);
@@ -603,7 +613,7 @@ class MessagingService {
       });
     } else {
       // Notify server
-      webSocketService.send('mark_read', {
+      webSocketServiceInstance.send('mark_read', {
         conversationId,
         messageIds: unreadMessages.map(msg => msg.id),
         readerAddress: this.currentAddress
@@ -627,7 +637,7 @@ class MessagingService {
     }
 
     // Send typing start
-    webSocketService.send('typing_start', {
+    webSocketServiceInstance.send('typing_start', {
       conversationId,
       userAddress: this.currentAddress
     });
@@ -652,7 +662,7 @@ class MessagingService {
       this.typingTimeouts.delete(conversationId);
     }
 
-    webSocketService.send('typing_stop', {
+    webSocketServiceInstance.send('typing_stop', {
       conversationId,
       userAddress: this.currentAddress
     });
@@ -674,7 +684,7 @@ class MessagingService {
     await this.storeBlockedUsersSecurely();
 
     // Notify server
-    webSocketService.send('block_user', {
+    webSocketServiceInstance.send('block_user', {
       blockerAddress: this.currentAddress,
       blockedAddress: normalizedAddress,
       reason
@@ -699,7 +709,7 @@ class MessagingService {
     await this.storeBlockedUsersSecurely();
 
     // Notify server
-    webSocketService.send('unblock_user', {
+    webSocketServiceInstance.send('unblock_user', {
       blockerAddress: this.currentAddress,
       blockedAddress: normalizedAddress
     });
@@ -791,7 +801,7 @@ class MessagingService {
    * Initialize WebSocket listeners
    */
   private initializeWebSocketListeners(): void {
-    webSocketService.on('message_received', async (message: ChatMessage) => {
+    webSocketServiceInstance.on('message_received', async (message: ChatMessage) => {
       if (!this.currentAddress) return;
 
       // Ignore messages from blocked users
@@ -830,6 +840,11 @@ class MessagingService {
             isPinned: false
           };
           this.conversations.set(conversationId, conversation);
+          
+          // MEMORY OPTIMIZATION: Enforce conversation limit
+          if (this.conversations.size > this.MAX_CONVERSATIONS) {
+            this.cleanupOldConversations();
+          }
         } else {
           conversation.lastMessage = message;
           conversation.lastActivity = message.timestamp;
@@ -847,7 +862,7 @@ class MessagingService {
       }
     });
 
-    webSocketService.on('message_delivered', (data: { messageId: string }) => {
+    webSocketServiceInstance.on('message_delivered', (data: { messageId: string }) => {
       // Find and update message delivery status
       for (const messages of this.messages.values()) {
         const message = messages.find(msg => msg.id === data.messageId);
@@ -859,7 +874,7 @@ class MessagingService {
       }
     });
 
-    webSocketService.on('message_read', (data: { messageIds: string[]; readerAddress: string }) => {
+    webSocketServiceInstance.on('message_read', (data: { messageIds: string[]; readerAddress: string }) => {
       // Update read status for messages
       for (const messages of this.messages.values()) {
         for (const message of messages) {
@@ -871,29 +886,29 @@ class MessagingService {
       }
     });
 
-    webSocketService.on('user_typing', (data: { conversationId: string; userAddress: string }) => {
+    webSocketServiceInstance.on('user_typing', (data: { conversationId: string; userAddress: string }) => {
       if (data.userAddress !== this.currentAddress) {
         this.emit('user_typing', data);
       }
     });
 
-    webSocketService.on('user_stopped_typing', (data: { conversationId: string; userAddress: string }) => {
+    webSocketServiceInstance.on('user_stopped_typing', (data: { conversationId: string; userAddress: string }) => {
       if (data.userAddress !== this.currentAddress) {
         this.emit('user_stopped_typing', data);
       }
     });
 
-    webSocketService.on('user_presence', (presence: UserPresence) => {
+    webSocketServiceInstance.on('user_presence', (presence: UserPresence) => {
       this.emit('user_presence', presence);
     });
 
     // Listen for connection status changes
-    webSocketService.on('connected', () => {
+    webSocketServiceInstance.on('connected', () => {
       // When reconnected, sync any pending messages
       this.offlineQueueService.syncPendingMessages().catch(console.error);
     });
 
-    webSocketService.on('disconnected', () => {
+    webSocketServiceInstance.on('disconnected', () => {
       // Handle disconnection
       this.emit('disconnected');
     });
@@ -916,6 +931,13 @@ class MessagingService {
     
     const messages = this.messages.get(conversationId)!;
     messages.push(message);
+    
+    // MEMORY OPTIMIZATION: Enforce message limit per conversation
+    if (messages.length > this.MAX_MESSAGES_PER_CONVERSATION) {
+      // Remove oldest messages, keep only the most recent ones
+      const toRemove = messages.splice(0, messages.length - this.MAX_MESSAGES_PER_CONVERSATION);
+      console.log(`Cleaned up ${toRemove.length} old messages from conversation ${conversationId}`);
+    }
     
     // Sort by timestamp
     messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
@@ -965,7 +987,16 @@ class MessagingService {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    this.listeners.get(event)?.push(callback);
+    
+    const eventListeners = this.listeners.get(event)!;
+    
+    // MEMORY OPTIMIZATION: Limit listeners per event
+    if (eventListeners.length >= this.MAX_LISTENERS_PER_EVENT) {
+      console.warn(`Too many listeners for event '${event}'. Removing oldest listener.`);
+      eventListeners.shift();
+    }
+    
+    eventListeners.push(callback);
   }
 
   off(event: string, callback: Function): void {
@@ -989,6 +1020,154 @@ class MessagingService {
         }
       });
     }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Memory management methods
+   */
+  private startPeriodicCleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    
+    this.cleanupInterval = setInterval(() => {
+      this.performMemoryCleanup();
+    }, this.CLEANUP_INTERVAL);
+  }
+
+  private performMemoryCleanup(): void {
+    try {
+      // Clean up old conversations
+      this.cleanupOldConversations();
+      
+      // Clean up message history
+      this.cleanupMessageHistory();
+      
+      // Clean up typing timeouts
+      this.cleanupTypingTimeouts();
+      
+      // Clean up event listeners
+      this.cleanupEventListeners();
+      
+      console.log('Messaging service memory cleanup completed');
+    } catch (error) {
+      console.error('Error during messaging service cleanup:', error);
+    }
+  }
+
+  private cleanupOldConversations(): void {
+    if (this.conversations.size <= this.MAX_CONVERSATIONS) {
+      return;
+    }
+    
+    // Sort conversations by last activity (oldest first)
+    const sortedConversations = Array.from(this.conversations.entries())
+      .sort(([, a], [, b]) => a.lastActivity.getTime() - b.lastActivity.getTime());
+    
+    // Remove oldest conversations
+    const toRemove = sortedConversations.slice(0, this.conversations.size - this.MAX_CONVERSATIONS);
+    
+    toRemove.forEach(([conversationId]) => {
+      this.conversations.delete(conversationId);
+      this.messages.delete(conversationId); // Also remove associated messages
+    });
+    
+    console.log(`Cleaned up ${toRemove.length} old conversations`);
+  }
+
+  private cleanupMessageHistory(): void {
+    let totalMessagesRemoved = 0;
+    
+    for (const [conversationId, messages] of this.messages.entries()) {
+      if (messages.length > this.MAX_MESSAGES_PER_CONVERSATION) {
+        const originalLength = messages.length;
+        // Keep only the most recent messages
+        messages.splice(0, messages.length - this.MAX_MESSAGES_PER_CONVERSATION);
+        totalMessagesRemoved += originalLength - messages.length;
+      }
+    }
+    
+    if (totalMessagesRemoved > 0) {
+      console.log(`Cleaned up ${totalMessagesRemoved} old messages across conversations`);
+    }
+  }
+
+  private cleanupTypingTimeouts(): void {
+    const now = Date.now();
+    const timeoutsToRemove: string[] = [];
+    
+    for (const [conversationId, timeout] of this.typingTimeouts.entries()) {
+      // Clear any timeout that's been running for more than 10 seconds
+      if (now - parseInt(conversationId.split('_')[1] || '0') > 10000) {
+        clearTimeout(timeout);
+        timeoutsToRemove.push(conversationId);
+      }
+    }
+    
+    timeoutsToRemove.forEach(id => this.typingTimeouts.delete(id));
+    
+    if (timeoutsToRemove.length > 0) {
+      console.log(`Cleaned up ${timeoutsToRemove.length} expired typing timeouts`);
+    }
+  }
+
+  private cleanupEventListeners(): void {
+    for (const [event, listeners] of this.listeners.entries()) {
+      if (listeners.length > this.MAX_LISTENERS_PER_EVENT) {
+        // Keep only the most recent listeners
+        const removed = listeners.splice(0, listeners.length - this.MAX_LISTENERS_PER_EVENT);
+        console.log(`Cleaned up ${removed.length} old listeners for event '${event}'`);
+      }
+    }
+  }
+
+  /**
+   * Get memory usage statistics
+   */
+  public getMemoryUsage(): {
+    conversations: number;
+    messages: number;
+    blockedUsers: number;
+    typingTimeouts: number;
+    eventListeners: number;
+    totalMessages: number;
+  } {
+    const totalMessages = Array.from(this.messages.values())
+      .reduce((total, messages) => total + messages.length, 0);
+    
+    return {
+      conversations: this.conversations.size,
+      messages: this.messages.size,
+      blockedUsers: this.blockedUsers.size,
+      typingTimeouts: this.typingTimeouts.size,
+      eventListeners: Array.from(this.listeners.values())
+        .reduce((total, listeners) => total + listeners.length, 0),
+      totalMessages
+    };
+  }
+
+  /**
+   * Cleanup method for service shutdown
+   */
+  public cleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    
+    // Clear all timeouts
+    for (const timeout of this.typingTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.typingTimeouts.clear();
+    
+    // Clear all data
+    this.conversations.clear();
+    this.messages.clear();
+    this.blockedUsers.clear();
+    this.listeners.clear();
+    
+    console.log('Messaging service cleanup completed');
   }
 
   /**
@@ -1123,15 +1302,6 @@ class MessagingService {
         }
       };
     });
-  }
-
-  /**
-   * Cleanup
-   */
-  cleanup(): void {
-    this.typingTimeouts.forEach(timeout => clearTimeout(timeout));
-    this.typingTimeouts.clear();
-    this.listeners.clear();
   }
 }
 

@@ -44,6 +44,12 @@ class WebSocketService {
   private isOptional: boolean = false;
   private connectionPromise: Promise<void> | null = null;
 
+  // MEMORY OPTIMIZATION: Limits and cleanup
+  private readonly MAX_LISTENERS_PER_EVENT = 20;
+  private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private listenerCounts: Map<string, number> = new Map();
+
   constructor(config: WebSocketConfig = {}) {
     this.config = {
       url: config.url || WS_URL,
@@ -76,6 +82,9 @@ class WebSocketService {
 
     this.detectResourceConstraints();
     this.setupVisibilityHandlers();
+    
+    // MEMORY OPTIMIZATION: Start periodic cleanup
+    this.startPeriodicCleanup();
   }
 
   private detectResourceConstraints(): void {
@@ -389,8 +398,23 @@ class WebSocketService {
   on(event: string, callback: Function) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
+      this.listenerCounts.set(event, 0);
     }
-    this.listeners.get(event)?.push(callback);
+    
+    const eventListeners = this.listeners.get(event)!;
+    const currentCount = this.listenerCounts.get(event)!;
+    
+    // MEMORY OPTIMIZATION: Limit listeners per event
+    if (currentCount >= this.MAX_LISTENERS_PER_EVENT) {
+      console.warn(`Too many listeners for event '${event}'. Removing oldest listener.`);
+      const removed = eventListeners.shift();
+      if (removed) {
+        this.listenerCounts.set(event, currentCount - 1);
+      }
+    }
+    
+    eventListeners.push(callback);
+    this.listenerCounts.set(event, eventListeners.length);
   }
 
   off(event: string, callback: Function) {
@@ -399,6 +423,8 @@ class WebSocketService {
       const index = listeners.indexOf(callback);
       if (index > -1) {
         listeners.splice(index, 1);
+        const currentCount = this.listenerCounts.get(event) || 0;
+        this.listenerCounts.set(event, Math.max(0, currentCount - 1));
       }
     }
   }
@@ -414,11 +440,15 @@ class WebSocketService {
   emit(event: string, ...args: any[]) {
     const listeners = this.listeners.get(event);
     if (listeners) {
-      listeners.forEach(callback => {
+      // MEMORY OPTIMIZATION: Create a copy to avoid modification during iteration
+      const listenersCopy = [...listeners];
+      listenersCopy.forEach(callback => {
         try {
           callback(...args);
         } catch (error) {
           console.error(`Error in WebSocket listener for event ${event}:`, error);
+          // MEMORY OPTIMIZATION: Remove problematic listeners
+          this.off(event, callback);
         }
       });
     }
@@ -453,10 +483,83 @@ class WebSocketService {
     return this.isOptional;
   }
 
+  /**
+   * MEMORY OPTIMIZATION: Periodic cleanup
+   */
+  private startPeriodicCleanup(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    
+    this.cleanupInterval = setInterval(() => {
+      this.performCleanup();
+    }, this.CLEANUP_INTERVAL);
+  }
+
+  private performCleanup(): void {
+    try {
+      let totalListenersRemoved = 0;
+      
+      // Clean up empty listener arrays
+      for (const [event, listeners] of this.listeners.entries()) {
+        if (listeners.length === 0) {
+          this.listeners.delete(event);
+          this.listenerCounts.delete(event);
+        } else if (listeners.length > this.MAX_LISTENERS_PER_EVENT) {
+          // Remove excess listeners
+          const excess = listeners.length - this.MAX_LISTENERS_PER_EVENT;
+          listeners.splice(0, excess);
+          this.listenerCounts.set(event, this.MAX_LISTENERS_PER_EVENT);
+          totalListenersRemoved += excess;
+        }
+      }
+      
+      if (totalListenersRemoved > 0) {
+        console.log(`WebSocket cleanup: removed ${totalListenersRemoved} excess listeners`);
+      }
+    } catch (error) {
+      console.error('Error during WebSocket cleanup:', error);
+    }
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Get memory usage statistics
+   */
+  public getMemoryUsage(): {
+    totalEvents: number;
+    totalListeners: number;
+    maxListenersPerEvent: number;
+    listenerCounts: Record<string, number>;
+  } {
+    const totalListeners = Array.from(this.listenerCounts.values())
+      .reduce((total, count) => total + count, 0);
+    
+    return {
+      totalEvents: this.listeners.size,
+      totalListeners,
+      maxListenersPerEvent: this.MAX_LISTENERS_PER_EVENT,
+      listenerCounts: Object.fromEntries(this.listenerCounts)
+    };
+  }
+
+  /**
+   * MEMORY OPTIMIZATION: Clear all listeners for an event
+   */
+  public clearListeners(event: string): void {
+    this.listeners.delete(event);
+    this.listenerCounts.delete(event);
+    console.log(`Cleared all listeners for event: ${event}`);
+  }
+
   disconnect(): void {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+    
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
     }
     
     this.stopHeartbeat();
@@ -475,4 +578,7 @@ class WebSocketService {
   }
 }
 
-export default WebSocketService;
+// Export singleton instance
+export const webSocketService = new WebSocketService();
+
+export { WebSocketService };

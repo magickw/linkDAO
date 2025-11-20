@@ -195,6 +195,10 @@ contract Marketplace is ReentrancyGuard, Ownable {
         require(quantity > 0, "Quantity must be greater than 0");
         require(bytes(metadataURI).length > 0, "Metadata URI required");
         
+        uint256 listingId = nextListingId++;
+        
+        Listing storage listing = listings[listingId];
+        
         if (listingType == ListingType.AUCTION) {
             require(endTime > block.timestamp, "End time must be in the future");
             // Set up commit-reveal properties for auctions
@@ -206,10 +210,6 @@ contract Marketplace is ReentrancyGuard, Ownable {
             }
             listing.revealPeriodEnd = endTime + revealPeriod;
         }
-        
-        uint256 listingId = nextListingId++;
-        
-        Listing storage listing = listings[listingId];
         listing.id = listingId;
         listing.seller = msg.sender;
         listing.tokenAddress = tokenAddress;
@@ -808,51 +808,6 @@ contract Marketplace is ReentrancyGuard, Ownable {
     }
 
     // View functions
-    function getActiveListings(uint256 start, uint256 count) 
-        external 
-        view 
-        returns (Listing[] memory) 
-    {
-        // Limit count to prevent DoS
-        uint256 maxCount = 100;
-        if (count > maxCount) {
-            count = maxCount;
-        }
-        
-        uint256 activeCount = 0;
-        uint256 loopCount = 0;
-        uint256 maxLoops = 1000; // Limit to prevent DoS
-        
-        for (uint256 i = 1; i < nextListingId && loopCount < maxLoops; i++) {
-            loopCount++;
-            if (listings[i].status == ListingStatus.ACTIVE) {
-                activeCount++;
-            }
-        }
-        
-        uint256 returnCount = count;
-        if (start + count > activeCount) {
-            returnCount = activeCount > start ? activeCount - start : 0;
-        }
-        
-        Listing[] memory result = new Listing[](returnCount);
-        uint256 currentIndex = 0;
-        uint256 resultIndex = 0;
-        loopCount = 0;
-        
-        for (uint256 i = 1; i < nextListingId && resultIndex < returnCount && loopCount < maxLoops; i++) {
-            loopCount++;
-            if (listings[i].status == ListingStatus.ACTIVE) {
-                if (currentIndex >= start) {
-                    result[resultIndex] = listings[i];
-                    resultIndex++;
-                }
-                currentIndex++;
-            }
-        }
-        
-        return result;
-    }
 
     function getBids(uint256 listingId) external view returns (Bid[] memory) {
         return listingBids[listingId];

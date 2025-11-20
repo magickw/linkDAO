@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import {
+import { 
   Users,
   FileText,
   AlertTriangle,
@@ -28,7 +28,9 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Home
+  Home,
+  X,
+  Check
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +54,10 @@ import { AdminOnboarding } from './Onboarding/AdminOnboarding';
 import { EnhancedAnalytics } from './EnhancedAnalytics';
 import { EnhancedAIModeration } from './EnhancedAIModeration';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { AdvancedSearchPanel } from './Search/AdvancedSearchPanel';
+import { BulkActionsToolbar } from './BulkOperations/BulkActionsToolbar';
+import { ExportButton } from './Export/ExportButton';
 
 interface AdminStats {
   pendingModerations: number;
@@ -81,6 +87,10 @@ export function AdminDashboard() {
   const [filterActionType, setFilterActionType] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [bulkAction, setBulkAction] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'pdf'>('csv');
   const webSocketManagerRef = useRef<any>(null);
 
   const isMounted = useRef(true);
@@ -92,69 +102,30 @@ export function AdminDashboard() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isAdmin()) {
-      router.push('/');
-      return;
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const result = await enhancedAdminService.getAdminStats();
+      if (isMounted.current) {
+        if (result.success) {
+          setStats(result.data);
+          setLastUpdated(new Date());
+        } else {
+          console.error('Failed to load admin stats:', result.error);
+          addToast('Failed to load dashboard statistics', 'error');
+        }
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        console.error('Failed to load admin stats:', error);
+        addToast('Network error loading statistics', 'error');
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-
-    loadStats();
-
-    // Initialize WebSocket connection
-    initializeWebSocket();
-
-    // Set up periodic refresh as fallback
-    const interval = setInterval(() => {
-      if (connectionStatus !== 'connected') {
-        loadStats();
-      }
-    }, 30000); // Refresh every 30 seconds if WebSocket is not available
-
-    return () => {
-      clearInterval(interval);
-      // Clean up WebSocket connection
-      if (webSocketManagerRef.current) {
-        webSocketManagerRef.current.disconnect();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, router]);
-
-  // Session timeout monitoring
-  useEffect(() => {
-    const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
-    const WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
-    const CHECK_INTERVAL = 60 * 1000; // Check every minute
-
-    const checkSessionTimeout = () => {
-      const signatureTimestamp = localStorage.getItem('linkdao_signature_timestamp');
-      if (!signatureTimestamp) return;
-
-      const sessionAge = Date.now() - parseInt(signatureTimestamp);
-      const timeRemaining = SESSION_DURATION - sessionAge;
-
-      setSessionTimeRemaining(Math.max(0, Math.floor(timeRemaining / 1000)));
-
-      // Show warning if less than 5 minutes remaining
-      if (timeRemaining > 0 && timeRemaining <= WARNING_THRESHOLD) {
-        setShowSessionWarning(true);
-      } else {
-        setShowSessionWarning(false);
-      }
-
-      // Auto logout if session expired
-      if (timeRemaining <= 0) {
-        addToast('Session expired. Please sign in again.', 'warning');
-        handleLogout();
-      }
-    };
-
-    // Check immediately and then periodically
-    checkSessionTimeout();
-    const interval = setInterval(checkSessionTimeout, CHECK_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [addToast]);
+  };
 
   const initializeWebSocket = async () => {
     if (!user) return;
@@ -239,35 +210,94 @@ export function AdminDashboard() {
     }
   };
 
-  const loadStats = async () => {
-    try {
-      setLoading(true);
-      const result = await enhancedAdminService.getAdminStats();
-      if (isMounted.current) {
-        if (result.success) {
-          setStats(result.data);
-          setLastUpdated(new Date());
-        } else {
-          console.error('Failed to load admin stats:', result.error);
-          addToast('Failed to load dashboard statistics', 'error');
-        }
-      }
-    } catch (error) {
-      if (isMounted.current) {
-        console.error('Failed to load admin stats:', error);
-        addToast('Network error loading statistics', 'error');
-      }
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
+  useEffect(() => {
+    if (!isAdmin()) {
+      router.push('/');
+      return;
     }
-  };
+
+    loadStats();
+
+    // Initialize WebSocket connection
+    initializeWebSocket();
+
+    // Set up periodic refresh as fallback
+    const interval = setInterval(() => {
+      if (connectionStatus !== 'connected') {
+        loadStats();
+      }
+    }, 30000); // Refresh every 30 seconds if WebSocket is not available
+
+    return () => {
+      clearInterval(interval);
+      // Clean up WebSocket connection
+      if (webSocketManagerRef.current) {
+        webSocketManagerRef.current.disconnect();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, router]);
 
   const handleRefresh = () => {
     loadStats();
     addToast('Dashboard refreshed', 'success', 2000);
   };
+
+  // Keyboard shortcuts for admin dashboard
+  useKeyboardShortcuts({
+    enabled: true,
+    onRefresh: handleRefresh,
+    onSearch: () => {
+      // Focus search input
+      const searchInput = document.querySelector('input[placeholder="Search actions..."]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    },
+    onGoToTop: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+    onGoToBottom: () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
+    onShowHelp: () => {
+      // Show keyboard shortcuts help modal
+      addToast('Keyboard shortcuts: R - Refresh, / - Search, G - Go to top, Shift+G - Go to bottom, ? - Show help', 'info', 5000);
+    }
+  });
+
+  // Session timeout monitoring
+  useEffect(() => {
+    const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+    const WARNING_THRESHOLD = 5 * 60 * 1000; // 5 minutes before expiry
+    const CHECK_INTERVAL = 60 * 1000; // Check every minute
+
+    const checkSessionTimeout = () => {
+      const signatureTimestamp = localStorage.getItem('linkdao_signature_timestamp');
+      if (!signatureTimestamp) return;
+
+      const sessionAge = Date.now() - parseInt(signatureTimestamp);
+      const timeRemaining = SESSION_DURATION - sessionAge;
+
+      setSessionTimeRemaining(Math.max(0, Math.floor(timeRemaining / 1000)));
+
+      // Show warning if less than 5 minutes remaining
+      if (timeRemaining > 0 && timeRemaining <= WARNING_THRESHOLD) {
+        setShowSessionWarning(true);
+      } else {
+        setShowSessionWarning(false);
+      }
+
+      // Auto logout if session expired
+      if (timeRemaining <= 0) {
+        addToast('Session expired. Please sign in again.', 'warning');
+        handleLogout();
+      }
+    };
+
+    // Check immediately and then periodically
+    checkSessionTimeout();
+    const interval = setInterval(checkSessionTimeout, CHECK_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [addToast]);
 
   const handleDisconnect = () => {
     setShowDisconnectDialog(true);
@@ -351,15 +381,19 @@ export function AdminDashboard() {
 
   // Export to CSV
   const handleExportCSV = () => {
-    const filtered = getFilteredActions();
-    if (filtered.length === 0) {
+    // Use selected items if any, otherwise use all filtered items
+    const dataToExport = selectedItems.size > 0 
+      ? getFilteredActions().filter(action => selectedItems.has(action.id || action.timestamp || ''))
+      : getFilteredActions();
+    
+    if (dataToExport.length === 0) {
       addToast('No actions to export', 'warning');
       return;
     }
 
     // Create CSV content
     const headers = ['Timestamp', 'Admin', 'Action', 'Reason'];
-    const rows = filtered.map(action => [
+    const rows = dataToExport.map(action => [
       new Date(action.timestamp).toLocaleString(),
       action.adminHandle,
       action.action,
@@ -382,7 +416,7 @@ export function AdminDashboard() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
-    addToast(`Exported ${filtered.length} actions to CSV`, 'success');
+    addToast(`Exported ${dataToExport.length} actions to CSV`, 'success');
   };
 
   // Get unique admins for filter dropdown
@@ -401,6 +435,92 @@ export function AdminDashboard() {
       return words[0];
     });
     return Array.from(new Set(types)).filter(Boolean);
+  };
+
+  // Bulk operations
+  const handleSelectItem = (id: string, selected: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (selected) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      const allIds = getFilteredActions().map(action => action.id || action.timestamp);
+      setSelectedItems(new Set(allIds));
+    } else {
+      setSelectedItems(new Set());
+    }
+  };
+
+  const handleBulkAction = async (action: string) => {
+    setBulkAction(action);
+    try {
+      // Perform bulk action based on type
+      switch (action) {
+        case 'approve':
+          // Example: approve selected items
+          addToast(`Approved ${selectedItems.size} items`, 'success');
+          break;
+        case 'reject':
+          // Example: reject selected items
+          addToast(`Rejected ${selectedItems.size} items`, 'warning');
+          break;
+        case 'delete':
+          // Example: delete selected items
+          addToast(`Deleted ${selectedItems.size} items`, 'error');
+          break;
+        case 'flag':
+          // Example: flag selected items
+          addToast(`Flagged ${selectedItems.size} items`, 'info');
+          break;
+        default:
+          addToast(`Performed ${action} on ${selectedItems.size} items`, 'info');
+      }
+      // Clear selection after action
+      setSelectedItems(new Set());
+    } catch (error) {
+      addToast(`Failed to perform bulk action: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    } finally {
+      setBulkAction(null);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedItems(new Set());
+  };
+
+  // Export functionality
+  const handleExport = async (exportOptions: { format: 'csv' | 'json' | 'pdf'; filename?: string }) => {
+    setExportFormat(exportOptions.format);
+    // Get the filtered actions data to export
+    const filtered = getFilteredActions();
+    if (filtered.length === 0) {
+      addToast('No items to export', 'warning');
+      return;
+    }
+
+    // Create export data based on format
+    if (exportOptions.format === 'csv') {
+      // CSV export implementation (already exists in the component)
+      handleExportCSV();
+    } else if (exportOptions.format === 'json') {
+      const jsonData = JSON.stringify(filtered, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${exportOptions.filename || 'admin-actions'}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      addToast(`Exported ${filtered.length} items to JSON`, 'success');
+    }
   };
 
   // Breadcrumb navigation
@@ -562,8 +682,7 @@ export function AdminDashboard() {
                   <WifiOff className="w-4 h-4 text-red-400" />
                   <span className="text-red-400">Offline</span>
                 </>
-              )}
-              </div>
+              )}</div>
             </div>
           </div>
           {lastUpdated && (
@@ -646,102 +765,134 @@ export function AdminDashboard() {
               </div>
             )}
 
+            {/* Advanced Search Panel */}
+            {showAdvancedSearch && (
+              <AdvancedSearchPanel
+                onSearch={(filters) => {
+                  setSearchQuery(filters.query || '');
+                  setFilterAdmin(filters.admin || '');
+                  setFilterActionType(filters.type || '');
+                  setCurrentPage(1);
+                }}
+                onClear={() => {
+                  setSearchQuery('');
+                  setFilterAdmin('');
+                  setFilterActionType('');
+                  setCurrentPage(1);
+                }}
+                filterOptions={{
+                  types: getUniqueActionTypes().map(type => ({ value: type, label: type })),
+                  statuses: [
+                    { value: 'completed', label: 'Completed' },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'failed', label: 'Failed' }
+                  ],
+                  categories: [
+                    { value: 'moderation', label: 'Moderation' },
+                    { value: 'user', label: 'User Management' },
+                    { value: 'seller', label: 'Seller' },
+                    { value: 'dispute', label: 'Dispute' }
+                  ]
+                }}
+              />
+            )}
+
+            {/* Bulk Operations Toolbar */}
+            <BulkActionsToolbar
+              selectedCount={selectedItems.size}
+              onAction={(action) => handleBulkAction(action)}
+              onClear={handleClearSelection}
+              availableActions={['approve', 'reject', 'flag', 'delete']}
+            />
+
             {/* Recent Actions */}
             <GlassPanel className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <h2 className="text-lg sm:text-xl font-bold text-white">Recent Admin Actions</h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
-                    onClick={handleExportCSV}
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
                     variant="outline"
                     size="small"
                     className="flex items-center gap-2"
-                    disabled={!stats?.recentActions || stats.recentActions.length === 0}
                   >
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Export CSV</span>
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">{showAdvancedSearch ? 'Hide Filters' : 'Advanced Filters'}</span>
                   </Button>
-                </div>
-              </div>
-
-              {/* Search and Filter Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search actions..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1); // Reset to first page on search
-                    }}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  <ExportButton
+                    data={getFilteredActions()}
+                    filename="admin-actions"
+                    availableFormats={['csv', 'json']}
+                    onExport={handleExport}
+                    columns={[
+                      { key: 'timestamp', label: 'Timestamp' },
+                      { key: 'adminHandle', label: 'Admin' },
+                      { key: 'action', label: 'Action' },
+                      { key: 'reason', label: 'Reason' }
+                    ]}
                   />
                 </div>
-
-                {/* Admin Filter */}
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select
-                    value={filterAdmin}
-                    onChange={(e) => {
-                      setFilterAdmin(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
-                  >
-                    <option value="">All Admins</option>
-                    {getUniqueAdmins().map(admin => (
-                      <option key={admin} value={admin} className="bg-gray-800">
-                        {admin}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Action Type Filter */}
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select
-                    value={filterActionType}
-                    onChange={(e) => {
-                      setFilterActionType(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
-                  >
-                    <option value="">All Actions</option>
-                    {getUniqueActionTypes().map(type => (
-                      <option key={type} value={type} className="bg-gray-800">
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
-              {/* Actions List */}
+              {/* Select All and Actions List */}
               {stats?.recentActions && stats.recentActions.length > 0 ? (
                 <>
+                  {/* Select All and Action Count */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={getFilteredActions().length > 0 && selectedItems.size === getFilteredActions().length}
+                        ref={(input) => {
+                          if (input) {
+                            input.indeterminate = selectedItems.size > 0 && selectedItems.size < getFilteredActions().length;
+                          }
+                        }}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800"
+                      />
+                      <span className="text-gray-400 text-sm">
+                        {selectedItems.size} of {getFilteredActions().length} selected
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="space-y-2 sm:space-y-3">
-                    {getPaginatedActions().map((action, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-white/5 rounded-lg gap-2 hover:bg-white/10 transition-colors">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
-                          <div className="min-w-0">
-                            <p className="text-white text-xs sm:text-sm">
-                              <span className="font-medium">{action.adminHandle}</span> {action.action}
-                            </p>
-                            <p className="text-gray-400 text-[10px] sm:text-xs truncate">{action.reason}</p>
+                    {getPaginatedActions().map((action, index) => {
+                      const actionId = action.id || action.timestamp || index.toString();
+                      const isSelected = selectedItems.has(actionId);
+                      
+                      return (
+                        <div 
+                          key={index} 
+                          className={`flex items-center p-2 sm:p-3 rounded-lg gap-2 transition-colors ${ 
+                            isSelected ? 'bg-blue-900/30 border border-blue-500/50' : 'bg-white/5 hover:bg-white/10'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => handleSelectItem(actionId, e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800 mr-2"
+                          />
+                          
+                          <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
+                              <div className="min-w-0">
+                                <p className="text-white text-xs sm:text-sm truncate">
+                                  <span className="font-medium">{action.adminHandle}</span> {action.action}
+                                </p>
+                                <p className="text-gray-400 text-[10px] sm:text-xs truncate">{action.reason}</p>
+                              </div>
+                            </div>
+                            <span className="text-gray-400 text-[10px] sm:text-xs flex-shrink-0">
+                              {new Date(action.timestamp).toLocaleString()}
+                            </span>
                           </div>
                         </div>
-                        <span className="text-gray-400 text-[10px] sm:text-xs ml-4 sm:ml-0 flex-shrink-0">
-                          {new Date(action.timestamp).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Pagination Controls */}

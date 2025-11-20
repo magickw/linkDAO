@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -147,6 +147,10 @@ const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const { address, isConnected } = useWeb3();
+
+  // Memory leak prevention: Track component mount status
+  const isMounted = useRef(true);
+
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
@@ -197,11 +201,23 @@ const CommunitiesPage: React.FC = () => {
   const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      // Clear any pending hover timeouts
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+      }
+    };
+  }, []);
+
 
   // Load communities and enhanced Web3 data on component mount
   useEffect(() => {
     const loadEnhancedCommunities = async () => {
       try {
+        if (!isMounted.current) return;
         setLoading(true);
         setError(null);
 
@@ -211,11 +227,14 @@ const CommunitiesPage: React.FC = () => {
           limit: 50
         });
 
+        if (!isMounted.current) return;
         setCommunities(communitiesData);
 
         // Load user's community memberships if wallet is connected
         if (address && isConnected) {
           const userMemberships = await CommunityService.getUserCommunityMemberships();
+
+          if (!isMounted.current) return;
           setJoinedCommunities(userMemberships);
 
           // Set admin roles for communities where user is admin
@@ -227,6 +246,7 @@ const CommunitiesPage: React.FC = () => {
               adminRoles[community.id] = 'admin';
             }
           });
+          if (!isMounted.current) return;
           setUserAdminRoles(adminRoles);
         }
 
@@ -235,11 +255,13 @@ const CommunitiesPage: React.FC = () => {
 
       } catch (err) {
         console.error('Error loading communities:', err);
+        if (!isMounted.current) return;
         setError(err instanceof Error ? err.message : 'Failed to load communities');
         // Show empty array instead of crashing
         setCommunities([]);
         await loadWeb3EnhancedData([]);
       } finally {
+        if (!isMounted.current) return;
         setLoading(false);
       }
     };
@@ -250,6 +272,7 @@ const CommunitiesPage: React.FC = () => {
   // Load posts from backend API with pagination
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
     try {
+      if (!isMounted.current) return;
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
@@ -270,6 +293,9 @@ const CommunitiesPage: React.FC = () => {
         userAddress: address // Pass user address for personalization
       }, pageNum, 20);
 
+      // Check if component is still mounted before updating state
+      if (!isMounted.current) return;
+
       // Handle the case where response is not properly structured
       const newPosts = Array.isArray(response) ? response : (response?.posts || []);
 
@@ -283,8 +309,10 @@ const CommunitiesPage: React.FC = () => {
       setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
+      if (!isMounted.current) return;
       if (!append) setPosts([]);
     } finally {
+      if (!isMounted.current) return;
       // Only set loading to false if this was the initial load
       if (pageNum === 1) {
         setLoading(false);

@@ -6,12 +6,15 @@
  */
 
 import { EventEmitter } from 'events';
-import WebSocketService from './webSocketService';
+import { WebSocketService, webSocketService } from './webSocketService';
 import { requestManager } from './requestManager';
 
+<<<<<<< Updated upstream
 // Create an instance of the WebSocket service
 const webSocketServiceInstance = new WebSocketService();
 
+=======
+>>>>>>> Stashed changes
 // Fallback configuration
 interface FallbackConfig {
   enabled: boolean;

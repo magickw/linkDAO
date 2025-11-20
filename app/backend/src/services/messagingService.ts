@@ -4,6 +4,13 @@ import { conversations, chatMessages, blockedUsers, messageReadStatus } from '..
 // import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
 import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
+import { cacheService } from './cacheService';
+
+// MEMORY OPTIMIZATION: Constants for limits and cleanup
+const MAX_CONVERSATIONS_PER_USER = 50;
+const MAX_MESSAGES_PER_QUERY = 100;
+const DEFAULT_CACHE_TTL = 300; // 5 minutes
+const CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 interface GetConversationsOptions {
   userAddress: string;
@@ -46,10 +53,37 @@ interface DecryptMessageData {
 }
 
 export class MessagingService {
+  // MEMORY OPTIMIZATION: Add cache and cleanup tracking
+  private lastCleanup: number = Date.now();
+  private activeConnections: Map<string, number> = new Map();
+  
   // Helper method to validate Ethereum addresses and prevent SQL injection
   private validateAddress(address: string): void {
     if (!/^0x[a-fA-F0-9]{40}$/i.test(address)) {
       throw new Error('Invalid Ethereum address format');
+    }
+  }
+  
+  // MEMORY OPTIMIZATION: Periodic cleanup method
+  private async performCleanup(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastCleanup < CLEANUP_INTERVAL) {
+      return;
+    }
+    
+    try {
+      // Clean up expired read status records (older than 30 days)
+      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+      await db.delete(messageReadStatus)
+        .where(lt(messageReadStatus.readAt, thirtyDaysAgo));
+      
+      // Clean up active connections tracking
+      this.activeConnections.clear();
+      
+      this.lastCleanup = now;
+      safeLogger.info('Messaging service cleanup completed');
+    } catch (error) {
+      safeLogger.error('Error during messaging service cleanup:', error);
     }
   }
   // Get user's conversations
@@ -59,42 +93,65 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
-      const userConversations = await db
-        .select({
-          id: conversations.id,
-          title: conversations.title,
-          participants: conversations.participants,
-          lastActivity: conversations.lastActivity,
-          unreadCount: conversations.unreadCount,
-          createdAt: conversations.createdAt,
-          // Get last message
-          lastMessage: sql<any>`
-            (SELECT json_build_object(
-              'id', m.id,
-              'content', m.content,
-              'sender_address', m.sender_address,
-              'sent_at', m.sent_at
-            )
-            FROM chat_messages m 
-            WHERE m.conversation_id = ${conversations.id}
-            ORDER BY m.sent_at DESC 
-            LIMIT 1)
-          `
-        })
-        .from(conversations)
-        .where(sql`participants::jsonb ? ${userAddress}`)
-        .orderBy(desc(conversations.lastActivity))
-        .limit(limit)
-        .offset(offset);
+      
+      // MEMORY OPTIMIZATION: Perform cleanup periodically
+      await this.performCleanup();
+      
+      // MEMORY OPTIMIZATION: Check cache first
+      const cacheKey = `conversations:${userAddress}:${page}:${limit}:${options.search || ''}`;
+      const cached = await cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+      
+      // MEMORY OPTIMIZATION: Enforce limit and use transaction
+      const actualLimit = Math.min(limit, MAX_CONVERSATIONS_PER_USER);
+      
+      const userConversations = await db.transaction(async (tx) => {
+        const conversations = await tx
+          .select({
+            id: conversations.id,
+            title: conversations.title,
+            participants: conversations.participants,
+            lastActivity: conversations.lastActivity,
+            unreadCount: conversations.unreadCount,
+            createdAt: conversations.createdAt,
+            // Get last message
+            lastMessage: sql<any>`
+              (SELECT json_build_object(
+                'id', m.id,
+                'content', m.content,
+                'sender_address', m.sender_address,
+                'sent_at', m.sent_at
+              )
+              FROM chat_messages m 
+              WHERE m.conversation_id = ${conversations.id}
+              ORDER BY m.sent_at DESC 
+              LIMIT 1)
+            `
+          })
+          .from(conversations)
+          .where(sql`participants::jsonb ? ${userAddress}`)
+          .orderBy(desc(conversations.lastActivity))
+          .limit(actualLimit)
+          .offset(offset);
+        
+        return conversations;
+      });
 
-      return {
+      const result = {
         conversations: userConversations,
         pagination: {
           page,
-          limit,
+          limit: actualLimit,
           total: userConversations.length
         }
       };
+      
+      // MEMORY OPTIMIZATION: Cache the result
+      await cacheService.set(cacheKey, result, DEFAULT_CACHE_TTL);
+      
+      return result;
     } catch (error) {
       safeLogger.error('Error getting conversations:', error);
       if (error instanceof Error && error.message.includes('database')) {
@@ -220,6 +277,10 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
+      
+      // MEMORY OPTIMIZATION: Track active connections
+      this.activeConnections.set(userAddress, (this.activeConnections.get(userAddress) || 0) + 1);
+      
       // Validate UUID format for before/after parameters
       if (before && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
         throw new Error('Invalid before parameter format');
@@ -227,6 +288,14 @@ export class MessagingService {
       if (after && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
         throw new Error('Invalid after parameter format');
       }
+      
+      // MEMORY OPTIMIZATION: Check cache first
+      const cacheKey = `messages:${conversationId}:${userAddress}:${page}:${limit}:${before || ''}:${after || ''}`;
+      const cached = await cacheService.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+      
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
@@ -237,6 +306,10 @@ export class MessagingService {
       }
 
       const offset = (page - 1) * limit;
+      
+      // MEMORY OPTIMIZATION: Enforce maximum limit
+      const actualLimit = Math.min(limit, MAX_MESSAGES_PER_QUERY);
+      
       let whereConditions = [eq(chatMessages.conversationId, conversationId)];
 
       // Add pagination filters
@@ -247,39 +320,56 @@ export class MessagingService {
         whereConditions.push(gt(chatMessages.sentAt, sql`(SELECT timestamp FROM chat_messages WHERE id = ${after})`));
       }
 
-      const conversationMessages = await db
-        .select({
-          id: chatMessages.id,
-          conversationId: chatMessages.conversationId,
-          senderAddress: chatMessages.senderAddress,
-          content: chatMessages.content,
-          sentAt: chatMessages.sentAt,
-          editedAt: chatMessages.editedAt,
-          deletedAt: chatMessages.deletedAt
-        })
-        .from(chatMessages)
-        .where(and(...whereConditions))
-        .orderBy(desc(chatMessages.sentAt))
-        .limit(limit)
-        .offset(offset);
+      const conversationMessages = await db.transaction(async (tx) => {
+        const messages = await tx
+          .select({
+            id: chatMessages.id,
+            conversationId: chatMessages.conversationId,
+            senderAddress: chatMessages.senderAddress,
+            content: chatMessages.content,
+            sentAt: chatMessages.sentAt,
+            editedAt: chatMessages.editedAt,
+            deletedAt: chatMessages.deletedAt
+          })
+          .from(chatMessages)
+          .where(and(...whereConditions))
+          .orderBy(desc(chatMessages.sentAt))
+          .limit(actualLimit)
+          .offset(offset);
+        
+        return messages;
+      });
 
-      return {
+      const result = {
         success: true,
         data: {
           messages: conversationMessages,
           pagination: {
             page,
-            limit,
+            limit: actualLimit,
             total: conversationMessages.length
           }
         }
       };
+      
+      // MEMORY OPTIMIZATION: Cache the result with shorter TTL for messages
+      await cacheService.set(cacheKey, result, DEFAULT_CACHE_TTL / 2);
+      
+      return result;
     } catch (error) {
       safeLogger.error('Error getting conversation messages:', error);
       if (error instanceof Error && error.message.includes('database')) {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
       throw new Error('Failed to get conversation messages');
+    } finally {
+      // MEMORY OPTIMIZATION: Decrease active connection count
+      const currentCount = this.activeConnections.get(userAddress) || 0;
+      if (currentCount <= 1) {
+        this.activeConnections.delete(userAddress);
+      } else {
+        this.activeConnections.set(userAddress, currentCount - 1);
+      }
     }
   }
 
@@ -918,6 +1008,36 @@ export class MessagingService {
         throw new Error('Messaging service temporarily unavailable. Database connection error.');
       }
       return false;
+    }
+  }
+
+  // MEMORY OPTIMIZATION: Get memory usage statistics
+  public getMemoryUsage(): {
+    activeConnections: number;
+    lastCleanup: number;
+    cacheStats?: any;
+  } {
+    return {
+      activeConnections: this.activeConnections.size,
+      lastCleanup: this.lastCleanup,
+      cacheStats: cacheService ? cacheService.getStats() : null
+    };
+  }
+
+  // MEMORY OPTIMIZATION: Force cleanup
+  public async forceCleanup(): Promise<void> {
+    await this.performCleanup();
+  }
+
+  // MEMORY OPTIMIZATION: Clear user-specific cache
+  public async clearUserCache(userAddress: string): Promise<void> {
+    try {
+      this.validateAddress(userAddress);
+      await cacheService.invalidatePattern(`conversations:${userAddress}:*`);
+      await cacheService.invalidatePattern(`messages:*:${userAddress}:*`);
+      safeLogger.info(`Cleared cache for user ${userAddress}`);
+    } catch (error) {
+      safeLogger.error('Error clearing user cache:', error);
     }
   }
 }

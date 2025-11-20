@@ -33,7 +33,8 @@ import {
   Eye,
   EyeOff,
   LogOut,
-  Package
+  Package,
+  Activity
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -53,6 +54,8 @@ import { AdminOnboarding } from './Onboarding/AdminOnboarding';
 import { EnhancedAnalytics } from './EnhancedAnalytics';
 import { EnhancedAIModeration } from './EnhancedAIModeration';
 import { SecurityComplianceDashboard } from './SecurityComplianceDashboard';
+import { SystemHealthDashboard } from './SystemHealthDashboard';
+import { DashboardCharts } from './DashboardCharts';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
@@ -106,7 +109,7 @@ export function EnhancedAdminDashboard() {
         loadStats();
       }
     }, 60000); // Refresh every 60 seconds (increased from 30s) if WebSocket is not available
-    
+
     return () => {
       clearInterval(interval);
       // Clean up WebSocket connection
@@ -118,7 +121,7 @@ export function EnhancedAdminDashboard() {
 
   const initializeWebSocket = async () => {
     if (!user) return;
-    
+
     try {
       // Create admin user object for WebSocket service
       // Map user role to valid admin roles for WebSocket service
@@ -129,7 +132,7 @@ export function EnhancedAdminDashboard() {
         'analyst': 'analyst',
         'user': 'admin' // Default to admin for regular users with admin access
       };
-      
+
       const adminUser: {
         adminId: string;
         email: string;
@@ -141,18 +144,18 @@ export function EnhancedAdminDashboard() {
         role: roleMap[user.role] || 'admin',
         permissions: user.permissions || []
       };
-      
+
       // Initialize WebSocket manager
       const manager = await initializeAdminWebSocketManager(adminUser);
       webSocketManagerRef.current = manager;
-      
+
       // Set up event listeners for real-time updates
       manager.on('dashboard_update', (data) => {
         if (data.data && activeTab === 'overview') {
           // Update stats with real-time data
           setStats(prevStats => {
             if (!prevStats) return prevStats;
-            
+
             return {
               ...prevStats,
               pendingModerations: data.data.systemMetrics?.pendingModerations || prevStats.pendingModerations,
@@ -165,14 +168,14 @@ export function EnhancedAdminDashboard() {
           });
         }
       });
-      
+
       manager.on('admin_alert', (alert) => {
         // Handle real-time alerts
         console.log('New admin alert:', alert);
         // Could show a notification or update UI based on alert type
         setNotificationCount(prev => prev + 1);
       });
-      
+
       console.log('Admin WebSocket connected successfully');
     } catch (error) {
       console.error('Failed to initialize admin WebSocket:', error);
@@ -213,13 +216,13 @@ export function EnhancedAdminDashboard() {
   const toggleFavorite = (tab: FavoriteTab) => {
     const isFavorite = favorites.some(fav => fav.id === tab.id);
     let newFavorites;
-    
+
     if (isFavorite) {
       newFavorites = favorites.filter(fav => fav.id !== tab.id);
     } else {
       newFavorites = [...favorites, tab];
     }
-    
+
     setFavorites(newFavorites);
     localStorage.setItem('adminDashboardFavorites', JSON.stringify(newFavorites));
   };
@@ -230,6 +233,7 @@ export function EnhancedAdminDashboard() {
 
   const allTabs = [
     { id: 'overview', label: 'Overview', icon: Home, permission: null, category: 'dashboard' },
+    { id: 'system-health', label: 'System Health', icon: Activity, permission: 'system.monitor', category: 'system' },
     { id: 'moderation', label: 'Moderation', icon: Shield, permission: 'content.moderate', category: 'content' },
     { id: 'ai-moderation', label: 'AI Moderation', icon: Brain, permission: 'content.moderate', category: 'content' },
     { id: 'history', label: 'Mod History', icon: History, permission: 'system.audit', category: 'audit' },
@@ -240,7 +244,7 @@ export function EnhancedAdminDashboard() {
     { id: 'workflows', label: 'Workflows', icon: Settings, permission: null, category: 'automation' },
     { id: 'onboarding', label: 'Onboarding', icon: HelpCircle, permission: null, category: 'user' },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review', category: 'business' },
-    
+
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view', category: 'business' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view', category: 'business' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
@@ -248,12 +252,12 @@ export function EnhancedAdminDashboard() {
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
-  const filteredTabs = showFavoritesOnly 
+  const filteredTabs = showFavoritesOnly
     ? allTabs.filter(tab => favorites.some(fav => fav.id === tab.id))
-    : allTabs.filter(tab => 
-        tab.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tab.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    : allTabs.filter(tab =>
+      tab.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tab.category.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const categorizedTabs = filteredTabs.reduce((acc, tab) => {
     if (!acc[tab.category]) {
@@ -286,26 +290,25 @@ export function EnhancedAdminDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       {/* Sidebar */}
-      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900/90 backdrop-blur-md border-r border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900/90 backdrop-blur-md border-r border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-white font-bold text-lg">Admin Panel</h2>
-          <button 
+          <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         <div className="p-4">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -317,13 +320,12 @@ export function EnhancedAdminDashboard() {
               className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white text-sm"
             />
           </div>
-          
+
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`flex items-center text-sm ${
-                showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
-              }`}
+              className={`flex items-center text-sm ${showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
+                }`}
             >
               <Star className="w-4 h-4 mr-1" />
               Favorites
@@ -343,7 +345,7 @@ export function EnhancedAdminDashboard() {
               </button>
             </div>
           </div>
-          
+
           <nav className="space-y-1">
             {Object.entries(categorizedTabs).map(([category, tabs]) => (
               <div key={category} className="mb-4">
@@ -361,11 +363,10 @@ export function EnhancedAdminDashboard() {
                             setActiveTab(tab.id);
                             setSidebarOpen(false);
                           }}
-                          className={`flex items-center flex-1 gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${
-                            activeTab === tab.id
-                              ? 'bg-purple-600 text-white'
-                              : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                          }`}
+                          className={`flex items-center flex-1 gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${activeTab === tab.id
+                            ? 'bg-purple-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                            }`}
                         >
                           <Icon className="w-4 h-4 flex-shrink-0" />
                           <span className="truncate">{tab.label}</span>
@@ -393,7 +394,7 @@ export function EnhancedAdminDashboard() {
           </nav>
         </div>
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
@@ -407,9 +408,9 @@ export function EnhancedAdminDashboard() {
             </button>
             <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
           </div>
-          
+
           <div className="flex items-center space-x-4">
-            <button 
+            <button
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               className="relative p-2 text-gray-400 hover:text-white"
             >
@@ -420,7 +421,7 @@ export function EnhancedAdminDashboard() {
                 </span>
               )}
             </button>
-            
+
             <button
               onClick={logout}
               className="flex items-center text-gray-400 hover:text-white text-sm"
@@ -428,7 +429,7 @@ export function EnhancedAdminDashboard() {
               <LogOut className="w-4 h-4 mr-1" />
               Logout
             </button>
-            
+
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
@@ -438,14 +439,14 @@ export function EnhancedAdminDashboard() {
             </div>
           </div>
         </header>
-        
+
         {/* Notifications Panel */}
         {notificationsOpen && (
           <div className="absolute top-16 right-4 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50">
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-medium">Notifications</h3>
-                <button 
+                <button
                   onClick={() => setNotificationsOpen(false)}
                   className="text-gray-400 hover:text-white"
                 >
@@ -458,7 +459,7 @@ export function EnhancedAdminDashboard() {
             </div>
           </div>
         )}
-        
+
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-4">
           <div className="max-w-7xl mx-auto">
@@ -555,6 +556,9 @@ export function EnhancedAdminDashboard() {
                   )}
                 </GlassPanel>
 
+                {/* Analytics Charts */}
+                <DashboardCharts />
+
                 {/* Quick Actions */}
                 <GlassPanel className="p-6">
                   <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
@@ -606,16 +610,20 @@ export function EnhancedAdminDashboard() {
                       Manage Users
                     </Button>
                     <Button
-                      onClick={() => setActiveTab('workflows')}
+                      onClick={() => setActiveTab('system-health')}
                       variant="outline"
                       className="flex items-center gap-2 justify-center"
                     >
-                      <Settings className="w-4 h-4" />
-                      Workflows
+                      <Activity className="w-4 h-4" />
+                      System Health
                     </Button>
                   </div>
                 </GlassPanel>
               </div>
+            )}
+
+            {activeTab === 'system-health' && (
+              <SystemHealthDashboard />
             )}
 
             {activeTab === 'moderation' && hasPermission('content.moderate') && (
@@ -641,7 +649,7 @@ export function EnhancedAdminDashboard() {
             {activeTab === 'notifications' && (
               <NotificationCenter />
             )}
-            
+
             {activeTab === 'push-setup' && (
               <MobilePushSetup />
             )}
@@ -665,15 +673,15 @@ export function EnhancedAdminDashboard() {
             {activeTab === 'analytics' && hasPermission('system.analytics') && (
               <AdminAnalytics />
             )}
-            
+
             {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
               <EnhancedAnalytics />
             )}
-            
+
             {activeTab === 'workflows' && (
               <WorkflowAutomationDashboard />
             )}
-            
+
             {activeTab === 'onboarding' && (
               <AdminOnboarding />
             )}

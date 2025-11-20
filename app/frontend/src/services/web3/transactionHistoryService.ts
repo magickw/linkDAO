@@ -49,14 +49,21 @@ export class TransactionHistoryService {
   private static instance: TransactionHistoryService;
   private contract: LDAOToken | null = null;
   private provider: ethers.providers.Provider | null = null;
+  private apiBase: string;
 
-  private constructor() {}
+  private constructor() {
+    this.apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+  }
 
   static getInstance(): TransactionHistoryService {
     if (!TransactionHistoryService.instance) {
       TransactionHistoryService.instance = new TransactionHistoryService();
     }
     return TransactionHistoryService.instance;
+  }
+
+  private getApiBase(): string {
+    return this.apiBase;
   }
 
   /**
@@ -93,35 +100,44 @@ export class TransactionHistoryService {
     offset: number = 0
   ): Promise<TokenTransaction[]> {
     try {
-      await this.initialize();
-      if (!this.contract || !this.provider) {
-        throw new Error('Service not initialized');
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
       }
 
-      // In a real implementation, this would query the blockchain for transfer events
-      // For now, we'll simulate some transaction history
-      
-      const transactions: TokenTransaction[] = [];
-      
-      // Simulate some recent transactions
-      for (let i = 0; i < Math.min(limit, 5); i++) {
-        const timestamp = Date.now() - (i * 86400000); // 1 day apart
-        const isOutgoing = Math.random() > 0.5;
-        
-        transactions.push({
-          hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`transfer_${userAddress}_${timestamp}_${i}`)),
-          from: isOutgoing ? userAddress : `0x${Math.random().toString(16).substr(2, 40)}`,
-          to: isOutgoing ? `0x${Math.random().toString(16).substr(2, 40)}` : userAddress,
-          value: (Math.random() * 1000).toFixed(2),
-          timestamp,
-          type: 'transfer',
-          status: 'success',
-          fee: (0.001 + Math.random() * 0.002).toFixed(6),
-          blockNumber: 1000000 + i
-        });
+      const res = await fetch(`${this.getApiBase()}/api/transactions/history/${userAddress}?limit=${limit}&offset=${offset}&type=token_transfer`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
+        }
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get token transfer history' }));
+        console.error('Error getting token transfer history:', errorData);
+        return [];
       }
-      
-      return transactions;
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        return [];
+      }
+
+      // Transform the backend response format to match TokenTransaction interface
+      const transactions = data.data;
+      return transactions.map((tx: any) => ({
+        hash: tx.transactionHash || tx.hash || tx.id,
+        from: tx.fromAddress || tx.from || userAddress,
+        to: tx.toAddress || tx.to || tx.recipient,
+        value: tx.amount || tx.value || '0',
+        timestamp: new Date(tx.timestamp || tx.createdAt).getTime(),
+        type: tx.type || 'transfer',
+        status: tx.status || 'success',
+        fee: tx.fee || tx.gasFee,
+        blockNumber: tx.blockNumber || tx.block
+      }));
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'getTokenTransferHistory',
@@ -141,41 +157,49 @@ export class TransactionHistoryService {
     offset: number = 0
   ): Promise<StakingTransaction[]> {
     try {
-      await this.initialize();
-      if (!this.contract || !this.provider) {
-        throw new Error('Service not initialized');
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
       }
 
-      // In a real implementation, this would query the blockchain for staking events
-      // For now, we'll simulate some staking history
-      
-      const transactions: StakingTransaction[] = [];
-      
-      // Simulate some recent staking transactions
-      for (let i = 0; i < Math.min(limit, 3); i++) {
-        const timestamp = Date.now() - (i * 172800000); // 2 days apart
-        const types: Array<'stake' | 'unstake' | 'claim'> = ['stake', 'unstake', 'claim'];
-        const type = types[i % types.length];
-        
-        const transaction: StakingTransaction = {
-          hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`stake_${userAddress}_${timestamp}_${i}`)),
-          user: userAddress,
-          amount: type === 'claim' ? '0' : (Math.random() * 100).toFixed(2),
-          tierId: Math.floor(Math.random() * 4) + 1,
-          timestamp,
-          type,
-          status: 'success',
-          blockNumber: 1000000 + i + 100
-        };
-        
-        if (type === 'claim') {
-          transaction.rewardAmount = (Math.random() * 5).toFixed(2);
+      const res = await fetch(`${this.getApiBase()}/api/ldao/history?limit=${limit}&offset=${offset}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
         }
-        
-        transactions.push(transaction);
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get staking history' }));
+        console.error('Error getting staking history:', errorData);
+        return [];
       }
-      
-      return transactions;
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        return [];
+      }
+
+      // Filter staking-related transactions from the combined history
+      const allTransactions = data.data.transactions || data.data || [];
+      const stakingTransactions = allTransactions.filter((tx: any) => 
+        tx.type && 
+        (tx.type.includes('stake') || tx.type.includes('unstake') || tx.type.includes('claim') || tx.type.includes('rewards'))
+      );
+
+      return stakingTransactions.map((tx: any) => ({
+        hash: tx.transactionHash || tx.hash || tx.id,
+        user: tx.userAddress || tx.userId || userAddress,
+        amount: tx.amount || tx.value || '0',
+        tierId: tx.tierId || tx.stakingTier || 1,
+        timestamp: new Date(tx.timestamp || tx.createdAt).getTime(),
+        type: tx.type || 'stake',
+        status: tx.status || 'success',
+        rewardAmount: tx.rewardAmount || tx.rewards || tx.earned,
+        blockNumber: tx.blockNumber || tx.block
+      }));
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'getStakingHistory',
@@ -195,56 +219,50 @@ export class TransactionHistoryService {
     offset: number = 0
   ): Promise<PurchaseTransaction[]> {
     try {
-      await this.initialize();
-      if (!this.contract || !this.provider) {
-        throw new Error('Service not initialized');
+      // Get token with client-side check to prevent SSR errors
+      let authToken = null;
+      if (typeof window !== 'undefined') {
+        authToken = localStorage.getItem('linkdao_access_token') || localStorage.getItem('token');
       }
 
-      // In a real implementation, this would query the blockchain or backend for purchase events
-      // For now, we'll retrieve from localStorage and simulate some purchase history
-      
-      const transactions: PurchaseTransaction[] = [];
-      
-      // Get purchase transactions from localStorage
-      try {
-        const storedTransactions = localStorage.getItem('ldao_purchase_transactions');
-        if (storedTransactions) {
-          const parsedTransactions = JSON.parse(storedTransactions);
-          // Filter by user address and limit results
-          const userTransactions = parsedTransactions
-            .filter((tx: any) => tx.user === userAddress)
-            .slice(offset, offset + limit);
-          
-          transactions.push(...userTransactions);
+      const res = await fetch(`${this.getApiBase()}/api/ldao/history?limit=${limit}&offset=${offset}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authToken ? `Bearer ${authToken}` : ''
         }
-      } catch (error) {
-        console.warn('Failed to retrieve purchase transactions from localStorage:', error);
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to get purchase history' }));
+        console.error('Error getting purchase history:', errorData);
+        return [];
       }
-      
-      // Simulate some additional recent purchases if we don't have enough
-      const needed = limit - transactions.length;
-      for (let i = 0; i < Math.min(needed, 3); i++) {
-        const timestamp = Date.now() - (i * 259200000); // 3 days apart
-        const methods: Array<'crypto' | 'fiat' | 'dex' | 'moonpay'> = ['crypto', 'fiat', 'dex', 'moonpay'];
-        const method = methods[i % methods.length];
-        const currencies: Array<'ETH' | 'USDC' | 'USD'> = ['ETH', 'USDC', 'USD'];
-        const currency = currencies[i % currencies.length];
-        
-        transactions.push({
-          hash: ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`purchase_${userAddress}_${timestamp}_${i}`)),
-          user: userAddress,
-          amount: (Math.random() * 10000).toFixed(2),
-          cost: (Math.random() * 5).toFixed(2),
-          currency,
-          timestamp,
-          type: 'purchase',
-          status: 'success',
-          method,
-          blockNumber: 1000000 + i + 200
-        });
+
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        return [];
       }
-      
-      return transactions;
+
+      // Filter purchase-related transactions from the combined history
+      const allTransactions = data.data.transactions || data.data || [];
+      const purchaseTransactions = allTransactions.filter((tx: any) => 
+        tx.type && 
+        (tx.type.includes('purchase') || tx.type.includes('buy') || tx.type.includes('acquisition') || tx.type.includes('mint'))
+      );
+
+      return purchaseTransactions.map((tx: any) => ({
+        hash: tx.transactionHash || tx.hash || tx.id,
+        user: tx.userAddress || tx.userId || userAddress,
+        amount: tx.amount || tx.value || '0',
+        cost: tx.cost || tx.price || tx.paymentAmount || '0',
+        currency: tx.currency || tx.paymentCurrency || 'ETH',
+        timestamp: new Date(tx.timestamp || tx.createdAt).getTime(),
+        type: tx.type || 'purchase',
+        status: tx.status || 'success',
+        method: tx.method || tx.paymentMethod || tx.transactionType || 'crypto',
+        blockNumber: tx.blockNumber || tx.block
+      }));
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'getPurchaseHistory',

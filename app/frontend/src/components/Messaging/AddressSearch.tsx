@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../design-system';
 import multichainResolver, { ResolvedAddress, AddressSearchResult } from '../../services/multichainResolver';
-import messagingService from '../../services/messagingService';
+import { messagingService } from '../../services/messagingService';
 
 interface AddressSearchProps {
   onAddressSelect: (address: ResolvedAddress) => void;
