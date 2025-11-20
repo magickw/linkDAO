@@ -62,7 +62,7 @@ const SERVICE_ENDPOINTS = {
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 100; // Increased from 10 to 100 for production
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 1000 : 300; // Increased to 300 for production to handle marketplace APIs
 const BACKOFF_MULTIPLIER = isDevelopment ? 1.2 : 1.5; // Lower backoff in development and production
 const MAX_BACKOFF_TIME = isDevelopment ? 5000 : 30000; // Reduced max backoff to 30s in production
 
@@ -109,7 +109,8 @@ const CACHEABLE_APIS = {
   '/api/chat/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
   '/api/messages/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
-  '/api/messaging/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 } // 30s fresh, 2min stale
+  '/api/messaging/conversations': { ttl: 30000, priority: 'high', staleTTL: 120000 }, // 30s fresh, 2min stale
+  '/api/cart': { ttl: 30000, priority: 'medium', staleTTL: 120000 } // 30s fresh, 2min stale
 };
 
 // Critical API responses that should be cached aggressively
@@ -298,7 +299,17 @@ async function networkFirst(request, cacheName) {
     // Special handling for community requests - shorter backoff times
     const url = new URL(request.url);
     const isCommunityRequest = url.pathname.includes('/api/communities');
-    const baseBackoffTime = isCommunityRequest ? 10000 : 30000; // 10s for communities, 30s for others
+    // Apply reduced base backoff time for cart API requests
+    const isCartRequest = url.pathname.includes('/api/cart');
+    let baseBackoffTime;
+    
+    if (isCommunityRequest) {
+      baseBackoffTime = 10000; // 10s for communities
+    } else if (isCartRequest) {
+      baseBackoffTime = 5000; // 5s for cart API to enable faster recovery
+    } else {
+      baseBackoffTime = 30000; // 30s for others
+    }
 
     const backoffTime = Math.min(
       baseBackoffTime * Math.pow(BACKOFF_MULTIPLIER, failureInfo.attempts - 1),
@@ -312,8 +323,12 @@ async function networkFirst(request, cacheName) {
   }
 
   // Check if request is already pending (request coalescing)
-  // Only coalesce non-critical requests to avoid blocking important operations
-  if (pendingRequests.has(requestKey) && !isCriticalRequest(request)) {
+  // EXCLUDE community API requests from coalescing to prevent response blocking
+  const url = new URL(request.url);
+  const isCommunityAPI = url.pathname.includes('/communities/');
+  // EXCLUDE blockchain API requests from coalescing as they may have different parameters
+  const isBlockchainAPI = url.hostname.includes('etherscan.io') || url.hostname.includes('basescan.org') || url.hostname.includes('bscscan.com');
+  if (pendingRequests.has(requestKey) && !isCriticalRequest(request) && !isCommunityAPI && !isBlockchainAPI) {
     console.log('Request already pending, coalescing:', requestKey);
     try {
       const sharedPromise = pendingRequests.get(requestKey);
@@ -546,7 +561,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       // Handle community API errors with specific backoff
       else if (url.pathname.includes('/api/communities') || url.pathname.includes('/communities/')) {
         console.warn('Community API failed:', networkResponse.status, networkResponse.statusText, requestKey);
-        // For 404 errors, don't aggressively backoff as the resource may not exist
+        // For 404 errors on specific community endpoints, don't aggressively backoff as the resource may not exist
         if (networkResponse.status === 404 || networkResponse.statusText.toLowerCase().includes('not found')) {
           console.log('Community not found (404), not applying backoff');
           failedRequests.delete(requestKey);
@@ -566,6 +581,21 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         failureInfo.attempts += 1;
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
+      }
+      // Handle cart API errors with specific handling
+      else if (url.pathname.includes('/api/cart')) {
+        console.warn('Cart API error:', networkResponse.status, requestKey);
+        // For 404 errors on cart endpoints, don't aggressively backoff
+        if (networkResponse.status === 404) {
+          console.log('Cart endpoint not found (404), not applying backoff');
+          failedRequests.delete(requestKey);
+        } else {
+          // Track failure with exponential backoff for other cart requests
+          const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+          failureInfo.attempts += 1;
+          failureInfo.lastFailure = Date.now();
+          failedRequests.set(requestKey, failureInfo);
+        }
       }
       else {
         // Track failure with exponential backoff for other requests
@@ -623,6 +653,15 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
     else if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations') || url.pathname.includes('/api/conversations') || url.pathname.includes('/api/messages/conversations')) {
       console.warn('Messaging API failed:', error.message, requestKey);
       // Track failure with exponential backoff for messaging requests
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+    }
+    // Handle cart API failures with more specific backoff
+    else if (url.pathname.includes('/api/cart')) {
+      console.warn('Cart API failed:', error.message, requestKey);
+      // Track failure with exponential backoff for cart requests
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
@@ -712,6 +751,7 @@ async function updateCacheInBackground(request, cacheName, requestKey) {
   }
 }
 
+// Get cached response with fallback mechanisms
 async function getCachedResponse(request, cacheName) {
   try {
     const cache = await caches.open(cacheName);
@@ -787,6 +827,8 @@ async function getCachedResponse(request, cacheName) {
       errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';
     } else if (url.pathname.includes('/api/feed')) {
       errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
+    } else if (url.pathname.includes('/api/cart')) {
+      errorMessage = 'Shopping cart service temporarily unavailable. Please check your connection and try again.';
     }
 
     return new Response(errorMessage, {
@@ -796,53 +838,6 @@ async function getCachedResponse(request, cacheName) {
   } catch (error) {
     console.error('Failed to get cached response:', error);
     return await handleCacheFailure(request, error);
-  }
-}
-
-// Navigation handler - for page requests
-async function navigationHandler(request) {
-  try {
-    const networkResponse = await fetch(request);
-    return networkResponse;
-  } catch (error) {
-    // Return cached page or offline page
-    const cache = await caches.open(STATIC_CACHE);
-    const cachedResponse = await cache.match(request);
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    // Return offline page as fallback
-    const offlineResponse = await cache.match('/offline.html');
-    if (offlineResponse) {
-      return offlineResponse;
-    }
-
-    // Fallback response if offline.html is not available
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>You are offline</title>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            h1 { color: #333; }
-            p { color: #666; }
-          </style>
-        </head>
-        <body>
-          <h1>You are offline</h1>
-          <p>Please check your internet connection and try again.</p>
-          <button onclick="window.location.reload()">Retry</button>
-        </body>
-      </html>
-    `, {
-      status: 503,
-      headers: { 'Content-Type': 'text/html' }
-    });
   }
 }
 
@@ -918,6 +913,8 @@ async function handleCacheFailure(request, error) {
     errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';
   } else if (url.pathname.includes('/api/feed')) {
     errorMessage = 'Feed service temporarily unavailable. Please check your connection and try again.';
+  } else if (url.pathname.includes('/api/cart')) {
+    errorMessage = 'Shopping cart service temporarily unavailable. Please check your connection and try again.';
   }
 
   return new Response(errorMessage, {
@@ -926,7 +923,70 @@ async function handleCacheFailure(request, error) {
   });
 }
 
+// Ensure service worker can resolve offline.html even when direct cache lookup fails
+// by implementing redundant fallback strategies in navigation and cache failure handlers
+async function navigationHandler(request) {
+  try {
+    const networkResponse = await fetch(request);
+    return networkResponse;
+  } catch (error) {
+    // Return cached page or offline page
+    const cache = await caches.open(STATIC_CACHE);
+    const cachedResponse = await cache.match(request);
 
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Return offline page as fallback with multiple fallback strategies
+    // First try to get offline.html from cache
+    let offlineResponse = await cache.match('/offline.html');
+    
+    // If that fails, try to get it from network
+    if (!offlineResponse) {
+      try {
+        const networkOfflineResponse = await fetch('/offline.html');
+        if (networkOfflineResponse.ok) {
+          // Cache it for future use
+          await cache.put('/offline.html', networkOfflineResponse.clone());
+          offlineResponse = networkOfflineResponse;
+        }
+      } catch (networkError) {
+        console.warn('Failed to fetch offline.html from network:', networkError);
+      }
+    }
+
+    // If we have offline.html, return it
+    if (offlineResponse) {
+      return offlineResponse;
+    }
+
+    // Final fallback response if offline.html is not available
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>You are offline</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            h1 { color: #333; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <h1>You are offline</h1>
+          <p>Please check your internet connection and try again.</p>
+          <button onclick="window.location.reload()">Retry</button>
+        </body>
+      </html>
+    `, {
+      status: 503,
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
 
 // Background cache update
 async function updateCache(request, cacheName) {
@@ -1045,6 +1105,8 @@ function getServiceKey(request) {
       return 'feed';
     } else if (pathParts[2] === 'posts') {
       return 'posts';
+    } else if (pathParts[2] === 'cart') {
+      return 'cart';
     } else {
       return pathParts[2]; // e.g., 'profiles', 'users', 'search', etc.
     }
@@ -1660,6 +1722,25 @@ function checkRateLimit(requestKey, now) {
 
   // Skip rate limiting for critical endpoints (authentication, profiles, etc.)
   if (isCriticalRequest({ url: url })) {
+    return true;
+  }
+
+  // Apply reduced base backoff time for community API requests
+  if (url.pathname.includes('/api/communities')) {
+    // Use a reduced base backoff time of 10 seconds instead of 30 seconds
+    // to enable faster recovery from transient failures while still preventing request storms
+    const communityFailureInfo = failedRequests.get(requestKey);
+    if (communityFailureInfo) {
+      const backoffTime = Math.min(
+        10000 * Math.pow(BACKOFF_MULTIPLIER, communityFailureInfo.attempts - 1),
+        MAX_BACKOFF_TIME
+      );
+      
+      if (now - communityFailureInfo.lastFailure < backoffTime) {
+        console.log(`Community API backing off request for ${backoffTime}ms:`, requestKey);
+        return false;
+      }
+    }
     return true;
   }
 

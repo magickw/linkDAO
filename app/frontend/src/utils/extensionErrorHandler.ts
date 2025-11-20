@@ -56,6 +56,13 @@ const EXTENSION_ERROR_PATTERNS = [
   'extension:///',
   'moz-extension://',
   'safari-extension://',
+  
+  // LastPass specific patterns
+  'lastpass',
+  'Cannot create item with duplicate id',
+  'Cannot find menu item with id',
+  'Add Item',
+  'background-redux-new.js',
 ] as const;
 
 /**

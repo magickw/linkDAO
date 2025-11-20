@@ -179,32 +179,39 @@ export class MetadataService {
         for (const gateway of gateways) {
           try {
             safeLogger.info(`Attempting to fetch content from gateway: ${gateway}`);
-            const response = await axios.get(gateway, { 
+            const response = await axios.get(gateway, {
               timeout: 15000, // Increase timeout
               headers: {
                 'User-Agent': 'LinkDAO/1.0'
               }
             });
-            
+
+            // Extract only the data we need to avoid circular reference issues
+            const { data, status } = response;
+            const responseDataType = typeof data;
+
+            // Check if data is a string before calling includes
+            const dataString = responseDataType === 'string' ? data : '';
+            const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
+
             // Check if response is valid (not a Cloudflare challenge page)
-            if (response.status === 200 && 
-                response.data && 
-                (typeof response.data === 'string' || typeof response.data === 'object') && 
-                !response.data.includes('Just a moment...') &&
-                !response.data.includes('cf-chl-task')) {
-              // If it's an object, stringify it
-              const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            if (status === 200 &&
+                data &&
+                (responseDataType === 'string' || responseDataType === 'object') &&
+                !hasCloudflareChallenge) {
+              // If it's an object, stringify it carefully
+              const content = responseDataType === 'string' ? data : JSON.stringify(data);
               safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { contentLength: content.length });
               return content;
             } else {
-              safeLogger.warn(`Gateway returned invalid response: ${gateway}`, { 
-                status: response.status, 
-                dataType: typeof response.data,
-                hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+              safeLogger.warn(`Gateway returned invalid response: ${gateway}`, {
+                status,
+                dataType: responseDataType,
+                hasCloudflareChallenge
               });
             }
-          } catch (gatewayError) {
-            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError.message });
+          } catch (gatewayError: any) {
+            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError?.message || 'Unknown error' });
             // Continue to next gateway
           }
         }
@@ -217,71 +224,85 @@ export class MetadataService {
       if (IPFS_CONFIG.host.includes('pinata')) {
         try {
           safeLogger.info(`Attempting to fetch content from Pinata gateway for CID: ${cid}`);
-          const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${cid}`, { 
+          const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${cid}`, {
             timeout: 15000, // Increase timeout
             headers: {
               'Authorization': `Bearer ${IPFS_CONFIG.projectId}`,
               'User-Agent': 'LinkDAO/1.0'
             }
           });
-          
+
+          // Extract only the data we need to avoid circular reference issues
+          const { data, status } = response;
+          const responseDataType = typeof data;
+
+          // Check if data is a string before calling includes
+          const dataString = responseDataType === 'string' ? data : '';
+          const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
+
           // Check if response is valid (not a Cloudflare challenge page)
-          if (response.status === 200 && 
-              response.data && 
-              (typeof response.data === 'string' || typeof response.data === 'object') && 
-              !response.data.includes('Just a moment...') &&
-              !response.data.includes('cf-chl-task')) {
-            // If it's an object, stringify it
-            const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+          if (status === 200 &&
+              data &&
+              (responseDataType === 'string' || responseDataType === 'object') &&
+              !hasCloudflareChallenge) {
+            // If it's an object, stringify it carefully
+            const content = responseDataType === 'string' ? data : JSON.stringify(data);
             safeLogger.info(`Successfully retrieved content from Pinata gateway`, { contentLength: content.length });
             return content;
           } else {
-            safeLogger.warn(`Pinata gateway returned invalid response`, { 
-              status: response.status, 
-              dataType: typeof response.data,
-              hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+            safeLogger.warn(`Pinata gateway returned invalid response`, {
+              status,
+              dataType: responseDataType,
+              hasCloudflareChallenge
             });
           }
-        } catch (pinataError) {
-          safeLogger.warn(`Pinata gateway failed for CID: ${cid}`, pinataError);
+        } catch (pinataError: any) {
+          safeLogger.warn(`Pinata gateway failed for CID: ${cid}`, { error: pinataError?.message || 'Unknown error' });
         }
-        
+
         // Fallback to other gateways
         const gateways = [
           `https://ipfs.io/ipfs/${cid}`,
           `https://cloudflare-ipfs.com/ipfs/${cid}`,
           `https://dweb.link/ipfs/${cid}`
         ];
-        
+
         for (const gateway of gateways) {
           try {
             safeLogger.info(`Attempting to fetch content from fallback gateway: ${gateway}`);
-            const response = await axios.get(gateway, { 
+            const response = await axios.get(gateway, {
               timeout: 15000, // Increase timeout
               headers: {
                 'User-Agent': 'LinkDAO/1.0'
               }
             });
-            
+
+            // Extract only the data we need to avoid circular reference issues
+            const { data, status } = response;
+            const responseDataType = typeof data;
+
+            // Check if data is a string before calling includes
+            const dataString = responseDataType === 'string' ? data : '';
+            const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
+
             // Check if response is valid (not a Cloudflare challenge page)
-            if (response.status === 200 && 
-                response.data && 
-                (typeof response.data === 'string' || typeof response.data === 'object') && 
-                !response.data.includes('Just a moment...') &&
-                !response.data.includes('cf-chl-task')) {
-              // If it's an object, stringify it
-              const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+            if (status === 200 &&
+                data &&
+                (responseDataType === 'string' || responseDataType === 'object') &&
+                !hasCloudflareChallenge) {
+              // If it's an object, stringify it carefully
+              const content = responseDataType === 'string' ? data : JSON.stringify(data);
               safeLogger.info(`Successfully retrieved content from fallback gateway: ${gateway}`, { contentLength: content.length });
               return content;
             } else {
-              safeLogger.warn(`Fallback gateway returned invalid response: ${gateway}`, { 
-                status: response.status, 
-                dataType: typeof response.data,
-                hasCloudflareChallenge: response.data.includes('Just a moment...') || response.data.includes('cf-chl-task')
+              safeLogger.warn(`Fallback gateway returned invalid response: ${gateway}`, {
+                status,
+                dataType: responseDataType,
+                hasCloudflareChallenge
               });
             }
-          } catch (gatewayError) {
-            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError.message });
+          } catch (gatewayError: any) {
+            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError?.message || 'Unknown error' });
             // Continue to next gateway
           }
         }

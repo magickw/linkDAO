@@ -122,9 +122,17 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         }
       } catch (error) {
         console.error('Failed to fetch content:', error);
-        setError(`Failed to load content: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        // Even on error, show what content we have
-        setContent(post.content || `Content not available`);
+
+        // Check if this is a backend IPFS service error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        if (errorMessage === 'BACKEND_IPFS_ERROR') {
+          setError('BACKEND_IPFS_ERROR');
+          setContent('');
+        } else {
+          setError(`Failed to load content: ${errorMessage}`);
+          // Even on error, show what content we have
+          setContent(post.content || `Content not available`);
+        }
       } finally {
         setLoading(false);
       }
@@ -291,19 +299,55 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {/* Content */}
       <div>
         {loading ? (
-          <p>Loading content...</p>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          </div>
+        ) : error === 'BACKEND_IPFS_ERROR' ? (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                  Content Temporarily Unavailable
+                </h4>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                  We're experiencing technical difficulties loading content from our storage system. Our team has been notified and is working on a fix.
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Post ID: {post.id}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : error ? (
-          <div>
-            <p className="text-red-500">{error}</p>
-            {/* Still show content if we have it, even if there was an error */}
-            {content && content !== 'No content available' && (
-              <p>{content}</p>
-            )}
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">Error loading content</p>
+                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                {/* Still show content if we have it, even if there was an error */}
+                {content && content !== 'No content available' && content !== 'Content not available' && (
+                  <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{content}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : content ? (
-          <p>{content}</p>
+          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{content}</p>
         ) : (
-          <p className="text-gray-500">No content available</p>
+          <p className="text-gray-500 dark:text-gray-400 italic">No content available</p>
         )}
 
         {/* Media */}

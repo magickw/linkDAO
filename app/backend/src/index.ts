@@ -641,6 +641,8 @@ import ensValidationRoutes from './routes/ensValidationRoutes';
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import marketplace routes
 import marketplaceRoutes from './routes/marketplaceRoutes';
+// Import cart routes
+import cartRoutes from './routes/cartRoutes';
 // Import database schema
 import { users } from './db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -808,6 +810,10 @@ app.use('/api/marketplace', marketplaceListingsRoutes);
 // Register main marketplace routes at different path to avoid conflicts
 app.use('/api/v1/marketplace', marketplaceRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+
+// Cart routes
+app.use('/api/v1/cart', cartRoutes);
+app.use('/api/cart', cartRoutes);
 
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);

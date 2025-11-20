@@ -27,11 +27,27 @@ export class IPFSContentService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch content: ${response.statusText}`);
+        // Check if it's a backend IPFS service error (500)
+        if (response.status === 500) {
+          try {
+            const errorData = await response.json();
+            // Check for the specific circular JSON error from backend
+            if (errorData.error && errorData.error.includes('circular structure')) {
+              console.error('Backend IPFS service error (circular JSON):', errorData);
+              throw new Error('BACKEND_IPFS_ERROR');
+            }
+          } catch (jsonError) {
+            // If we can't parse the error, still treat 500 as backend issue
+            console.error('Backend IPFS service unavailable (500)');
+            throw new Error('BACKEND_IPFS_ERROR');
+          }
+        }
+
+        throw new Error(`Failed to fetch content (HTTP ${response.status}): ${response.statusText}`);
       }
 
       const data = await response.json();
-      
+
       // Handle different response formats from the backend
       let content = '';
       if (data.data && data.data.content) {
@@ -44,7 +60,7 @@ export class IPFSContentService {
         // If we get an object with cid but no content, try to extract content
         content = JSON.stringify(data.data);
       }
-      
+
       // If we still don't have content, check if the entire data is a string
       if (!content && typeof data === 'string') {
         content = data;
@@ -56,8 +72,14 @@ export class IPFSContentService {
       return content;
     } catch (error) {
       console.error('Error fetching content from IPFS:', error);
-      // Return a more descriptive error message
-      throw new Error(`Failed to retrieve content from IPFS: ${cid} - ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Provide user-friendly error messages
+      if (error instanceof Error && error.message === 'BACKEND_IPFS_ERROR') {
+        throw new Error('BACKEND_IPFS_ERROR');
+      }
+
+      // Return a more descriptive error message for other errors
+      throw new Error(`Failed to retrieve content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

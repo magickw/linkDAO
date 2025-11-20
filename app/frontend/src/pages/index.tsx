@@ -245,23 +245,23 @@ export default function Home() {
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
             <div className="absolute inset-0 bg-grid-white/[0.05] bg-[length:30px_30px]"></div>
 
-            <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 pt-20 pb-16 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-12">
-              <div className="lg:w-1/2 xl:w-5/12">
+            <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 pt-24 pb-20 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-16">
+              <div className="lg:w-1/2 xl:w-6/12">
                 <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-300 text-sm font-medium mb-6 backdrop-blur-sm">
                   <span className="flex h-2 w-2 rounded-full bg-primary-400 mr-2 animate-pulse"></span>
                   The Future of Social is Here
                 </div>
 
-                <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+                <h1 className="text-6xl md:text-8xl font-extrabold text-white mb-8 leading-tight tracking-tight">
                   Own Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">Identity</span>.<br />
                   Shape Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400">World</span>.
                 </h1>
 
-                <p className="text-xl text-gray-300 mb-10 max-w-2xl leading-relaxed">
+                <p className="text-2xl text-gray-300 mb-12 max-w-3xl leading-relaxed">
                   LinkDAO is the first decentralized social network where you truly own your data, earn from your content, and govern the platform itself.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
                   <ConnectButton.Custom>
                     {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
                       const ready = rainbowMounted && authenticationStatus !== 'loading';
@@ -269,11 +269,11 @@ export default function Home() {
                         <button
                           onClick={openConnectModal}
                           disabled={!ready}
-                          className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
+                          className="group relative inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
                         >
                           <div className="absolute -inset-3 rounded-xl bg-gradient-to-r from-cyan-400 via-primary-500 to-purple-500 opacity-30 group-hover:opacity-100 blur-lg transition-opacity duration-200" />
                           <span className="relative flex items-center gap-2">
-                            Connect Wallet <Zap className="w-5 h-5" />
+                            Connect Wallet <Zap className="w-6 h-6" />
                           </span>
                         </button>
                       );
@@ -282,7 +282,7 @@ export default function Home() {
 
                   <button
                     onClick={scrollToFeatures}
-                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
+                    className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
                   >
                     Explore Features
                   </button>
