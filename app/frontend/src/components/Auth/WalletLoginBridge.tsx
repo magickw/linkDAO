@@ -38,8 +38,8 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
   // Prevent page refresh loops by tracking failed attempts
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const maxFailedAttempts = 2; // Maximum failed attempts before stopping (reduced from 3)
-  const failedAttemptCooldown = 60000; // 60 seconds cooldown after failed attempts (increased from 30s)
+  const maxFailedAttempts = 1; // Maximum failed attempts before stopping (reduced from 2 to prevent excessive retries)
+  const failedAttemptCooldown = 300000; // 5 minutes cooldown after failed attempts (increased from 60s)
   const [isInitialLoad, setIsInitialLoad] = useState(true); // Track if this is the initial page load
   
   // Add a cooldown period to prevent rapid retries

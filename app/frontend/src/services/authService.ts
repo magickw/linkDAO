@@ -28,7 +28,8 @@ class AuthService {
   // Add retry tracking fields
   private lastAuthAttempt: number = 0;
   private authAttemptCount: number = 0;
-  private readonly MAX_AUTH_DELAY: number = 5000; // Cap max delay at 5 seconds
+  private readonly MAX_AUTH_DELAY: number = 30000; // Cap max delay at 30 seconds (increased from 5s)
+  private readonly MAX_AUTH_ATTEMPTS: number = 3; // Maximum total attempts before giving up
 
   constructor() {
     // Use centralized environment config to ensure correct backend port
@@ -86,6 +87,12 @@ class AuthService {
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
     // Track authentication attempt
     this.lastAuthAttempt = Date.now();
+
+    // Check if we've exceeded maximum attempts
+    if (this.authAttemptCount >= this.MAX_AUTH_ATTEMPTS) {
+      console.error(`❌ Maximum authentication attempts (${this.MAX_AUTH_ATTEMPTS}) exceeded. Please try again later.`);
+      throw new Error(`Maximum authentication attempts exceeded. Please wait before trying again.`);
+    }
 
     try {
       // Add conditional delay based on retry count to prevent rapid retry loops

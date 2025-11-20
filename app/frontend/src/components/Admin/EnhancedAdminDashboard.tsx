@@ -56,6 +56,7 @@ import { EnhancedAIModeration } from './EnhancedAIModeration';
 import { SecurityComplianceDashboard } from './SecurityComplianceDashboard';
 import { SystemHealthDashboard } from './SystemHealthDashboard';
 import { DashboardCharts } from './DashboardCharts';
+import { useKeyboardShortcuts, KeyboardShortcutsHelp, CommandPalette } from '@/hooks/useKeyboardShortcuts';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
@@ -90,6 +91,69 @@ export function EnhancedAdminDashboard() {
   const [notificationCount, setNotificationCount] = useState(0);
   const webSocketManagerRef = useRef<any>(null);
   const [statsAvailable, setStatsAvailable] = useState(true); // Track if stats endpoint is available
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+
+  // Keyboard shortcuts configuration
+  const shortcuts = [
+    {
+      key: 'k',
+      ctrl: true,
+      description: 'Open command palette',
+      action: () => setShowCommandPalette(true),
+      category: 'Navigation',
+    },
+    {
+      key: 'd',
+      description: 'Go to Dashboard',
+      action: () => setActiveTab('overview'),
+      category: 'Navigation',
+    },
+    {
+      key: 'm',
+      description: 'Go to Moderation',
+      action: () => hasPermission('content.moderate') && setActiveTab('moderation'),
+      category: 'Navigation',
+    },
+    {
+      key: 'u',
+      description: 'Go to Users',
+      action: () => hasPermission('users.view') && setActiveTab('users'),
+      category: 'Navigation',
+    },
+    {
+      key: 'a',
+      description: 'Go to Analytics',
+      action: () => hasPermission('system.analytics') && setActiveTab('analytics'),
+      category: 'Navigation',
+    },
+    {
+      key: 'h',
+      description: 'Go to System Health',
+      action: () => hasPermission('system.monitor') && setActiveTab('system-health'),
+      category: 'Navigation',
+    },
+    {
+      key: '/',
+      description: 'Focus search',
+      action: () => {
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+        searchInput?.focus();
+      },
+      category: 'Actions',
+    },
+  ];
+
+  const { showHelp, setShowHelp } = useKeyboardShortcuts({ shortcuts });
+
+  // Command palette commands
+  const commands = allTabs.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    description: `Navigate to ${tab.label}`,
+    action: () => setActiveTab(tab.id),
+    icon: <tab.icon className="w-4 h-4" />,
+    category: tab.category,
+  }));
 
   useEffect(() => {
     if (!isAdmin()) {
@@ -688,6 +752,20 @@ export function EnhancedAdminDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        commands={commands}
+      />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        shortcuts={shortcuts}
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
+      />
     </div>
   );
 }

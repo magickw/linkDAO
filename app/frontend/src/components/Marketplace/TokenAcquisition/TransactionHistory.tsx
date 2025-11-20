@@ -8,14 +8,15 @@ import { transactionHistoryService } from '@/services/web3/transactionHistorySer
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { normalizeTimestamp } from '@/utils/transactionUtils';
-import { 
-  ArrowDownLeft, 
-  ArrowUpRight, 
-  Lock, 
-  Unlock, 
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Lock,
+  Unlock,
   Gift,
   Download,
-  Filter
+  Filter,
+  ExternalLink
 } from 'lucide-react';
 
 type Transaction = Awaited<ReturnType<typeof transactionHistoryService.getCombinedHistory>>[0];
@@ -81,6 +82,16 @@ const TransactionHistory: React.FC = () => {
 
   const formatAddress = (addr: string): string => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  };
+
+  // Get Etherscan URL based on network (Sepolia testnet)
+  const getEtherscanUrl = (txHash: string): string => {
+    // Using Sepolia testnet as per deployedAddresses-sepolia.json (chainId: 11155111)
+    return `https://sepolia.etherscan.io/tx/${txHash}`;
+  };
+
+  const openEtherscan = (txHash: string): void => {
+    window.open(getEtherscanUrl(txHash), '_blank', 'noopener,noreferrer');
   };
 
   const getTransactionIcon = (type: string) => {
@@ -270,12 +281,16 @@ const TransactionHistory: React.FC = () => {
               </div>
               
               <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between text-sm">
-                <div className="text-white/70">
-                  Tx: {tx.hash.substring(0, 10)}...{tx.hash.substring(tx.hash.length - 8)}
-                </div>
+                <button
+                  onClick={() => openEtherscan(tx.hash)}
+                  className="flex items-center gap-1 text-white/70 hover:text-blue-400 transition-colors group"
+                >
+                  <span>Tx: {tx.hash.substring(0, 10)}...{tx.hash.substring(tx.hash.length - 8)}</span>
+                  <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
                 <div className={`px-2 py-1 rounded text-xs ${
-                  tx.status === 'success' 
-                    ? 'bg-green-500/20 text-green-400' 
+                  tx.status === 'success'
+                    ? 'bg-green-500/20 text-green-400'
                     : 'bg-red-500/20 text-red-400'
                 }`}>
                   {tx.status}

@@ -371,18 +371,18 @@ const ReferralSystem: React.FC = () => {
         </GlassPanel>
       )}
 
-      {/* Leaderboard */}
+      {/* Leaderboard - Only show if there's real data from backend */}
       {leaderboard.length > 0 && (
         <GlassPanel variant="secondary" className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <Trophy className="text-yellow-400" size={24} />
             <h3 className="text-xl font-bold text-white">Referral Leaderboard</h3>
           </div>
-          
+
           <div className="space-y-3">
             {leaderboard.map((entry, index) => (
-              <div 
-                key={index} 
+              <div
+                key={`${entry.user}-${index}`}
                 className="flex items-center justify-between p-4 bg-white/5 rounded-lg"
               >
                 <div className="flex items-center gap-3">
@@ -399,11 +399,11 @@ const ReferralSystem: React.FC = () => {
                       {formatAddress(entry.user)}
                     </div>
                     <div className="text-sm text-white/70">
-                      {entry.referrals} referrals
+                      {entry.referrals} referral{entry.referrals !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="font-bold text-green-400">{entry.rewards} LDAO</div>
                   <div className="text-sm text-white/70">earned</div>
