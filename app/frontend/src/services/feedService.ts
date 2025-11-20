@@ -153,10 +153,27 @@ export class FeedService {
         params.append('userAddress', filter.userAddress);
       }
 
+      // Validate and filter community IDs before adding to params
       if (filter.communities && filter.communities.length > 0) {
-        filter.communities.forEach(communityId => {
+        // UUID regex pattern to validate community IDs
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        const validCommunityIds = filter.communities.filter(communityId => {
+          const isValid = uuidPattern.test(communityId);
+          if (!isValid) {
+            console.warn(`[FEED] Invalid community ID filtered out: ${communityId}`);
+          }
+          return isValid;
+        });
+
+        validCommunityIds.forEach(communityId => {
           params.append('communities', communityId);
         });
+
+        // If all community IDs were invalid, log warning
+        if (filter.communities.length > 0 && validCommunityIds.length === 0) {
+          console.warn('[FEED] All community IDs were invalid and filtered out');
+        }
       }
 
       if (filter.tags && filter.tags.length > 0) {

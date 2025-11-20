@@ -590,6 +590,12 @@ class CartService {
         headers,
       });
 
+      // Gracefully handle 404 (cart doesn't exist yet for this user)
+      if (response.status === 404) {
+        console.log('Cart not found on backend (expected for new users), using local cart');
+        return null;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

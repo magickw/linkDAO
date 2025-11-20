@@ -26,7 +26,7 @@ interface SellerAPIEndpoints {
   // Profile endpoints
   getProfile: (walletAddress: string) => string;
   updateProfile: (walletAddress: string) => string;
-  createProfile: (walletAddress?: string) => string;
+  createProfile: () => string;
   updateProfileEnhanced: (walletAddress: string) => string;
 
   // Onboarding endpoints
@@ -119,7 +119,7 @@ export class UnifiedSellerAPIClient {
     // Profile endpoints
     getProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
     updateProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
-    createProfile: (walletAddress?: string) => walletAddress ? `${this.baseURL}/${walletAddress}` : `${this.baseURL}/profile`,
+    createProfile: () => `${this.baseURL}/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/${walletAddress}/enhanced`,
 
     // Onboarding endpoints
@@ -396,7 +396,7 @@ export class UnifiedSellerAPIClient {
   }
 
   async createProfile(walletAddress: string | undefined, profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    return await this.request<SellerProfile>(this.endpoints.createProfile(walletAddress), {
+    return await this.request<SellerProfile>(this.endpoints.createProfile(), {
       method: 'POST',
       body: JSON.stringify(profileData),
     });
