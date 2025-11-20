@@ -335,7 +335,7 @@ class LDAOAcquisitionService {
         usdAmount: ethers.utils.formatEther(usdAmount),
         ethAmount: ethers.utils.formatEther(ethAmount),
         usdcAmount: ethers.utils.formatUnits(usdcAmount, 6),
-        discount: discount.toNumber() / 10000, // Convert from basis points (10000 = 100%)
+        discount: discount.toNumber() / 100, // Convert from basis points (100 = 1%)
         fees: {
           processing: ethers.utils.formatEther(processingFee),
           gas: ethers.utils.formatEther(gasFee),

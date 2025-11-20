@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useAccount } from 'wagmi';
@@ -258,8 +259,16 @@ function GovernanceContent() {
       </Layout>
     );
   }
+=======
+import React from 'react';
+import Head from 'next/head';
+import TopNavigation from '@/components/Layout/TopNavigation';
+import { designTokens } from '@/design-system/tokens';
+>>>>>>> Stashed changes
 
+const GovernancePage: React.FC = () => {
   return (
+<<<<<<< Updated upstream
     <Layout title="Governance - LinkDAO" fullWidth={true}>
       <SEOHead
         title="Governance - LinkDAO"
@@ -720,10 +729,65 @@ function GovernanceContent() {
               )}
             </div>
           )}
+=======
+    <div className="min-h-screen">
+      <Head>
+        <title>Governance - LinkDAO</title>
+        <meta name="description" content="Participate in LinkDAO governance and voting" />
+      </Head>
+
+      {/* Background */}
+      <div 
+        className="fixed inset-0 z-0"
+        style={{
+          background: designTokens.gradients.heroMain,
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Top Navigation */}
+        <TopNavigation variant="governance" />
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-white mb-4">
+              DAO Governance
+            </h1>
+            <p className="text-xl text-white/80 mb-8">
+              Participate in community decisions and shape the future of LinkDAO
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
+                <h3 className="text-xl font-semibold text-white mb-4">Active Proposals</h3>
+                <p className="text-white/70">
+                  View and vote on current governance proposals
+                </p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
+                <h3 className="text-xl font-semibold text-white mb-4">Voting Power</h3>
+                <p className="text-white/70">
+                  Check your voting power and delegation status
+                </p>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
+                <h3 className="text-xl font-semibold text-white mb-4">Create Proposal</h3>
+                <p className="text-white/70">
+                  Submit new proposals for community consideration
+                </p>
+              </div>
+            </div>
+          </div>
+>>>>>>> Stashed changes
         </div>
       </div>
-    </Layout>
+    </div>
   );
+<<<<<<< Updated upstream
 }
 
 export default function Governance() {
@@ -733,3 +797,8 @@ export default function Governance() {
     </GovernanceErrorBoundary>
   );
 }
+=======
+};
+
+export default GovernancePage;
+>>>>>>> Stashed changes

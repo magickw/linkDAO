@@ -41,6 +41,7 @@
     "validate:localhost": "hardhat run scripts/pre-mainnet-validation.ts --network localhost"
   },
   "dependencies": {
+    "@chainlink/contracts": "^1.4.0",
     "@openzeppelin/contracts": "^5.4.0",
     "@openzeppelin/contracts-upgradeable": "^5.4.0"
   },

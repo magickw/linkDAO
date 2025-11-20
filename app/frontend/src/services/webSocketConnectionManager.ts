@@ -10,7 +10,7 @@ import WebSocketService from './webSocketService';
 import { requestManager } from './requestManager';
 
 // Create an instance of the WebSocket service
-const webSocketService = new WebSocketService();
+const webSocketServiceInstance = new WebSocketService();
 
 // Fallback configuration
 interface FallbackConfig {
@@ -63,7 +63,7 @@ export class WebSocketConnectionManager {
   private lastPollingData: Map<string, any> = new Map();
 
   constructor(fallbackConfig?: Partial<FallbackConfig>) {
-    this.webSocketService = webSocketService;
+    this.webSocketService = webSocketServiceInstance;
     
     this.fallbackConfig = {
       enabled: true,

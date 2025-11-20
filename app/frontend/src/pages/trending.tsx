@@ -10,7 +10,7 @@ export default function TrendingPage() {
   const handleTrendingItemClick = (type: 'post' | 'community' | 'hashtag' | 'topic', item: any) => {
     switch (type) {
       case 'community':
-        router.push(`/dashboard?community=${item.id}`);
+        router.push(`/?community=${item.id}`);
         break;
       case 'hashtag':
         router.push(`/hashtags/${item.tag}`);
@@ -19,7 +19,7 @@ export default function TrendingPage() {
         router.push(`/search?q=${encodeURIComponent(item)}&type=all`);
         break;
       case 'post':
-        router.push(`/dashboard?post=${item.id}`);
+        router.push(`/?post=${item.id}`);
         break;
     }
   };

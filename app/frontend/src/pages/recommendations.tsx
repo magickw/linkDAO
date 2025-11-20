@@ -93,7 +93,7 @@ export default function RecommendationsPage() {
                   onClick={() => {
                     // This would trigger wallet connection
                     // The actual implementation depends on your Web3Context
-                    router.push('/dashboard');
+                    router.push('/');
                   }}
                   className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                 >

@@ -24,7 +24,7 @@ export default function LegacyFunctionalityPreserver() {
         // Preserve any query parameters and redirect to dashboard with feed view
         const preservedQuery = { ...query, view: 'feed' };
         router.replace({
-          pathname: '/dashboard',
+          pathname: '/',
           query: preservedQuery
         });
         return;
@@ -40,7 +40,7 @@ export default function LegacyFunctionalityPreserver() {
           // Remove the query parameter to clean up the URL
           const { view: _, ...cleanQuery } = query;
           router.replace({
-            pathname: '/dashboard',
+            pathname: '/',
             query: cleanQuery
           }, undefined, { shallow: true });
         }
@@ -192,7 +192,7 @@ export default function LegacyFunctionalityPreserver() {
       if (typeof window === 'undefined' || !window.sessionStorage) return;
       
       const savedPosition = sessionStorage.getItem('legacy-scroll-position');
-      if (savedPosition && router.pathname === '/dashboard') {
+      if (savedPosition && (router.pathname === '/dashboard' || router.pathname === '/')) {
         try {
           const position = JSON.parse(savedPosition);
           window.scrollTo(0, position.y);

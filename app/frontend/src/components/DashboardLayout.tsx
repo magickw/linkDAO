@@ -19,9 +19,13 @@ import { performanceMonitor } from '@/utils/performanceMonitor';
 import { PageTransition, ViewTransition } from '@/components/animations/TransitionComponents';
 import { EnhancedThemeToggle } from '@/components/VisualPolish';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
+<<<<<<< Updated upstream
 import { MessagingWidget } from '@/components/Messaging';
 import TrendingSidebar from '@/components/TrendingSidebar';
 import EnhancedNotificationSystem from '@/components/EnhancedNotificationSystem';
+=======
+import TopNavigation from '@/components/Layout/TopNavigation';
+>>>>>>> Stashed changes
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -256,6 +260,7 @@ export default function DashboardLayout({
           </div>
         </div>
 
+<<<<<<< Updated upstream
         {/* Mobile Navigation */}
         <MobileNavigation />
 
@@ -357,6 +362,66 @@ export default function DashboardLayout({
                 </a>
               </p>
             </div>
+=======
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top Navigation */}
+          <TopNavigation variant="dashboard" />
+
+          {/* Main content with right sidebar */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Main content */}
+            <main className={`flex-1 overflow-y-auto p-3 md:p-6 ${
+              navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''
+            } ${isMobile ? 'pb-20' : ''}`}>
+              <Web3ErrorBoundary>
+                <PageTransition animation="fade" duration={300}>
+                  {children}
+                </PageTransition>
+              </Web3ErrorBoundary>
+            </main>
+
+            {/* Right Sidebar - Hidden on mobile */}
+            {navigationState.rightSidebarVisible && !isMobile && (
+              <aside className="fixed right-0 top-16 bottom-0 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-l border-gray-200/50 dark:border-gray-700/50 overflow-y-auto animate-slideInRight">
+                <div className="p-6">
+                  {rightSidebar || (
+                    /* Default sidebar content */
+                    <div className="space-y-6">
+                      <div className="animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                          Trending
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="p-3 bg-gray-50/80 dark:bg-gray-700/80 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-600/80 transition-all duration-200 hover:scale-105">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              Trending content will appear here
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                          Quick Actions
+                        </h3>
+                        <div className="space-y-2">
+                          <button 
+                            onClick={onCreatePost}
+                            className="w-full p-3 text-left bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg hover:from-primary-100 hover:to-secondary-100 dark:hover:from-primary-900/30 dark:hover:to-secondary-900/30 transition-all duration-200 hover:scale-105 group"
+                          >
+                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                              Create Post
+                            </p>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            )}
+>>>>>>> Stashed changes
           </div>
         </footer>
 

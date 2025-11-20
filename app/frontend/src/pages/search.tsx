@@ -32,14 +32,14 @@ export default function SearchPage() {
   const handleResultSelect = (type: 'post' | 'community' | 'user', id: string) => {
     switch (type) {
       case 'community':
-        router.push(`/dashboard?community=${id}`);
+        router.push(`/?community=${id}`);
         break;
       case 'user':
         router.push(`/profile?user=${id}`);
         break;
       case 'post':
         // Navigate to post detail or highlight in feed
-        router.push(`/dashboard?post=${id}`);
+        router.push(`/?post=${id}`);
         break;
     }
   };
@@ -47,7 +47,7 @@ export default function SearchPage() {
   const handleTrendingItemClick = (type: 'post' | 'community' | 'hashtag' | 'topic', item: any) => {
     switch (type) {
       case 'community':
-        router.push(`/dashboard?community=${item.id}`);
+        router.push(`/?community=${item.id}`);
         break;
       case 'hashtag':
         router.push(`/hashtags/${item.tag}`);
@@ -56,7 +56,7 @@ export default function SearchPage() {
         router.push(`/search?q=${encodeURIComponent(item)}&type=all`);
         break;
       case 'post':
-        router.push(`/dashboard?post=${item.id}`);
+        router.push(`/?post=${item.id}`);
         break;
     }
   };

@@ -687,7 +687,7 @@ export const CapacityPlanningPanel: React.FC<CapacityPlanningPanelProps> = ({
                             innerRadius={40}
                             outerRadius={80}
                             dataKey="value"
-                            label={({ name, percentage }) => `${name}: ${percentage}%`}
+                            label={({ name, percent }) => `${name}: ${percent}%`}
                           >
                             {costBreakdownData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

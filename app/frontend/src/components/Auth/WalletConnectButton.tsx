@@ -2,7 +2,11 @@ import React from 'react';
 import { useAccount, useConnect } from 'wagmi';
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
 import { useAuth } from '@/context/AuthContext';
+<<<<<<< Updated upstream
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+=======
+import { NetworkSwitcher } from '@/components/Web3/NetworkSwitcher';
+>>>>>>> Stashed changes
 
 interface WalletConnectButtonProps {
   onSuccess?: () => void;
@@ -42,8 +46,49 @@ export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({
 
   // Show different states based on connection and authentication
   if (isConnected && isAuthenticated) {
+    // Mock reputation data - in real app, this would come from a hook or service
+    const userReputation = {
+      score: 850,
+      level: 'Trusted Seller',
+      daoApproved: true
+    };
+
     return (
-      <div className={`flex items-center space-x-2 ${className}`}>
+      <div className={`flex items-center space-x-3 ${className}`}>
+        {/* User Reputation Score */}
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg border border-purple-400/30">
+          <div className="flex items-center space-x-1">
+            <span className="text-yellow-400">⭐</span>
+            <span className="text-sm font-semibold text-white">{userReputation.score}</span>
+          </div>
+          {userReputation.daoApproved && (
+            <div className="flex items-center space-x-1">
+              <span className="text-green-400">✓</span>
+              <span className="text-xs text-green-300">DAO</span>
+            </div>
+          )}
+        </div>
+
+        {/* Network Switcher */}
+        <NetworkSwitcher variant="compact" />
+        
+        {/* Wallet Connect Button */}
+        <RainbowConnectButton
+          accountStatus="address"
+          showBalance={false}
+          chainStatus="none"
+        />
+      </div>
+    );
+  }
+
+  if (isConnected && !isAuthenticated) {
+    return (
+      <div className={`flex items-center space-x-3 ${className}`}>
+        {/* Network Switcher */}
+        <NetworkSwitcher variant="compact" />
+        
+        {/* Wallet Connect Button */}
         <RainbowConnectButton
           accountStatus="address"
           showBalance={false}

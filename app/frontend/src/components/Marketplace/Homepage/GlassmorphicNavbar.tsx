@@ -7,11 +7,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useAccount } from 'wagmi';
 import { GlassNavbar } from '@/design-system/components/GlassPanel';
 import { Button, GhostButton } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
 import { SearchBar } from './SearchBar';
-
+import { NetworkSwitcher } from '@/components/Web3/NetworkSwitcher';
 import { WalletConnectButton } from '@/components/Auth/WalletConnectButton';
 
 interface NavItem {
@@ -22,6 +23,7 @@ interface NavItem {
 
 export const GlassmorphicNavbar: React.FC = () => {
   const router = useRouter();
+  const { isConnected } = useAccount();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems: NavItem[] = [
@@ -81,32 +83,42 @@ export const GlassmorphicNavbar: React.FC = () => {
             {/* Search Bar */}
             <SearchBar />
 
-            {/* Wallet Connect Button */}
-            <div className="marketplace-wallet-connect">
-              <WalletConnectButton 
-                className="marketplace-styled compact"
-                onSuccess={() => {
-                  console.log('Wallet connected successfully');
-                }}
-                onError={(error) => {
-                  console.error('Wallet connection error:', error);
-                }}
-              />
+            {/* Web3 Controls */}
+            <div className="flex items-center space-x-3">
+              {/* Network Switcher */}
+              {isConnected && <NetworkSwitcher variant="compact" showDisconnect={true} />}
+
+              {/* Wallet Connect Button */}
+              <div className="marketplace-wallet-connect">
+                <WalletConnectButton 
+                  className="marketplace-styled compact"
+                  onSuccess={() => {
+                    console.log('Wallet connected successfully');
+                  }}
+                  onError={(error) => {
+                    console.error('Wallet connection error:', error);
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center space-x-2">
-            <div className="marketplace-wallet-connect">
-              <WalletConnectButton 
-                className="marketplace-styled compact"
-                onSuccess={() => {
-                  console.log('Wallet connected successfully');
-                }}
-                onError={(error) => {
-                  console.error('Wallet connection error:', error);
-                }}
-              />
+            {/* Mobile Web3 Controls */}
+            <div className="flex items-center space-x-2">
+              {isConnected && <NetworkSwitcher variant="compact" showDisconnect={true} />}
+              <div className="marketplace-wallet-connect">
+                <WalletConnectButton 
+                  className="marketplace-styled compact"
+                  onSuccess={() => {
+                    console.log('Wallet connected successfully');
+                  }}
+                  onError={(error) => {
+                    console.error('Wallet connection error:', error);
+                  }}
+                />
+              </div>
             </div>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
