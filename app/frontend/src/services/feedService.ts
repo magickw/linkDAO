@@ -207,7 +207,7 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
-        
+
         // For server errors, return empty feed instead of throwing
         if (response.status >= 500) {
           console.warn('Backend unavailable for feed, returning empty feed');
@@ -217,7 +217,17 @@ export class FeedService {
             totalPages: 0
           };
         }
-        
+
+        // Handle 400 errors (e.g., invalid community IDs) gracefully
+        if (response.status === 400) {
+          console.warn('Invalid feed parameters (possibly non-existent community), returning empty feed');
+          return {
+            posts: [],
+            hasMore: false,
+            totalPages: 0
+          };
+        }
+
         throw error;
       }
 
