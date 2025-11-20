@@ -163,7 +163,7 @@ export default function SmartRightSidebar({
           args: [recipient as `0x${string}`, amountBigInt, ''],
           value: amountBigInt,
           gas: 300000n,
-          chainId: chainId as any
+          chainId: chainId as keyof typeof paymentRouterAddress
         })
           .then((res: any) => {
             const hash = res?.hash ?? res?.transactionHash ?? null;
@@ -183,7 +183,7 @@ export default function SmartRightSidebar({
       writeSendTokenAsync({
         args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''],
         gas: 500000n,
-        chainId: chainId as any
+        chainId: chainId as keyof typeof paymentRouterAddress
       })
         .then((res: any) => {
           const hash = res?.hash ?? res?.transactionHash ?? null;
@@ -287,7 +287,7 @@ export default function SmartRightSidebar({
           args: [routerAddress, amountBigInt, `swap:${toToken}`],
           value: amountBigInt,
           gas: 300000n,
-          chainId
+          chainId: chainId as keyof typeof paymentRouterAddress
         });
         addToast('Swap (ETH) submitted', 'success');
         try { router.push('/wallet/transactions'); } catch { }
@@ -302,7 +302,7 @@ export default function SmartRightSidebar({
       await writeSendTokenAsync({
         args: [tokenAddr, routerAddress, amountBigInt, `swap:${toToken}`],
         gas: 500000n,
-        chainId
+        chainId: chainId as keyof typeof paymentRouterAddress
       });
       addToast('Swap submitted', 'success');
       try { router.push('/wallet/transactions'); } catch { }
@@ -338,7 +338,7 @@ export default function SmartRightSidebar({
           args: [routerAddress, amountBigInt, `stake:${poolId}`],
           value: amountBigInt,
           gas: 300000n,
-          chainId
+          chainId: chainId as keyof typeof paymentRouterAddress
         });
         addToast('Stake (ETH) submitted', 'success');
         try { router.push('/wallet/transactions'); } catch { }
@@ -352,7 +352,7 @@ export default function SmartRightSidebar({
       await writeSendTokenAsync({
         args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`],
         gas: 500000n,
-        chainId
+        chainId: chainId as keyof typeof paymentRouterAddress
       });
       addToast('Stake submitted', 'success');
       try { router.push('/wallet/transactions'); } catch { }

@@ -93,7 +93,7 @@ export default function Wallet() {
       sendEthPayment({
         args: [recipient as `0x${string}`, amountInWei, ''],
         value: amountInWei,
-        chainId: selectedChainId,
+        chainId: selectedChainId as any,
       });
     } else if (selectedToken) {
       // Handle ERC-20 token payments
@@ -107,7 +107,7 @@ export default function Wallet() {
           amountInWei,
           '' // memo parameter
         ],
-        chainId: selectedChainId,
+        chainId: selectedChainId as any,
       });
     } else {
       addToast('Selected token not available on this network', 'error');
