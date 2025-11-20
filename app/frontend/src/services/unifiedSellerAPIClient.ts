@@ -1,27 +1,26 @@
-import { 
-  SellerProfile, 
-  SellerDashboardStats, 
-  SellerNotification, 
-  SellerOrder, 
-  SellerListing, 
-  OnboardingStep, 
+import {
+  SellerProfile,
+  SellerDashboardStats,
+  SellerNotification,
+  SellerOrder,
+  SellerListing,
+  OnboardingStep,
   SellerAnalytics,
   SellerProfileUpdateRequest,
   SellerProfileUpdateResponse,
   ENSValidationResult
 } from '../types/seller';
-import { 
-  SellerTier, 
-  TierProgress, 
-  TierUpgradeInfo 
+import {
+  SellerTier,
+  TierProgress,
+  TierUpgradeInfo
 } from '../types/sellerTier';
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
-// In production or when NEXT_PUBLIC_USE_API_ROUTES is true, use Next.js API routes as proxy
-// Otherwise, directly call the backend
+// Always use the full backend URL to avoid relative path issues
 const USE_API_ROUTES = process.env.NEXT_PUBLIC_USE_API_ROUTES === 'true' || typeof window !== 'undefined';
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
-const SELLER_API_BASE = USE_API_ROUTES ? '/api/marketplace/seller' : `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
+const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
 
 interface SellerAPIEndpoints {
   // Profile endpoints
@@ -29,58 +28,58 @@ interface SellerAPIEndpoints {
   updateProfile: (walletAddress: string) => string;
   createProfile: (walletAddress?: string) => string;
   updateProfileEnhanced: (walletAddress: string) => string;
-  
+
   // Onboarding endpoints
   getOnboardingSteps: (walletAddress: string) => string;
   updateOnboardingStep: (walletAddress: string, stepId: string) => string;
-  
+
   // Dashboard endpoints
   getDashboard: (walletAddress: string) => string;
   getAnalytics: (walletAddress: string) => string;
-  
+
   // Listings endpoints
   getListings: (walletAddress: string) => string;
   createListing: () => string;
   updateListing: (listingId: string) => string;
   deleteListing: (listingId: string) => string;
-  
+
   // Orders endpoints
   getOrders: (walletAddress: string) => string;
   updateOrderStatus: (orderId: string) => string;
   addTrackingNumber: (orderId: string) => string;
-  
+
   // Notifications endpoints
   getNotifications: (walletAddress: string) => string;
   markNotificationRead: (notificationId: string) => string;
-  
+
   // ENS endpoints
   validateENS: () => string;
   verifyENSOwnership: () => string;
-  
+
   // Verification endpoints
   sendEmailVerification: () => string;
   verifyEmail: () => string;
   sendPhoneVerification: () => string;
   verifyPhone: () => string;
-  
+
   // KYC endpoints
   submitKYC: (walletAddress: string) => string;
   getKYCStatus: (walletAddress: string) => string;
-  
+
   // Payment endpoints
   getPaymentHistory: (walletAddress: string) => string;
   requestWithdrawal: () => string;
-  
+
   // Dispute endpoints
   getDisputes: (walletAddress: string) => string;
   respondToDispute: (disputeId: string) => string;
-  
+
   // Tier endpoints
   getSellerTier: (walletAddress: string) => string;
   getTierProgress: (walletAddress: string) => string;
   getTierUpgradeEligibility: (walletAddress: string) => string;
   refreshTierData: (walletAddress: string) => string;
-  
+
   // Automated tier upgrade endpoints
   getTierProgressionTracking: (walletAddress: string) => string;
   triggerTierEvaluation: () => string;
@@ -114,7 +113,7 @@ export class SellerAPIError extends Error {
 // Unified API client with consistent error handling
 export class UnifiedSellerAPIClient {
   private baseURL = SELLER_API_BASE;
-  
+
   // Standardized endpoint patterns
   private endpoints: SellerAPIEndpoints = {
     // Profile endpoints
@@ -122,58 +121,58 @@ export class UnifiedSellerAPIClient {
     updateProfile: (walletAddress: string) => `${this.baseURL}/${walletAddress}`,
     createProfile: (walletAddress?: string) => walletAddress ? `${this.baseURL}/${walletAddress}` : `${this.baseURL}/profile`,
     updateProfileEnhanced: (walletAddress: string) => `${this.baseURL}/${walletAddress}/enhanced`,
-    
+
     // Onboarding endpoints
     getOnboardingSteps: (walletAddress: string) => `${this.baseURL}/onboarding/${walletAddress}`,
     updateOnboardingStep: (walletAddress: string, stepId: string) => `${this.baseURL}/onboarding/${walletAddress}/${stepId}`,
-    
+
     // Dashboard endpoints
     getDashboard: (walletAddress: string) => `${this.baseURL}/dashboard/${walletAddress}`,
     getAnalytics: (walletAddress: string) => `${this.baseURL}/analytics/${walletAddress}`,
-    
+
     // Listings endpoints
     getListings: (walletAddress: string) => `${this.baseURL}/listings/${walletAddress}`,
     createListing: () => `${this.baseURL}/listings`,
     updateListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
     deleteListing: (listingId: string) => `${this.baseURL}/listings/${listingId}`,
-    
+
     // Orders endpoints
     getOrders: (walletAddress: string) => `${this.baseURL}/orders/${walletAddress}`,
     updateOrderStatus: (orderId: string) => `${this.baseURL}/orders/${orderId}/status`,
     addTrackingNumber: (orderId: string) => `${this.baseURL}/orders/${orderId}/tracking`,
-    
+
     // Notifications endpoints
     getNotifications: (walletAddress: string) => `${this.baseURL}/notifications/${walletAddress}`,
     markNotificationRead: (notificationId: string) => `${this.baseURL}/notifications/${notificationId}/read`,
-    
+
     // ENS endpoints
     validateENS: () => `${this.baseURL}/ens/validate`,
     verifyENSOwnership: () => `${this.baseURL}/ens/verify-ownership`,
-    
+
     // Verification endpoints
     sendEmailVerification: () => `${this.baseURL}/verification/email`,
     verifyEmail: () => `${this.baseURL}/verification/email/verify`,
     sendPhoneVerification: () => `${this.baseURL}/verification/phone`,
     verifyPhone: () => `${this.baseURL}/verification/phone/verify`,
-    
+
     // KYC endpoints
     submitKYC: (walletAddress: string) => `${this.baseURL}/kyc/${walletAddress}`,
     getKYCStatus: (walletAddress: string) => `${this.baseURL}/kyc/${walletAddress}`,
-    
+
     // Payment endpoints
     getPaymentHistory: (walletAddress: string) => `${this.baseURL}/payments/${walletAddress}`,
     requestWithdrawal: () => `${this.baseURL}/withdraw`,
-    
+
     // Dispute endpoints
     getDisputes: (walletAddress: string) => `${this.baseURL}/disputes/${walletAddress}`,
     respondToDispute: (disputeId: string) => `${this.baseURL}/disputes/${disputeId}/respond`,
-    
+
     // Tier endpoints
     getSellerTier: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier`,
     getTierProgress: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/progress`,
     getTierUpgradeEligibility: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/upgrade-eligibility`,
     refreshTierData: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/refresh`,
-    
+
     // Automated tier upgrade endpoints
     getTierProgressionTracking: (walletAddress: string) => `/api/marketplace/seller/tier/progression/${walletAddress}`,
     triggerTierEvaluation: () => `/api/marketplace/seller/tier/evaluate`,
@@ -186,10 +185,10 @@ export class UnifiedSellerAPIClient {
     try {
       // Get authentication token if available
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
+
       // Get wallet address for authentication
       const walletAddress = localStorage.getItem('linkdao_wallet_address');
-      
+
       const response = await fetch(endpoint, {
         ...options,
         headers: {
@@ -200,7 +199,7 @@ export class UnifiedSellerAPIClient {
           ...options?.headers,
         },
       });
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -219,7 +218,7 @@ export class UnifiedSellerAPIClient {
           // If we can't read the response, provide a generic error
           errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
-        
+
         throw new SellerAPIError(
           this.getErrorType(response.status),
           errorData.message || `HTTP ${response.status}: ${response.statusText}`,
@@ -228,13 +227,13 @@ export class UnifiedSellerAPIClient {
           response.status
         );
       }
-      
+
       // For successful responses, check if there's content to parse
       const responseText = await response.text();
       if (!responseText) {
         return {} as T;
       }
-      
+
       let result;
       try {
         result = JSON.parse(responseText);
@@ -247,7 +246,7 @@ export class UnifiedSellerAPIClient {
           { responseText }
         );
       }
-      
+
       // Handle backend response format { success: true, data: ... }
       if (result.success === false) {
         throw new SellerAPIError(
@@ -257,13 +256,13 @@ export class UnifiedSellerAPIClient {
           result
         );
       }
-      
+
       return result.success ? result.data : result;
     } catch (error) {
       if (error instanceof SellerAPIError) {
         throw error;
       }
-      
+
       // Handle network errors
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new SellerAPIError(
@@ -273,7 +272,7 @@ export class UnifiedSellerAPIClient {
           error
         );
       }
-      
+
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -287,10 +286,10 @@ export class UnifiedSellerAPIClient {
     try {
       // Get authentication token if available
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
+
       // Get wallet address for authentication
       const walletAddress = localStorage.getItem('linkdao_wallet_address');
-      
+
       const response = await fetch(endpoint, {
         ...options,
         method: 'POST', // Changed from PUT to POST for form data
@@ -302,7 +301,7 @@ export class UnifiedSellerAPIClient {
           ...options?.headers,
         },
       });
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -321,7 +320,7 @@ export class UnifiedSellerAPIClient {
           // If we can't read the response, provide a generic error
           errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
         }
-        
+
         throw new SellerAPIError(
           this.getErrorType(response.status),
           errorData.message || `HTTP ${response.status}: ${response.statusText}`,
@@ -330,13 +329,13 @@ export class UnifiedSellerAPIClient {
           response.status
         );
       }
-      
+
       // For successful responses, check if there's content to parse
       const responseText = await response.text();
       if (!responseText) {
         return {} as T;
       }
-      
+
       let result;
       try {
         result = JSON.parse(responseText);
@@ -349,7 +348,7 @@ export class UnifiedSellerAPIClient {
           { responseText }
         );
       }
-      
+
       if (result.success === false) {
         throw new SellerAPIError(
           SellerErrorType.API_ERROR,
@@ -358,13 +357,13 @@ export class UnifiedSellerAPIClient {
           result
         );
       }
-      
+
       return result.success ? result.data : result;
     } catch (error) {
       if (error instanceof SellerAPIError) {
         throw error;
       }
-      
+
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -412,7 +411,7 @@ export class UnifiedSellerAPIClient {
 
   async updateProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
     const formData = new FormData();
-    
+
     // Add text fields
     Object.entries(updates).forEach(([key, value]) => {
       if (key !== 'profileImage' && key !== 'coverImage' && value !== undefined) {
@@ -423,7 +422,7 @@ export class UnifiedSellerAPIClient {
         }
       }
     });
-    
+
     // Add image files
     if (updates.profileImage) {
       formData.append('profileImage', updates.profileImage);
@@ -466,7 +465,7 @@ export class UnifiedSellerAPIClient {
 
   // Listings API methods
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
-    const url = status 
+    const url = status
       ? `${this.endpoints.getListings(walletAddress)}?status=${status}`
       : this.endpoints.getListings(walletAddress);
     return await this.request<SellerListing[]>(url);
@@ -494,7 +493,7 @@ export class UnifiedSellerAPIClient {
 
   // Orders API methods
   async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
-    const url = status 
+    const url = status
       ? `${this.endpoints.getOrders(walletAddress)}?status=${status}`
       : this.endpoints.getOrders(walletAddress);
     return await this.request<SellerOrder[]>(url);
