@@ -159,7 +159,12 @@ export default function SmartRightSidebar({
       if (isNative) {
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         // Trigger the async write and capture hash when available; rely on isPending from the hook for UI
-        writeSendEthAsync({ args: [recipient as `0x${string}`, amountBigInt, ''], value: amountBigInt, gas: 300000n })
+        writeSendEthAsync({
+          args: [recipient as `0x${string}`, amountBigInt, ''],
+          value: amountBigInt,
+          gas: 300000n,
+          chainId
+        })
           .then((res: any) => {
             const hash = res?.hash ?? res?.transactionHash ?? null;
             if (hash) setSendTxHash(hash);
@@ -175,7 +180,11 @@ export default function SmartRightSidebar({
       // Token transfer via payment router
       if (!writeSendTokenAsync) throw new Error('Token write hook not available');
       const tokenAddr = tokenAddress as `0x${string}`;
-      writeSendTokenAsync({ args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''], gas: 500000n })
+      writeSendTokenAsync({
+        args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''],
+        gas: 500000n,
+        chainId
+      })
         .then((res: any) => {
           const hash = res?.hash ?? res?.transactionHash ?? null;
           if (hash) setSendTxHash(hash);
@@ -274,7 +283,12 @@ export default function SmartRightSidebar({
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
         if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `swap:${toToken}`], value: amountBigInt, gas: 300000n });
+        await writeSendEthAsync({
+          args: [routerAddress, amountBigInt, `swap:${toToken}`],
+          value: amountBigInt,
+          gas: 300000n,
+          chainId
+        });
         addToast('Swap (ETH) submitted', 'success');
         try { router.push('/wallet/transactions'); } catch { }
         return;
@@ -285,7 +299,11 @@ export default function SmartRightSidebar({
       const tokenAddr = paymentToken.address as `0x${string}`;
       const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
       if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `swap:${toToken}`], gas: 500000n });
+      await writeSendTokenAsync({
+        args: [tokenAddr, routerAddress, amountBigInt, `swap:${toToken}`],
+        gas: 500000n,
+        chainId
+      });
       addToast('Swap submitted', 'success');
       try { router.push('/wallet/transactions'); } catch { }
       return;
@@ -316,7 +334,12 @@ export default function SmartRightSidebar({
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
         if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `stake:${poolId}`], value: amountBigInt, gas: 300000n });
+        await writeSendEthAsync({
+          args: [routerAddress, amountBigInt, `stake:${poolId}`],
+          value: amountBigInt,
+          gas: 300000n,
+          chainId
+        });
         addToast('Stake (ETH) submitted', 'success');
         try { router.push('/wallet/transactions'); } catch { }
         return;
@@ -326,7 +349,11 @@ export default function SmartRightSidebar({
       const tokenAddr = paymentToken.address as `0x${string}`;
       const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
       if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`], gas: 500000n });
+      await writeSendTokenAsync({
+        args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`],
+        gas: 500000n,
+        chainId
+      });
       addToast('Stake submitted', 'success');
       try { router.push('/wallet/transactions'); } catch { }
       return;

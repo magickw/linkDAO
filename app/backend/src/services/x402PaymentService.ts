@@ -118,7 +118,22 @@ export class X402PaymentService {
       }
 
       // Mock implementation for testing or when CDP is not available
-      safeLogger.info('Processing x402 payment with mock implementation', { orderId: request.orderId });
+      safeLogger.warn('Processing x402 payment with mock implementation - Coinbase CDP credentials not configured', { orderId: request.orderId });
+      
+      // Check if we have any credentials at all
+      const hasCredentials = !!(
+        (process.env.CDP_API_KEY_ID || process.env.COINBASE_API_KEY) &&
+        (process.env.CDP_API_KEY_SECRET || process.env.COINBASE_API_SECRET)
+      );
+
+      if (!hasCredentials) {
+        // Return a more informative error when credentials are completely missing
+        return {
+          success: false,
+          status: 'failed',
+          error: 'Coinbase CDP API credentials not configured. Please add COINBASE_API_KEY and COINBASE_API_SECRET to your environment variables.',
+        };
+      }
       
       // For x402 payments, we'll generate a payment URL
       const paymentUrl = `https://pay.coinbase.com/x402/${request.orderId}`;
