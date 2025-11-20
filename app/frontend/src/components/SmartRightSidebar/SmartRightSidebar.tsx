@@ -163,7 +163,7 @@ export default function SmartRightSidebar({
           args: [recipient as `0x${string}`, amountBigInt, ''],
           value: amountBigInt,
           gas: 300000n,
-          chainId
+          chainId: chainId as any
         })
           .then((res: any) => {
             const hash = res?.hash ?? res?.transactionHash ?? null;
@@ -183,7 +183,7 @@ export default function SmartRightSidebar({
       writeSendTokenAsync({
         args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''],
         gas: 500000n,
-        chainId
+        chainId: chainId as any
       })
         .then((res: any) => {
           const hash = res?.hash ?? res?.transactionHash ?? null;
