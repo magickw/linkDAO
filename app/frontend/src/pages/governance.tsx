@@ -782,12 +782,10 @@ const GovernancePage: React.FC = () => {
               </div>
             </div>
           </div>
->>>>>>> Stashed changes
         </div>
       </div>
     </div>
   );
-<<<<<<< Updated upstream
 }
 
 export default function Governance() {
@@ -797,8 +795,3 @@ export default function Governance() {
     </GovernanceErrorBoundary>
   );
 }
-=======
-};
-
-export default GovernancePage;
->>>>>>> Stashed changes

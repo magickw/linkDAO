@@ -427,6 +427,5 @@ export class MarketplaceMessagingService {
     return numbers.length > 0 ? numbers.reduce((a, b) => a + b, 0) / numbers.length : 0;
   }
 }
-}
 
 export const marketplaceMessagingService = new MarketplaceMessagingService();

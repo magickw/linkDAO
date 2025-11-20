@@ -9,15 +9,9 @@ import { EventEmitter } from 'events';
 import { WebSocketService, webSocketService } from './webSocketService';
 import { requestManager } from './requestManager';
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 // Create an instance of the WebSocket service
 const webSocketServiceInstance = new WebSocketService();
 
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 // Fallback configuration
 interface FallbackConfig {
   enabled: boolean;
