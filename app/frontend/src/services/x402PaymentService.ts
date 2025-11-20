@@ -1,3 +1,5 @@
+import { authService } from './authService';
+
 export interface X402PaymentRequest {
   orderId: string;
   amount: string;
@@ -52,9 +54,12 @@ export class X402PaymentService {
         console.warn('Could not fetch CSRF token:', tokenError);
       }
 
+      // Get auth headers with Bearer token
+      const authHeaders = authService.getAuthHeaders();
+
       // Call the backend x402 payment API with proper authentication
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        ...authHeaders, // Include Authorization header with Bearer token
       };
 
       // Include CSRF token if available
