@@ -567,6 +567,13 @@ export class FeedController {
         const metadataService = new MetadataService();
         const content = await metadataService.getFromIPFS(cid);
         
+        // Check if content is valid
+        if (!content || content.length === 0) {
+          safeLogger.warn(`No content found for CID: ${cid}`);
+          res.status(404).json(apiResponse.error(`Content not found for CID: ${cid}`, 404));
+          return;
+        }
+        
         // Return consistent response format
         res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully'));
       } catch (ipfsError) {

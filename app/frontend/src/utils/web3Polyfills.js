@@ -53,6 +53,18 @@ if (typeof window !== 'undefined') {
     // If we can't define the property, it's likely already defined by an extension
     console.debug('Ethereum property already defined by extension:', e.message);
   }
+  
+  // Additional protection against ethereum redefinition errors
+  try {
+    // Add a more robust check before any potential redefinition
+    if (window.ethereum && typeof window.ethereum === 'object') {
+      // Freeze the ethereum object to prevent redefinition
+      Object.freeze(window.ethereum);
+    }
+  } catch (freezeError) {
+    // If freezing fails, it's likely already frozen or not configurable
+    console.debug('Could not freeze ethereum object:', freezeError.message);
+  }
 }
 
 // Polyfill for React Native's Linking

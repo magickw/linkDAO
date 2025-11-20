@@ -547,6 +547,17 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         // Don't backoff authentication failures, they may be resolved by user login
         failedRequests.delete(requestKey);
         // Don't cache 401 responses
+        // Return a more descriptive error for messaging endpoints
+        if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations')) {
+          console.warn('Messaging API authentication failed, returning specific error');
+          return new Response(JSON.stringify({ 
+            error: 'Authentication required', 
+            message: 'Please login to access messaging features' 
+          }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
         return networkResponse;
       }
       // Handle service unavailable errors (503) with specific backoff
@@ -821,7 +832,7 @@ async function getCachedResponse(request, cacheName) {
     const url = new URL(request.url);
     let errorMessage = 'Content not available offline';
 
-    if (url.pathname.includes('/api/messaging')) {
+    if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations')) {
       errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
     } else if (url.pathname.includes('/api/communities')) {
       errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';
@@ -907,7 +918,7 @@ async function handleCacheFailure(request, error) {
   const url = new URL(request.url);
   let errorMessage = 'Content not available offline';
 
-  if (url.pathname.includes('/api/messaging')) {
+  if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations')) {
     errorMessage = 'Messaging service temporarily unavailable. Please check your connection and try again.';
   } else if (url.pathname.includes('/api/communities')) {
     errorMessage = 'Community service temporarily unavailable. Please check your connection and try again.';

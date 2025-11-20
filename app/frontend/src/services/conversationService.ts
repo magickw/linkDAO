@@ -1,5 +1,6 @@
 import { fetchWithRetry } from '../utils/apiUtils';
 import { API_BASE_URL } from '../config/api';
+import { authService } from './authService';
 
 // Ordered list of conversation endpoint patterns to try
 const CONVERSATION_ENDPOINTS = [
@@ -25,12 +26,21 @@ export class ConversationService {
     
     for (const endpoint of CONVERSATION_ENDPOINTS) {
       try {
+        // Get JWT token from authService
+        const token = authService.getToken();
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add Authorization header if we have a token
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetchWithRetry<ConversationResponse>(
           `${API_BASE_URL}${endpoint}?limit=${limit}&offset=${offset}`,
           {
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers,
             credentials: 'include'
           },
           {

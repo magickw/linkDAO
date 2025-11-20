@@ -201,6 +201,13 @@ export class MetadataService {
                 !hasCloudflareChallenge) {
               // If it's an object, stringify it carefully
               const content = responseDataType === 'string' ? data : JSON.stringify(data);
+              
+              // Check if content is valid
+              if (!content || content.length === 0) {
+                safeLogger.warn(`No content found from gateway: ${gateway}`);
+                throw new Error(`Content not available from gateway: ${gateway}`);
+              }
+              
               safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { contentLength: content.length });
               return content;
             } else {
@@ -247,6 +254,13 @@ export class MetadataService {
               !hasCloudflareChallenge) {
             // If it's an object, stringify it carefully
             const content = responseDataType === 'string' ? data : JSON.stringify(data);
+            
+            // Check if content is valid
+            if (!content || content.length === 0) {
+              safeLogger.warn(`No content found from Pinata gateway`);
+              throw new Error(`Content not available from Pinata gateway`);
+            }
+            
             safeLogger.info(`Successfully retrieved content from Pinata gateway`, { contentLength: content.length });
             return content;
           } else {
@@ -292,6 +306,13 @@ export class MetadataService {
                 !hasCloudflareChallenge) {
               // If it's an object, stringify it carefully
               const content = responseDataType === 'string' ? data : JSON.stringify(data);
+              
+              // Check if content is valid
+              if (!content || content.length === 0) {
+                safeLogger.warn(`No content found from fallback gateway: ${gateway}`);
+                throw new Error(`Content not available from fallback gateway: ${gateway}`);
+              }
+              
               safeLogger.info(`Successfully retrieved content from fallback gateway: ${gateway}`, { contentLength: content.length });
               return content;
             } else {
@@ -315,6 +336,13 @@ export class MetadataService {
         chunks.push(chunk);
       }
       const content = Buffer.concat(chunks).toString();
+      
+      // Check if content is valid
+      if (!content || content.length === 0) {
+        safeLogger.warn(`No content found for CID: ${cid}`);
+        throw new Error(`Content not available: ${cid}`);
+      }
+      
       safeLogger.info(`Successfully retrieved content using IPFS client cat method`, { contentLength: content.length });
       return content;
     } catch (error) {

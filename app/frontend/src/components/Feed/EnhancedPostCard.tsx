@@ -109,7 +109,12 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
               setContent(contentText);
             }
           } else {
-            setContent(`Content not available (CID: ${post.contentCid})`);
+            // If we got empty content from IPFS, try to use any existing content
+            if (post.content && post.content.length > 0) {
+              setContent(post.content);
+            } else {
+              setContent(`Content not available (CID: ${post.contentCid})`);
+            }
           }
         } else if (post.content) {
           // If we have content but no CID, use the content directly

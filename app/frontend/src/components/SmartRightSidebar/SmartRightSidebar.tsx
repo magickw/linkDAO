@@ -162,7 +162,7 @@ export default function SmartRightSidebar({
         writeSendEthAsync({
           args: [recipient as `0x${string}`, amountBigInt, ''],
           value: amountBigInt,
-          gas: 300000n,
+          gas: 150000n,
           chainId: chainId as keyof typeof paymentRouterAddress
         })
           .then((res: any) => {
@@ -182,7 +182,7 @@ export default function SmartRightSidebar({
       const tokenAddr = tokenAddress as `0x${string}`;
       writeSendTokenAsync({
         args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''],
-        gas: 500000n,
+        gas: 200000n,
         chainId: chainId as keyof typeof paymentRouterAddress
       })
         .then((res: any) => {

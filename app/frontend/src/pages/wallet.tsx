@@ -93,6 +93,7 @@ export default function Wallet() {
       sendEthPayment({
         args: [recipient as `0x${string}`, amountInWei, ''],
         value: amountInWei,
+        gas: 150000n,
         chainId: selectedChainId as any,
       });
     } else if (selectedToken) {
@@ -107,6 +108,7 @@ export default function Wallet() {
           amountInWei,
           '' // memo parameter
         ],
+        gas: 200000n,
         chainId: selectedChainId as any,
       });
     } else {
