@@ -37,19 +37,24 @@ class AuthController {
    */
   async walletConnect(req: Request, res: Response) {
     try {
+      safeLogger.info('Starting walletConnect authentication');
+
       // Validate request
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        safeLogger.warn('Validation failed for walletConnect', { errors: errors.array() });
         return validationErrorResponse(res, errors.array());
       }
 
       const { walletAddress, signature, message, referralCode }: WalletConnectRequest & { referralCode?: string } = req.body;
+      safeLogger.info('Processing wallet connect for address', { walletAddress });
 
       // Verify signature
       try {
         const recoveredAddress = ethers.verifyMessage(message, signature);
 
         if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+          safeLogger.warn('Signature verification failed: address mismatch', { recovered: recoveredAddress, expected: walletAddress });
           return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
         }
       } catch (error) {
@@ -58,40 +63,56 @@ class AuthController {
       }
 
       // Find or create user
-      let user = await db
-        .select()
-        .from(users)
-        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
-        .limit(1);
-
+      let user;
       let isNewUser = false;
-      if (user.length === 0) {
-        isNewUser = true;
-        // Create new user
-        const newUser = await db
-          .insert(users)
-          .values({
-            walletAddress: walletAddress.toLowerCase(),
-            createdAt: new Date()
-          })
-          .returning();
 
-        user = newUser;
+      try {
+        safeLogger.info('Looking up user in database', { walletAddress });
+        const existingUsers = await db
+          .select()
+          .from(users)
+          .where(eq(users.walletAddress, walletAddress.toLowerCase()))
+          .limit(1);
+
+        if (existingUsers.length === 0) {
+          safeLogger.info('User not found, creating new user', { walletAddress });
+          isNewUser = true;
+          // Create new user
+          const newUser = await db
+            .insert(users)
+            .values({
+              walletAddress: walletAddress.toLowerCase(),
+              createdAt: new Date()
+            })
+            .returning();
+
+          user = newUser;
+        } else {
+          user = existingUsers;
+        }
+      } catch (dbError) {
+        safeLogger.error('Database error during user lookup/creation:', dbError);
+        return errorResponse(res, 'DATABASE_ERROR', 'Failed to access user database', 500);
       }
 
       // Force admin role for specific address
-      const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || '0xEe034b53D4cCb101b2a4faec27708be507197350';
-      if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
-        const currentUser = user[0];
-        if (currentUser.role !== 'admin') {
-          safeLogger.info('Promoting user to admin', { walletAddress });
-          const updatedUser = await db
-            .update(users)
-            .set({ role: 'admin' })
-            .where(eq(users.id, currentUser.id))
-            .returning();
-          user = updatedUser;
+      try {
+        const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || '0xEe034b53D4cCb101b2a4faec27708be507197350';
+        if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+          const currentUser = user[0];
+          if (currentUser.role !== 'admin') {
+            safeLogger.info('Promoting user to admin', { walletAddress });
+            const updatedUser = await db
+              .update(users)
+              .set({ role: 'admin' })
+              .where(eq(users.id, currentUser.id))
+              .returning();
+            user = updatedUser;
+          }
         }
+      } catch (adminError) {
+        safeLogger.error('Error promoting admin user:', adminError);
+        // Continue even if admin promotion fails
       }
 
       const userData = user[0];
@@ -107,6 +128,7 @@ class AuthController {
       // Handle referral code if provided and user is new
       if (isNewUser && referralCode) {
         try {
+          safeLogger.info('Processing referral code', { referralCode, userId: userData.id });
           // Validate referral code
           const referralValidation = await referralService.validateReferralCode(referralCode);
 
@@ -118,6 +140,7 @@ class AuthController {
               tier: 1, // Default tier
               bonusPercentage: 10 // Default bonus percentage
             });
+            safeLogger.info('Referral processed successfully');
           }
         } catch (error) {
           safeLogger.error('Error processing referral during signup:', error);
@@ -126,38 +149,44 @@ class AuthController {
       }
 
       // Generate JWT token
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret || jwtSecret.length < 32) {
-        throw new Error('JWT_SECRET not configured properly');
-      }
-      const token = jwt.sign(
-        {
-          userId: userData.id,
-          walletAddress: userData.walletAddress,
-          timestamp: Date.now()
-        },
-        jwtSecret,
-        { expiresIn: '24h' }
-      );
+      try {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret || jwtSecret.length < 32) {
+          throw new Error('JWT_SECRET not configured properly');
+        }
 
-      // Return success response
-      successResponse(res, {
-        token,
-        user: {
-          id: userData.id,
-          walletAddress: userData.walletAddress,
-          handle: userData.handle,
-          profileCid: userData.profileCid,
-          role: userData.role, // Include role in response
-          email: userData.email, // Include email in response
-          permissions: userData.permissions // Include permissions in response
-        },
-        expiresIn: '24h',
-        isNewUser
-      }, 200);
+        const token = jwt.sign(
+          {
+            userId: userData.id,
+            walletAddress: userData.walletAddress,
+            timestamp: Date.now()
+          },
+          jwtSecret,
+          { expiresIn: '24h' }
+        );
+
+        // Return success response
+        successResponse(res, {
+          token,
+          user: {
+            id: userData.id,
+            walletAddress: userData.walletAddress,
+            handle: userData.handle,
+            profileCid: userData.profileCid,
+            role: userData.role, // Include role in response
+            email: userData.email, // Include email in response
+            permissions: userData.permissions // Include permissions in response
+          },
+          expiresIn: '24h',
+          isNewUser
+        }, 200);
+      } catch (jwtError) {
+        safeLogger.error('JWT generation error:', jwtError);
+        return errorResponse(res, 'TOKEN_ERROR', 'Failed to generate session token', 500);
+      }
 
     } catch (error) {
-      safeLogger.error('Wallet connect error:', error);
+      safeLogger.error('Wallet connect unhandled error:', error);
       errorResponse(res, 'AUTHENTICATION_ERROR', 'Authentication failed', 500);
     }
   }

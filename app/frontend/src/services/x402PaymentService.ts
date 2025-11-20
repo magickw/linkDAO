@@ -17,12 +17,12 @@ export interface X402PaymentResult {
 
 export class X402PaymentService {
   private readonly API_BASE_URL: string;
-  
+
   constructor() {
     // Initialize with proper API base URL
-    this.API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 
-                        process.env.NEXT_PUBLIC_API_URL || 
-                        'http://localhost:10000';
+    this.API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:10000';
   }
 
   /**
@@ -31,8 +31,8 @@ export class X402PaymentService {
   async processPayment(request: X402PaymentRequest): Promise<X402PaymentResult> {
     try {
       // Validate required fields
-      if (!request.orderId || !request.amount || !request.currency || 
-          !request.buyerAddress || !request.sellerAddress || !request.listingId) {
+      if (!request.orderId || !request.amount || !request.currency ||
+        !request.buyerAddress || !request.sellerAddress || !request.listingId) {
         throw new Error('Missing required fields in x402 payment request');
       }
 
@@ -43,7 +43,7 @@ export class X402PaymentService {
           method: 'GET',
           credentials: 'include' // Include session cookies
         });
-        
+
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
           csrfToken = tokenData.data?.csrfToken;
@@ -71,11 +71,12 @@ export class X402PaymentService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('X402 payment failed with status:', response.status, errorText);
         throw new Error(`Failed to process x402 payment: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to process x402 payment');
       }
@@ -118,7 +119,7 @@ export class X402PaymentService {
           method: 'GET',
           credentials: 'include' // Include session cookies
         });
-        
+
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
           csrfToken = tokenData.data?.csrfToken;
@@ -149,7 +150,7 @@ export class X402PaymentService {
       }
 
       const result = await response.json();
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to check x402 payment status');
       }
@@ -191,7 +192,7 @@ export class X402PaymentService {
           method: 'GET',
           credentials: 'include' // Include session cookies
         });
-        
+
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
           csrfToken = tokenData.data?.csrfToken;
@@ -222,7 +223,7 @@ export class X402PaymentService {
       }
 
       const result = await response.json();
-      
+
       if (!result.success) {
         throw new Error(result.error || 'Failed to process x402 refund');
       }
