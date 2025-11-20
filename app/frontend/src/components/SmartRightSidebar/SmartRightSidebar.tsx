@@ -7,7 +7,7 @@ import { SendTokenModal, ReceiveTokenModal, SwapTokenModal, StakeTokenModal } fr
 import { QuickAction, Transaction } from '../../types/wallet';
 import { useWalletData } from '../../hooks/useWalletData';
 import { useCryptoPayment } from '../../hooks/useCryptoPayment';
-import { 
+import {
   useWritePaymentRouterSendTokenPayment,
   useWritePaymentRouterSendEthPayment
 } from '@/generated';
@@ -23,10 +23,10 @@ interface SmartRightSidebarProps {
   className?: string;
 }
 
-export default function SmartRightSidebar({ 
-  context, 
+export default function SmartRightSidebar({
+  context,
   communityId,
-  className = '' 
+  className = ''
 }: SmartRightSidebarProps) {
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
@@ -35,7 +35,7 @@ export default function SmartRightSidebar({
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | null>(null);
   const [sendModalEstimate, setSendModalEstimate] = useState<any /* GasFeeEstimate */ | null>(null);
-  
+
   // Use real wallet data with live prices and transaction history
   const {
     walletData,
@@ -159,7 +159,7 @@ export default function SmartRightSidebar({
       if (isNative) {
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         // Trigger the async write and capture hash when available; rely on isPending from the hook for UI
-        writeSendEthAsync({ args: [recipient as `0x${string}`, amountBigInt, ''], value: amountBigInt })
+        writeSendEthAsync({ args: [recipient as `0x${string}`, amountBigInt, ''], value: amountBigInt, gas: 300000n })
           .then((res: any) => {
             const hash = res?.hash ?? res?.transactionHash ?? null;
             if (hash) setSendTxHash(hash);
@@ -168,21 +168,21 @@ export default function SmartRightSidebar({
             console.error('writeSendEthAsync error', err);
           });
         addToast('Payment submitted (ETH)', 'success');
-        try { router.push('/wallet/transactions'); } catch {}
+        try { router.push('/wallet/transactions'); } catch { }
         return;
       }
 
       // Token transfer via payment router
       if (!writeSendTokenAsync) throw new Error('Token write hook not available');
       const tokenAddr = tokenAddress as `0x${string}`;
-      writeSendTokenAsync({ args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''] })
+      writeSendTokenAsync({ args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''], gas: 500000n })
         .then((res: any) => {
           const hash = res?.hash ?? res?.transactionHash ?? null;
           if (hash) setSendTxHash(hash);
         })
         .catch((err: any) => console.error('writeSendTokenAsync error', err));
       addToast('Payment submitted', 'success');
-      try { router.push('/wallet/transactions'); } catch {}
+      try { router.push('/wallet/transactions'); } catch { }
       return;
     } catch (err: any) {
       console.error('Send token failed:', err);
@@ -220,8 +220,8 @@ export default function SmartRightSidebar({
           chainId: chainId || 1
         } as any;
 
-  const estimate = await estimateGas(paymentRequest);
-  if (!cancelled) setSendModalEstimate(estimate ?? null);
+        const estimate = await estimateGas(paymentRequest);
+        if (!cancelled) setSendModalEstimate(estimate ?? null);
       } catch (e) {
         console.warn('preview gas estimate failed', e);
         if (!cancelled) setSendModalEstimate(null);
@@ -237,11 +237,11 @@ export default function SmartRightSidebar({
   const handleSwapToken = useCallback(async (fromToken: string, toToken: string, amount: number) => {
     try {
       if (!walletData) throw new Error('Wallet data not available');
-      
+
       // Get token addresses
       const fromTokenData = walletData.balances.find(b => b.symbol === fromToken);
       const toTokenData = walletData.balances.find(b => b.symbol === toToken);
-      
+
       const fromTokenAddress = fromTokenData?.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH
       const toTokenAddress = toTokenData?.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as example
 
@@ -274,9 +274,9 @@ export default function SmartRightSidebar({
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
         if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `swap:${toToken}`], value: amountBigInt });
+        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `swap:${toToken}`], value: amountBigInt, gas: 300000n });
         addToast('Swap (ETH) submitted', 'success');
-        try { router.push('/wallet/transactions'); } catch {}
+        try { router.push('/wallet/transactions'); } catch { }
         return;
       }
 
@@ -285,9 +285,9 @@ export default function SmartRightSidebar({
       const tokenAddr = paymentToken.address as `0x${string}`;
       const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
       if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `swap:${toToken}`] });
+      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `swap:${toToken}`], gas: 500000n });
       addToast('Swap submitted', 'success');
-      try { router.push('/wallet/transactions'); } catch {}
+      try { router.push('/wallet/transactions'); } catch { }
       return;
     } catch (err: any) {
       console.error('Swap failed', err);
@@ -316,9 +316,9 @@ export default function SmartRightSidebar({
         if (!writeSendEthAsync) throw new Error('ETH write hook not available');
         const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
         if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `stake:${poolId}`], value: amountBigInt });
+        await writeSendEthAsync({ args: [routerAddress, amountBigInt, `stake:${poolId}`], value: amountBigInt, gas: 300000n });
         addToast('Stake (ETH) submitted', 'success');
-        try { router.push('/wallet/transactions'); } catch {}
+        try { router.push('/wallet/transactions'); } catch { }
         return;
       }
 
@@ -326,9 +326,9 @@ export default function SmartRightSidebar({
       const tokenAddr = paymentToken.address as `0x${string}`;
       const routerAddress = paymentRouterAddress[chainId as keyof typeof paymentRouterAddress] as `0x${string}` | undefined;
       if (!routerAddress) throw new Error(`Payment router address not configured for chain ID: ${chainId}`);
-      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`] });
+      await writeSendTokenAsync({ args: [tokenAddr, routerAddress, amountBigInt, `stake:${poolId}`], gas: 500000n });
       addToast('Stake submitted', 'success');
-      try { router.push('/wallet/transactions'); } catch {}
+      try { router.push('/wallet/transactions'); } catch { }
       return;
     } catch (err: any) {
       console.error('Stake failed', err);
@@ -374,7 +374,7 @@ export default function SmartRightSidebar({
             </button>
           </div>
         </div>
-        
+
         {/* Trending Now (available even when wallet is disconnected) */}
         <TrendingContentWidget context={context} />
       </div>

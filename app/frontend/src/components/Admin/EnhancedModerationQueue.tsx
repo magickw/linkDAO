@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Clock, User, MessageSquare } from 'lucide-react';
 import { GlassPanel, Button } from '@/design-system';
-import { BulkActionsToolbar, SelectableRow, SelectAllCheckbox, BulkAction } from '../BulkOperations/BulkActionsToolbar';
-import { AdvancedSearchPanel, SearchFilters, SavedFilter } from '../Search/AdvancedSearchPanel';
-import { ExportButton } from '../Export/ExportButton';
+import { BulkActionsToolbar, SelectableRow, SelectAllCheckbox, BulkAction } from './BulkOperations/BulkActionsToolbar';
+import { AdvancedSearchPanel, SearchFilters, SavedFilter } from './Search/AdvancedSearchPanel';
+import { ExportButton } from './Export/ExportButton';
 
 interface ModerationItem {
     id: string;
@@ -295,14 +295,14 @@ export function EnhancedModerationQueue() {
                                     </div>
                                     <div className="flex gap-2 ml-4">
                                         <Button
-                                            variant="success"
+                                            variant="primary"
                                             size="small"
                                             onClick={() => handleBulkAction('approve')}
                                         >
                                             Approve
                                         </Button>
                                         <Button
-                                            variant="danger"
+                                            variant="secondary"
                                             size="small"
                                             onClick={() => handleBulkAction('reject')}
                                         >
