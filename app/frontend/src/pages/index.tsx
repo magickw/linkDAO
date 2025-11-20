@@ -245,7 +245,7 @@ export default function Home() {
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
             <div className="absolute inset-0 bg-grid-white/[0.05] bg-[length:30px_30px]"></div>
 
-            <div className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-16 pt-24 pb-20 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-16">
+            <div className="relative z-10 mx-auto px-6 sm:px-8 lg:px-12 xl:px-20 pt-24 pb-20 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-16">
               <div className="lg:w-1/2 xl:w-6/12">
                 <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-300 text-sm font-medium mb-6 backdrop-blur-sm">
                   <span className="flex h-2 w-2 rounded-full bg-primary-400 mr-2 animate-pulse"></span>

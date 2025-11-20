@@ -82,7 +82,7 @@ class CartService {
   private static instance: CartService;
   private storageKey = 'linkdao_marketplace_cart';
   private listeners: Set<(state: CartState) => void> = new Set();
-  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   private isAuthenticated = false;
   private authToken: string | null = null;
 

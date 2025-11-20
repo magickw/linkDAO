@@ -1725,25 +1725,6 @@ function checkRateLimit(requestKey, now) {
     return true;
   }
 
-  // Apply reduced base backoff time for community API requests
-  if (url.pathname.includes('/api/communities')) {
-    // Use a reduced base backoff time of 10 seconds instead of 30 seconds
-    // to enable faster recovery from transient failures while still preventing request storms
-    const communityFailureInfo = failedRequests.get(requestKey);
-    if (communityFailureInfo) {
-      const backoffTime = Math.min(
-        10000 * Math.pow(BACKOFF_MULTIPLIER, communityFailureInfo.attempts - 1),
-        MAX_BACKOFF_TIME
-      );
-      
-      if (now - communityFailureInfo.lastFailure < backoffTime) {
-        console.log(`Community API backing off request for ${backoffTime}ms:`, requestKey);
-        return false;
-      }
-    }
-    return true;
-  }
-
   // Apply rate limiting to geolocation services to prevent excessive requests
   // but allow reasonable fallback attempts between different providers
   if (url.hostname.includes('ip-api.com') || url.hostname.includes('ipify.org') || url.hostname.includes('ipinfo.io')) {

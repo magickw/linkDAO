@@ -9,7 +9,7 @@ class CSRFService {
   private baseUrl: string;
 
   private constructor() {
-    // Use the same base URL as the auth service
+    // Use the same base URL as the cart service for consistency
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
     
     // Load from localStorage if available
