@@ -21,9 +21,9 @@ export class ProfileService {
     try {
       // Get auth token from localStorage - check multiple possible storage keys
       const token = localStorage.getItem('linkdao_access_token') ||
-                   localStorage.getItem('authToken') ||
-                   localStorage.getItem('token') ||
-                   localStorage.getItem('auth_token');
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -66,7 +66,7 @@ export class ProfileService {
   static async getProfileById(id: string): Promise<UserProfile | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/${id}`, {
         method: 'GET',
@@ -75,9 +75,9 @@ export class ProfileService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
@@ -85,7 +85,7 @@ export class ProfileService {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch profile');
       }
-      
+
       const profile = await response.json();
       // Convert string dates to Date objects
       return {
@@ -95,11 +95,11 @@ export class ProfileService {
       };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -112,7 +112,7 @@ export class ProfileService {
   static async getProfileByAddress(address: string): Promise<UserProfile | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       console.log(`Fetching profile for address: ${address}`);
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles/address/${address}`, {
@@ -122,14 +122,14 @@ export class ProfileService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return null;
         }
-        
+
         let errorMessage = 'Failed to fetch profile';
         try {
           const errorData = await response.json();
@@ -154,11 +154,11 @@ export class ProfileService {
             errorMessage = `Invalid response from backend (status: ${response.status})`;
           }
         }
-        
+
         console.error(`Failed to fetch profile for address ${address}:`, errorMessage);
         throw new Error(errorMessage);
       }
-      
+
       try {
         const contentType = response.headers.get('content-type') || '';
         const raw = await response.text();
@@ -198,21 +198,21 @@ export class ProfileService {
       }
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       // Handle network connection errors
-      if (error instanceof Error && 
-          (error.message.includes('fetch') || 
-           error.message.includes('NetworkError') || 
-           error.message.includes('Failed to fetch'))) {
+      if (error instanceof Error &&
+        (error.message.includes('fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('Failed to fetch'))) {
         console.warn(`Backend unavailable, falling back to minimal profile for ${address}`);
         // Return null instead of throwing error to allow graceful degradation
         return null;
       }
-      
+
       console.error(`Error fetching profile for address ${address}:`, error);
       throw error;
     }
@@ -231,9 +231,9 @@ export class ProfileService {
     try {
       // Get auth token from localStorage - check multiple possible storage keys
       const token = localStorage.getItem('linkdao_access_token') ||
-                   localStorage.getItem('authToken') ||
-                   localStorage.getItem('token') ||
-                   localStorage.getItem('auth_token');
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -310,9 +310,9 @@ export class ProfileService {
     try {
       // Get auth token from localStorage - check multiple possible storage keys
       const token = localStorage.getItem('linkdao_access_token') ||
-                   localStorage.getItem('authToken') ||
-                   localStorage.getItem('token') ||
-                   localStorage.getItem('auth_token');
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -377,9 +377,9 @@ export class ProfileService {
     try {
       // Get auth token from localStorage - check multiple possible storage keys
       const token = localStorage.getItem('linkdao_access_token') ||
-                   localStorage.getItem('authToken') ||
-                   localStorage.getItem('token') ||
-                   localStorage.getItem('auth_token');
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -423,7 +423,7 @@ export class ProfileService {
   static async getAllProfiles(): Promise<UserProfile[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/profiles`, {
         method: 'GET',
@@ -432,14 +432,14 @@ export class ProfileService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch profiles');
       }
-      
+
       const profiles = await response.json();
       // Convert string dates to Date objects for all profiles
       return profiles.map((profile: any) => ({
@@ -449,12 +449,49 @@ export class ProfileService {
       }));
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
+    }
+  }
+
+  /**
+   * Search profiles by query (address, ENS, or name)
+   * @param query - Search query
+   * @returns Array of matching profiles
+   */
+  static async searchProfiles(query: string): Promise<UserProfile[]> {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const normalizedQuery = query.toLowerCase().trim();
+    const isAddress = /^0x[a-fA-F0-9]{40}$/.test(normalizedQuery);
+
+    try {
+      // If query is an address, try to fetch directly
+      if (isAddress) {
+        const profile = await this.getProfileByAddress(normalizedQuery);
+        return profile ? [profile] : [];
+      }
+
+      // Otherwise, fetch all profiles and filter (MVP approach)
+      // In a production app with many users, this should be a backend search endpoint
+      const allProfiles = await this.getAllProfiles();
+
+      return allProfiles.filter(profile => {
+        const nameMatch = profile.displayName?.toLowerCase().includes(normalizedQuery);
+        const ensMatch = profile.ens?.toLowerCase().includes(normalizedQuery);
+        const addressMatch = profile.walletAddress.toLowerCase().includes(normalizedQuery);
+
+        return nameMatch || ensMatch || addressMatch;
+      });
+    } catch (error) {
+      console.error('Error searching profiles:', error);
+      return [];
     }
   }
 }

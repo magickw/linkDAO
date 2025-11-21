@@ -27,6 +27,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
 import CommunityPostCreator from './Community/CommunityPostCreator';
+import CommunityPostCardEnhanced from './Community/CommunityPostCardEnhanced';
 
 interface CommunityViewProps {
   communitySlug: string;
@@ -61,10 +62,10 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
 
         // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
         let data = null;
-        
+
         // Try fetching by slug first (most common case for user navigation)
         data = await CommunityService.getCommunityBySlug(communitySlug);
-        
+
         // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
         if (!data) {
           // Check if it looks like a UUID before trying
@@ -375,89 +376,54 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         <div className="space-y-0">
           {Array.isArray(posts) && posts.length > 0 ? (
             posts.map(post => (
-              <div
+              <CommunityPostCardEnhanced
                 key={post.id}
-                className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
-                  }`}
-              >
-                <div className="flex">
-                  {/* Reddit-style Vote Column */}
-                  <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 min-w-[48px]">
-                    <button
-                      onClick={() => handleVote(post.id, 'up')}
-                      className="p-1 text-gray-400 hover:text-orange-500 rounded transition-colors"
-                    >
-                      <ArrowUp className="w-5 h-5" />
-                    </button>
-                    <span className="text-xs font-bold text-gray-900 dark:text-white py-0.5">
-                      {(typeof post.upvotes === 'number' ? post.upvotes : 0) - (typeof post.downvotes === 'number' ? post.downvotes : 0)}
-                    </span>
-                    <button
-                      onClick={() => handleVote(post.id, 'down')}
-                      className="p-1 text-gray-400 hover:text-blue-500 rounded transition-colors"
-                    >
-                      <ArrowDown className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Post Content */}
-                  <div className="flex-1 p-3">
-                    {/* Post Metadata - Reddit Style */}
-                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      <span className="font-semibold text-gray-900 dark:text-white">
-                        {communityData?.displayName || communityData?.name || 'Community'}
-                      </span>
-                      <span>•</span>
-                      <span>Posted by u/{post.author || 'Unknown'}</span>
-                      <span>•</span>
-                      <span>{post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Unknown date'}</span>
-                      {typeof post.stakedValue === 'number' && post.stakedValue > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="text-green-600 dark:text-green-400">
-                            {post.stakedValue} 🪙
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Post Title - Reddit Style */}
-                    <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
-                      {post.title || 'Untitled Post'}
-                    </h3>
-
-                    {/* Post Content - Reddit Style */}
-                    <p className="text-gray-700 dark:text-gray-300 text-sm mb-2 line-clamp-2">
-                      {post.content || 'No content available'}
-                    </p>
-
-                    {/* Flair - Reddit Style */}
-                    <div className="mb-2">
-                      {post.flair && (
-                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded-full">
-                          {post.flair}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Action Bar - Reddit Style */}
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>{typeof post.commentCount === 'number' ? post.commentCount : 0} Comments</span>
-                      </button>
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                        <Share className="w-4 h-4" />
-                        <span>Share</span>
-                      </button>
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
-                        <Bookmark className="w-4 h-4" />
-                        <span>Save</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                post={{
+                  ...post,
+                  // Ensure compatibility with EnhancedPost interface
+                  contentCid: post.contentCid || post.content || '',
+                  mediaCids: post.mediaCids || [],
+                  tags: post.tags || [],
+                  reactions: post.reactions || [],
+                  tips: post.tips || [],
+                  comments: typeof post.commentCount === 'number' ? post.commentCount : (post.comments?.length || 0),
+                  shares: post.shares || 0,
+                  views: post.views || 0,
+                  engagementScore: post.engagementScore || 0,
+                  createdAt: new Date(post.createdAt),
+                  updatedAt: new Date(post.updatedAt || post.createdAt),
+                  onchainRef: post.onchainRef || '',
+                  stakedValue: parseFloat(post.stakedValue || '0'),
+                  reputationScore: post.reputationScore || 0,
+                  // Community specific fields
+                  flair: post.flair,
+                  isPinned: post.isPinned,
+                  isLocked: post.isLocked,
+                  upvotes: post.upvotes || 0,
+                  downvotes: post.downvotes || 0,
+                  isQuickPost: false
+                }}
+                community={communityData}
+                userMembership={isJoined ? {
+                  id: 'temp-membership-id',
+                  userId: address || '',
+                  communityId: communityData.id,
+                  role: memberRole as any,
+                  joinedAt: new Date(),
+                  reputation: 0,
+                  contributions: 0,
+                  isActive: true,
+                  lastActivityAt: new Date()
+                } : null}
+                onVote={(postId, voteType, stakeAmount) => handleVote(postId, voteType === 'upvote' ? 'up' : 'down')}
+                onReaction={async (postId, type, amount) => {
+                  console.log('Reaction:', postId, type, amount);
+                }}
+                onTip={async (postId, amount, token) => {
+                  console.log('Tip:', postId, amount, token);
+                }}
+                className={`mb-4 ${highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+              />
             ))
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">

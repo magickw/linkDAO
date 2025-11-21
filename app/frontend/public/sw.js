@@ -309,7 +309,7 @@ async function networkFirst(request, cacheName) {
     // Apply reduced base backoff time for seller dashboard requests
     const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
     let baseBackoffTime;
-    
+
     if (isCommunityRequest) {
       baseBackoffTime = 10000; // 10s for communities
     } else if (isCartRequest) {
@@ -372,7 +372,7 @@ async function networkFirst(request, cacheName) {
   }
 
   // Special handling for geolocation requests - try fallback services
-  const url = new URL(request.url);
+  // url is already declared at the top of the function
   // Skip ip-api.com due to rate limiting - use alternatives directly
   if (url.hostname.includes('ip-api.com')) {
     console.warn('Skipping ip-api.com (rate limited), using alternatives');
@@ -560,7 +560,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
         console.warn('Authentication failed (401):', networkResponse.status, requestKey);
         // Don't backoff authentication failures, they may be resolved by user login
         failedRequests.delete(requestKey);
-        
+
         // Clear cached response for this endpoint if skipCacheOnError is enabled
         if (cacheConfig.skipCacheOnError) {
           try {
@@ -571,14 +571,14 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
             console.warn('Failed to clear cached response:', clearError);
           }
         }
-        
+
         // Don't cache 401 responses
         // Return a more descriptive error for messaging endpoints
         if (url.pathname.includes('/api/messaging') || url.pathname.includes('/api/chat/conversations')) {
           console.warn('Messaging API authentication failed, returning specific error');
-          return new Response(JSON.stringify({ 
-            error: 'Authentication required', 
-            message: 'Please login to access messaging features' 
+          return new Response(JSON.stringify({
+            error: 'Authentication required',
+            message: 'Please login to access messaging features'
           }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
@@ -589,17 +589,17 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       // Handle service unavailable errors (503) with specific backoff
       else if (networkResponse.status === 503) {
         console.warn('Service unavailable (503):', networkResponse.status, requestKey);
-        
+
         // For seller dashboard requests, reduce backoff time
         const url = new URL(request.url);
         const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
-        
+
         // Track failure with exponential backoff for service unavailable errors
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
         failureInfo.attempts += 1;
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
-        
+
         // For seller requests, don't aggressively backoff on 503 errors
         if (isSellerRequest) {
           console.log('Seller request 503 error, reducing backoff time');
@@ -729,7 +729,7 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
-      
+
       // For seller requests, don't aggressively backoff on network errors
       console.log('Seller request network error, reducing backoff time');
       // Reduce backoff time for seller requests by clearing failure info after short period
@@ -1022,7 +1022,7 @@ async function navigationHandler(request) {
     // Return offline page as fallback with multiple fallback strategies
     // First try to get offline.html from cache
     let offlineResponse = await cache.match('/offline.html');
-    
+
     // If that fails, try to get it from network
     if (!offlineResponse) {
       try {

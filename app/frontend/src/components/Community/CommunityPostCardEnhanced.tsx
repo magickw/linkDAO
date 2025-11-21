@@ -58,14 +58,14 @@ export default function CommunityPostCardEnhanced({
 
   // Check if the post is a CommunityPost or a QuickPost
   const isCommunityPostType = isCommunityPost(post);
-  
+
   // Type guard to safely access CommunityPost properties
   const communityPost = isCommunityPostType ? post as any : null;
 
   // State
   const [showComments, setShowComments] = useState(false);
   // Initialize comments based on the type of post (CommunityPost has structured comments, EnhancedPost has a count)
-  const [comments, setComments] = useState<Comment[]>(isCommunityPostType && Array.isArray(post.comments) ? post.comments : []);
+  const [comments, setComments] = useState<Comment[]>(isCommunityPostType && Array.isArray((post as any).comments) ? (post as any).comments : []);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -80,7 +80,7 @@ export default function CommunityPostCardEnhanced({
   ]);
 
   // Calculate vote score (community posts have upvotes/downvotes, quickPosts don't)
-  const voteScore = isCommunityPostType && 'upvotes' in post && typeof post.upvotes === 'number' && 'downvotes' in post && typeof post.downvotes === 'number' ? (post.upvotes - post.downvotes) : 0;
+  const voteScore = isCommunityPostType && 'upvotes' in post && typeof (post as any).upvotes === 'number' && 'downvotes' in post && typeof (post as any).downvotes === 'number' ? ((post as any).upvotes - (post as any).downvotes) : 0;
 
   // Loading skeleton
   if (isLoading) {
@@ -148,13 +148,13 @@ export default function CommunityPostCardEnhanced({
 
     // Toggle vote if clicking the same type
     const finalVoteType = userVote === voteType ? 'remove' : voteType;
-    
+
     // Optimistically update UI
     setUserVote(finalVoteType === 'remove' ? null : voteType);
-    
+
     // Call parent handler with stake amount
     onVote(postId, finalVoteType as 'upvote' | 'downvote', stakeAmount);
-    
+
     if (stakeAmount) {
       addToast(`Voted with ${stakeAmount} tokens staked!`, 'success');
     }
@@ -190,9 +190,9 @@ export default function CommunityPostCardEnhanced({
   // Handle comment submission
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newComment.trim()) return;
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to comment', 'error');
       return;
@@ -205,7 +205,7 @@ export default function CommunityPostCardEnhanced({
 
     try {
       setCommentSubmitting(true);
-      
+
       const commentData: CreateCommentInput = {
         postId: post.id,
         author: address || '',
@@ -213,11 +213,11 @@ export default function CommunityPostCardEnhanced({
       };
 
       const newCommentObj = await CommunityPostService.createComment(commentData);
-      
+
       // Add new comment to the list
       setComments(prevComments => [newCommentObj, ...prevComments]);
       setNewComment('');
-      
+
       addToast('Comment posted!', 'success');
     } catch (err) {
       console.error('Error posting comment:', err);
@@ -233,17 +233,17 @@ export default function CommunityPostCardEnhanced({
       addToast('Please connect your wallet to react', 'error');
       return;
     }
-    
+
     if (!userMembership) {
       addToast('You must join the community to react', 'error');
       return;
     }
-    
+
     try {
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
-      
+
       // Update local state
       setReactions(prev => prev.map(reaction => {
         if (reaction.type === reactionType) {
@@ -258,7 +258,7 @@ export default function CommunityPostCardEnhanced({
         }
         return reaction;
       }));
-      
+
       addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
@@ -310,23 +310,23 @@ export default function CommunityPostCardEnhanced({
         />
       );
     }
-    
+
     if (isCommunityPostType && post.tags?.includes('defi')) {
       // Extract protocol name from tags or content
-      const protocolName = post.tags.find(tag => 
+      const protocolName = post.tags.find(tag =>
         ['aave', 'compound', 'uniswap', 'curve', 'yearn'].includes(tag.toLowerCase())
       ) || 'Aave';
       return <CommunityDeFiEmbed protocolName={protocolName} className="mt-3" />;
     }
-    
+
     if (isCommunityPostType && post.tags?.includes('wallet') && post.onchainRef) {
       return <WalletSnapshotEmbed walletAddress={post.onchainRef} className="mt-3" />;
     }
-    
+
     if (isCommunityPostType && (post.tags?.includes('governance') || post.tags?.includes('dao'))) {
       return <CommunityGovernance community={community} className="mt-3" />;
     }
-    
+
     return null;
   };
 
@@ -353,14 +353,13 @@ export default function CommunityPostCardEnhanced({
           />
 
           {/* Vote Score */}
-          <span 
-            className={`text-sm font-bold py-1 ${
-              voteScore > 0 
-                ? 'text-orange-500' 
-                : voteScore < 0 
-                  ? 'text-blue-500' 
+          <span
+            className={`text-sm font-bold py-1 ${voteScore > 0
+                ? 'text-orange-500'
+                : voteScore < 0
+                  ? 'text-blue-500'
                   : 'text-gray-500 dark:text-gray-400'
-            }`}
+              }`}
             aria-label={`Vote score: ${voteScore > 0 ? '+' : ''}${voteScore}`}
           >
             {voteScore > 0 ? '+' : ''}{voteScore}
@@ -421,6 +420,13 @@ export default function CommunityPostCardEnhanced({
 
           {/* Post Content */}
           <div className="mb-4">
+            {/* Post Title */}
+            {post.title && (
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 leading-tight">
+                {post.title}
+              </h3>
+            )}
+
             <div className="text-gray-900 dark:text-white whitespace-pre-wrap break-words">
               {post.contentCid}
             </div>
@@ -519,7 +525,7 @@ export default function CommunityPostCardEnhanced({
                     <p className="text-xs text-gray-500 dark:text-gray-400">Comments</p>
                   </div>
                 </div>
-                
+
                 {reactions.filter(r => r.userStaked > 0).length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                     <h5 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Your Stakes</h5>
@@ -555,7 +561,7 @@ export default function CommunityPostCardEnhanced({
                   <span>{comments.length} comments</span>
                 </button>
 
-                <button 
+                <button
                   onClick={() => setShowAnalytics(!showAnalytics)}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
                   aria-label="Toggle analytics"
