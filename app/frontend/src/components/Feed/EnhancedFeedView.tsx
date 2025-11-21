@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { EnhancedPost as FeedEnhancedPost, FeedFilter, FeedSortType, FeedError } from '../../types/feed';
 import { useFeedSortingPreferences, useDisplayPreferences, useAutoRefreshPreferences } from '../../hooks/useFeedPreferences';
 import InfiniteScrollFeed from './InfiniteScrollFeed';
@@ -14,6 +14,7 @@ import { FeedSkeleton } from '@/components/animations/LoadingSkeletons';
 import { useAccount } from 'wagmi';
 import { useFollowing } from '@/hooks/useFollow';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
+import { ProfileService } from '@/services/profileService';
 
 // Helper function to validate IPFS CID and construct proper URL
 function getAvatarUrl(profileCid: string | undefined): string | undefined {
@@ -96,6 +97,9 @@ const EnhancedFeedView = React.memo(({
   const { data: following = [], isLoading: followingLoading } = useFollowing(address);
   const [userCommunityIds, setUserCommunityIds] = useState<string[]>([]);
   const [userInterestTags, setUserInterestTags] = useState<string[]>([]);
+
+  // Profile cache to avoid repeated API calls
+  const profileCacheRef = useRef<Map<string, any>>(new Map());
 
   // Load user's joined communities (ids)
   useEffect(() => {
@@ -203,8 +207,31 @@ const EnhancedFeedView = React.memo(({
     setFilter(prev => ({ ...prev, timeRange }));
   }, [updateTimeRange]);
 
-  // Convert feed post to card post format - memoized
-  const convertFeedPostToCardPost = useCallback((feedPost: FeedEnhancedPost): EnhancedPost => {
+  // Convert feed post to card post format with profile fetching - memoized
+  const convertFeedPostToCardPost = useCallback(async (feedPost: FeedEnhancedPost): Promise<EnhancedPost> => {
+    // Fetch profile if not cached
+    let profile = profileCacheRef.current.get(feedPost.author);
+    if (!profile) {
+      try {
+        profile = await ProfileService.getProfileByAddress(feedPost.author);
+        if (profile) {
+          profileCacheRef.current.set(feedPost.author, profile);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile for', feedPost.author, error);
+      }
+    }
+
+    // Determine avatar URL with fallback logic
+    let avatarUrl: string | undefined;
+    if (profile?.avatarCid) {
+      avatarUrl = getAvatarUrl(profile.avatarCid);
+    } else if (profile?.profileCid) {
+      avatarUrl = getAvatarUrl(profile.profileCid);
+    } else if (feedPost.profileCid) {
+      avatarUrl = getAvatarUrl(feedPost.profileCid);
+    }
+
     return {
       id: feedPost.id,
       title: feedPost.title || '',
@@ -212,10 +239,10 @@ const EnhancedFeedView = React.memo(({
       contentCid: feedPost.contentCid, // Add the missing contentCid field
       author: feedPost.author,
       authorProfile: {
-        handle: feedPost.handle || feedPost.author.slice(0, 8),
-        verified: false,
-        avatar: getAvatarUrl(feedPost.profileCid),
-        reputationTier: undefined
+        handle: profile?.displayName || profile?.handle || feedPost.handle || feedPost.author.slice(0, 8),
+        verified: profile?.verified || false,
+        avatar: avatarUrl,
+        reputationTier: profile?.reputationTier
       },
       createdAt: feedPost.createdAt,
       updatedAt: feedPost.updatedAt || feedPost.createdAt,
@@ -277,9 +304,10 @@ const EnhancedFeedView = React.memo(({
     };
   }, []);
 
-  // Handle posts loading - memoized
-  const handlePostsLoad = useCallback((newPosts: FeedEnhancedPost[]) => {
-    let convertedPosts = newPosts.map(convertFeedPostToCardPost);
+  // Handle posts loading - memoized (now async to handle profile fetching)
+  const handlePostsLoad = useCallback(async (newPosts: FeedEnhancedPost[]) => {
+    // Convert posts with profile fetching
+    const convertedPosts = await Promise.all(newPosts.map(convertFeedPostToCardPost));
     // No client-side filtering needed since backend handles it
     setPosts(convertedPosts);
     setError(null); // Clear any previous errors
@@ -368,8 +396,8 @@ const EnhancedFeedView = React.memo(({
             key={option.value}
             onClick={() => handleSortChange(option.value)}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${filter.sortBy === option.value
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              ? 'text-primary-600 dark:text-primary-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
               }`}
             title={option.desc}
           >
@@ -441,7 +469,7 @@ const EnhancedFeedView = React.memo(({
                 <EmptyFeedState filter={filter} />
               ) : (
                 <div className="space-y-4">
-                  {feedPosts.map(post => convertFeedPostToCardPost(post)).map(renderPost)}
+                  {feedPosts.map(renderPost)}
                 </div>
               )}
 

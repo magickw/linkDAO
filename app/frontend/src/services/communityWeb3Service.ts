@@ -111,7 +111,7 @@ export class CommunityWeb3Service {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
-      
+
       if (!this.tokenContract) {
         throw new Error('Token contract not initialized');
       }
@@ -122,7 +122,7 @@ export class CommunityWeb3Service {
         ethers.utils.parseEther(input.stakeAmount),
         1 // Default to first staking tier
       );
-      
+
       await tx.wait();
       return tx.hash;
     } catch (error) {
@@ -143,7 +143,7 @@ export class CommunityWeb3Service {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
-      
+
       if (!this.governanceContract) {
         throw new Error('Governance contract not initialized');
       }
@@ -165,13 +165,13 @@ export class CommunityWeb3Service {
         signatures,
         calldatas
       );
-      
+
       const receipt = await tx.wait();
-      
+
       // Extract proposal ID from events
       const proposalCreatedEvent = receipt.events?.find((e: { event: string; args?: { id?: any }; }) => e.event === 'ProposalCreated');
       const proposalId = proposalCreatedEvent?.args?.id?.toString() || receipt.hash;
-      
+
       return proposalId;
     } catch (error) {
       console.error('Error creating governance proposal:', error);
@@ -190,21 +190,21 @@ export class CommunityWeb3Service {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
-      
+
       if (!this.governanceContract) {
         throw new Error('Governance contract not initialized');
       }
 
       // Vote on proposal (0 = against, 1 = for, 2 = abstain)
       const voteChoice = support ? 1 : 0;
-      
+
       const governanceWithSigner = this.governanceContract.connect(signer);
       const tx = await governanceWithSigner.castVote(
         proposalId,
         voteChoice,
         "" // Empty reason for now
       );
-      
+
       await tx.wait();
       return tx.hash;
     } catch (error) {
@@ -220,16 +220,87 @@ export class CommunityWeb3Service {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
-      
-      // For now, we'll just simulate a tip transaction
-      // In a real implementation, this would transfer tokens to the recipient
-      console.log(`Tipping ${input.amount} ${input.token} to post ${input.postId}`);
-      
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Return mock transaction hash
-      return `0x${Math.random().toString(16).substring(2, 66)}`;
+
+      // Get network to determine which contract addresses to use
+      const network = await signer.provider?.getNetwork();
+      const chainId = network?.chainId;
+
+      // Contract addresses for Sepolia testnet
+      const TIP_ROUTER_ADDRESS = '0x755Fe81411c86019fff6033E0567A4D93b57281b';
+      const LDAO_TOKEN_ADDRESS = '0xc9F690B45e33ca909bB9ab97836091673232611B';
+
+      // For now, we only support LDAO token
+      if (input.token !== 'LDAO') {
+        throw new Error('Only LDAO token is currently supported for tipping');
+      }
+
+      // TipRouter ABI - only the functions we need
+      const TIP_ROUTER_ABI = [
+        'function tip(bytes32 postId, address creator, uint256 amount)',
+        'function tipWithComment(bytes32 postId, address creator, uint256 amount, string comment)',
+        'function calculateFee(uint256 amount) view returns (uint256)'
+      ];
+
+      // ERC20 ABI for approve
+      const ERC20_ABI = [
+        'function approve(address spender, uint256 amount) returns (bool)',
+        'function allowance(address owner, address spender) view returns (uint256)',
+        'function balanceOf(address account) view returns (uint256)'
+      ];
+
+      // Create contract instances
+      const tipRouterContract = new ethers.Contract(TIP_ROUTER_ADDRESS, TIP_ROUTER_ABI, signer);
+      const ldaoTokenContract = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, signer);
+
+      // Convert amount to wei (LDAO has 18 decimals)
+      const amountWei = ethers.parseUnits(input.amount, 18);
+
+      // Check user's LDAO balance
+      const userAddress = await signer.getAddress();
+      const balance = await ldaoTokenContract.balanceOf(userAddress);
+
+      if (balance < amountWei) {
+        throw new Error(`Insufficient LDAO balance. You have ${ethers.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
+      }
+
+      // Check current allowance
+      const currentAllowance = await ldaoTokenContract.allowance(userAddress, TIP_ROUTER_ADDRESS);
+
+      // Approve TipRouter to spend LDAO if needed
+      if (currentAllowance < amountWei) {
+        console.log('Approving TipRouter to spend LDAO...');
+        const approveTx = await ldaoTokenContract.approve(TIP_ROUTER_ADDRESS, amountWei);
+        await approveTx.wait();
+        console.log('Approval confirmed');
+      }
+
+      // Convert postId to bytes32
+      const postIdBytes32 = ethers.id(input.postId);
+
+      // Send tip (with or without comment)
+      let tx;
+      if (input.message && input.message.trim()) {
+        console.log(`Tipping ${input.amount} LDAO with comment to ${input.recipientAddress}`);
+        tx = await tipRouterContract.tipWithComment(
+          postIdBytes32,
+          input.recipientAddress,
+          amountWei,
+          input.message.trim()
+        );
+      } else {
+        console.log(`Tipping ${input.amount} LDAO to ${input.recipientAddress}`);
+        tx = await tipRouterContract.tip(
+          postIdBytes32,
+          input.recipientAddress,
+          amountWei
+        );
+      }
+
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      console.log('Tip transaction confirmed:', receipt.hash);
+
+      return receipt.hash;
     } catch (error) {
       console.error('Error tipping community post:', error);
       throw error;
@@ -243,7 +314,7 @@ export class CommunityWeb3Service {
     try {
       const signer = await getSigner();
       if (!signer) throw new Error('No signer available');
-      
+
       if (!this.tokenContract) {
         throw new Error('Token contract not initialized');
       }
@@ -251,7 +322,7 @@ export class CommunityWeb3Service {
       // Claim all staking rewards
       const tokenWithSigner = this.tokenContract.connect(signer);
       const tx = await tokenWithSigner.claimAllStakeRewards();
-      
+
       await tx.wait();
       return tx.hash;
     } catch (error) {
@@ -271,7 +342,7 @@ export class CommunityWeb3Service {
 
       // Get user's total staking rewards
       const totalRewards = await this.tokenContract.getTotalStakeRewards(userAddress);
-      
+
       // Mock implementation for now
       const mockRewards: StakingReward[] = [
         {
@@ -282,7 +353,7 @@ export class CommunityWeb3Service {
           earned: parseFloat(ethers.utils.formatEther(totalRewards)) > 0
         }
       ];
-      
+
       return mockRewards;
     } catch (error) {
       console.error('Error getting staking rewards:', error);
@@ -301,7 +372,7 @@ export class CommunityWeb3Service {
 
       // Get user's voting power from the token contract
       const votingPower = await this.tokenContract.votingPower(userAddress);
-      
+
       return ethers.utils.formatEther(votingPower);
     } catch (error) {
       console.error('Error getting voting power:', error);
@@ -324,11 +395,11 @@ export class CommunityWeb3Service {
 
       // Get user's staked amount
       const stakedAmount = await this.tokenContract.totalStaked(userAddress);
-      
+
       // For now, we'll use a simple requirement
       // In a real implementation, this would be configurable per community/action
       const requiredStake = ethers.utils.parseEther("100"); // 100 LDAO tokens
-      
+
       return {
         canPerform: stakedAmount.gte(requiredStake),
         requiredStake: ethers.utils.formatEther(requiredStake),
@@ -460,7 +531,7 @@ export class CommunityWeb3Service {
           actions: []
         }
       ];
-      
+
       return mockProposals;
     } catch (error) {
       console.error('Error getting community proposals:', error);

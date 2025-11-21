@@ -715,6 +715,20 @@ export const sellers = pgTable("sellers", {
     payout_setup: false,
     first_listing: false
   }),
+  // KYC Compliance fields
+  legalBusinessName: varchar("legal_business_name", { length: 255 }),
+  businessType: varchar("business_type", { length: 50 }).default("individual"),
+  registeredAddressStreet: varchar("registered_address_street", { length: 500 }),
+  registeredAddressCity: varchar("registered_address_city", { length: 100 }),
+  registeredAddressState: varchar("registered_address_state", { length: 100 }),
+  registeredAddressPostalCode: varchar("registered_address_postal_code", { length: 20 }),
+  registeredAddressCountry: varchar("registered_address_country", { length: 100 }),
+  taxIdEncrypted: text("tax_id_encrypted"),
+  taxIdType: varchar("tax_id_type", { length: 20 }).default("ssn"),
+  kycStatus: varchar("kyc_status", { length: 30 }).default("pending"),
+  kycSubmittedAt: timestamp("kyc_submitted_at"),
+  kycVerifiedAt: timestamp("kyc_verified_at"),
+  kycRejectionReason: text("kyc_rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

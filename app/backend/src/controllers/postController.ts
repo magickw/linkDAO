@@ -16,23 +16,23 @@ export class PostController {
   async createPost(req: Request, res: Response): Promise<Response> {
     try {
       console.log('POST /api/posts - Creating post');
-      
+
       const { content, author, type = 'text', visibility = 'public', tags, media, parentId, onchainRef } = req.body;
-      
+
       if (!content || content.trim() === '') {
         return res.status(400).json({
           success: false,
           error: 'Content is required'
         });
       }
-      
+
       if (!author) {
         return res.status(400).json({
           success: false,
           error: 'Author is required'
         });
       }
-      
+
       // Prepare input for PostService
       const postInput: CreatePostInput = {
         author,
@@ -42,12 +42,12 @@ export class PostController {
         parentId,
         onchainRef
       };
-      
+
       // Create post using PostService
       const post = await this.postService.createPost(postInput);
-      
+
       console.log('Post created:', post.id);
-      
+
       return res.status(201).json({
         success: true,
         data: post
@@ -64,7 +64,7 @@ export class PostController {
   async getAllPosts(req: Request, res: Response): Promise<Response> {
     try {
       const posts = await this.postService.getAllPosts();
-      
+
       return res.json({
         success: true,
         data: posts
@@ -81,14 +81,14 @@ export class PostController {
     try {
       const { id } = req.params;
       const post = await this.postService.getPostById(id);
-      
+
       if (!post) {
         return res.status(404).json({
           success: false,
           error: 'Post not found'
         });
       }
-      
+
       return res.json({
         success: true,
         data: post
@@ -104,16 +104,16 @@ export class PostController {
   async getFeed(req: Request, res: Response): Promise<Response> {
     try {
       const { forUser } = req.query;
-      
+
       if (!forUser || typeof forUser !== 'string') {
         return res.status(400).json({
           success: false,
           error: 'forUser parameter is required'
         });
       }
-      
+
       const posts = await this.postService.getFeed(forUser);
-      
+
       return res.json({
         success: true,
         data: posts
@@ -131,7 +131,7 @@ export class PostController {
     try {
       const { author } = req.params;
       const posts = await this.postService.getPostsByAuthor(author);
-      
+
       return res.json({
         success: true,
         data: posts
@@ -148,7 +148,7 @@ export class PostController {
     try {
       const { tag } = req.params;
       const posts = await this.postService.getPostsByTag(tag);
-      
+
       return res.json({
         success: true,
         data: posts
@@ -165,7 +165,7 @@ export class PostController {
     try {
       const { communityId } = req.params;
       const posts = await this.postService.getPostsByCommunity(communityId);
-      
+
       return res.json({
         success: true,
         data: posts
@@ -182,22 +182,22 @@ export class PostController {
     try {
       const { id } = req.params;
       const { content, tags, media } = req.body;
-      
+
       const updateInput = {
         content,
         tags,
         media
       };
-      
+
       const post = await this.postService.updatePost(id, updateInput);
-      
+
       if (!post) {
         return res.status(404).json({
           success: false,
           error: 'Post not found'
         });
       }
-      
+
       return res.json({
         success: true,
         data: post
@@ -210,18 +210,83 @@ export class PostController {
     }
   }
 
+  async repostPost(req: Request, res: Response): Promise<Response> {
+    try {
+      console.log('POST /api/posts/repost - Creating repost');
+
+      const { originalPostId, message, author } = req.body;
+
+      if (!originalPostId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Original post ID is required'
+        });
+      }
+
+      if (!author) {
+        return res.status(400).json({
+          success: false,
+          error: 'Author is required'
+        });
+      }
+
+      // Get the original post
+      const originalPost = await this.postService.getPostById(originalPostId);
+
+      if (!originalPost) {
+        return res.status(404).json({
+          success: false,
+          error: 'Original post not found'
+        });
+      }
+
+      // Create repost content - combine message with reference to original
+      let repostContent = message ? `${message}\n\n` : '';
+      repostContent += `Reposted from @${originalPost.author} (${originalPostId})`;
+
+      // Create the repost as a new post with reference to original
+      const postInput: CreatePostInput = {
+        author,
+        content: repostContent, // This will be uploaded to IPFS by PostService
+        tags: originalPost.tags || [],
+        media: originalPost.mediaCids || [], // Will be uploaded to IPFS
+        parentId: originalPostId, // Link to original post
+        onchainRef: originalPost.onchainRef
+      };
+
+      const repost = await this.postService.createPost(postInput);
+
+      console.log('Repost created:', repost.id);
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          ...repost,
+          originalPost: originalPost,
+          isRepost: true
+        }
+      });
+    } catch (error: any) {
+      console.error('Error creating repost:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to create repost'
+      });
+    }
+  }
+
   async deletePost(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const deleted = await this.postService.deletePost(id);
-      
+
       if (!deleted) {
         return res.status(404).json({
           success: false,
           error: 'Post not found'
         });
       }
-      
+
       return res.status(204).send();
     } catch (error: any) {
       return res.status(500).json({
