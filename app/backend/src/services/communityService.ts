@@ -113,6 +113,19 @@ interface AutomatedExecutionData {
 }
 
 export class CommunityService {
+  // Helper method to safely parse JSON
+  private safeJsonParse(input: string | null | undefined, defaultValue: any): any {
+    if (!input) {
+      return defaultValue;
+    }
+    try {
+      return JSON.parse(input);
+    } catch (error) {
+      safeLogger.warn(`Failed to parse JSON for input: ${input.substring(0, 100)}...`, error);
+      return defaultValue;
+    }
+  }
+
   // List communities with filtering and caching
   async listCommunities(options: ListCommunitiesOptions) {
     const { page, limit, category, search, sort, tags } = options;
@@ -443,19 +456,19 @@ export class CommunityService {
         name: community.name,
         displayName: community.displayName,
         description: community.description || '',
-        rules: community.rules ? JSON.parse(community.rules) : [],
+        rules: this.safeJsonParse(community.rules, []),
         category: community.category,
-        tags: community.tags ? JSON.parse(community.tags) : [],
+        tags: this.safeJsonParse(community.tags, []),
         avatar: community.avatar,
         banner: community.banner,
         memberCount: community.memberCount,
         postCount: community.postCount,
         isPublic: community.isPublic,
-        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        moderators: this.safeJsonParse(community.moderators, []),
         creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: community.treasuryAddress,
         governanceToken: community.governanceToken,
-        settings: community.settings ? JSON.parse(community.settings) : null,
+        settings: this.safeJsonParse(community.settings, null),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         // User-specific data
@@ -573,19 +586,19 @@ export class CommunityService {
         slug: community.slug,
         displayName: community.displayName,
         description: community.description || '',
-        rules: community.rules ? JSON.parse(community.rules) : [],
+        rules: this.safeJsonParse(community.rules, []),
         category: community.category,
-        tags: community.tags ? JSON.parse(community.tags) : [],
+        tags: this.safeJsonParse(community.tags, []),
         avatar: community.avatar,
         banner: community.banner,
         memberCount: community.memberCount,
         postCount: community.postCount,
         isPublic: community.isPublic,
-        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        moderators: this.safeJsonParse(community.moderators, []),
         creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: community.treasuryAddress,
         governanceToken: community.governanceToken,
-        settings: community.settings ? JSON.parse(community.settings) : null,
+        settings: this.safeJsonParse(community.settings, null),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         // User-specific data
@@ -883,14 +896,14 @@ export class CommunityService {
         displayName: community.displayName,
         description: community.description || '',
         category: community.category,
-        tags: community.tags ? JSON.parse(community.tags) : [],
+        tags: this.safeJsonParse(community.tags, []),
         avatar: community.avatar,
         banner: community.banner,
         memberCount: community.memberCount,
         postCount: community.postCount,
         isPublic: community.isPublic,
-        rules: community.rules ? JSON.parse(community.rules) : [],
-        settings: community.settings ? JSON.parse(community.settings) : {},
+        rules: this.safeJsonParse(community.rules, []),
+        settings: this.safeJsonParse(community.settings, {}),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
       };
@@ -3704,19 +3717,19 @@ export class CommunityService {
         name: community.name,
         displayName: community.displayName,
         description: community.description || '',
-        rules: community.rules ? JSON.parse(community.rules) : [],
+        rules: this.safeJsonParse(community.rules, []),
         category: community.category,
-        tags: community.tags ? JSON.parse(community.tags) : [],
+        tags: this.safeJsonParse(community.tags, []),
         avatar: community.avatar,
         banner: community.banner,
         memberCount: community.memberCount,
         postCount: community.postCount,
         isPublic: community.isPublic,
-        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        moderators: this.safeJsonParse(community.moderators, []),
         creatorAddress: community.creatorAddress, // Add creatorAddress
         treasuryAddress: community.treasuryAddress,
         governanceToken: community.governanceToken,
-        settings: community.settings ? JSON.parse(community.settings) : null,
+        settings: this.safeJsonParse(community.settings, null),
         createdAt: community.createdAt,
         updatedAt: community.updatedAt,
         // User-specific data

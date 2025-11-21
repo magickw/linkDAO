@@ -30,6 +30,22 @@ router.get('/seller/dashboard/:walletAddress',
       return successResponse(res, stats, 200);
     } catch (error) {
       safeLogger.error('Error fetching dashboard stats:', error);
+      
+      // Handle database connection errors specifically
+      if (error && typeof error === 'object' && ('code' in error)) {
+        const errorCode = (error as any).code;
+        // If it's a database connection error, return 404 instead of 503
+        // This prevents the service worker from aggressively backing off
+        if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+          safeLogger.warn('Database connection error, returning 404 for dashboard stats:', errorCode);
+          return res.status(404).json({
+            success: false,
+            error: 'Seller profile not found',
+            message: 'Unable to connect to database. Profile may not exist or try again later.',
+            code: 'DATABASE_CONNECTION_ERROR'
+          });
+        }
+      }
 
       if (error instanceof Error) {
         if (error.message.includes('not found')) {
@@ -76,6 +92,22 @@ router.get('/seller/notifications/:walletAddress',
       return successResponse(res, notifications, 200);
     } catch (error) {
       safeLogger.error('Error fetching notifications:', error);
+      
+      // Handle database connection errors specifically
+      if (error && typeof error === 'object' && ('code' in error)) {
+        const errorCode = (error as any).code;
+        // If it's a database connection error, return 404 instead of 503
+        // This prevents the service worker from aggressively backing off
+        if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+          safeLogger.warn('Database connection error, returning 404 for notifications:', errorCode);
+          return res.status(404).json({
+            success: false,
+            error: 'Seller profile not found',
+            message: 'Unable to connect to database. Profile may not exist or try again later.',
+            code: 'DATABASE_CONNECTION_ERROR'
+          });
+        }
+      }
 
       return errorResponse(
         res,
@@ -103,6 +135,22 @@ router.put('/seller/notifications/:notificationId/read', csrfProtection,
       return successResponse(res, { message: 'Notification marked as read' }, 200);
     } catch (error) {
       safeLogger.error('Error marking notification as read:', error);
+      
+      // Handle database connection errors specifically
+      if (error && typeof error === 'object' && ('code' in error)) {
+        const errorCode = (error as any).code;
+        // If it's a database connection error, return 404 instead of 503
+        // This prevents the service worker from aggressively backing off
+        if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+          safeLogger.warn('Database connection error, returning 404 for mark notification read:', errorCode);
+          return res.status(404).json({
+            success: false,
+            error: 'Notification not found',
+            message: 'Unable to connect to database. Notification may not exist or try again later.',
+            code: 'DATABASE_CONNECTION_ERROR'
+          });
+        }
+      }
 
       if (error instanceof Error && error.message.includes('not found')) {
         return notFoundResponse(res, 'Notification not found');
@@ -142,6 +190,22 @@ router.get('/seller/analytics/:walletAddress',
       return successResponse(res, analytics, 200);
     } catch (error) {
       safeLogger.error('Error fetching analytics:', error);
+      
+      // Handle database connection errors specifically
+      if (error && typeof error === 'object' && ('code' in error)) {
+        const errorCode = (error as any).code;
+        // If it's a database connection error, return 404 instead of 503
+        // This prevents the service worker from aggressively backing off
+        if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+          safeLogger.warn('Database connection error, returning 404 for analytics:', errorCode);
+          return res.status(404).json({
+            success: false,
+            error: 'Seller profile not found',
+            message: 'Unable to connect to database. Profile may not exist or try again later.',
+            code: 'DATABASE_CONNECTION_ERROR'
+          });
+        }
+      }
 
       return errorResponse(
         res,

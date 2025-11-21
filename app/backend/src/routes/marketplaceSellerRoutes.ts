@@ -51,6 +51,23 @@ router.get('/seller/:walletAddress', async (req: Request, res: Response) => {
 
     return successResponse(res, profile, 200);
   } catch (error) {
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 503
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller profile:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
+    
+    // For other errors, return 500
     return errorResponse(
       res,
       'PROFILE_FETCH_ERROR',

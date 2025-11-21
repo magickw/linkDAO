@@ -195,7 +195,11 @@ export class FeedService {
         moderationFilter: moderationFilter.toString()
       });
 
-      // For following feed, make sure to include user's own posts 
+      console.log('🔍 [DEBUG] About to execute posts query...');
+      console.log('🔍 [DEBUG] followingFilter type:', typeof followingFilter);
+      console.log('🔍 [DEBUG] finalFollowingFilter will be:', feedSource === 'following' && userAddress && user && user.length > 0 ? 'OR with user posts' : 'standard filter');
+
+      // For following feed, make sure to include user's own posts
       let finalFollowingFilter = followingFilter;
       if (feedSource === 'following' && userAddress && user && user.length > 0) {
         // When feedSource is 'following', always include user's own posts
@@ -204,7 +208,10 @@ export class FeedService {
           followingFilter,  // Posts from followed users (including self if added to followingIds)
           eq(posts.authorId, user[0].id)  // User's own posts
         );
+        console.log('🔍 [DEBUG] Using OR filter to include user own posts');
       }
+
+      console.log('🔍 [DEBUG] Executing posts query NOW...');
 
       // Get regular posts with engagement metrics
       const regularPosts = await db
@@ -444,6 +451,11 @@ export class FeedService {
 
     } catch (error) {
       safeLogger.error('Error getting enhanced feed:', error);
+      console.error('[FEED ERROR] Full error details:', error);
+      if (error instanceof Error) {
+        console.error('[FEED ERROR] Error message:', error.message);
+        console.error('[FEED ERROR] Error stack:', error.stack);
+      }
       throw new Error('Failed to retrieve feed');
     }
   }

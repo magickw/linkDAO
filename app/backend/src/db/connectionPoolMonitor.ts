@@ -34,6 +34,8 @@ class ConnectionPoolMonitor {
     private queryDurations: number[] = [];
     private errorCount = 0;
     private lastErrorReset = Date.now();
+    private connectionErrorCount = 0;
+    private lastConnectionErrorReset = Date.now();
     private alertThresholds: AlertThresholds;
     private alertCallbacks: ((alert: PoolAlert) => void)[] = [];
 
@@ -112,15 +114,31 @@ class ConnectionPoolMonitor {
     /**
      * Record a connection error
      */
-    recordError() {
+    recordError(error?: any) {
         this.errorCount++;
         this.metrics.connectionErrors++;
+
+        // Check if this is a connection-specific error
+        let isConnectionError = false;
+        if (error && typeof error === 'object' && 'code' in error) {
+            const errorCode = (error as any).code;
+            if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+                isConnectionError = true;
+                this.connectionErrorCount++;
+            }
+        }
 
         // Reset error count every minute
         const now = Date.now();
         if (now - this.lastErrorReset > 60000) {
             this.errorCount = 1;
             this.lastErrorReset = now;
+        }
+        
+        // Reset connection error count every 5 minutes
+        if (now - this.lastConnectionErrorReset > 300000) {
+            this.connectionErrorCount = 1;
+            this.lastConnectionErrorReset = now;
         }
 
         // Alert on high error rate
@@ -129,6 +147,16 @@ class ConnectionPoolMonitor {
                 level: 'critical',
                 type: 'high_error_rate',
                 message: `High error rate: ${this.errorCount} errors in the last minute`,
+                metrics: { ...this.metrics },
+            });
+        }
+        
+        // Alert specifically on connection errors
+        if (isConnectionError && this.connectionErrorCount > 3) {
+            this.triggerAlert({
+                level: 'critical',
+                type: 'connection_error_rate',
+                message: `High connection error rate: ${this.connectionErrorCount} connection errors in the last 5 minutes`,
                 metrics: { ...this.metrics },
             });
         }

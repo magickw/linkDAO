@@ -53,6 +53,9 @@ export class FeedController {
 
         res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
       } catch (serviceError) {
+        console.error('[FEED CONTROLLER ERROR] Service error details:', serviceError);
+        console.error('[FEED CONTROLLER ERROR] Error message:', serviceError instanceof Error ? serviceError.message : 'Unknown error');
+        console.error('[FEED CONTROLLER ERROR] Error stack:', serviceError instanceof Error ? serviceError.stack : 'No stack trace');
         safeLogger.error('Feed service error:', serviceError);
 
         // Return fallback empty feed instead of error

@@ -37,6 +37,18 @@ export class SellerProfileService {
       return this.mapSellerToProfile(seller);
     } catch (error) {
       safeLogger.error('Error fetching seller profile:', error);
+      
+      // Handle database connection errors specifically
+      if (error && typeof error === 'object' && 'code' in error) {
+        const errorCode = (error as any).code;
+        // If it's a database connection error, return null instead of throwing
+        // This will allow the frontend to handle it as a "not found" case rather than a 503
+        if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+          safeLogger.warn('Database connection error, returning null for seller profile:', errorCode);
+          return null;
+        }
+      }
+      
       throw error;
     }
   }

@@ -2,6 +2,7 @@ import { db } from '../db';
 import { sellers, orders, products, notifications, sellerTransactions } from '../db/schema';
 import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
 import { cacheService } from './cacheService';
+import { safeLogger } from '../utils/safeLogger';
 
 /**
  * Dashboard Statistics Interface
@@ -113,7 +114,41 @@ class SellerDashboardService {
         .limit(1);
 
       if (!seller) {
-        throw new Error('Seller not found');
+        // Instead of throwing an error that might cause a 503, return a default stats object
+        // This allows the frontend to handle it gracefully
+        safeLogger.warn('Seller not found for dashboard stats, returning default stats');
+        return {
+          sales: {
+            today: '0',
+            week: '0',
+            month: '0',
+            total: '0',
+          },
+          orders: {
+            pending: 0,
+            processing: 0,
+            completed: 0,
+            total: 0,
+          },
+          listings: {
+            active: 0,
+            draft: 0,
+            soldOut: 0,
+            total: 0,
+          },
+          balance: {
+            available: '0',
+            pending: '0',
+            escrow: '0',
+            total: '0',
+          },
+          reputation: {
+            score: 0,
+            totalReviews: 0,
+            averageRating: 0,
+          },
+          unreadNotifications: 0,
+        };
       }
 
       const now = new Date();
@@ -342,7 +377,35 @@ class SellerDashboardService {
         .limit(1);
 
       if (!seller) {
-        throw new Error('Seller not found');
+        // Instead of throwing an error that might cause a 503, return a default analytics object
+        // This allows the frontend to handle it gracefully
+        safeLogger.warn('Seller not found for analytics, returning default analytics');
+        return {
+          period: '30d',
+          revenue: {
+            total: '0',
+            byDay: [],
+          },
+          orders: {
+            total: 0,
+            byStatus: {},
+            byDay: [],
+          },
+          products: {
+            topSelling: [],
+            byCategory: {},
+          },
+          customers: {
+            new: 0,
+            returning: 0,
+            total: 0,
+          },
+          performance: {
+            averageOrderValue: '0.00',
+            conversionRate: 0,
+            fulfillmentRate: 0,
+          },
+        };
       }
 
       // OPTIMIZED: Combined analytics query with proper limits

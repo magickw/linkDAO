@@ -277,6 +277,19 @@ dbPool.on('connect', (client) => {
 dbPool.on('error', (err, client) => {
   console.error('❌ Database pool error:', err);
 
+  // Record the error in our monitoring system
+  // Note: We're using the connection pool monitor from the db module
+  // This requires importing it here
+  try {
+    const { getMonitor } = require('./db/connectionPoolMonitor');
+    const monitor = getMonitor();
+    if (monitor) {
+      monitor.recordError(err);
+    }
+  } catch (monitorError) {
+    console.warn('Failed to record error in connection pool monitor:', monitorError);
+  }
+
   // Force garbage collection on database errors in constrained environments
   if (isResourceConstrained && global.gc) {
     setTimeout(() => global.gc && global.gc(), 1000);
@@ -484,6 +497,36 @@ app.get('/health', async (req, res) => {
     console.warn('Redis service not available for health check:', error.message);
   }
 
+  // Get database status
+  let databaseStatus = { enabled: false, connected: false };
+  try {
+    // Test database connection
+    if (dbPool) {
+      const startTime = Date.now();
+      const result = await dbPool.query('SELECT 1');
+      const queryTime = Date.now() - startTime;
+      
+      databaseStatus = {
+        enabled: true,
+        connected: true,
+        queryTime: queryTime,
+        pool: {
+          total: dbPool.totalCount,
+          idle: dbPool.idleCount,
+          waiting: dbPool.waitingCount
+        }
+      };
+    }
+  } catch (error) {
+    // Database not available
+    console.warn('Database not available for health check:', error.message);
+    databaseStatus = {
+      enabled: true,
+      connected: false,
+      error: error.message
+    };
+  }
+
   res.status(200).json({
     success: true,
     status: 'healthy',
@@ -493,7 +536,8 @@ app.get('/health', async (req, res) => {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024)
     },
-    redis: redisStatus
+    redis: redisStatus,
+    database: databaseStatus
   });
 });
 
@@ -520,6 +564,54 @@ app.get('/health/redis', async (req, res) => {
       error: {
         message: error.message,
         name: error.name
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Add database-specific health check endpoint
+app.get('/health/database', async (req, res) => {
+  try {
+    // Test database connection
+    if (dbPool) {
+      const startTime = Date.now();
+      const result = await dbPool.query('SELECT 1');
+      const queryTime = Date.now() - startTime;
+      
+      res.status(200).json({
+        success: true,
+        status: 'Database health check completed',
+        database: {
+          connected: true,
+          queryTime: queryTime,
+          pool: {
+            total: dbPool.totalCount,
+            idle: dbPool.idleCount,
+            waiting: dbPool.waitingCount,
+            max: dbPool.options.max
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(503).json({
+        success: false,
+        status: 'Database not configured',
+        error: {
+          message: 'Database connection pool not initialized'
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: 'Database health check failed',
+      error: {
+        message: error.message,
+        name: error.name,
+        code: (error as any).code
       },
       timestamp: new Date().toISOString()
     });

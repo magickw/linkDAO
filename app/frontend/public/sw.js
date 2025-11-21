@@ -306,12 +306,16 @@ async function networkFirst(request, cacheName) {
     const isCommunityRequest = url.pathname.includes('/api/communities');
     // Apply reduced base backoff time for cart API requests
     const isCartRequest = url.pathname.includes('/api/cart');
+    // Apply reduced base backoff time for seller dashboard requests
+    const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
     let baseBackoffTime;
     
     if (isCommunityRequest) {
       baseBackoffTime = 10000; // 10s for communities
     } else if (isCartRequest) {
       baseBackoffTime = 5000; // 5s for cart API to enable faster recovery
+    } else if (isSellerRequest) {
+      baseBackoffTime = 10000; // 10s for seller dashboard to enable faster recovery
     } else {
       baseBackoffTime = 30000; // 30s for others
     }
@@ -585,11 +589,28 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       // Handle service unavailable errors (503) with specific backoff
       else if (networkResponse.status === 503) {
         console.warn('Service unavailable (503):', networkResponse.status, requestKey);
+        
+        // For seller dashboard requests, reduce backoff time
+        const url = new URL(request.url);
+        const isSellerRequest = url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/');
+        
         // Track failure with exponential backoff for service unavailable errors
         const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
         failureInfo.attempts += 1;
         failureInfo.lastFailure = Date.now();
         failedRequests.set(requestKey, failureInfo);
+        
+        // For seller requests, don't aggressively backoff on 503 errors
+        if (isSellerRequest) {
+          console.log('Seller request 503 error, reducing backoff time');
+          // Reduce backoff time for seller requests by clearing failure info after short period
+          setTimeout(() => {
+            if (failedRequests.get(requestKey)?.attempts <= 3) {
+              failedRequests.delete(requestKey);
+              console.log('Cleared seller request failure info for faster retry');
+            }
+          }, 5000); // Clear after 5 seconds for seller requests
+        }
       }
       // Handle community API errors with specific backoff
       else if (url.pathname.includes('/api/communities') || url.pathname.includes('/communities/')) {
@@ -699,6 +720,25 @@ async function performNetworkRequest(request, cacheName, requestKey, cacheConfig
       failureInfo.attempts += 1;
       failureInfo.lastFailure = Date.now();
       failedRequests.set(requestKey, failureInfo);
+    }
+    // Handle seller dashboard failures with more specific backoff
+    else if (url.pathname.includes('/api/marketplace/seller') || url.pathname.includes('/dashboard/')) {
+      console.warn('Seller dashboard failed:', error.message, requestKey);
+      // Track failure with exponential backoff for seller requests
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+      
+      // For seller requests, don't aggressively backoff on network errors
+      console.log('Seller request network error, reducing backoff time');
+      // Reduce backoff time for seller requests by clearing failure info after short period
+      setTimeout(() => {
+        if (failedRequests.get(requestKey)?.attempts <= 3) {
+          failedRequests.delete(requestKey);
+          console.log('Cleared seller request failure info for faster retry');
+        }
+      }, 5000); // Clear after 5 seconds for seller requests
     }
     else {
       // Track failure with exponential backoff for other requests

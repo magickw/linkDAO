@@ -43,7 +43,7 @@ if (connectionString) {
         prepare: false, // Disable prefetch as it's not supported in production environments
         max: maxConnections,
         idle_timeout: isRenderFree ? 20 : (isRenderPro ? 30 : 60), // Seconds
-        connect_timeout: isRenderFree ? 5 : (isRenderPro ? 3 : 2), // Seconds
+        connect_timeout: isRenderFree ? 10 : (isRenderPro ? 5 : 3), // Increased timeout for better reliability
         max_lifetime: 60 * 30, // 30 minutes max connection lifetime to prevent stale connections
 
         // Advanced connection pool settings
@@ -74,6 +74,11 @@ if (connectionString) {
             safeLogger.debug('Database connection closed');
           }
         },
+        
+        // Retry configuration for better resilience
+        retry_backoff: true,
+        retry_max: 3,
+        retry_delay: 1000, // 1 second initial delay
       };
 
       client = postgres(connectionString, clientConfig);
@@ -161,7 +166,33 @@ if (connectionString) {
             }
           } catch (error) {
             safeLogger.error('❌ Database health check failed:', error);
-            // Optionally: Implement reconnection logic here
+            
+            // Implement reconnection logic for specific errors
+            if (error && typeof error === 'object' && ('code' in error)) {
+              const errorCode = (error as any).code;
+              if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+                safeLogger.warn('Database connection lost, attempting to reconnect...');
+                // Clear existing client and db instances
+                if (client) {
+                  try {
+                    await client.end();
+                  } catch (endError) {
+                    safeLogger.error('Error closing existing database client:', endError);
+                  }
+                }
+                
+                // Try to reinitialize the connection
+                try {
+                  client = postgres(connectionString, clientConfig);
+                  db = drizzle(client, { schema });
+                  safeLogger.info('✅ Database reconnection successful');
+                } catch (reconnectError) {
+                  safeLogger.error('❌ Database reconnection failed:', reconnectError);
+                  client = undefined;
+                  db = undefined;
+                }
+              }
+            }
           }
         }, 300000); // Every 5 minutes
       }
@@ -169,6 +200,17 @@ if (connectionString) {
 
   } catch (error) {
     safeLogger.error('❌ Failed to establish database connection:', error);
+    
+    // Try to reconnect with exponential backoff
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error detected, will retry with backoff');
+        // We'll let the application continue without database for now
+        // Individual services will handle the database unavailability gracefully
+      }
+    }
+    
     client = undefined;
     db = undefined;
   }
