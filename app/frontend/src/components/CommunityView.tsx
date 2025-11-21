@@ -59,8 +59,13 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         setLoading(true);
         setError(null);
 
+        // Check if communitySlug is a UUID (ID) or a slug
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
+
         // Fetch real community data from API
-        const data = await CommunityService.getCommunityBySlug(communitySlug);
+        const data = isUuid
+          ? await CommunityService.getCommunityById(communitySlug)
+          : await CommunityService.getCommunityBySlug(communitySlug);
 
         if (!data) {
           setError('Community not found');
@@ -90,8 +95,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
       } catch (err) {
         console.error('Error fetching community data:', err);
         // Provide a more user-friendly error message that accounts for network issues
-        const errorMessage = err instanceof Error 
-          ? err.message 
+        const errorMessage = err instanceof Error
+          ? err.message
           : 'Failed to load community. Please check your connection and try again.';
         setError(errorMessage);
         setCommunityData(null);
@@ -143,13 +148,13 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             {error || 'Community Not Found'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {error 
-              ? 'There was an issue loading this community. The community may not exist or there might be a temporary server issue.' 
+            {error
+              ? 'There was an issue loading this community. The community may not exist or there might be a temporary server issue.'
               : 'The community you are looking for could not be found.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link 
-              href="/communities" 
+            <Link
+              href="/communities"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center"
             >
               ← Back to Communities
@@ -176,7 +181,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
               {communityData.displayName || communityData.name}
             </h3>
-            <Link 
+            <Link
               href="/communities"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
@@ -304,9 +309,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value as any)}
-                className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${
-                  sortBy !== 'top' ? 'hidden' : ''
-                }`}
+                className={`text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:text-white ${sortBy !== 'top' ? 'hidden' : ''
+                  }`}
               >
                 <option value="hour">Past Hour</option>
                 <option value="day">Past Day</option>
@@ -318,7 +322,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             )}
           </div>
         </div>
-        
+
         {/* Create Post Card - Reddit Style */}
         <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm border border-t-0 border-gray-200 dark:border-gray-700 mb-4">
           <div className="p-3">
@@ -364,11 +368,10 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         <div className="space-y-0">
           {Array.isArray(posts) && posts.length > 0 ? (
             posts.map(post => (
-              <div 
-                key={post.id} 
-                className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${
-                  highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
-                }`}
+              <div
+                key={post.id}
+                className={`bg-white dark:bg-gray-800 rounded-none border-x border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors first:rounded-t-lg last:rounded-b-lg first:border-t last:border-b ${highlightedPostId === post.id ? 'ring-2 ring-blue-500 border-blue-500' : ''
+                  }`}
               >
                 <div className="flex">
                   {/* Reddit-style Vote Column */}
@@ -456,7 +459,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 Be the first to start a discussion in this community!
               </p>
-              <button 
+              <button
                 onClick={handleCreatePost}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
@@ -498,7 +501,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
                 </span>
               </div>
             </div>
-            
+
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-xs uppercase tracking-wide">Community Rules</h4>
               <div className="space-y-1">
@@ -562,8 +565,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
               <div className="h-12 flex items-end">
                 <div className="flex items-end space-x-0.5 w-full">
                   {[65, 70, 68, 75, 72, 80, 78, 82, 85, 83, 88, 90].map((value, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="bg-gradient-to-t from-blue-500 to-purple-500 rounded-t flex-1"
                       style={{ height: `${value}%` }}
                     />

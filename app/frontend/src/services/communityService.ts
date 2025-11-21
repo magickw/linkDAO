@@ -1,7 +1,7 @@
-import { 
-  Community, 
-  CreateCommunityInput, 
-  UpdateCommunityInput 
+import {
+  Community,
+  CreateCommunityInput,
+  UpdateCommunityInput
 } from '../models/Community';
 import { CommunityOfflineCacheService } from './communityOfflineCacheService';
 import { fetchWithRetry, RetryOptions } from './retryUtils';
@@ -25,12 +25,12 @@ const COMMUNITY_RETRY_OPTIONS: RetryOptions = {
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return true;
     }
-    
+
     if (error.response) {
       const status = error.response.status;
       return status >= 500 || status === 429 || status === 503;
     }
-    
+
     return false;
   }
 };
@@ -61,11 +61,11 @@ export class CommunityService {
   static async createCommunity(data: CreateCommunityInput): Promise<Community> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}`,
         {
@@ -76,18 +76,18 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || 'Failed to create community');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // If offline, queue the action
       if (!this.offlineCacheService.isOnlineStatus()) {
         await this.offlineCacheService.queueOfflineAction({
@@ -99,11 +99,11 @@ export class CommunityService {
         });
         throw new Error('Community creation queued for when online');
       }
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -116,8 +116,25 @@ export class CommunityService {
   static async getCommunityById(id: string): Promise<Community | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
+    // Check for known invalid IDs to avoid unnecessary network calls
+    if (id === '1174a923-f8a9-4898-9e66-375056794a0b') {
+      console.debug(`[communityService] Skipping fetch for known invalid community ID: ${id}`);
+      return null;
+    }
+
     try {
+      // Check if we're offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.log(`[communityService] Offline, attempting to fetch community ${id} from cache`);
+        const cachedCommunity = await this.offlineCacheService.getCachedCommunity(id);
+        if (cachedCommunity) {
+          return cachedCommunity;
+        }
+        // If not in cache and offline, we can't do anything
+        return null;
+      }
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
@@ -129,13 +146,14 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn(`[communityService] Community not found with ID: ${id}`);
+          // Suppress warning for 404s as they are expected for deleted/missing communities
+          console.debug(`[communityService] Community not found with ID: ${id}`);
           return null;
         }
         if (response.status === 401 || response.status === 403) {
@@ -150,7 +168,7 @@ export class CommunityService {
             return cached;
           }
           console.warn('Community service unavailable (503), returning null');
-          
+
           // Add a small delay before retrying to avoid overwhelming the service
           await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
           return null;
@@ -169,22 +187,22 @@ export class CommunityService {
         const errorText = await response.text().catch(() => 'Unknown error');
         throw new Error(`Failed to fetch community (${response.status} ${response.statusText}): ${errorText}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (!data.success || !data.data) {
         return null;
       }
-      
+
       const community = data.data;
-      
+
       // Cache the community for offline support
       await this.offlineCacheService.cacheCommunity(community);
-      
+
       return community;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // Try to get from cache on network errors
       if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TypeError')) {
         const cached = await this.offlineCacheService.getCachedCommunity(id);
@@ -193,7 +211,7 @@ export class CommunityService {
           return cached;
         }
       }
-      
+
       console.error('Error fetching community:', error);
       return null;
     }
@@ -207,7 +225,7 @@ export class CommunityService {
   static async getCommunityBySlug(slug: string): Promise<Community | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${slug}`,
@@ -220,9 +238,9 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
@@ -240,7 +258,7 @@ export class CommunityService {
             return cached;
           }
           console.warn('Community service unavailable (503), returning null');
-          
+
           // Add a small delay before retrying to avoid overwhelming the service
           await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
           return null;
@@ -258,9 +276,9 @@ export class CommunityService {
         // For other errors, throw to be caught by outer catch
         throw new Error(`Failed to fetch community by slug: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Handle different response structures
       if (!data.success && !data.data && !Array.isArray(data) && typeof data === 'object') {
         // If data is already a community object, return it
@@ -271,20 +289,20 @@ export class CommunityService {
         }
         return null;
       }
-      
+
       if (!data.success || !data.data) {
         return null;
       }
-      
+
       const community = data.data;
-      
+
       // Cache the community for offline support
       await this.offlineCacheService.cacheCommunity(community);
-      
+
       return community;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // Try to get from cache on network errors
       if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TypeError')) {
         const cached = await this.offlineCacheService.getCachedCommunity(slug);
@@ -293,7 +311,7 @@ export class CommunityService {
           return cached;
         }
       }
-      
+
       console.error('Error fetching community by slug:', error);
       return null;
     }
@@ -313,7 +331,7 @@ export class CommunityService {
   }): Promise<Community[]> {
     // Create cache key based on parameters
     const cacheKey = `communities:${JSON.stringify(params || {})}`;
-    
+
     // Use circuit breaker and request coalescing
     return communityCircuitBreaker.execute(
       () => globalRequestCoalescer.request(
@@ -321,7 +339,7 @@ export class CommunityService {
         async () => {
           let url = `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}`;
           const searchParams = new URLSearchParams();
-          
+
           if (params) {
             if (params.category) searchParams.append('category', params.category);
             if (params.tags) searchParams.append('tags', params.tags.join(','));
@@ -329,11 +347,11 @@ export class CommunityService {
             if (params.limit) searchParams.append('limit', params.limit.toString());
             if (params.offset) searchParams.append('offset', params.offset.toString());
           }
-          
+
           if (searchParams.toString()) {
             url += `?${searchParams.toString()}`;
           }
-          
+
           try {
             const response = await requestManager.request(url, {
               method: 'GET',
@@ -345,7 +363,7 @@ export class CommunityService {
               retries: 2,
               deduplicate: true
             });
-            
+
             // Normalize payload to an array regardless of envelope shape
             let communities: Community[] = [];
             if (Array.isArray(response)) communities = response;
@@ -361,11 +379,11 @@ export class CommunityService {
           } catch (error) {
             // Handle specific error cases with better fallbacks
             console.error('Error fetching communities:', error);
-            
+
             // Try to get from offline cache - we'll use fallback data since there's no method to get all communities
             console.warn('Network error, but no cached communities available');
             return [];
-            
+
             // Return empty array instead of throwing to prevent UI crashes
             console.warn('Returning empty communities array due to persistent errors');
             return [];
@@ -393,12 +411,12 @@ export class CommunityService {
     );
   }
 
-    /**
-   * Get communities that belong to the current user (both created and member of)
-   * @param page - Page number (default: 1)
-   * @param limit - Number of items per page (default: 100)
-   * @returns Paginated list of user's communities
-   */
+  /**
+ * Get communities that belong to the current user (both created and member of)
+ * @param page - Page number (default: 1)
+ * @param limit - Number of items per page (default: 100)
+ * @returns Paginated list of user's communities
+ */
   static async getMyCommunities(page: number = 1, limit: number = 100): Promise<{ communities: Community[]; pagination: any }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -457,7 +475,7 @@ export class CommunityService {
   static async getCommunityByName(name: string): Promise<Community | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/name/${name}`,
@@ -470,9 +488,9 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
@@ -495,16 +513,16 @@ export class CommunityService {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || `Failed to fetch community (HTTP ${response.status})`);
       }
-      
+
       const json = await safeJson(response);
       return (json as Community) || null;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -532,7 +550,7 @@ export class CommunityService {
       }
 
       const data = await response.json();
-      
+
       if (!data.success || !data.data) {
         return [];
       }
@@ -554,11 +572,11 @@ export class CommunityService {
   static async updateCommunity(id: string, data: UpdateCommunityInput): Promise<Community> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
@@ -569,27 +587,27 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
-      
+
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || 'Failed to update community');
       }
-      
+
       const json = await safeJson(response);
       const community = json as Community;
-      
+
       // Update cache
       if (community) {
         await this.offlineCacheService.cacheCommunity(community);
       }
-      
+
       return community;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // If offline, queue the action
       if (!this.offlineCacheService.isOnlineStatus()) {
         await this.offlineCacheService.queueOfflineAction({
@@ -601,11 +619,11 @@ export class CommunityService {
         });
         throw new Error('Community update queued for when online');
       }
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -618,11 +636,11 @@ export class CommunityService {
   static async deleteCommunity(id: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${id}`,
         {
@@ -632,9 +650,9 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           return false;
@@ -642,14 +660,14 @@ export class CommunityService {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || 'Failed to delete community');
       }
-      
+
       // Clear cache
       await this.offlineCacheService.clearCommunityCache(id);
-      
+
       return true;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // If offline, queue the action
       if (!this.offlineCacheService.isOnlineStatus()) {
         await this.offlineCacheService.queueOfflineAction({
@@ -661,11 +679,11 @@ export class CommunityService {
         });
         throw new Error('Community deletion queued for when online');
       }
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -679,7 +697,7 @@ export class CommunityService {
   static async searchCommunities(query: string, limit: number = 20): Promise<Community[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/search?q=${encodeURIComponent(query)}&limit=${limit}`,
@@ -692,9 +710,9 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -714,7 +732,7 @@ export class CommunityService {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || `Failed to search communities (HTTP ${response.status})`);
       }
-      
+
       const json = await safeJson(response);
       // Normalize payload to an array regardless of envelope shape
       if (Array.isArray(json)) return json;
@@ -726,11 +744,11 @@ export class CommunityService {
       return [];
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -743,7 +761,7 @@ export class CommunityService {
   static async getTrendingCommunities(limit: number = 10): Promise<Community[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetchWithRetry(
         `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/trending?limit=${limit}`,
@@ -756,14 +774,14 @@ export class CommunityService {
         },
         COMMUNITY_RETRY_OPTIONS
       );
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await safeJson(response);
         throw new Error((error && (error.error || error.message)) || 'Failed to fetch trending communities');
       }
-      
+
       const json = await safeJson(response);
       // Normalize payload to an array regardless of envelope shape
       if (Array.isArray(json)) return json;
@@ -775,11 +793,11 @@ export class CommunityService {
       return [];
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }

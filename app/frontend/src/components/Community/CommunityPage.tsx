@@ -82,7 +82,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     const updateNetworkStatus = () => {
       const onlineStatus = typeof navigator !== 'undefined' ? navigator.onLine : true;
       setIsOnline(onlineStatus);
-      
+
       // Get pending actions count
       offlineCacheService.getCacheStats().then(stats => {
         setPendingActions(stats.pendingActions);
@@ -91,7 +91,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
     // Check if we're in a browser environment
     const isBrowser = typeof window !== 'undefined';
-    
+
     if (isBrowser) {
       window.addEventListener('online', updateNetworkStatus);
       window.addEventListener('offline', updateNetworkStatus);
@@ -128,7 +128,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
       setCommunity(communityData);
       setStats(communityStats);
-      
+
       // Track community performance metrics
       if (communityData) {
         communityPerformanceService.getCurrentMetrics(communityData.id)
@@ -168,7 +168,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
   // Check user's membership status
   const checkMembershipStatus = async (
-    communityId: string, 
+    communityId: string,
     userAddress: string
   ): Promise<MembershipStatus> => {
     try {
@@ -188,7 +188,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
     if (!isAuthenticated || !user || !community) return;
 
     try {
-      const endpoint = membershipStatus.isMember 
+      const endpoint = membershipStatus.isMember
         ? `/api/communities/${community.id}/leave`
         : `/api/communities/${community.id}/join`;
 
@@ -209,8 +209,8 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
       if (stats) {
         setStats({
           ...stats,
-          memberCount: membershipStatus.isMember 
-            ? stats.memberCount - 1 
+          memberCount: membershipStatus.isMember
+            ? stats.memberCount - 1
             : stats.memberCount + 1
         });
       }
@@ -248,8 +248,8 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
         if (stats) {
           setStats(prev => prev ? {
             ...prev,
-            memberCount: data.action === 'join' 
-              ? prev.memberCount + 1 
+            memberCount: data.action === 'join'
+              ? prev.memberCount + 1
               : prev.memberCount - 1
           } : null);
         }
@@ -297,14 +297,31 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   if (error || !community) {
     return (
       <div className="community-page-error">
-        <h2>Community Not Found</h2>
-        <p>{error || 'The requested community could not be found.'}</p>
-        <button 
-          onClick={() => router.push('/communities')}
-          className="btn btn-primary"
-        >
-          Browse Communities
-        </button>
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-100 dark:border-gray-700">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Community Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            {error || 'The community you are looking for does not exist or has been removed.'}
+          </p>
+          <div className="flex flex-col space-y-3">
+            <button
+              onClick={() => router.push('/communities')}
+              className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-primary-500/30"
+            >
+              Browse Communities
+            </button>
+            <button
+              onClick={() => router.back()}
+              className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -406,7 +423,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                 communityId={community.id}
                 rules={community.rules}
                 canEdit={canUserModerate}
-                onRulesUpdate={(rules) => setCommunity(prev => 
+                onRulesUpdate={(rules) => setCommunity(prev =>
                   prev ? { ...prev, rules } : null
                 )}
               />
@@ -426,7 +443,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                 onClose={() => setActiveTab('posts')}
               />
             )}
-            
+
             {activeTab === 'performance' && canUserModerate && (
               <CommunityPerformanceDashboard
                 communityId={community.id}
