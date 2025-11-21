@@ -720,13 +720,18 @@ export class HealthMonitoringService {
   // Check for system-level alerts
   private checkSystemAlerts(health: SystemHealth): void {
     const memory = health.metrics.memory;
-    const memoryUsagePercent = (memory.heapUsed / memory.heapTotal) * 100;
-    
-    // Memory usage alerts
+
+    // Use RSS against total system memory for accurate percentage
+    // For Render Pro: 4GB RAM = 4096MB, so RSS / 4096MB = actual usage
+    const os = require('os');
+    const totalSystemMemory = os.totalmem();
+    const memoryUsagePercent = (memory.rss / totalSystemMemory) * 100;
+
+    // Memory usage alerts - only for actual system memory pressure
     if (memoryUsagePercent > 90) {
-      this.addAlert('high_memory_usage', 'critical', `Memory usage at ${memoryUsagePercent.toFixed(1)}%`);
+      this.addAlert('high_memory_usage', 'critical', `Memory usage at ${memoryUsagePercent.toFixed(1)}% (${Math.round(memory.rss / 1024 / 1024)}MB / ${Math.round(totalSystemMemory / 1024 / 1024)}MB)`);
     } else if (memoryUsagePercent > 80) {
-      this.addAlert('high_memory_usage', 'warning', `Memory usage at ${memoryUsagePercent.toFixed(1)}%`);
+      this.addAlert('high_memory_usage', 'warning', `Memory usage at ${memoryUsagePercent.toFixed(1)}% (${Math.round(memory.rss / 1024 / 1024)}MB / ${Math.round(totalSystemMemory / 1024 / 1024)}MB)`);
     } else {
       this.removeAlert('high_memory_usage');
     }

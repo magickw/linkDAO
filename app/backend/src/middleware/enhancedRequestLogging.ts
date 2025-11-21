@@ -163,16 +163,22 @@ export const enhancedRequestLoggingMiddleware = (
   performSecurityAnalysis(req, requestLog);
 
   // Log incoming request with appropriate level
-  const logLevel = shouldLogRequest(req) ? 'info' : 'debug';
-  logger[logLevel](`Incoming ${req.method} ${req.originalUrl}`, {
-    requestId,
-    correlationId,
-    ip: requestLog.ip,
-    userAgent: requestLog.headers.userAgent,
-    query: Object.keys(req.query).length > 0 ? req.query : undefined,
-    contentLength: req.get('Content-Length'),
-    security: requestLog.security?.suspicious ? requestLog.security : undefined
-  });
+  // In production, only log errors, slow requests, and security issues - not every request
+  const isProduction = process.env.NODE_ENV === 'production';
+  const shouldLog = !isProduction || requestLog.security?.suspicious || requestLog.security?.riskScore > 5;
+
+  if (shouldLog) {
+    const logLevel = shouldLogRequest(req) ? 'info' : 'debug';
+    logger[logLevel](`Incoming ${req.method} ${req.originalUrl}`, {
+      requestId,
+      correlationId,
+      ip: requestLog.ip,
+      userAgent: requestLog.headers.userAgent,
+      query: Object.keys(req.query).length > 0 ? req.query : undefined,
+      contentLength: req.get('Content-Length'),
+      security: requestLog.security?.suspicious ? requestLog.security : undefined
+    });
+  }
 
   // Override res.json to capture response data
   const originalJson = res.json;
@@ -231,16 +237,23 @@ export const enhancedRequestLoggingMiddleware = (
       // Record performance metrics
       recordPerformanceMetrics(req, res, responseTime, requestLog);
 
-      // Log completion
-      logger.info(`Request ${requestId} finished`, {
-        requestId,
-        correlationId,
-        method: req.method,
-        url: req.originalUrl,
-        statusCode: res.statusCode,
-        responseTime,
-        performance: requestLog.performance
-      });
+      // In production, only log slow requests (>2s), errors, or security issues
+      const shouldLogFinish = !isProduction ||
+                             responseTime > 2000 ||
+                             res.statusCode >= 400 ||
+                             requestLog.security?.suspicious;
+
+      if (shouldLogFinish) {
+        logger.info(`Request ${requestId} finished`, {
+          requestId,
+          correlationId,
+          method: req.method,
+          url: req.originalUrl,
+          statusCode: res.statusCode,
+          responseTime,
+          performance: responseTime > 2000 ? requestLog.performance : undefined // Only include perf details for slow requests
+        });
+      }
 
       // Check for alerts
       checkForAlerts(requestLog);
@@ -397,7 +410,8 @@ function recordPerformanceMetrics(
 // Log response with appropriate level and detail
 function logResponse(requestLog: EnhancedRequestLog, responseBody?: any): void {
   const { statusCode, responseTime, requestId, correlationId } = requestLog;
-  
+  const isProduction = process.env.NODE_ENV === 'production';
+
   if (statusCode >= 500) {
     logger.error(`Request ${requestId} failed with server error`, {
       ...requestLog,
@@ -414,7 +428,8 @@ function logResponse(requestLog: EnhancedRequestLog, responseBody?: any): void {
       ...requestLog,
       performance: requestLog.performance
     });
-  } else {
+  } else if (!isProduction) {
+    // In production, skip logging successful fast requests to reduce noise
     logger.info(`Request ${requestId} completed successfully`, {
       requestId,
       correlationId,

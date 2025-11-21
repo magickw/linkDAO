@@ -117,12 +117,6 @@ export class CommunityService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    // Check for known invalid IDs to avoid unnecessary network calls
-    if (id === '1174a923-f8a9-4898-9e66-375056794a0b') {
-      console.debug(`[communityService] Skipping fetch for known invalid community ID: ${id}`);
-      return null;
-    }
-
     try {
       // Check if we're offline
       if (typeof navigator !== 'undefined' && !navigator.onLine) {

@@ -314,13 +314,18 @@ export class ComprehensiveMonitoringService {
 
     const current = this.metrics[this.metrics.length - 1];
 
-    // Memory usage check
-    const memoryPercentage = (current.system.memory.heapUsed / current.system.memory.heapTotal) * 100;
+    // Memory usage check - use RSS against total system memory for accurate percentage
+    // For Render Pro: 4GB RAM = 4096MB, so RSS (276MB) / 4096MB = ~6.7%, not 95%!
+    const os = require('os');
+    const totalSystemMemory = os.totalmem();
+    const memoryPercentage = (current.system.memory.rss / totalSystemMemory) * 100;
+
+    // Only alert if memory usage is genuinely high (>85% of system memory)
     if (memoryPercentage > this.thresholds.memoryUsage) {
       await this.createAlert(
         'high_memory_usage',
         'High Memory Usage',
-        `Memory usage at ${Math.round(memoryPercentage)}%`,
+        `Memory usage at ${Math.round(memoryPercentage)}% (${Math.round(current.system.memory.rss / 1024 / 1024)}MB / ${Math.round(totalSystemMemory / 1024 / 1024)}MB)`,
         memoryPercentage > 95 ? 'critical' : 'high'
       );
     }

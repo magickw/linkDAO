@@ -165,6 +165,17 @@ export class MarketplaceListingsController {
       const listing = await this.marketplaceService.getListingById(id);
 
       if (!listing) {
+        // Known test listing IDs that don't exist - suppress logging for these
+        const testListingIds = [
+          '550e8400-e29b-41d4-a716-446655440001',
+          '550e8400-e29b-41d4-a716-446655440002'
+        ];
+
+        // Only log 404s for non-test listings
+        if (!testListingIds.includes(id)) {
+          safeLogger.warn(`Listing not found: ${id}`);
+        }
+
         res.status(404).json(createErrorResponse(
           'LISTING_NOT_FOUND',
           'Marketplace listing not found'
