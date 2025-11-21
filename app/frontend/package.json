@@ -61,7 +61,7 @@
     "date-fns": "^2.30.0",
     "dompurify": "^3.3.0",
     "eslint": "^9.38.0",
-    "ethers": "^5.8.0",
+    "ethers": "^6.15.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.24",
     "hono": "^4.10.3",

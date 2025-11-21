@@ -253,14 +253,14 @@ export class CommunityWeb3Service {
       const ldaoTokenContract = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, signer);
 
       // Convert amount to wei (LDAO has 18 decimals)
-      const amountWei = ethers.parseUnits(input.amount, 18);
+      const amountWei = ethers.utils.parseUnits(input.amount, 18);
 
       // Check user's LDAO balance
       const userAddress = await signer.getAddress();
       const balance = await ldaoTokenContract.balanceOf(userAddress);
 
       if (balance < amountWei) {
-        throw new Error(`Insufficient LDAO balance. You have ${ethers.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
+        throw new Error(`Insufficient LDAO balance. You have ${ethers.utils.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
       }
 
       // Check current allowance
@@ -275,7 +275,7 @@ export class CommunityWeb3Service {
       }
 
       // Convert postId to bytes32
-      const postIdBytes32 = ethers.id(input.postId);
+      const postIdBytes32 = ethers.utils.id(input.postId);
 
       // Send tip (with or without comment)
       let tx;

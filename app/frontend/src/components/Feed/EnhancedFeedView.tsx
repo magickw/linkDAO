@@ -708,7 +708,7 @@ interface PaginatedFeedProps {
   postsPerPage: number;
   renderPost: (post: EnhancedPost) => React.ReactNode;
   onPostsUpdate: (posts: EnhancedPost[]) => void;
-  convertPost: (feedPost: FeedEnhancedPost) => EnhancedPost;
+  convertPost: (feedPost: FeedEnhancedPost) => EnhancedPost | Promise<EnhancedPost>;
   onError: (error: FeedError) => void;
 }
 
@@ -731,7 +731,7 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
     try {
       const { FeedService } = await import('../../services/feedService');
       const response = await FeedService.getEnhancedFeed(filter, page, postsPerPage);
-      const convertedPosts = response.posts.map(convertPost);
+      const convertedPosts = await Promise.all(response.posts.map(convertPost));
 
       setPosts(convertedPosts);
       setTotalPages(response.totalPages);
