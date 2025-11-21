@@ -46,6 +46,16 @@ class AuthService {
   }
 
   /**
+   * Reset authentication attempt counter
+   * This allows users to retry after hitting the maximum attempts limit
+   */
+  public resetAuthAttempts(): void {
+    this.authAttemptCount = 0;
+    this.lastAuthAttempt = 0;
+    console.log('✅ Authentication attempt counter reset');
+  }
+
+  /**
    * Get authentication nonce for wallet signature
    */
   async getNonce(address: string): Promise<{ nonce: string; message: string }> {
@@ -85,6 +95,14 @@ class AuthService {
    * Authenticate with Web3 wallet signature
    */
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
+    // Reset authentication counter when starting a new authentication flow
+    // This allows users to retry after disconnecting and reconnecting their wallet
+    if (this.authAttemptCount >= this.MAX_AUTH_ATTEMPTS) {
+      console.log('🔄 Resetting authentication counter for new wallet connection attempt');
+      this.authAttemptCount = 0;
+      this.lastAuthAttempt = 0;
+    }
+
     // Track authentication attempt
     this.lastAuthAttempt = Date.now();
 
@@ -247,16 +265,22 @@ class AuthService {
         const lowerMessage = signErrorMessage.toLowerCase();
 
         if (lowerMessage.includes('rejected') || lowerMessage.includes('denied')) {
-          // Increment authentication attempt count on failure
-          this.authAttemptCount++;
+          // User rejected signature - RESET counter instead of incrementing
+          // This prevents authentication loop when user explicitly rejects
+          console.log('User rejected signature request - resetting authentication counter');
+          this.authAttemptCount = 0;
+          this.lastAuthAttempt = 0;
           return { success: false, error: 'Signature request was rejected by user' };
         } else if (lowerMessage.includes('not supported')) {
-          // Increment authentication attempt count on failure
-          this.authAttemptCount++;
+          // Wallet doesn't support signing - this is not a retry-able error
+          // Reset counter to prevent blocking future attempts with different wallets
+          console.log('Wallet does not support signing - resetting authentication counter');
+          this.authAttemptCount = 0;
+          this.lastAuthAttempt = 0;
           return { success: false, error: 'Your wallet does not support message signing' };
         } else {
           console.error('Signing error:', signError);
-          // Increment authentication attempt count on failure
+          // Only increment for actual technical errors (not user actions)
           this.authAttemptCount++;
           return { success: false, error: signErrorMessage };
         }

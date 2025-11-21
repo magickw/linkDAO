@@ -1,14 +1,13 @@
 import { eq, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { databaseService } from '../services/databaseService';
 import { sellers } from '../db/schema';
-import { 
-  SellerProfile, 
-  CreateSellerProfileRequest, 
-  UpdateSellerProfileRequest, 
+import {
+  SellerProfile,
+  CreateSellerProfileRequest,
+  UpdateSellerProfileRequest,
   OnboardingStatus,
-  OnboardingSteps 
+  OnboardingSteps
 } from '../types/sellerProfile';
 
 export class SellerProfileService {
@@ -263,14 +262,9 @@ export class SellerProfileService {
   // Get seller tier information
   async getSellerTier(walletAddress: string): Promise<{ tier: string; benefits: string[] }> {
     try {
-      const db = databaseService.getDatabase();
-      const [seller] = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
-        .limit(1);
+      const profile = await this.getProfile(walletAddress);
 
-      if (!seller) {
+      if (!profile) {
         return {
           tier: 'unverified',
           benefits: ['Basic seller features']
@@ -285,8 +279,8 @@ export class SellerProfileService {
       };
 
       return {
-        tier: seller.tier || 'unverified',
-        benefits: tierBenefits[seller.tier as keyof typeof tierBenefits] || tierBenefits.unverified
+        tier: profile.tier || 'unverified',
+        benefits: tierBenefits[profile.tier as keyof typeof tierBenefits] || tierBenefits.unverified
       };
     } catch (error) {
       safeLogger.error('Error getting seller tier:', error);
@@ -305,14 +299,9 @@ export class SellerProfileService {
     requirements: { [key: string]: boolean };
   }> {
     try {
-      const db = databaseService.getDatabase();
-      const [seller] = await db
-        .select()
-        .from(sellers)
-        .where(eq(sellers.walletAddress, walletAddress))
-        .limit(1);
+      const profile = await this.getProfile(walletAddress);
 
-      if (!seller) {
+      if (!profile) {
         return {
           currentTier: 'unverified',
           nextTier: 'basic',
@@ -325,32 +314,34 @@ export class SellerProfileService {
         };
       }
 
-      const currentTier = seller.tier || 'unverified';
+      const currentTier = profile.tier || 'unverified';
+      const profileCompletenessScore = profile.profileCompleteness?.score || 0;
+
       const tierProgress = {
         unverified: {
           nextTier: 'basic',
           requirements: {
-            profileComplete: seller.profileCompleteness >= 50,
-            emailVerified: seller.emailVerified || false,
-            firstListing: false
+            profileComplete: profileCompletenessScore >= 50,
+            emailVerified: false, // Would need to check from users table
+            firstListing: false // Would need to check from listings
           }
         },
         basic: {
           nextTier: 'verified',
           requirements: {
-            profileComplete: seller.profileCompleteness >= 75,
-            emailVerified: seller.emailVerified || false,
-            firstListing: seller.totalListings > 0,
+            profileComplete: profileCompletenessScore >= 75,
+            emailVerified: false,
+            firstListing: false,
             noDisputes: true
           }
         },
         verified: {
           nextTier: 'premium',
           requirements: {
-            profileComplete: seller.profileCompleteness >= 90,
-            salesVolume: seller.totalSales > 1000,
-            goodRating: seller.averageRating >= 4.5,
-            activeListings: seller.activeListings >= 5
+            profileComplete: profileCompletenessScore >= 90,
+            salesVolume: false,
+            goodRating: false,
+            activeListings: false
           }
         },
         premium: {
@@ -385,6 +376,10 @@ export class SellerProfileService {
       
 
   private mapSellerToProfile(seller: any): SellerProfile {
+    // Safely access date fields with null checks
+    const createdAtValue = seller.createdAt instanceof Date ? seller.createdAt : new Date();
+    const updatedAtValue = seller.updatedAt instanceof Date ? seller.updatedAt : new Date();
+
     return {
       walletAddress: seller.walletAddress,
       displayName: seller.displayName || undefined,
@@ -395,7 +390,7 @@ export class SellerProfileService {
       location: seller.location || undefined,
       ensHandle: seller.ensHandle || undefined,
       ensVerified: seller.ensVerified || false,
-      ensLastVerified: seller.ensLastVerified?.toISOString(),
+      ensLastVerified: seller.ensLastVerified?.toISOString?.() || undefined,
       profileImageIpfs: seller.profileImageIpfs || undefined,
       profileImageCdn: seller.profileImageCdn || undefined,
       profilePicture: seller.profileImageCdn || seller.coverImageUrl || undefined, // For backward compatibility
@@ -417,11 +412,11 @@ export class SellerProfileService {
         averageRating: 0,
         totalReviews: 0,
         reputationScore: 0,
-        joinDate: seller.createdAt?.toISOString() || new Date().toISOString(),
-        lastActive: seller.updatedAt?.toISOString() || new Date().toISOString(),
+        joinDate: createdAtValue.toISOString(),
+        lastActive: updatedAtValue.toISOString(),
       },
-      createdAt: seller.createdAt || new Date(),
-      updatedAt: seller.updatedAt || new Date(),
+      createdAt: createdAtValue,
+      updatedAt: updatedAtValue,
     };
   }
 

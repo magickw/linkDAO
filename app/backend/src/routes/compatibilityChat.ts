@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
 import { csrfProtection } from '../middleware/csrfProtection';
-import { requireJwt } from '../middleware/authJwt';
+import { authMiddleware } from '../middleware/authMiddleware';
 // Import Drizzle DB and table bindings for typed queries
 import { db } from '../db';
 import { conversations, chatMessages } from '../db/schema';
@@ -60,7 +60,7 @@ router.get('/api/health', (_req: Request, res: Response) => {
 });
 
 // List conversations (protected)
-router.get('/api/chat/conversations', requireJwt, (_req: Request, res: Response) => {
+router.get('/api/chat/conversations', authMiddleware, (_req: Request, res: Response) => {
   if (hasDb) {
     (async () => {
       try {
@@ -89,24 +89,24 @@ router.get('/api/chat/conversations', requireJwt, (_req: Request, res: Response)
 });
 
 // Also support /api/conversations as an alternate path
-router.get('/api/conversations', requireJwt, (_req: Request, res: Response) => {
+router.get('/api/conversations', authMiddleware, (_req: Request, res: Response) => {
   const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
   res.json({ conversations: list });
 });
 
 // Support additional alternate paths for conversations
-router.get('/api/messages/conversations', requireJwt, (_req: Request, res: Response) => {
+router.get('/api/messages/conversations', authMiddleware, (_req: Request, res: Response) => {
   const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
   res.json({ conversations: list });
 });
 
-router.get('/api/messaging/conversations', requireJwt, (_req: Request, res: Response) => {
+router.get('/api/messaging/conversations', authMiddleware, (_req: Request, res: Response) => {
   const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
   res.json({ conversations: list });
 });
 
 // Create a DM conversation
-router.post('/api/chat/conversations/dm', csrfProtection,  requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/conversations/dm', csrfProtection, authMiddleware, (req: Request, res: Response) => {
   const { participants } = req.body || {};
   if (!Array.isArray(participants) || participants.length === 0) {
     return res.status(400).json({ error: 'participants (string[]) required' });
@@ -165,7 +165,7 @@ router.post('/api/chat/conversations/dm', csrfProtection,  requireJwt, (req: Req
 });
 
 // Get chat history for a conversation
-router.get('/api/chat/history/:conversationId', requireJwt, (req: Request, res: Response) => {
+router.get('/api/chat/history/:conversationId', authMiddleware, (req: Request, res: Response) => {
   const { conversationId } = req.params;
   if (hasDb) {
     (async () => {
@@ -197,7 +197,7 @@ router.get('/api/chat/history/:conversationId', requireJwt, (req: Request, res: 
 });
 
 // Post a message
-router.post('/api/chat/messages', csrfProtection,  requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/messages', csrfProtection, authMiddleware, (req: Request, res: Response) => {
   const { conversation_id, sender_address, content } = req.body || {};
   if (!conversation_id || !inMemoryConversations[conversation_id]) {
     return res.status(400).json({ error: 'valid conversation_id required' });
@@ -281,7 +281,7 @@ router.post('/api/chat/messages', csrfProtection,  requireJwt, (req: Request, re
 });
 
 // Mark messages as read for a conversation
-router.post('/api/chat/messages/read', csrfProtection,  requireJwt, (req: Request, res: Response) => {
+router.post('/api/chat/messages/read', csrfProtection, authMiddleware, (req: Request, res: Response) => {
   const { conversation_id } = req.body || {};
   if (!conversation_id) {
     return res.status(400).json({ error: 'valid conversation_id required' });

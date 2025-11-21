@@ -59,13 +59,20 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         setLoading(true);
         setError(null);
 
-        // Check if communitySlug is a UUID (ID) or a slug
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
-
-        // Fetch real community data from API
-        const data = isUuid
-          ? await CommunityService.getCommunityById(communitySlug)
-          : await CommunityService.getCommunityBySlug(communitySlug);
+        // Better approach: Try to fetch by slug first, and only try by ID if slug returns null
+        let data = null;
+        
+        // Try fetching by slug first (most common case for user navigation)
+        data = await CommunityService.getCommunityBySlug(communitySlug);
+        
+        // If slug fetch didn't work (returned null), try by ID if it looks like a UUID
+        if (!data) {
+          // Check if it looks like a UUID before trying
+          const isUuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(communitySlug);
+          if (isUuidFormat) {
+            data = await CommunityService.getCommunityById(communitySlug);
+          }
+        }
 
         if (!data) {
           setError('Community not found');

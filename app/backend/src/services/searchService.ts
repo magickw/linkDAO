@@ -562,6 +562,7 @@ export class SearchService {
         .select({
           id: schema.communities.id,
           name: schema.communities.name,
+          slug: schema.communities.slug,
           displayName: schema.communities.displayName,
           description: schema.communities.description,
           category: schema.communities.category,
@@ -583,6 +584,7 @@ export class SearchService {
       return communitiesResult.map(community => ({
         id: community.id,
         name: community.name,
+        slug: community.slug,
         displayName: community.displayName,
         description: community.description || '',
         category: community.category,

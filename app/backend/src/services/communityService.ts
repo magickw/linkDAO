@@ -259,6 +259,7 @@ export class CommunityService {
         .select({
           id: communities.id,
           name: communities.name,
+          slug: communities.slug,
           displayName: communities.displayName,
           description: communities.description,
           category: communities.category,
@@ -288,6 +289,7 @@ export class CommunityService {
       const transformedCommunities = trendingCommunities.map(item => ({
         id: item.id,
         name: item.name,
+        slug: item.slug,
         displayName: item.displayName,
         description: item.description || '',
         category: item.category,
