@@ -469,7 +469,7 @@ const EnhancedFeedView = React.memo(({
                 <EmptyFeedState filter={filter} />
               ) : (
                 <div className="space-y-4">
-                  {feedPosts.map(renderPost)}
+                  {posts.map(renderPost)}
                 </div>
               )}
 
