@@ -43,41 +43,41 @@ export function transformDisplayListingToUnified(
       id: displayListing.id || '',
       sellerId: displayListing.sellerId || displayListing.sellerWalletAddress || '',
       sellerWalletAddress: displayListing.sellerWalletAddress || displayListing.sellerId || '',
-      
+
       // Basic listing information
       title: displayListing.title || displayListing.metadataURI || 'Untitled Listing',
       description: displayListing.description || '',
       category: displayListing.category || displayListing.itemType?.toLowerCase() || 'uncategorized',
       subcategory: displayListing.subcategory,
       tags: displayListing.tags || [],
-      
+
       // Pricing information (unified format)
       price: typeof displayListing.price === 'string' ? parseFloat(displayListing.price) : (displayListing.price || 0),
       currency: displayListing.currency || 'ETH',
       displayPrice: formatPrice(displayListing.price, displayListing.currency),
       displayCurrency: formatCurrency(displayListing.currency),
-      
+
       // Inventory and availability
       quantity: displayListing.quantity || 1,
       condition: displayListing.condition || 'new',
       availability: displayListing.isActive === false ? 'out_of_stock' : 'available',
-      
+
       // Media and presentation
       images: displayListing.images || [displayListing.image].filter(Boolean),
       thumbnailUrl: displayListing.image || displayListing.images?.[0] || '',
       featuredImage: displayListing.featuredImage || displayListing.images?.[0],
-      
+
       // Status and lifecycle
       status: mapListingStatus(displayListing.status, displayListing.isActive),
       listingType: displayListing.listingType?.toLowerCase() || displayListing.saleType || 'fixed_price',
       saleType: displayListing.itemType?.toLowerCase() || displayListing.saleType || 'physical',
-      
+
       // Engagement metrics
       views: displayListing.views || 0,
       favorites: displayListing.favorites || displayListing.likes || 0,
       likes: displayListing.likes || displayListing.favorites || 0,
       questions: displayListing.questions || 0,
-      
+
       // Blockchain and escrow
       isEscrowProtected: displayListing.isEscrowProtected || displayListing.isEscrowed || false,
       isEscrowed: displayListing.isEscrowed || displayListing.isEscrowProtected || false,
@@ -85,27 +85,27 @@ export function transformDisplayListingToUnified(
       tokenAddress: displayListing.tokenAddress,
       tokenId: displayListing.tokenId,
       nftStandard: displayListing.nftStandard,
-      
+
       // Shipping and fulfillment
       shippingOptions: transformShippingOptions(displayListing.shippingOptions || displayListing.shipping),
-      
+
       // Additional metadata
       specifications: displayListing.specifications,
       metadata: transformListingMetadata(displayListing),
-      
+
       // Timestamps (unified format)
       createdAt: formatTimestamp(displayListing.createdAt || displayListing.startTime),
       updatedAt: formatTimestamp(displayListing.updatedAt),
       publishedAt: formatTimestamp(displayListing.publishedAt),
       startTime: formatTimestamp(displayListing.startTime),
       endTime: formatTimestamp(displayListing.endTime),
-      
+
       // Auction-specific fields
       currentBid: displayListing.currentBid ? parseFloat(displayListing.currentBid) : undefined,
       minimumBid: displayListing.minimumBid ? parseFloat(displayListing.minimumBid) : undefined,
       reservePrice: displayListing.reservePrice ? parseFloat(displayListing.reservePrice) : undefined,
       highestBidder: displayListing.highestBidderWalletAddress,
-      
+
       // Trust and verification
       trust: transformTrustIndicators(displayListing.trust),
       verificationStatus: displayListing.verificationStatus
@@ -152,46 +152,46 @@ export function transformSellerListingToUnified(
       id: sellerListing.id,
       sellerId: '', // Will be filled by context
       sellerWalletAddress: '', // Will be filled by context
-      
+
       // Basic listing information
       title: sellerListing.title,
       description: sellerListing.description,
       category: sellerListing.category,
       subcategory: sellerListing.subcategory,
       tags: sellerListing.tags,
-      
+
       // Pricing information
       price: sellerListing.price,
       currency: sellerListing.currency as any,
       displayPrice: formatPrice(sellerListing.price, sellerListing.currency),
       displayCurrency: formatCurrency(sellerListing.currency),
-      
+
       // Inventory and availability
       quantity: sellerListing.quantity,
       condition: sellerListing.condition,
       availability: sellerListing.status === 'active' ? 'available' : 'out_of_stock',
-      
+
       // Media and presentation
       images: sellerListing.images,
       thumbnailUrl: sellerListing.images[0] || '',
       featuredImage: sellerListing.images[0],
-      
+
       // Status and lifecycle
       status: sellerListing.status,
       listingType: sellerListing.saleType as any,
       saleType: 'physical', // Default assumption
-      
+
       // Engagement metrics
       views: sellerListing.views,
       favorites: sellerListing.favorites,
       likes: sellerListing.favorites, // Map favorites to likes
       questions: sellerListing.questions,
-      
+
       // Blockchain and escrow
       isEscrowProtected: sellerListing.escrowEnabled,
       isEscrowed: sellerListing.escrowEnabled,
       escrowEnabled: sellerListing.escrowEnabled,
-      
+
       // Shipping and fulfillment
       shippingOptions: {
         free: sellerListing.shippingOptions.free,
@@ -199,14 +199,14 @@ export function transformSellerListingToUnified(
         estimatedDays: sellerListing.shippingOptions.estimatedDays,
         international: sellerListing.shippingOptions.international,
       },
-      
+
       // Additional metadata
       specifications: sellerListing.specifications,
       metadata: {
         specifications: sellerListing.specifications,
         condition: sellerListing.condition,
       },
-      
+
       // Timestamps
       createdAt: sellerListing.createdAt,
       updatedAt: sellerListing.updatedAt,
@@ -245,39 +245,39 @@ export function transformMarketplaceListingToUnified(
       id: marketplaceListing.id,
       sellerId: marketplaceListing.sellerAddress || marketplaceListing.sellerWalletAddress,
       sellerWalletAddress: marketplaceListing.sellerWalletAddress || marketplaceListing.sellerAddress,
-      
+
       // Basic listing information
       title: marketplaceListing.title || marketplaceListing.metadataURI || 'Untitled',
       description: marketplaceListing.description || '',
       category: marketplaceListing.category || marketplaceListing.itemType?.toLowerCase() || 'uncategorized',
       tags: [],
-      
+
       // Pricing information
       price: typeof marketplaceListing.price === 'string' ? parseFloat(marketplaceListing.price) : marketplaceListing.price,
       currency: marketplaceListing.currency || 'ETH',
       displayPrice: formatPrice(marketplaceListing.price, marketplaceListing.currency),
       displayCurrency: formatCurrency(marketplaceListing.currency),
-      
+
       // Inventory and availability
       quantity: marketplaceListing.quantity || 1,
       condition: 'new', // Default
       availability: marketplaceListing.isActive ? 'available' : 'out_of_stock',
-      
+
       // Media and presentation
       images: marketplaceListing.images || [],
       thumbnailUrl: marketplaceListing.images?.[0] || '',
-      
+
       // Status and lifecycle
       status: mapMarketplaceStatus(marketplaceListing.status, marketplaceListing.isActive),
       listingType: marketplaceListing.listingType?.toLowerCase() || 'fixed_price',
       saleType: marketplaceListing.itemType?.toLowerCase() || 'physical',
-      
+
       // Engagement metrics
       views: 0,
       favorites: 0,
       likes: 0,
       questions: 0,
-      
+
       // Blockchain and escrow
       isEscrowProtected: marketplaceListing.isEscrowed || false,
       isEscrowed: marketplaceListing.isEscrowed || false,
@@ -285,20 +285,20 @@ export function transformMarketplaceListingToUnified(
       tokenAddress: marketplaceListing.tokenAddress,
       tokenId: marketplaceListing.tokenId,
       nftStandard: marketplaceListing.nftStandard,
-      
+
       // Shipping and fulfillment
       shippingOptions: {
         free: false,
         estimatedDays: '3-5',
         international: false,
       },
-      
+
       // Metadata
       specifications: {},
       metadata: {
         specifications: {},
       },
-      
+
       // Timestamps
       createdAt: formatTimestamp(marketplaceListing.createdAt),
       updatedAt: formatTimestamp(marketplaceListing.updatedAt),
@@ -344,7 +344,7 @@ export function transformSellerProfileToUnified(
       // Core identification
       id: sellerProfile.id,
       walletAddress: sellerProfile.walletAddress,
-      
+
       // Basic profile information
       displayName: sellerProfile.displayName,
       storeName: sellerProfile.storeName,
@@ -352,14 +352,14 @@ export function transformSellerProfileToUnified(
       description: sellerProfile.description,
       sellerStory: sellerProfile.sellerStory,
       location: sellerProfile.location,
-      
+
       // Media and branding
       profileImageUrl: sellerProfile.profilePicture,
       profilePicture: sellerProfile.profilePicture,
       logo: sellerProfile.logo,
       coverImageUrl: sellerProfile.coverImage,
       coverImage: sellerProfile.coverImage,
-      
+
       // Image storage (unified format)
       images: {
         profile: sellerProfile.profilePicture ? {
@@ -379,12 +379,12 @@ export function transformSellerProfileToUnified(
           thumbnail: sellerProfile.logo,
         } : undefined,
       },
-      
+
       // ENS and identity
       ensHandle: sellerProfile.ensHandle,
       ensVerified: sellerProfile.ensVerified,
       ensLastVerified: sellerProfile.ensLastVerified,
-      
+
       // Contact and social
       email: sellerProfile.email,
       emailVerified: sellerProfile.emailVerified,
@@ -392,7 +392,7 @@ export function transformSellerProfileToUnified(
       phoneVerified: sellerProfile.phoneVerified,
       websiteUrl: sellerProfile.websiteUrl,
       socialLinks: sellerProfile.socialLinks || {},
-      
+
       // Verification and status
       verificationStatus: {
         email: sellerProfile.emailVerified,
@@ -400,25 +400,25 @@ export function transformSellerProfileToUnified(
         kyc: sellerProfile.kycStatus,
         identity: sellerProfile.kycStatus === 'approved',
       },
-      
+
       applicationStatus: sellerProfile.applicationStatus,
       applicationDate: sellerProfile.applicationDate,
       approvedDate: sellerProfile.approvedDate,
       rejectionReason: sellerProfile.rejectionReason,
       suspensionReason: sellerProfile.suspensionReason,
       reviewedBy: sellerProfile.reviewedBy,
-      
+
       // Tier and reputation
       tier: transformSellerTier(sellerProfile.tier),
       tierProgress: transformTierProgress(sellerProfile),
       reputation: transformReputationData(sellerProfile.stats),
-      
+
       // Statistics
       stats: transformSellerStats(sellerProfile.stats),
-      
+
       // Profile completeness
       profileCompleteness: sellerProfile.profileCompleteness,
-      
+
       // Settings and preferences
       settings: {
         notifications: {
@@ -447,18 +447,18 @@ export function transformSellerProfileToUnified(
           internationalEnabled: (sellerProfile.settings as any)?.shipping?.internationalEnabled ?? false,
         },
       },
-      
+
       // Onboarding progress
       onboardingProgress: {
         ...sellerProfile.onboardingProgress,
         steps: (sellerProfile.onboardingProgress as any)?.steps || [],
       },
-      
-      // Payment and payout
-      payoutPreferences: {
-        defaultCrypto: sellerProfile.payoutPreferences.defaultCrypto,
-        cryptoAddresses: sellerProfile.payoutPreferences.cryptoAddresses,
-        fiatEnabled: sellerProfile.payoutPreferences.fiatEnabled,
+
+      // Payment and payout (with defensive defaults)
+      payoutPreferences: sellerProfile.payoutPreferences ? {
+        defaultCrypto: sellerProfile.payoutPreferences.defaultCrypto || 'ETH',
+        cryptoAddresses: sellerProfile.payoutPreferences.cryptoAddresses || {},
+        fiatEnabled: sellerProfile.payoutPreferences.fiatEnabled ?? false,
         offRampProvider: sellerProfile.payoutPreferences.offRampProvider,
         bankAccount: sellerProfile.payoutPreferences.bankAccount ? {
           ...sellerProfile.payoutPreferences.bankAccount,
@@ -466,18 +466,27 @@ export function transformSellerProfileToUnified(
         } : undefined,
         autoWithdraw: (sellerProfile.payoutPreferences as any)?.autoWithdraw ?? false,
         minimumWithdraw: (sellerProfile.payoutPreferences as any)?.minimumWithdraw ?? 0,
+      } : {
+        // Default payout preferences if missing
+        defaultCrypto: 'ETH',
+        cryptoAddresses: {},
+        fiatEnabled: false,
+        offRampProvider: undefined,
+        bankAccount: undefined,
+        autoWithdraw: false,
+        minimumWithdraw: 0,
       },
-      
+
       // DAO and governance
       daoReputation: sellerProfile.daoReputation ? {
         ...sellerProfile.daoReputation,
         stakingAmount: (sellerProfile.daoReputation as any)?.stakingAmount ?? 0,
         delegatedVotes: (sellerProfile.daoReputation as any)?.delegatedVotes ?? 0,
       } : undefined,
-      
+
       // Verification badges
       badges: sellerProfile.badges,
-      
+
       // Timestamps
       createdAt: sellerProfile.createdAt,
       updatedAt: sellerProfile.updatedAt,
@@ -519,7 +528,7 @@ export function transformDashboardStatsToUnified(
     const unified: UnifiedSellerDashboard = {
       // Profile information
       profile,
-      
+
       // Listings overview
       listings: {
         items: listings,
@@ -534,7 +543,7 @@ export function transformDashboardStatsToUnified(
           recentlyAdded: listings.slice(0, 3), // Top 3 as recently added
         },
       },
-      
+
       // Orders overview
       orders: {
         items: [], // Would need to be provided separately
@@ -549,7 +558,7 @@ export function transformDashboardStatsToUnified(
           recent: [], // Would need to be provided separately
         },
       },
-      
+
       // Analytics and metrics
       analytics: {
         overview: {
@@ -597,10 +606,10 @@ export function transformDashboardStatsToUnified(
           bounceRate: 0,
         },
       },
-      
+
       // Notifications
       notifications: [], // Would need to be provided separately
-      
+
       // Tier information
       tierInfo: {
         current: profile.tier,
@@ -611,7 +620,7 @@ export function transformDashboardStatsToUnified(
         upgradeRecommendations: [],
         history: [],
       },
-      
+
       // Financial overview
       financial: {
         balance: {
@@ -636,7 +645,7 @@ export function transformDashboardStatsToUnified(
           failed: [],
         },
       },
-      
+
       // Performance metrics
       performance: {
         kpis: {
@@ -656,17 +665,17 @@ export function transformDashboardStatsToUnified(
           yourRanking: 0,
         },
       },
-      
+
       // Recent activity
       recentActivity: [],
-      
+
       // Quick actions
       quickActions: [
         { id: '1', title: 'Create Listing', description: 'Add a new product', icon: 'plus', url: '/seller/listings/new', priority: 1, enabled: true },
         { id: '2', title: 'View Orders', description: 'Check pending orders', icon: 'orders', url: '/seller/orders', priority: 2, enabled: true },
         { id: '3', title: 'Analytics', description: 'View performance', icon: 'chart', url: '/seller/analytics', priority: 3, enabled: true },
       ],
-      
+
       // System status
       systemStatus: {
         online: true,
@@ -676,7 +685,7 @@ export function transformDashboardStatsToUnified(
         maintenanceMode: false,
         announcements: [],
       },
-      
+
       // Last updated timestamp
       lastUpdated: new Date().toISOString(),
     };
@@ -704,7 +713,7 @@ export function transformDashboardStatsToUnified(
 function formatPrice(price: any, currency?: string): string {
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
   if (isNaN(numPrice)) return '0';
-  
+
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: currency === 'USD' ? 2 : 4,
     maximumFractionDigits: currency === 'USD' ? 2 : 6,
@@ -746,7 +755,7 @@ function mapListingStatus(status: any, isActive?: boolean): UnifiedSellerListing
     };
     return statusMap[status] || 'draft';
   }
-  
+
   if (isActive === false) return 'paused';
   return 'active';
 }
@@ -761,7 +770,7 @@ function mapMarketplaceStatus(status: any, isActive?: boolean): UnifiedSellerLis
     };
     return statusMap[status] || (isActive ? 'active' : 'draft');
   }
-  
+
   return isActive ? 'active' : 'draft';
 }
 
@@ -773,7 +782,7 @@ function transformShippingOptions(shipping: any): UnifiedSellerListing['shipping
       international: false,
     };
   }
-  
+
   return {
     free: shipping.free || false,
     cost: shipping.cost,
@@ -802,7 +811,7 @@ function transformListingMetadata(listing: any): ListingMetadata {
 
 function transformTrustIndicators(trust: any): TrustIndicators | undefined {
   if (!trust) return undefined;
-  
+
   return {
     verified: trust.verified || false,
     escrowProtected: trust.escrowProtected || false,
@@ -852,7 +861,7 @@ function transformSellerTier(tierId: string): SellerTier {
       limitations: [],
     },
   };
-  
+
   return defaultTiers[tierId] || defaultTiers['anonymous'];
 }
 
@@ -884,27 +893,27 @@ function transformSellerStats(stats: any): SellerStats {
     totalSales: stats?.totalSales || 0,
     totalRevenue: stats?.totalSales || 0,
     averageOrderValue: 0,
-    
+
     // Listing metrics
     activeListings: stats?.activeListings || 0,
     totalListings: stats?.activeListings || 0,
     completedOrders: stats?.completedOrders || 0,
-    
+
     // Engagement metrics
     totalViews: 0,
     totalFavorites: 0,
     conversionRate: 0,
-    
+
     // Reputation metrics
     averageRating: stats?.averageRating || 0,
     totalReviews: stats?.totalReviews || 0,
     reputationScore: stats?.reputationScore || 0,
-    
+
     // Activity metrics
     responseTime: 0,
     fulfillmentRate: 0,
     disputeRate: 0,
-    
+
     // Time-based metrics
     joinDate: stats?.joinDate || new Date().toISOString(),
     lastActive: stats?.lastActive || new Date().toISOString(),
