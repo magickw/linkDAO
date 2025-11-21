@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
 import { db } from '../db';
 import { purchaseTransactions, earningActivities, stakingPositions } from '../db/schema';
-import { eq, gte, lte, desc, sql } from 'drizzle-orm';
+import { eq, gte, lte, desc, sql, and } from 'drizzle-orm';
 
 export interface SystemMetrics {
   totalPurchases: number;
@@ -54,6 +54,7 @@ export interface OptimizationRecommendations {
 
 export class LDAOPostLaunchMonitoringService extends EventEmitter {
   private metricsCache: Map<string, any> = new Map();
+  private readonly MAX_CACHE_SIZE = 100;
   private alertThresholds = {
     errorRate: 0.05, // 5%
     responseTime: 2000, // 2 seconds
@@ -68,8 +69,11 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
 
   async getSystemMetrics(timeRange: { start: Date; end: Date }): Promise<SystemMetrics> {
     try {
-      const cacheKey = `system_metrics_${timeRange.start.getTime()}_${timeRange.end.getTime()}`;
-      
+      // Normalize cache key to nearest minute to improve hit rate and reduce cache bloat
+      const startKey = Math.floor(timeRange.start.getTime() / 60000);
+      const endKey = Math.floor(timeRange.end.getTime() / 60000);
+      const cacheKey = `system_metrics_${startKey}_${endKey}`;
+
       if (this.metricsCache.has(cacheKey)) {
         return this.metricsCache.get(cacheKey);
       }
@@ -78,39 +82,47 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
       const purchaseStats = await db
         .select({
           totalPurchases: sql<number>`count(*)`,
-          totalVolume: sql<number>`sum(amount)`,
-          averageSize: sql<number>`avg(amount)`
+          totalVolume: sql<number>`sum(${purchaseTransactions.amount})`,
+          averageSize: sql<number>`avg(${purchaseTransactions.amount})`
         })
         .from(purchaseTransactions)
         .where(
-          sql`${purchaseTransactions.createdAt} >= ${timeRange.start} AND ${purchaseTransactions.createdAt} <= ${timeRange.end}`
+          and(
+            gte(purchaseTransactions.createdAt, timeRange.start),
+            lte(purchaseTransactions.createdAt, timeRange.end)
+          )
         );
 
       // Get conversion metrics
       const conversionData = await this.calculateConversionRate(timeRange);
-      
+
       // Get staking participation
       const stakingStats = await db
         .select({
-          totalStakers: sql<number>`count(distinct user_id)`,
-          totalStaked: sql<number>`sum(amount)`
+          totalStakers: sql<number>`count(distinct ${stakingPositions.userId})`,
+          totalStaked: sql<number>`sum(${stakingPositions.amount})`
         })
         .from(stakingPositions)
         .where(eq(stakingPositions.status, 'active'));
 
       const metrics: SystemMetrics = {
-        totalPurchases: purchaseStats[0]?.totalPurchases || 0,
-        totalVolume: purchaseStats[0]?.totalVolume || 0,
-        averageTransactionSize: purchaseStats[0]?.averageSize || 0,
+        totalPurchases: Number(purchaseStats[0]?.totalPurchases || 0),
+        totalVolume: Number(purchaseStats[0]?.totalVolume || 0),
+        averageTransactionSize: Number(purchaseStats[0]?.averageSize || 0),
         conversionRate: conversionData.rate,
         userAcquisitionRate: await this.calculateUserAcquisitionRate(timeRange),
-        stakingParticipation: stakingStats[0]?.totalStakers || 0,
+        stakingParticipation: Number(stakingStats[0]?.totalStakers || 0),
         errorRate: await this.calculateErrorRate(timeRange),
         responseTime: await this.getAverageResponseTime(timeRange)
       };
 
-      // Cache for 5 minutes
+      // Cache management
+      if (this.metricsCache.size >= this.MAX_CACHE_SIZE) {
+        this.metricsCache.clear(); // Simple strategy: clear all if full
+      }
+
       this.metricsCache.set(cacheKey, metrics);
+      // Auto-expire after 5 minutes
       setTimeout(() => this.metricsCache.delete(cacheKey), 5 * 60 * 1000);
 
       return metrics;
@@ -130,22 +142,25 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
         })
         .from(purchaseTransactions)
         .where(
-          sql`${purchaseTransactions.createdAt} >= ${timeRange.start} AND ${purchaseTransactions.createdAt} <= ${timeRange.end}`
+          and(
+            gte(purchaseTransactions.createdAt, timeRange.start),
+            lte(purchaseTransactions.createdAt, timeRange.end)
+          )
         )
         .groupBy(purchaseTransactions.paymentMethod);
 
       // Analyze purchase patterns
       const timePatterns = await this.analyzePurchasePatterns(timeRange);
-      
+
       // Analyze user journey
       const journeyData = await this.analyzeUserJourney(timeRange);
-      
+
       // Analyze earning behavior
       const earningData = await this.analyzeEarningBehavior(timeRange);
 
       return {
         preferredPaymentMethods: paymentMethods.reduce((acc, pm) => {
-          acc[pm.method] = pm.count;
+          acc[pm.method] = Number(pm.count);
           return acc;
         }, {} as Record<string, number>),
         purchasePatterns: timePatterns,
@@ -389,12 +404,15 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
       .select({ count: sql<number>`count(*)` })
       .from(purchaseTransactions)
       .where(
-        sql`${purchaseTransactions.createdAt} >= ${timeRange.start} AND ${purchaseTransactions.createdAt} <= ${timeRange.end}`
+        and(
+          gte(purchaseTransactions.createdAt, timeRange.start),
+          lte(purchaseTransactions.createdAt, timeRange.end)
+        )
       );
 
     // Mock session data - in practice, track actual user sessions
     const estimatedSessions = (purchases[0]?.count || 0) * 20; // Assume 20 sessions per purchase
-    const conversionRate = estimatedSessions > 0 ? (purchases[0]?.count || 0) / estimatedSessions : 0;
+    const conversionRate = estimatedSessions > 0 ? Number(purchases[0]?.count || 0) / estimatedSessions : 0;
 
     return { rate: conversionRate };
   }
@@ -402,14 +420,17 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
   private async calculateUserAcquisitionRate(timeRange: { start: Date; end: Date }): Promise<number> {
     // Simplified user acquisition rate
     const newUsers = await db
-      .select({ count: sql<number>`count(distinct user_id)` })
+      .select({ count: sql<number>`count(distinct ${purchaseTransactions.userId})` })
       .from(purchaseTransactions)
       .where(
-        sql`${purchaseTransactions.createdAt} >= ${timeRange.start} AND ${purchaseTransactions.createdAt} <= ${timeRange.end}`
+        and(
+          gte(purchaseTransactions.createdAt, timeRange.start),
+          lte(purchaseTransactions.createdAt, timeRange.end)
+        )
       );
 
     const days = Math.ceil((timeRange.end.getTime() - timeRange.start.getTime()) / (24 * 60 * 60 * 1000));
-    return (newUsers[0]?.count || 0) / days;
+    return Number(newUsers[0]?.count || 0) / (days || 1); // Prevent division by zero
   }
 
   private async calculateErrorRate(timeRange: { start: Date; end: Date }): Promise<number> {
@@ -472,17 +493,20 @@ export class LDAOPostLaunchMonitoringService extends EventEmitter {
         .select({
           type: earningActivities.activityType,
           count: sql<number>`count(*)`,
-          avgTokens: sql<number>`avg(tokens_earned)`
+          avgTokens: sql<number>`avg(${earningActivities.tokensEarned})`
         })
         .from(earningActivities)
         .where(
-          sql`${earningActivities.createdAt} >= ${timeRange.start} AND ${earningActivities.createdAt} <= ${timeRange.end}`
+          and(
+            gte(earningActivities.createdAt, timeRange.start),
+            lte(earningActivities.createdAt, timeRange.end)
+          )
         )
         .groupBy(earningActivities.activityType);
 
       return {
         mostPopularActivities: (activities || []).reduce((acc, activity) => {
-          acc[activity.type] = activity.count;
+          acc[activity.type] = Number(activity.count);
           return acc;
         }, {} as Record<string, number>),
         averageEarningsPerUser: 125.5, // Mock data

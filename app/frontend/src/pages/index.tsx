@@ -232,7 +232,7 @@ export default function Home() {
           </a>
 
           {/* Animated Hero Section */}
-          <div className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-gray-900">
+          <div className="relative min-h-[75vh] md:min-h-[80vh] flex flex-col justify-center overflow-hidden bg-gray-900">
             {/* Animated Mesh Gradient Background */}
             <div className="absolute inset-0 opacity-40">
               <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -245,23 +245,23 @@ export default function Home() {
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
             <div className="absolute inset-0 bg-grid-white/[0.05] bg-[length:30px_30px]"></div>
 
-            <div className="relative z-10 mx-auto px-6 sm:px-8 lg:px-12 xl:px-20 pt-24 pb-20 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-16">
+            <div className="relative z-10 mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pt-16 pb-12 text-center lg:text-left lg:flex lg:items-center lg:justify-between lg:gap-10">
               <div className="lg:w-1/2 xl:w-6/12">
-                <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-300 text-sm font-medium mb-6 backdrop-blur-sm">
+                <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary-500/30 bg-primary-500/10 text-primary-300 text-xs font-medium mb-4 backdrop-blur-sm">
                   <span className="flex h-2 w-2 rounded-full bg-primary-400 mr-2 animate-pulse"></span>
                   The Future of Social is Here
                 </div>
 
-                <h1 className="text-6xl md:text-8xl font-extrabold text-white mb-8 leading-tight tracking-tight">
+                <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-tight tracking-tight">
                   Own Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">Identity</span>.<br />
                   Shape Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400">World</span>.
                 </h1>
 
-                <p className="text-2xl text-gray-300 mb-12 max-w-3xl leading-relaxed">
+                <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl leading-relaxed">
                   LinkDAO is the first decentralized social network where you truly own your data, earn from your content, and govern the platform itself.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                   <ConnectButton.Custom>
                     {({ openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
                       const ready = rainbowMounted && authenticationStatus !== 'loading';
@@ -269,11 +269,11 @@ export default function Home() {
                         <button
                           onClick={openConnectModal}
                           disabled={!ready}
-                          className="group relative inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
+                          className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-primary-600 font-pj rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-600"
                         >
                           <div className="absolute -inset-3 rounded-xl bg-gradient-to-r from-cyan-400 via-primary-500 to-purple-500 opacity-30 group-hover:opacity-100 blur-lg transition-opacity duration-200" />
                           <span className="relative flex items-center gap-2">
-                            Connect Wallet <Zap className="w-6 h-6" />
+                            Connect Wallet <Zap className="w-5 h-5" />
                           </span>
                         </button>
                       );
@@ -282,7 +282,7 @@ export default function Home() {
 
                   <button
                     onClick={scrollToFeatures}
-                    className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white transition-all duration-200 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
+                    className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white transition-all duration-200 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
                   >
                     Explore Features
                   </button>
@@ -290,47 +290,47 @@ export default function Home() {
               </div>
 
               {/* Floating 3D Elements (Visual Representation) */}
-              <div className="hidden lg:block lg:w-1/2 relative h-[600px]">
+              <div className="hidden lg:block lg:w-1/2 relative h-[500px]">
                 {/* Central Phone/Feed Mockup */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-[500px] bg-gray-900 rounded-[3rem] border-8 border-gray-800 shadow-2xl overflow-hidden z-20 rotate-[-5deg] hover:rotate-0 transition-transform duration-500">
-                  <div className="absolute top-0 left-0 right-0 h-6 bg-gray-800 z-30 rounded-b-xl mx-16"></div>
-                  <div className="p-4 space-y-4 mt-8 opacity-80">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-[400px] bg-gray-900 rounded-[2rem] border-4 border-gray-800 shadow-2xl overflow-hidden z-20 rotate-[-5deg] hover:rotate-0 transition-transform duration-500">
+                  <div className="absolute top-0 left-0 right-0 h-4 bg-gray-800 z-30 rounded-b-lg mx-12"></div>
+                  <div className="p-3 space-y-3 mt-6 opacity-80">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500"></div>
                       <div className="space-y-1">
-                        <div className="w-24 h-3 bg-gray-700 rounded"></div>
-                        <div className="w-16 h-2 bg-gray-800 rounded"></div>
+                        <div className="w-16 h-2 bg-gray-700 rounded"></div>
+                        <div className="w-12 h-1.5 bg-gray-800 rounded"></div>
                       </div>
                     </div>
-                    <div className="w-full h-40 bg-gray-800 rounded-xl"></div>
-                    <div className="space-y-2">
-                      <div className="w-full h-3 bg-gray-700 rounded"></div>
-                      <div className="w-5/6 h-3 bg-gray-700 rounded"></div>
+                    <div className="w-full h-32 bg-gray-800 rounded-xl"></div>
+                    <div className="space-y-1.5">
+                      <div className="w-full h-2.5 bg-gray-700 rounded"></div>
+                      <div className="w-4/5 h-2.5 bg-gray-700 rounded"></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Floating Cards */}
-                <div className="absolute top-20 right-10 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-xl animate-float z-30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
-                      <TrendingUp className="w-6 h-6" />
+                <div className="absolute top-16 right-8 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-xl shadow-xl animate-float z-30">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-green-500/20 rounded-lg text-green-400">
+                      <TrendingUp className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs text-gray-400">LDAO Price</div>
-                      <div className="text-lg font-bold text-white">$4.20 <span className="text-green-400 text-sm">+12%</span></div>
+                      <div className="text-[0.65rem] text-gray-400">LDAO Price</div>
+                      <div className="text-base font-bold text-white">$4.20 <span className="text-green-400 text-xs">+12%</span></div>
                     </div>
                   </div>
                 </div>
 
-                <div className="absolute bottom-40 -left-10 bg-white/10 backdrop-blur-xl border border-white/20 p-4 rounded-2xl shadow-xl animate-float animation-delay-2000 z-30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                      <Vote className="w-6 h-6" />
+                <div className="absolute bottom-32 -left-8 bg-white/10 backdrop-blur-xl border border-white/20 p-3 rounded-xl shadow-xl animate-float animation-delay-2000 z-30">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-500/20 rounded-lg text-blue-400">
+                      <Vote className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs text-gray-400">Active Proposal</div>
-                      <div className="text-sm font-bold text-white">Treasury Allocation</div>
+                      <div className="text-[0.65rem] text-gray-400">Active Proposal</div>
+                      <div className="text-xs font-bold text-white">Treasury Allocation</div>
                     </div>
                   </div>
                 </div>
@@ -508,7 +508,11 @@ export default function Home() {
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
                       <span className="text-2xl font-bold text-white">1</span>
                     </div>
-                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full flex justify-center items-center">
+                      <svg className="w-8 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Connect Wallet</h3>
                   <p className="text-gray-600 dark:text-gray-300">
@@ -521,7 +525,11 @@ export default function Home() {
                     <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
                       <span className="text-2xl font-bold text-white">2</span>
                     </div>
-                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-purple-500 to-pink-600"></div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full flex justify-center items-center">
+                      <svg className="w-8 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Create Profile</h3>
                   <p className="text-gray-600 dark:text-gray-300">
@@ -534,7 +542,11 @@ export default function Home() {
                     <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
                       <span className="text-2xl font-bold text-white">3</span>
                     </div>
-                    <div className="hidden lg:block absolute top-8 left-1/2 w-full h-0.5 bg-gradient-to-r from-pink-500 to-orange-600"></div>
+                    <div className="hidden lg:block absolute top-8 left-1/2 w-full flex justify-center items-center">
+                      <svg className="w-8 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Join Communities</h3>
                   <p className="text-gray-600 dark:text-gray-300">

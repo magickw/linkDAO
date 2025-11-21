@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { FeedSortingHeader } from './FeedSortingTabs';
 import { EnhancedPost } from '../../types/feed';
+import EnhancedPostCard from './EnhancedPostCard';
 import { useFeedSortingPreferences } from '../../hooks/useFeedPreferences';
 import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 import { FeedService } from '../../services/feedService';
@@ -54,7 +55,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
           feedSource: 'following' // Show posts from followed users (including self) for home/feed
         }, 1, 20);
       }
-      
+
       setPosts(response.posts);
       setHasMore(response.hasMore);
       setError(null);
@@ -125,19 +126,33 @@ export const FeedPage: React.FC<FeedPageProps> = ({
       )}
 
       {posts.length > 0 && (
-        <div data-testid="virtualized-list">
+        <div data-testid="virtualized-list" className="space-y-4">
           {posts.map((post, index) => (
-            <article key={post.id || index} data-testid="post-card">
-              <div className="post-card">
-                <div className="post-author">{post.author}</div>
-                <div className="post-content">{post.contentCid}</div>
-                <div className="post-meta">
-                  <span>{new Date(post.createdAt).toLocaleString()}</span>
-                  <span>{post.comments} comments</span>
-                  <span>{post.engagementScore} engagement</span>
-                </div>
-              </div>
-            </article>
+            <EnhancedPostCard
+              key={post.id || index}
+              post={post}
+              onLike={async (postId) => {
+                await FeedService.addReaction(postId, 'like');
+              }}
+              onComment={async (postId) => {
+                // This is usually handled by the card expanding to show comments, 
+                // but we can also trigger a focus or navigation if needed.
+                // For now, we'll just log it as the card handles the UI.
+                console.log('Comment clicked for', postId);
+              }}
+              onShare={async (postId) => {
+                await FeedService.sharePost(postId, 'web_share');
+              }}
+              onTip={async (postId, amount, token, message) => {
+                if (amount && token) {
+                  await FeedService.sendTip(postId, parseFloat(amount), token, message);
+                }
+              }}
+              onReaction={async (postId, type, amount) => {
+                await FeedService.addReaction(postId, type, amount);
+              }}
+              className="mb-4"
+            />
           ))}
         </div>
       )}
