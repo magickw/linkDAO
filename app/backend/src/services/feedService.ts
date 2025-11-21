@@ -4,6 +4,7 @@ import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, 
 import { eq, desc, and, or, inArray, sql, gt, isNull } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
+import { MetadataService } from './metadataService';
 
 interface FeedOptions {
   userAddress: string;
@@ -64,16 +65,16 @@ export class FeedService {
   // Get enhanced personalized feed
   async getEnhancedFeed(options: FeedOptions) {
     // Default to all feed and newest posts if not specified
-    const { 
-      userAddress, 
-      page, 
-      limit, 
+    const {
+      userAddress,
+      page,
+      limit,
       sort = 'new', // Default to newest
-      communities: filterCommunities, 
+      communities: filterCommunities,
       timeRange = 'all', // Default to all time
       feedSource = 'all' // Default to all feed to ensure users see their own posts
     } = options;
-    
+
     const offset = (page - 1) * limit;
 
     // Build time range filter
@@ -87,48 +88,48 @@ export class FeedService {
 
     // Declare user variable in outer scope so it's accessible to later queries
     let user: any[] = [];
-    
+
     // Build following filter if feedSource is 'following'
     let followingFilter = sql`1=1`;
     let quickPostFollowingFilter = sql`1=1`; // Separate filter for quick posts
     if (feedSource === 'following' && userAddress) {
       // Get the user ID from address
       const normalizedAddress = userAddress.toLowerCase();
-      
+
       console.log('🔍 [BACKEND FEED] Building following filter for user:', normalizedAddress);
-      
+
       user = await db.select({ id: users.id })
         .from(users)
         .where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`)
         .limit(1);
-      
+
       console.log('🔍 [BACKEND FEED] User lookup result:', user);
-      
+
       if (user.length > 0) {
         const userId = user[0].id;
         console.log('✅ [BACKEND FEED] Found user ID:', userId);
-        
+
         // Get list of users the current user is following
         const followingList = await db.select({ followingId: follows.followingId })
           .from(follows)
           .where(eq(follows.followerId, userId));
-        
+
         console.log('🔍 [BACKEND FEED] Following list query result:', followingList);
-        
+
         const followingIds = followingList.map(f => f.followingId);
-        
+
         console.log('📋 [BACKEND FEED] User is following:', followingIds.length, 'users');
-        
+
         // Always include the user's own posts in the following feed
         // Add the user's own ID to ensure they see their own posts
         if (!followingIds.includes(userId)) {
           followingIds.push(userId);
           console.log('📋 [BACKEND FEED] Added user\'s own ID to following list');
         }
-        
+
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
-        
+
         // Ensure we always include the user's own posts, even if followingIds is empty
         if (followingIds.length === 0) {
           // If user follows no one (except themselves), just show their own posts
@@ -139,7 +140,7 @@ export class FeedService {
           followingFilter = inArray(posts.authorId, followingIds);
           quickPostFollowingFilter = inArray(quickPosts.authorId, followingIds);
         }
-        
+
         console.log('📋 [BACKEND FEED] Following filter applied');
       } else {
         console.log('⚠️ [BACKEND FEED] User not found in database, creating user and showing all posts...');
@@ -150,7 +151,7 @@ export class FeedService {
             createdAt: new Date()
           })
           .onConflictDoNothing();
-        
+
         // For new users, default to showing all posts until they follow someone
         // This ensures they see the platform content while onboarding
         followingFilter = sql`1=1`;
@@ -340,7 +341,7 @@ export class FeedService {
         paginatedPosts.map(async (post) => {
           // Determine which reactions/tips tables to use based on post type
           let reactionCount, tipCount, tipTotal, commentCount, viewCount;
-          
+
           if (post.isQuickPost) {
             // For quick posts, use quick post tables
             [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
@@ -450,7 +451,7 @@ export class FeedService {
   async getTrendingPosts(options: { page: number; limit: number; timeRange: string }) {
     const { page, limit, timeRange } = options;
     const offset = (page - 1) * limit;
-    
+
     try {
       const timeFilter = this.buildTimeFilter(timeRange);
 
@@ -569,7 +570,7 @@ export class FeedService {
       const normalizedAddress = authorAddress.toLowerCase();
       let user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       let userId: string;
-      
+
       if (user.length === 0) {
         // Store wallet address in lowercase for consistency
         const newUser = await db.insert(users).values({
@@ -581,12 +582,28 @@ export class FeedService {
         userId = user[0].id;
       }
 
-      // Create the post - content is now the CID
+      // Upload content to IPFS to get CID
+      let contentCid: string;
+      try {
+        const metadataService = new MetadataService();
+        contentCid = await metadataService.uploadToIPFS(content);
+        safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
+      } catch (uploadError) {
+        safeLogger.error('Error uploading content to IPFS:', uploadError);
+        // Generate fallback CID if upload fails
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256').update(content).digest('hex');
+        contentCid = `Qm${hash.substring(0, 44)}`;
+        safeLogger.warn(`IPFS upload failed, using fallback CID: ${contentCid}`);
+      }
+
+      // Create the post - store both content and CID
       const newPost = await db
         .insert(posts)
         .values({
           authorId: userId,
-          contentCid: content, // This is now the CID, not the actual content
+          content: content, // Store actual content as fallback
+          contentCid: contentCid, // Store CID (may be fallback)
           dao: communityId,
           mediaCids: JSON.stringify(mediaUrls),
           tags: JSON.stringify(tags),
@@ -686,7 +703,7 @@ export class FeedService {
       if (tags !== undefined) {
         // Delete existing tags
         await db.delete(postTags).where(eq(postTags.postId, postIdInt));
-        
+
         // Insert new tags
         if (tags && tags.length > 0) {
           const tagInserts = tags.map(tag => ({
@@ -849,7 +866,7 @@ export class FeedService {
   async getEngagementData(postId: string) {
     try {
       const postIdInt = parseInt(postId);
-      
+
       // Get post basic info
       const post = await db
         .select({
@@ -871,39 +888,39 @@ export class FeedService {
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
-        .from(reactions)
-        .where(eq(reactions.postId, postIdInt)),
+          .from(reactions)
+          .where(eq(reactions.postId, postIdInt)),
 
         db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
-        .from(tips)
-        .where(eq(tips.postId, postIdInt)),
+          .from(tips)
+          .where(eq(tips.postId, postIdInt)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
-        .from(posts)
-        .where(eq(posts.parentId, postIdInt)),
+          .from(posts)
+          .where(eq(posts.parentId, postIdInt)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
-        .from(views)
-        .where(eq(views.postId, postIdInt)),
+          .from(views)
+          .where(eq(views.postId, postIdInt)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
-        .from(bookmarks)
-        .where(eq(bookmarks.postId, postIdInt)),
+          .from(bookmarks)
+          .where(eq(bookmarks.postId, postIdInt)),
 
         db.select({
           count: sql<number>`COUNT(*)`
         })
-        .from(shares)
-        .where(eq(shares.postId, postIdInt))
+          .from(shares)
+          .where(eq(shares.postId, postIdInt))
       ]);
 
       return {
@@ -935,7 +952,7 @@ export class FeedService {
 
     try {
       const postIdInt = parseInt(postId);
-      
+
       // Verify post exists
       const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
       if (post.length === 0) {
@@ -1094,7 +1111,7 @@ export class FeedService {
       // Calculate metrics
       const totalPosts = communityPosts.length;
       const totalEngagement = communityPosts.reduce((sum, post) => sum + parseFloat(post.stakedValue || '0'), 0);
-      
+
       // Get top contributors
       const contributorMap = new Map<string, { postCount: number; engagement: number }>();
       communityPosts.forEach(post => {
@@ -1155,7 +1172,7 @@ export class FeedService {
   ) {
     try {
       let leaderboardQuery;
-      
+
       switch (metric) {
         case 'posts':
           leaderboardQuery = db
@@ -1170,7 +1187,7 @@ export class FeedService {
             .orderBy(desc(sql`COUNT(*)`))
             .limit(limit);
           break;
-          
+
         case 'engagement':
           leaderboardQuery = db
             .select({
@@ -1184,7 +1201,7 @@ export class FeedService {
             .orderBy(desc(sql`SUM(CAST(${posts.stakedValue} AS DECIMAL))`))
             .limit(limit);
           break;
-          
+
         // Add cases for tips_received and tips_given if needed
         default:
           leaderboardQuery = db
@@ -1303,10 +1320,10 @@ export class FeedService {
   // Get trending hashtags
   async getTrendingHashtags(options: { limit: number; timeRange: string }) {
     const { limit, timeRange } = options;
-    
+
     try {
       const timeFilter = this.buildTimeFilter(timeRange);
-      
+
       const trendingHashtags = await db
         .select({
           tag: postTags.tag,
@@ -1330,9 +1347,9 @@ export class FeedService {
         postCount: hashtag.postCount,
         totalEngagement: hashtag.totalEngagement || 0,
         recentActivity: hashtag.recentActivity || 0,
-        trendingScore: (hashtag.postCount * 0.3) + 
-                      ((hashtag.totalEngagement || 0) * 0.5) + 
-                      ((hashtag.recentActivity || 0) * 0.2)
+        trendingScore: (hashtag.postCount * 0.3) +
+          ((hashtag.totalEngagement || 0) * 0.5) +
+          ((hashtag.recentActivity || 0) * 0.2)
       }));
     } catch (error) {
       safeLogger.error('Error getting trending hashtags:', error);
@@ -1344,7 +1361,7 @@ export class FeedService {
   async getContentPopularityMetrics(postId: string) {
     try {
       const postIdInt = parseInt(postId);
-      
+
       // Get comprehensive engagement data
       const [postData, reactionData, tipData, shareData] = await Promise.all([
         db.select({
@@ -1353,26 +1370,26 @@ export class FeedService {
           stakedValue: posts.stakedValue,
           tags: posts.tags
         })
-        .from(posts)
-        .where(eq(posts.id, postIdInt))
-        .limit(1),
+          .from(posts)
+          .where(eq(posts.id, postIdInt))
+          .limit(1),
 
         db.select({
           type: reactions.type,
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`
         })
-        .from(reactions)
-        .where(eq(reactions.postId, postIdInt))
-        .groupBy(reactions.type),
+          .from(reactions)
+          .where(eq(reactions.postId, postIdInt))
+          .groupBy(reactions.type),
 
         db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`SUM(CAST(amount AS DECIMAL))`,
           avgAmount: sql<number>`AVG(CAST(amount AS DECIMAL))`
         })
-        .from(tips)
-        .where(eq(tips.postId, postIdInt)),
+          .from(tips)
+          .where(eq(tips.postId, postIdInt)),
 
         // Placeholder for shares - would need a shares table
         Promise.resolve([{ count: 0 }])
@@ -1384,12 +1401,12 @@ export class FeedService {
 
       const post = postData[0];
       const ageInHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
-      
+
       // Calculate various popularity metrics
       const totalReactions = reactionData.reduce((sum, r) => sum + r.count, 0);
       const totalTips = tipData[0]?.count || 0;
       const totalShares = shareData[0]?.count || 0;
-      
+
       const engagementRate = this.calculateEngagementRate(totalReactions, totalTips, totalShares);
       const viralityScore = this.calculateViralityScore(totalShares, totalReactions, ageInHours);
       const qualityScore = this.calculateContentQualityScore(
@@ -1557,7 +1574,7 @@ export class FeedService {
 
     try {
       const postIdInt = parseInt(postId);
-      
+
       // Verify post exists
       const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
       if (post.length === 0) {
@@ -1573,7 +1590,7 @@ export class FeedService {
 
       // In a real implementation, you might want to store share data in a database
       // For now, we'll just return a mock share object
-      
+
       // Update engagement score
       await this.updateEngagementScore(postId);
 
@@ -1597,7 +1614,7 @@ export class FeedService {
 
     try {
       const postIdInt = parseInt(postId);
-      
+
       // Get user - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
@@ -1710,7 +1727,7 @@ export class FeedService {
   private calculateEngagementGrowth(posts: any[], timeRange: string): number {
     // Simple engagement growth calculation
     if (posts.length === 0) return 0;
-    
+
     // Calculate average engagement per time unit
     const totalEngagement = posts.reduce((sum, post) => sum + parseFloat(post.stakedValue || '0'), 0);
     return totalEngagement / posts.length;

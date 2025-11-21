@@ -94,6 +94,17 @@ router.get('/api/conversations', requireJwt, (_req: Request, res: Response) => {
   res.json({ conversations: list });
 });
 
+// Support additional alternate paths for conversations
+router.get('/api/messages/conversations', requireJwt, (_req: Request, res: Response) => {
+  const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+  res.json({ conversations: list });
+});
+
+router.get('/api/messaging/conversations', requireJwt, (_req: Request, res: Response) => {
+  const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+  res.json({ conversations: list });
+});
+
 // Create a DM conversation
 router.post('/api/chat/conversations/dm', csrfProtection,  requireJwt, (req: Request, res: Response) => {
   const { participants } = req.body || {};

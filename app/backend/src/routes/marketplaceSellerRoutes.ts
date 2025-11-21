@@ -26,6 +26,76 @@ const upload = multer({
 // NOTE: Seller Profile routes are now handled by sellerProfileRoutes
 // This avoids conflicts and ensures proper onboarding flow support
 
+// GET profile - Primary endpoint for fetching seller profile
+router.get('/seller/:walletAddress', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid wallet address format'
+      });
+    }
+
+    const profile = await sellerProfileService.getProfile(walletAddress);
+
+    // Return 404 if profile not found, not 500
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Seller profile not found'
+      });
+    }
+
+    return successResponse(res, profile, 200);
+  } catch (error) {
+    return errorResponse(
+      res,
+      'PROFILE_FETCH_ERROR',
+      'Failed to get seller profile',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+  }
+});
+
+// PUT profile - Update seller profile
+router.put('/seller/:walletAddress', csrfProtection, async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid wallet address format'
+      });
+    }
+
+    const updateData = req.body;
+    const updatedProfile = await sellerProfileService.updateProfile(walletAddress, updateData);
+
+    if (!updatedProfile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Seller profile not found'
+      });
+    }
+
+    return successResponse(res, updatedProfile, 200);
+  } catch (error) {
+    return errorResponse(
+      res,
+      'PROFILE_UPDATE_ERROR',
+      'Failed to update seller profile',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+  }
+});
+
 // Enhanced profile update with image support
 router.put(
   '/seller/:walletAddress/enhanced',

@@ -62,6 +62,7 @@ export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
   authorId: uuid("author_id").references(() => users.id),
   title: text("title"), // Making title nullable to handle existing data
+  content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
   parentId: integer("parent_id"),
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
@@ -96,6 +97,7 @@ export const posts = pgTable("posts", {
 export const quickPosts = pgTable("quick_posts", {
   id: uuid("id").defaultRandom().primaryKey(),
   authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content"), // Actual post content (fallback when IPFS unavailable)
   contentCid: text("content_cid").notNull(),
   parentId: uuid("parent_id").references(() => quickPosts.id, { onDelete: "cascade" }), // For replies
   mediaCids: text("media_cids"), // JSON array of media IPFS CIDs

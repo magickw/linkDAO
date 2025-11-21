@@ -121,11 +121,11 @@ export class CommunityService {
     try {
       // Build where conditions
       const whereConditions = [];
-      
+
       if (category) {
         whereConditions.push(eq(communities.category, category));
       }
-      
+
       if (search) {
         const sanitizedSearch = sanitizeInput(search);
         validateLength(sanitizedSearch, 100, 'Search query');
@@ -137,7 +137,7 @@ export class CommunityService {
           )
         );
       }
-      
+
       if (tags && tags.length > 0) {
         // Search in JSON tags array
         whereConditions.push(
@@ -313,7 +313,7 @@ export class CommunityService {
       };
     } catch (error) {
       safeLogger.error('Error getting trending communities:', error);
-      
+
       // Return fallback empty result instead of throwing error
       return {
         communities: [],
@@ -363,6 +363,8 @@ export class CommunityService {
   // Get community details with membership info
   async getCommunityDetails(communityId: string, userAddress?: string) {
     try {
+      safeLogger.info(`Fetching community details for ID: ${communityId}, userAddress: ${userAddress || 'none'}`);
+
       // Get community details
       const communityResult = await db
         .select({
@@ -390,11 +392,15 @@ export class CommunityService {
         .where(eq(communities.id, communityId))
         .limit(1);
 
+      safeLogger.info(`Community query result count: ${communityResult.length}`);
+
       if (communityResult.length === 0) {
+        safeLogger.warn(`Community not found in database for ID: ${communityId}`);
         return null;
       }
 
       const community = communityResult[0];
+      safeLogger.info(`Found community: ${community.name} (${community.displayName})`);
 
       // Get user membership if userAddress provided
       let membership = null;
@@ -469,9 +475,20 @@ export class CommunityService {
         } : null,
       };
 
+      safeLogger.info(`Successfully retrieved community details for: ${community.displayName}`);
       return communityData;
     } catch (error) {
-      safeLogger.error('Error getting community details for ID:', communityId, error);
+      safeLogger.error('Error getting community details for ID:', communityId, 'Error:', error);
+      safeLogger.error('Error stack:', error.stack);
+      safeLogger.error('Error message:', error.message);
+      safeLogger.error('Error code:', error.code);
+
+      // Handle database connection errors specifically
+      if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        safeLogger.error('Database connection error when fetching community details');
+        throw new Error('Service temporarily unavailable');
+      }
+
       // Return a more graceful error response instead of throwing
       return null;
     }
@@ -591,14 +608,14 @@ export class CommunityService {
       return communityData;
     } catch (error) {
       safeLogger.error('Error getting community by slug:', slug, error);
-      
+
       // Handle database connection errors specifically
       if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
         safeLogger.error('Database connection error when fetching community by slug:', slug);
         // Return a service unavailable response
         throw new Error('Service temporarily unavailable');
       }
-      
+
       // Return a more graceful error response instead of throwing for other errors
       return null;
     }
@@ -611,11 +628,11 @@ export class CommunityService {
       if (!/^[a-z0-9-]+$/.test(data.slug)) {
         throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
       }
-      
+
       if (/^-|-$/.test(data.slug)) {
         throw new Error('Slug cannot start or end with a hyphen');
       }
-      
+
       if (data.slug.length < 3) {
         throw new Error('Slug must be at least 3 characters long');
       }
@@ -741,7 +758,7 @@ export class CommunityService {
     try {
       // Sanitize all input data
       const sanitizedUpdateData = sanitizeObject(updateData);
-      
+
       // Validate input lengths
       if (sanitizedUpdateData.displayName) {
         validateLength(sanitizedUpdateData.displayName, 100, 'Display name');
@@ -749,21 +766,21 @@ export class CommunityService {
       if (sanitizedUpdateData.description) {
         validateLength(sanitizedUpdateData.description, 1000, 'Description');
       }
-      
+
       // Validate slug if provided
       if (sanitizedUpdateData.slug) {
         if (!/^[a-z0-9-]+$/.test(sanitizedUpdateData.slug)) {
           throw new Error('Slug can only contain lowercase letters, numbers, and hyphens');
         }
-        
+
         if (/^-|-$/.test(sanitizedUpdateData.slug)) {
           throw new Error('Slug cannot start or end with a hyphen');
         }
-        
+
         if (sanitizedUpdateData.slug.length < 3) {
           throw new Error('Slug must be at least 3 characters long');
         }
-        
+
         // Check if slug is already taken by another community
         const existingSlug = await db
           .select({ id: communities.id })
@@ -773,7 +790,7 @@ export class CommunityService {
             ne(communities.id, communityId)
           ))
           .limit(1);
-          
+
         if (existingSlug.length > 0) {
           throw new Error('This slug is already taken by another community');
         }
@@ -801,43 +818,43 @@ export class CommunityService {
 
       // Prepare update data
       const updateFields: any = {};
-      
+
       if (sanitizedUpdateData.displayName !== undefined) {
         updateFields.displayName = sanitizedUpdateData.displayName;
       }
-      
+
       if (sanitizedUpdateData.slug !== undefined) {
         updateFields.slug = sanitizedUpdateData.slug;
       }
-      
+
       if (sanitizedUpdateData.description !== undefined) {
         updateFields.description = sanitizedUpdateData.description;
       }
-      
+
       if (sanitizedUpdateData.category !== undefined) {
         updateFields.category = sanitizedUpdateData.category;
       }
-      
+
       if (sanitizedUpdateData.tags !== undefined) {
         updateFields.tags = JSON.stringify(sanitizedUpdateData.tags);
       }
-      
+
       if (sanitizedUpdateData.avatar !== undefined) {
         updateFields.avatar = sanitizedUpdateData.avatar;
       }
-      
+
       if (sanitizedUpdateData.banner !== undefined) {
         updateFields.banner = sanitizedUpdateData.banner;
       }
-      
+
       if (sanitizedUpdateData.isPublic !== undefined) {
         updateFields.isPublic = sanitizedUpdateData.isPublic;
       }
-      
+
       if (sanitizedUpdateData.rules !== undefined) {
         updateFields.rules = JSON.stringify(sanitizedUpdateData.rules);
       }
-      
+
       if (sanitizedUpdateData.settings !== undefined) {
         updateFields.settings = JSON.stringify(sanitizedUpdateData.settings);
       }
@@ -857,7 +874,7 @@ export class CommunityService {
       }
 
       const community = updatedCommunity[0];
-      
+
       return {
         id: community.id,
         name: community.name,
@@ -935,10 +952,10 @@ export class CommunityService {
     try {
       // Check if community exists and is public
       const communityResult = await db
-        .select({ 
-          id: communities.id, 
+        .select({
+          id: communities.id,
           isPublic: communities.isPublic,
-          memberCount: communities.memberCount 
+          memberCount: communities.memberCount
         })
         .from(communities)
         .where(eq(communities.id, data.communityId))
@@ -986,7 +1003,7 @@ export class CommunityService {
       // Update community member count
       await db
         .update(communities)
-        .set({ 
+        .set({
           memberCount: community.memberCount + 1,
           updatedAt: new Date()
         })
@@ -995,8 +1012,8 @@ export class CommunityService {
       // Update community stats
       await this.updateCommunityStats(data.communityId);
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: {
           id: membershipResult[0].id,
           communityId: data.communityId,
@@ -1019,9 +1036,9 @@ export class CommunityService {
     try {
       // Check if user is a member
       const membershipResult = await db
-        .select({ 
+        .select({
           id: communityMembers.id,
-          role: communityMembers.role 
+          role: communityMembers.role
         })
         .from(communityMembers)
         .where(
@@ -1058,7 +1075,7 @@ export class CommunityService {
       if (communityResult.length > 0) {
         await db
           .update(communities)
-          .set({ 
+          .set({
             memberCount: Math.max(0, communityResult[0].memberCount - 1),
             updatedAt: new Date()
           })
@@ -1117,7 +1134,7 @@ export class CommunityService {
 
       // Build where conditions for posts
       const whereConditions = [];
-      
+
       // Match by community ID or dao name (for backward compatibility)
       if (communityName) {
         whereConditions.push(
@@ -1247,9 +1264,9 @@ export class CommunityService {
 
       // Check minimum reputation requirement
       if (settings?.minimumReputation && membership[0].reputation < settings.minimumReputation) {
-        return { 
-          success: false, 
-          message: `Minimum reputation of ${settings.minimumReputation} required to post` 
+        return {
+          success: false,
+          message: `Minimum reputation of ${settings.minimumReputation} required to post`
         };
       }
 
@@ -1288,7 +1305,7 @@ export class CommunityService {
       // Update community post count
       await db
         .update(communities)
-        .set({ 
+        .set({
           postCount: sql`${communities.postCount} + 1`,
           updatedAt: new Date()
         })
@@ -1297,7 +1314,7 @@ export class CommunityService {
       // Update member contributions
       await db
         .update(communityMembers)
-        .set({ 
+        .set({
           contributions: sql`${communityMembers.contributions} + 1`,
           lastActivityAt: new Date()
         })
@@ -1306,8 +1323,8 @@ export class CommunityService {
       // Update community stats
       await this.updateCommunityStats(communityId);
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: {
           id: newPost.id.toString(),
           authorId: newPost.authorId,
@@ -1554,8 +1571,8 @@ export class CommunityService {
       const recentPosts = recentPostsResult[0] || { posts7d: 0, posts30d: 0 };
 
       // Calculate engagement rate (active members / total members)
-      const engagementRate = community.memberCount > 0 
-        ? activeMembers.activeMembers7d / community.memberCount 
+      const engagementRate = community.memberCount > 0
+        ? activeMembers.activeMembers7d / community.memberCount
         : 0;
 
       // Calculate growth rate (simplified - would need historical data for accurate calculation)
@@ -1609,7 +1626,7 @@ export class CommunityService {
       // Update post status to approved
       await db
         .update(posts)
-        .set({ 
+        .set({
           status: 'approved',
           updatedAt: new Date()
         })
@@ -1641,7 +1658,7 @@ export class CommunityService {
       // Update post status to rejected
       await db
         .update(posts)
-        .set({ 
+        .set({
           status: 'rejected',
           updatedAt: new Date()
         })
@@ -1769,10 +1786,10 @@ export class CommunityService {
       switch (action) {
         case 'approve':
           return await this.approvePost(targetId, moderatorAddress, communityId);
-          
+
         case 'reject':
           return await this.rejectPost(targetId, moderatorAddress, communityId, reason || 'Content rejected by moderator');
-          
+
         case 'ban':
           // Ban a user from the community
           await db
@@ -1788,7 +1805,7 @@ export class CommunityService {
                 eq(communityMembers.userAddress, targetId)
               )
             );
-          
+
           result = {
             action: 'ban',
             targetId,
@@ -1798,7 +1815,7 @@ export class CommunityService {
             timestamp: new Date()
           };
           break;
-          
+
         case 'unban':
           // Unban a user from the community
           await db
@@ -1814,7 +1831,7 @@ export class CommunityService {
                 eq(communityMembers.userAddress, targetId)
               )
             );
-          
+
           result = {
             action: 'unban',
             targetId,
@@ -1824,7 +1841,7 @@ export class CommunityService {
             timestamp: new Date()
           };
           break;
-          
+
         case 'promote':
           // Promote a user to moderator
           await db
@@ -1839,7 +1856,7 @@ export class CommunityService {
                 eq(communityMembers.userAddress, targetId)
               )
             );
-          
+
           result = {
             action: 'promote',
             targetId,
@@ -1849,7 +1866,7 @@ export class CommunityService {
             timestamp: new Date()
           };
           break;
-          
+
         case 'demote':
           // Demote a user from moderator to member
           await db
@@ -1864,7 +1881,7 @@ export class CommunityService {
                 eq(communityMembers.userAddress, targetId)
               )
             );
-          
+
           result = {
             action: 'demote',
             targetId,
@@ -1874,7 +1891,7 @@ export class CommunityService {
             timestamp: new Date()
           };
           break;
-          
+
         default:
           return { success: false, message: 'Invalid moderation action' };
       }
@@ -1913,7 +1930,7 @@ export class CommunityService {
     try {
       // Build where conditions
       const whereConditions = [eq(communityGovernanceProposals.communityId, communityId)];
-      
+
       if (status) {
         whereConditions.push(eq(communityGovernanceProposals.status, status));
       }
@@ -2057,8 +2074,8 @@ export class CommunityService {
 
       const newProposal = proposalResult[0];
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: {
           id: newProposal.id,
           communityId: newProposal.communityId,
@@ -2167,7 +2184,7 @@ export class CommunityService {
       }
 
       const gated = gatedContent[0];
-      
+
       // For token balance requirements, we would integrate with blockchain APIs
       // For now, we'll return false as we don't have blockchain integration
       if (gated.gatingType === 'token_balance' && gated.minimumBalance) {
@@ -2480,7 +2497,7 @@ export class CommunityService {
   async getUserSubscriptions(userId: string, communityId?: string): Promise<any[]> {
     try {
       const whereConditions = [eq(communityUserSubscriptions.userId, userId)];
-      
+
       if (communityId) {
         whereConditions.push(eq(communityUserSubscriptions.communityId, communityId));
       }
@@ -2660,7 +2677,7 @@ export class CommunityService {
   async getCreatorRewards(userAddress: string, communityId?: string): Promise<any[]> {
     try {
       const whereConditions = [eq(communityCreatorRewards.creatorAddress, userAddress)];
-      
+
       if (communityId) {
         whereConditions.push(eq(communityCreatorRewards.communityId, communityId));
       }
@@ -2829,7 +2846,7 @@ export class CommunityService {
   async getUserStaking(userAddress: string, communityId?: string): Promise<any[]> {
     try {
       const whereConditions = [eq(communityStaking.userAddress, userAddress)];
-      
+
       if (communityId) {
         whereConditions.push(eq(communityStaking.communityId, communityId));
       }
@@ -3082,7 +3099,7 @@ export class CommunityService {
           eq(communityUserReferrals.referredAddress, userAddress)
         )
       ];
-      
+
       if (programId) {
         whereConditions.push(eq(communityUserReferrals.programId, programId));
       }
@@ -3304,11 +3321,11 @@ export class CommunityService {
   private validateProposalType(type: string, metadata: any): { isValid: boolean; error?: string } {
     // Basic validation - in a real implementation, you would have more specific validation
     // based on the proposal type and required metadata fields
-    
+
     if (!type) {
       return { isValid: false, error: 'Proposal type is required' };
     }
-    
+
     // Add validation logic based on proposal type
     switch (type) {
       case 'general':
@@ -3366,9 +3383,9 @@ export class CommunityService {
 
       // Check execution delay
       if (proposal.executionEta && now < proposal.executionEta) {
-        return { 
-          success: false, 
-          message: `Proposal cannot be executed until ${proposal.executionEta.toISOString()}` 
+        return {
+          success: false,
+          message: `Proposal cannot be executed until ${proposal.executionEta.toISOString()}`
         };
       }
 
@@ -3426,10 +3443,10 @@ export class CommunityService {
         })
         .where(eq(communityGovernanceProposals.id, proposalId));
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: 'Proposal executed successfully',
-        executionResult 
+        executionResult
       };
 
     } catch (error) {
@@ -3484,8 +3501,8 @@ export class CommunityService {
       const { amount, recipient, tokenAddress } = metadata;
       // This would integrate with smart contracts for actual treasury transfers
       // For now, just record the allocation intent
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: `Treasury allocation of ${amount} approved for ${recipient}`,
         note: 'Smart contract execution required'
       };
@@ -3722,14 +3739,14 @@ export class CommunityService {
       return communityData;
     } catch (error) {
       safeLogger.error('Error getting community details for ID:', communityId, error);
-      
+
       // Handle database connection errors specifically
       if (error.message?.includes('database') || error.message?.includes('connection') || error.code === 'ECONNREFUSED') {
         safeLogger.error('Database connection error when fetching community:', communityId);
         // Return a service unavailable response
         throw new Error('Service temporarily unavailable');
       }
-      
+
       // Return a more graceful error response instead of throwing for other errors
       return null;
     }
@@ -3740,10 +3757,10 @@ export class CommunityService {
     try {
       // Get communities created by user
       const createdCommunities = await this.getCommunitiesCreatedByUser(userAddress, 1, 100);
-      
+
       // Get communities user is member of
       const memberCommunities = await this.getCommunitiesUserIsMemberOf(userAddress, 1, 100);
-      
+
       // Combine and sort by creation date (newest first)
       const allCommunities = [
         ...createdCommunities.communities,
@@ -3751,11 +3768,11 @@ export class CommunityService {
       ].sort((a, b) => {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-      
+
       // Apply pagination
       const offset = (page - 1) * limit;
       const paginatedCommunities = allCommunities.slice(offset, offset + limit);
-      
+
       return {
         communities: paginatedCommunities,
         pagination: {

@@ -6,6 +6,9 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
 import { MetadataService } from '../services/metadataService';
+import { db } from '../db';
+import { posts, quickPosts } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 export class FeedController {
   // Get enhanced personalized feed (optional authentication)
@@ -51,7 +54,7 @@ export class FeedController {
         res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));
       } catch (serviceError) {
         safeLogger.error('Feed service error:', serviceError);
-        
+
         // Return fallback empty feed instead of error
         res.json(apiResponse.success({
           posts: [],
@@ -66,7 +69,7 @@ export class FeedController {
       }
     } catch (error) {
       safeLogger.error('Error getting enhanced feed:', error);
-      
+
       // Return fallback response instead of error
       res.json(apiResponse.success({
         posts: [],
@@ -563,22 +566,56 @@ export class FeedController {
       }
 
       try {
-        // Create metadata service instance
+        // First, try to retrieve content from IPFS
         const metadataService = new MetadataService();
         const content = await metadataService.getFromIPFS(cid);
-        
+
         // Check if content is valid
         if (!content || content.length === 0) {
-          safeLogger.warn(`No content found for CID: ${cid}`);
-          res.status(404).json(apiResponse.error(`Content not found for CID: ${cid}`, 404));
-          return;
+          throw new Error('No content found in IPFS');
         }
-        
+
         // Return consistent response format
-        res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully'));
+        res.json(apiResponse.success({ content, cid }, 'Content retrieved successfully from IPFS'));
+        return;
       } catch (ipfsError) {
-        safeLogger.error('Error retrieving content from IPFS:', ipfsError);
-        res.status(500).json(apiResponse.error(`Failed to retrieve content from IPFS: ${ipfsError instanceof Error ? ipfsError.message : 'Unknown error'}`));
+        safeLogger.warn(`IPFS retrieval failed for CID: ${cid}, attempting database fallback`, ipfsError);
+
+        // IPFS failed, try to retrieve from database
+        try {
+          // Check posts table first
+          const postResult = await db
+            .select({ content: posts.content })
+            .from(posts)
+            .where(eq(posts.contentCid, cid))
+            .limit(1);
+
+          if (postResult.length > 0 && postResult[0].content) {
+            safeLogger.info(`Content retrieved from posts table for CID: ${cid}`);
+            res.json(apiResponse.success({ content: postResult[0].content, cid }, 'Content retrieved successfully from database'));
+            return;
+          }
+
+          // Check quick_posts table
+          const quickPostResult = await db
+            .select({ content: quickPosts.content })
+            .from(quickPosts)
+            .where(eq(quickPosts.contentCid, cid))
+            .limit(1);
+
+          if (quickPostResult.length > 0 && quickPostResult[0].content) {
+            safeLogger.info(`Content retrieved from quick_posts table for CID: ${cid}`);
+            res.json(apiResponse.success({ content: quickPostResult[0].content, cid }, 'Content retrieved successfully from database'));
+            return;
+          }
+
+          // No content found in database either
+          safeLogger.error(`No content found in IPFS or database for CID: ${cid}`);
+          res.status(404).json(apiResponse.error(`Content not found for CID: ${cid}`, 404));
+        } catch (dbError) {
+          safeLogger.error('Error retrieving content from database:', dbError);
+          res.status(500).json(apiResponse.error(`Failed to retrieve content: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`));
+        }
       }
     } catch (error) {
       safeLogger.error('Error in getContentFromIPFS:', error);

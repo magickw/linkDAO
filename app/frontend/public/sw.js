@@ -289,7 +289,12 @@ async function networkFirst(request, cacheName) {
 
   // Rate limiting check
   if (!checkRateLimit(requestKey, now)) {
-    console.log('Rate limit exceeded for:', requestKey);
+    // Only log rate limit exceeded once per endpoint per minute
+    const rateLimitLogKey = `rate_limit_log:${requestKey}`;
+    if (!requestCounts.has(rateLimitLogKey)) {
+      console.log('Rate limit exceeded for:', requestKey);
+      requestCounts.set(rateLimitLogKey, { count: 1, windowStart: now });
+    }
     return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
   }
 
@@ -317,7 +322,12 @@ async function networkFirst(request, cacheName) {
     );
 
     if (now - failureInfo.lastFailure < backoffTime) {
-      console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
+      // Only log backing off once per unique backoff period
+      const backoffLogKey = `backoff_log:${requestKey}:${failureInfo.lastFailure}`;
+      if (!requestCounts.has(backoffLogKey)) {
+        console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
+        requestCounts.set(backoffLogKey, { count: 1, windowStart: now });
+      }
       return await getCachedResponseWithFallback(request, cacheName, cacheConfig);
     }
   }
