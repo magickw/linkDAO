@@ -309,21 +309,26 @@ if (process.env.RENDER || isResourceConstrained) {
   }, isRenderStandard ? 30000 : 60000); // Check more frequently for Standard tier
 }
 
-// Initialize memory monitoring service
-if (process.env.RENDER || isResourceConstrained) {
+// Initialize memory monitoring service - can be disabled via env var
+const enableMemoryMonitoring = process.env.ENABLE_MEMORY_MONITORING !== 'false';
+
+if ((process.env.RENDER || isResourceConstrained) && enableMemoryMonitoring) {
   const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : (isRenderStandard ? 'Standard' : 'Standard'));
   console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
 
   // Start memory monitoring with more frequent intervals for critical environments
-  const monitoringInterval = isMemoryCritical ? 15000 : // Every 15 seconds for critical
-    (isRenderFree ? 30000 :
-      (isRenderPro ? 45000 :
-        (isRenderStandard ? 40000 : 60000)));
+  // Increased intervals to reduce CPU usage
+  const monitoringInterval = isMemoryCritical ? 60000 : // Every 60 seconds for critical (was 15s)
+    (isRenderFree ? 120000 :  // Every 2 minutes for free (was 30s)
+      (isRenderPro ? 180000 :  // Every 3 minutes for pro (was 45s)
+        (isRenderStandard ? 120000 : 300000))); // Every 2-5 minutes
+
   memoryMonitoringService.startMonitoring(monitoringInterval);
 
   // Log initial memory stats
   const initialStats = memoryMonitoringService.getMemoryStats();
   console.log(`📊 Initial memory: ${initialStats.heapUsed}MB heap / ${initialStats.rss}MB RSS`);
+  console.log(`⏱️  Memory monitoring interval: ${monitoringInterval / 1000}s`);
 
   // Add process memory limit monitoring if specified
   if (process.env.MEMORY_LIMIT) {
@@ -333,6 +338,8 @@ if (process.env.RENDER || isResourceConstrained) {
 
   // The memoryMonitoringService handles all memory monitoring and GC operations
   // No additional monitoring needed here
+} else {
+  console.log('⚠️ Memory monitoring disabled via ENABLE_MEMORY_MONITORING=false');
 }
 
 // Initialize performance optimization
@@ -1125,12 +1132,14 @@ httpServer.listen(PORT, () => {
       }
 
       // Comprehensive monitoring - disabled on resource-constrained environments
-      const enableMonitoring = !isSevereResourceConstrained && !process.env.DISABLE_MONITORING; // Changed to isSevereResourceConstrained
+      // Can also be disabled via ENABLE_COMPREHENSIVE_MONITORING=false
+      const enableComprehensiveMonitoring = process.env.ENABLE_COMPREHENSIVE_MONITORING !== 'false';
+      const enableMonitoring = !isSevereResourceConstrained && !process.env.DISABLE_MONITORING && enableComprehensiveMonitoring;
 
       if (enableMonitoring) {
         try {
-          // Use longer intervals on Render Pro to reduce overhead
-          const monitoringInterval = isRenderPro ? 120000 : 60000; // 2min for Pro, 1min for others
+          // Use longer intervals to reduce overhead
+          const monitoringInterval = isRenderPro ? 300000 : 180000; // 5min for Pro, 3min for others (increased from 2min/1min)
           comprehensiveMonitoringService.startMonitoring(monitoringInterval);
           console.log('✅ Comprehensive monitoring service started');
           console.log(`📊 System health monitoring active (${monitoringInterval / 1000}s intervals)`);
@@ -1139,14 +1148,18 @@ httpServer.listen(PORT, () => {
         }
       } else {
         const reason = isRenderFree ? 'Render free tier' :
-          isMemoryCritical ? 'memory critical (<512MB)' : // More specific reason
+          isMemoryCritical ? 'memory critical (<512MB)' :
             isResourceConstrained ? 'resource constraints' :
-              'manual disable';
+              !enableComprehensiveMonitoring ? 'disabled via env var' :
+                'manual disable';
         console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
       }
 
       // Order event listener - disabled on resource-constrained environments
-      if (enableMonitoring && !isSevereResourceConstrained) { // Changed to isSevereResourceConstrained
+      // Can also be disabled via ENABLE_BACKGROUND_SERVICES=false
+      const enableBackgroundServices = process.env.ENABLE_BACKGROUND_SERVICES !== 'false';
+
+      if (enableMonitoring && !isSevereResourceConstrained && enableBackgroundServices) {
         try {
           orderEventListenerService.startListening();
           console.log('✅ Order event listener started');
@@ -1155,7 +1168,7 @@ httpServer.listen(PORT, () => {
           console.warn('⚠️ Order event listener failed to start:', error);
         }
       } else {
-        console.log('⚠️ Order event listener disabled for resource optimization');
+        console.log('⚠️ Order event listener disabled to save resources');
       }
     }).catch((error) => {
       console.error('Failed to initialize services:', error);
