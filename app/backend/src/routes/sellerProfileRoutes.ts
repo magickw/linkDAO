@@ -43,6 +43,22 @@ router.get('/seller/:walletAddress',
   } catch (error) {
     safeLogger.error('Error fetching seller profile:', error);
     
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller profile:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
+    
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {
         return validationErrorResponse(res, [
@@ -91,6 +107,22 @@ router.put('/seller/:walletAddress', csrfProtection,
     return successResponse(res, profile, 200);
   } catch (error) {
     safeLogger.error('Error updating seller profile:', error);
+    
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller profile update:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
     
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
@@ -177,6 +209,22 @@ router.post('/seller/profile', csrfProtection,
   } catch (error) {
     safeLogger.error('Error creating/updating seller profile:', error);
     
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller profile create/update:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
+    
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address') || error.message.includes('Invalid ENS handle')) {
         return validationErrorResponse(res, [
@@ -228,6 +276,22 @@ router.get('/seller/onboarding/:walletAddress',
     return successResponse(res, onboardingStatus, 200);
   } catch (error) {
     safeLogger.error('Error fetching onboarding status:', error);
+    
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for onboarding status:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
     
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {
@@ -296,6 +360,22 @@ router.put('/seller/onboarding/:walletAddress/:step', csrfProtection,  async (re
   } catch (error) {
     safeLogger.error('Error updating onboarding step:', error);
     
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for onboarding step update:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
+    
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
         return notFoundResponse<OnboardingStatus>(res, 'Seller profile not found');
@@ -358,6 +438,22 @@ router.get('/seller/:walletAddress/tier',
   } catch (error) {
     safeLogger.error('Error fetching seller tier:', error);
     
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller tier:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
+    
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {
         return validationErrorResponse(res, [
@@ -418,6 +514,22 @@ router.get('/seller/:walletAddress/tier/progress',
     return successResponse(res, tierProgress, 200);
   } catch (error) {
     safeLogger.error('Error fetching seller tier progress:', error);
+    
+    // Handle database connection errors specifically
+    if (error && typeof error === 'object' && ('code' in error)) {
+      const errorCode = (error as any).code;
+      // If it's a database connection error, return 404 instead of 500
+      // This prevents the service worker from aggressively backing off
+      if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND' || errorCode === 'ETIMEDOUT') {
+        safeLogger.warn('Database connection error, returning 404 for seller tier progress:', errorCode);
+        return res.status(404).json({
+          success: false,
+          error: 'Seller profile not found',
+          message: 'Unable to connect to database. Profile may not exist or try again later.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+    }
     
     if (error instanceof Error) {
       if (error.message.includes('Invalid wallet address')) {

@@ -887,7 +887,8 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/orders', orderCreationRoutes);
 
 // Marketplace seller routes
-app.use('/api/marketplace', marketplaceSellerRoutes);
+// NOTE: Seller Profile routes are now handled by sellerProfileRoutes to avoid conflicts
+// app.use('/api/marketplace', marketplaceSellerRoutes);
 
 // Seller profile API routes
 app.use('/api/marketplace', sellerProfileRoutes);

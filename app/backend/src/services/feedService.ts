@@ -64,6 +64,8 @@ interface CommentData {
 export class FeedService {
   // Get enhanced personalized feed
   async getEnhancedFeed(options: FeedOptions) {
+    console.log('[FEED SERVICE] getEnhancedFeed called with options:', JSON.stringify(options));
+
     // Default to all feed and newest posts if not specified
     const {
       userAddress,
@@ -74,6 +76,8 @@ export class FeedService {
       timeRange = 'all', // Default to all time
       feedSource = 'all' // Default to all feed to ensure users see their own posts
     } = options;
+
+    console.log('[FEED SERVICE] Parsed options:', { userAddress, page, limit, sort, filterCommunities, timeRange, feedSource });
 
     const offset = (page - 1) * limit;
 
@@ -1771,3 +1775,6 @@ export class FeedService {
     }
   }
 }
+
+// Export singleton instance
+export const feedService = new FeedService();

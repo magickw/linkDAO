@@ -14,7 +14,16 @@ export class FeedController {
   // Get enhanced personalized feed (optional authentication)
   async getEnhancedFeed(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address; // Optional - can be undefined for anonymous users
+      // Get user address from either authenticated session or query parameter
+      const authenticatedAddress = req.user?.address;
+      const queryUserAddress = req.query.userAddress as string | undefined;
+      const userAddress = authenticatedAddress || queryUserAddress || null;
+
+      console.log('[FEED CONTROLLER] User address sources:', {
+        authenticatedAddress,
+        queryUserAddress,
+        finalUserAddress: userAddress
+      });
 
       const {
         page = 1,
