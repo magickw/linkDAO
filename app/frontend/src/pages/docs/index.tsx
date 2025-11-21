@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { 
-  BookOpen, 
+import {
+  BookOpen,
   ArrowLeft,
   Home,
   Code,
@@ -34,7 +34,8 @@ import {
   Building,
   Lightbulb,
   Target,
-  TrendingUp
+  TrendingUp,
+  ChevronRight
 } from 'lucide-react';
 import DocSidebar from '@/components/Documentation/DocSidebar';
 import DocViewer from '@/components/Documentation/DocViewer';
@@ -46,7 +47,7 @@ const DocsPage: NextPage = () => {
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [toc, setToc] = useState<{id: string, title: string, level: number}[]>([]);
+  const [toc, setToc] = useState<{ id: string, title: string, level: number }[]>([]);
   const [activeSection, setActiveSection] = useState('');
 
   // Documentation structure with enhanced categorization
@@ -54,7 +55,9 @@ const DocsPage: NextPage = () => {
     {
       id: 'getting-started',
       title: 'Getting Started',
-      icon: <Home className="w-5 h-5" />,
+      description: 'Essentials for new users',
+      icon: <Zap className="w-6 h-6 text-yellow-500" />,
+      color: 'bg-yellow-500/10 text-yellow-600',
       documents: [
         {
           id: 'introduction',
@@ -88,7 +91,9 @@ const DocsPage: NextPage = () => {
     {
       id: 'user-guides',
       title: 'User Guides',
-      icon: <GraduationCap className="w-5 h-5" />,
+      description: 'Step-by-step tutorials',
+      icon: <GraduationCap className="w-6 h-6 text-green-500" />,
+      color: 'bg-green-500/10 text-green-600',
       documents: [
         {
           id: 'wallet-setup',
@@ -148,8 +153,10 @@ const DocsPage: NextPage = () => {
     },
     {
       id: 'technical',
-      title: 'Technical Documentation',
-      icon: <Code className="w-5 h-5" />,
+      title: 'Technical Docs',
+      description: 'APIs and Architecture',
+      icon: <Code className="w-6 h-6 text-blue-500" />,
+      color: 'bg-blue-500/10 text-blue-600',
       documents: [
         {
           id: 'technical-whitepaper',
@@ -201,7 +208,9 @@ const DocsPage: NextPage = () => {
     {
       id: 'developer',
       title: 'Developer Resources',
-      icon: <Code className="w-5 h-5" />,
+      description: 'SDKs and Tools',
+      icon: <Wrench className="w-6 h-6 text-purple-500" />,
+      color: 'bg-purple-500/10 text-purple-600',
       documents: [
         {
           id: 'contributing',
@@ -244,7 +253,9 @@ const DocsPage: NextPage = () => {
     {
       id: 'advanced-topics',
       title: 'Advanced Topics',
-      icon: <TrendingUp className="w-5 h-5" />,
+      description: 'Deep dives and optimization',
+      icon: <TrendingUp className="w-6 h-6 text-red-500" />,
+      color: 'bg-red-500/10 text-red-600',
       documents: [
         {
           id: 'governance-mechanisms',
@@ -287,28 +298,28 @@ const DocsPage: NextPage = () => {
   ];
 
   // Flatten documents for search
-  const allDocuments = documentationCategories.flatMap(category => 
+  const allDocuments = documentationCategories.flatMap(category =>
     category.documents.map(doc => ({ ...doc, category: category.id, categoryTitle: category.title }))
   );
 
   // Filter documents based on search and category with improved search
   const filteredDocuments = allDocuments.filter(doc => {
     const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
-    
+
     // If no search terms, show all documents in category
     if (searchTerms.length === 0) {
       return selectedCategory === 'all' || doc.category === selectedCategory;
     }
-    
+
     // Check if document matches all search terms
-    const matchesAllTerms = searchTerms.every(term => 
+    const matchesAllTerms = searchTerms.every(term =>
       doc.title.toLowerCase().includes(term) ||
       doc.description.toLowerCase().includes(term) ||
       (doc.tags && doc.tags.some(tag => tag.toLowerCase().includes(term)))
     );
-    
+
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
-    
+
     return matchesAllTerms && matchesCategory;
   });
 
@@ -355,7 +366,7 @@ We encountered an error while loading this document. Please try again later or c
   const generateToc = (content: string) => {
     // Reset header counter for each document
     let headerCounter = 0;
-    
+
     const headers = content.match(/^(#{1,4})\s+(.+)$/gm);
     if (headers) {
       const tocItems = headers.map((header) => {
@@ -369,7 +380,7 @@ We encountered an error while loading this document. Please try again later or c
           return { id, title, level };
         }
         return null;
-      }).filter(Boolean) as {id: string, title: string, level: number}[];
+      }).filter(Boolean) as { id: string, title: string, level: number }[];
       setToc(tocItems);
     } else {
       setToc([]);
@@ -432,39 +443,65 @@ We encountered an error while loading this document. Please try again later or c
         <title>Documentation - LinkDAO</title>
         <meta name="description" content="Comprehensive documentation for LinkDAO platform, smart contracts, and development" />
       </Head>
-      
+
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
-                <Link href="/" className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                <Link href="/" className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   Back to Home
                 </Link>
               </div>
               <div className="flex items-center">
-                <BookOpen className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-3" />
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Documentation</h1>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 shadow-lg">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300">
+                  Documentation
+                </h1>
               </div>
               <div></div>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Documentation Center</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Comprehensive guides, technical documentation, and resources for LinkDAO
-            </p>
-          </div>
+        {/* Hero Section (Only visible when no document is selected) */}
+        {!selectedDocument && (
+          <div className="relative bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 opacity-50" />
+            <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
 
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-6 tracking-tight">
+                How can we help you?
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+                Search our comprehensive documentation for guides, API references, and troubleshooting tips.
+              </p>
+
+              <div className="max-w-2xl mx-auto relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-6 w-6 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-12 pr-4 py-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg placeholder-gray-400 transition-all"
+                  placeholder="Search for articles, guides, and docs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
           <div className="flex flex-col lg:flex-row gap-8 h-full">
-            {/* Sidebar Navigation */}
-            <div className="lg:w-1/4">
+            {/* Sidebar Navigation - Always visible on desktop */}
+            <div className={`lg:w-1/4 ${!selectedDocument ? 'hidden lg:block' : ''}`}>
               <DocSidebar
                 categories={documentationCategories}
                 selectedCategory={selectedCategory}
@@ -480,7 +517,7 @@ We encountered an error while loading this document. Please try again later or c
             </div>
 
             {/* Main Content */}
-            <div className="lg:w-3/4 h-full">
+            <div className={`${selectedDocument ? 'lg:w-3/4' : 'w-full'} h-full`}>
               {selectedDocument ? (
                 // Document Viewer
                 <DocViewer
@@ -493,119 +530,108 @@ We encountered an error while loading this document. Please try again later or c
                   toc={toc}
                   activeSection={activeSection}
                   onSectionChange={setActiveSection}
+                  categoryTitle={allDocuments.find(d => d.id === selectedDocument)?.categoryTitle}
+                  nextDoc={(() => {
+                    const currentIndex = allDocuments.findIndex(d => d.id === selectedDocument);
+                    if (currentIndex !== -1 && currentIndex < allDocuments.length - 1) {
+                      return { id: allDocuments[currentIndex + 1].id, title: allDocuments[currentIndex + 1].title };
+                    }
+                    return null;
+                  })()}
+                  prevDoc={(() => {
+                    const currentIndex = allDocuments.findIndex(d => d.id === selectedDocument);
+                    if (currentIndex > 0) {
+                      return { id: allDocuments[currentIndex - 1].id, title: allDocuments[currentIndex - 1].title };
+                    }
+                    return null;
+                  })()}
+                  onNavigate={handleDocumentSelect}
                 />
               ) : (
-                // Document List
-                <div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                      {selectedCategory === 'all' ? 'All Documentation' : documentationCategories.find(c => c.id === selectedCategory)?.title}
-                    </h2>
-                    
-                    {filteredDocuments.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredDocuments.map((doc) => (
-                          <div
-                            key={doc.id}
-                            onClick={() => handleDocumentSelect(doc.id)}
-                            className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white dark:bg-gray-800"
-                          >
-                            <div className="flex items-start">
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg mr-4">
-                                <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{doc.title}</h3>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{doc.description}</p>
-                                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  <span className="mr-2">{doc.readTime}</span>
-                                  <span className="mx-2">•</span>
-                                  <span>Updated {doc.lastUpdated}</span>
-                                </div>
-                                {doc.tags && doc.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-2">
-                                    {doc.tags.slice(0, 3).map((tag, index) => (
-                                      <span key={index} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 rounded">
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                          No documents found
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">
-                          Try adjusting your search terms or filters
-                        </p>
-                        <button
-                          onClick={() => {
-                            setSearchQuery('');
-                            setSelectedCategory('all');
-                          }}
-                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                // Landing Page Content
+                <div className="space-y-12">
+                  {/* Categories Grid */}
+                  <section>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Browse by Category</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {documentationCategories.map((category) => (
+                        <div
+                          key={category.id}
+                          onClick={() => handleCategorySelect(category.id)}
+                          className="group cursor-pointer bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden"
                         >
-                          Clear Filters
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                          <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-300`}>
+                            {React.cloneElement(category.icon as React.ReactElement, { className: "w-24 h-24" })}
+                          </div>
 
-                  {/* Quick Links */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                      <div className="flex items-center mb-4">
-                        <Code className="w-6 h-6 text-blue-600 dark:text-blue-400 mr-2" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Developers</h3>
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        Technical documentation for developers building on LinkDAO
-                      </p>
-                      <button
-                        onClick={() => handleCategorySelect('technical')}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
-                      >
-                        View Documentation →
-                      </button>
+                          <div className={`w-12 h-12 rounded-xl ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                            {category.icon}
+                          </div>
+
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {category.title}
+                          </h3>
+                          <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                            {category.description}
+                          </p>
+
+                          <div className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">
+                            Explore {category.documents.length} articles
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    
-                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                      <div className="flex items-center mb-4">
-                        <GraduationCap className="w-6 h-6 text-green-600 dark:text-green-400 mr-2" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">User Guides</h3>
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        Step-by-step guides for using LinkDAO platform features
-                      </p>
-                      <button
-                        onClick={() => handleCategorySelect('user-guides')}
-                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
-                      >
-                        View Guides →
-                      </button>
+                  </section>
+
+                  {/* Popular Articles */}
+                  <section>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Popular Articles</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {allDocuments.slice(0, 4).map((doc) => (
+                        <div
+                          key={doc.id}
+                          onClick={() => handleDocumentSelect(doc.id)}
+                          className="flex items-start p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition-colors group"
+                        >
+                          <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg mr-4 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 transition-colors">
+                            <FileText className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {doc.title}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
+                              {doc.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    
-                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                      <div className="flex items-center mb-4">
-                        <HelpCircle className="w-6 h-6 text-purple-600 dark:text-purple-400 mr-2" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Support</h3>
+                  </section>
+
+                  {/* Help Section */}
+                  <section className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div>
+                        <h2 className="text-2xl font-bold mb-2">Still need help?</h2>
+                        <p className="text-blue-100">
+                          Can't find what you're looking for? Our support team is here to help.
+                        </p>
                       </div>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        Get help with common issues and questions
-                      </p>
-                      <Link href="/support" className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
-                        Visit Support Center →
-                      </Link>
+                      <div className="flex gap-4">
+                        <Link href="/support" className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors shadow-lg">
+                          Contact Support
+                        </Link>
+                        <a href="https://discord.gg/linkdao" target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-blue-700/50 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors backdrop-blur-sm">
+                          Join Discord
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  </section>
                 </div>
               )}
             </div>

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useSendTransaction, useWriteContract, useWaitForTransactionReceipt, useChainId, useAccount } from 'wagmi';
+import { useSendTransaction, useWriteContract, useChainId, useAccount, useConfig } from 'wagmi';
 import { parseUnits } from 'viem';
 
 const ERC20_TRANSFER_ABI = [
@@ -25,8 +25,12 @@ interface TransferOptions {
 export function useTokenTransfer() {
     const chainId = useChainId();
     const { address } = useAccount();
+    const config = useConfig();
     const [isPending, setIsPending] = useState(false);
     const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
+
+    // Get the current chain object from config
+    const chain = config.chains.find(c => c.id === chainId);
 
     // Native ETH Transfer
     const {
@@ -73,7 +77,7 @@ export function useTokenTransfer() {
                     abi: ERC20_TRANSFER_ABI,
                     functionName: 'transfer',
                     args: [recipient as `0x${string}`, amountBigInt],
-                    chainId,
+                    chain,
                     account: address
                 });
             }
@@ -86,7 +90,7 @@ export function useTokenTransfer() {
         } finally {
             setIsPending(false);
         }
-    }, [chainId, address, sendTransactionAsync, writeContractAsync]);
+    }, [chain, chainId, address, sendTransactionAsync, writeContractAsync]);
 
     return {
         transfer,

@@ -6,7 +6,6 @@ export interface Community {
   description: string;
   rules: string[];
   memberCount: number;
-  postCount?: number;
   createdAt: Date;
   updatedAt: Date;
   avatar?: string;
@@ -27,27 +26,6 @@ export interface Community {
   trendingScore?: number;
   onlineMemberCount?: number;
   activeMemberCount?: number;
-  
-  // User-specific membership data
-  isMember?: boolean;
-  memberRole?: string | null;
-  memberReputation?: number;
-  memberContributions?: number;
-  memberJoinedAt?: Date | null;
-  
-  // Statistics data
-  stats?: CommunityStats;
-}
-
-export interface CommunityStats {
-  activeMembers7d: number;
-  activeMembers30d: number;
-  posts7d: number;
-  posts30d: number;
-  engagementRate: number;
-  growthRate7d: number;
-  growthRate30d: number;
-  trendingScore: number;
 }
 
 export interface CommunitySettings {

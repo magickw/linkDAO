@@ -25,7 +25,7 @@ import {
 interface DocCategory {
   id: string;
   title: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   documents: {
     id: string;
     title: string;
@@ -76,24 +76,6 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
     }
   };
 
-  // Get icon for category
-  const getCategoryIcon = (categoryId: string) => {
-    switch (categoryId) {
-      case 'getting-started':
-        return <Home className="w-5 h-5" />;
-      case 'user-guides':
-        return <GraduationCap className="w-5 h-5" />;
-      case 'technical':
-        return <Code className="w-5 h-5" />;
-      case 'developer':
-        return <Wrench className="w-5 h-5" />;
-      case 'advanced-topics':
-        return <TrendingUp className="w-5 h-5" />;
-      default:
-        return <BookOpen className="w-5 h-5" />;
-    }
-  };
-
   return (
     <>
       {/* Mobile menu button */}
@@ -137,11 +119,10 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
                     onSelectCategory('all');
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left ${
-                    selectedCategory === 'all'
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left ${selectedCategory === 'all'
                       ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   <BookOpen className="w-5 h-5 mr-3" />
                   All Documents
@@ -155,14 +136,22 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
                       toggleCategory(category.id);
                       setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${
-                      selectedCategory === category.id
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${selectedCategory === category.id
                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center">
-                      <span className="mr-3">{getCategoryIcon(category.id)}</span>
+                      <span className="mr-3">
+                        {category.icon ? (
+                          // Clone the icon to ensure consistent sizing if needed, or just render it
+                          React.isValidElement(category.icon) ?
+                            React.cloneElement(category.icon as React.ReactElement, { className: "w-5 h-5" }) :
+                            category.icon
+                        ) : (
+                          <BookOpen className="w-5 h-5" />
+                        )}
+                      </span>
                       {category.title}
                     </div>
                     {expandedCategories.includes(category.id) ? (
@@ -181,16 +170,15 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
                               onSelectDocument(doc.id);
                               setMobileMenuOpen(false);
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center ${
-                              selectedDocument === doc.id
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center ${selectedDocument === doc.id
                                 ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium'
                                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                            }`}
+                              }`}
                           >
                             <FileText className="w-3 h-3 mr-2" />
                             {doc.title}
                           </button>
-                          
+
                           {/* Show document hierarchy below the document name when selected */}
                           {selectedDocument === doc.id && toc && toc.length > 0 && (
                             <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
@@ -201,11 +189,10 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
                                       onTocItemClick?.(item.id);
                                       setMobileMenuOpen(false);
                                     }}
-                                    className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${
-                                      activeSection === item.id
+                                    className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${activeSection === item.id
                                         ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium'
                                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    }`}
+                                      }`}
                                     style={{ paddingLeft: `${(item.level - 1) * 12}px` }}
                                   >
                                     <div className="flex items-center">

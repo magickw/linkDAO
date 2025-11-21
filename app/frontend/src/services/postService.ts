@@ -255,19 +255,6 @@ export class PostService {
     sort: string = 'new'
   ): Promise<{ posts: Post[]; pagination: any }> {
     try {
-      // If this is the default linkdao community, return empty results to avoid API calls
-      if (communityId === 'linkdao-default') {
-        return {
-          posts: [],
-          pagination: {
-            page,
-            limit,
-            total: 0,
-            totalPages: 0
-          }
-        };
-      }
-
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -306,11 +293,6 @@ export class PostService {
     sort: string = 'new'
   ): Promise<Post[]> {
     try {
-      // If this is the default linkdao community, return an empty array to avoid API calls
-      if (communityId === 'linkdao-default') {
-        return [];
-      }
-      
       const result = await this.getCommunityPosts(communityId, page, limit, sort);
       return result.posts || [];
     } catch (error) {
