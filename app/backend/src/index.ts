@@ -232,16 +232,17 @@ console.log('   isSevereResourceConstrained:', isSevereResourceConstrained);
 
 // Database connection pool optimization for different environments
 const dbConfig = productionConfig.database;
-// More conservative connection pool sizes for memory-critical environments
+// Optimize connection pool sizes based on available resources
+// Render Pro: 4GB RAM, 2 CPU - can handle significantly more connections
 const maxConnections = isMemoryCritical ? 1 :
   (isRenderFree ? dbConfig.maxConnections :
-    (isRenderPro ? 5 :
-      (isRenderStandard ? 10 : // Reduced from 15
+    (isRenderPro ? 20 : // Increased from 5 to 20 for Pro plan
+      (isRenderStandard ? 10 :
         (process.env.RENDER ? 3 : 20))));
 const minConnections = isMemoryCritical ? 1 :
   (isRenderFree ? dbConfig.minConnections :
-    (isRenderPro ? 2 :
-      (isRenderStandard ? 3 : // Reduced from 5
+    (isRenderPro ? 5 : // Increased from 2 to 5 for Pro plan
+      (isRenderStandard ? 3 :
         (process.env.RENDER ? 1 : 5))));
 
 // Initialize optimized database pool
@@ -250,20 +251,22 @@ const dbPool = new Pool({
   max: maxConnections,
   min: minConnections,
   // Increase timeouts for better performance with more resources
+  // Render Pro can handle longer-running queries
   idleTimeoutMillis: isRenderFree ? dbConfig.idleTimeoutMillis :
-    (isRenderPro ? 30000 :
+    (isRenderPro ? 60000 : // Increased from 30000 to 60000
       (isRenderStandard ? 60000 : 60000)),
   connectionTimeoutMillis: isRenderFree ? dbConfig.connectionTimeoutMillis :
-    (isRenderPro ? 3000 :
+    (isRenderPro ? 5000 : // Increased from 3000 to 5000
       (isRenderStandard ? 5000 : 2000)),
   // Add connection cleanup and resource management
   allowExitOnIdle: true,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   // Relax statement timeouts for better performance with more resources
-  statement_timeout: isResourceConstrained ? 30000 : 90000,
+  // Render Pro can handle much longer queries
+  statement_timeout: isResourceConstrained ? 30000 : (isRenderPro ? 120000 : 90000),
   // Relax query timeouts for better performance with more resources
-  query_timeout: isResourceConstrained ? 25000 : 85000,
+  query_timeout: isResourceConstrained ? 25000 : (isRenderPro ? 115000 : 85000),
 });
 
 // Add database pool event handlers for monitoring and cleanup
@@ -316,11 +319,11 @@ if ((process.env.RENDER || isResourceConstrained) && enableMemoryMonitoring) {
   const tierName = isRenderFree ? 'Free' : (isRenderPro ? 'Pro' : (isRenderStandard ? 'Standard' : 'Standard'));
   console.log(`🚀 Running on Render ${tierName} Tier - Memory optimizations enabled`);
 
-  // Start memory monitoring with more frequent intervals for critical environments
-  // Increased intervals to reduce CPU usage
-  const monitoringInterval = isMemoryCritical ? 60000 : // Every 60 seconds for critical (was 15s)
-    (isRenderFree ? 120000 :  // Every 2 minutes for free (was 30s)
-      (isRenderPro ? 180000 :  // Every 3 minutes for pro (was 45s)
+  // Start memory monitoring with optimized intervals based on plan
+  // Render Pro has more resources, so we can monitor less frequently
+  const monitoringInterval = isMemoryCritical ? 60000 : // Every 60 seconds for critical
+    (isRenderFree ? 120000 :  // Every 2 minutes for free
+      (isRenderPro ? 300000 :  // Every 5 minutes for Pro (increased from 3min)
         (isRenderStandard ? 120000 : 300000))); // Every 2-5 minutes
 
   memoryMonitoringService.startMonitoring(monitoringInterval);
@@ -964,7 +967,9 @@ app.use('/api/ipfs', ipfsRoutes);
 // Socket.IO will handle its own /socket.io/* routes when enabled
 app.all('/socket.io/*', (req, res) => {
   // Check if WebSockets should be enabled
+  // Render Pro has sufficient resources for WebSockets
   const webSocketsEnabled = process.env.ENABLE_WEBSOCKETS === 'true' ||
+    isRenderPro ||
     (process.env.RENDER_SERVICE_TYPE === 'standard' || process.env.RENDER_SERVICE_TYPE === 'pro');
 
   if (!webSocketsEnabled) {
@@ -1046,8 +1051,9 @@ httpServer.listen(PORT, () => {
       //   console.warn('⚠️ Performance monitoring initialization failed:', error.message);
       // }
 
-      // WebSocket services - more conservative for memory-critical environments
-      const enableWebSockets = (!isSevereResourceConstrained || isRenderStandard) && !process.env.DISABLE_WEBSOCKETS;
+      // WebSocket services - enabled on Render Pro and non-constrained environments
+      // Render Pro (4GB RAM, 2 CPU) can easily handle WebSocket connections
+      const enableWebSockets = (isRenderPro || (!isSevereResourceConstrained || isRenderStandard)) && !process.env.DISABLE_WEBSOCKETS;
 
       if (enableWebSockets) {
         try {
@@ -1066,8 +1072,8 @@ httpServer.listen(PORT, () => {
         console.log(`⚠️ WebSocket service disabled (${reason}) to conserve memory`);
       }
 
-      // Admin WebSocket service - only on non-constrained environments
-      if (enableWebSockets && !isSevereResourceConstrained) { // Changed from !isRenderFree
+      // Admin WebSocket service - enabled on Render Pro and non-constrained environments
+      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
         try {
           const adminWebSocketService = initializeAdminWebSocket(httpServer);
           console.log('✅ Admin WebSocket service initialized');
@@ -1079,8 +1085,8 @@ httpServer.listen(PORT, () => {
         console.log('⚠️ Admin WebSocket service disabled for resource optimization');
       }
 
-      // Seller WebSocket service - only on non-constrained environments
-      if (enableWebSockets && !isSevereResourceConstrained) { // Changed from !isRenderFree
+      // Seller WebSocket service - enabled on Render Pro and non-constrained environments
+      if (enableWebSockets && (isRenderPro || !isSevereResourceConstrained)) {
         try {
           const sellerWebSocketService = initializeSellerWebSocket();
           console.log('✅ Seller WebSocket service initialized');
@@ -1131,10 +1137,10 @@ httpServer.listen(PORT, () => {
         console.log('📝 Server will continue without caching');
       }
 
-      // Comprehensive monitoring - disabled on resource-constrained environments
+      // Comprehensive monitoring - enabled on Render Pro and non-constrained environments
       // Can also be disabled via ENABLE_COMPREHENSIVE_MONITORING=false
       const enableComprehensiveMonitoring = process.env.ENABLE_COMPREHENSIVE_MONITORING !== 'false';
-      const enableMonitoring = !isSevereResourceConstrained && !process.env.DISABLE_MONITORING && enableComprehensiveMonitoring;
+      const enableMonitoring = (isRenderPro || !isSevereResourceConstrained) && !process.env.DISABLE_MONITORING && enableComprehensiveMonitoring;
 
       if (enableMonitoring) {
         try {
@@ -1155,11 +1161,11 @@ httpServer.listen(PORT, () => {
         console.log(`⚠️ Comprehensive monitoring disabled (${reason}) to save memory`);
       }
 
-      // Order event listener - disabled on resource-constrained environments
+      // Order event listener - enabled on Render Pro and non-constrained environments
       // Can also be disabled via ENABLE_BACKGROUND_SERVICES=false
       const enableBackgroundServices = process.env.ENABLE_BACKGROUND_SERVICES !== 'false';
 
-      if (enableMonitoring && !isSevereResourceConstrained && enableBackgroundServices) {
+      if (enableMonitoring && (isRenderPro || !isSevereResourceConstrained) && enableBackgroundServices) {
         try {
           orderEventListenerService.startListening();
           console.log('✅ Order event listener started');
@@ -1191,7 +1197,7 @@ httpServer.on('error', (error: any) => {
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
 
-  const shutdownTimeout = isResourceConstrained ? 5000 : 10000; // Shorter timeout for constrained environments
+  const shutdownTimeout = isResourceConstrained ? 5000 : (isRenderPro ? 15000 : 10000); // Longer timeout for Pro
   let shutdownTimer: NodeJS.Timeout;
 
   try {

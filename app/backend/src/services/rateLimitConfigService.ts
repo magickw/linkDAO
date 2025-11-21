@@ -32,8 +32,13 @@ export class RateLimitConfigService {
 
   /**
    * Initialize default rate limiting rules
+   * Rates are optimized for Render Pro (4GB RAM, 2 CPU)
    */
   private initializeDefaultRules(): void {
+    // Check if running on Render Pro for more generous limits
+    const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+    const multiplier = isRenderPro ? 3 : 1; // 3x limits for Pro plan
+
     this.rules = [
       // Authentication endpoints - most restrictive
       {
@@ -42,7 +47,7 @@ export class RateLimitConfigService {
         pattern: '/api/auth/wallet',
         method: 'POST',
         windowMs: 60 * 1000, // 1 minute
-        maxRequests: 5,
+        maxRequests: 5 * multiplier, // 5 for free, 15 for Pro
         customMessage: 'Too many authentication attempts. Please wait before trying again.',
         enabled: true,
         priority: 100
@@ -53,7 +58,7 @@ export class RateLimitConfigService {
         pattern: '/api/auth/refresh',
         method: 'POST',
         windowMs: 60 * 1000,
-        maxRequests: 10,
+        maxRequests: 10 * multiplier, // 10 for free, 30 for Pro
         enabled: true,
         priority: 95
       },
@@ -65,7 +70,7 @@ export class RateLimitConfigService {
         pattern: '/api/marketplace/seller/profile',
         method: 'POST',
         windowMs: 60 * 1000,
-        maxRequests: 3,
+        maxRequests: 3 * multiplier, // 3 for free, 9 for Pro
         customMessage: 'Too many profile updates. Please wait before making changes.',
         enabled: true,
         priority: 90
@@ -78,7 +83,7 @@ export class RateLimitConfigService {
         pattern: '/marketplace/listings',
         method: 'POST',
         windowMs: 60 * 1000,
-        maxRequests: 2,
+        maxRequests: 2 * multiplier, // 2 for free, 6 for Pro
         customMessage: 'Too many listings created. Please wait before creating another.',
         enabled: true,
         priority: 85
@@ -89,7 +94,7 @@ export class RateLimitConfigService {
         pattern: '/marketplace/listings',
         method: 'GET',
         windowMs: 60 * 1000,
-        maxRequests: 100,
+        maxRequests: 100 * multiplier, // 100 for free, 300 for Pro
         enabled: true,
         priority: 50
       },
@@ -101,7 +106,7 @@ export class RateLimitConfigService {
         pattern: '/marketplace/reputation/*',
         method: 'POST',
         windowMs: 60 * 1000,
-        maxRequests: 5,
+        maxRequests: 5 * multiplier, // 5 for free, 15 for Pro
         enabled: true,
         priority: 80
       },
@@ -111,7 +116,7 @@ export class RateLimitConfigService {
         pattern: '/marketplace/reputation/*',
         method: 'GET',
         windowMs: 60 * 1000,
-        maxRequests: 50,
+        maxRequests: 50 * multiplier, // 50 for free, 150 for Pro
         enabled: true,
         priority: 40
       },
@@ -122,7 +127,7 @@ export class RateLimitConfigService {
         name: 'File Uploads',
         pattern: '/api/upload/*',
         windowMs: 60 * 1000,
-        maxRequests: 10,
+        maxRequests: 10 * multiplier, // 10 for free, 30 for Pro
         customMessage: 'Too many file uploads. Please wait before uploading more files.',
         enabled: true,
         priority: 75
@@ -135,7 +140,7 @@ export class RateLimitConfigService {
         pattern: '/api/search/*',
         method: 'GET',
         windowMs: 60 * 1000,
-        maxRequests: 200,
+        maxRequests: 200 * multiplier, // 200 for free, 600 for Pro
         skipConditions: ['successful_response'],
         enabled: true,
         priority: 30
@@ -147,7 +152,7 @@ export class RateLimitConfigService {
         name: 'Health Checks',
         pattern: '/health*',
         windowMs: 60 * 1000,
-        maxRequests: 1000,
+        maxRequests: 1000 * multiplier, // 1000 for free, 3000 for Pro
         enabled: true,
         priority: 10
       },
@@ -158,13 +163,13 @@ export class RateLimitConfigService {
         name: 'General API',
         pattern: '/api/*',
         windowMs: 60 * 1000,
-        maxRequests: 100,
+        maxRequests: 100 * multiplier, // 100 for free, 300 for Pro
         enabled: true,
         priority: 1
       }
     ];
 
-    logger.info(`Initialized ${this.rules.length} rate limiting rules`);
+    logger.info(`Initialized ${this.rules.length} rate limiting rules (Render Pro: ${isRenderPro})`);
   }
 
   /**

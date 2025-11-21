@@ -37,6 +37,10 @@ class ProductionServerManager {
   }
 
   private loadConfiguration(): ProductionServerConfig {
+    // Detect Render Pro for optimal cluster configuration
+    const isRenderPro = process.env.RENDER && process.env.RENDER_PRO;
+    const defaultWorkers = isRenderPro ? 2 : require('os').cpus().length;
+
     return {
       port: parseInt(process.env.PORT || '10000'),
       sslPort: parseInt(process.env.SSL_PORT || '443'),
@@ -44,8 +48,9 @@ class ProductionServerManager {
       environment: process.env.NODE_ENV || 'production',
       gracefulShutdownTimeout: parseInt(process.env.GRACEFUL_SHUTDOWN_TIMEOUT || '30000'),
       cluster: {
-        enabled: process.env.CLUSTER_ENABLED === 'true',
-        workers: parseInt(process.env.CLUSTER_WORKERS || '0') || require('os').cpus().length
+        // Enable clustering by default on Render Pro (2 CPUs available)
+        enabled: process.env.CLUSTER_ENABLED === 'true' || isRenderPro,
+        workers: parseInt(process.env.CLUSTER_WORKERS || '0') || defaultWorkers
       }
     };
   }

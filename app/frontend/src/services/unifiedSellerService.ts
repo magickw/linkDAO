@@ -208,9 +208,9 @@ export class UnifiedSellerService {
         return cached.data;
       }
 
-      // Fetch from API
+      // Fetch from API using the proper endpoint
       const response = await unifiedSellerAPIClient.request<SellerListing[]>(
-        `/listings/${walletAddress}`
+        unifiedSellerAPIClient['endpoints'].getListings(walletAddress)
       );
 
       if (!response || !Array.isArray(response)) {
@@ -269,10 +269,10 @@ export class UnifiedSellerService {
       const legacyListing = this.convertUnifiedListingToLegacy(listingData);
 
       const response = await unifiedSellerAPIClient.request<SellerListing>(
-        `/listings/${walletAddress}`,
+        unifiedSellerAPIClient['endpoints'].createListing(),
         {
           method: 'POST',
-          body: JSON.stringify(legacyListing),
+          body: JSON.stringify({ ...legacyListing, walletAddress }),
         }
       );
 
@@ -308,7 +308,7 @@ export class UnifiedSellerService {
       const legacyUpdates = this.convertUnifiedListingToLegacy(updates);
 
       const response = await unifiedSellerAPIClient.request<SellerListing>(
-        `/listings/${walletAddress}/${listingId}`,
+        unifiedSellerAPIClient['endpoints'].updateListing(listingId),
         {
           method: 'PUT',
           body: JSON.stringify(legacyUpdates),
