@@ -353,7 +353,7 @@ export class UnifiedSellerService {
       const [profile, listings, dashboardStats] = await Promise.all([
         this.getProfile(walletAddress),
         this.getListings(walletAddress),
-        unifiedSellerAPIClient.request<SellerDashboardStats>(`/dashboard/${walletAddress}`)
+        unifiedSellerAPIClient.request<SellerDashboardStats>(unifiedSellerAPIClient['endpoints'].getDashboard(walletAddress))
       ]);
 
       if (!profile) {
@@ -397,7 +397,7 @@ export class UnifiedSellerService {
   async getOrders(walletAddress: string): Promise<SellerOrder[]> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerOrder[]>(
-        `/orders/${walletAddress}`
+        unifiedSellerAPIClient['endpoints'].getOrders(walletAddress)
       );
 
       return response || [];
@@ -418,7 +418,7 @@ export class UnifiedSellerService {
   async getAnalytics(walletAddress: string): Promise<SellerAnalytics> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerAnalytics>(
-        `/analytics/${walletAddress}`
+        unifiedSellerAPIClient['endpoints'].getAnalytics(walletAddress)
       );
 
       return response;
@@ -439,7 +439,7 @@ export class UnifiedSellerService {
   async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerNotification[]>(
-        `/notifications/${walletAddress}`
+        unifiedSellerAPIClient['endpoints'].getNotifications(walletAddress)
       );
 
       return response || [];
@@ -456,7 +456,7 @@ export class UnifiedSellerService {
   async markNotificationRead(walletAddress: string, notificationId: string): Promise<void> {
     try {
       await unifiedSellerAPIClient.request(
-        `/notifications/${walletAddress}/${notificationId}/read`,
+        unifiedSellerAPIClient['endpoints'].markNotificationRead(notificationId),
         { method: 'POST' }
       );
     } catch (error) {
