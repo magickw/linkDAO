@@ -3,16 +3,19 @@ export const ENV_CONFIG = {
   // Backend API URL - defaults to localhost:8000 for development
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
   API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000',
-  
+
   // WebSocket URL - derived from backend URL (Socket.IO will append /socket.io/)
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 
-    (process.env.NEXT_PUBLIC_BACKEND_URL 
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL ||
+    (process.env.NEXT_PUBLIC_BACKEND_URL
       ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^http/, 'ws').replace(/\/$/, '')}/socket.io/`
       : 'ws://localhost:8000/socket.io/'),
-  
+
   // WalletConnect
   WALLETCONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'd051afaee33392cccc42e141b9f7697b',
-  
+
+  // Coinbase CDP (for OnchainKit and x402 protocol)
+  CDP_API_KEY: process.env.NEXT_PUBLIC_CDP_API_KEY || '',
+
   // Smart Contract Addresses (Sepolia Testnet)
   LDAO_TOKEN_ADDRESS: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS || '0xc9F690B45e33ca909bB9ab97836091673232611B',
   TIP_ROUTER_ADDRESS: process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS || '0x755Fe81411c86019fff6033E0567A4D93b57281b',

@@ -85,7 +85,8 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
         setLoading(true);
         
         // Fetch actual listing data from API
-        const response = await fetch(`http://localhost:10000/marketplace/listings/${listingId}`);
+        const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+        const response = await fetch(`${baseUrl}/marketplace/listings/${listingId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {

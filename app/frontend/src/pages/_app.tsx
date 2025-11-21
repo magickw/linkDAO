@@ -7,12 +7,15 @@ import { config } from '@/lib/rainbowkit';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { OnchainKitProvider } from '@coinbase/onchainkit';
+import { base } from 'wagmi/chains';
 import { Web3Provider } from '@/context/Web3Context';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
 import { ContactProvider } from '@/contexts/ContactContext';
+import { ENV_CONFIG } from '@/config/environment';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
 // Cart provider not needed - using service-based cart
@@ -351,27 +354,32 @@ export default function App({ Component, pageProps, router }: AppProps) {
       <ErrorBoundary>
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>
-            <SellerQueryProvider queryClient={queryClient}>
-            <RainbowKitProvider>
-              <Web3Provider>
-                <AuthProvider>
-                  <ToastProvider>
-                    <NavigationProvider>
-                      <ContactProvider>
-                        <EnhancedThemeProvider defaultTheme="system">
-                          <AppContent>
-                            <Component {...pageProps} />
-                          </AppContent>
-                          {/* Automatic wallet login bridge with toast notifications */}
-                          <WalletLoginBridgeWithToast />
-                        </EnhancedThemeProvider>
-                      </ContactProvider>
-                    </NavigationProvider>
-                  </ToastProvider>
-                </AuthProvider>
-              </Web3Provider>
-            </RainbowKitProvider>
-          </SellerQueryProvider>
+            <OnchainKitProvider
+              apiKey={ENV_CONFIG.CDP_API_KEY}
+              chain={base}
+            >
+              <SellerQueryProvider queryClient={queryClient}>
+              <RainbowKitProvider>
+                <Web3Provider>
+                  <AuthProvider>
+                    <ToastProvider>
+                      <NavigationProvider>
+                        <ContactProvider>
+                          <EnhancedThemeProvider defaultTheme="system">
+                            <AppContent>
+                              <Component {...pageProps} />
+                            </AppContent>
+                            {/* Automatic wallet login bridge with toast notifications */}
+                            <WalletLoginBridgeWithToast />
+                          </EnhancedThemeProvider>
+                        </ContactProvider>
+                      </NavigationProvider>
+                    </ToastProvider>
+                  </AuthProvider>
+                </Web3Provider>
+              </RainbowKitProvider>
+            </SellerQueryProvider>
+          </OnchainKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>

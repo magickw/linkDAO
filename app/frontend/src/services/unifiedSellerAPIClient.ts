@@ -18,9 +18,48 @@ import {
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
 // Always use the full backend URL to avoid relative path issues
+
+/**
+ * Get the backend URL with defensive fallback logic
+ * This ensures the correct URL is used even if environment variables are missing
+ */
+const getBackendURL = (): string => {
+  // Check environment variables first
+  const envURL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+
+  if (envURL) {
+    console.log('[SellerAPI] Using backend URL from environment:', envURL);
+    return envURL;
+  }
+
+  // Fallback logic for production (when environment variables are not set)
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+
+    // Production domains - use api.linkdao.io
+    if (hostname === 'linkdao.io' || hostname === 'www.linkdao.io' || hostname === 'app.linkdao.io') {
+      console.log('[SellerAPI] Detected production domain, using https://api.linkdao.io');
+      return 'https://api.linkdao.io';
+    }
+
+    // Vercel preview deployments - use api.linkdao.io
+    if (hostname.includes('vercel.app')) {
+      console.log('[SellerAPI] Detected Vercel deployment, using https://api.linkdao.io');
+      return 'https://api.linkdao.io';
+    }
+  }
+
+  // Local development fallback
+  console.log('[SellerAPI] Using local development URL');
+  return 'http://localhost:10000';
+};
+
 const USE_API_ROUTES = process.env.NEXT_PUBLIC_USE_API_ROUTES === 'true' || typeof window !== 'undefined';
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+const BACKEND_API_BASE_URL = getBackendURL();
 const SELLER_API_BASE = `${BACKEND_API_BASE_URL}/api/marketplace/seller`;
+
+// Log the final URL being used (helpful for debugging)
+console.log('[SellerAPI] Initialized with base URL:', SELLER_API_BASE);
 
 interface SellerAPIEndpoints {
   // Profile endpoints
@@ -174,15 +213,22 @@ export class UnifiedSellerAPIClient {
     refreshTierData: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/refresh`,
 
     // Automated tier upgrade endpoints
-    getTierProgressionTracking: (walletAddress: string) => `/api/marketplace/seller/tier/progression/${walletAddress}`,
-    triggerTierEvaluation: () => `/api/marketplace/seller/tier/evaluate`,
-    getTierCriteria: () => `/api/marketplace/seller/tier/criteria`,
-    getTierEvaluationHistory: (walletAddress: string) => `/api/marketplace/seller/tier/history/${walletAddress}`,
-    getTierUpgradeNotifications: (walletAddress: string) => `/api/marketplace/seller/tier/notifications/${walletAddress}`,
+    getTierProgressionTracking: (walletAddress: string) => `${this.baseURL}/tier/progression/${walletAddress}`,
+    triggerTierEvaluation: () => `${this.baseURL}/tier/evaluate`,
+    getTierCriteria: () => `${this.baseURL}/tier/criteria`,
+    getTierEvaluationHistory: (walletAddress: string) => `${this.baseURL}/tier/history/${walletAddress}`,
+    getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress}`,
   };
 
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     try {
+      // Log the request for debugging (especially useful in production)
+      console.log('[SellerAPI] Request:', {
+        endpoint,
+        method: options?.method || 'GET',
+        baseURL: this.baseURL
+      });
+
       // Get authentication token if available
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 

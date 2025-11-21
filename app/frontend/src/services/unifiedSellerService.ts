@@ -82,7 +82,7 @@ export class UnifiedSellerService {
 
       // Fetch from API
       const response = await unifiedSellerAPIClient.request<SellerProfile>(
-        `/api/marketplace/seller/${walletAddress}`
+        unifiedSellerAPIClient['endpoints'].getProfile(walletAddress)
       );
 
       if (!response) {
@@ -166,7 +166,7 @@ export class UnifiedSellerService {
       const legacyUpdates = this.convertUnifiedProfileToLegacy(updates);
 
       const response = await unifiedSellerAPIClient.request<SellerProfile>(
-        `/api/marketplace/seller/${walletAddress}`,
+        unifiedSellerAPIClient['endpoints'].updateProfile(walletAddress),
         {
           method: 'PUT',
           body: JSON.stringify(legacyUpdates),
