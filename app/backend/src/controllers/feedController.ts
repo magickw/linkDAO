@@ -129,21 +129,11 @@ export class FeedController {
         return;
       }
 
-      // Upload content to IPFS to get CID
-      let contentCid: string;
-      try {
-        const metadataService = new MetadataService();
-        contentCid = await metadataService.uploadToIPFS(content);
-        safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
-      } catch (uploadError) {
-        safeLogger.error('Error uploading content to IPFS:', uploadError);
-        res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
-        return;
-      }
-
+      // Don't upload to IPFS here - let feedService.createPost handle it
+      // This ensures the actual content is stored in the database as fallback
       const post = await feedService.createPost({
         authorAddress: userAddress,
-        content: contentCid, // Pass the CID, not the content
+        content: content, // Pass the actual content, not the CID
         communityId,
         mediaUrls,
         tags
@@ -168,24 +158,12 @@ export class FeedController {
       const { id } = req.params;
       const { content, tags } = req.body;
 
-      // Upload content to IPFS to get CID if content is provided
-      let contentCid: string | undefined;
-      if (content) {
-        try {
-          const metadataService = new MetadataService();
-          contentCid = await metadataService.uploadToIPFS(content);
-          safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
-        } catch (uploadError) {
-          safeLogger.error('Error uploading content to IPFS:', uploadError);
-          res.status(500).json(apiResponse.error('Failed to upload content to IPFS', 500));
-          return;
-        }
-      }
-
+      // Don't upload to IPFS here - let feedService.updatePost handle it if needed
+      // For now, we'll pass the content directly and let the service handle IPFS upload
       const updatedPost = await feedService.updatePost({
         postId: id,
         userAddress,
-        content: contentCid, // Pass the CID, not the content
+        content: content, // Pass the actual content, service will handle IPFS if needed
         tags
       });
 

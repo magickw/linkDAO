@@ -130,11 +130,12 @@ export class FeedService {
         console.log('📋 [BACKEND FEED] Including user\'s own posts, total IDs:', followingIds.length);
         console.log('📋 [BACKEND FEED] Following IDs:', followingIds);
 
-        // Ensure we always include the user's own posts, even if followingIds is empty
-        if (followingIds.length === 0) {
-          // If user follows no one (except themselves), just show their own posts
-          followingFilter = eq(posts.authorId, userId);
-          quickPostFollowingFilter = eq(quickPosts.authorId, userId);
+        // If user follows no one (only themselves in the list), show ALL posts instead
+        // This ensures new users have content to engage with
+        if (followingIds.length === 1 && followingIds[0] === userId) {
+          console.log('📋 [BACKEND FEED] User follows nobody - showing all posts for better onboarding experience');
+          followingFilter = sql`1=1`;
+          quickPostFollowingFilter = sql`1=1`;
         } else {
           // Filter posts to show from followed users AND the user's own posts
           followingFilter = inArray(posts.authorId, followingIds);
@@ -682,7 +683,22 @@ export class FeedService {
       // Prepare update data
       const updateData: any = {};
       if (content !== undefined) {
-        updateData.contentCid = content; // This is now the CID, not the actual content
+        // Upload to IPFS and store both content and CID
+        let contentCid: string;
+        try {
+          const metadataService = new MetadataService();
+          contentCid = await metadataService.uploadToIPFS(content);
+          safeLogger.info('Content uploaded to IPFS with CID:', contentCid);
+        } catch (uploadError) {
+          safeLogger.error('Error uploading content to IPFS:', uploadError);
+          // Generate fallback CID if upload fails
+          const crypto = require('crypto');
+          const hash = crypto.createHash('sha256').update(content).digest('hex');
+          contentCid = `Qm${hash.substring(0, 44)}`;
+          safeLogger.warn(`IPFS upload failed, using fallback CID: ${contentCid}`);
+        }
+        updateData.content = content; // Store actual content as fallback
+        updateData.contentCid = contentCid; // Store CID (may be fallback)
       }
       if (tags !== undefined) {
         updateData.tags = JSON.stringify(tags);
