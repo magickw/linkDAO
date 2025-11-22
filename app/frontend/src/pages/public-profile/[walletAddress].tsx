@@ -505,7 +505,7 @@ export default function PublicProfile() {
                         </p>
                         <div className="mt-3 flex items-center justify-between">
                           <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                            <span>❤️ {post.likes || 0}</span>
+                            <span>❤️ {post.reactionCount || post.reactions?.length || 0}</span>
                             <span>💬 {post.comments || 0}</span>
                             <span>🔄 {post.shares || 0}</span>
                           </div>
@@ -526,7 +526,7 @@ export default function PublicProfile() {
             {/* Followers Tab */}
             {activeTab === 'followers' && (
               <FollowerList 
-                userId={profile.walletAddress} 
+                userAddress={profile.walletAddress} 
                 isOwnProfile={false}
                 isPublicProfile={true}
               />
@@ -535,7 +535,7 @@ export default function PublicProfile() {
             {/* Following Tab */}
             {activeTab === 'following' && (
               <FollowingList 
-                userId={profile.walletAddress} 
+                userAddress={profile.walletAddress} 
                 isOwnProfile={false}
                 isPublicProfile={true}
               />
