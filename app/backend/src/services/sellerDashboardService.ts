@@ -99,7 +99,7 @@ class SellerDashboardService {
     // OPTIMIZED: Check cache first with short TTL for real-time data
     const cacheKey = `seller:dashboard:${walletAddress.toLowerCase()}`;
     const cachedStats = await cacheService.get<DashboardStats>(cacheKey);
-    
+
     if (cachedStats) {
       return cachedStats;
     }
@@ -152,16 +152,16 @@ class SellerDashboardService {
       }
 
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
       // OPTIMIZED: Combined sales query with conditional aggregation
       const [salesData] = await tx
         .select({
-          today: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${todayStart} THEN ${orders.amount} ELSE 0 END), 0)`,
-          week: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${weekStart} THEN ${orders.amount} ELSE 0 END), 0)`,
-          month: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${monthStart} THEN ${orders.amount} ELSE 0 END), 0)`,
+          today: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${todayStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
+          week: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${weekStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
+          month: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${monthStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
           total: sql<string>`COALESCE(SUM(${orders.amount}), 0)`,
           pending: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'pending' THEN ${orders.amount} ELSE 0 END), 0)`,
           processing: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'processing' THEN ${orders.amount} ELSE 0 END), 0)`,
@@ -251,7 +251,7 @@ class SellerDashboardService {
 
     // OPTIMIZED: Cache results with short TTL for dashboard data (30 seconds)
     await cacheService.set(cacheKey, stats, 30);
-    
+
     return stats;
   }
 
@@ -365,7 +365,7 @@ class SellerDashboardService {
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<AnalyticsData> {
     // OPTIMIZED: Validate and limit period to prevent excessive data queries
     const days = Math.min(Math.max(parseInt(period.replace('d', '')) || 30, 1), 365); // Between 1-365 days
-    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     // OPTIMIZED: Use single transaction for all analytics queries
     return await db.transaction(async (tx) => {
@@ -482,7 +482,7 @@ class SellerDashboardService {
         performance: {
           averageOrderValue: averageOrderValue.toFixed(2),
           conversionRate: 0, // TODO: Implement conversion rate calculation
-          fulfillmentRate: Math.round(fulfillfillmentRate * 100) / 100,
+          fulfillmentRate: Math.round(fulfillmentRate * 100) / 100,
         },
       };
     });

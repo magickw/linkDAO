@@ -60,28 +60,25 @@ router.get('/api/health', (_req: Request, res: Response) => {
 });
 
 // List conversations (protected)
-router.get('/api/chat/conversations', authMiddleware, (_req: Request, res: Response) => {
+router.get('/api/chat/conversations', authMiddleware, async (_req: Request, res: Response) => {
   if (hasDb) {
-    (async () => {
-      try {
-        const rows = await db.select({
-          id: conversations.id,
-          title: conversations.title,
-          participants: conversations.participants,
-          lastMessageId: conversations.lastMessageId,
-          lastActivity: conversations.lastActivity,
-          unreadCount: conversations.unreadCount,
-          createdAt: conversations.createdAt,
-  }).from(conversations).orderBy(desc(conversations.lastActivity));
+    try {
+      const rows = await db.select({
+        id: conversations.id,
+        title: conversations.title,
+        participants: conversations.participants,
+        lastMessageId: conversations.lastMessageId,
+        lastActivity: conversations.lastActivity,
+        unreadCount: conversations.unreadCount,
+        createdAt: conversations.createdAt,
+      }).from(conversations).orderBy(desc(conversations.lastActivity));
 
-        return res.json({ conversations: rows });
-      } catch (err) {
-        safeLogger.error('[compatibilityChat] DB error fetching conversations', err);
-        const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
-        return res.json({ conversations: list });
-      }
-    })();
-    return;
+      return res.json({ conversations: rows });
+    } catch (err) {
+      safeLogger.error('[compatibilityChat] DB error fetching conversations', err);
+      const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+      return res.json({ conversations: list });
+    }
   }
 
   const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
@@ -106,46 +103,43 @@ router.get('/api/messaging/conversations', authMiddleware, (_req: Request, res: 
 });
 
 // Create a DM conversation
-router.post('/api/chat/conversations/dm', csrfProtection, authMiddleware, (req: Request, res: Response) => {
+router.post('/api/chat/conversations/dm', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   const { participants } = req.body || {};
   if (!Array.isArray(participants) || participants.length === 0) {
     return res.status(400).json({ error: 'participants (string[]) required' });
   }
 
   if (hasDb) {
-    (async () => {
-      try {
-        const inserted = await db.insert(conversations).values({
-          title: null,
-          participants: participants,
-          lastMessageId: null,
-          lastActivity: new Date(),
-          unreadCount: 0,
-          createdAt: new Date(),
-        }).returning();
+    try {
+      const inserted = await db.insert(conversations).values({
+        title: null,
+        participants: participants,
+        lastMessageId: null,
+        lastActivity: new Date(),
+        unreadCount: 0,
+        createdAt: new Date(),
+      }).returning();
 
-  const created = inserted[0];
-  // ensure messages array exists in-memory for compatibility tooling
-  messages[String(created.id)] = [];
-  return res.status(201).json({ conversation: created });
-      } catch (err) {
-        safeLogger.error('[compatibilityChat] DB error creating conversation', err);
-        // fallback to in-memory
-        const id = genId();
-        const conv: Conversation = {
-          id,
-          participants,
-          last_message: null,
-          last_activity: nowIso(),
-          unread_count: 0,
-          created_at: nowIso(),
-        };
-        inMemoryConversations[id] = conv;
-        messages[id] = [];
-        return res.status(201).json({ conversation: conv });
-      }
-    })();
-    return;
+      const created = inserted[0];
+      // ensure messages array exists in-memory for compatibility tooling
+      messages[String(created.id)] = [];
+      return res.status(201).json({ conversation: created });
+    } catch (err) {
+      safeLogger.error('[compatibilityChat] DB error creating conversation', err);
+      // fallback to in-memory
+      const id = genId();
+      const conv: Conversation = {
+        id,
+        participants,
+        last_message: null,
+        last_activity: nowIso(),
+        unread_count: 0,
+        created_at: nowIso(),
+      };
+      inMemoryConversations[id] = conv;
+      messages[id] = [];
+      return res.status(201).json({ conversation: conv });
+    }
   }
 
   const id = genId();
@@ -165,31 +159,28 @@ router.post('/api/chat/conversations/dm', csrfProtection, authMiddleware, (req: 
 });
 
 // Get chat history for a conversation
-router.get('/api/chat/history/:conversationId', authMiddleware, (req: Request, res: Response) => {
+router.get('/api/chat/history/:conversationId', authMiddleware, async (req: Request, res: Response) => {
   const { conversationId } = req.params;
   if (hasDb) {
-    (async () => {
-      try {
-        const msgs = await db.select({
-          id: chatMessages.id,
-          conversationId: chatMessages.conversationId,
-          senderAddress: chatMessages.senderAddress,
-          content: chatMessages.content,
-          sentAt: chatMessages.sentAt,
-          editedAt: chatMessages.editedAt,
-          deletedAt: chatMessages.deletedAt,
-        }).from(chatMessages).where(eq(chatMessages.conversationId, conversationId)).orderBy(desc(chatMessages.sentAt)).limit(500);
+    try {
+      const msgs = await db.select({
+        id: chatMessages.id,
+        conversationId: chatMessages.conversationId,
+        senderAddress: chatMessages.senderAddress,
+        content: chatMessages.content,
+        sentAt: chatMessages.sentAt,
+        editedAt: chatMessages.editedAt,
+        deletedAt: chatMessages.deletedAt,
+      }).from(chatMessages).where(eq(chatMessages.conversationId, conversationId)).orderBy(desc(chatMessages.sentAt)).limit(500);
 
-        const convRows = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
-        const convRow = convRows[0];
-        return res.json({ conversation: convRow || inMemoryConversations[conversationId], messages: msgs });
-      } catch (err) {
-        safeLogger.error('[compatibilityChat] DB error fetching history', err);
-        const msgs = messages[conversationId] || [];
-        return res.json({ conversation: inMemoryConversations[conversationId], messages: msgs });
-      }
-    })();
-    return;
+      const convRows = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+      const convRow = convRows[0];
+      return res.json({ conversation: convRow || inMemoryConversations[conversationId], messages: msgs });
+    } catch (err) {
+      safeLogger.error('[compatibilityChat] DB error fetching history', err);
+      const msgs = messages[conversationId] || [];
+      return res.json({ conversation: inMemoryConversations[conversationId], messages: msgs });
+    }
   }
 
   const msgs = messages[conversationId] || [];
@@ -197,7 +188,7 @@ router.get('/api/chat/history/:conversationId', authMiddleware, (req: Request, r
 });
 
 // Post a message
-router.post('/api/chat/messages', csrfProtection, authMiddleware, (req: Request, res: Response) => {
+router.post('/api/chat/messages', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   const { conversation_id, sender_address, content } = req.body || {};
   if (!conversation_id || !inMemoryConversations[conversation_id]) {
     return res.status(400).json({ error: 'valid conversation_id required' });
@@ -207,58 +198,55 @@ router.post('/api/chat/messages', csrfProtection, authMiddleware, (req: Request,
   }
 
   if (hasDb) {
-    (async () => {
-      try {
-        const inserted = await db.insert(chatMessages).values({
-          conversationId: conversation_id,
-          senderAddress: sender_address,
-          content,
-          sentAt: new Date(),
-        }).returning();
+    try {
+      const inserted = await db.insert(chatMessages).values({
+        conversationId: conversation_id,
+        senderAddress: sender_address,
+        content,
+        sentAt: new Date(),
+      }).returning();
 
-        const created = inserted[0];
+      const created = inserted[0];
 
-        // read current unreadCount then update conversation
-        const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversation_id)).limit(1);
-        const currentUnread = convRows[0]?.unreadCount ?? 0;
+      // read current unreadCount then update conversation
+      const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversation_id)).limit(1);
+      const currentUnread = convRows[0]?.unreadCount ?? 0;
 
-        await db.update(conversations).set({
-          lastMessageId: created.id,
-          lastActivity: new Date(),
-          unreadCount: Number(currentUnread) + 1,
-        }).where(eq(conversations.id, conversation_id));
+      await db.update(conversations).set({
+        lastMessageId: created.id,
+        lastActivity: new Date(),
+        unreadCount: Number(currentUnread) + 1,
+      }).where(eq(conversations.id, conversation_id));
 
-        // mirror into in-memory for compatibility (map DB row shape to Message)
-        messages[conversation_id] = messages[conversation_id] || [];
-        messages[conversation_id].push({
-          id: String(created.id),
-          conversation_id: String(created.conversationId ?? conversation_id),
-          sender_address: String(created.senderAddress ?? ''),
-          content: String(created.content ?? ''),
-          timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
-          edited_at: created.editedAt ? String(created.editedAt) : null,
-          deleted_at: created.deletedAt ? String(created.deletedAt) : null,
-        });
-        return res.status(201).json({ message: created });
-      } catch (err) {
-        safeLogger.error('[compatibilityChat] DB error creating message', err);
-        // fallback to in-memory
-        const msg: Message = {
-          id: genId(),
-          conversation_id,
-          sender_address,
-          content,
-          timestamp: nowIso(),
-        };
-        messages[conversation_id].push(msg);
-        const conv = inMemoryConversations[conversation_id];
-        conv.last_message = content;
-        conv.last_activity = msg.timestamp;
-        conv.unread_count = (conv.unread_count || 0) + 1;
-        return res.status(201).json({ message: msg });
-      }
-    })();
-    return;
+      // mirror into in-memory for compatibility (map DB row shape to Message)
+      messages[conversation_id] = messages[conversation_id] || [];
+      messages[conversation_id].push({
+        id: String(created.id),
+        conversation_id: String(created.conversationId ?? conversation_id),
+        sender_address: String(created.senderAddress ?? ''),
+        content: String(created.content ?? ''),
+        timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+        edited_at: created.editedAt ? String(created.editedAt) : null,
+        deleted_at: created.deletedAt ? String(created.deletedAt) : null,
+      });
+      return res.status(201).json({ message: created });
+    } catch (err) {
+      safeLogger.error('[compatibilityChat] DB error creating message', err);
+      // fallback to in-memory
+      const msg: Message = {
+        id: genId(),
+        conversation_id,
+        sender_address,
+        content,
+        timestamp: nowIso(),
+      };
+      messages[conversation_id].push(msg);
+      const conv = inMemoryConversations[conversation_id];
+      conv.last_message = content;
+      conv.last_activity = msg.timestamp;
+      conv.unread_count = (conv.unread_count || 0) + 1;
+      return res.status(201).json({ message: msg });
+    }
   }
 
   const msg: Message = {
@@ -281,26 +269,23 @@ router.post('/api/chat/messages', csrfProtection, authMiddleware, (req: Request,
 });
 
 // Mark messages as read for a conversation
-router.post('/api/chat/messages/read', csrfProtection, authMiddleware, (req: Request, res: Response) => {
+router.post('/api/chat/messages/read', csrfProtection, authMiddleware, async (req: Request, res: Response) => {
   const { conversation_id } = req.body || {};
   if (!conversation_id) {
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
 
   if (hasDb) {
-    (async () => {
-      try {
-        await db.update(conversations).set({ unreadCount: 0 }).where(eq(conversations.id, conversation_id));
-        // also update in-memory if present
-        if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
-        return res.json({ ok: true });
-      } catch (err) {
-        safeLogger.error('[compatibilityChat] DB error marking read', err);
-        if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
-        return res.json({ ok: true });
-      }
-    })();
-    return;
+    try {
+      await db.update(conversations).set({ unreadCount: 0 }).where(eq(conversations.id, conversation_id));
+      // also update in-memory if present
+      if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
+      return res.json({ ok: true });
+    } catch (err) {
+      safeLogger.error('[compatibilityChat] DB error marking read', err);
+      if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
+      return res.json({ ok: true });
+    }
   }
 
   if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;

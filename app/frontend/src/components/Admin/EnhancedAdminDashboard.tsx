@@ -34,7 +34,8 @@ import {
   EyeOff,
   LogOut,
   Package,
-  Activity
+  Activity,
+  HeartHandshake
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -58,6 +59,8 @@ import { SystemHealthDashboard } from './SystemHealthDashboard';
 import { DashboardCharts } from './DashboardCharts';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
+import { CharityVerificationPanel } from './CharityVerificationPanel';
+import { CharityProposal } from './CharityProposalCard';
 
 interface AdminStats {
   pendingModerations: number;
@@ -67,6 +70,7 @@ interface AdminStats {
   totalUsers: number;
   totalSellers: number;
   recentActions: any[];
+  pendingCharityProposals?: number;
 }
 
 interface FavoriteTab {
@@ -91,6 +95,7 @@ export function EnhancedAdminDashboard() {
   const [notificationCount, setNotificationCount] = useState(0);
   const webSocketManagerRef = useRef<any>(null);
   const [statsAvailable, setStatsAvailable] = useState(true); // Track if stats endpoint is available
+  const [charityProposals, setCharityProposals] = useState<CharityProposal[]>([]);
 
   // Keyboard shortcuts configuration
   const shortcuts = [
@@ -303,6 +308,7 @@ export function EnhancedAdminDashboard() {
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics', category: 'analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
+    { id: 'charity-verification', label: 'Charity Verification', icon: HeartHandshake, permission: 'governance.verify', category: 'governance' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const filteredTabs = showFavoritesOnly
@@ -737,6 +743,28 @@ export function EnhancedAdminDashboard() {
 
             {activeTab === 'onboarding' && (
               <AdminOnboarding />
+            )}
+
+            {activeTab === 'charity-verification' && (
+              <CharityVerificationPanel
+                proposals={charityProposals}
+                onApprove={async (proposalId, notes) => {
+                  console.log('Approving charity proposal:', proposalId, notes);
+                  // TODO: Implement API call to approve charity proposal
+                  // Update local state
+                  setCharityProposals(prev =>
+                    prev.map(p => p.id === proposalId ? { ...p, isVerifiedCharity: true } : p)
+                  );
+                }}
+                onReject={async (proposalId, notes) => {
+                  console.log('Rejecting charity proposal:', proposalId, notes);
+                  // TODO: Implement API call to reject charity proposal
+                  // Update local state
+                  setCharityProposals(prev =>
+                    prev.map(p => p.id === proposalId ? { ...p, status: 'defeated' as const } : p)
+                  );
+                }}
+              />
             )}
           </div>
         </main>

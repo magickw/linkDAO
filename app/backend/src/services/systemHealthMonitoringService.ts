@@ -117,14 +117,16 @@ export class SystemHealthMonitoringService extends EventEmitter {
   async collectMetrics(): Promise<HealthMetrics> {
     const systemHealth = gracefulDegradationService.getSystemHealth();
     const circuitBreakerStats = circuitBreakerService.getAllStates();
-    
+
     // Collect system load metrics
     const memoryUsage = process.memoryUsage();
     const cpuUsage = process.cpuUsage();
-    
+    const os = require('os');
+    const totalSystemMemory = os.totalmem();
+
     // Convert CPU usage to percentage (simplified)
     const cpuPercent = (cpuUsage.user + cpuUsage.system) / 1000000; // Convert to seconds
-    
+
     // Build services metrics
     const services: HealthMetrics['services'] = {};
     systemHealth.services.forEach(service => {
@@ -150,7 +152,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
       timestamp: new Date(),
       systemLoad: {
         cpu: cpuPercent,
-        memory: (memoryUsage.rss / memoryUsage.heapTotal) * 100,
+        memory: (memoryUsage.rss / totalSystemMemory) * 100,
         heap: memoryUsage
       },
       services,
