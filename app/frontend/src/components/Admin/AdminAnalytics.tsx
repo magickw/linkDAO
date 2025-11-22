@@ -61,10 +61,8 @@ export function AdminAnalytics() {
       const [usersResponse, sellersResponse, disputesResponse, moderationResponse, platformHealthResponse] = await Promise.all([
         adminService.getUsers({ limit: 1000 }),
         adminService.getSellerApplications({ limit: 1000 }),
-        // For disputes and moderation, we would need specific endpoints
-        // For now, we'll use placeholder data for these specific stats
-        Promise.resolve(null),
-        Promise.resolve(null),
+        adminService.getDisputes({ limit: 1000 }),
+        adminService.getModerationQueue({ limit: 1000 }),
         analyticsService.getOverviewMetrics()
       ]);
       
@@ -74,27 +72,33 @@ export function AdminAnalytics() {
       // Process seller growth data
       const sellerGrowthData = processSellerGrowthData(sellersResponse.applications);
       
+      // Calculate real dispute statistics
+      const realDisputeStats = {
+        total: disputesResponse.total || 0,
+        resolved: disputesResponse.disputes?.filter(d => d.status === 'resolved' || d.status === 'closed').length || 0,
+        pending: disputesResponse.disputes?.filter(d => d.status === 'open' || d.status === 'investigating' || d.status === 'awaiting_response').length || 0,
+        averageResolutionTime: 2.3 // This would need to be calculated from actual resolution times in a real implementation
+      };
+
+      // Calculate real moderation statistics
+      const realModerationStats = {
+        total: moderationResponse.total || 0,
+        approved: moderationResponse.items?.filter(m => m.status === 'approved').length || 0,
+        rejected: moderationResponse.items?.filter(m => m.status === 'rejected').length || 0,
+        pending: moderationResponse.items?.filter(m => m.status === 'pending').length || 0
+      };
+
       // Create analytics object with real data
       const analyticsData: AnalyticsData = {
         userGrowth: userGrowthData,
         sellerGrowth: sellerGrowthData,
-        disputeStats: {
-          total: 156,
-          resolved: 142,
-          pending: 14,
-          averageResolutionTime: 2.3
-        },
-        moderationStats: {
-          total: 1247,
-          approved: 1089,
-          rejected: 134,
-          pending: 24
-        },
+        disputeStats: realDisputeStats,
+        moderationStats: realModerationStats,
         platformHealth: {
-          activeUsers: platformHealthResponse.activeUsers.monthly,
-          activeSellers: sellersResponse.applications.filter(app => app.status === 'approved').length,
-          totalTransactions: platformHealthResponse.totalOrders,
-          totalVolume: platformHealthResponse.totalRevenue
+          activeUsers: platformHealthResponse.activeUsers?.monthly || 0,
+          activeSellers: sellersResponse.applications?.filter(app => app.status === 'approved').length || 0,
+          totalTransactions: platformHealthResponse.totalOrders || 0,
+          totalVolume: platformHealthResponse.totalRevenue || 0
         }
       };
       

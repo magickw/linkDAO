@@ -596,7 +596,9 @@ export function SellerApplications() {
                         if (!value) return null;
 
                         const documentName = key.replace(/([A-Z])/g, ' $1').trim();
-                        const isVerified = Math.random() > 0.5; // Mock verification status
+                        // For now, we'll assume verification status based on whether the document field has a value
+                        // In a real implementation, this would come from the backend verification system
+                        const isVerified = value ? true : false;
 
                         return (
                           <div key={key} className="p-3 bg-white/5 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors">

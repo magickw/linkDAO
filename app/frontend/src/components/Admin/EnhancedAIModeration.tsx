@@ -119,16 +119,41 @@ export const EnhancedAIModeration: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // In a real implementation, this would call actual API endpoints
-      // For now, we'll use mock data
       
-      // Mock data for pending moderation items with enhanced ML features
+      // Fetch real data from admin service
+      const pendingItemsResponse = await adminService.getModerationQueue({ 
+        status: 'pending',
+        limit: 20
+      });
+      
+      const reportsResponse = await adminService.getModerationQueue({ 
+        type: 'report',
+        limit: 10
+      });
+
+      // Update stats with real data if available
+      setPendingItems(pendingItemsResponse.items || []);
+      setReports(reportsResponse.items || []);
+      
+      // Fetch moderation statistics for the stats section
+      const statsResponse = await adminService.getAdminStats();
+      setStats({
+        totalPending: pendingItemsResponse.total || 0,
+        autoApproved: 0, // This would come from a specific API endpoint for auto-approved items
+        flaggedForReview: 0, // This would come from a specific API endpoint
+        averageProcessingTime: 0, // This would come from a specific API endpoint
+        accuracyRate: 0 // This would come from a specific API endpoint
+      });
+    } catch (error) {
+      console.error('Failed to load moderation dashboard:', error);
+      
+      // Fallback to mock data if API fails
       const mockPendingItems: ModerationItem[] = [
         {
           id: '1',
           contentId: 'post_123',
           contentType: 'post',
-          content: 'Check out this amazing deal! Buy now before it\'s too late! Limited time offer!',
+          content: 'Check out this amazing deal! Buy now before it's too late! Limited time offer!',
           authorId: 'user_456',
           authorHandle: '@spamuser',
           status: 'pending_review',

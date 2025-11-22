@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LinkDAO Cross-Chain Deployment Configuration",
+  "description": "Comprehensive deployment configuration for LinkDAO cross-chain smart contracts",
+  
+  "chains": {
+    "ethereum": {
+      "chainId": 1,
+      "name": "Ethereum Mainnet",
+      "rpcUrl": "${ETHEREUM_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "2000000000",
+        "maxFeePerGas": "100000000000"
+      },
+      "confirmations": 5,
+      "timeout": 600000,
+      "role": "source",
+      "oracle": {
+        "ethUsdFeed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+      }
+    },
+    "base": {
+      "chainId": 8453,
+      "name": "Base Mainnet",
+      "rpcUrl": "${BASE_MAINNET_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "1000000000",
+        "maxFeePerGas": "10000000000"
+      },
+      "confirmations": 2,
+      "timeout": 300000,
+      "role": "destination",
+      "oracle": {
+        "ethUsdFeed": "0x71041dddad3719d0a7d502ab3e6e4b6c07e530e8"
+      }
+    },
+    "polygon": {
+      "chainId": 137,
+      "name": "Polygon Mainnet",
+      "rpcUrl": "${POLYGON_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "30000000000",
+        "maxFeePerGas": "200000000000"
+      },
+      "confirmations": 20,
+      "timeout": 600000,
+      "role": "destination",
+      "oracle": {
+        "ethUsdFeed": "0xF9680D99D6C9589e2a93a78AaE22b296E2b8b4b0"
+      }
+    },
+    "arbitrum": {
+      "chainId": 42161,
+      "name": "Arbitrum One",
+      "rpcUrl": "${ARBITRUM_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "100000000",
+        "maxFeePerGas": "1000000000"
+      },
+      "confirmations": 2,
+      "timeout": 300000,
+      "role": "destination",
+      "oracle": {
+        "ethUsdFeed": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
+      }
+    }
+  },
+
+  "bridge": {
+    "contracts": {
+      "LDAOBridge": {
+        "priority": 1,
+        "constructor": {
+          "ldaoToken": "${LDAO_TOKEN_ADDRESS}",
+          "owner": "${OWNER_ADDRESS}"
+        },
+        "verify": true,
+        "critical": true
+      },
+      "BridgeValidator": {
+        "priority": 2,
+        "constructor": {
+          "owner": "${OWNER_ADDRESS}"
+        },
+        "verify": true,
+        "critical": true
+      },
+      "LDAOBridgeToken": {
+        "priority": 3,
+        "constructor": {
+          "name": "Bridged LinkDAO Token",
+          "symbol": "bLDAO",
+          "bridge": "${LDAO_BRIDGE_ADDRESS}",
+          "owner": "${OWNER_ADDRESS}"
+        },
+        "verify": true,
+        "critical": true,
+        "deployOn": ["base", "polygon", "arbitrum"]
+      }
+    },
+    
+    "parameters": {
+      "validatorThreshold": 3,
+      "minValidatorStake": "10000000000000000000000", 
+      "bridgeTimeout": 86400,
+      "minBridgeAmount": "10000000000000000000",
+      "maxBridgeAmount": "1000000000000000000000000"
+    },
+    
+    "fees": {
+      "baseFee": "1000000000000000000",
+      "feePercentage": 50
+    }
+  },
+
+  "validators": {
+    "initialValidators": [
+      "${VALIDATOR_1_ADDRESS}",
+      "${VALIDATOR_2_ADDRESS}",
+      "${VALIDATOR_3_ADDRESS}",
+      "${VALIDATOR_4_ADDRESS}",
+      "${VALIDATOR_5_ADDRESS}"
+    ],
+    "stakeAmount": "10000000000000000000000"
+  },
+
+  "chainConfigs": {
+    "ethereum": {
+      "isSupported": true,
+      "minBridgeAmount": "10000000000000000000",
+      "maxBridgeAmount": "1000000000000000000000000",
+      "baseFee": "1000000000000000000",
+      "feePercentage": 50,
+      "tokenAddress": "${LDAO_TOKEN_ADDRESS}",
+      "isLockChain": true
+    },
+    "base": {
+      "isSupported": true,
+      "minBridgeAmount": "10000000000000000000",
+      "maxBridgeAmount": "1000000000000000000000000",
+      "baseFee": "1000000000000000000",
+      "feePercentage": 50,
+      "tokenAddress": "${LDAO_BRIDGE_TOKEN_BASE_ADDRESS}",
+      "isLockChain": false
+    },
+    "polygon": {
+      "isSupported": true,
+      "minBridgeAmount": "10000000000000000000",
+      "maxBridgeAmount": "1000000000000000000000000",
+      "baseFee": "1000000000000000000",
+      "feePercentage": 50,
+      "tokenAddress": "${LDAO_BRIDGE_TOKEN_POLYGON_ADDRESS}",
+      "isLockChain": false
+    },
+    "arbitrum": {
+      "isSupported": true,
+      "minBridgeAmount": "10000000000000000000",
+      "maxBridgeAmount": "1000000000000000000000000",
+      "baseFee": "1000000000000000000",
+      "feePercentage": 50,
+      "tokenAddress": "${LDAO_BRIDGE_TOKEN_ARBITRUM_ADDRESS}",
+      "isLockChain": false
+    }
+  },
+
+  "postDeployment": {
+    "verifyContracts": true,
+    "setupInterconnections": true,
+    "transferOwnership": true,
+    "renounceOwnership": false,
+    "pauseContracts": false,
+    "steps": [
+      {
+        "name": "Initialize chain configurations",
+        "contract": "LDAOBridge",
+        "method": "updateChainConfig",
+        "params": [
+          ["ethereum", "${ETHEREUM_CHAIN_CONFIG}"],
+          ["base", "${BASE_CHAIN_CONFIG}"],
+          ["polygon", "${POLYGON_CHAIN_CONFIG}"],
+          ["arbitrum", "${ARBITRUM_CHAIN_CONFIG}"]
+        ]
+      },
+      {
+        "name": "Add initial validators",
+        "contract": "BridgeValidator",
+        "method": "addValidator",
+        "params": [
+          ["${VALIDATOR_1_ADDRESS}", "${STAKE_AMOUNT}"],
+          ["${VALIDATOR_2_ADDRESS}", "${STAKE_AMOUNT}"],
+          ["${VALIDATOR_3_ADDRESS}", "${STAKE_AMOUNT}"],
+          ["${VALIDATOR_4_ADDRESS}", "${STAKE_AMOUNT}"],
+          ["${VALIDATOR_5_ADDRESS}", "${STAKE_AMOUNT}"]
+        ]
+      },
+      {
+        "name": "Set validator threshold",
+        "contract": "BridgeValidator",
+        "method": "updateThreshold",
+        "params": ["${VALIDATOR_THRESHOLD}"]
+      },
+      {
+        "name": "Transfer ownership to multisig",
+        "contracts": ["LDAOBridge", "BridgeValidator", "LDAOBridgeToken"],
+        "method": "transferOwnership",
+        "params": ["${GOVERNANCE_MULTISIG_ADDRESS}"]
+      }
+    ]
+  },
+
+  "verification": {
+    "etherscan": {
+      "apiKey": "${ETHERSCAN_API_KEY}",
+      "enabled": true
+    },
+    "blockscout": {
+      "apiKey": "${BLOCKSCOUT_API_KEY}",
+      "enabled": true
+    },
+    "sourcify": {
+      "enabled": true
+    }
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "endpoints": {
+      "slack": "${SLACK_WEBHOOK_URL}",
+      "discord": "${DISCORD_WEBHOOK_URL}",
+      "email": "${ALERT_EMAIL}"
+    },
+    "events": {
+      "bridgeInitiated": true,
+      "bridgeCompleted": true,
+      "bridgeFailed": true,
+      "validatorAdded": true,
+      "validatorRemoved": true,
+      "emergencyWithdraw": true
+    }
+  },
+
+  "security": {
+    "pauseOnDeploy": false,
+    "requireMultisigApproval": true,
+    "maxGasPrice": "150000000000",
+    "slippageTolerance": "5",
+    "dryRun": false
+  },
+
+  "backup": {
+    "saveDeploymentData": true,
+    "backupPath": "./deployments/cross-chain",
+    "includeABI": true,
+    "includeSourceCode": true
+  },
+
+  "emergencyContacts": {
+    "primary": "${PRIMARY_CONTACT_EMAIL}",
+    "secondary": "${SECONDARY_CONTACT_EMAIL}",
+    "oncall": "${ONCALL_PHONE}"
+  },
+
+  "metadata": {
+    "version": "1.0.0",
+    "deployer": "${DEPLOYER_NAME}",
+    "organization": "LinkDAO",
+    "license": "MIT",
+    "repository": "https://github.com/magickw/contracts",
+    "documentation": "https://docs.linkdao.io"
+  }
+}

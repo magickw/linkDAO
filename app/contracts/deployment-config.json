@@ -251,5 +251,12 @@
     "license": "MIT",
     "repository": "https://github.com/magickw/contracts",
     "documentation": "https://docs.linkdao.io"
+  },
+
+  "crossChain": {
+    "configFile": "./cross-chain-deployment-config.json",
+    "deploymentScript": "./scripts/deploy-cross-chain.ts",
+    "guide": "./CROSS_CHAIN_DEPLOYMENT_GUIDE.md",
+    "summary": "./CROSS_CHAIN_DEPLOYMENT_SUMMARY.md"
   }
 }

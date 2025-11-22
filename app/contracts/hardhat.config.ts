@@ -70,6 +70,34 @@ const config: HardhatUserConfig = {
       gas: 6000000,
       gasPrice: 1000000000, // 1 gwei
     },
+    polygonMumbai: {
+      url: process.env.MUMBAI_RPC_URL || "https://polygon-mumbai.infura.io/v3/YOUR_INFURA_KEY",
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== "your_wallet_private_key_here") ? [process.env.PRIVATE_KEY] : [],
+      chainId: 80001,
+      gas: 6000000,
+      gasPrice: 20000000000, // 20 gwei
+    },
+    arbitrumGoerli: {
+      url: process.env.ARBITRUM_GOERLI_RPC_URL || "https://goerli-rollup.arbitrum.io/rpc",
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== "your_wallet_private_key_here") ? [process.env.PRIVATE_KEY] : [],
+      chainId: 421613,
+      gas: 6000000,
+      gasPrice: 2000000000, // 2 gwei
+    },
+    polygon: {
+      url: process.env.POLYGON_RPC_URL || "https://polygon-rpc.com",
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== "your_wallet_private_key_here") ? [process.env.PRIVATE_KEY] : [],
+      chainId: 137,
+      gas: 6000000,
+      gasPrice: 200000000000, // 200 gwei
+    },
+    arbitrum: {
+      url: process.env.ARBITRUM_RPC_URL || "https://arb1.arbitrum.io/rpc",
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== "your_wallet_private_key_here") ? [process.env.PRIVATE_KEY] : [],
+      chainId: 42161,
+      gas: 6000000,
+      gasPrice: 2000000000, // 2 gwei
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -92,6 +120,10 @@ const config: HardhatUserConfig = {
       sepolia: process.env.ETHERSCAN_API_KEY || "",
       base: process.env.BASESCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
       baseSepolia: process.env.BASESCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
+      polygon: process.env.POLYGONSCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
+      arbitrum: process.env.ARBISCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
+      arbitrumGoerli: process.env.ARBISCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
     },
     customChains: []
   },

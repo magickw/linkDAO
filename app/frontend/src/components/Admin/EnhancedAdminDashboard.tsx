@@ -373,7 +373,7 @@ export function EnhancedAdminDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed lg:static inset - y - 0 left - 0 z - 50 w - 64 bg - gray - 900 / 90 backdrop - blur - md border - r border - gray - 700 transform transition - transform duration - 300 ease -in -out lg: translate - x - 0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900/90 backdrop-blur-md border-r border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } `}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-white font-bold text-lg">Admin Panel</h2>
@@ -400,7 +400,7 @@ export function EnhancedAdminDashboard() {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`flex items - center text - sm ${showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
+              className={`flex items-center text-sm ${showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
                 } `}
             >
               <Star className="w-4 h-4 mr-1" />
@@ -409,13 +409,13 @@ export function EnhancedAdminDashboard() {
             <div className="flex gap-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p - 1 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
+                className={`p-1 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p - 1 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
+                className={`p-1 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -439,7 +439,7 @@ export function EnhancedAdminDashboard() {
                             setActiveTab(tab.id);
                             setSidebarOpen(false);
                           }}
-                          className={`flex items - center flex - 1 gap - 2 px - 2 py - 2 rounded - lg text - sm transition - colors ${activeTab === tab.id
+                          className={`flex items-center flex-1 gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${activeTab === tab.id
                             ? 'bg-purple-600 text-white'
                             : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                             } `}
@@ -542,7 +542,7 @@ export function EnhancedAdminDashboard() {
             {/* WebSocket Status */}
             {webSocketManagerRef.current && (
               <div className="mb-4 flex items-center p-2 bg-gray-800/50 rounded-lg">
-                <div className={`w - 2 h - 2 rounded - full mr - 2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'} `}></div>
+                <div className={`w-2 h-2 rounded-full mr-2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'} `}></div>
                 <span className="text-xs text-gray-300">
                   {webSocketManagerRef.current.isConnected ? 'Real-time updates enabled' : 'Connecting to real-time updates...'}
                 </span>

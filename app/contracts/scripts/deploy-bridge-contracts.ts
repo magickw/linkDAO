@@ -1,10 +1,40 @@
 import { ethers } from "hardhat";
-import { Contract } from "ethers";
 
 interface DeploymentResult {
-  ldaoBridge: Contract;
-  bridgeValidator: Contract;
-  ldaoBridgeToken?: Contract;
+  ldaoBridge: any;
+  bridgeValidator: any;
+  ldaoBridgeToken?: any;
+}
+
+interface CrossChainConfig {
+  chains: {
+    [key: string]: {
+      chainId: number;
+      name: string;
+      role: string;
+      oracle: { ethUsdFeed: string };
+    };
+  };
+  chainConfigs: {
+    [key: string]: {
+      isSupported: boolean;
+      minBridgeAmount: string;
+      maxBridgeAmount: string;
+      baseFee: string;
+      feePercentage: number;
+      tokenAddress: string;
+      isLockChain: boolean;
+    };
+  };
+  validators: {
+    initialValidators: string[];
+    stakeAmount: string;
+  };
+  bridge: {
+    parameters: {
+      validatorThreshold: number;
+    };
+  };
 }
 
 async function main(): Promise<DeploymentResult> {
@@ -12,11 +42,20 @@ async function main(): Promise<DeploymentResult> {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);
-  console.log("Account balance:", (await deployer.provider.getBalance(deployer.address)).toString());
+  console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
   // Get network information
   const network = await ethers.provider.getNetwork();
   console.log("Network:", network.name, "Chain ID:", network.chainId);
+
+  // Load cross-chain configuration
+  let crossChainConfig: CrossChainConfig | undefined;
+  try {
+    crossChainConfig = require("../cross-chain-deployment-config.json");
+    console.log("Loaded cross-chain configuration");
+  } catch (error) {
+    console.log("No cross-chain configuration found, using defaults");
+  }
 
   // Deploy or get existing LDAO Token address
   let ldaoTokenAddress: string;
@@ -53,7 +92,7 @@ async function main(): Promise<DeploymentResult> {
   console.log("LDAO Bridge deployed to:", ldaoBridgeAddress);
 
   // Deploy Bridge Token for destination chains (if not Ethereum mainnet)
-  let ldaoBridgeToken: Contract | undefined;
+  let ldaoBridgeToken: any;
   if (network.chainId !== 1n) { // Not Ethereum mainnet
     console.log("Deploying LDAO Bridge Token for destination chain...");
     const LDAOBridgeToken = await ethers.getContractFactory("LDAOBridgeToken");
@@ -63,35 +102,77 @@ async function main(): Promise<DeploymentResult> {
       ldaoBridgeAddress,
       deployer.address
     );
-    await ldaoBridgeToken.waitForDeployment();
-    const ldaoBridgeTokenAddress = await ldaoBridgeToken.getAddress();
-    console.log("LDAO Bridge Token deployed to:", ldaoBridgeTokenAddress);
+    if (ldaoBridgeToken) {
+      await ldaoBridgeToken.waitForDeployment();
+      const ldaoBridgeTokenAddress = await ldaoBridgeToken.getAddress();
+      console.log("LDAO Bridge Token deployed to:", ldaoBridgeTokenAddress);
+    }
   }
 
   // Initialize bridge with validators
   console.log("Setting up initial validators...");
   
-  // Add deployer as initial validator (for testing)
-  const stakeAmount = ethers.parseEther("10000"); // 10,000 LDAO
+  // Determine stake amount from config or use default
+  const stakeAmount = crossChainConfig ? 
+    ethers.parseEther(crossChainConfig.validators?.stakeAmount?.toString() || "10000") : 
+    ethers.parseEther("10000"); // 10,000 LDAO
   
   // First, approve the validator contract to spend tokens
   const ldaoToken = await ethers.getContractAt("LDAOToken", ldaoTokenAddress);
   const approveTx = await ldaoToken.approve(bridgeValidatorAddress, stakeAmount);
-  await approveTx.wait();
+  if ('wait' in approveTx) await (approveTx as any).wait();
   console.log("Approved validator contract to spend LDAO tokens");
 
   // Add validator
   const addValidatorTx = await bridgeValidator.addValidator(deployer.address, stakeAmount);
-  await addValidatorTx.wait();
+  if ('wait' in addValidatorTx) await (addValidatorTx as any).wait();
   console.log("Added initial validator:", deployer.address);
 
   // Configure bridge fee collection
   console.log("Configuring bridge parameters...");
   
-  // Set validator threshold to 1 for testing (in production, should be higher)
-  const setThresholdTx = await bridgeValidator.updateThreshold(1);
-  await setThresholdTx.wait();
-  console.log("Set validator threshold to 1");
+  // Set validator threshold from config or use default
+  const validatorThreshold = crossChainConfig ? 
+    crossChainConfig.bridge.parameters.validatorThreshold : 1;
+  const setThresholdTx = await bridgeValidator.updateThreshold(validatorThreshold);
+  if ('wait' in setThresholdTx) await (setThresholdTx as any).wait();
+  console.log(`Set validator threshold to ${validatorThreshold}`);
+
+  // If cross-chain config is available, initialize chain configurations
+  if (crossChainConfig) {
+    console.log("Initializing chain configurations...");
+    
+    // Map chain names to LDAOBridge.ChainId enum values
+    const chainIdMap: { [key: string]: number } = {
+      ethereum: 0,
+      polygon: 1,
+      arbitrum: 2
+    };
+    
+    // Update chain configurations
+    for (const [chainName, chainConfig] of Object.entries(crossChainConfig.chainConfigs)) {
+      if (chainConfig.isSupported) {
+        try {
+          const chainId = chainIdMap[chainName];
+          if (chainId !== undefined) {
+                    const updateConfigTx = await ldaoBridge.updateChainConfig(chainId, {
+              isSupported: chainConfig.isSupported,
+              minBridgeAmount: ethers.parseEther(chainConfig.minBridgeAmount.replace('10000000000000000000', '10')),
+              maxBridgeAmount: ethers.parseEther(chainConfig.maxBridgeAmount.replace('1000000000000000000000000', '1000000')),
+              baseFee: ethers.parseEther(chainConfig.baseFee.replace('1000000000000000000', '1')),
+              feePercentage: chainConfig.feePercentage,
+              tokenAddress: chainConfig.tokenAddress,
+              isLockChain: chainConfig.isLockChain
+            });
+            if ('wait' in updateConfigTx) await (updateConfigTx as any).wait();
+            console.log(`Updated configuration for ${chainName}`);
+          }
+        } catch (error) {
+          console.log(`Failed to update configuration for ${chainName}:`, error);
+        }
+      }
+    }
+  }
 
   // Save deployment addresses
   const deploymentInfo = {
