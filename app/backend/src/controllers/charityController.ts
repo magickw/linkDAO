@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { safeLogger } from '../utils/safeLogger';
-import { pool } from '../config/database';
+import { client } from '../db';
 
 export class CharityController {
     /**
@@ -44,10 +44,14 @@ export class CharityController {
             query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
             params.push(parseInt(limit as string));
 
-            const result = await pool.query(query, params);
+            if (!client) {
+                throw new Error('Database connection not available');
+            }
+
+            const result = await client.unsafe(query, params);
 
             // Transform the data
-            const charities = result.rows.map(row => ({
+            const charities = result.map(row => ({
                 ...row,
                 endTime: new Date(row.endTime),
                 createdAt: new Date(row.createdAt),
@@ -76,8 +80,12 @@ export class CharityController {
         WHERE type = 'charity'
       `;
 
-            const result = await pool.query(statsQuery);
-            const stats = result.rows[0];
+            if (!client) {
+                throw new Error('Database connection not available');
+            }
+
+            const result = await client.unsafe(statsQuery);
+            const stats = result[0];
 
             res.json({
                 pendingCharityProposals: parseInt(stats.pending) || 0,
@@ -126,17 +134,21 @@ export class CharityController {
         WHERE id = $1 AND type = 'charity'
       `;
 
-            const result = await pool.query(query, [id]);
+            if (!client) {
+                throw new Error('Database connection not available');
+            }
 
-            if (result.rows.length === 0) {
+            const result = await client.unsafe(query, [id]);
+
+            if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
             }
 
             const charity = {
-                ...result.rows[0],
-                endTime: new Date(result.rows[0].endTime),
-                createdAt: new Date(result.rows[0].createdAt),
-                verifiedAt: result.rows[0].verifiedAt ? new Date(result.rows[0].verifiedAt) : null,
+                ...result[0],
+                endTime: new Date(result[0].endTime),
+                createdAt: new Date(result[0].createdAt),
+                verifiedAt: result[0].verifiedAt ? new Date(result[0].verifiedAt) : null,
             };
 
             res.json(charity);
@@ -176,9 +188,13 @@ export class CharityController {
         RETURNING id, title, charity_name as "charityName"
       `;
 
-            const result = await pool.query(updateQuery, [adminId, notes || '', id]);
+            if (!client) {
+                throw new Error('Database connection not available');
+            }
 
-            if (result.rows.length === 0) {
+            const result = await client.unsafe(updateQuery, [adminId, notes || '', id]);
+
+            if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
             }
 
@@ -188,7 +204,7 @@ export class CharityController {
         VALUES ($1, $2, $3, $4, $5, NOW())
       `;
 
-            await pool.query(logQuery, [
+            await client.unsafe(logQuery, [
                 adminId,
                 'approved_charity',
                 'charity_proposal',
@@ -203,7 +219,7 @@ export class CharityController {
             res.json({
                 success: true,
                 message: 'Charity approved successfully',
-                charity: result.rows[0]
+                charity: result[0]
             });
         } catch (error) {
             safeLogger.error('Error approving charity:', error);
@@ -245,9 +261,13 @@ export class CharityController {
         RETURNING id, title, charity_name as "charityName"
       `;
 
-            const result = await pool.query(updateQuery, [adminId, notes, id]);
+            if (!client) {
+                throw new Error('Database connection not available');
+            }
 
-            if (result.rows.length === 0) {
+            const result = await client.unsafe(updateQuery, [adminId, notes, id]);
+
+            if (result.length === 0) {
                 return res.status(404).json({ error: 'Charity not found' });
             }
 
@@ -257,7 +277,7 @@ export class CharityController {
         VALUES ($1, $2, $3, $4, $5, NOW())
       `;
 
-            await pool.query(logQuery, [
+            await client.unsafe(logQuery, [
                 adminId,
                 'rejected_charity',
                 'charity_proposal',
@@ -272,7 +292,7 @@ export class CharityController {
             res.json({
                 success: true,
                 message: 'Charity rejected',
-                charity: result.rows[0]
+                charity: result[0]
             });
         } catch (error) {
             safeLogger.error('Error rejecting charity:', error);
