@@ -2,7 +2,7 @@ services:
   - type: web
     name: linkdao-backend
     env: node
-    plan: standard
+    plan: pro
     rootDir: app/backend
     buildCommand: chmod +x scripts/prebuild.sh && ./scripts/prebuild.sh && npm install --no-audit --prefer-offline --include=optional && chmod +x scripts/build-production-optimized.sh && ./scripts/build-production-optimized.sh
     startCommand: npm run start:production
@@ -13,7 +13,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: '--max-old-space-size=1536 --expose-gc'
+        value: '--max-old-space-size=3072 --expose-gc'
       - key: PORT
         value: 10000
       - key: DATABASE_URL
@@ -33,17 +33,19 @@ services:
       - key: ENABLE_WEBSOCKETS
         value: 'true'
       - key: RENDER_SERVICE_TYPE
-        value: 'standard'
+        value: 'pro'
       - key: RENDER
         value: 'true'
       - key: RENDER_PRO
-        value: 'false'
+        value: 'true'
       - key: MEMORY_LIMIT
-        value: '2048'
+        value: '4096'
       - key: RENDER_SERVICE_PLAN
-        value: 'standard'
+        value: 'pro'
       - key: DEBUG_RENDER_CONFIG
         value: 'true'
+      - key: DB_POOL_MAX
+        value: '25'
     autoDeploy: true
   - type: redis
     name: linkdao-redis
