@@ -26,8 +26,9 @@ export function CharityVerification() {
                 description: charity.description,
                 charityName: charity.charityName,
                 charityDescription: charity.charityDescription,
+                charityRecipient: charity.charityRecipient || '',
                 ein: charity.ein,
-                donationAmount: charity.donationAmount || 0,
+                donationAmount: String(charity.donationAmount || 0),
                 charityNavigatorRating: charity.charityNavigatorRating,
                 documentIPFSHashes: charity.documentIPFSHashes || [],
                 proofOfVerification: charity.proofOfVerification,
@@ -36,6 +37,10 @@ export function CharityVerification() {
                 isVerifiedCharity: charity.isVerifiedCharity || false,
                 endTime: charity.endTime ? new Date(charity.endTime) : new Date(),
                 createdAt: charity.createdAt ? new Date(charity.createdAt) : new Date(),
+                proposer: charity.proposer || '',
+                forVotes: String(charity.forVotes || 0),
+                againstVotes: String(charity.againstVotes || 0),
+                abstainVotes: String(charity.abstainVotes || 0),
             }));
 
             setProposals(transformedProposals);
