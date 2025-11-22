@@ -305,12 +305,29 @@ const EnhancedFeedView = React.memo(({
   }, []);
 
   // Handle posts loading - memoized (now async to handle profile fetching)
-  const handlePostsLoad = useCallback(async (newPosts: FeedEnhancedPost[]) => {
-    // Convert posts with profile fetching
-    const convertedPosts = await Promise.all(newPosts.map(convertFeedPostToCardPost));
-    // No client-side filtering needed since backend handles it
-    setPosts(convertedPosts);
-    setError(null); // Clear any previous errors
+  const handlePostsLoad = useCallback(async (newPosts: FeedEnhancedPost[], page: number) => {
+    try {
+      // Convert posts with profile fetching
+      const convertedPosts = await Promise.all(newPosts.map(convertFeedPostToCardPost));
+
+      // Update posts state based on page number
+      setPosts(prevPosts => {
+        if (page === 1) {
+          return convertedPosts;
+        } else {
+          // Filter out duplicates just in case
+          const existingIds = new Set(prevPosts.map(p => p.id));
+          const uniqueNewPosts = convertedPosts.filter(p => !existingIds.has(p.id));
+          return [...prevPosts, ...uniqueNewPosts];
+        }
+      });
+
+      setError(null); // Clear any previous errors
+    } catch (err: any) {
+      console.error('Error converting posts:', err);
+      // Don't set global error state here to avoid breaking the entire feed
+      // just because some posts failed to convert
+    }
   }, [convertFeedPostToCardPost]);
 
   // Handle trending updates - memoized

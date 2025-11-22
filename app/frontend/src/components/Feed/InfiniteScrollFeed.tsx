@@ -9,7 +9,7 @@ import { analyticsService } from '@/services/analyticsService';
 
 interface InfiniteScrollFeedProps {
   filter: FeedFilter;
-  onPostsLoad: (posts: EnhancedPost[]) => void;
+  onPostsLoad: (posts: EnhancedPost[], page: number) => void;
   children: (posts: EnhancedPost[], state: InfiniteScrollState) => React.ReactNode;
   className?: string;
   threshold?: number; // Distance from bottom to trigger load (in pixels)
@@ -72,7 +72,7 @@ const InfiniteScrollFeed = React.memo(({
     try {
       // Try to get data from cache first
       const response = await FeedService.getEnhancedFeed(filter, page, postsPerPage);
-      
+
       setScrollState(prev => ({
         ...prev,
         isLoading: false,
@@ -87,7 +87,7 @@ const InfiniteScrollFeed = React.memo(({
         setPosts(prev => [...prev, ...response.posts]);
       }
 
-      onPostsLoad(response.posts);
+      onPostsLoad(response.posts, page);
     } catch (error: any) {
       const feedError: FeedError = {
         code: error.code || 'FEED_LOAD_ERROR',
@@ -95,13 +95,13 @@ const InfiniteScrollFeed = React.memo(({
         timestamp: new Date(),
         retryable: error.retryable !== false
       };
-      
+
       setScrollState(prev => ({
         ...prev,
         isLoading: false,
         error: feedError.message
       }));
-      
+
       if (onError) {
         onError(feedError);
       }
@@ -205,12 +205,12 @@ const InfiniteScrollFeed = React.memo(({
     if (isMobile && pullDistance > 50) { // Pull threshold of 50px
       setIsRefreshing(true);
       refresh();
-      
+
       // Track pull to refresh
       analyticsService.trackUserEvent('feed_pull_to_refresh', {
         timestamp: new Date()
       });
-      
+
       setTimeout(() => setIsRefreshing(false), 1000); // Simulate refresh
     }
     setPullStart(0);
@@ -220,7 +220,7 @@ const InfiniteScrollFeed = React.memo(({
   // Memoized pull-to-refresh indicator
   const pullToRefreshIndicator = useMemo(() => {
     if (!isMobile || pullDistance <= 0) return null;
-    
+
     return (
       <div className="flex justify-center py-2 bg-gray-100 dark:bg-gray-800">
         <div className="flex items-center space-x-2">
@@ -252,7 +252,7 @@ const InfiniteScrollFeed = React.memo(({
   // Memoized loading trigger
   const loadingTrigger = useMemo(() => {
     if (!scrollState.hasMore) return null;
-    
+
     return (
       <div
         ref={loadingRef}
@@ -288,7 +288,7 @@ const InfiniteScrollFeed = React.memo(({
   // Memoized end of feed indicator
   const endOfFeedIndicator = useMemo(() => {
     if (scrollState.hasMore || posts.length === 0) return null;
-    
+
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -309,7 +309,7 @@ const InfiniteScrollFeed = React.memo(({
   // Memoized virtual feed
   const virtualFeed = useMemo(() => {
     if (!enableVirtualization || posts.length < 50) return null;
-    
+
     return (
       <VirtualFeed
         posts={posts}
@@ -331,12 +331,12 @@ const InfiniteScrollFeed = React.memo(({
   // Memoized regular feed with proper optimization
   const regularFeed = useMemo(() => {
     if (enableVirtualization && posts.length >= 50) return null;
-    
+
     return children(posts, { ...scrollState, refresh, retry } as any);
   }, [enableVirtualization, posts.length, children, posts, scrollState, refresh, retry]);
 
   return (
-    <div 
+    <div
       className={className}
       ref={containerRef}
       onTouchStart={handleTouchStart}
@@ -345,12 +345,12 @@ const InfiniteScrollFeed = React.memo(({
       style={isMobile && pullDistance > 0 ? { transform: `translateY(${pullDistance}px)` } : {}}
     >
       {pullToRefreshIndicator}
-      
+
       {virtualFeed || regularFeed}
-      
+
       {/* Loading trigger element */}
       {loadingTrigger}
-      
+
       {/* End of feed indicator */}
       {endOfFeedIndicator}
     </div>
@@ -469,7 +469,7 @@ export function useInfiniteScroll(
         timestamp: new Date(),
         retryable: error.retryable !== false
       };
-      
+
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -490,12 +490,12 @@ export function useInfiniteScroll(
 
   const refresh = useCallback(async () => {
     reset();
-    
+
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
       const response = await FeedService.getEnhancedFeed(filter, 1, postsPerPage);
-      
+
       setState({
         hasMore: response.hasMore,
         isLoading: false,
@@ -511,7 +511,7 @@ export function useInfiniteScroll(
         timestamp: new Date(),
         retryable: error.retryable !== false
       };
-      
+
       setState(prev => ({
         ...prev,
         isLoading: false,

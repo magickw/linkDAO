@@ -18,7 +18,7 @@ export interface Community {
   treasuryAddress?: string;
   governanceToken?: string;
   settings: CommunitySettings;
-  
+
   // Performance tracking fields
   viewCount?: number;
   engagementScore?: number;
@@ -26,6 +26,10 @@ export interface Community {
   trendingScore?: number;
   onlineMemberCount?: number;
   activeMemberCount?: number;
+
+  // Membership info
+  isMember?: boolean;
+  memberRole?: string;
 }
 
 export interface CommunitySettings {

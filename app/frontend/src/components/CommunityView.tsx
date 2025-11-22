@@ -49,8 +49,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPostCreator, setShowPostCreator] = useState(false);
 
-  // Mock user membership state for demonstration purposes
-  const memberRole = (communityData?.moderators || []).includes(address || '') ? 'admin' : 'member';
+  // Use membership data from backend if available, otherwise fallback to moderators check
+  const memberRole = communityData?.memberRole || ((communityData?.moderators || []).includes(address || '') ? 'admin' : 'member');
   const canEditCommunity = isConnected && address && memberRole === 'admin';
   const isCommunityCreator = isConnected && address && communityData?.creatorAddress === address;
 
@@ -96,6 +96,19 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         };
 
         setCommunityData(processedCommunityData);
+
+        // Set joined status from backend data
+        if (processedCommunityData.isMember !== undefined) {
+          setIsJoined(processedCommunityData.isMember);
+        } else {
+          // Fallback logic if backend doesn't provide isMember
+          // If user is creator or moderator, they are joined
+          const isMod = (processedCommunityData.moderators || []).includes(address || '');
+          const isCreator = processedCommunityData.creatorAddress === address;
+          if (isMod || isCreator) {
+            setIsJoined(true);
+          }
+        }
 
         // Fetch real posts for the community
         const communityPosts = await PostService.getPostsByCommunity(data.id);

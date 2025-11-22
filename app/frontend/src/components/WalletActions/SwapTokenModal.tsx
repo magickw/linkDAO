@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
 import { dexService } from '@/services/dexService';
-import { formatUnits, parseUnits } from 'ethers/lib/utils';
+import { formatUnits, parseUnits } from 'ethers';
 import { GasFeeService } from '@/services/gasFeeService';
 import { usePublicClient } from 'wagmi';
 import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
@@ -93,11 +93,11 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
         } catch (err) {
           console.error('Error fetching swap quote:', err);
           setError('Failed to get exchange rate. Using mock data.');
-          
+
           // Fallback to mock calculation
           const rate = fromTokenData.valueUSD / toTokenData.valueUSD;
           setExchangeRate(rate);
-          
+
           if (fromAmount) {
             const estimated = parseFloat(fromAmount) * rate;
             setToAmount(estimated.toFixed(6));
@@ -115,18 +115,18 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
   // Validate tokens before swap
   const validateTokens = async () => {
     if (!fromTokenData || !toTokenData) return false;
-    
+
     try {
       // Validate token addresses using DEX service
       const fromTokenAddress = fromTokenData.contractAddress || '0x0000000000000000000000000000000000000000';
       const toTokenAddress = toTokenData.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-      
+
       // Validate both tokens
       await Promise.all([
         dexService.validateToken(fromTokenAddress),
         dexService.validateToken(toTokenAddress)
       ]);
-      
+
       return true;
     } catch (err) {
       console.error('Token validation failed:', err);
@@ -286,8 +286,8 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
                   ))}
                 {/* Add popular tokens not in wallet */}
                 {popularTokens
-                  .filter(token => 
-                    !tokens.some(t => t.symbol === token.symbol) && 
+                  .filter(token =>
+                    !tokens.some(t => t.symbol === token.symbol) &&
                     token.symbol !== fromToken
                   )
                   .map((token) => (
@@ -359,11 +359,10 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
           <button
             onClick={handleSwap}
             disabled={isLoading || !fromAmount || !toAmount}
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-              isLoading || !fromAmount || !toAmount
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${isLoading || !fromAmount || !toAmount
                 ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                 : 'bg-primary-600 hover:bg-primary-700 text-white'
-            }`}
+              }`}
           >
             {isLoading ? (
               <div className="flex items-center justify-center">
