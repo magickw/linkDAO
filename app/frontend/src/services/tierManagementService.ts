@@ -3,10 +3,10 @@
  * Handles all tier-related operations and validations
  */
 
-import { 
-  SellerTier, 
-  TierProgress, 
-  TierUpgradeInfo, 
+import {
+  SellerTier,
+  TierProgress,
+  TierUpgradeInfo,
   TierValidationResult,
   TierRequirement,
   TIER_LEVELS,
@@ -190,19 +190,26 @@ class TierManagementService {
 
     try {
       const tierData = await unifiedSellerAPIClient.getSellerTier(walletAddress);
-      const tier = tierData || this.defaultTiers[0]; // Default to Bronze
-      
+
+      // Ensure tierData has required arrays and structure
+      const tier = tierData ? {
+        ...tierData,
+        benefits: Array.isArray(tierData.benefits) ? tierData.benefits : [],
+        requirements: Array.isArray(tierData.requirements) ? tierData.requirements : [],
+        limitations: Array.isArray(tierData.limitations) ? tierData.limitations : [],
+      } : this.defaultTiers[0]; // Default to Bronze
+
       // Cache the result
       this.tierCache.set(walletAddress, { tier, timestamp: Date.now() });
-      
+
       return tier;
     } catch (error) {
       console.error('Error fetching seller tier:', error);
       const fallbackTier = this.defaultTiers[0]; // Fallback to Bronze tier
-      
+
       // Cache fallback for a shorter duration
       this.tierCache.set(walletAddress, { tier: fallbackTier, timestamp: Date.now() - this.CACHE_DURATION + 60000 });
-      
+
       return fallbackTier;
     }
   }
@@ -215,7 +222,7 @@ class TierManagementService {
       console.error('Error fetching tier progress:', error);
       const currentTier = await this.getSellerTier(walletAddress);
       const nextTier = this.getNextTier(currentTier);
-      
+
       return {
         currentTier,
         nextTier,
@@ -235,7 +242,7 @@ class TierManagementService {
       console.error('Error checking tier upgrade eligibility:', error);
       const currentTier = await this.getSellerTier(walletAddress);
       const nextTier = this.getNextTier(currentTier);
-      
+
       return {
         canUpgrade: false,
         nextTier,
@@ -261,9 +268,12 @@ class TierManagementService {
   }
 
   private isActionAllowed(tier: SellerTier, action: TierAction): TierValidationResult {
+    // Ensure benefits exists
+    const benefits = Array.isArray(tier.benefits) ? tier.benefits : [];
+
     switch (action) {
       case TIER_ACTIONS.CREATE_LISTING:
-        const listingLimit = tier.benefits.find(b => b.type === 'listing_limit');
+        const listingLimit = benefits.find(b => b.type === 'listing_limit');
         if (!listingLimit) {
           return {
             isAllowed: false,
@@ -274,7 +284,7 @@ class TierManagementService {
         return { isAllowed: true };
 
       case TIER_ACTIONS.ACCESS_ANALYTICS:
-        const analyticsAccess = tier.benefits.find(b => b.type === 'analytics_access');
+        const analyticsAccess = benefits.find(b => b.type === 'analytics_access');
         if (!analyticsAccess) {
           return {
             isAllowed: false,
@@ -286,7 +296,7 @@ class TierManagementService {
         return { isAllowed: true };
 
       case TIER_ACTIONS.PRIORITY_SUPPORT:
-        const prioritySupport = tier.benefits.find(b => b.type === 'priority_support');
+        const prioritySupport = benefits.find(b => b.type === 'priority_support');
         if (!prioritySupport) {
           return {
             isAllowed: false,

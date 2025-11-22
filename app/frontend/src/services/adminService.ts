@@ -998,6 +998,7 @@ class AdminService {
     totalSellers: number;
     recentActions: AdminAction[];
     pendingCharityProposals?: number;
+    isMock?: boolean;
   }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
@@ -1067,7 +1068,8 @@ class AdminService {
               timestamp: new Date(Date.now() - 3600000).toISOString(),
               status: 'completed'
             }
-          ]
+          ],
+          isMock: true // Flag to indicate mock data
         };
       }
 

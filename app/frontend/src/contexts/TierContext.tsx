@@ -66,7 +66,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
     // Perform local validation based on tier object
     switch (action) {
       case TIER_ACTIONS.CREATE_LISTING:
-        const listingLimit = tier.benefits.find(b => b.type === 'listing_limit');
+        const listingLimit = tier.benefits?.find(b => b.type === 'listing_limit');
         if (!listingLimit) {
           return {
             isAllowed: false,
@@ -77,7 +77,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
         return { isAllowed: true };
 
       case TIER_ACTIONS.ACCESS_ANALYTICS:
-        const analyticsAccess = tier.benefits.find(b => b.type === 'analytics_access');
+        const analyticsAccess = tier.benefits?.find(b => b.type === 'analytics_access');
         if (!analyticsAccess) {
           return {
             isAllowed: false,
@@ -89,7 +89,7 @@ export const TierProvider: React.FC<TierProviderProps> = ({ children, walletAddr
         return { isAllowed: true };
 
       case TIER_ACTIONS.PRIORITY_SUPPORT:
-        const prioritySupport = tier.benefits.find(b => b.type === 'priority_support');
+        const prioritySupport = tier.benefits?.find(b => b.type === 'priority_support');
         if (!prioritySupport) {
           return {
             isAllowed: false,

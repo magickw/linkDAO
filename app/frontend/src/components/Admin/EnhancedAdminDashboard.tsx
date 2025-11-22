@@ -72,6 +72,7 @@ interface AdminStats {
   totalSellers: number;
   recentActions: any[];
   pendingCharityProposals?: number;
+  isMock?: boolean;
 }
 
 interface FavoriteTab {
@@ -176,7 +177,7 @@ export function EnhancedAdminDashboard() {
         webSocketManagerRef.current.disconnect();
       }
     };
-  }, [isAdmin, router]);
+  }, [isAdmin, router, user]); // Added user to dependency array to ensure refresh on auth update
 
   const initializeWebSocket = async () => {
     if (!user) return;
@@ -551,6 +552,33 @@ export function EnhancedAdminDashboard() {
             {/* Content */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
+                {/* Auth Warning Banner */}
+                {stats?.isMock && (
+                  <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <AlertTriangle className="w-5 h-5 text-yellow-500 mr-3" />
+                      <div>
+                        <p className="text-yellow-200 font-medium">Authentication Issue Detected</p>
+                        <p className="text-yellow-200/70 text-sm">
+                          Displaying mock data because the backend rejected the authentication token.
+                          Please try refreshing the page or logging out and back in.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="small"
+                      variant="outline"
+                      className="border-yellow-500/50 text-yellow-200 hover:bg-yellow-500/20"
+                      onClick={() => {
+                        setLoading(true);
+                        loadStats();
+                      }}
+                    >
+                      Retry Connection
+                    </Button>
+                  </div>
+                )}
+
                 {/* Stats Grid */}
                 {loading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
