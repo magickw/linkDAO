@@ -1,11 +1,11 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { safeLogger } from '../utils/safeLogger';
 import { db } from '../db';
-import { 
-  sellers, 
-  users, 
-  imageStorage, 
-  ensVerifications, 
+import {
+  sellers,
+  users,
+  imageStorage,
+  ensVerifications,
   sellerActivities,
   sellerBadges,
   marketplaceListings,
@@ -41,10 +41,10 @@ export interface ValidationRule {
 
 export interface SellerProfileData {
   walletAddress: string;
-  displayName?: string;
   storeName?: string;
   bio?: string;
   description?: string;
+  storeDescription?: string;
   sellerStory?: string;
   location?: string;
   ensHandle?: string;
@@ -54,10 +54,20 @@ export interface SellerProfileData {
   twitterHandle?: string;
   discordHandle?: string;
   telegramHandle?: string;
+  linkedinHandle?: string;
+  facebookHandle?: string;
   profileImageIpfs?: string;
   profileImageCdn?: string;
   coverImageIpfs?: string;
   coverImageCdn?: string;
+  // Business Information
+  legalBusinessName?: string;
+  businessType?: string;
+  registeredAddressStreet?: string;
+  registeredAddressCity?: string;
+  registeredAddressState?: string;
+  registeredAddressPostalCode?: string;
+  registeredAddressCountry?: string;
   // Add reputation metrics
   reputation?: {
     overallScore: number;
@@ -107,7 +117,7 @@ class SellerService {
       }
 
       const sellerData = seller[0];
-      
+
       // Get reputation data using wallet address
       let reputation = null;
       try {
@@ -116,10 +126,10 @@ class SellerService {
         safeLogger.warn('Could not fetch reputation data:', error);
         // Continue without reputation data
       }
-      
+
       // Calculate profile completeness
       const completeness = this.calculateProfileCompleteness(sellerData);
-      
+
       return {
         ...sellerData,
         reputation: reputation ? {
@@ -152,13 +162,13 @@ class SellerService {
         if (!ensValidation.isValid) {
           throw new Error('Invalid ENS handle format');
         }
-        
+
         // Verify ownership if ENS handle is provided
         const isOwned = await ensService.verifyENSOwnership(
-          profileData.ensHandle, 
+          profileData.ensHandle,
           profileData.walletAddress
         );
-        
+
         if (!isOwned) {
           throw new Error('ENS handle is not owned by this wallet address');
         }
@@ -168,7 +178,6 @@ class SellerService {
         .insert(sellers)
         .values({
           walletAddress: profileData.walletAddress,
-          displayName: profileData.displayName,
           storeName: profileData.storeName,
           bio: profileData.bio,
           description: profileData.description,
@@ -181,6 +190,8 @@ class SellerService {
           twitterHandle: profileData.twitterHandle,
           discordHandle: profileData.discordHandle,
           telegramHandle: profileData.telegramHandle,
+          linkedinHandle: profileData.linkedinHandle,
+          facebookHandle: profileData.facebookHandle,
           profileImageIpfs: profileData.profileImageIpfs,
           profileImageCdn: profileData.profileImageCdn,
           coverImageIpfs: profileData.coverImageIpfs,
@@ -215,7 +226,7 @@ class SellerService {
   }
 
   async updateSellerProfile(
-    walletAddress: string, 
+    walletAddress: string,
     updates: Partial<SellerProfileData>
   ): Promise<SellerProfileData> {
     try {
@@ -226,17 +237,17 @@ class SellerService {
           if (!ensValidation.isValid) {
             throw new Error('Invalid ENS handle format');
           }
-          
+
           // Verify ownership
           const isOwned = await ensService.verifyENSOwnership(
-            updates.ensHandle, 
+            updates.ensHandle,
             walletAddress
           );
-          
+
           if (!isOwned) {
             throw new Error('ENS handle is not owned by this wallet address');
           }
-          
+
           // Set verification fields
           updates.ensVerified = true;
           updates.ensLastVerified = new Date();
@@ -426,7 +437,7 @@ class SellerService {
       totalWeight += rule.weight;
       const value = (profile as any)[rule.field];
       const isCompleted = value && (typeof value !== 'string' || value.trim() !== '');
-      
+
       if (isCompleted) {
         completedWeight += rule.weight;
       } else {
@@ -509,13 +520,13 @@ class SellerService {
       discord: /^.{2,32}#[0-9]{4}$|^[A-Za-z0-9_.]{2,32}$/,
       telegram: /^@?[A-Za-z0-9_]{5,32}$/,
     };
-    
+
     const pattern = patterns[platform];
     return pattern ? pattern.test(handle) : true;
   }
 
   private generateRecommendations(
-    missingFields: string[], 
+    missingFields: string[],
     score: number
   ): Array<{
     action: string;
@@ -581,7 +592,7 @@ class SellerService {
       'telegramHandle': 'Telegram Handle',
       'ensHandle': 'ENS Handle',
     };
-    
+
     return labels[field] || field;
   }
 
@@ -645,12 +656,12 @@ class SellerService {
       const completeness = this.calculateProfileCompleteness(seller);
 
       const stats = listingStats[0] || { totalListings: 0, activeListings: 0 };
-      const orderAgg = orderStats[0] || { 
-        totalSales: 0, 
-        totalRevenue: '0', 
-        completedOrders: 0, 
-        pendingOrders: 0, 
-        disputedOrders: 0 
+      const orderAgg = orderStats[0] || {
+        totalSales: 0,
+        totalRevenue: '0',
+        completedOrders: 0,
+        pendingOrders: 0,
+        disputedOrders: 0
       };
       const reputation = reputationData[0] || { reputationScore: 0 };
       const rating = ratingData[0] || { averageRating: 0 };
@@ -687,7 +698,7 @@ class SellerService {
 
       // Create verification record
       const verificationId = `${verificationType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Update seller verification status
       const updateData: any = {};
       switch (verificationType) {
@@ -735,7 +746,7 @@ class SellerService {
 
   // Seller Reputation Tracking
   async updateSellerReputation(
-    walletAddress: string, 
+    walletAddress: string,
     action: 'sale_completed' | 'dispute_resolved' | 'review_received',
     data: any
   ): Promise<void> {
@@ -780,7 +791,7 @@ class SellerService {
           updates.successfulSales = Number(currentRep.successfulSales) + 1;
           updates.reputationScore = Number(currentRep.reputationScore) + 5; // +5 points for completed sale
           break;
-        
+
         case 'dispute_resolved':
           updates.resolvedDisputes = Number(currentRep.resolvedDisputes) + 1;
           if (data.resolution === 'seller_favor') {
@@ -789,7 +800,7 @@ class SellerService {
             updates.reputationScore = Math.max(0, Number(currentRep.reputationScore) - 2); // -2 points for unfavorable resolution
           }
           break;
-        
+
         case 'review_received':
           if (data.rating >= 4) {
             updates.positiveReviews = Number(currentRep.positiveReviews) + 1;

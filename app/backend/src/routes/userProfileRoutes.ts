@@ -12,6 +12,7 @@ const userProfileController = new UserProfileController();
 
 router.post('/', csrfProtection,  authenticateToken, asyncHandler(userProfileController.createProfile));
 router.get('/address/:address', asyncHandler(userProfileController.getProfileByAddress));
+router.get('/public/:walletAddress', asyncHandler(userProfileController.getPublicProfile));
 router.get('/:id', asyncHandler(userProfileController.getProfileById));
 router.put('/:id', csrfProtection,  authenticateToken, asyncHandler(userProfileController.updateProfile));
 router.delete('/:id', csrfProtection,  authenticateToken, asyncHandler(userProfileController.deleteProfile));

@@ -21,41 +21,41 @@ export interface UnifiedSellerListing {
   id: string;
   sellerId: string;
   sellerWalletAddress: string;
-  
+
   // Basic listing information
   title: string;
   description: string;
   category: string;
   subcategory?: string;
   tags: string[];
-  
+
   // Pricing information (unified format)
   price: number;
   currency: 'ETH' | 'USDC' | 'DAI' | 'USD';
   displayPrice: string; // Formatted price for display
   displayCurrency: string; // User-friendly currency display
-  
+
   // Inventory and availability
   quantity: number;
   condition: 'new' | 'used' | 'refurbished';
   availability: 'available' | 'out_of_stock' | 'discontinued';
-  
+
   // Media and presentation
   images: string[];
   thumbnailUrl: string; // Optimized thumbnail
   featuredImage?: string;
-  
+
   // Status and lifecycle
   status: 'draft' | 'active' | 'paused' | 'sold' | 'expired' | 'cancelled';
   listingType: 'fixed_price' | 'auction' | 'negotiable';
   saleType: 'physical' | 'digital' | 'nft' | 'service';
-  
+
   // Engagement metrics
   views: number;
   favorites: number;
   likes: number;
   questions: number;
-  
+
   // Blockchain and escrow
   isEscrowProtected: boolean;
   isEscrowed: boolean;
@@ -63,7 +63,7 @@ export interface UnifiedSellerListing {
   tokenAddress?: string;
   tokenId?: string;
   nftStandard?: 'ERC721' | 'ERC1155';
-  
+
   // Shipping and fulfillment
   shippingOptions: {
     free: boolean;
@@ -73,24 +73,24 @@ export interface UnifiedSellerListing {
     regions?: string[];
     expedited?: boolean;
   };
-  
+
   // Additional metadata
   specifications?: Record<string, string>;
   metadata: ListingMetadata;
-  
+
   // Timestamps (unified format)
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
   startTime?: string;
   endTime?: string;
-  
+
   // Auction-specific fields
   currentBid?: number;
   minimumBid?: number;
   reservePrice?: number;
   highestBidder?: string;
-  
+
   // Trust and verification
   trust?: TrustIndicators;
   verificationStatus?: 'pending' | 'verified' | 'rejected';
@@ -129,22 +129,26 @@ export interface UnifiedSellerProfile {
   // Core identification
   id: string;
   walletAddress: string;
-  
+
   // Basic profile information
-  displayName?: string;
   storeName?: string;
   bio?: string;
   description?: string;
+  storeDescription?: string;
   sellerStory?: string;
   location?: string;
-  
+
   // Media and branding
   profileImageUrl?: string;
   profilePicture?: string;
+  profileImageCdn?: string;
+  profileImageIpfs?: string;
   logo?: string;
   coverImageUrl?: string;
   coverImage?: string;
-  
+  coverImageCdn?: string;
+  coverImageIpfs?: string;
+
   // Image storage (unified format)
   images: {
     profile?: {
@@ -166,12 +170,12 @@ export interface UnifiedSellerProfile {
       ipfs?: string;
     };
   };
-  
+
   // ENS and identity
   ensHandle?: string;
   ensVerified: boolean;
   ensLastVerified?: string;
-  
+
   // Contact and social
   email?: string;
   emailVerified: boolean;
@@ -183,9 +187,19 @@ export interface UnifiedSellerProfile {
     discord?: string;
     telegram?: string;
     linkedin?: string;
+    facebook?: string;
     website?: string;
   };
-  
+
+  // Business Information
+  legalBusinessName?: string;
+  businessType?: string;
+  registeredAddressStreet?: string;
+  registeredAddressCity?: string;
+  registeredAddressState?: string;
+  registeredAddressPostalCode?: string;
+  registeredAddressCountry?: string;
+
   // Verification and status
   verificationStatus: {
     email: boolean;
@@ -193,22 +207,22 @@ export interface UnifiedSellerProfile {
     kyc: 'none' | 'pending' | 'approved' | 'rejected';
     identity: boolean;
   };
-  
+
   applicationStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   applicationDate: string;
   approvedDate?: string;
   rejectionReason?: string;
   suspensionReason?: string;
   reviewedBy?: string;
-  
+
   // Tier and reputation
   tier: SellerTier;
   tierProgress: TierProgress;
   reputation: ReputationData;
-  
+
   // Statistics (unified format)
   stats: SellerStats;
-  
+
   // Profile completeness
   profileCompleteness: {
     score: number; // 0-100
@@ -225,22 +239,22 @@ export interface UnifiedSellerProfile {
     }>;
     lastCalculated: string;
   };
-  
+
   // Settings and preferences
   settings: SellerSettings;
-  
+
   // Onboarding progress
   onboardingProgress: OnboardingProgress;
-  
+
   // Payment and payout
   payoutPreferences: PayoutPreferences;
-  
+
   // DAO and governance
   daoReputation?: DAOReputation;
-  
+
   // Verification badges
   badges: string[];
-  
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -305,27 +319,27 @@ export interface SellerStats {
   totalSales: number;
   totalRevenue: number;
   averageOrderValue: number;
-  
+
   // Listing metrics
   activeListings: number;
   totalListings: number;
   completedOrders: number;
-  
+
   // Engagement metrics
   totalViews: number;
   totalFavorites: number;
   conversionRate: number;
-  
+
   // Reputation metrics
   averageRating: number;
   totalReviews: number;
   reputationScore: number;
-  
+
   // Activity metrics
   responseTime: number; // in hours
   fulfillmentRate: number; // percentage
   disputeRate: number; // percentage
-  
+
   // Time-based metrics
   joinDate: string;
   lastActive: string;
@@ -415,43 +429,43 @@ export interface DAOReputation {
 export interface UnifiedSellerDashboard {
   // Profile information
   profile: UnifiedSellerProfile;
-  
+
   // Listings overview
   listings: {
     items: UnifiedSellerListing[];
     summary: ListingsSummary;
   };
-  
+
   // Orders overview
   orders: {
     items: SellerOrder[];
     summary: OrdersSummary;
   };
-  
+
   // Analytics and metrics
   analytics: SellerAnalytics;
-  
+
   // Notifications
   notifications: SellerNotification[];
-  
+
   // Tier information
   tierInfo: TierInformation;
-  
+
   // Financial overview
   financial: FinancialOverview;
-  
+
   // Performance metrics
   performance: PerformanceMetrics;
-  
+
   // Recent activity
   recentActivity: ActivityItem[];
-  
+
   // Quick actions
   quickActions: QuickAction[];
-  
+
   // System status
   systemStatus: SystemStatus;
-  
+
   // Last updated timestamp
   lastUpdated: string;
 }

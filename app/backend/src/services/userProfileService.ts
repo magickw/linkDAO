@@ -318,6 +318,34 @@ export class UserProfileService {
     }
   }
 
+  async getPublicProfile(walletAddress: string): Promise<any> {
+    try {
+      const db = databaseService.getDatabase();
+      const normalizedAddress = walletAddress.toLowerCase();
+      const [dbUser] = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
+      
+      if (!dbUser) {
+        return undefined;
+      }
+
+      // Return only public information - exclude all sensitive data
+      return {
+        id: dbUser.id,
+        walletAddress: dbUser.walletAddress,
+        handle: dbUser.handle || '',
+        displayName: dbUser.displayName || dbUser.handle || `User ${dbUser.walletAddress.substring(0, 8)}`,
+        ens: dbUser.ens || '',
+        avatarCid: dbUser.avatarCid || '',
+        bioCid: dbUser.bioCid || '',
+        createdAt: dbUser.createdAt ? new Date(dbUser.createdAt) : new Date(),
+        updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
+      };
+    } catch (error) {
+      safeLogger.error('Error in getPublicProfile:', error);
+      return undefined;
+    }
+  }
+
   async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {
     const db = databaseService.getDatabase();
     

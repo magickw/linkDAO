@@ -808,6 +808,66 @@ app.get('/api/profiles/address/:address', async (req, res) => {
   }
 });
 
+// Public profile endpoint - excludes sensitive information
+app.get('/api/profile/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Ethereum address'
+      });
+    }
+    
+    const result = await getUserByAddress(walletAddress);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    // Transform the user data to match the frontend UserProfile interface
+    const user = result.rows[0];
+    let profileData = {};
+    
+    try {
+      if (user.profile_cid) {
+        profileData = JSON.parse(user.profile_cid);
+      }
+    } catch (e) {
+      console.log('Failed to parse profile data for user:', user.wallet_address);
+    }
+    
+    // Create public profile - exclude sensitive information
+    const publicProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      handle: user.handle || '',
+      displayName: profileData.displayName || '',
+      ens: profileData.ens || '',
+      avatarCid: profileData.avatarCid || profileData.profilePicture || '',
+      bioCid: profileData.bioCid || profileData.bio || '',
+      // Only include basic info, exclude all billing/shipping/email data
+      createdAt: new Date(user.created_at),
+      updatedAt: new Date(user.created_at)
+    };
+    
+    res.json({
+      success: true,
+      data: publicProfile
+    });
+  } catch (error) {
+    console.error('Error fetching public profile by address:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Posts routes
 app.get('/api/posts/feed', async (req, res) => {
   try {

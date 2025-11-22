@@ -678,7 +678,6 @@ export const productTags = pgTable("product_tags", {
 export const sellers = pgTable("sellers", {
   id: serial("id").primaryKey(),
   walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
-  displayName: varchar("display_name", { length: 255 }),
   storeName: varchar("store_name", { length: 255 }),
   bio: text("bio"),
   description: text("description"),
@@ -705,6 +704,8 @@ export const sellers = pgTable("sellers", {
   twitterHandle: varchar("twitter_handle", { length: 100 }),
   discordHandle: varchar("discord_handle", { length: 100 }),
   telegramHandle: varchar("telegram_handle", { length: 100 }),
+  linkedinHandle: varchar("linkedin_handle", { length: 100 }),
+  facebookHandle: varchar("facebook_handle", { length: 100 }),
   // Seller profile API fields
   storeDescription: text("store_description"),
   isVerified: boolean("is_verified").default(false),

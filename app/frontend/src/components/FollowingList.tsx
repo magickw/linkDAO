@@ -7,9 +7,11 @@ import { useProfiles } from '@/hooks/useProfiles';
 interface FollowingListProps {
   userAddress: string;
   className?: string;
+  isOwnProfile?: boolean;
+  isPublicProfile?: boolean;
 }
 
-export default function FollowingList({ userAddress, className = '' }: FollowingListProps) {
+export default function FollowingList({ userAddress, className = '', isOwnProfile = false, isPublicProfile = false }: FollowingListProps) {
   const { address: currentUserAddress } = useWeb3();
   const { data: following, isLoading, error } = useFollowing(userAddress);
   const { data: followingProfiles, isLoading: isProfilesLoading } = useProfiles(following as string[] | undefined);

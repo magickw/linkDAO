@@ -608,225 +608,7 @@ const CommunitiesPage: React.FC = () => {
     stakingRewards: Math.floor(Math.random() * 20)
   })).filter(community => community.id); // Filter out any communities without valid IDs
 
-  if (isMobile) {
-    return (
-      <ErrorBoundary>
-        <VisualPolishIntegration>
-          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Head>
-              <title>Communities - LinkDAO Enhanced</title>
-              <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
-            </Head>
-
-            {/* Enhanced Mobile Header */}
-            <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">Communities</h1>
-                  <div className="flex items-center space-x-2">
-                    {/* Governance Notifications */}
-                    {governanceNotifications > 0 && (
-                      <div className="relative">
-                        <button className={`p-2 text-gray-600 hover:text-gray-900 ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}`}>
-                          <Vote className="w-5 h-5" />
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {governanceNotifications}
-                          </span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Web3 Data Display */}
-            <div className="p-4">
-              <MobileWeb3DataDisplay
-                tokenData={{
-                  symbol: 'LDAO',
-                  balance: userBalance,
-                  value: userBalance * 0.5,
-                  change24h: 2.5,
-                  price: 0.5
-                }}
-                stakingData={{
-                  totalStaked: 500,
-                  rewards: stakingRewards,
-                  apy: 12.5,
-                  lockPeriod: '30 days'
-                }}
-                governanceData={{
-                  votingPower: 150,
-                  activeProposals: governanceNotifications,
-                  votesParticipated: 8,
-                  totalProposals: 12
-                }}
-                gasPrice={25}
-                networkName="Ethereum"
-                compact={true}
-              />
-            </div>
-
-
-
-            {/* Collapsible Sidebar */}
-            <div className="px-4 mb-4">
-              <CollapsibleWeb3Sidebar
-                communities={communityData}
-                currentCommunity={undefined}
-                onCommunitySelect={(id) => {
-                  const community = communityList.find(c => c.id === id);
-                  if (community) {
-                    router.push(`/communities/${community.slug || community.name}`);
-                  }
-                }}
-                onCreateCommunity={handleCreateCommunityClick}
-                walletConnected={walletConnected}
-                totalStakingRewards={stakingRewards}
-                governanceNotifications={governanceNotifications}
-              />
-            </div>
-
-            {/* Enhanced Mobile Posts Feed */}
-            <div className="px-0 pb-24 space-y-0">
-              {/* Mobile Loading State */}
-              {loading && (
-                <div className="space-y-0">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 border-y border-gray-200 dark:border-gray-700 p-4 animate-pulse">
-                      <div className="flex space-x-3">
-                        <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                          <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Mobile Empty State */}
-              {!loading && filteredPosts.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Users className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No posts yet
-                  </h3>
-                  <p className="text-gray-500 mb-6 px-4">
-                    {joinedCommunities.length === 0
-                      ? "Join communities to see posts"
-                      : "Be the first to post!"
-                    }
-                  </p>
-                  <button
-                    onClick={handleCreatePost}
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
-                  >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Create Post
-                  </button>
-                </div>
-              )}
-
-              {filteredPosts.map(post => {
-                // Defensive checks for post data
-                if (!post || typeof post !== 'object') return null;
-
-                const community = communityList.find(c => c.id === post.communityId);
-
-                // Ensure required post properties exist
-                const postId = post.id || `post-${Math.random()}`;
-                const postTitle = post.title || 'Untitled Post';
-                const postContent = post.content || '';
-                const postAuthorName = post.authorName || 'Unknown Author';
-                const postAuthor = post.author || '';
-                const postUpvotes = typeof post.upvotes === 'number' ? post.upvotes : 0;
-                const postCommentCount = typeof post.commentCount === 'number' ? post.commentCount : 0;
-                const postStakedTokens = typeof post.stakedTokens === 'number' ? post.stakedTokens : 0;
-                const postCreatedAt = post.createdAt || new Date().toISOString();
-                const postType = post.type || 'text';
-                const postIsStaked = !!post.isStaked;
-
-                return (
-                  <CompactWeb3PostCard
-                    key={postId}
-                    post={{
-                      id: postId,
-                      title: postTitle,
-                      content: postContent,
-                      author: {
-                        name: postAuthorName,
-                        avatar: '👤',
-                        address: postAuthor
-                      },
-                      community: {
-                        name: community?.displayName || 'Unknown',
-                        avatar: community?.avatar || '🏛️'
-                      },
-                      metrics: {
-                        upvotes: postUpvotes,
-                        comments: postCommentCount,
-                        views: Math.floor(Math.random() * 1000),
-                        stakingAmount: postStakedTokens,
-                        stakerCount: Math.floor(Math.random() * 50)
-                      },
-                      timestamp: new Date(postCreatedAt).toLocaleDateString(),
-                      isUpvoted: false,
-                      isSaved: false,
-                      postType: postType as any,
-                      onChainProof: postIsStaked
-                    }}
-                    onUpvote={() => handleUpvote(postId)}
-                    onComment={() => handleComment(postId)}
-                    onShare={() => handleShare(postId)}
-                    onSave={() => handleSave(postId)}
-                    onTip={(amount?: number) => handleTip(postId, amount)}
-                    onStake={() => handleStake(postId)}
-                    onViewPost={() => handleViewPost(postId)}
-                    walletConnected={walletConnected}
-                  />
-                );
-              })}
-
-              {/* Mobile Load More */}
-              {loadingMore && (
-                <div className="flex justify-center py-6">
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
-                    <span className="text-sm">Loading...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Mobile End of Feed */}
-              {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
-                <div className="text-center py-6">
-                  <p className="text-gray-500 text-sm">
-                    You've reached the end! 🎉
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Floating Action Button */}
-            <div className="fixed bottom-20 right-4 z-50">
-              <button
-                onClick={handleCreatePost}
-                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-w-[44px] min-h-[44px]"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-        </VisualPolishIntegration>
-      </ErrorBoundary>
-    );
-  }
+  // Mobile and desktop now use the same Layout component for consistency
 
   return (
     <ErrorBoundary>
@@ -846,9 +628,9 @@ const CommunitiesPage: React.FC = () => {
             <meta name="keywords" content="DAO communities, decentralized communities, Web3, blockchain, governance, LinkDAO" />
           </Head>
 
-          <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
-            {/* Reddit-style Left Sidebar */}
-            <div className="col-span-12 lg:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-4 lg:px-8 mx-auto max-w-7xl pt-0 lg:pt-6">
+            {/* Reddit-style Left Sidebar - Hidden on mobile */}
+            <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
 
 
@@ -911,10 +693,10 @@ const CommunitiesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Reddit-style Center Feed */}
-            <div className="col-span-12 lg:col-span-6">
+            {/* Reddit-style Center Feed - Full width on mobile */}
+            <div className="col-span-1 lg:col-span-6">
               {/* Sort Tabs - Reddit Style */}
-              <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-sm border border-gray-200 dark:border-gray-700 border-b-0">
+              <div className="bg-white dark:bg-gray-800 rounded-none lg:rounded-t-lg shadow-sm border-x-0 lg:border-x border-t-0 lg:border-t border-gray-200 dark:border-gray-700 border-b-0">
                 <div className="flex items-center justify-between p-3">
                   <div className="flex space-x-1">
                     {(['hot', 'new', 'top', 'rising'] as FeedSortType[]).map(tab => (
@@ -951,7 +733,7 @@ const CommunitiesPage: React.FC = () => {
               </div>
 
               {/* Create Post Card - Reddit Style */}
-              <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-sm border border-t-0 border-gray-200 dark:border-gray-700 mb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-none lg:rounded-b-lg shadow-sm border-x-0 lg:border-x border-t-0 border-gray-200 dark:border-gray-700 mb-0 lg:mb-4">
                 <div className="p-3">
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -1207,8 +989,8 @@ const CommunitiesPage: React.FC = () => {
               )}
             </div>
 
-            {/* Reddit-style Right Sidebar */}
-            <div className="col-span-12 lg:col-span-3">
+            {/* Reddit-style Right Sidebar - Hidden on mobile */}
+            <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">
                 {/* Community Info Card - Reddit Style */}
                 <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-sm p-4 text-white">
@@ -1307,6 +1089,19 @@ const CommunitiesPage: React.FC = () => {
             onSubmit={handleCreateCommunity}
             isLoading={isCreatingCommunity}
           />
+
+          {/* Mobile Floating Action Button */}
+          {isMobile && (
+            <div className="fixed bottom-20 right-4 z-50">
+              <button
+                onClick={handleCreatePost}
+                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-label="Create Post"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
+          )}
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>

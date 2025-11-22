@@ -13,7 +13,6 @@ export interface SellerProfile {
     tier: SellerTier['id'];
 
     // Basic Profile
-    displayName?: string;
     storeName?: string;
     profilePicture?: string;
     logo?: string;
@@ -22,18 +21,18 @@ export interface SellerProfile {
     description?: string;
     sellerStory?: string;
     location?: string;
-    
+
     // ENS Support (optional)
     ensHandle?: string;
     ensVerified: boolean;
     ensLastVerified?: string;
-    
+
     // Image Storage with IPFS and CDN support
     profileImageIpfs?: string;
     profileImageCdn?: string;
     coverImageIpfs?: string;
     coverImageCdn?: string;
-    
+
     // Enhanced Social Media Links
     websiteUrl?: string;
     socialLinks?: {
@@ -41,9 +40,10 @@ export interface SellerProfile {
         discord?: string;
         telegram?: string;
         linkedin?: string;
+        facebook?: string;
         website?: string;
     };
-    
+
     // Profile Completeness
     profileCompleteness: {
         score: number; // 0-100
@@ -60,7 +60,7 @@ export interface SellerProfile {
         }>;
         lastCalculated: string;
     };
-    
+
     // Application Status
     applicationStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
     applicationDate: string;

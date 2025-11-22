@@ -38,6 +38,15 @@ export class UserProfileController {
     return res.json({ data: profile });
   }
 
+  getPublicProfile = async (req: Request, res: Response): Promise<Response> => {
+    const { walletAddress } = req.params;
+    const profile = await userProfileService.getPublicProfile(walletAddress);
+    if (!profile) {
+      throw new NotFoundError('Public profile not found');
+    }
+    return res.json({ data: profile });
+  }
+
   updateProfile = async (req: Request, res: Response): Promise<Response> => {
     const { id } = req.params;
     const input: UpdateUserProfileInput = req.body;

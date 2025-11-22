@@ -306,8 +306,10 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                           : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
                           } hover:scale-[1.03]`}
                       >
-                        <span className="mr-1">🔒</span>
-                        Admin
+                        <span className="flex flex-col items-center leading-4">
+                          <span className="text-base">🔒</span>
+                          <span className="text-[11px] mt-0.5">Admin</span>
+                        </span>
                         {router.pathname === '/admin' && (
                           <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
                         )}
