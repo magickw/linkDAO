@@ -60,7 +60,7 @@ import { DashboardCharts } from './DashboardCharts';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 import { CharityVerificationPanel } from './CharityVerificationPanel';
-import { CharityProposal } from './CharityProposalCard';
+import { CharityProposal } from '../Governance/CharityProposalCard';
 
 interface AdminStats {
   pendingModerations: number;

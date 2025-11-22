@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
-import { ArrowLeft, Hash, Users } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, X } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 import { CommunityService } from '@/services/communityService';
 import { PostService } from '@/services/postService';
@@ -13,7 +13,7 @@ import { useToast } from '@/context/ToastContext';
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
   const { community } = router.query;
-  const { address, isConnected } = useWeb3(); // Properly destructure address and isConnected
+  const { address, isConnected } = useWeb3();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -22,8 +22,11 @@ const CreatePostPage: React.FC = () => {
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [userCommunities, setUserCommunities] = useState<any[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  
+  const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
+  const [newCommunityName, setNewCommunityName] = useState('');
+  const [newCommunityDescription, setNewCommunityDescription] = useState('');
+  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
+
   const { addToast } = useToast();
 
   // Fetch user's communities
@@ -31,66 +34,56 @@ const CreatePostPage: React.FC = () => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
         try {
-          // Get all user's communities by paging through results
           const allUserCommunities = [];
           let page = 1;
-          const pageSize = 50; // Reasonable page size for API calls
+          const pageSize = 50;
           let hasMore = true;
-          
+
           while (hasMore) {
             try {
               const { communities, pagination } = await CommunityService.getMyCommunities(page, pageSize);
               allUserCommunities.push(...communities);
-              
-              // Check if there are more pages
+
               if (pagination && pagination.page && pagination.totalPages) {
                 hasMore = page < pagination.totalPages;
               } else {
-                // Fallback: if no pagination info, assume no more pages if we got fewer results than page size
                 hasMore = communities.length === pageSize;
               }
-              
+
               page++;
             } catch (pageError) {
               console.error(`Error fetching page ${page} of user communities:`, pageError);
-              // Stop fetching more pages if we encounter an error
               hasMore = false;
-              // But continue with whatever communities we've already fetched
             }
           }
-          
+
           setUserCommunities(allUserCommunities);
-          
-          // If there's a community parameter in the URL, select it ONLY if user is a member
+
           if (community && typeof community === 'string') {
-            // First try to match by id or slug
-            let foundCommunity = allUserCommunities.find((c: any) => 
+            let foundCommunity = allUserCommunities.find((c: any) =>
               c.id === community || c.slug === community
             );
-            
-            // If no match found, try strict name matching (normalized)
+
             if (!foundCommunity) {
               const normalizedCommunity = community.trim().toLowerCase();
-              const nameMatches = allUserCommunities.filter((c: any) => 
+              const nameMatches = allUserCommunities.filter((c: any) =>
                 c.name && c.name.trim().toLowerCase() === normalizedCommunity
               );
-              
-              // Only accept name match if it's unique
+
               if (nameMatches.length === 1) {
                 foundCommunity = nameMatches[0];
               }
             }
-            
+
             if (foundCommunity) {
               setSelectedCommunity(foundCommunity.id);
             } else {
-              // Show error if user tries to post to a community they're not a member of
               addToast('You must be a member of this community to post', 'error');
             }
           }
         } catch (error) {
           console.error('Error fetching user communities:', error);
-          addToast('Error loading your communities. You can only post to communities you are a member of.', 'error');
+          addToast('Error loading your communities.', 'error');
         } finally {
           setLoadingCommunities(false);
         }
@@ -102,13 +95,6 @@ const CreatePostPage: React.FC = () => {
     fetchUserCommunities();
   }, [isConnected, address, community, addToast]);
 
-  // Filter communities based on search term
-  const filteredCommunities = userCommunities.filter(community => 
-    (community.displayName || community.name || '')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
@@ -118,6 +104,44 @@ const CreatePostPage: React.FC = () => {
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleCreateCommunity = async () => {
+    if (!newCommunityName.trim()) {
+      addToast('Please enter a community name', 'error');
+      return;
+    }
+
+    setIsCreatingCommunity(true);
+    try {
+      // Generate slug from name (lowercase, replace spaces with hyphens)
+      const slug = newCommunityName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+      const newCommunity = await CommunityService.createCommunity({
+        name: newCommunityName.trim(),
+        slug: slug,
+        displayName: newCommunityName.trim(),
+        description: newCommunityDescription.trim() || `Welcome to ${newCommunityName.trim()}`,
+        category: 'general', // Default category
+        isPublic: true,
+      });
+
+      addToast('Community created successfully!', 'success');
+
+      // Add to user communities and select it
+      setUserCommunities([...userCommunities, newCommunity]);
+      setSelectedCommunity(newCommunity.id);
+
+      // Close modal and reset form
+      setShowCreateCommunityModal(false);
+      setNewCommunityName('');
+      setNewCommunityDescription('');
+    } catch (error) {
+      console.error('Error creating community:', error);
+      addToast(error instanceof Error ? error.message : 'Failed to create community', 'error');
+    } finally {
+      setIsCreatingCommunity(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,13 +157,11 @@ const CreatePostPage: React.FC = () => {
       return;
     }
 
-    // Require community selection
     if (!selectedCommunity) {
       addToast('Please select a community to post in', 'error');
       return;
     }
 
-    // Ensure user is a member of the selected community
     const isMember = userCommunities.some((c: any) => c.id === selectedCommunity);
     if (!isMember) {
       addToast('You must be a member of the selected community to post', 'error');
@@ -161,7 +183,6 @@ const CreatePostPage: React.FC = () => {
 
       addToast('Post created successfully!', 'success');
 
-      // Redirect to the community
       const communityData = userCommunities.find(c => c.id === selectedCommunity);
       if (communityData) {
         router.push(`/communities/${communityData.slug || communityData.name || communityData.id}`);
@@ -175,6 +196,8 @@ const CreatePostPage: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  const selectedCommunityData = userCommunities.find(c => c.id === selectedCommunity);
 
   return (
     <ErrorBoundary>
@@ -194,7 +217,7 @@ const CreatePostPage: React.FC = () => {
                   router.push('/');
                 }
               }}
-              className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 mb-4"
+              className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               Back
@@ -202,112 +225,86 @@ const CreatePostPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Create a Post
             </h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Share your thoughts with the community
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Community Selection */}
+            {/* Community Selection Dropdown */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Select Community *
+                Select Community <span className="text-red-500">*</span>
               </label>
 
               {loadingCommunities ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600 dark:text-gray-400">Loading your communities...</span>
-                </div>
-              ) : userCommunities.length === 0 ? (
-                <div className="text-center py-8 px-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                  <Users className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-900 dark:text-gray-100 font-medium mb-2">No communities yet</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    You need to join or create a community before you can post
-                  </p>
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      type="button"
-                      onClick={() => router.push('/communities')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      Browse Communities
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => router.push('/communities/create')}
-                      className="px-4 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-sm"
-                    >
-                      Create Community
-                    </button>
-                  </div>
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">Loading communities...</span>
                 </div>
               ) : (
-                <>
-                  {/* Search Input for Communities */}
-                  {userCommunities.length > 5 && (
-                    <div className="mb-4">
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search your communities..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {/* User communities */}
-                    {filteredCommunities.map(community => (
-                      <button
-                        key={community.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCommunity(community.id);
-                          setSearchTerm('');
-                        }}
-                        className={`p-4 rounded-lg border-2 text-left transition-colors ${
-                          selectedCommunity === community.id
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <div className="text-lg">{community.avatar || '🏛️'}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 dark:text-white truncate">
-                              {community.displayName || community.name}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                              <Users className="w-3 h-3 mr-1" />
-                              {community.memberCount?.toLocaleString() || 0} members
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                <div className="space-y-3">
+                  {/* Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedCommunity || ''}
+                      onChange={(e) => setSelectedCommunity(e.target.value || null)}
+                      className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                      required
+                    >
+                      <option value="">Choose a community...</option>
+                      {userCommunities.map(community => (
+                        <option key={community.id} value={community.id}>
+                          {community.avatar || '🏛️'} {community.displayName || community.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                   </div>
 
-                  {/* Show message when search yields no results */}
-                  {searchTerm && filteredCommunities.length === 0 && (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                      No communities found matching "{searchTerm}"
+                  {/* Selected Community Preview */}
+                  {selectedCommunityData && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">{selectedCommunityData.avatar || '🏛️'}</div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {selectedCommunityData.displayName || selectedCommunityData.name}
+                          </div>
+                          {selectedCommunityData.description && (
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-1">
+                              {selectedCommunityData.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
-                </>
+
+                  {/* Create New Community Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateCommunityModal(true)}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Create New Community</span>
+                  </button>
+                </div>
               )}
             </div>
 
             {/* Title */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Title *
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter a descriptive title"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 maxLength={300}
               />
@@ -319,13 +316,13 @@ const CreatePostPage: React.FC = () => {
             {/* Content */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Content *
+                Content <span className="text-red-500">*</span>
               </label>
               <RichTextEditor
                 value={content}
                 onChange={setContent}
                 placeholder="Share your thoughts..."
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[200px]"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[200px]"
               />
             </div>
 
@@ -389,7 +386,7 @@ const CreatePostPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !selectedCommunity}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Posting...' : 'Create Post'}
@@ -397,6 +394,79 @@ const CreatePostPage: React.FC = () => {
             </div>
           </form>
         </div>
+
+        {/* Create Community Modal */}
+        {showCreateCommunityModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Create New Community
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowCreateCommunityModal(false);
+                    setNewCommunityName('');
+                    setNewCommunityDescription('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Community Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newCommunityName}
+                    onChange={(e) => setNewCommunityName(e.target.value)}
+                    placeholder="Enter community name"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    maxLength={100}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={newCommunityDescription}
+                    onChange={(e) => setNewCommunityDescription(e.target.value)}
+                    placeholder="Describe your community"
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    maxLength={500}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowCreateCommunityModal(false);
+                      setNewCommunityName('');
+                      setNewCommunityDescription('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateCommunity}
+                    disabled={isCreatingCommunity || !newCommunityName.trim()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isCreatingCommunity ? 'Creating...' : 'Create Community'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     </ErrorBoundary>
   );
