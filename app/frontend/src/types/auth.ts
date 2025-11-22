@@ -78,7 +78,7 @@ export interface ModerationQueue {
   id: string;
   type: 'post' | 'user_report' | 'seller_application' | 'dispute';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_review' | 'resolved' | 'escalated';
+  status: 'pending' | 'quarantined' | 'blocked' | 'allowed' | 'appealed' | 'under_review' | 'in_review' | 'resolved' | 'escalated';
   reportedBy?: string;
   targetId: string;
   targetType: string;

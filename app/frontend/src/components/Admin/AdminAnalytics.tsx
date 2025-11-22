@@ -83,9 +83,9 @@ export function AdminAnalytics() {
       // Calculate real moderation statistics
       const realModerationStats = {
         total: moderationResponse.total || 0,
-        approved: moderationResponse.items?.filter(m => m.status === 'approved').length || 0,
-        rejected: moderationResponse.items?.filter(m => m.status === 'rejected').length || 0,
-        pending: moderationResponse.items?.filter(m => m.status === 'pending').length || 0
+        approved: moderationResponse.items?.filter(m => m.status === 'allowed').length || 0,
+        rejected: moderationResponse.items?.filter(m => m.status === 'blocked' || m.status === 'quarantined').length || 0,
+        pending: moderationResponse.items?.filter(m => m.status === 'pending' || m.status === 'in_review' || m.status === 'escalated').length || 0
       };
 
       // Create analytics object with real data

@@ -3,12 +3,12 @@ import { ethers } from "hardhat";
 async function main() {
   console.log("Initializing chain configurations...");
   
-  // Load cross-chain configuration
-  const crossChainConfig = require("../cross-chain-deployment-config.json");
-  
   // Get deployer account
   const [deployer] = await ethers.getSigners();
   console.log("Using account:", deployer.address);
+  
+  // Load cross-chain configuration
+  const crossChainConfig = require("../cross-chain-deployment-config.json");
   
   // Load deployed contract addresses
   // In a real deployment, you would load these from the deployment files

@@ -3,13 +3,13 @@ import { ethers } from "hardhat";
 async function main() {
   console.log("Testing LinkDAO Cross-Chain Functionality...");
   
-  // Get network information
-  const network = await ethers.provider.getNetwork();
-  console.log("Network:", network.name, "Chain ID:", network.chainId);
-  
   // Get test accounts
   const [deployer, user1, user2] = await ethers.getSigners();
   console.log("Using accounts:", deployer.address, user1.address, user2.address);
+  
+  // Get network information
+  const network = await ethers.provider.getNetwork();
+  console.log("Network:", network.name, "Chain ID:", network.chainId);
   
   // Try to load deployment info
   try {

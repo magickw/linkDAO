@@ -14,14 +14,14 @@ async function main() {
   // Show account balance
   try {
     const balance = await ethers.provider.getBalance(deployer.address);
-    console.log("Account balance:", balance.toString());
+    console.log("Account balance:", ethers.formatEther(balance), "ETH");
   } catch (error) {
     console.log("Could not fetch account balance");
   }
   
   // Deploy based on network
-  if (network.chainId === 1n) { // Ethereum Mainnet
-    console.log("\n=== Deploying Source Chain Contracts (Ethereum) ===");
+  if (network.chainId === 11155111n) { // Sepolia
+    console.log("\n=== Deploying Source Chain Contracts (Sepolia) ===");
     
     // Deploy LDAO Token (if not already deployed)
     console.log("Deploying LDAO Token...");
@@ -61,46 +61,11 @@ async function main() {
     };
     
     const fs = require("fs");
-    fs.writeFileSync(`deployed-cross-chain-ethereum.json`, JSON.stringify(deploymentInfo, null, 2));
-    console.log("Deployment info saved to deployed-cross-chain-ethereum.json");
+    fs.writeFileSync(`deployed-cross-chain-sepolia.json`, JSON.stringify(deploymentInfo, null, 2));
+    console.log("Deployment info saved to deployed-cross-chain-sepolia.json");
     
-  } else if (network.chainId === 8453n) { // Base Mainnet
-    console.log("\n=== Deploying Destination Chain Contracts (Base) ===");
-    
-    // For destination chains, we need the bridge address from source chain
-    // In a real deployment, this would be provided as an environment variable
-    const bridgeAddress = process.env.LDAO_BRIDGE_ADDRESS || "0x0000000000000000000000000000000000000000";
-    
-    // Deploy LDAO Bridge Token
-    console.log("Deploying LDAO Bridge Token...");
-    const LDAOBridgeToken = await ethers.getContractFactory("LDAOBridgeToken");
-    const ldaoBridgeToken = await LDAOBridgeToken.deploy(
-      "Bridged LinkDAO Token",
-      "bLDAO",
-      bridgeAddress,
-      deployer.address
-    );
-    await ldaoBridgeToken.waitForDeployment();
-    const ldaoBridgeTokenAddress = await ldaoBridgeToken.getAddress();
-    console.log("LDAO Bridge Token deployed to:", ldaoBridgeTokenAddress);
-    
-    // Save deployment info
-    const deploymentInfo = {
-      network: network.name,
-      chainId: network.chainId.toString(),
-      deployer: deployer.address,
-      contracts: {
-        LDAOBridgeToken: ldaoBridgeTokenAddress
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    const fs = require("fs");
-    fs.writeFileSync(`deployed-cross-chain-base.json`, JSON.stringify(deploymentInfo, null, 2));
-    console.log("Deployment info saved to deployed-cross-chain-base.json");
-    
-  } else if (network.chainId === 137n) { // Polygon Mainnet
-    console.log("\n=== Deploying Destination Chain Contracts (Polygon) ===");
+  } else if (network.chainId === 84532n) { // Base Sepolia
+    console.log("\n=== Deploying Destination Chain Contracts (Base Sepolia) ===");
     
     // For destination chains, we need the bridge address from source chain
     // In a real deployment, this would be provided as an environment variable
@@ -131,11 +96,11 @@ async function main() {
     };
     
     const fs = require("fs");
-    fs.writeFileSync(`deployed-cross-chain-polygon.json`, JSON.stringify(deploymentInfo, null, 2));
-    console.log("Deployment info saved to deployed-cross-chain-polygon.json");
+    fs.writeFileSync(`deployed-cross-chain-base-sepolia.json`, JSON.stringify(deploymentInfo, null, 2));
+    console.log("Deployment info saved to deployed-cross-chain-base-sepolia.json");
     
-  } else if (network.chainId === 42161n) { // Arbitrum Mainnet
-    console.log("\n=== Deploying Destination Chain Contracts (Arbitrum) ===");
+  } else if (network.chainId === 80001n) { // Polygon Mumbai
+    console.log("\n=== Deploying Destination Chain Contracts (Polygon Mumbai) ===");
     
     // For destination chains, we need the bridge address from source chain
     // In a real deployment, this would be provided as an environment variable
@@ -166,18 +131,52 @@ async function main() {
     };
     
     const fs = require("fs");
-    fs.writeFileSync(`deployed-cross-chain-arbitrum.json`, JSON.stringify(deploymentInfo, null, 2));
-    console.log("Deployment info saved to deployed-cross-chain-arbitrum.json");
+    fs.writeFileSync(`deployed-cross-chain-polygon-mumbai.json`, JSON.stringify(deploymentInfo, null, 2));
+    console.log("Deployment info saved to deployed-cross-chain-polygon-mumbai.json");
+    
+  } else if (network.chainId === 421613n) { // Arbitrum Goerli
+    console.log("\n=== Deploying Destination Chain Contracts (Arbitrum Goerli) ===");
+    
+    // For destination chains, we need the bridge address from source chain
+    // In a real deployment, this would be provided as an environment variable
+    const bridgeAddress = process.env.LDAO_BRIDGE_ADDRESS || "0x0000000000000000000000000000000000000000";
+    
+    // Deploy LDAO Bridge Token
+    console.log("Deploying LDAO Bridge Token...");
+    const LDAOBridgeToken = await ethers.getContractFactory("LDAOBridgeToken");
+    const ldaoBridgeToken = await LDAOBridgeToken.deploy(
+      "Bridged LinkDAO Token",
+      "bLDAO",
+      bridgeAddress,
+      deployer.address
+    );
+    await ldaoBridgeToken.waitForDeployment();
+    const ldaoBridgeTokenAddress = await ldaoBridgeToken.getAddress();
+    console.log("LDAO Bridge Token deployed to:", ldaoBridgeTokenAddress);
+    
+    // Save deployment info
+    const deploymentInfo = {
+      network: network.name,
+      chainId: network.chainId.toString(),
+      deployer: deployer.address,
+      contracts: {
+        LDAOBridgeToken: ldaoBridgeTokenAddress
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    const fs = require("fs");
+    fs.writeFileSync(`deployed-cross-chain-arbitrum-goerli.json`, JSON.stringify(deploymentInfo, null, 2));
+    console.log("Deployment info saved to deployed-cross-chain-arbitrum-goerli.json");
     
   } else {
     console.log("\n=== Network not configured for cross-chain deployment ===");
-    console.log("Please deploy to Ethereum (source) or Base, Polygon, or Arbitrum (destination) networks.");
-    console.log("For testnet deployment, use: npm run deploy:cross-chain:testnet");
+    console.log("Please deploy to Sepolia (source) or Base Sepolia, Polygon Mumbai, or Arbitrum Goerli (destination) networks.");
   }
   
   console.log("\n=== Cross-Chain Deployment Complete ===");
   console.log("Next steps:");
-  console.log("1. If deployed to Ethereum, deploy LDAOBridgeToken to destination chains");
+  console.log("1. If deployed to Sepolia, deploy LDAOBridgeToken to destination chains");
   console.log("2. Set up validator network");
   console.log("3. Initialize chain configurations");
   console.log("4. Test cross-chain transfers");

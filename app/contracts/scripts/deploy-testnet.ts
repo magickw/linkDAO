@@ -3,14 +3,21 @@ import { ethers } from "hardhat";
 async function main() {
   console.log("Starting LinkDAO Cross-Chain Deployment...");
   
+  // Get deployer account
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying with account:", deployer.address);
+  
   // Get network information
   const network = await ethers.provider.getNetwork();
   console.log("Deploying to network:", network.name, "Chain ID:", network.chainId);
   
-  // Get deployer account
-  const [deployer] = await ethers.getSigners();
-  console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
+  // Show account balance
+  try {
+    const balance = await ethers.provider.getBalance(deployer.address);
+    console.log("Account balance:", balance.toString());
+  } catch (error) {
+    console.log("Could not fetch account balance");
+  }
   
   // Deploy based on network
   if (network.chainId === 11155111n) { // Sepolia
