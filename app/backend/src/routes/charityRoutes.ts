@@ -11,7 +11,7 @@ const router = Router();
  * @access Admin only
  */
 router.get('/charities', authenticate, validateAdminRole, (req, res) => {
-    charityController.getCharities(req, res);
+    return charityController.getCharities(req, res);
 });
 
 /**
@@ -20,7 +20,7 @@ router.get('/charities', authenticate, validateAdminRole, (req, res) => {
  * @access Admin only
  */
 router.get('/charities/stats', authenticate, validateAdminRole, (req, res) => {
-    charityController.getCharityStats(req, res);
+    return charityController.getCharityStats(req, res);
 });
 
 /**
@@ -29,7 +29,7 @@ router.get('/charities/stats', authenticate, validateAdminRole, (req, res) => {
  * @access Admin only
  */
 router.get('/charities/:id', authenticate, validateAdminRole, (req, res) => {
-    charityController.getCharity(req, res);
+    return charityController.getCharity(req, res);
 });
 
 /**
@@ -38,7 +38,7 @@ router.get('/charities/:id', authenticate, validateAdminRole, (req, res) => {
  * @access Admin only
  */
 router.post('/charities/:id/approve', authenticate, validateAdminRole, (req, res) => {
-    charityController.approveCharity(req, res);
+    return charityController.approveCharity(req, res);
 });
 
 /**
@@ -47,7 +47,7 @@ router.post('/charities/:id/approve', authenticate, validateAdminRole, (req, res
  * @access Admin only
  */
 router.post('/charities/:id/reject', authenticate, validateAdminRole, (req, res) => {
-    charityController.rejectCharity(req, res);
+    return charityController.rejectCharity(req, res);
 });
 
 export default router;
