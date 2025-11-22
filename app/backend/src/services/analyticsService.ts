@@ -324,6 +324,9 @@ export class AnalyticsService {
         geoData = await this.getLocationFromIP(metadata.ipAddress);
       }
 
+      // Convert "anonymous" to NULL for UUID column compatibility
+      const userIdValue = userId === 'anonymous' ? null : userId;
+
       // Insert into user_analytics table
       await db.execute(sql`
         INSERT INTO user_analytics (
@@ -331,7 +334,7 @@ export class AnalyticsService {
           page_url, user_agent, ip_address, country, city,
           device_type, browser, referrer, timestamp
         ) VALUES (
-          ${userId}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
+          ${userIdValue}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
           ${metadata?.pageUrl}, ${metadata?.userAgent}, ${metadata?.ipAddress},
           ${geoData.country}, ${geoData.city}, ${metadata?.deviceType},
           ${metadata?.browser}, ${metadata?.referrer}, NOW()

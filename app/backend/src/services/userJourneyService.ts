@@ -99,6 +99,9 @@ export class UserJourneyService {
     }
   ): Promise<void> {
     try {
+      // Convert "anonymous" to NULL for UUID column compatibility
+      const userIdValue = userId === 'anonymous' ? null : userId;
+
       // Insert the event into user_analytics table
       await db.execute(sql`
         INSERT INTO user_analytics (
@@ -106,7 +109,7 @@ export class UserJourneyService {
           page_url, user_agent, ip_address, country,
           device_type, browser, referrer, timestamp
         ) VALUES (
-          ${userId}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
+          ${userIdValue}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
           ${pageUrl}, ${metadata?.userAgent}, ${metadata?.ipAddress}, ${metadata?.country},
           ${metadata?.deviceType}, ${metadata?.browser}, ${metadata?.referrer}, NOW()
         )
