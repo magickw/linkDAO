@@ -160,38 +160,51 @@ class SellerDashboardService {
         };
       }
 
+      // If user not found in users table, we can't query orders (which use UUID)
+      // Return default stats for orders but still show listings (which use seller.id)
+      if (!user) {
+        safeLogger.warn('User not found in users table for seller dashboard, returning partial stats', { walletAddress });
+      }
+
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-      // Use user UUID for orders queries if available, otherwise use seller.id as fallback
-      // This fixes the schema mismatch where orders.sellerId expects UUID but seller.id is integer
-      const sellerIdForOrders = user?.id || seller.id;
+      // Use user UUID for orders queries - DO NOT fall back to seller.id as it's an integer
+      // orders.sellerId expects UUID (references users.id), not integer (sellers.id)
+      const sellerIdForOrders = user?.id;
 
-      // OPTIMIZED: Combined sales query with conditional aggregation
-      const [salesData] = await tx
-        .select({
-          today: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${todayStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
-          week: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${weekStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
-          month: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${monthStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
-          total: sql<string>`COALESCE(SUM(${orders.amount}), 0)`,
-          pending: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'pending' THEN ${orders.amount} ELSE 0 END), 0)`,
-          processing: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'processing' THEN ${orders.amount} ELSE 0 END), 0)`,
-        })
-        .from(orders)
-        .where(eq(orders.sellerId, sellerIdForOrders as any));
+      // Default values for sales and order data (used when user not found)
+      let salesData: { today: string; week: string; month: string; total: string; pending: string; processing: string } | undefined;
+      let orderCounts: { pending: number; processing: number; completed: number; total: number } | undefined;
 
-      // OPTIMIZED: Combined order counts with aggregation
-      const [orderCounts] = await tx
-        .select({
-          pending: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)`,
-          processing: sql<number>`COUNT(CASE WHEN ${orders.status} = 'processing' THEN 1 END)`,
-          completed: sql<number>`COUNT(CASE WHEN ${orders.status} = 'completed' THEN 1 END)`,
-          total: sql<number>`COUNT(*)`,
-        })
-        .from(orders)
-        .where(eq(orders.sellerId, sellerIdForOrders as any));
+      // Only query orders if we have a valid user UUID
+      if (sellerIdForOrders) {
+        // OPTIMIZED: Combined sales query with conditional aggregation
+        [salesData] = await tx
+          .select({
+            today: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${todayStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
+            week: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${weekStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
+            month: sql<string>`COALESCE(SUM(CASE WHEN ${orders.createdAt} >= ${monthStart}::timestamp THEN ${orders.amount} ELSE 0 END), 0)`,
+            total: sql<string>`COALESCE(SUM(${orders.amount}), 0)`,
+            pending: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'pending' THEN ${orders.amount} ELSE 0 END), 0)`,
+            processing: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'processing' THEN ${orders.amount} ELSE 0 END), 0)`,
+          })
+          .from(orders)
+          .where(eq(orders.sellerId, sellerIdForOrders));
+
+        // OPTIMIZED: Combined order counts with aggregation
+        [orderCounts] = await tx
+          .select({
+            pending: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)`,
+            processing: sql<number>`COUNT(CASE WHEN ${orders.status} = 'processing' THEN 1 END)`,
+            completed: sql<number>`COUNT(CASE WHEN ${orders.status} = 'completed' THEN 1 END)`,
+            total: sql<number>`COUNT(*)`,
+          })
+          .from(orders)
+          .where(eq(orders.sellerId, sellerIdForOrders));
+      }
 
       // OPTIMIZED: Combined listing counts with aggregation
       // Note: products.sellerId uses the sellers.id (integer), not users.id (UUID)
@@ -429,44 +442,53 @@ class SellerDashboardService {
         };
       }
 
-      // Use user UUID for orders queries if available, otherwise use seller.id as fallback
-      // This fixes the schema mismatch where orders.sellerId expects UUID but seller.id is integer
-      const sellerIdForOrders = user?.id || seller.id;
+      // Use user UUID for orders queries - DO NOT fall back to seller.id as it's an integer
+      // orders.sellerId expects UUID (references users.id), not integer (sellers.id)
+      const sellerIdForOrders = user?.id;
 
-      // OPTIMIZED: Combined analytics query with proper limits
-      const [analyticsData] = await tx
-        .select({
-          totalRevenue: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'completed' THEN ${orders.amount} ELSE 0 END), 0)`,
-          totalOrders: sql<number>`COUNT(*)`,
-          completedOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'completed' THEN 1 END)`,
-          pendingOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)`,
-          processingOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'processing' THEN 1 END)`,
-        })
-        .from(orders)
-        .where(
-          and(
-            eq(orders.sellerId, sellerIdForOrders as any),
-            gte(orders.createdAt, periodStart)
-          )
-        );
+      // Default values for analytics data (used when user not found)
+      let analyticsData: { totalRevenue: string; totalOrders: number; completedOrders: number; pendingOrders: number; processingOrders: number } | undefined;
+      let dailyData: Array<{ date: string; revenue: string; orderCount: number }> = [];
 
-      // OPTIMIZED: Limited daily breakdown with reasonable limit
-      const dailyData = await tx
-        .select({
-          date: sql<string>`DATE(${orders.createdAt})`,
-          revenue: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'completed' THEN ${orders.amount} ELSE 0 END), 0)`,
-          orderCount: sql<number>`COUNT(*)`,
-        })
-        .from(orders)
-        .where(
-          and(
-            eq(orders.sellerId, sellerIdForOrders as any),
-            gte(orders.createdAt, periodStart)
+      // Only query orders if we have a valid user UUID
+      if (sellerIdForOrders) {
+        // OPTIMIZED: Combined analytics query with proper limits
+        [analyticsData] = await tx
+          .select({
+            totalRevenue: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'completed' THEN ${orders.amount} ELSE 0 END), 0)`,
+            totalOrders: sql<number>`COUNT(*)`,
+            completedOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'completed' THEN 1 END)`,
+            pendingOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'pending' THEN 1 END)`,
+            processingOrders: sql<number>`COUNT(CASE WHEN ${orders.status} = 'processing' THEN 1 END)`,
+          })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.sellerId, sellerIdForOrders),
+              gte(orders.createdAt, periodStart)
+            )
+          );
+
+        // OPTIMIZED: Limited daily breakdown with reasonable limit
+        dailyData = await tx
+          .select({
+            date: sql<string>`DATE(${orders.createdAt})`,
+            revenue: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'completed' THEN ${orders.amount} ELSE 0 END), 0)`,
+            orderCount: sql<number>`COUNT(*)`,
+          })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.sellerId, sellerIdForOrders),
+              gte(orders.createdAt, periodStart)
+            )
           )
-        )
-        .groupBy(sql`DATE(${orders.createdAt})`)
-        .orderBy(desc(sql`DATE(${orders.createdAt})`))
-        .limit(90); // Limit to 90 days max
+          .groupBy(sql`DATE(${orders.createdAt})`)
+          .orderBy(desc(sql`DATE(${orders.createdAt})`))
+          .limit(90); // Limit to 90 days max
+      } else {
+        safeLogger.warn('User not found in users table for analytics, returning partial data', { walletAddress });
+      }
 
       // Calculate performance metrics safely
       const totalRevenue = Number(analyticsData?.totalRevenue || 0);
