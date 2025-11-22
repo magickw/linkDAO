@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { charityController } from '../controllers/charityController';
-import { authenticate } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
@@ -10,7 +10,7 @@ const router = Router();
  * @desc Get all charity proposals
  * @access Admin only
  */
-router.get('/charities', authenticate, validateAdminRole, (req, res) => {
+router.get('/charities', authenticateToken, validateAdminRole, (req, res) => {
     return charityController.getCharities(req, res);
 });
 
@@ -19,7 +19,7 @@ router.get('/charities', authenticate, validateAdminRole, (req, res) => {
  * @desc Get charity statistics
  * @access Admin only
  */
-router.get('/charities/stats', authenticate, validateAdminRole, (req, res) => {
+router.get('/charities/stats', authenticateToken, validateAdminRole, (req, res) => {
     return charityController.getCharityStats(req, res);
 });
 
@@ -28,7 +28,7 @@ router.get('/charities/stats', authenticate, validateAdminRole, (req, res) => {
  * @desc Get a single charity proposal
  * @access Admin only
  */
-router.get('/charities/:id', authenticate, validateAdminRole, (req, res) => {
+router.get('/charities/:id', authenticateToken, validateAdminRole, (req, res) => {
     return charityController.getCharity(req, res);
 });
 
@@ -37,7 +37,7 @@ router.get('/charities/:id', authenticate, validateAdminRole, (req, res) => {
  * @desc Approve a charity proposal
  * @access Admin only
  */
-router.post('/charities/:id/approve', authenticate, validateAdminRole, (req, res) => {
+router.post('/charities/:id/approve', authenticateToken, validateAdminRole, (req, res) => {
     return charityController.approveCharity(req, res);
 });
 
@@ -46,7 +46,7 @@ router.post('/charities/:id/approve', authenticate, validateAdminRole, (req, res
  * @desc Reject a charity proposal
  * @access Admin only
  */
-router.post('/charities/:id/reject', authenticate, validateAdminRole, (req, res) => {
+router.post('/charities/:id/reject', authenticateToken, validateAdminRole, (req, res) => {
     return charityController.rejectCharity(req, res);
 });
 
