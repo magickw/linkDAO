@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { sellers, orders, products, notifications, sellerTransactions } from '../db/schema';
+import { sellers, orders, products, notifications, sellerTransactions, users } from '../db/schema';
 import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
 import { cacheService } from './cacheService';
 import { safeLogger } from '../utils/safeLogger';
@@ -106,11 +106,20 @@ class SellerDashboardService {
 
     // Use transaction to reduce connection overhead
     const stats = await db.transaction(async (tx) => {
-      // Verify seller exists
+      // Verify seller exists and get user UUID for orders queries
+      // NOTE: sellers.id is an integer (serial), but orders.sellerId references users.id (UUID)
+      // So we need to get the user's UUID by wallet address for querying orders
       const [seller] = await tx
         .select({ id: sellers.id })
         .from(sellers)
         .where(eq(sellers.walletAddress, walletAddress))
+        .limit(1);
+
+      // Get user UUID for orders queries (orders.sellerId references users.id which is UUID)
+      const [user] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
         .limit(1);
 
       if (!seller) {
@@ -156,6 +165,10 @@ class SellerDashboardService {
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
+      // Use user UUID for orders queries if available, otherwise use seller.id as fallback
+      // This fixes the schema mismatch where orders.sellerId expects UUID but seller.id is integer
+      const sellerIdForOrders = user?.id || seller.id;
+
       // OPTIMIZED: Combined sales query with conditional aggregation
       const [salesData] = await tx
         .select({
@@ -167,7 +180,7 @@ class SellerDashboardService {
           processing: sql<string>`COALESCE(SUM(CASE WHEN ${orders.status} = 'processing' THEN ${orders.amount} ELSE 0 END), 0)`,
         })
         .from(orders)
-        .where(eq(orders.sellerId, seller.id as any));
+        .where(eq(orders.sellerId, sellerIdForOrders as any));
 
       // OPTIMIZED: Combined order counts with aggregation
       const [orderCounts] = await tx
@@ -178,9 +191,10 @@ class SellerDashboardService {
           total: sql<number>`COUNT(*)`,
         })
         .from(orders)
-        .where(eq(orders.sellerId, seller.id as any));
+        .where(eq(orders.sellerId, sellerIdForOrders as any));
 
       // OPTIMIZED: Combined listing counts with aggregation
+      // Note: products.sellerId uses the sellers.id (integer), not users.id (UUID)
       const [listingCounts] = await tx
         .select({
           active: sql<number>`COUNT(CASE WHEN ${products.status} = 'active' THEN 1 END)`,
@@ -365,7 +379,7 @@ class SellerDashboardService {
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<AnalyticsData> {
     // OPTIMIZED: Validate and limit period to prevent excessive data queries
     const days = Math.min(Math.max(parseInt(period.replace('d', '')) || 30, 1), 365); // Between 1-365 days
-    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     // OPTIMIZED: Use single transaction for all analytics queries
     return await db.transaction(async (tx) => {
@@ -374,6 +388,13 @@ class SellerDashboardService {
         .select({ id: sellers.id })
         .from(sellers)
         .where(eq(sellers.walletAddress, walletAddress))
+        .limit(1);
+
+      // Get user UUID for orders queries (orders.sellerId references users.id which is UUID)
+      const [user] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
         .limit(1);
 
       if (!seller) {
@@ -408,6 +429,10 @@ class SellerDashboardService {
         };
       }
 
+      // Use user UUID for orders queries if available, otherwise use seller.id as fallback
+      // This fixes the schema mismatch where orders.sellerId expects UUID but seller.id is integer
+      const sellerIdForOrders = user?.id || seller.id;
+
       // OPTIMIZED: Combined analytics query with proper limits
       const [analyticsData] = await tx
         .select({
@@ -420,7 +445,7 @@ class SellerDashboardService {
         .from(orders)
         .where(
           and(
-            eq(orders.sellerId, seller.id as any),
+            eq(orders.sellerId, sellerIdForOrders as any),
             gte(orders.createdAt, periodStart)
           )
         );
@@ -435,7 +460,7 @@ class SellerDashboardService {
         .from(orders)
         .where(
           and(
-            eq(orders.sellerId, seller.id as any),
+            eq(orders.sellerId, sellerIdForOrders as any),
             gte(orders.createdAt, periodStart)
           )
         )
