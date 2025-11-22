@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LineChart, BarChart, AreaChart, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, BarChart, AreaChart, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, Bar } from 'recharts';
 import { GlassPanel } from '@/design-system';
 import { TrendingUp, Users, Shield, ShoppingBag } from 'lucide-react';
 import { adminService } from '@/services/adminService';
@@ -60,10 +60,10 @@ export function DashboardCharts({
     };
 
     // Only load from API if no data is provided
-    if (userGrowthData.length === 0 && 
-        moderationData.length === 0 && 
-        sellerPerformanceData.length === 0 && 
-        disputeData.length === 0) {
+    if (userGrowthData.length === 0 &&
+      moderationData.length === 0 &&
+      sellerPerformanceData.length === 0 &&
+      disputeData.length === 0) {
       loadChartData();
     } else {
       setChartData({

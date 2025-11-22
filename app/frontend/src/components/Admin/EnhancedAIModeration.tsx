@@ -26,6 +26,7 @@ import {
   Bell
 } from 'lucide-react';
 import { Button, GlassPanel } from '@/design-system';
+import { adminService } from '@/services/adminService';
 
 interface ModerationItem {
   id: string;
@@ -119,41 +120,73 @@ export const EnhancedAIModeration: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch real data from admin service
-      const pendingItemsResponse = await adminService.getModerationQueue({ 
+      const pendingItemsResponse = await adminService.getModerationQueue({
         status: 'pending',
         limit: 20
       });
-      
-      const reportsResponse = await adminService.getModerationQueue({ 
+
+      const reportsResponse = await adminService.getModerationQueue({
         type: 'report',
         limit: 10
       });
 
       // Update stats with real data if available
-      setPendingItems(pendingItemsResponse.items || []);
-      setReports(reportsResponse.items || []);
-      
+      const mappedPendingItems: ModerationItem[] = (pendingItemsResponse.items || []).map((item: any) => ({
+        id: item.id,
+        contentId: item.targetId,
+        contentType: item.targetType as any,
+        content: 'Content unavailable', // Placeholder as API doesn't return content yet
+        authorId: 'unknown',
+        authorHandle: '@unknown',
+        status: item.status as any,
+        riskScore: item.priority === 'high' ? 0.8 : item.priority === 'medium' ? 0.5 : 0.2,
+        moderationCategories: [item.reason],
+        explanation: item.reason,
+        createdAt: item.createdAt,
+        confidence: 0.8,
+        context: {
+          userHistory: {
+            previousViolations: 0,
+            accountAge: 0,
+            reputationScore: 0.5
+          }
+        }
+      }));
+      setPendingItems(mappedPendingItems);
+
+      const mappedReports: Report[] = (reportsResponse.items || []).map((item: any) => ({
+        id: item.id,
+        contentId: item.targetId,
+        contentType: item.targetType,
+        reporterId: 'unknown',
+        reporterHandle: '@unknown',
+        reason: item.reason,
+        details: 'No details available',
+        status: 'open',
+        createdAt: item.createdAt,
+        priority: item.priority as any || 'medium'
+      }));
+      setReports(mappedReports);
+
       // Fetch moderation statistics for the stats section
       const statsResponse = await adminService.getAdminStats();
       setStats({
-        totalPending: pendingItemsResponse.total || 0,
-        autoApproved: 0, // This would come from a specific API endpoint for auto-approved items
-        flaggedForReview: 0, // This would come from a specific API endpoint
-        averageProcessingTime: 0, // This would come from a specific API endpoint
-        accuracyRate: 0 // This would come from a specific API endpoint
+        ...stats, // Keep existing fields
+        totalPendingReview: pendingItemsResponse.total || 0,
+        totalReports: reportsResponse.total || 0,
       });
     } catch (error) {
       console.error('Failed to load moderation dashboard:', error);
-      
+
       // Fallback to mock data if API fails
       const mockPendingItems: ModerationItem[] = [
         {
           id: '1',
           contentId: 'post_123',
           contentType: 'post',
-          content: 'Check out this amazing deal! Buy now before it's too late! Limited time offer!',
+          content: 'Check out this amazing deal! Buy now before it\'s too late! Limited time offer!',
           authorId: 'user_456',
           authorHandle: '@spamuser',
           status: 'pending_review',
@@ -276,8 +309,6 @@ export const EnhancedAIModeration: React.FC = () => {
       setReports(mockReports);
       setStats(mockStats);
 
-    } catch (error) {
-      console.error('Failed to load moderation dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -467,11 +498,10 @@ export const EnhancedAIModeration: React.FC = () => {
           <nav className="flex space-x-8 px-6" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('queue')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'queue'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'queue'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
             >
               <span className="flex items-center space-x-2">
                 <Clock className="w-4 h-4" />
@@ -480,11 +510,10 @@ export const EnhancedAIModeration: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('reports')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'reports'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'reports'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
             >
               <span className="flex items-center space-x-2">
                 <Flag className="w-4 h-4" />
@@ -493,11 +522,10 @@ export const EnhancedAIModeration: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'analytics'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'analytics'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
             >
               <span className="flex items-center space-x-2">
                 <BarChart3 className="w-4 h-4" />
@@ -506,11 +534,10 @@ export const EnhancedAIModeration: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'settings'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'settings'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
             >
               <span className="flex items-center space-x-2">
                 <Settings className="w-4 h-4" />
@@ -706,12 +733,11 @@ export const EnhancedAIModeration: React.FC = () => {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            report.priority === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${report.priority === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
                             report.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400' :
-                            report.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                            'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                          }`}>
+                              report.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                            }`}>
                             {report.priority}
                           </span>
                           <span className="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 rounded-full text-xs font-semibold">
@@ -802,7 +828,7 @@ export const EnhancedAIModeration: React.FC = () => {
             <div className="space-y-6">
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Model Configuration</h3>
-                
+
                 <div className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -814,7 +840,7 @@ export const EnhancedAIModeration: React.FC = () => {
                       max="1"
                       step="0.01"
                       value={modelSettings.sensitivity}
-                      onChange={(e) => setModelSettings({...modelSettings, sensitivity: parseFloat(e.target.value)})}
+                      onChange={(e) => setModelSettings({ ...modelSettings, sensitivity: parseFloat(e.target.value) })}
                       className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                     />
                     <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -822,7 +848,7 @@ export const EnhancedAIModeration: React.FC = () => {
                       <span>More Sensitive</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Auto-Approve Threshold: {(modelSettings.autoApproveThreshold * 100).toFixed(0)}%
@@ -833,11 +859,11 @@ export const EnhancedAIModeration: React.FC = () => {
                       max="1"
                       step="0.01"
                       value={modelSettings.autoApproveThreshold}
-                      onChange={(e) => setModelSettings({...modelSettings, autoApproveThreshold: parseFloat(e.target.value)})}
+                      onChange={(e) => setModelSettings({ ...modelSettings, autoApproveThreshold: parseFloat(e.target.value) })}
                       className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Auto-Reject Threshold: {(modelSettings.autoRejectThreshold * 100).toFixed(0)}%
@@ -848,18 +874,18 @@ export const EnhancedAIModeration: React.FC = () => {
                       max="1"
                       step="0.01"
                       value={modelSettings.autoRejectThreshold}
-                      onChange={(e) => setModelSettings({...modelSettings, autoRejectThreshold: parseFloat(e.target.value)})}
+                      onChange={(e) => setModelSettings({ ...modelSettings, autoRejectThreshold: parseFloat(e.target.value) })}
                       className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center">
                       <input
                         id="context-analysis"
                         type="checkbox"
                         checked={modelSettings.enableContextAnalysis}
-                        onChange={(e) => setModelSettings({...modelSettings, enableContextAnalysis: e.target.checked})}
+                        onChange={(e) => setModelSettings({ ...modelSettings, enableContextAnalysis: e.target.checked })}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <label htmlFor="context-analysis" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
@@ -871,7 +897,7 @@ export const EnhancedAIModeration: React.FC = () => {
                         id="user-history"
                         type="checkbox"
                         checked={modelSettings.enableUserHistory}
-                        onChange={(e) => setModelSettings({...modelSettings, enableUserHistory: e.target.checked})}
+                        onChange={(e) => setModelSettings({ ...modelSettings, enableUserHistory: e.target.checked })}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <label htmlFor="user-history" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
@@ -879,9 +905,9 @@ export const EnhancedAIModeration: React.FC = () => {
                       </label>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-end">
-                    <Button 
+                    <Button
                       onClick={saveModelSettings}
                       className="flex items-center gap-2"
                     >
@@ -891,7 +917,7 @@ export const EnhancedAIModeration: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Model Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
