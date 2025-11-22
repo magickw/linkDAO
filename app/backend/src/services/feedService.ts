@@ -224,6 +224,7 @@ export class FeedService {
           authorId: posts.authorId,
           dao: posts.dao,
           title: posts.title,
+          content: posts.content, // Include content directly
           contentCid: posts.contentCid,
           mediaCids: posts.mediaCids,
           tags: posts.tags,
@@ -280,6 +281,7 @@ export class FeedService {
           id: quickPosts.id,
           authorId: quickPosts.authorId,
           dao: sql<string>`NULL` as unknown as string, // Quick posts don't have DAO
+          content: quickPosts.content, // Include content directly
           contentCid: quickPosts.contentCid,
           mediaCids: quickPosts.mediaCids,
           tags: quickPosts.tags,

@@ -7,10 +7,10 @@
 export interface UserActivity {
   id: string;
   userId: string;
-  activityType: 'post_create' | 'post_like' | 'post_comment' | 'post_share' | 
-                 'community_join' | 'community_leave' | 'community_post' |
-                 'message_send' | 'message_read' | 'profile_view' | 'search' |
-                 'governance_vote' | 'tip_send' | 'tip_receive';
+  activityType: 'post_create' | 'post_like' | 'post_comment' | 'post_share' |
+  'community_join' | 'community_leave' | 'community_post' |
+  'message_send' | 'message_read' | 'profile_view' | 'search' |
+  'governance_vote' | 'tip_send' | 'tip_receive';
   targetType: 'post' | 'community' | 'user' | 'message' | 'proposal';
   targetId: string;
   metadata: Record<string, any>;
@@ -175,7 +175,7 @@ class UserActivityService {
   }> {
     try {
       const params = new URLSearchParams();
-      
+
       if (options.page) params.append('page', options.page.toString());
       if (options.limit) params.append('limit', options.limit.toString());
       if (options.activityTypes) {
@@ -267,7 +267,7 @@ class UserActivityService {
   }> {
     try {
       const response = await fetch(
-        `${this.baseUrl}/reputation/${userAddress}`,
+        `/api/reputation/${userAddress}`,
         {
           headers: {
             'Authorization': `Bearer ${this.getAuthToken()}`,

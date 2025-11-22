@@ -2,6 +2,7 @@ export interface Post {
   id: string;
   author: string;
   parentId: string | null;
+  content?: string; // Direct content from DB to avoid IPFS fetch
   contentCid: string;
   mediaCids: string[];
   tags: string[];

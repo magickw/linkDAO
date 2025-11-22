@@ -25,7 +25,7 @@ export class PostService {
           hasDbInstance: !!databaseService.db,
           timestamp: new Date().toISOString()
         });
-        
+
         // The database service might have been initialized but failed to connect
         // Check if the database connection is actually available by testing it
         try {
@@ -152,7 +152,7 @@ export class PostService {
           input.tags && input.tags.length > 0 ? input.tags : undefined,
           input.onchainRef
         );
-        
+
         // Update post with moderation metadata
         try {
           await databaseService.updatePost(dbPost.id, {
@@ -200,12 +200,12 @@ export class PostService {
       return post;
     } catch (error) {
       safeLogger.error('Error creating post:', error);
-      
+
       // If it's a database connectivity issue, throw a specific error
       if (error.message && error.message.includes('Database service temporarily unavailable')) {
         throw new Error('Service temporarily unavailable. Please try again later.');
       }
-      
+
       // Re-throw other errors
       throw error;
     }
@@ -218,16 +218,16 @@ export class PostService {
       safeLogger.info(`Invalid post ID: ${id}`);
       return undefined;
     }
-    
+
     try {
       // Fetch the post from database using the new dedicated method
       const dbPost = await databaseService.getPostById(postId);
-      
+
       if (!dbPost) {
         safeLogger.info(`Post not found with ID: ${postId}`);
         return undefined;
       }
-      
+
       // Get user profile for author info
       const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
       if (!author) {
@@ -237,6 +237,7 @@ export class PostService {
           id: dbPost.id.toString(),
           author: 'unknown',
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
           contentCid: dbPost.contentCid,
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -244,11 +245,12 @@ export class PostService {
           onchainRef: '',
         };
       }
-      
+
       return {
         id: dbPost.id.toString(),
         author: author.walletAddress,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        content: dbPost.content,
         contentCid: dbPost.contentCid,
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -267,19 +269,20 @@ export class PostService {
     if (!user) {
       return [];
     }
-    
+
     // Get posts from database
     const dbPosts = await databaseService.getPostsByAuthor(user.id);
-    
+
     // Convert to Post model
     const posts: Post[] = dbPosts.map((dbPost: any) => {
       // Handle potential null dates by providing default values
       const createdAt = dbPost.createdAt || new Date();
-      
+
       return {
         id: dbPost.id.toString(),
         author,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        content: dbPost.content,
         contentCid: dbPost.contentCid,
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
         tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -287,7 +290,7 @@ export class PostService {
         onchainRef: dbPost.onchainRef || ''
       };
     });
-    
+
     return posts;
   }
 
@@ -295,16 +298,17 @@ export class PostService {
     try {
       // Get posts by tag from database
       const dbPosts = await databaseService.getPostsByTag(tag.toLowerCase());
-      
+
       // Convert to Post model with proper author information
       const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
         const author = await userProfileService.getProfileById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
-        
+
         return {
           id: dbPost.id.toString(),
           author: authorAddress,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
           contentCid: dbPost.contentCid,
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -312,7 +316,7 @@ export class PostService {
           onchainRef: ''
         };
       }));
-      
+
       return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
       safeLogger.error('Error getting posts by tag:', error);
@@ -324,21 +328,22 @@ export class PostService {
     try {
       // Get posts by community from database
       const dbPosts = await databaseService.getPostsByCommunity(communityId);
-      
+
       // Convert to Post model with proper author information
       const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
         // Get the author's profile
         const author = await userProfileService.getProfileById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
-        
+
         // Handle potential null dates by providing default values
         const createdAt = dbPost.createdAt || new Date();
         const updatedAt = dbPost.updatedAt || new Date();
-        
+
         return {
           id: dbPost.id.toString(),
           author: authorAddress,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
           contentCid: dbPost.contentCid,
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -353,7 +358,7 @@ export class PostService {
           stakedValue: dbPost.stakedValue ? parseFloat(dbPost.stakedValue.toString()) : undefined
         };
       }));
-      
+
       // Sort by creation date (newest first)
       return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     } catch (error) {
@@ -434,13 +439,13 @@ export class PostService {
 
       // Delete from database
       const deleted = await databaseService.deletePost(postId);
-      
+
       if (deleted) {
         safeLogger.info(`Post ${id} deleted successfully`);
         // Note: In production, you might want to unpin from IPFS
         // await this.metadataService.unpinFromIPFS(existingPost.contentCid);
       }
-      
+
       return deleted;
     } catch (error) {
       safeLogger.error('Error deleting post:', error);
@@ -452,7 +457,7 @@ export class PostService {
     try {
       // Get all posts from database
       const dbPosts = await databaseService.getAllPosts();
-      
+
       // Convert to Post model with proper author information
       const posts: Post[] = [];
       for (const dbPost of dbPosts) {
@@ -468,14 +473,15 @@ export class PostService {
               authorAddress = 'unknown';
             }
           }
-          
+
           // Handle potential null dates by providing default values
           const createdAt = dbPost.createdAt || new Date();
-          
+
           posts.push({
             id: dbPost.id.toString(),
             author: authorAddress,
             parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+            content: dbPost.content,
             contentCid: dbPost.contentCid,
             mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
             tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -487,10 +493,10 @@ export class PostService {
           continue; // Skip this post and continue with others
         }
       }
-      
+
       // Sort by creation date (newest first)
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
+
       return posts;
     } catch (error) {
       safeLogger.error('Error getting all posts:', error);
@@ -526,26 +532,27 @@ export class PostService {
       // - Marketplace updates from followed users or DAOs
       // - AI suggested posts based on user interests
       // - Staking/boosted posts that should be prioritized
-      
+
       // Get posts from followed users (including self)
       const postsPromises = followingIds.map((userId: any) => databaseService.getPostsByAuthor(userId));
       const postsArrays = await Promise.all(postsPromises);
-      
+
       // Flatten the arrays and convert to Post model
       const allPosts = postsArrays.flat();
-      
+
       const posts: Post[] = await Promise.all(allPosts.map(async (dbPost: any) => {
         // Get the author's address
         const author = await databaseService.getUserById(dbPost.authorId);
         const authorAddress = author ? author.walletAddress : 'unknown';
-        
+
         // Handle potential null dates by providing default values
         const createdAt = dbPost.createdAt || new Date();
-        
+
         return {
           id: dbPost.id.toString(),
           author: authorAddress,
           parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          content: dbPost.content,
           contentCid: dbPost.contentCid,
           mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
           tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
@@ -553,21 +560,21 @@ export class PostService {
           onchainRef: dbPost.onchainRef || ''
         };
       }));
-      
+
       // Sort by creation date (newest first)
       posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-      
+
       // Remove duplicates by ID
       const uniquePosts: Post[] = [];
       const seenIds = new Set<string>();
-      
+
       for (const post of posts) {
         if (!seenIds.has(post.id)) {
           seenIds.add(post.id);
           uniquePosts.push(post);
         }
       }
-      
+
       return uniquePosts;
     } catch (error) {
       safeLogger.error("Error getting personalized feed:", error);

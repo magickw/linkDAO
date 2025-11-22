@@ -96,7 +96,7 @@ export class DatabaseService {
         handle: handle || null,
         profileCid: profileCid || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating user:", error);
@@ -119,7 +119,7 @@ export class DatabaseService {
         isTokenGated: false,
         updatedAt: new Date()
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating post:", error);
@@ -134,6 +134,7 @@ export class DatabaseService {
           id: schema.posts.id,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
+          content: schema.posts.content,
           contentCid: schema.posts.contentCid,
           parentId: schema.posts.parentId,
           mediaCids: schema.posts.mediaCids,
@@ -167,6 +168,7 @@ export class DatabaseService {
           id: schema.posts.id,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
+          content: schema.posts.content,
           contentCid: schema.posts.contentCid,
           parentId: schema.posts.parentId,
           mediaCids: schema.posts.mediaCids,
@@ -202,6 +204,7 @@ export class DatabaseService {
           id: schema.posts.id,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
+          content: schema.posts.content,
           contentCid: schema.posts.contentCid,
           parentId: schema.posts.parentId,
           mediaCids: schema.posts.mediaCids,
@@ -229,7 +232,7 @@ export class DatabaseService {
     }
   }
 
-  
+
 
   async getPostsByCommunity(communityId: string) {
     try {
@@ -238,6 +241,7 @@ export class DatabaseService {
           id: schema.posts.id,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
+          content: schema.posts.content,
           contentCid: schema.posts.contentCid,
           parentId: schema.posts.parentId,
           mediaCids: schema.posts.mediaCids,
@@ -258,7 +262,7 @@ export class DatabaseService {
         .from(schema.posts)
         .where(eq(schema.posts.communityId, communityId))
         .orderBy(desc(schema.posts.createdAt));
-      
+
       return result;
     } catch (error) {
       safeLogger.error("Error getting posts by community:", error);
@@ -273,6 +277,7 @@ export class DatabaseService {
           id: schema.posts.id,
           authorId: schema.posts.authorId,
           title: schema.posts.title,
+          content: schema.posts.content,
           contentCid: schema.posts.contentCid,
           parentId: schema.posts.parentId,
           mediaCids: schema.posts.mediaCids,
@@ -292,7 +297,7 @@ export class DatabaseService {
         })
         .from(schema.posts)
         .orderBy(desc(schema.posts.createdAt));
-      
+
       safeLogger.info(`Retrieved ${result.length} posts from database`);
       return result;
     } catch (error) {
@@ -311,7 +316,7 @@ export class DatabaseService {
         })
         .where(eq(schema.posts.id, id))
         .returning();
-      
+
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error updating post:", error);
@@ -333,7 +338,7 @@ export class DatabaseService {
         .delete(schema.posts)
         .where(eq(schema.posts.id, id))
         .returning();
-      
+
       return result.length > 0;
     } catch (error) {
       safeLogger.error("Error deleting post:", error);
@@ -348,7 +353,7 @@ export class DatabaseService {
         followerId,
         followingId
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error following user:", error);
@@ -401,7 +406,7 @@ export class DatabaseService {
         txHash: txHash || null,
         memo: memo || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating payment:", error);
@@ -419,7 +424,7 @@ export class DatabaseService {
         startBlock: startBlock || null,
         endBlock: endBlock || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating proposal:", error);
@@ -436,7 +441,7 @@ export class DatabaseService {
         scopes,
         model
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating bot:", error);
@@ -453,7 +458,7 @@ export class DatabaseService {
         // Convert array to JSON string for storage
         embedding: JSON.stringify(embedding)
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating embedding:", error);
@@ -473,9 +478,9 @@ export class DatabaseService {
   }
 
   // Marketplace operations
-  async createListing(sellerId: string, tokenAddress: string, price: string, quantity: number, 
-                     itemType: string, listingType: string, metadataURI: string, 
-                     nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string) {
+  async createListing(sellerId: string, tokenAddress: string, price: string, quantity: number,
+    itemType: string, listingType: string, metadataURI: string,
+    nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string) {
     try {
       const result = await this.db.insert(schema.listings).values({
         sellerId,
@@ -490,7 +495,7 @@ export class DatabaseService {
         reservePrice: reservePrice || null,
         minIncrement: minIncrement || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating listing:", error);
@@ -505,7 +510,7 @@ export class DatabaseService {
         safeLogger.warn("getListingById called with invalid ID, returning null");
         return null;
       }
-      
+
       const result = await this.db.select().from(schema.listings).where(eq(schema.listings.id, id));
       return result[0] || null;
     } catch (error) {
@@ -568,7 +573,7 @@ export class DatabaseService {
         bidderId,
         amount
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error placing bid:", error);
@@ -601,7 +606,7 @@ export class DatabaseService {
         buyerId,
         amount
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error making offer:", error);
@@ -637,8 +642,8 @@ export class DatabaseService {
     }
   }
 
-  async createEscrow(listingId: string, buyerId: string, sellerId: string, amount: string, 
-                     deliveryInfo?: string) {
+  async createEscrow(listingId: string, buyerId: string, sellerId: string, amount: string,
+    deliveryInfo?: string) {
     try {
       const result = await this.db.insert(schema.escrows).values({
         listingId,
@@ -648,7 +653,7 @@ export class DatabaseService {
         deliveryInfo: deliveryInfo || null,
         deliveryConfirmed: false
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating escrow:", error);
@@ -689,9 +694,9 @@ export class DatabaseService {
 
   async confirmDelivery(escrowId: number, deliveryInfo: string) {
     try {
-      const result = await this.db.update(schema.escrows).set({ 
-        deliveryInfo, 
-        deliveryConfirmed: true 
+      const result = await this.db.update(schema.escrows).set({
+        deliveryInfo,
+        deliveryConfirmed: true
       }).where(eq(schema.escrows.id, escrowId)).returning();
       return result[0] || null;
     } catch (error) {
@@ -700,8 +705,8 @@ export class DatabaseService {
     }
   }
 
-  async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string, 
-                    paymentToken: string, escrowId?: string) {
+  async createOrder(listingId: string, buyerId: string, sellerId: string, amount: string,
+    paymentToken: string, escrowId?: string) {
     try {
       const result = await this.db.insert(schema.orders).values({
         listingId,
@@ -711,7 +716,7 @@ export class DatabaseService {
         paymentToken,
         escrowId: escrowId || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating order:", error);
@@ -758,7 +763,7 @@ export class DatabaseService {
         reason,
         evidence: evidence || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating dispute:", error);
@@ -802,7 +807,7 @@ export class DatabaseService {
         score,
         daoApproved
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating user reputation:", error);
@@ -847,7 +852,7 @@ export class DatabaseService {
         objectId,
         aiAnalysis: aiAnalysis || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating AI moderation record:", error);
@@ -916,7 +921,7 @@ export class DatabaseService {
       throw error;
     }
   }
-      
+
   // --- Product Category operations ---
   async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: number) {
     try {
@@ -929,7 +934,7 @@ export class DatabaseService {
         imageUrl: imageUrl || null,
         sortOrder: sortOrder || 0
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating category:", error);
@@ -986,9 +991,9 @@ export class DatabaseService {
   }
 
   // Product operations
-  async createProduct(sellerId: string, title: string, description: string, priceAmount: string, priceCurrency: string, 
-                     categoryId: string, images: string, metadata: string, inventory: number, tags?: string, 
-                     shipping?: string, nft?: string) {
+  async createProduct(sellerId: string, title: string, description: string, priceAmount: string, priceCurrency: string,
+    categoryId: string, images: string, metadata: string, inventory: number, tags?: string,
+    shipping?: string, nft?: string) {
     try {
       const result = await this.db.insert(schema.products).values({
         sellerId,
@@ -1004,7 +1009,7 @@ export class DatabaseService {
         shipping: shipping || null,
         nft: nft || null
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating product:", error);
@@ -1076,7 +1081,7 @@ export class DatabaseService {
         productId,
         tag: tag.toLowerCase().trim()
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating product tag:", error);
@@ -1144,7 +1149,7 @@ export class DatabaseService {
       // Calculate date range based on timeframe
       const now = new Date();
       const startDate = new Date();
-      
+
       switch (timeframe) {
         case 'week':
           startDate.setDate(now.getDate() - 7);
@@ -1214,21 +1219,21 @@ export class DatabaseService {
           monthStart.setMonth(now.getMonth() - i);
           monthStart.setDate(1);
           monthStart.setHours(0, 0, 0, 0);
-          
+
           const monthEnd = new Date(monthStart);
           monthEnd.setMonth(monthStart.getMonth() + 1);
           monthEnd.setHours(0, 0, 0, -1);
-          
+
           const monthOrders = orders.filter((order: any) => {
             const orderDate = new Date(order.createdAt);
             return orderDate >= monthStart && orderDate <= monthEnd;
           });
-          
+
           monthlyTrends.push({
             month: monthStart.toLocaleString('default', { month: 'short', year: 'numeric' }),
             orderCount: monthOrders.length,
             volume: monthOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
-            completionRate: monthOrders.length > 0 ? 
+            completionRate: monthOrders.length > 0 ?
               monthOrders.filter((order: any) => order.status === 'completed').length / monthOrders.length : 0
           });
         }
@@ -1238,17 +1243,17 @@ export class DatabaseService {
         for (let i = daysInMonth; i >= 1; i--) {
           const dayStart = new Date(now.getFullYear(), now.getMonth(), i, 0, 0, 0);
           const dayEnd = new Date(now.getFullYear(), now.getMonth(), i, 23, 59, 59);
-          
+
           const dayOrders = orders.filter((order: any) => {
             const orderDate = new Date(order.createdAt);
             return orderDate >= dayStart && orderDate <= dayEnd;
           });
-          
+
           monthlyTrends.push({
             date: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             orderCount: dayOrders.length,
             volume: dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
-            completionRate: dayOrders.length > 0 ? 
+            completionRate: dayOrders.length > 0 ?
               dayOrders.filter((order: any) => order.status === 'completed').length / dayOrders.length : 0
           });
         }
@@ -1258,21 +1263,21 @@ export class DatabaseService {
           const dayStart = new Date(now);
           dayStart.setDate(now.getDate() - i);
           dayStart.setHours(0, 0, 0, 0);
-          
+
           const dayEnd = new Date(dayStart);
           dayEnd.setDate(dayStart.getDate() + 1);
           dayEnd.setHours(0, 0, 0, -1);
-          
+
           const dayOrders = orders.filter((order: any) => {
             const orderDate = new Date(order.createdAt);
             return orderDate >= dayStart && orderDate <= dayEnd;
           });
-          
+
           monthlyTrends.push({
             date: dayStart.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
             orderCount: dayOrders.length,
             volume: dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0).toString(),
-            completionRate: dayOrders.length > 0 ? 
+            completionRate: dayOrders.length > 0 ?
               dayOrders.filter((order: any) => order.status === 'completed').length / dayOrders.length : 0
           });
         }
@@ -1289,7 +1294,7 @@ export class DatabaseService {
       ];
 
       // Calculate user retention metrics if this is for a seller
-      const repeatCustomerRate = orders.length > 0 ? 
+      const repeatCustomerRate = orders.length > 0 ?
         orders.filter((order: any) => order.buyerId && orders.some(o => o.buyerId === order.buyerId && o.id !== order.id)).length / orders.length : 0;
 
       return {
@@ -1360,11 +1365,11 @@ export class DatabaseService {
         status: schema.orders.status,
         count: sql<number>`count(*)`
       })
-      .from(schema.orders)
-      .where(userType === 'buyer' 
-        ? eq(schema.orders.buyerId, userId)
-        : eq(schema.orders.sellerId, userId))
-      .groupBy(schema.orders.status);
+        .from(schema.orders)
+        .where(userType === 'buyer'
+          ? eq(schema.orders.buyerId, userId)
+          : eq(schema.orders.sellerId, userId))
+        .groupBy(schema.orders.status);
 
       const counts: Record<string, number> = {};
       result.forEach(row => {
@@ -1460,11 +1465,11 @@ export class DatabaseService {
       const [result] = await this.db.select()
         .from(schema.notificationPreferences)
         .where(eq(schema.notificationPreferences.userAddress, userAddress));
-      
+
       if (result?.preferences) {
         return JSON.parse(result.preferences);
       }
-      
+
       // Return default preferences
       return {
         email: true,
@@ -1641,7 +1646,7 @@ export class DatabaseService {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating moderation case:", error);
@@ -1672,7 +1677,7 @@ export class DatabaseService {
   }>) {
     try {
       const updateData: any = { ...updates };
-      
+
       // Convert numbers to strings for database
       if (updates.confidence !== undefined) {
         updateData.confidence = updates.confidence.toString();
@@ -1680,12 +1685,12 @@ export class DatabaseService {
       if (updates.riskScore !== undefined) {
         updateData.riskScore = updates.riskScore.toString();
       }
-      
+
       const result = await this.db.update(schema.moderationCases)
         .set(updateData)
         .where(eq(schema.moderationCases.id, id))
         .returning();
-      
+
       return result[0] || null;
     } catch (error) {
       safeLogger.error("Error updating moderation case:", error);
@@ -1701,7 +1706,7 @@ export class DatabaseService {
     try {
       let query = this.db.select().from(schema.moderationCases)
         .where(eq(schema.moderationCases.userId, userId));
-      
+
       if (options.status) {
         query = query.where(
           and(
@@ -1710,12 +1715,12 @@ export class DatabaseService {
           )
         );
       }
-      
+
       const result = await query
         .orderBy(desc(schema.moderationCases.createdAt))
         .limit(options.limit)
         .offset((options.page - 1) * options.limit);
-      
+
       return result;
     } catch (error) {
       safeLogger.error("Error getting user moderation cases:", error);
@@ -1753,7 +1758,7 @@ export class DatabaseService {
         status: 'open',
         createdAt: new Date()
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating content report:", error);
@@ -1791,7 +1796,7 @@ export class DatabaseService {
         rationale: data.rationale || null,
         createdAt: new Date()
       }).returning();
-      
+
       return result[0];
     } catch (error) {
       safeLogger.error("Error creating moderation action:", error);
@@ -1859,7 +1864,7 @@ export class DatabaseService {
         updatedAt: new Date(),
         confirmedAt: null
       };
-      
+
       safeLogger.info(`Created payment transaction ${transactionData.id} for order ${transactionData.orderId}`);
       return transaction;
     } catch (error) {
@@ -1904,7 +1909,7 @@ export class DatabaseService {
         updatedAt: new Date(),
         confirmedAt: new Date()
       };
-      
+
       safeLogger.info(`Retrieved payment transaction ${transactionId}`);
       return mockTransaction;
     } catch (error) {
@@ -1935,7 +1940,7 @@ export class DatabaseService {
         updatedAt: new Date(),
         confirmedAt: new Date()
       }];
-      
+
       safeLogger.info(`Retrieved ${mockTransactions.length} payment transactions for order ${orderId}`);
       return mockTransactions;
     } catch (error) {
@@ -1976,7 +1981,7 @@ export class DatabaseService {
         metadata: receiptData.metadata,
         createdAt: new Date()
       };
-      
+
       safeLogger.info(`Created payment receipt ${receiptData.receiptNumber} for transaction ${receiptData.transactionId}`);
       return receipt;
     } catch (error) {
@@ -2004,7 +2009,7 @@ export class DatabaseService {
         receiptUrl: `http://localhost:3000/receipts/RCP-${Date.now()}-ABC123`,
         createdAt: new Date()
       }];
-      
+
       safeLogger.info(`Retrieved ${mockReceipts.length} payment receipts for order ${orderId}`);
       return mockReceipts;
     } catch (error) {
@@ -2033,7 +2038,7 @@ export class DatabaseService {
         timestamp: trackingData.timestamp,
         createdAt: new Date()
       };
-      
+
       safeLogger.info(`Created order tracking for order ${trackingData.orderId}: ${trackingData.status}`);
       return tracking;
     } catch (error) {
@@ -2090,13 +2095,13 @@ export class DatabaseService {
         completedAt: receiptData.completedAt,
         metadata: receiptData.metadata
       };
-      
+
       // Store in a mock database (in real implementation, this would be an actual DB insert)
       if (!(global as any).mockReceipts) {
         (global as any).mockReceipts = [];
       }
       (global as any).mockReceipts.push(receipt);
-      
+
       safeLogger.info(`Created receipt ${receiptData.receiptNumber} of type ${receiptData.type}`);
       return receipt;
     } catch (error) {
@@ -2113,12 +2118,12 @@ export class DatabaseService {
       // In a real implementation, this would query the database
       const mockReceipts = (global as any).mockReceipts || [];
       const receipt = mockReceipts.find((r: any) => r.id === receiptId);
-      
+
       if (receipt) {
         safeLogger.info(`Retrieved receipt ${receiptId}`);
         return receipt;
       }
-      
+
       safeLogger.info(`Receipt ${receiptId} not found`);
       return null;
     } catch (error) {
@@ -2137,7 +2142,7 @@ export class DatabaseService {
       const userReceipts = mockReceipts
         .filter((r: any) => r.buyerAddress === userAddress)
         .slice(offset, offset + limit);
-      
+
       safeLogger.info(`Retrieved ${userReceipts.length} receipts for user ${userAddress}`);
       return userReceipts;
     } catch (error) {
@@ -2154,7 +2159,7 @@ export class DatabaseService {
       // In a real implementation, this would query the database
       const mockReceipts = (global as any).mockReceipts || [];
       const orderReceipts = mockReceipts.filter((r: any) => r.orderId === orderId);
-      
+
       safeLogger.info(`Retrieved ${orderReceipts.length} receipts for order ${orderId}`);
       return orderReceipts;
     } catch (error) {
@@ -2171,7 +2176,7 @@ export class DatabaseService {
       // In a real implementation, this would update the database record
       const mockReceipts = (global as any).mockReceipts || [];
       const receiptIndex = mockReceipts.findIndex((r: any) => r.id === receiptId);
-      
+
       if (receiptIndex !== -1) {
         mockReceipts[receiptIndex].status = status;
         if (metadata) {
@@ -2183,7 +2188,7 @@ export class DatabaseService {
         safeLogger.info(`Updated receipt ${receiptId} status to ${status}`);
         return true;
       }
-      
+
       safeLogger.warn(`Receipt ${receiptId} not found for status update`);
       return false;
     } catch (error) {
@@ -2205,7 +2210,7 @@ export class DatabaseService {
         metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
         read: notification.read
       }).returning();
-      
+
       return created;
     } catch (error) {
       safeLogger.error("Error creating admin notification:", error);
@@ -2234,7 +2239,7 @@ export class DatabaseService {
         .set({ read: true })
         .where(eq(schema.admin_notifications.id, parseInt(notificationId)))
         .returning();
-      
+
       return !!updated;
     } catch (error) {
       safeLogger.error("Error marking admin notification as read:", error);
@@ -2252,7 +2257,7 @@ export class DatabaseService {
             eq(schema.admin_notifications.read, false)
           )
         );
-      
+
       return true;
     } catch (error) {
       safeLogger.error("Error marking all admin notifications as read:", error);
@@ -2271,7 +2276,7 @@ export class DatabaseService {
             eq(schema.admin_notifications.read, false)
           )
         );
-      
+
       return parseInt(result[0].count.toString()) || 0;
     } catch (error) {
       safeLogger.error("Error getting admin unread notification count:", error);
@@ -2307,11 +2312,11 @@ export class DatabaseService {
         .select()
         .from(schema.admin_notification_preferences)
         .where(eq(schema.admin_notification_preferences.adminId, adminId));
-      
+
       if (result.length > 0) {
         return JSON.parse(result[0].preferences);
       }
-      
+
       // Return default preferences
       return {
         email: true,
@@ -2349,7 +2354,7 @@ export class DatabaseService {
     try {
       const deleted = await this.db.delete(schema.admin_notifications)
         .where(lt(schema.admin_notifications.createdAt, cutoffDate));
-      
+
       return deleted;
     } catch (error) {
       safeLogger.error("Error deleting old admin notifications:", error);
@@ -2364,7 +2369,7 @@ export class DatabaseService {
         .select({ count: sql<number>`count(*)` })
         .from(schema.admin_notifications)
         .where(eq(schema.admin_notifications.adminId, adminId));
-      
+
       const total = parseInt(totalCountResult[0].count.toString()) || 0;
 
       // Get unread count
@@ -2377,19 +2382,19 @@ export class DatabaseService {
             eq(schema.admin_notifications.read, false)
           )
         );
-      
+
       const unread = parseInt(unreadCountResult[0].count.toString()) || 0;
 
       // Get count by type
       const typeResults = await this.db
-        .select({ 
+        .select({
           type: schema.admin_notifications.type,
-          count: sql<number>`count(*)` 
+          count: sql<number>`count(*)`
         })
         .from(schema.admin_notifications)
         .where(eq(schema.admin_notifications.adminId, adminId))
         .groupBy(schema.admin_notifications.type);
-      
+
       const byType: Record<string, number> = {};
       typeResults.forEach(row => {
         byType[row.type] = parseInt(row.count.toString());
@@ -2397,14 +2402,14 @@ export class DatabaseService {
 
       // Get count by category
       const categoryResults = await this.db
-        .select({ 
+        .select({
           category: schema.admin_notifications.category,
-          count: sql<number>`count(*)` 
+          count: sql<number>`count(*)`
         })
         .from(schema.admin_notifications)
         .where(eq(schema.admin_notifications.adminId, adminId))
         .groupBy(schema.admin_notifications.category);
-      
+
       const byCategory: Record<string, number> = {};
       categoryResults.forEach(row => {
         byCategory[row.category] = parseInt(row.count.toString());

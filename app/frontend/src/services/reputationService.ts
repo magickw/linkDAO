@@ -1,8 +1,8 @@
-import { 
-  UserReputation, 
-  Badge, 
-  Achievement, 
-  ReputationEvent, 
+import {
+  UserReputation,
+  Badge,
+  Achievement,
+  ReputationEvent,
   MiniProfileData,
   REPUTATION_LEVELS,
   BADGE_DEFINITIONS
@@ -13,7 +13,7 @@ class ReputationService {
 
   async getUserReputation(userId: string): Promise<UserReputation> {
     try {
-      const response = await fetch(`${this.baseUrl}/reputation/${userId}`, {
+      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -37,7 +37,7 @@ class ReputationService {
 
   async getMiniProfileData(userId: string): Promise<MiniProfileData> {
     try {
-      const response = await fetch(`${this.baseUrl}/users/${userId}/mini-profile`);
+      const response = await fetch(`${this.baseUrl}/api/users/${userId}/mini-profile`);
       if (!response.ok) {
         // Handle 404 by returning a default mini profile object
         if (response.status === 404) {
@@ -56,7 +56,7 @@ class ReputationService {
 
   async getReputationEvents(userId: string, limit = 50): Promise<ReputationEvent[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/reputation/${userId}/events?limit=${limit}`);
+      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/events?limit=${limit}`);
       if (!response.ok) {
         // Handle 404 by returning empty array
         if (response.status === 404) {
@@ -75,7 +75,7 @@ class ReputationService {
 
   async awardPoints(userId: string, category: string, points: number, description: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/reputation/${userId}/award`, {
+      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/award`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ class ReputationService {
 
   async checkForNewAchievements(userId: string): Promise<Achievement[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/reputation/${userId}/achievements/check`);
+      const response = await fetch(`${this.baseUrl}/api/reputation/${userId}/achievements/check`);
       if (!response.ok) {
         throw new Error('Failed to check for new achievements');
       }
@@ -123,7 +123,7 @@ class ReputationService {
   private getDefaultUserReputation(): UserReputation {
     const totalScore = 0;
     const level = this.calculateLevel(totalScore);
-    
+
     return {
       totalScore,
       level,
@@ -167,7 +167,7 @@ class ReputationService {
   private getMockUserReputation(): UserReputation {
     const totalScore = 2750;
     const level = this.calculateLevel(totalScore);
-    
+
     return {
       totalScore,
       level,
