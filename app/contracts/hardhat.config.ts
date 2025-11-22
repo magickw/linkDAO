@@ -43,8 +43,8 @@ const config: HardhatUserConfig = {
       chainId: 31337,
     },
     sepolia: {
-      url: "https://rpc.sepolia.org",
-      accounts: ["0x39f6e4aea4f11a15e6fab847e281bf97e4a138f321bbe8b9435369c7946d28e8"],
+      url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
       gas: 6000000,
       gasPrice: 20000000000, // 20 gwei

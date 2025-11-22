@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
+import { CharityLookup } from './CharityLookup';
+import { CharityDocumentUpload } from './CharityDocumentUpload';
+import { LinkPreview } from './LinkPreview';
+import { CharitySearchResult } from '@/services/charityVerificationService';
+import { UploadResult } from '@/services/ipfsUploadService';
 
 interface CharityProposalFormProps {
     onSubmit: (proposalData: CharityProposalData) => Promise<void>;
@@ -17,6 +22,9 @@ export interface CharityProposalData {
     charityDescription: string;
     proofOfVerification: string;
     impactMetrics: string;
+    ein?: string;
+    charityNavigatorRating?: number;
+    documentIPFSHashes?: string[];
 }
 
 export const CharityProposalForm: React.FC<CharityProposalFormProps> = ({
@@ -33,10 +41,15 @@ export const CharityProposalForm: React.FC<CharityProposalFormProps> = ({
         donationAmount: '',
         charityDescription: '',
         proofOfVerification: '',
-        impactMetrics: ''
+        impactMetrics: '',
+        ein: '',
+        charityNavigatorRating: undefined,
+        documentIPFSHashes: [],
     });
 
     const [errors, setErrors] = useState<Partial<Record<keyof CharityProposalData, string>>>({});
+    const [uploadedDocuments, setUploadedDocuments] = useState<UploadResult[]>([]);
+    const [verificationMethod, setVerificationMethod] = useState<'link' | 'document'>('link');
 
     const validateForm = (): boolean => {
         const newErrors: Partial<Record<keyof CharityProposalData, string>> = {};
@@ -92,6 +105,27 @@ export const CharityProposalForm: React.FC<CharityProposalFormProps> = ({
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: undefined }));
         }
+    };
+
+    const handleCharitySelect = (charity: CharitySearchResult) => {
+        setFormData(prev => ({
+            ...prev,
+            charityName: charity.charityName,
+            charityDescription: charity.mission || '',
+            ein: charity.ein,
+            charityNavigatorRating: charity.overallRating,
+            proofOfVerification: charity.websiteURL || '',
+        }));
+    };
+
+    const handleDocumentUpload = (results: UploadResult[]) => {
+        setUploadedDocuments(results);
+        const ipfsHashes = results.map(r => r.cid);
+        setFormData(prev => ({
+            ...prev,
+            documentIPFSHashes: ipfsHashes,
+            proofOfVerification: results[0]?.url || prev.proofOfVerification,
+        }));
     };
 
     return (
@@ -183,6 +217,27 @@ export const CharityProposalForm: React.FC<CharityProposalFormProps> = ({
                 {errors.donationAmount && <p className="mt-1 text-sm text-red-600">{errors.donationAmount}</p>}
             </div>
 
+            {/* Charity Lookup */}
+            <CharityLookup
+                onCharitySelect={handleCharitySelect}
+                disabled={disabled || isSubmitting}
+            />
+
+            {/* EIN Field */}
+            {formData.ein && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        EIN (Employer Identification Number)
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.ein}
+                        disabled
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white bg-gray-50 cursor-not-allowed"
+                    />
+                </div>
+            )}
+
             {/* Charity Mission Description */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -200,22 +255,67 @@ export const CharityProposalForm: React.FC<CharityProposalFormProps> = ({
                 {errors.charityDescription && <p className="mt-1 text-sm text-red-600">{errors.charityDescription}</p>}
             </div>
 
-            {/* Proof of Verification (Optional) */}
+            {/* Proof of Verification */}
             <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Proof of Verification (Optional)
+                    Proof of Verification
                 </label>
-                <input
-                    type="text"
-                    value={formData.proofOfVerification}
-                    onChange={(e) => handleChange('proofOfVerification', e.target.value)}
-                    disabled={disabled || isSubmitting}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="IPFS hash, website URL, or verification document link"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Provide evidence of charity legitimacy (e.g., IPFS hash, charity registration number, website)
-                </p>
+
+                {/* Verification Method Toggle */}
+                <div className="flex space-x-4 mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setVerificationMethod('link')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${verificationMethod === 'link'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            }`}
+                    >
+                        Link/URL
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setVerificationMethod('document')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${verificationMethod === 'document'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            }`}
+                    >
+                        Upload Documents
+                    </button>
+                </div>
+
+                {verificationMethod === 'link' ? (
+                    <div>
+                        <input
+                            type="text"
+                            value={formData.proofOfVerification}
+                            onChange={(e) => handleChange('proofOfVerification', e.target.value)}
+                            disabled={disabled || isSubmitting}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="IPFS hash, website URL, or verification document link"
+                        />
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Provide a link to verification documents or charity website
+                        </p>
+
+                        {formData.proofOfVerification && (
+                            <div className="mt-3">
+                                <LinkPreview url={formData.proofOfVerification} />
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <CharityDocumentUpload
+                        onUploadComplete={handleDocumentUpload}
+                        metadata={{
+                            documentType: 'verification',
+                            charityName: formData.charityName,
+                            ein: formData.ein,
+                        }}
+                        disabled={disabled || isSubmitting}
+                    />
+                )}
             </div>
 
             {/* Impact Metrics (Optional) */}

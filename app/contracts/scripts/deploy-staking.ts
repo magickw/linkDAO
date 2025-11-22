@@ -1,7 +1,6 @@
 import { ethers } from "hardhat";
 import { formatEther } from "ethers";
 import { writeFileSync } from "fs";
-import { BigNumber } from "ethers";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
