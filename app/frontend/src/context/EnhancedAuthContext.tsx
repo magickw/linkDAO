@@ -311,11 +311,11 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
           handleLogout();
         } else if (user && user.address && accounts[0].toLowerCase() !== user.address.toLowerCase()) {
           // Account changed to a completely different one, need to re-authenticate
-          console.log(' purse Account changed, re-authenticating');
+          console.log('👛 Account changed, re-authenticating');
           handleLogout();
         } else if (user && !user.address && accounts[0]) {
           // First account connection, don't logout - just let the useEffect handle it
-          console.log(' purse Account connected, will be handled by wallet connection effect');
+          console.log('👛 Account connected, will be handled by wallet connection effect');
         }
       };
 
@@ -327,13 +327,31 @@ export const EnhancedAuthProvider = ({ children }: { children: ReactNode }) => {
         }
       };
 
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
+      try {
+        // Use try-catch to handle read-only property errors from wallet providers
+        const ethereum = window.ethereum;
 
-      return () => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
-      };
+        // Check if the provider supports event listeners properly
+        if (ethereum && typeof ethereum.on === 'function') {
+          ethereum.on('accountsChanged', handleAccountsChanged);
+          ethereum.on('chainChanged', handleChainChanged);
+
+          return () => {
+            try {
+              if (ethereum && typeof ethereum.removeListener === 'function') {
+                ethereum.removeListener('accountsChanged', handleAccountsChanged);
+                ethereum.removeListener('chainChanged', handleChainChanged);
+              }
+            } catch (error) {
+              // Ignore cleanup errors - wallet provider may have been removed
+              console.debug('Error removing ethereum event listeners:', error);
+            }
+          };
+        }
+      } catch (error) {
+        // Handle read-only property errors silently
+        console.debug('Error setting up ethereum event listeners:', error);
+      }
     }
   }, [user, handleLogout]);
 

@@ -505,7 +505,7 @@ app.get('/health', async (req, res) => {
       const startTime = Date.now();
       const result = await dbPool.query('SELECT 1');
       const queryTime = Date.now() - startTime;
-      
+
       databaseStatus = {
         enabled: true,
         connected: true,
@@ -578,7 +578,7 @@ app.get('/health/database', async (req, res) => {
       const startTime = Date.now();
       const result = await dbPool.query('SELECT 1');
       const queryTime = Date.now() - startTime;
-      
+
       res.status(200).json({
         success: true,
         status: 'Database health check completed',
@@ -717,6 +717,8 @@ import adminRoutes from './routes/adminRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
 import adminAIRoutes from './routes/admin/ai';
 import { systemHealthMonitoringRoutes } from './routes/systemHealthMonitoringRoutes';
+// Import charity routes
+import charityRoutes from './routes/charityRoutes';
 // Import workflow automation routes
 import workflowAutomationRoutes from './routes/workflowAutomationRoutes';
 // Import marketplace registration routes
@@ -858,6 +860,9 @@ app.use('/api/admin/ai', adminAIRoutes);
 
 // System health monitoring routes
 app.use('/api/admin/system-health', systemHealthMonitoringRoutes);
+
+// Charity routes
+app.use('/api/admin', charityRoutes);
 
 // Workflow automation routes
 app.use('/api/admin/workflows', workflowAutomationRoutes);

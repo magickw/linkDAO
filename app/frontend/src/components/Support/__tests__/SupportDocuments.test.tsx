@@ -1,24 +1,414 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SupportDocuments } from '../SupportDocuments';
+import SupportDocuments from '../SupportDocuments';
 import { mockDocuments, mockCategories } from './mocks/documentMocks';
 
 // Mock the document service
-jest.mock('../../services/documentService', () => ({
-  loadDocuments: jest.fn(() => Promise.resolve(mockDocuments)),
-  searchDocuments: jest.fn((query) => 
-    Promise.resolve(mockDocuments.filter(doc => 
+jest.mock('../../../services/documentService', () => ({
+  loadDocuments: jest.fn(() => Promise.resolve([
+    {
+      id: 'beginners-guide',
+      title: 'Beginner\'s Guide to LDAO',
+      description: 'Learn the basics of LDAO tokens, wallet setup, and getting started with the platform.',
+      category: 'getting-started',
+      difficulty: 'beginner',
+      readTime: 15,
+      lastUpdated: '2024-01-15T10:00:00Z',
+      popularity: 95,
+      tags: ['wallet', 'setup', 'basics', 'tokens'],
+      content: `# Beginner's Guide to LDAO
+
+## Introduction
+Welcome to the LDAO ecosystem! This guide will help you get started.
+
+## Step 1: Setting up your wallet
+First, you'll need to set up a compatible wallet...
+
+## Step 2: Acquiring LDAO tokens
+Once your wallet is ready, you can acquire LDAO tokens...
+
+## Step 3: Using the platform
+Now you're ready to explore the platform features...`,
+      author: 'LDAO Team',
+      version: '1.2.0'
+    },
+    {
+      id: 'security-guide',
+      title: 'Security Best Practices',
+      description: 'Essential security guidelines to protect your LDAO tokens and personal information.',
+      category: 'security',
+      difficulty: 'intermediate',
+      readTime: 8,
+      lastUpdated: '2024-01-20T14:30:00Z',
+      popularity: 87,
+      tags: ['security', 'safety', 'protection', 'best-practices'],
+      content: `# Security Best Practices
+
+## Wallet Security
+Keep your private keys secure and never share them...
+
+## Platform Safety
+Use strong passwords and enable two-factor authentication...
+
+## Common Scams
+Be aware of these common scam tactics...`,
+      author: 'Security Team',
+      version: '2.1.0'
+    },
+    {
+      id: 'troubleshooting-guide',
+      title: 'Troubleshooting Guide',
+      description: 'Solutions to common issues and problems you might encounter.',
+      category: 'troubleshooting',
+      difficulty: 'intermediate',
+      readTime: 12,
+      lastUpdated: '2024-01-18T09:15:00Z',
+      popularity: 73,
+      tags: ['troubleshooting', 'problems', 'solutions', 'help'],
+      content: `# Troubleshooting Guide
+
+## Connection Issues
+If you're having trouble connecting to the platform...
+
+## Transaction Problems
+When transactions fail or are pending...
+
+## Wallet Issues
+Common wallet-related problems and solutions...`,
+      author: 'Support Team',
+      version: '1.5.0'
+    },
+    {
+      id: 'quick-faq',
+      title: 'Quick FAQ',
+      description: 'Frequently asked questions and quick answers.',
+      category: 'getting-started',
+      difficulty: 'beginner',
+      readTime: 5,
+      lastUpdated: '2024-01-10T16:45:00Z',
+      popularity: 91,
+      tags: ['faq', 'questions', 'answers', 'quick'],
+      content: `# Quick FAQ
+
+## What is LDAO?
+LDAO is a decentralized autonomous organization token...
+
+## How do I get started?
+Follow our beginner's guide to get started...
+
+## Is it safe?
+Yes, when you follow our security best practices...`,
+      author: 'LDAO Team',
+      version: '1.0.0'
+    }
+  ])),
+  searchDocuments: jest.fn((query) => {
+    const mockDocs = [
+      {
+        id: 'beginners-guide',
+        title: 'Beginner\'s Guide to LDAO',
+        description: 'Learn the basics of LDAO tokens, wallet setup, and getting started with the platform.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 15,
+        lastUpdated: '2024-01-15T10:00:00Z',
+        popularity: 95,
+        tags: ['wallet', 'setup', 'basics', 'tokens'],
+        content: `# Beginner's Guide to LDAO
+
+## Introduction
+Welcome to the LDAO ecosystem! This guide will help you get started.
+
+## Step 1: Setting up your wallet
+First, you'll need to set up a compatible wallet...
+
+## Step 2: Acquiring LDAO tokens
+Once your wallet is ready, you can acquire LDAO tokens...
+
+## Step 3: Using the platform
+Now you're ready to explore the platform features...`,
+        author: 'LDAO Team',
+        version: '1.2.0'
+      },
+      {
+        id: 'security-guide',
+        title: 'Security Best Practices',
+        description: 'Essential security guidelines to protect your LDAO tokens and personal information.',
+        category: 'security',
+        difficulty: 'intermediate',
+        readTime: 8,
+        lastUpdated: '2024-01-20T14:30:00Z',
+        popularity: 87,
+        tags: ['security', 'safety', 'protection', 'best-practices'],
+        content: `# Security Best Practices
+
+## Wallet Security
+Keep your private keys secure and never share them...
+
+## Platform Safety
+Use strong passwords and enable two-factor authentication...
+
+## Common Scams
+Be aware of these common scam tactics...`,
+        author: 'Security Team',
+        version: '2.1.0'
+      },
+      {
+        id: 'troubleshooting-guide',
+        title: 'Troubleshooting Guide',
+        description: 'Solutions to common issues and problems you might encounter.',
+        category: 'troubleshooting',
+        difficulty: 'intermediate',
+        readTime: 12,
+        lastUpdated: '2024-01-18T09:15:00Z',
+        popularity: 73,
+        tags: ['troubleshooting', 'problems', 'solutions', 'help'],
+        content: `# Troubleshooting Guide
+
+## Connection Issues
+If you're having trouble connecting to the platform...
+
+## Transaction Problems
+When transactions fail or are pending...
+
+## Wallet Issues
+Common wallet-related problems and solutions...`,
+        author: 'Support Team',
+        version: '1.5.0'
+      },
+      {
+        id: 'quick-faq',
+        title: 'Quick FAQ',
+        description: 'Frequently asked questions and quick answers.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 5,
+        lastUpdated: '2024-01-10T16:45:00Z',
+        popularity: 91,
+        tags: ['faq', 'questions', 'answers', 'quick'],
+        content: `# Quick FAQ
+
+## What is LDAO?
+LDAO is a decentralized autonomous organization token...
+
+## How do I get started?
+Follow our beginner's guide to get started...
+
+## Is it safe?
+Yes, when you follow our security best practices...`,
+        author: 'LDAO Team',
+        version: '1.0.0'
+      }
+    ];
+    
+    return Promise.resolve(mockDocs.filter(doc => 
       doc.title.toLowerCase().includes(query.toLowerCase()) ||
       doc.content.toLowerCase().includes(query.toLowerCase())
-    ))
-  ),
-  getDocumentsByCategory: jest.fn((category) =>
-    Promise.resolve(mockDocuments.filter(doc => doc.category === category))
-  ),
-  getDocumentMetadata: jest.fn((id) => 
-    Promise.resolve(mockDocuments.find(doc => doc.id === id))
-  )
+    ));
+  }),
+  getDocumentsByCategory: jest.fn((category) => {
+    const mockDocs = [
+      {
+        id: 'beginners-guide',
+        title: 'Beginner\'s Guide to LDAO',
+        description: 'Learn the basics of LDAO tokens, wallet setup, and getting started with the platform.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 15,
+        lastUpdated: '2024-01-15T10:00:00Z',
+        popularity: 95,
+        tags: ['wallet', 'setup', 'basics', 'tokens'],
+        content: `# Beginner's Guide to LDAO
+
+## Introduction
+Welcome to the LDAO ecosystem! This guide will help you get started.
+
+## Step 1: Setting up your wallet
+First, you'll need to set up a compatible wallet...
+
+## Step 2: Acquiring LDAO tokens
+Once your wallet is ready, you can acquire LDAO tokens...
+
+## Step 3: Using the platform
+Now you're ready to explore the platform features...`,
+        author: 'LDAO Team',
+        version: '1.2.0'
+      },
+      {
+        id: 'security-guide',
+        title: 'Security Best Practices',
+        description: 'Essential security guidelines to protect your LDAO tokens and personal information.',
+        category: 'security',
+        difficulty: 'intermediate',
+        readTime: 8,
+        lastUpdated: '2024-01-20T14:30:00Z',
+        popularity: 87,
+        tags: ['security', 'safety', 'protection', 'best-practices'],
+        content: `# Security Best Practices
+
+## Wallet Security
+Keep your private keys secure and never share them...
+
+## Platform Safety
+Use strong passwords and enable two-factor authentication...
+
+## Common Scams
+Be aware of these common scam tactics...`,
+        author: 'Security Team',
+        version: '2.1.0'
+      },
+      {
+        id: 'troubleshooting-guide',
+        title: 'Troubleshooting Guide',
+        description: 'Solutions to common issues and problems you might encounter.',
+        category: 'troubleshooting',
+        difficulty: 'intermediate',
+        readTime: 12,
+        lastUpdated: '2024-01-18T09:15:00Z',
+        popularity: 73,
+        tags: ['troubleshooting', 'problems', 'solutions', 'help'],
+        content: `# Troubleshooting Guide
+
+## Connection Issues
+If you're having trouble connecting to the platform...
+
+## Transaction Problems
+When transactions fail or are pending...
+
+## Wallet Issues
+Common wallet-related problems and solutions...`,
+        author: 'Support Team',
+        version: '1.5.0'
+      },
+      {
+        id: 'quick-faq',
+        title: 'Quick FAQ',
+        description: 'Frequently asked questions and quick answers.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 5,
+        lastUpdated: '2024-01-10T16:45:00Z',
+        popularity: 91,
+        tags: ['faq', 'questions', 'answers', 'quick'],
+        content: `# Quick FAQ
+
+## What is LDAO?
+LDAO is a decentralized autonomous organization token...
+
+## How do I get started?
+Follow our beginner's guide to get started...
+
+## Is it safe?
+Yes, when you follow our security best practices...`,
+        author: 'LDAO Team',
+        version: '1.0.0'
+      }
+    ];
+    
+    return Promise.resolve(mockDocs.filter(doc => doc.category === category));
+  }),
+  getDocumentMetadata: jest.fn((id) => {
+    const mockDocs = [
+      {
+        id: 'beginners-guide',
+        title: 'Beginner\'s Guide to LDAO',
+        description: 'Learn the basics of LDAO tokens, wallet setup, and getting started with the platform.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 15,
+        lastUpdated: '2024-01-15T10:00:00Z',
+        popularity: 95,
+        tags: ['wallet', 'setup', 'basics', 'tokens'],
+        content: `# Beginner's Guide to LDAO
+
+## Introduction
+Welcome to the LDAO ecosystem! This guide will help you get started.
+
+## Step 1: Setting up your wallet
+First, you'll need to set up a compatible wallet...
+
+## Step 2: Acquiring LDAO tokens
+Once your wallet is ready, you can acquire LDAO tokens...
+
+## Step 3: Using the platform
+Now you're ready to explore the platform features...`,
+        author: 'LDAO Team',
+        version: '1.2.0'
+      },
+      {
+        id: 'security-guide',
+        title: 'Security Best Practices',
+        description: 'Essential security guidelines to protect your LDAO tokens and personal information.',
+        category: 'security',
+        difficulty: 'intermediate',
+        readTime: 8,
+        lastUpdated: '2024-01-20T14:30:00Z',
+        popularity: 87,
+        tags: ['security', 'safety', 'protection', 'best-practices'],
+        content: `# Security Best Practices
+
+## Wallet Security
+Keep your private keys secure and never share them...
+
+## Platform Safety
+Use strong passwords and enable two-factor authentication...
+
+## Common Scams
+Be aware of these common scam tactics...`,
+        author: 'Security Team',
+        version: '2.1.0'
+      },
+      {
+        id: 'troubleshooting-guide',
+        title: 'Troubleshooting Guide',
+        description: 'Solutions to common issues and problems you might encounter.',
+        category: 'troubleshooting',
+        difficulty: 'intermediate',
+        readTime: 12,
+        lastUpdated: '2024-01-18T09:15:00Z',
+        popularity: 73,
+        tags: ['troubleshooting', 'problems', 'solutions', 'help'],
+        content: `# Troubleshooting Guide
+
+## Connection Issues
+If you're having trouble connecting to the platform...
+
+## Transaction Problems
+When transactions fail or are pending...
+
+## Wallet Issues
+Common wallet-related problems and solutions...`,
+        author: 'Support Team',
+        version: '1.5.0'
+      },
+      {
+        id: 'quick-faq',
+        title: 'Quick FAQ',
+        description: 'Frequently asked questions and quick answers.',
+        category: 'getting-started',
+        difficulty: 'beginner',
+        readTime: 5,
+        lastUpdated: '2024-01-10T16:45:00Z',
+        popularity: 91,
+        tags: ['faq', 'questions', 'answers', 'quick'],
+        content: `# Quick FAQ
+
+## What is LDAO?
+LDAO is a decentralized autonomous organization token...
+
+## How do I get started?
+Follow our beginner's guide to get started...
+
+## Is it safe?
+Yes, when you follow our security best practices...`,
+        author: 'LDAO Team',
+        version: '1.0.0'
+      }
+    ];
+    
+    return Promise.resolve(mockDocs.find(doc => doc.id === id));
+  })
 }));
 
 describe('SupportDocuments Component', () => {

@@ -1,5 +1,5 @@
 import { DocumentService } from '../documentService';
-import { mockDocuments, mockCategories, mockAnalytics } from '../components/Support/__tests__/mocks/documentMocks';
+import { mockDocuments, mockCategories, mockAnalytics } from '../../components/Support/__tests__/mocks/documentMocks';
 
 // Mock fetch for API calls
 global.fetch = jest.fn();

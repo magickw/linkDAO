@@ -7,8 +7,9 @@ import { Governance__factory, LDAOToken__factory } from '@/types/typechain';
 import { Governance, LDAOToken } from '@/types/typechain';
 
 // Contract addresses (these should be configured in environment variables)
-const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || '0x...';
-const LDAO_TOKEN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_CONTRACT_ADDRESS || '0x...';
+// Using null instead of '0x...' to prevent invalid ENS name errors
+const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || null;
+const LDAO_TOKEN_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_LDAO_TOKEN_CONTRACT_ADDRESS || null;
 
 export interface StakeVoteInput {
   postId: string;
@@ -87,19 +88,28 @@ export class CommunityWeb3Service {
         return;
       }
 
-      // Initialize governance contract
-      this.governanceContract = new ethers.Contract(
-        GOVERNANCE_CONTRACT_ADDRESS,
-        Governance__factory.abi,
-        provider
-      );
+      // Check if contract addresses are properly configured
+      if (!GOVERNANCE_CONTRACT_ADDRESS || !ethers.isAddress(GOVERNANCE_CONTRACT_ADDRESS)) {
+        console.warn('Governance contract address not configured or invalid, skipping initialization');
+      } else {
+        // Initialize governance contract only if address is valid
+        this.governanceContract = new ethers.Contract(
+          GOVERNANCE_CONTRACT_ADDRESS,
+          Governance__factory.abi,
+          provider
+        );
+      }
 
-      // Initialize token contract
-      this.tokenContract = new ethers.Contract(
-        LDAO_TOKEN_CONTRACT_ADDRESS,
-        LDAOToken__factory.abi,
-        provider
-      );
+      if (!LDAO_TOKEN_CONTRACT_ADDRESS || !ethers.isAddress(LDAO_TOKEN_CONTRACT_ADDRESS)) {
+        console.warn('LDAO token contract address not configured or invalid, skipping initialization');
+      } else {
+        // Initialize token contract only if address is valid
+        this.tokenContract = new ethers.Contract(
+          LDAO_TOKEN_CONTRACT_ADDRESS,
+          LDAOToken__factory.abi,
+          provider
+        );
+      }
     } catch (error) {
       console.error('Error initializing contracts:', error);
     }

@@ -9,7 +9,7 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!wagmi|viem|@wagmi|@walletconnect|@ethersproject)',
+    '/node_modules/(?!wagmi|viem|@wagmi|@walletconnect|@ethersproject|porto)',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',

@@ -35,7 +35,7 @@ import {
   LogOut,
   Package,
   Activity,
-  HeartHandshake
+  Heart // Changed from HeartHandshake to Heart
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -60,6 +60,7 @@ import { DashboardCharts } from './DashboardCharts';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 import { CharityVerificationPanel } from './CharityVerificationPanel';
+import { CharityVerification } from './CharityVerification';
 import { CharityProposal } from '../Governance/CharityProposalCard';
 
 interface AdminStats {
@@ -308,7 +309,7 @@ export function EnhancedAdminDashboard() {
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics', category: 'analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
-    { id: 'charity-verification', label: 'Charity Verification', icon: HeartHandshake, permission: 'governance.verify', category: 'governance' },
+    { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const filteredTabs = showFavoritesOnly
@@ -326,23 +327,38 @@ export function EnhancedAdminDashboard() {
     return acc;
   }, {} as Record<string, typeof allTabs>);
 
-  const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
-    <GlassPanel className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-white mt-1">{value}</p>
-          {trend && (
-            <p className={`text-xs sm:text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {trend > 0 ? '+' : ''}{trend}% from last week
-            </p>
-          )}
+  const StatCard = ({ title, value, icon: Icon, color, trend, onClick }: any) => (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={`w-full text-left ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : 'cursor-default'} transition-all duration-200`}
+      role="button"
+      aria-label={onClick ? `View ${title}` : title}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
+      <GlassPanel className={`p-4 sm:p-6 ${onClick ? 'hover:bg-white/20 hover:shadow-lg hover:shadow-purple-500/20' : 'hover:bg-white/15'} transition-all duration-200`}>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white mt-1">{value}</p>
+            {trend && (
+              <p className={`text-xs sm:text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {trend > 0 ? '+' : ''}{trend}% from last week
+              </p>
+            )}
+          </div>
+          <div className={`p-2 sm:p-3 rounded-lg ${color} flex-shrink-0 ml-2`}>
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
         </div>
-        <div className={`p-2 sm:p-3 rounded-lg ${color} flex-shrink-0 ml-2`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-        </div>
-      </div>
-    </GlassPanel>
+      </GlassPanel>
+    </button>
   );
 
   return (
@@ -356,8 +372,8 @@ export function EnhancedAdminDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-gray-900/90 backdrop-blur-md border-r border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
+      <div className={`fixed lg:static inset - y - 0 left - 0 z - 50 w - 64 bg - gray - 900 / 90 backdrop - blur - md border - r border - gray - 700 transform transition - transform duration - 300 ease -in -out lg: translate - x - 0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } `}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-white font-bold text-lg">Admin Panel</h2>
           <button
@@ -383,8 +399,8 @@ export function EnhancedAdminDashboard() {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`flex items-center text-sm ${showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
-                }`}
+              className={`flex items - center text - sm ${showFavoritesOnly ? 'text-yellow-400' : 'text-gray-400 hover:text-white'
+                } `}
             >
               <Star className="w-4 h-4 mr-1" />
               Favorites
@@ -392,13 +408,13 @@ export function EnhancedAdminDashboard() {
             <div className="flex gap-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`p - 1 rounded ${viewMode === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`p - 1 rounded ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'} `}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -422,10 +438,10 @@ export function EnhancedAdminDashboard() {
                             setActiveTab(tab.id);
                             setSidebarOpen(false);
                           }}
-                          className={`flex items-center flex-1 gap-2 px-2 py-2 rounded-lg text-sm transition-colors ${activeTab === tab.id
+                          className={`flex items - center flex - 1 gap - 2 px - 2 py - 2 rounded - lg text - sm transition - colors ${activeTab === tab.id
                             ? 'bg-purple-600 text-white'
                             : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                            }`}
+                            } `}
                         >
                           <Icon className="w-4 h-4 flex-shrink-0" />
                           <span className="truncate">{tab.label}</span>
@@ -525,7 +541,7 @@ export function EnhancedAdminDashboard() {
             {/* WebSocket Status */}
             {webSocketManagerRef.current && (
               <div className="mb-4 flex items-center p-2 bg-gray-800/50 rounded-lg">
-                <div className={`w-2 h-2 rounded-full mr-2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <div className={`w - 2 h - 2 rounded - full mr - 2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'} `}></div>
                 <span className="text-xs text-gray-300">
                   {webSocketManagerRef.current.isConnected ? 'Real-time updates enabled' : 'Connecting to real-time updates...'}
                 </span>
@@ -551,37 +567,52 @@ export function EnhancedAdminDashboard() {
                       value={stats.pendingModerations}
                       icon={Shield}
                       color="bg-orange-500"
+                      onClick={() => setActiveTab('moderation')}
                     />
                     <StatCard
                       title="Seller Applications"
                       value={stats.pendingSellerApplications}
                       icon={ShoppingBag}
                       color="bg-blue-500"
+                      onClick={() => setActiveTab('sellers')}
                     />
                     <StatCard
                       title="Open Disputes"
                       value={stats.openDisputes}
                       icon={AlertTriangle}
                       color="bg-red-500"
+                      onClick={() => setActiveTab('disputes')}
                     />
                     <StatCard
                       title="Total Users"
                       value={stats.totalUsers.toLocaleString()}
                       icon={Users}
                       color="bg-green-500"
+                      onClick={() => setActiveTab('users')}
                     />
                     <StatCard
                       title="Total Sellers"
                       value={stats.totalSellers.toLocaleString()}
                       icon={ShoppingBag}
                       color="bg-purple-500"
+                      onClick={() => setActiveTab('performance')}
                     />
                     <StatCard
                       title="Suspended Users"
                       value={stats.suspendedUsers}
                       icon={XCircle}
                       color="bg-gray-500"
+                      onClick={() => setActiveTab('users')}
                     />
+                    {stats.pendingCharityProposals !== undefined && (
+                      <StatCard
+                        title="Pending Charities"
+                        value={stats.pendingCharityProposals}
+                        icon={Heart}
+                        color="bg-pink-500"
+                        onClick={() => setActiveTab('charity-verification')}
+                      />
+                    )}
                   </div>
                 )}
 

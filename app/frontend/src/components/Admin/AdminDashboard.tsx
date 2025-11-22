@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { 
+import {
   Users,
   FileText,
   AlertTriangle,
@@ -27,6 +27,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Heart,
   User,
   Home,
   X,
@@ -43,6 +45,7 @@ import { ModerationQueue } from './ModerationQueue';
 import { ModerationHistory } from './ModerationHistory';
 import { SellerApplications } from './SellerApplications';
 import { SellerPerformance } from './SellerPerformance';
+import { CharityVerification } from './CharityVerification';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
 import { AdminAnalytics } from './AdminAnalytics';
@@ -67,6 +70,7 @@ interface AdminStats {
   totalUsers: number;
   totalSellers: number;
   recentActions: any[];
+  pendingCharityProposals?: number;
 }
 
 export function AdminDashboard() {
@@ -382,10 +386,10 @@ export function AdminDashboard() {
   // Export to CSV
   const handleExportCSV = () => {
     // Use selected items if any, otherwise use all filtered items
-    const dataToExport = selectedItems.size > 0 
+    const dataToExport = selectedItems.size > 0
       ? getFilteredActions().filter(action => selectedItems.has(action.id || action.timestamp || ''))
       : getFilteredActions();
-    
+
     if (dataToExport.length === 0) {
       addToast('No actions to export', 'warning');
       return;
@@ -567,29 +571,45 @@ export function AdminDashboard() {
     { id: 'onboarding', label: 'Onboarding', icon: HelpCircle, permission: null },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review' },
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view' },
+    { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
-  const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
-    <GlassPanel className="p-4 sm:p-6 hover:bg-white/15 transition-all duration-200">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-white mt-1">{value}</p>
-          {trend && (
-            <p className={`text-xs sm:text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {trend > 0 ? '+' : ''}{trend}% from last week
-            </p>
-          )}
+  const StatCard = ({ title, value, icon: Icon, color, trend, onClick }: any) => (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className={`w-full text-left ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : 'cursor-default'} transition-all duration-200`}
+      role="button"
+      aria-label={onClick ? `View ${title}` : title}
+      tabIndex={onClick ? 0 : -1}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
+      <GlassPanel className={`p-4 sm:p-6 ${onClick ? 'hover:bg-white/20 hover:shadow-lg hover:shadow-purple-500/20' : 'hover:bg-white/15'} transition-all duration-200`}>
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white mt-1">{value}</p>
+            {trend && (
+              <p className={`text-xs sm:text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {trend > 0 ? '+' : ''}{trend}% from last week
+              </p>
+            )}
+          </div>
+          <div className={`p-2 sm:p-3 rounded-lg ${color} flex-shrink-0 ml-2`}>
+            <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
         </div>
-        <div className={`p-2 sm:p-3 rounded-lg ${color} flex-shrink-0 ml-2`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-        </div>
-      </div>
-    </GlassPanel>
+      </GlassPanel>
+    </button>
   );
 
   return (
@@ -731,37 +751,52 @@ export function AdminDashboard() {
                   value={stats.pendingModerations}
                   icon={Shield}
                   color="bg-orange-500"
+                  onClick={() => setActiveTab('moderation')}
                 />
                 <StatCard
                   title="Seller Applications"
                   value={stats.pendingSellerApplications}
                   icon={ShoppingBag}
                   color="bg-blue-500"
+                  onClick={() => setActiveTab('sellers')}
                 />
                 <StatCard
                   title="Open Disputes"
                   value={stats.openDisputes}
                   icon={AlertTriangle}
                   color="bg-red-500"
+                  onClick={() => setActiveTab('disputes')}
                 />
                 <StatCard
                   title="Total Users"
                   value={stats.totalUsers.toLocaleString()}
                   icon={Users}
                   color="bg-green-500"
+                  onClick={() => setActiveTab('users')}
                 />
                 <StatCard
                   title="Total Sellers"
                   value={stats.totalSellers.toLocaleString()}
                   icon={ShoppingBag}
                   color="bg-purple-500"
+                  onClick={() => setActiveTab('performance')}
                 />
                 <StatCard
                   title="Suspended Users"
                   value={stats.suspendedUsers}
                   icon={XCircle}
                   color="bg-gray-500"
+                  onClick={() => setActiveTab('users')}
                 />
+                {stats.pendingCharityProposals !== undefined && (
+                  <StatCard
+                    title="Pending Charities"
+                    value={stats.pendingCharityProposals}
+                    icon={Heart}
+                    color="bg-pink-500"
+                    onClick={() => setActiveTab('charity-verification')}
+                  />
+                )}
               </div>
             )}
 
@@ -861,13 +896,12 @@ export function AdminDashboard() {
                     {getPaginatedActions().map((action, index) => {
                       const actionId = action.id || action.timestamp || index.toString();
                       const isSelected = selectedItems.has(actionId);
-                      
+
                       return (
-                        <div 
-                          key={index} 
-                          className={`flex items-center p-2 sm:p-3 rounded-lg gap-2 transition-colors ${ 
-                            isSelected ? 'bg-blue-900/30 border border-blue-500/50' : 'bg-white/5 hover:bg-white/10'
-                          }`}
+                        <div
+                          key={index}
+                          className={`flex items-center p-2 sm:p-3 rounded-lg gap-2 transition-colors ${isSelected ? 'bg-blue-900/30 border border-blue-500/50' : 'bg-white/5 hover:bg-white/10'
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -875,7 +909,7 @@ export function AdminDashboard() {
                             onChange={(e) => handleSelectItem(actionId, e.target.checked)}
                             className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800 mr-2"
                           />
-                          
+
                           <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                               <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
@@ -1019,6 +1053,10 @@ export function AdminDashboard() {
 
         {activeTab === 'performance' && hasPermission('marketplace.seller_view') && (
           <SellerPerformance />
+        )}
+
+        {activeTab === 'charity-verification' && hasPermission('governance.verify') && (
+          <CharityVerification />
         )}
 
         {activeTab === 'disputes' && hasPermission('disputes.view') && (

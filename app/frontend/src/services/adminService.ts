@@ -997,6 +997,7 @@ class AdminService {
     totalUsers: number;
     totalSellers: number;
     recentActions: AdminAction[];
+    pendingCharityProposals?: number;
   }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
@@ -1008,7 +1009,25 @@ class AdminService {
         throw new Error(errorData.message || `Failed to fetch admin stats: ${response.status} ${response.statusText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+
+      // Fetch charity stats separately if not included
+      let charityStats = { pendingCharityProposals: 0 };
+      try {
+        const charityResponse = await fetch(`${this.baseUrl}/api/admin/charities/stats`, {
+          headers: this.getHeaders(),
+        });
+        if (charityResponse.ok) {
+          charityStats = await charityResponse.json();
+        }
+      } catch (error) {
+        console.warn('Failed to fetch charity stats:', error);
+      }
+
+      return {
+        ...data,
+        pendingCharityProposals: charityStats.pendingCharityProposals || 0,
+      };
     } catch (error: any) {
       console.error('Error in getAdminStats:', error);
 
@@ -1020,9 +1039,9 @@ class AdminService {
           pendingModerations: 5,
           pendingSellerApplications: 3,
           openDisputes: 2,
-          suspendedUsers: 1,
-          totalUsers: 150,
-          totalSellers: 12,
+          suspendedUsers: 10,
+          totalUsers: 1000,
+          totalSellers: 50,
           recentActions: [
             {
               id: 'mock_action_1',
@@ -1062,6 +1081,72 @@ class AdminService {
         totalSellers: 0,
         recentActions: []
       };
+    }
+  }
+
+  // Charity Verification Methods
+  async getCharities(filters?: { status?: string; limit?: number }): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/charities?${params}`, {
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch charities: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getCharities:', error);
+      return [];
+    }
+  }
+
+  async approveCharity(charityId: string, notes?: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/charities/${charityId}/approve`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to approve charity: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in approveCharity:', error);
+      return { success: false };
+    }
+  }
+
+  async rejectCharity(charityId: string, notes: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/charities/${charityId}/reject`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to reject charity: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in rejectCharity:', error);
+      return { success: false };
     }
   }
 
