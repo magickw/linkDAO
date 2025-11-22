@@ -170,8 +170,8 @@ export default function PublicProfile() {
       return post.content;
     }
 
-    // If no content CID, return empty string
-    if (!post.contentCid) {
+    // If no content CID or CID is not valid IPFS format, use direct content
+    if (!post.contentCid || (!post.contentCid.startsWith('Qm') && !post.contentCid.startsWith('baf'))) {
       // Try to use post.content if available
       if (post.content) {
         return post.content;
@@ -179,7 +179,7 @@ export default function PublicProfile() {
       return '';
     }
 
-    // If it looks like a CID, fetch the content
+    // If it looks like a valid IPFS CID, fetch the content
     if (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('baf')) {
       // Fetch content from backend API that proxies IPFS
       fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/feed/content/${post.contentCid}`)

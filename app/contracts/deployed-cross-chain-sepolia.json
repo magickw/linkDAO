@@ -1,0 +1,11 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+  "contracts": {
+    "LDAOToken": "0x6bd7072b87B944b12B7B998566dca2e83f96DC19",
+    "LDAOBridge": "0xD925d9879a730C56E58CC3e8885359ea9C67e060",
+    "BridgeValidator": "0xe2d1C1FE6b0dDa7d71ACC4C4298991cC2dF7b155"
+  },
+  "timestamp": "2025-11-22T23:20:48.871Z"
+}

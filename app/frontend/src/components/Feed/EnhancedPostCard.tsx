@@ -87,8 +87,8 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           return;
         }
         
-        // If post has contentCid, fetch from IPFS
-        if (post.contentCid) {
+        // If post has contentCid that looks like a valid IPFS CID, fetch from IPFS
+        if (post.contentCid && (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('bafy'))) {
           console.log('Fetching content from IPFS for CID:', post.contentCid);
           const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
           console.log('Received content from IPFS:', { contentText, length: contentText?.length });
