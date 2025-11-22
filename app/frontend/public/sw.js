@@ -191,6 +191,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip requests that look like wallet addresses (0x followed by hex chars)
+  // These are invalid URLs that should not be fetched
+  if (/^\/0x[a-fA-F0-9]{40}$/.test(url.pathname)) {
+    console.warn('Skipping invalid wallet address URL:', url.pathname);
+    event.respondWith(new Response('Not Found', { status: 404 }));
+    return;
+  }
+
   // Handle placehold.co requests with local placeholders
   if (url.hostname === 'placehold.co') {
     event.respondWith(handlePlaceholderRequest(url));

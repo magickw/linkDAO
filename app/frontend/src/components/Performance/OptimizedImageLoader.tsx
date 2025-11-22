@@ -113,12 +113,30 @@ class ImageCacheManager {
 const imageCache = new ImageCacheManager();
 
 // Image optimization utilities
+const isValidImageUrl = (src: string): boolean => {
+  if (!src || typeof src !== 'string') return false;
+  // Allow data URLs, blob URLs, absolute URLs, and relative paths starting with /
+  return src.startsWith('data:') ||
+         src.startsWith('blob:') ||
+         src.startsWith('http://') ||
+         src.startsWith('https://') ||
+         src.startsWith('/');
+};
+
+const DEFAULT_AVATAR = '/images/default-avatar.png';
+
 const getOptimizedImageURL = (
   src: string,
   width?: number,
   height?: number,
   quality: number = 75
 ): string => {
+  // Validate src - if it looks like a wallet address or invalid, use default
+  if (!isValidImageUrl(src)) {
+    console.warn('Invalid image URL detected, using default:', src?.substring(0, 20));
+    return DEFAULT_AVATAR;
+  }
+
   // If it's already a data URL or blob URL, return as is
   if (src.startsWith('data:') || src.startsWith('blob:')) {
     return src;
@@ -128,13 +146,13 @@ const getOptimizedImageURL = (
   if (src.startsWith('http')) {
     // Example: Use a CDN or image optimization service
     const url = new URL(src);
-    
+
     // Add optimization parameters if the service supports them
     if (width) url.searchParams.set('w', width.toString());
     if (height) url.searchParams.set('h', height.toString());
     url.searchParams.set('q', quality.toString());
     url.searchParams.set('f', 'webp'); // Prefer WebP format
-    
+
     return url.toString();
   }
 
