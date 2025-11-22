@@ -67,7 +67,7 @@ export class WalletSecurity {
     enableBiometric: false,
     encryptStorage: true,
     allowedNetworks: [1, 5, 137, 80001], // Mainnet, Goerli, Polygon, Mumbai
-    maxTransactionValue: BigInt(ethers.utils.parseEther('10').toString()),
+    maxTransactionValue: BigInt(ethers.parseEther('10').toString()),
     requireConfirmation: true
   };
 
@@ -99,7 +99,7 @@ export class WalletSecurity {
   static async createSession(
     walletAddress: string,
     networkId: number,
-    provider: ethers.providers.Provider,
+    provider: ethers.Provider,
     config: Partial<WalletSecurityConfig> = {}
   ): Promise<WalletSecurityResult> {
     const finalConfig = { ...this.DEFAULT_CONFIG, ...config };
@@ -419,7 +419,7 @@ export class WalletSecurity {
     const errors: string[] = [];
 
     try {
-      ethers.utils.getAddress(address);
+      ethers.getAddress(address);
       return { valid: true, errors };
     } catch {
       errors.push('Invalid wallet address format');

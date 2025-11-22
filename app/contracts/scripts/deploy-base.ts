@@ -33,11 +33,11 @@ class BaseDeploymentManager {
     console.log('🚀 Starting Base deployment process...');
     console.log('📍 Network:', this.config.network);
     console.log('👤 Deployer:', deployer.address);
-    console.log('💰 Balance:', ethers.utils.formatEther(await deployer.getBalance()), 'ETH');
+    console.log('💰 Balance:', ethers.formatEther(await deployer.getBalance()), 'ETH');
     
     // Check if deployer has sufficient balance for deployment
     const balance = await deployer.getBalance();
-    if (balance.lt(ethers.utils.parseEther("0.01"))) {
+    if (balance.lt(ethers.parseEther("0.01"))) {
       console.warn('⚠️  Warning: Low balance detected. Deployment may fail due to insufficient funds.');
     }
   }
@@ -89,7 +89,7 @@ class BaseDeploymentManager {
       'USD Coin', // name
       'USDC', // symbol
       6, // decimals
-      ethers.utils.parseUnits('1000000', 6) // initial supply (1M USDC)
+      ethers.parseUnits('1000000', 6) // initial supply (1M USDC)
     ]);
 
     // Deploy ReputationSystem - constructor()

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestSuite } from "./TestSuite";
 
-const { parseEther, parseUnits } = ethers.utils;
+const { parseEther, parseUnits } = ethers;
 
 describe("Gas Optimization Tests and Benchmarks", function () {
   let testSuite: TestSuite;

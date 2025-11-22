@@ -41,6 +41,7 @@ export interface GovernanceInterface extends utils.Interface {
     "delegates(address)": FunctionFragment;
     "execute(uint256)": FunctionFragment;
     "executeAsMultisig(uint256)": FunctionFragment;
+    "executeGovernanceChange(address,uint256,bytes)": FunctionFragment;
     "executionDelay()": FunctionFragment;
     "getVotingPower(address)": FunctionFragment;
     "governanceToken()": FunctionFragment;
@@ -80,6 +81,7 @@ export interface GovernanceInterface extends utils.Interface {
       | "delegates"
       | "execute"
       | "executeAsMultisig"
+      | "executeGovernanceChange"
       | "executionDelay"
       | "getVotingPower"
       | "governanceToken"
@@ -161,6 +163,14 @@ export interface GovernanceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "executeAsMultisig",
     values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "executeGovernanceChange",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BytesLike>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "executionDelay",
@@ -298,6 +308,10 @@ export interface GovernanceInterface extends utils.Interface {
   decodeFunctionResult(functionFragment: "execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "executeAsMultisig",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "executeGovernanceChange",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -688,6 +702,13 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    executeGovernanceChange(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     executionDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     getVotingPower(
@@ -880,6 +901,13 @@ export interface Governance extends BaseContract {
 
   executeAsMultisig(
     proposalId: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  executeGovernanceChange(
+    target: PromiseOrValue<string>,
+    value: PromiseOrValue<BigNumberish>,
+    data: PromiseOrValue<BytesLike>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -1077,6 +1105,13 @@ export interface Governance extends BaseContract {
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    executeGovernanceChange(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1416,6 +1451,13 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    executeGovernanceChange(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     getVotingPower(
@@ -1565,6 +1607,13 @@ export interface Governance extends BaseContract {
 
     executeAsMultisig(
       proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    executeGovernanceChange(
+      target: PromiseOrValue<string>,
+      value: PromiseOrValue<BigNumberish>,
+      data: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

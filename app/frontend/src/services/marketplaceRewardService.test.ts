@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { MarketplaceRewardService, MarketplaceTransaction } from '../services/marketplaceRewardService';
 
 describe('MarketplaceRewardService', () => {
@@ -15,7 +15,7 @@ describe('MarketplaceRewardService', () => {
       transactionId: '1',
       seller,
       buyer,
-      transactionValue: BigNumber.from('1000000000000000000000'), // 1000 LDAO
+      transactionValue: ethers.parseEther('1000'), // 1000 LDAO
       tokenAddress: '0x789...', // LDAO token address
       timestamp: Math.floor(Date.now() / 1000)
     };
@@ -25,9 +25,9 @@ describe('MarketplaceRewardService', () => {
 
       expect(result.success).toBe(true);
       expect(result.rewardAmount).toBeDefined();
-      expect(BigNumber.from(result.rewardAmount!).eq(
-        BigNumber.from('1000000000000000000') // 1 LDAO (0.1% of 1000)
-      )).toBe(true);
+      expect(BigNumber(result.rewardAmount!) ===
+        ethers.parseEther('1') // 1 LDAO (0.1% of 1000)
+      ).toBe(true);
     });
 
     it('should prevent duplicate reward processing', async () => {
@@ -43,7 +43,7 @@ describe('MarketplaceRewardService', () => {
     it('should reject invalid transactions', async () => {
       const invalidTransaction: MarketplaceTransaction = {
         ...validTransaction,
-        transactionValue: BigNumber.from(0)
+        transactionValue: 0n
       };
 
       const result = await marketplaceService.processTransactionReward(invalidTransaction);
@@ -72,9 +72,9 @@ describe('MarketplaceRewardService', () => {
       await marketplaceService.processTransactionReward(transaction2);
 
       const totalRewards = await marketplaceService.getTotalMarketplaceRewards(seller);
-      expect(BigNumber.from(totalRewards).eq(
-        BigNumber.from('2000000000000000000') // 2 LDAO (0.1% of 2000)
-      )).toBe(true);
+      expect(BigNumber(totalRewards) ===
+        ethers.parseEther('2') // 2 LDAO (0.1% of 2000)
+      ).toBe(true);
     });
 
     it('should retrieve user transactions correctly', async () => {
@@ -91,8 +91,8 @@ describe('MarketplaceRewardService', () => {
       const stats = await marketplaceService.getRewardsStatistics(seller);
       
       expect(stats.transactionCount).toBe(1);
-      expect(BigNumber.from(stats.totalRewards).gt(0)).toBe(true);
-      expect(BigNumber.from(stats.averageReward).gt(0)).toBe(true);
+      expect(BigNumber(stats.totalRewards) > 0n).toBe(true);
+      expect(BigNumber(stats.averageReward) > 0n).toBe(true);
     });
 
     it('should handle pagination in transaction history', async () => {

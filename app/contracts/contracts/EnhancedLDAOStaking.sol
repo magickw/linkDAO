@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  * @notice Enhanced staking contract with flexible/fixed terms, auto-compounding, and premium member benefits
  */
 contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
-    IERC20 public immutable ldaoToken;
+    IERC20 public ldaoToken;
     
     // Enhanced staking structures
     struct StakePosition {
@@ -95,7 +95,20 @@ contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
     event StakingTierUpdated(uint256 indexed tierId);
     
     constructor(address _ldaoToken, address _owner) Ownable(_owner) {
+        require(_ldaoToken != address(0), "Invalid LDAO token address");
+        require(_owner != address(0), "Invalid owner address");
+        
         ldaoToken = IERC20(_ldaoToken);
+        
+        // Initialize basic tier data - keep constructor minimal
+        _initializeBasicTiers();
+    }
+    
+    /**
+     * @notice Initialize staking tiers - separate from constructor to avoid stack issues
+     */
+    function initializeTiers() external onlyOwner {
+        require(nextTierId == 1, "Tiers already initialized"); // Prevent reinitialization
         
         // Initialize default enhanced staking tiers
         _createStakingTier(
@@ -155,33 +168,69 @@ contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
+     * @notice Initialize basic tier data - minimal constructor operations
+     */
+    function _initializeBasicTiers() private {
+        // Set nextTierId to 1 to indicate initialization is needed
+        nextTierId = 1;
+    }
+    
+    /**
      * @notice Stake tokens with enhanced options
      */
     function stake(
         uint256 amount,
         uint256 tierId,
-        bool autoCompound
+        bool enableAutoCompound
     ) external nonReentrant whenNotPaused {
-        require(amount > 0, "Amount must be greater than 0");
-        require(ldaoToken.balanceOf(msg.sender) >= amount, "Insufficient balance");
+        _validateStakeInput(amount, tierId, enableAutoCompound);
         
         StakingTier storage tier = stakingTiers[tierId];
-        require(tier.isActive, "Staking tier not active");
-        require(amount >= tier.minStakeAmount, "Amount below minimum for tier");
-        require(tier.maxStakeAmount == 0 || amount <= tier.maxStakeAmount, "Amount exceeds maximum");
-        require(!autoCompound || tier.allowsAutoCompound, "Auto-compound not allowed for this tier");
+        _validateStakeRequirements(amount, tier, enableAutoCompound);
         
         // Transfer tokens to contract
         require(ldaoToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
         
+        // Create stake position and update state
+        uint256 positionIndex = _createStakePosition(msg.sender, amount, tierId, enableAutoCompound);
+        _updateUserStakeInfo(msg.sender, amount);
+        
+        emit Staked(msg.sender, amount, tierId, positionIndex, enableAutoCompound);
+    }
+    
+    /**
+     * @notice Validate stake input parameters
+     */
+    function _validateStakeInput(uint256 amount, uint256 tierId, bool enableAutoCompound) private view {
+        require(amount > 0, "Amount must be greater than 0");
+        require(ldaoToken.balanceOf(msg.sender) >= amount, "Insufficient balance");
+        require(tierId > 0 && tierId < nextTierId, "Tiers not initialized");
+    }
+    
+    /**
+     * @notice Validate stake requirements against tier
+     */
+    function _validateStakeRequirements(uint256 amount, StakingTier storage tier, bool enableAutoCompound) private view {
+        require(tier.isActive, "Staking tier not active");
+        require(amount >= tier.minStakeAmount, "Amount below minimum for tier");
+        require(tier.maxStakeAmount == 0 || amount <= tier.maxStakeAmount, "Amount exceeds maximum");
+        require(!enableAutoCompound || tier.allowsAutoCompound, "Auto-compound not allowed for this tier");
+    }
+    
+    /**
+     * @notice Create stake position and return index
+     */
+    function _createStakePosition(address user, uint256 amount, uint256 tierId, bool enableAutoCompound) private returns (uint256) {
+        StakingTier storage tier = stakingTiers[tierId];
+        
         // Calculate APR rate (base + premium bonus if applicable)
         uint256 aprRate = tier.baseAprRate;
-        if (premiumMembers[msg.sender]) {
+        if (premiumMembers[user]) {
             aprRate += tier.premiumBonusRate;
         }
         
         // Create stake position
-        userStakes[msg.sender].push(StakePosition({
+        userStakes[user].push(StakePosition({
             amount: amount,
             startTime: block.timestamp,
             lockPeriod: tier.lockPeriod,
@@ -189,26 +238,29 @@ contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
             lastRewardClaim: block.timestamp,
             accumulatedRewards: 0,
             isActive: true,
-            isAutoCompound: autoCompound,
+            isAutoCompound: enableAutoCompound,
             isFixedTerm: tier.lockPeriod > 0,
             tierId: tierId
         }));
-        
-        // Update user info
-        UserStakingInfo storage info = userInfo[msg.sender];
-        info.totalStaked += amount;
-        info.activePositions++;
-        info.lastActivityTime = block.timestamp;
         
         // Update totals
         totalStakedSupply += amount;
         
         // Update voting power and premium status
-        _updateVotingPower(msg.sender);
-        _updatePremiumMembership(msg.sender);
+        _updateVotingPower(user);
+        _updatePremiumMembership(user);
         
-        uint256 positionIndex = userStakes[msg.sender].length - 1;
-        emit Staked(msg.sender, amount, tierId, positionIndex, autoCompound);
+        return userStakes[user].length - 1;
+    }
+    
+    /**
+     * @notice Update user staking info
+     */
+    function _updateUserStakeInfo(address user, uint256 amount) private {
+        UserStakingInfo storage info = userInfo[user];
+        info.totalStaked += amount;
+        info.activePositions++;
+        info.lastActivityTime = block.timestamp;
     }
     
     /**
@@ -539,6 +591,7 @@ contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
     ) external onlyOwner {
         require(tierId > 0 && tierId < nextTierId, "Invalid tier ID");
         
+        // Update tier in smaller chunks to avoid stack issues
         StakingTier storage tier = stakingTiers[tierId];
         tier.name = name;
         tier.lockPeriod = lockPeriod;
@@ -603,19 +656,20 @@ contract EnhancedLDAOStaking is Ownable, ReentrancyGuard, Pausable {
         bool allowsAutoCompound,
         uint256 earlyWithdrawalPenalty
     ) internal {
-        stakingTiers[nextTierId] = StakingTier({
-            name: name,
-            lockPeriod: lockPeriod,
-            baseAprRate: baseAprRate,
-            premiumBonusRate: premiumBonusRate,
-            minStakeAmount: minStakeAmount,
-            maxStakeAmount: maxStakeAmount,
-            isActive: true,
-            allowsAutoCompound: allowsAutoCompound,
-            earlyWithdrawalPenalty: earlyWithdrawalPenalty
-        });
+        uint256 currentTierId = nextTierId;
         
-        emit StakingTierCreated(nextTierId, name);
+        // Create tier in smaller chunks to avoid stack issues
+        stakingTiers[currentTierId].name = name;
+        stakingTiers[currentTierId].lockPeriod = lockPeriod;
+        stakingTiers[currentTierId].baseAprRate = baseAprRate;
+        stakingTiers[currentTierId].premiumBonusRate = premiumBonusRate;
+        stakingTiers[currentTierId].minStakeAmount = minStakeAmount;
+        stakingTiers[currentTierId].maxStakeAmount = maxStakeAmount;
+        stakingTiers[currentTierId].isActive = true;
+        stakingTiers[currentTierId].allowsAutoCompound = allowsAutoCompound;
+        stakingTiers[currentTierId].earlyWithdrawalPenalty = earlyWithdrawalPenalty;
+        
+        emit StakingTierCreated(currentTierId, name);
         nextTierId++;
     }
     

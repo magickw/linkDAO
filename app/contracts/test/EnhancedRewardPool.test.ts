@@ -16,7 +16,7 @@ describe("EnhancedRewardPool", function () {
   let funder: SignerWithAddress;
 
   const EPOCH_DURATION = 7 * 24 * 60 * 60; // 7 days
-  const MINIMUM_FUNDING = ethers.utils.parseEther("1000");
+  const MINIMUM_FUNDING = ethers.parseEther("1000");
   const REPUTATION_MULTIPLIER = 150; // 1.5x max
 
   // Reward categories
@@ -54,12 +54,12 @@ describe("EnhancedRewardPool", function () {
     await rewardPool.deployed();
 
     // Mint tokens for testing
-    await ldaoToken.mint(funder.address, ethers.utils.parseEther("10000"));
-    await ldaoToken.mint(owner.address, ethers.utils.parseEther("10000"));
+    await ldaoToken.mint(funder.address, ethers.parseEther("10000"));
+    await ldaoToken.mint(owner.address, ethers.parseEther("10000"));
     
     // Approve reward pool to spend tokens
-    await ldaoToken.connect(funder).approve(rewardPool.address, ethers.utils.parseEther("10000"));
-    await ldaoToken.connect(owner).approve(rewardPool.address, ethers.utils.parseEther("10000"));
+    await ldaoToken.connect(funder).approve(rewardPool.address, ethers.parseEther("10000"));
+    await ldaoToken.connect(owner).approve(rewardPool.address, ethers.parseEther("10000"));
   });
 
   describe("Deployment", function () {
@@ -114,7 +114,7 @@ describe("EnhancedRewardPool", function () {
 
   describe("Epoch Management", function () {
     it("Should allow funding the current epoch", async function () {
-      const fundAmount = ethers.utils.parseEther("5000");
+      const fundAmount = ethers.parseEther("5000");
       
       await expect(rewardPool.connect(funder).fundEpoch(fundAmount))
         .to.emit(rewardPool, "Funded")
@@ -161,11 +161,11 @@ describe("EnhancedRewardPool", function () {
   describe("Reward Calculation", function () {
     beforeEach(async function () {
       // Fund the epoch
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("5000"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("5000"));
     });
 
     it("Should calculate rewards with reputation multiplier", async function () {
-      const baseAmount = ethers.utils.parseEther("100");
+      const baseAmount = ethers.parseEther("100");
       
       // Set user reputation to get multiplier
       // Note: This would normally be done through the reputation system
@@ -180,9 +180,9 @@ describe("EnhancedRewardPool", function () {
     it("Should batch calculate rewards efficiently", async function () {
       const users = [user1.address, user2.address, user3.address];
       const baseAmounts = [
-        ethers.utils.parseEther("100"),
-        ethers.utils.parseEther("200"),
-        ethers.utils.parseEther("150")
+        ethers.parseEther("100"),
+        ethers.parseEther("200"),
+        ethers.parseEther("150")
       ];
 
       await rewardPool.batchCalculateRewards(users, 1, TRADING_REWARDS, baseAmounts);
@@ -196,7 +196,7 @@ describe("EnhancedRewardPool", function () {
 
     it("Should reject batch with mismatched array lengths", async function () {
       const users = [user1.address, user2.address];
-      const baseAmounts = [ethers.utils.parseEther("100")]; // Different length
+      const baseAmounts = [ethers.parseEther("100")]; // Different length
 
       await expect(rewardPool.batchCalculateRewards(users, 1, TRADING_REWARDS, baseAmounts))
         .to.be.revertedWith("Array length mismatch");
@@ -204,7 +204,7 @@ describe("EnhancedRewardPool", function () {
 
     it("Should reject batch that's too large", async function () {
       const users = new Array(101).fill(user1.address);
-      const baseAmounts = new Array(101).fill(ethers.utils.parseEther("100"));
+      const baseAmounts = new Array(101).fill(ethers.parseEther("100"));
 
       await expect(rewardPool.batchCalculateRewards(users, 1, TRADING_REWARDS, baseAmounts))
         .to.be.revertedWith("Batch size too large");
@@ -214,7 +214,7 @@ describe("EnhancedRewardPool", function () {
       // Deactivate a category
       await rewardPool.updateRewardCategory(TRADING_REWARDS, 4000, false);
 
-      await expect(rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.utils.parseEther("100")))
+      await expect(rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.parseEther("100")))
         .to.be.revertedWith("Category not active");
     });
   });
@@ -222,9 +222,9 @@ describe("EnhancedRewardPool", function () {
   describe("Reward Claiming", function () {
     beforeEach(async function () {
       // Fund epoch and calculate some rewards
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("5000"));
-      await rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.utils.parseEther("100"));
-      await rewardPool.calculateReward(user2.address, 1, GOVERNANCE_REWARDS, ethers.utils.parseEther("200"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("5000"));
+      await rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.parseEther("100"));
+      await rewardPool.calculateReward(user2.address, 1, GOVERNANCE_REWARDS, ethers.parseEther("200"));
       
       // Finalize epoch
       await time.increase(EPOCH_DURATION + 1);
@@ -248,8 +248,8 @@ describe("EnhancedRewardPool", function () {
 
     it("Should not allow claiming from non-finalized epoch", async function () {
       // Start new epoch and calculate rewards
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("1000"));
-      await rewardPool.calculateReward(user1.address, 2, TRADING_REWARDS, ethers.utils.parseEther("50"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("1000"));
+      await rewardPool.calculateReward(user1.address, 2, TRADING_REWARDS, ethers.parseEther("50"));
 
       await expect(rewardPool.connect(user1).claimRewards(2))
         .to.be.revertedWith("Epoch not finalized");
@@ -269,8 +269,8 @@ describe("EnhancedRewardPool", function () {
 
     it("Should allow claiming from multiple epochs", async function () {
       // Create and finalize another epoch with rewards
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("2000"));
-      await rewardPool.calculateReward(user1.address, 2, CONTENT_REWARDS, ethers.utils.parseEther("75"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("2000"));
+      await rewardPool.calculateReward(user1.address, 2, CONTENT_REWARDS, ethers.parseEther("75"));
       
       await time.increase(EPOCH_DURATION + 1);
       await rewardPool.finalizeEpoch(2);
@@ -347,7 +347,7 @@ describe("EnhancedRewardPool", function () {
     });
 
     it("Should allow updating minimum funding", async function () {
-      const newMinimum = ethers.utils.parseEther("2000");
+      const newMinimum = ethers.parseEther("2000");
 
       await rewardPool.updateGovernanceParameter("minimumFunding", newMinimum);
       expect(await rewardPool.minimumFunding()).to.equal(newMinimum);
@@ -376,7 +376,7 @@ describe("EnhancedRewardPool", function () {
 
   describe("Access Control", function () {
     it("Should only allow governance to calculate rewards", async function () {
-      await expect(rewardPool.connect(user1).calculateReward(user2.address, 1, TRADING_REWARDS, ethers.utils.parseEther("100")))
+      await expect(rewardPool.connect(user1).calculateReward(user2.address, 1, TRADING_REWARDS, ethers.parseEther("100")))
         .to.be.revertedWith("Not authorized");
     });
 
@@ -401,33 +401,33 @@ describe("EnhancedRewardPool", function () {
   describe("Emergency Functions", function () {
     it("Should allow emergency withdrawal by governance", async function () {
       // Fund the pool
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("1000"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("1000"));
       
-      const withdrawAmount = ethers.utils.parseEther("500");
+      const withdrawAmount = ethers.parseEther("500");
       const initialBalance = await ldaoToken.balanceOf(owner.address);
       
       await rewardPool.emergencyWithdraw(withdrawAmount);
       
       const finalBalance = await ldaoToken.balanceOf(owner.address);
       expect(finalBalance - initialBalance).to.equal(withdrawAmount);
-      expect(await rewardPool.totalPoolBalance()).to.equal(ethers.utils.parseEther("500"));
+      expect(await rewardPool.totalPoolBalance()).to.equal(ethers.parseEther("500"));
     });
 
     it("Should reject emergency withdrawal of more than balance", async function () {
-      await expect(rewardPool.emergencyWithdraw(ethers.utils.parseEther("1000")))
+      await expect(rewardPool.emergencyWithdraw(ethers.parseEther("1000")))
         .to.be.revertedWith("Insufficient balance");
     });
 
     it("Should only allow governance to emergency withdraw", async function () {
-      await expect(rewardPool.connect(user1).emergencyWithdraw(ethers.utils.parseEther("100")))
+      await expect(rewardPool.connect(user1).emergencyWithdraw(ethers.parseEther("100")))
         .to.be.revertedWith("Not authorized");
     });
   });
 
   describe("View Functions", function () {
     it("Should return correct user epoch rewards", async function () {
-      await rewardPool.connect(funder).fundEpoch(ethers.utils.parseEther("1000"));
-      await rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.utils.parseEther("100"));
+      await rewardPool.connect(funder).fundEpoch(ethers.parseEther("1000"));
+      await rewardPool.calculateReward(user1.address, 1, TRADING_REWARDS, ethers.parseEther("100"));
 
       const [rewardAmount, hasClaimed] = await rewardPool.getUserEpochRewards(user1.address, 1);
       expect(rewardAmount).to.be.gt(0);

@@ -1,10 +1,10 @@
-import { 
-  Proposal, 
-  ProposalStatus, 
-  ProposalCategory, 
+import {
+  Proposal,
+  ProposalStatus,
+  ProposalCategory,
   VoteChoice,
   VotingMetrics,
-  ParticipationMetrics 
+  ParticipationMetrics
 } from '../types/governance';
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
 import { ethers } from 'ethers';
@@ -30,20 +30,20 @@ const GOVERNANCE_ABI = [
     "type": "function",
     "name": "proposalCount",
     "inputs": [],
-    "outputs": [{"name": "", "type": "uint256"}],
+    "outputs": [{ "name": "", "type": "uint256" }],
     "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "getProposal",
-    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "inputs": [{ "name": "proposalId", "type": "uint256" }],
     "outputs": [
-      {"name": "proposer", "type": "address"},
-      {"name": "description", "type": "string"},
-      {"name": "forVotes", "type": "uint256"},
-      {"name": "againstVotes", "type": "uint256"},
-      {"name": "executed", "type": "bool"},
-      {"name": "category", "type": "uint256"}
+      { "name": "proposer", "type": "address" },
+      { "name": "description", "type": "string" },
+      { "name": "forVotes", "type": "uint256" },
+      { "name": "againstVotes", "type": "uint256" },
+      { "name": "executed", "type": "bool" },
+      { "name": "category", "type": "uint256" }
     ],
     "stateMutability": "view"
   },
@@ -51,8 +51,8 @@ const GOVERNANCE_ABI = [
     "type": "function",
     "name": "vote",
     "inputs": [
-      {"name": "proposalId", "type": "uint256"},
-      {"name": "support", "type": "bool"}
+      { "name": "proposalId", "type": "uint256" },
+      { "name": "support", "type": "bool" }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -61,11 +61,11 @@ const GOVERNANCE_ABI = [
     "type": "function",
     "name": "createProposal",
     "inputs": [
-      {"name": "description", "type": "string"},
-      {"name": "category", "type": "uint256"},
-      {"name": "data", "type": "bytes"}
+      { "name": "description", "type": "string" },
+      { "name": "category", "type": "uint256" },
+      { "name": "data", "type": "bytes" }
     ],
-    "outputs": [{"name": "proposalId", "type": "uint256"}],
+    "outputs": [{ "name": "proposalId", "type": "uint256" }],
     "stateMutability": "nonpayable"
   }
 ];
@@ -74,7 +74,7 @@ export class GovernanceService {
   private baseUrl = ENV_CONFIG.BACKEND_URL;
   private governanceAddress = process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
   private contract: ethers.Contract | null = null;
-  private provider: ethers.providers.Provider | null = null;
+  private provider: ethers.Provider | null = null;
 
   /**
    * Initialize Web3 contract connection
@@ -85,13 +85,13 @@ export class GovernanceService {
     try {
       // Try to use window.ethereum if available
       if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
         this.provider = provider;
         this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, provider);
       } else {
         // Fallback to JSON-RPC provider
         const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/demo';
-        this.provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        this.provider = new ethers.JsonRpcProvider(rpcUrl);
         this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
       }
     } catch (error) {
@@ -106,7 +106,7 @@ export class GovernanceService {
     try {
       await this.initializeContract();
       if (!this.contract) return 0;
-      
+
       const count = await this.contract.proposalCount();
       return count.toNumber();
     } catch (error) {
@@ -126,7 +126,7 @@ export class GovernanceService {
         try {
           const proposalCount = await this.getProposalCount();
           const proposals: Proposal[] = [];
-          
+
           // Fetch each proposal from the contract
           for (let i = 0; i < proposalCount; i++) {
             try {
@@ -136,7 +136,7 @@ export class GovernanceService {
               console.warn(`Failed to fetch proposal ${i}:`, err);
             }
           }
-          
+
           if (proposals.length > 0) {
             return proposals;
           }
@@ -144,7 +144,7 @@ export class GovernanceService {
           console.warn('Contract fetch failed, trying backend:', contractError);
         }
       }
-      
+
       // Try backend API
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
       if (response.ok) {
@@ -156,13 +156,13 @@ export class GovernanceService {
           }
         }
       }
-      
+
       // Fallback to Web3 service for real data
       const web3Proposals = await communityWeb3Service.getCommunityProposals(communityId);
       return this.transformWeb3Proposals(web3Proposals);
     } catch (error) {
       console.error('Error fetching community proposals:', error);
-      
+
       // Return mock data for development
       return this.getMockProposals(communityId);
     }
@@ -230,12 +230,12 @@ export class GovernanceService {
         },
         body: JSON.stringify(proposalData)
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         return this.transformBackendProposal(data);
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error creating proposal:', error);
@@ -264,7 +264,7 @@ export class GovernanceService {
   } | null> {
     try {
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
-      
+
       if (response.ok) {
         const json = await safeJson(response);
         if (json) {
@@ -275,7 +275,7 @@ export class GovernanceService {
           };
         }
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error fetching treasury data:', error);
@@ -295,12 +295,12 @@ export class GovernanceService {
   } | null> {
     try {
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/users/${userId}/voting-power`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error fetching voting power:', error);
@@ -330,18 +330,18 @@ export class GovernanceService {
           votingPower
         })
       });
-      
+
       if (response.ok) {
         return { success: true };
       }
-      
+
       const errorData = await response.json();
       return { success: false, error: errorData.error };
     } catch (error) {
       console.error('Error delegating voting power:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -366,18 +366,18 @@ export class GovernanceService {
           daoId
         })
       });
-      
+
       if (response.ok) {
         return { success: true };
       }
-      
+
       const errorData = await response.json();
       return { success: false, error: errorData.error };
     } catch (error) {
       console.error('Error revoking delegation:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -395,7 +395,7 @@ export class GovernanceService {
     try {
       const url = `${this.baseUrl}/governance/users/${userId}/voting-history${daoId ? `?daoId=${daoId}` : ''}`;
       const response = await fetch(url);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.map((vote: any) => ({
@@ -403,7 +403,7 @@ export class GovernanceService {
           createdAt: new Date(vote.createdAt)
         }));
       }
-      
+
       return [];
     } catch (error) {
       console.error('Error fetching voting history:', error);
@@ -430,31 +430,31 @@ export class GovernanceService {
       // Try to vote via smart contract
       await this.initializeContract();
       if (this.contract && typeof window !== 'undefined' && (window as any).ethereum) {
-        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
-        const signer = provider.getSigner();
-        const contractWithSigner = this.contract.connect(signer);
-        
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
+        const signer = await provider.getSigner();
+        const contractWithSigner = this.contract.connect(signer) as any;
+
         const tx = await contractWithSigner.vote(parseInt(proposalId), support);
         const receipt = await tx.wait();
-        
+
         return {
           success: true,
           transactionHash: receipt.transactionHash
         };
       }
-      
+
       // Fallback to Web3 service
       const transactionHash = await communityWeb3Service.voteOnProposal(proposalId, support);
-      
-      return { 
-        success: true, 
-        transactionHash 
+
+      return {
+        success: true,
+        transactionHash
       };
     } catch (error) {
       console.error('Error voting on proposal:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -480,16 +480,16 @@ export class GovernanceService {
         proposalData.description,
         proposalData.actions
       );
-      
-      return { 
-        success: true, 
-        proposalId 
+
+      return {
+        success: true,
+        proposalId
       };
     } catch (error) {
       console.error('Error creating proposal:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -497,23 +497,23 @@ export class GovernanceService {
   /**
    * Get user's voting power via Web3
    */
-  async getVotingPowerWeb3(communityId: string, userAddress: string): Promise<{ 
-    success: boolean; 
-    votingPower?: string; 
-    error?: string 
+  async getVotingPowerWeb3(communityId: string, userAddress: string): Promise<{
+    success: boolean;
+    votingPower?: string;
+    error?: string
   }> {
     try {
       const votingPower = await communityWeb3Service.getVotingPower(communityId, userAddress);
-      
-      return { 
-        success: true, 
-        votingPower 
+
+      return {
+        success: true,
+        votingPower
       };
     } catch (error) {
       console.error('Error getting voting power:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
   }
@@ -524,7 +524,7 @@ export class GovernanceService {
   async getUserVotingPower(communityId: string, userAddress: string): Promise<number> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/voting-power/${communityId}/${userAddress}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.votingPower;
@@ -546,7 +546,7 @@ export class GovernanceService {
   async getCommunityParticipationRate(communityId: string): Promise<number> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/participation/${communityId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.participationRate;
@@ -566,7 +566,7 @@ export class GovernanceService {
   async getProposalVotingMetrics(proposalId: string): Promise<VotingMetrics> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/metrics/${proposalId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.metrics;
@@ -586,7 +586,7 @@ export class GovernanceService {
   async canUserVote(proposalId: string, userAddress: string): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/can-vote/${proposalId}/${userAddress}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.canVote;
@@ -606,7 +606,7 @@ export class GovernanceService {
   async getParticipationMetrics(communityId: string, userAddress?: string): Promise<ParticipationMetrics> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/participation-metrics/${communityId}${userAddress ? `?userAddress=${userAddress}` : ''}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data.metrics;
@@ -634,7 +634,7 @@ export class GovernanceService {
   }> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/historical-participation/${communityId}?timeframe=${timeframe}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data;
@@ -659,7 +659,7 @@ export class GovernanceService {
   }> {
     try {
       const response = await fetch(`${this.baseUrl}/governance/voting-weight/${communityId}/${userAddress}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         return data;
@@ -669,7 +669,7 @@ export class GovernanceService {
       const votingPower = Math.random() * 1000 + 100;
       const totalVotingPower = 50000;
       const percentage = (votingPower / totalVotingPower) * 100;
-      
+
       return {
         votingPower,
         percentage,
@@ -692,7 +692,7 @@ export class GovernanceService {
    */
   private transformContractProposal(proposalId: number, contractProposal: any, communityId: string): Proposal {
     const [proposer, description, forVotes, againstVotes, executed, category] = contractProposal;
-    
+
     // Calculate status based on execution and votes
     let status: ProposalStatus = ProposalStatus.ACTIVE;
     if (executed) {
@@ -704,7 +704,7 @@ export class GovernanceService {
         status = forPercentage.gte(60) ? ProposalStatus.SUCCEEDED : ProposalStatus.FAILED;
       }
     }
-    
+
     return {
       id: `prop_${proposalId}`,
       onChainId: proposalId.toString(),
@@ -715,8 +715,8 @@ export class GovernanceService {
       type: 'general',
       startTime: new Date(Date.now() - 7 * 86400000), // Assume started 7 days ago
       endTime: new Date(Date.now() + 7 * 86400000), // Ends 7 days from now
-      forVotes: ethers.utils.formatEther(forVotes),
-      againstVotes: ethers.utils.formatEther(againstVotes),
+      forVotes: ethers.formatEther(forVotes),
+      againstVotes: ethers.formatEther(againstVotes),
       abstainVotes: '0',
       quorum: '1000.0',
       status,
@@ -957,7 +957,7 @@ export class GovernanceService {
     const currentParticipationRate = (totalVoters / eligibleVoters) * 100;
     const userVotingWeight = userAddress ? Math.random() * 500 + 50 : 0;
     const totalVotingPower = 50000;
-    
+
     return {
       currentParticipationRate,
       eligibleVoters,
@@ -986,31 +986,31 @@ export class GovernanceService {
     const periods = [];
     const numPeriods = timeframe === 'week' ? 8 : timeframe === 'month' ? 6 : 4;
     let baseRate = 65;
-    
+
     for (let i = numPeriods - 1; i >= 0; i--) {
       const variation = (Math.random() - 0.5) * 10;
       const rate = Math.max(40, Math.min(95, baseRate + variation));
-      
+
       periods.push({
-        period: timeframe === 'week' 
-          ? `Week ${i + 1}` 
-          : timeframe === 'month' 
-            ? `Month ${i + 1}` 
+        period: timeframe === 'week'
+          ? `Week ${i + 1}`
+          : timeframe === 'month'
+            ? `Month ${i + 1}`
             : `Q${i + 1}`,
         participationRate: rate,
         totalProposals: Math.floor(Math.random() * 5) + 2,
         avgVotingPower: Math.random() * 200 + 100
       });
-      
+
       baseRate = rate;
     }
-    
-    const trend = periods[0].participationRate > periods[periods.length - 1].participationRate 
-      ? 'increasing' 
-      : periods[0].participationRate < periods[periods.length - 1].participationRate 
-        ? 'decreasing' 
+
+    const trend = periods[0].participationRate > periods[periods.length - 1].participationRate
+      ? 'increasing'
+      : periods[0].participationRate < periods[periods.length - 1].participationRate
+        ? 'decreasing'
         : 'stable';
-    
+
     return { periods, trend };
   }
 }

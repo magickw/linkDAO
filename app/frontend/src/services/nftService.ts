@@ -84,15 +84,15 @@ class NFTService {
     formData.append('image', params.image);
     formData.append('royalty', params.royalty.toString());
     formData.append('attributes', JSON.stringify(params.attributes));
-    
+
     if (params.animationFile) {
       formData.append('animation', params.animationFile);
     }
-    
+
     if (params.externalUrl) {
       formData.append('externalUrl', params.externalUrl);
     }
-    
+
     if (params.collectionId) {
       formData.append('collectionId', params.collectionId);
     }
@@ -123,11 +123,11 @@ class NFTService {
     formData.append('mintPrice', params.mintPrice);
     formData.append('isPublicMint', params.isPublicMint.toString());
     formData.append('royalty', params.royalty.toString());
-    
+
     if (params.externalUrl) {
       formData.append('externalUrl', params.externalUrl);
     }
-    
+
     if (params.maxSupply) {
       formData.append('maxSupply', params.maxSupply.toString());
     }
@@ -329,7 +329,7 @@ class NFTService {
     offset = 0
   ): Promise<any> {
     const params = new URLSearchParams();
-    
+
     if (query) params.append('q', query);
     if (filters?.collectionId) params.append('collectionId', filters.collectionId);
     if (filters?.creatorId) params.append('creatorId', filters.creatorId);
@@ -396,8 +396,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     // NFT Marketplace contract ABI (simplified)
     const contractABI = [
@@ -411,7 +411,7 @@ class NFTService {
         await signer.getAddress(),
         tokenURI,
         royalty,
-        ethers.utils.formatBytes32String(contentHash)
+        ethers.encodeBytes32String(contentHash)
       );
 
       const receipt = await tx.wait();
@@ -435,8 +435,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     // Marketplace contract ABI (simplified for listing)
     const contractABI = [
@@ -478,8 +478,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function buyNFT(uint256 tokenId) external payable"
@@ -512,7 +512,7 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
     const contractABI = [
@@ -548,7 +548,7 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
     const contractABI = [
@@ -586,7 +586,7 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
 
     const contractABI = [
@@ -613,7 +613,7 @@ class NFTService {
    */
   async getMetadataFromIPFS(ipfsHash: string): Promise<NFTMetadata> {
     const response = await fetch(`https://ipfs.io/ipfs/${ipfsHash}`);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch metadata from IPFS');
     }

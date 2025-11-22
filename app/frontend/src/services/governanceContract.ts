@@ -16,43 +16,43 @@ const GOVERNANCE_TOKEN_ABI = [
 
 export class GovernanceContractService {
   private contract: ethers.Contract | null = null;
-  private provider: ethers.providers.Web3Provider | null = null;
+  private provider: ethers.BrowserProvider | null = null;
 
-  async initialize(tokenAddress: string, provider: ethers.providers.Web3Provider) {
+  async initialize(tokenAddress: string, provider: ethers.BrowserProvider) {
     this.provider = provider;
-    const signer = provider.getSigner();
+    const signer = await provider.getSigner();
     this.contract = new ethers.Contract(tokenAddress, GOVERNANCE_TOKEN_ABI, signer);
   }
 
   async getTokenBalance(userAddress: string): Promise<string> {
     if (!this.contract) throw new Error('Contract not initialized');
     const balance = await this.contract.balanceOf(userAddress);
-    return ethers.utils.formatEther(balance);
+    return ethers.formatEther(balance);
   }
 
   async getStakedBalance(userAddress: string): Promise<string> {
     if (!this.contract) throw new Error('Contract not initialized');
     const balance = await this.contract.getStakedBalance(userAddress);
-    return ethers.utils.formatEther(balance);
+    return ethers.formatEther(balance);
   }
 
   async stakeTokens(amount: string): Promise<string> {
     if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.stake(ethers.utils.parseEther(amount));
+    const tx = await this.contract.stake(ethers.parseEther(amount));
     await tx.wait();
     return tx.hash;
   }
 
   async unstakeTokens(amount: string): Promise<string> {
     if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.unstake(ethers.utils.parseEther(amount));
+    const tx = await this.contract.unstake(ethers.parseEther(amount));
     await tx.wait();
     return tx.hash;
   }
 
   async voteOnProposal(proposalId: number, support: boolean, amount: string): Promise<string> {
     if (!this.contract) throw new Error('Contract not initialized');
-    const tx = await this.contract.vote(proposalId, support, ethers.utils.parseEther(amount));
+    const tx = await this.contract.vote(proposalId, support, ethers.parseEther(amount));
     await tx.wait();
     return tx.hash;
   }

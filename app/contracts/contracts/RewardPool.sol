@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RewardPool is Ownable {
-    IERC20 public immutable ldao;
+    IERC20 public ldao;
     uint256 public currentEpoch;
 
     struct Account {

@@ -29,70 +29,6 @@ import type {
 } from "../common";
 
 export declare namespace Marketplace {
-  export type ListingStruct = {
-    id: PromiseOrValue<BigNumberish>;
-    seller: PromiseOrValue<string>;
-    tokenAddress: PromiseOrValue<string>;
-    price: PromiseOrValue<BigNumberish>;
-    quantity: PromiseOrValue<BigNumberish>;
-    itemType: PromiseOrValue<BigNumberish>;
-    listingType: PromiseOrValue<BigNumberish>;
-    status: PromiseOrValue<BigNumberish>;
-    startTime: PromiseOrValue<BigNumberish>;
-    endTime: PromiseOrValue<BigNumberish>;
-    highestBid: PromiseOrValue<BigNumberish>;
-    highestBidder: PromiseOrValue<string>;
-    metadataURI: PromiseOrValue<string>;
-    isEscrowed: PromiseOrValue<boolean>;
-    nftStandard: PromiseOrValue<BigNumberish>;
-    tokenId: PromiseOrValue<BigNumberish>;
-    reservePrice: PromiseOrValue<BigNumberish>;
-    minIncrement: PromiseOrValue<BigNumberish>;
-    reserveMet: PromiseOrValue<boolean>;
-  };
-
-  export type ListingStructOutput = [
-    BigNumber,
-    string,
-    string,
-    BigNumber,
-    BigNumber,
-    number,
-    number,
-    number,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    string,
-    string,
-    boolean,
-    number,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    boolean
-  ] & {
-    id: BigNumber;
-    seller: string;
-    tokenAddress: string;
-    price: BigNumber;
-    quantity: BigNumber;
-    itemType: number;
-    listingType: number;
-    status: number;
-    startTime: BigNumber;
-    endTime: BigNumber;
-    highestBid: BigNumber;
-    highestBidder: string;
-    metadataURI: string;
-    isEscrowed: boolean;
-    nftStandard: number;
-    tokenId: BigNumber;
-    reservePrice: BigNumber;
-    minIncrement: BigNumber;
-    reserveMet: boolean;
-  };
-
   export type BidStruct = {
     bidder: PromiseOrValue<string>;
     amount: PromiseOrValue<BigNumberish>;
@@ -212,11 +148,11 @@ export interface MarketplaceInterface extends utils.Interface {
     "acceptHighestBid(uint256)": FunctionFragment;
     "acceptOffer(uint256)": FunctionFragment;
     "cancelListing(uint256)": FunctionFragment;
+    "commitBid(uint256,uint256,uint256)": FunctionFragment;
     "createListing(address,uint256,uint256,uint8,uint8,uint256,string)": FunctionFragment;
     "daoApprovedVendors(address)": FunctionFragment;
     "disputes(uint256)": FunctionFragment;
     "escrowContract()": FunctionFragment;
-    "getActiveListings(uint256,uint256)": FunctionFragment;
     "getBids(uint256)": FunctionFragment;
     "getDispute(uint256)": FunctionFragment;
     "getOffers(uint256)": FunctionFragment;
@@ -238,6 +174,7 @@ export interface MarketplaceInterface extends utils.Interface {
     "purchaseListing(uint256,uint256)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "reputationScores(address)": FunctionFragment;
+    "revealBid(uint256,uint256,uint256)": FunctionFragment;
     "setAuctionExtensionTime(uint256)": FunctionFragment;
     "setDAOApprovedVendor(address,bool)": FunctionFragment;
     "setEscrowContract(address)": FunctionFragment;
@@ -257,11 +194,11 @@ export interface MarketplaceInterface extends utils.Interface {
       | "acceptHighestBid"
       | "acceptOffer"
       | "cancelListing"
+      | "commitBid"
       | "createListing"
       | "daoApprovedVendors"
       | "disputes"
       | "escrowContract"
-      | "getActiveListings"
       | "getBids"
       | "getDispute"
       | "getOffers"
@@ -283,6 +220,7 @@ export interface MarketplaceInterface extends utils.Interface {
       | "purchaseListing"
       | "renounceOwnership"
       | "reputationScores"
+      | "revealBid"
       | "setAuctionExtensionTime"
       | "setDAOApprovedVendor"
       | "setEscrowContract"
@@ -316,6 +254,14 @@ export interface MarketplaceInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "commitBid",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "createListing",
     values: [
       PromiseOrValue<string>,
@@ -338,10 +284,6 @@ export interface MarketplaceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "escrowContract",
     values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getActiveListings",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "getBids",
@@ -422,6 +364,14 @@ export interface MarketplaceInterface extends utils.Interface {
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
+    functionFragment: "revealBid",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setAuctionExtensionTime",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
@@ -482,6 +432,7 @@ export interface MarketplaceInterface extends utils.Interface {
     functionFragment: "cancelListing",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "commitBid", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "createListing",
     data: BytesLike
@@ -493,10 +444,6 @@ export interface MarketplaceInterface extends utils.Interface {
   decodeFunctionResult(functionFragment: "disputes", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "escrowContract",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getActiveListings",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getBids", data: BytesLike): Result;
@@ -553,6 +500,7 @@ export interface MarketplaceInterface extends utils.Interface {
     functionFragment: "reputationScores",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "revealBid", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "setAuctionExtensionTime",
     data: BytesLike
@@ -839,6 +787,13 @@ export interface Marketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    commitBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     createListing(
       tokenAddress: PromiseOrValue<string>,
       price: PromiseOrValue<BigNumberish>,
@@ -883,12 +838,6 @@ export interface Marketplace extends BaseContract {
     >;
 
     escrowContract(overrides?: CallOverrides): Promise<[string]>;
-
-    getActiveListings(
-      start: PromiseOrValue<BigNumberish>,
-      count: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[Marketplace.ListingStructOutput[]]>;
 
     getBids(
       listingId: PromiseOrValue<BigNumberish>,
@@ -962,7 +911,8 @@ export interface Marketplace extends BaseContract {
         BigNumber,
         BigNumber,
         BigNumber,
-        boolean
+        boolean,
+        BigNumber
       ] & {
         id: BigNumber;
         seller: string;
@@ -983,6 +933,7 @@ export interface Marketplace extends BaseContract {
         reservePrice: BigNumber;
         minIncrement: BigNumber;
         reserveMet: boolean;
+        revealPeriodEnd: BigNumber;
       }
     >;
 
@@ -1056,6 +1007,13 @@ export interface Marketplace extends BaseContract {
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
+
+    revealBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
 
     setAuctionExtensionTime(
       newTime: PromiseOrValue<BigNumberish>,
@@ -1132,6 +1090,13 @@ export interface Marketplace extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  commitBid(
+    listingId: PromiseOrValue<BigNumberish>,
+    bidAmount: PromiseOrValue<BigNumberish>,
+    salt: PromiseOrValue<BigNumberish>,
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   createListing(
     tokenAddress: PromiseOrValue<string>,
     price: PromiseOrValue<BigNumberish>,
@@ -1176,12 +1141,6 @@ export interface Marketplace extends BaseContract {
   >;
 
   escrowContract(overrides?: CallOverrides): Promise<string>;
-
-  getActiveListings(
-    start: PromiseOrValue<BigNumberish>,
-    count: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<Marketplace.ListingStructOutput[]>;
 
   getBids(
     listingId: PromiseOrValue<BigNumberish>,
@@ -1255,7 +1214,8 @@ export interface Marketplace extends BaseContract {
       BigNumber,
       BigNumber,
       BigNumber,
-      boolean
+      boolean,
+      BigNumber
     ] & {
       id: BigNumber;
       seller: string;
@@ -1276,6 +1236,7 @@ export interface Marketplace extends BaseContract {
       reservePrice: BigNumber;
       minIncrement: BigNumber;
       reserveMet: boolean;
+      revealPeriodEnd: BigNumber;
     }
   >;
 
@@ -1349,6 +1310,13 @@ export interface Marketplace extends BaseContract {
     arg0: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
+
+  revealBid(
+    listingId: PromiseOrValue<BigNumberish>,
+    bidAmount: PromiseOrValue<BigNumberish>,
+    salt: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
 
   setAuctionExtensionTime(
     newTime: PromiseOrValue<BigNumberish>,
@@ -1425,6 +1393,13 @@ export interface Marketplace extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    commitBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     createListing(
       tokenAddress: PromiseOrValue<string>,
       price: PromiseOrValue<BigNumberish>,
@@ -1469,12 +1444,6 @@ export interface Marketplace extends BaseContract {
     >;
 
     escrowContract(overrides?: CallOverrides): Promise<string>;
-
-    getActiveListings(
-      start: PromiseOrValue<BigNumberish>,
-      count: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<Marketplace.ListingStructOutput[]>;
 
     getBids(
       listingId: PromiseOrValue<BigNumberish>,
@@ -1548,7 +1517,8 @@ export interface Marketplace extends BaseContract {
         BigNumber,
         BigNumber,
         BigNumber,
-        boolean
+        boolean,
+        BigNumber
       ] & {
         id: BigNumber;
         seller: string;
@@ -1569,6 +1539,7 @@ export interface Marketplace extends BaseContract {
         reservePrice: BigNumber;
         minIncrement: BigNumber;
         reserveMet: boolean;
+        revealPeriodEnd: BigNumber;
       }
     >;
 
@@ -1640,6 +1611,13 @@ export interface Marketplace extends BaseContract {
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    revealBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     setAuctionExtensionTime(
       newTime: PromiseOrValue<BigNumberish>,
@@ -1865,6 +1843,13 @@ export interface Marketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    commitBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     createListing(
       tokenAddress: PromiseOrValue<string>,
       price: PromiseOrValue<BigNumberish>,
@@ -1887,12 +1872,6 @@ export interface Marketplace extends BaseContract {
     ): Promise<BigNumber>;
 
     escrowContract(overrides?: CallOverrides): Promise<BigNumber>;
-
-    getActiveListings(
-      start: PromiseOrValue<BigNumberish>,
-      count: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
 
     getBids(
       listingId: PromiseOrValue<BigNumberish>,
@@ -1978,6 +1957,13 @@ export interface Marketplace extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    revealBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     setAuctionExtensionTime(
       newTime: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
@@ -2056,6 +2042,13 @@ export interface Marketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    commitBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     createListing(
       tokenAddress: PromiseOrValue<string>,
       price: PromiseOrValue<BigNumberish>,
@@ -2078,12 +2071,6 @@ export interface Marketplace extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     escrowContract(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    getActiveListings(
-      start: PromiseOrValue<BigNumberish>,
-      count: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
 
     getBids(
       listingId: PromiseOrValue<BigNumberish>,
@@ -2171,6 +2158,13 @@ export interface Marketplace extends BaseContract {
     reputationScores(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    revealBid(
+      listingId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     setAuctionExtensionTime(

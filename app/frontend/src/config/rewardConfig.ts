@@ -1,9 +1,9 @@
-import { BigNumber, ethers } from 'ethers';
+import { ethers } from 'ethers';
 
 export interface RewardRates {
   contentCreation: {
-    minReward: BigNumber;
-    maxReward: BigNumber;
+    minReward: bigint;
+    maxReward: bigint;
     qualityThresholds: {
       low: number;    // Minimum score for low quality (10 LDAO)
       medium: number; // Minimum score for medium quality (25 LDAO)
@@ -11,8 +11,8 @@ export interface RewardRates {
     };
   };
   communityEngagement: {
-    minReward: BigNumber;
-    maxReward: BigNumber;
+    minReward: bigint;
+    maxReward: bigint;
     metrics: {
       likes: number;      // Reward multiplier for likes received
       replies: number;    // Reward multiplier for replies received
@@ -29,8 +29,8 @@ export interface RewardRates {
 
 export const rewardConfig: RewardRates = {
   contentCreation: {
-    minReward: ethers.utils.parseEther('10'), // 10 LDAO
-    maxReward: ethers.utils.parseEther('50'), // 50 LDAO
+    minReward: ethers.parseEther('10'), // 10 LDAO
+    maxReward: ethers.parseEther('50'), // 50 LDAO
     qualityThresholds: {
       low: 50,     // 50% quality score
       medium: 75,  // 75% quality score
@@ -38,8 +38,8 @@ export const rewardConfig: RewardRates = {
     }
   },
   communityEngagement: {
-    minReward: ethers.utils.parseEther('1'),  // 1 LDAO
-    maxReward: ethers.utils.parseEther('10'), // 10 LDAO
+    minReward: ethers.parseEther('1'),  // 1 LDAO
+    maxReward: ethers.parseEther('10'), // 10 LDAO
     metrics: {
       likes: 0.5,      // 0.5 LDAO per like
       replies: 1,      // 1 LDAO per reply
@@ -57,58 +57,58 @@ export const rewardConfig: RewardRates = {
 /**
  * Calculate content creation reward based on quality score
  * @param qualityScore - Quality score of the content (0-100)
- * @returns Reward amount in LDAO tokens (as BigNumber)
+ * @returns Reward amount in LDAO tokens (as bigint)
  */
-export function calculateContentReward(qualityScore: number): BigNumber {
+export function calculateContentReward(qualityScore: number): bigint {
   const { qualityThresholds, minReward, maxReward } = rewardConfig.contentCreation;
   
   if (qualityScore >= qualityThresholds.high) {
     return maxReward;
   } else if (qualityScore >= qualityThresholds.medium) {
-    return ethers.utils.parseEther('25'); // 25 LDAO
+    return ethers.parseEther('25'); // 25 LDAO
   } else if (qualityScore >= qualityThresholds.low) {
     return minReward;
   }
-  return BigNumber.from(0);
+  return 0n;
 }
 
 /**
  * Calculate community engagement reward
  * @param metrics - Engagement metrics for the comment
- * @returns Reward amount in LDAO tokens (as BigNumber)
+ * @returns Reward amount in LDAO tokens (as bigint)
  */
 export function calculateEngagementReward(metrics: {
   likes: number;
   replies: number;
   helpfulnessScore: number;
-}): BigNumber {
+}): bigint {
   const { minReward, maxReward } = rewardConfig.communityEngagement;
   const { likes, replies, helpfulness } = rewardConfig.communityEngagement.metrics;
 
-  const reward = BigNumber.from(0)
-    .add(ethers.utils.parseEther((likes * metrics.likes).toString()))
-    .add(ethers.utils.parseEther((replies * metrics.replies).toString()))
-    .add(ethers.utils.parseEther((helpfulness * metrics.helpfulnessScore).toString()));
+  const reward = 0n +
+    ethers.parseEther((likes * metrics.likes).toString()) +
+    ethers.parseEther((replies * metrics.replies).toString()) +
+    ethers.parseEther((helpfulness * metrics.helpfulnessScore).toString());
 
-  if (reward.lt(minReward)) return minReward;
-  if (reward.gt(maxReward)) return maxReward;
+  if (reward < minReward) return minReward;
+  if (reward > maxReward) return maxReward;
   return reward;
 }
 
 /**
  * Calculate referral reward
  * @param purchaseAmount - Amount of first purchase in LDAO tokens
- * @returns Reward amount in LDAO tokens (as BigNumber)
+ * @returns Reward amount in LDAO tokens (as bigint)
  */
-export function calculateReferralReward(purchaseAmount: BigNumber): BigNumber {
-  return purchaseAmount.mul(rewardConfig.referralProgram.percentage).div(100);
+export function calculateReferralReward(purchaseAmount: bigint): bigint {
+  return (purchaseAmount * BigInt(rewardConfig.referralProgram.percentage)) / 100n;
 }
 
 /**
  * Calculate marketplace transaction reward
  * @param transactionValue - Value of the transaction in LDAO tokens
- * @returns Reward amount in LDAO tokens (as BigNumber)
+ * @returns Reward amount in LDAO tokens (as bigint)
  */
-export function calculateMarketplaceReward(transactionValue: BigNumber): BigNumber {
-  return transactionValue.mul(Math.floor(rewardConfig.marketplace.transactionRewardRate * 10000)).div(10000);
+export function calculateMarketplaceReward(transactionValue: bigint): bigint {
+  return (transactionValue * BigInt(Math.floor(rewardConfig.marketplace.transactionRewardRate * 10000))) / 10000n;
 }

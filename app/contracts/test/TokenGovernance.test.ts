@@ -14,9 +14,9 @@ describe("Enhanced Token and Governance System", function () {
   let user3: SignerWithAddress;
   let delegate: SignerWithAddress;
 
-  const INITIAL_SUPPLY = ethers.utils.parseEther("1000000000"); // 1 billion tokens
-  const STAKE_AMOUNT = ethers.utils.parseEther("1000"); // 1000 tokens
-  const LARGE_STAKE = ethers.utils.parseEther("10000"); // 10000 tokens
+  const INITIAL_SUPPLY = ethers.parseEther("1000000000"); // 1 billion tokens
+  const STAKE_AMOUNT = ethers.parseEther("1000"); // 1000 tokens
+  const LARGE_STAKE = ethers.parseEther("10000"); // 10000 tokens
 
   beforeEach(async function () {
     [owner, treasury, user1, user2, user3, delegate] = await ethers.getSigners();
@@ -32,10 +32,10 @@ describe("Enhanced Token and Governance System", function () {
     await governance.deployed();
 
     // Distribute tokens for testing
-    await ldaoToken.connect(treasury).transfer(user1.address, ethers.utils.parseEther("100000"));
-    await ldaoToken.connect(treasury).transfer(user2.address, ethers.utils.parseEther("100000"));
-    await ldaoToken.connect(treasury).transfer(user3.address, ethers.utils.parseEther("100000"));
-    await ldaoToken.connect(treasury).transfer(delegate.address, ethers.utils.parseEther("100000"));
+    await ldaoToken.connect(treasury).transfer(user1.address, ethers.parseEther("100000"));
+    await ldaoToken.connect(treasury).transfer(user2.address, ethers.parseEther("100000"));
+    await ldaoToken.connect(treasury).transfer(user3.address, ethers.parseEther("100000"));
+    await ldaoToken.connect(treasury).transfer(delegate.address, ethers.parseEther("100000"));
   });
 
   describe("Enhanced Token Staking System", function () {
@@ -54,7 +54,7 @@ describe("Enhanced Token and Governance System", function () {
       it("Should allow owner to create new staking tiers", async function () {
         const lockPeriod = 60 * 24 * 60 * 60; // 60 days
         const rewardRate = 1000; // 10%
-        const minStakeAmount = ethers.utils.parseEther("2000");
+        const minStakeAmount = ethers.parseEther("2000");
 
         const tx = await ldaoToken.connect(owner).createStakingTier(
           lockPeriod,
@@ -420,8 +420,8 @@ describe("Enhanced Token and Governance System", function () {
       });
 
       it("Should allow owner to update category parameters", async function () {
-        const newQuorum = ethers.utils.parseEther("1000000");
-        const newThreshold = ethers.utils.parseEther("100000");
+        const newQuorum = ethers.parseEther("1000000");
+        const newThreshold = ethers.parseEther("100000");
         
         const tx = await governance.connect(owner).setCategoryParameters(
           1, // MARKETPLACE_POLICY
@@ -488,7 +488,7 @@ describe("Enhanced Token and Governance System", function () {
       const votingPowerBefore = await ldaoToken.votingPower(user1.address);
       
       // Transfer some tokens
-      const transferAmount = ethers.utils.parseEther("1000");
+      const transferAmount = ethers.parseEther("1000");
       await ldaoToken.connect(user1).transfer(user2.address, transferAmount);
       
       const votingPowerAfter = await ldaoToken.votingPower(user1.address);
@@ -499,9 +499,9 @@ describe("Enhanced Token and Governance System", function () {
 
     it("Should handle complex governance scenarios", async function () {
       // Multiple users stake different amounts
-      await ldaoToken.connect(user1).stake(ethers.utils.parseEther("5000"), 3);
-      await ldaoToken.connect(user2).stake(ethers.utils.parseEther("10000"), 4);
-      await ldaoToken.connect(user3).stake(ethers.utils.parseEther("2000"), 2);
+      await ldaoToken.connect(user1).stake(ethers.parseEther("5000"), 3);
+      await ldaoToken.connect(user2).stake(ethers.parseEther("10000"), 4);
+      await ldaoToken.connect(user3).stake(ethers.parseEther("2000"), 2);
       
       // Create a high-stakes proposal
       const proposalTx = await governance.connect(user2).propose(

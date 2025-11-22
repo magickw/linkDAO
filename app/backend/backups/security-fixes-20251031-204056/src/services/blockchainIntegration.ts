@@ -97,7 +97,7 @@ export class BlockchainIntegrationService {
 
       const balance = await token.balanceOf(userAddress);
       const balanceFormatted = ethers.formatEther(balance);
-      const minimumBN = ethers.utils.parseEther(minimumBalance);
+      const minimumBN = ethers.parseEther(minimumBalance);
 
       return {
         hasBalance: balance.gte(minimumBN),

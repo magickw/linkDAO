@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { calculateContentReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
 import { RewardPool } from '../types/contracts/RewardPool';
@@ -88,7 +88,7 @@ export class ContentRewardService {
       const rewardAmount = calculateContentReward(qualityScore);
 
       // If no reward is earned, return early
-      if (rewardAmount.eq(0)) {
+      if (rewardAmount === 0n) {
         return {
           success: false,
           error: 'Content quality does not meet minimum threshold for rewards'
@@ -114,7 +114,7 @@ export class ContentRewardService {
 
       return {
         success: true,
-        transactionHash: receipt.transactionHash,
+        transactionHash: receipt.hash,
         rewardAmount: rewardAmount.toString()
       };
 
@@ -142,7 +142,7 @@ export class ContentRewardService {
       }
 
       // Add additional eligibility checks here (e.g., content age, author reputation, etc.)
-      
+
       return true;
     } catch (error) {
       console.error('Error checking content eligibility:', error);

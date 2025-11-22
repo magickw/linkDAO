@@ -200,11 +200,11 @@ export default function LDAOPurchaseModal({
 
       // Check network for crypto purchases
       if (purchaseMethod === 'crypto' && typeof window !== 'undefined' && window.ethereum) {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum);
         const network = await provider.getNetwork();
         const expectedChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111'); // Sepolia
 
-        if (network.chainId !== expectedChainId) {
+        if (network.chainId !== BigInt(expectedChainId)) {
           setTransactionStatus({
             step: 'Wrong network detected',
             status: 'failed',
@@ -223,7 +223,7 @@ export default function LDAOPurchaseModal({
 
             // Verify network switched
             const newNetwork = await provider.getNetwork();
-            if (newNetwork.chainId !== expectedChainId) {
+            if (newNetwork.chainId !== BigInt(expectedChainId)) {
               throw new Error('Network switch failed');
             }
 

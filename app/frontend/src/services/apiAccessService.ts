@@ -97,16 +97,16 @@ export interface APIAccessRequest {
 
 export class APIAccessService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
   private static apiTiers: APITier[] | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       APIAccessService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       APIAccessService.currentAddress = (await signer.getAddress()).toLowerCase();
       
       // Load API tiers
@@ -359,18 +359,17 @@ export class APIAccessService {
         throw new Error('LDAO token address not configured');
       }
 
+      const signer = await APIAccessService.provider.getSigner();
       const ldaoContract = new ethers.Contract(
         ldaoAddress,
         ['function approve(address spender, uint256 amount) returns (bool)', 'function transfer(address to, uint256 amount) returns (bool)'],
-        APIAccessService.provider
+        signer
       );
 
-      const signer = APIAccessService.provider.getSigner();
-
       // Approve tokens for staking
-      const approveTx = await ldaoContract.connect(signer).approve(
+      const approveTx = await ldaoContract.approve(
         process.env.NEXT_PUBLIC_API_STAKING_ADDRESS,
-        ethers.utils.parseEther(amount)
+        ethers.parseEther(amount)
       );
       await approveTx.wait();
 

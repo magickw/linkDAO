@@ -574,7 +574,7 @@ export default function CommunityPostCardEnhanced({
               </div>
 
               <div className="text-xs font-medium">
-                {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LNK staked
+                {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LDAO staked
               </div>
             </div>
           )}

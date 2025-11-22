@@ -98,6 +98,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
     "buyNFT(uint256)": FunctionFragment;
     "cancelListing(uint256)": FunctionFragment;
     "cancelOffer(uint256,uint256)": FunctionFragment;
+    "commitBid(uint256,uint256,uint256)": FunctionFragment;
     "createAuction(uint256,uint256,uint256,uint256,uint8)": FunctionFragment;
     "creatorNFTs(address,uint256)": FunctionFragment;
     "creatorRoyalties(address)": FunctionFragment;
@@ -121,6 +122,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
     "platformFee()": FunctionFragment;
     "platformFeeRecipient()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
+    "revealBid(uint256,uint256,uint256)": FunctionFragment;
     "royaltyInfo(uint256,uint256)": FunctionFragment;
     "safeTransferFrom(address,address,uint256)": FunctionFragment;
     "safeTransferFrom(address,address,uint256,bytes)": FunctionFragment;
@@ -149,6 +151,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
       | "buyNFT"
       | "cancelListing"
       | "cancelOffer"
+      | "commitBid"
       | "createAuction"
       | "creatorNFTs"
       | "creatorRoyalties"
@@ -172,6 +175,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
       | "platformFee"
       | "platformFeeRecipient"
       | "renounceOwnership"
+      | "revealBid"
       | "royaltyInfo"
       | "safeTransferFrom(address,address,uint256)"
       | "safeTransferFrom(address,address,uint256,bytes)"
@@ -218,6 +222,14 @@ export interface NFTMarketplaceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "cancelOffer",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "commitBid",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "createAuction",
@@ -328,6 +340,14 @@ export interface NFTMarketplaceInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "revealBid",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "royaltyInfo",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
   ): string;
@@ -416,6 +436,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
     functionFragment: "cancelOffer",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "commitBid", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "createAuction",
     data: BytesLike
@@ -475,6 +496,7 @@ export interface NFTMarketplaceInterface extends utils.Interface {
     functionFragment: "renounceOwnership",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "revealBid", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "royaltyInfo",
     data: BytesLike
@@ -821,7 +843,9 @@ export interface NFTMarketplace extends BaseContract {
         BigNumber,
         BigNumber,
         boolean,
-        number
+        number,
+        boolean,
+        BigNumber
       ] & {
         tokenId: BigNumber;
         seller: string;
@@ -833,6 +857,8 @@ export interface NFTMarketplace extends BaseContract {
         endTime: BigNumber;
         isActive: boolean;
         paymentMethod: number;
+        bidsRevealed: boolean;
+        revealPeriodEnd: BigNumber;
       }
     >;
 
@@ -855,6 +881,13 @@ export interface NFTMarketplace extends BaseContract {
       tokenId: PromiseOrValue<BigNumberish>,
       offerIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    commitBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     createAuction(
@@ -1004,6 +1037,13 @@ export interface NFTMarketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    revealBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     royaltyInfo(
       tokenId: PromiseOrValue<BigNumberish>,
       salePrice: PromiseOrValue<BigNumberish>,
@@ -1118,7 +1158,9 @@ export interface NFTMarketplace extends BaseContract {
       BigNumber,
       BigNumber,
       boolean,
-      number
+      number,
+      boolean,
+      BigNumber
     ] & {
       tokenId: BigNumber;
       seller: string;
@@ -1130,6 +1172,8 @@ export interface NFTMarketplace extends BaseContract {
       endTime: BigNumber;
       isActive: boolean;
       paymentMethod: number;
+      bidsRevealed: boolean;
+      revealPeriodEnd: BigNumber;
     }
   >;
 
@@ -1152,6 +1196,13 @@ export interface NFTMarketplace extends BaseContract {
     tokenId: PromiseOrValue<BigNumberish>,
     offerIndex: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  commitBid(
+    tokenId: PromiseOrValue<BigNumberish>,
+    bidAmount: PromiseOrValue<BigNumberish>,
+    salt: PromiseOrValue<BigNumberish>,
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   createAuction(
@@ -1301,6 +1352,13 @@ export interface NFTMarketplace extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  revealBid(
+    tokenId: PromiseOrValue<BigNumberish>,
+    bidAmount: PromiseOrValue<BigNumberish>,
+    salt: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   royaltyInfo(
     tokenId: PromiseOrValue<BigNumberish>,
     salePrice: PromiseOrValue<BigNumberish>,
@@ -1415,7 +1473,9 @@ export interface NFTMarketplace extends BaseContract {
         BigNumber,
         BigNumber,
         boolean,
-        number
+        number,
+        boolean,
+        BigNumber
       ] & {
         tokenId: BigNumber;
         seller: string;
@@ -1427,6 +1487,8 @@ export interface NFTMarketplace extends BaseContract {
         endTime: BigNumber;
         isActive: boolean;
         paymentMethod: number;
+        bidsRevealed: boolean;
+        revealPeriodEnd: BigNumber;
       }
     >;
 
@@ -1448,6 +1510,13 @@ export interface NFTMarketplace extends BaseContract {
     cancelOffer(
       tokenId: PromiseOrValue<BigNumberish>,
       offerIndex: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    commitBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1595,6 +1664,13 @@ export interface NFTMarketplace extends BaseContract {
     platformFeeRecipient(overrides?: CallOverrides): Promise<string>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
+
+    revealBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     royaltyInfo(
       tokenId: PromiseOrValue<BigNumberish>,
@@ -1917,6 +1993,13 @@ export interface NFTMarketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    commitBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     createAuction(
       tokenId: PromiseOrValue<BigNumberish>,
       startingPrice: PromiseOrValue<BigNumberish>,
@@ -2031,6 +2114,13 @@ export interface NFTMarketplace extends BaseContract {
     platformFeeRecipient(overrides?: CallOverrides): Promise<BigNumber>;
 
     renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    revealBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -2161,6 +2251,13 @@ export interface NFTMarketplace extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    commitBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     createAuction(
       tokenId: PromiseOrValue<BigNumberish>,
       startingPrice: PromiseOrValue<BigNumberish>,
@@ -2277,6 +2374,13 @@ export interface NFTMarketplace extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    revealBid(
+      tokenId: PromiseOrValue<BigNumberish>,
+      bidAmount: PromiseOrValue<BigNumberish>,
+      salt: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

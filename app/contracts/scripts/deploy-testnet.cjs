@@ -8,10 +8,10 @@ async function main() {
   
   console.log("Deploying contracts with the account:", deployer.address);
   const balance = await deployer.getBalance();
-  console.log("Account balance:", ethers.utils.formatEther(balance), "ETH");
+  console.log("Account balance:", ethers.formatEther(balance), "ETH");
 
   // Check if we have enough balance for deployment
-  if (balance.lt(ethers.utils.parseEther("0.01"))) {
+  if (balance.lt(ethers.parseEther("0.01"))) {
     console.log("⚠️  Warning: Low balance. You might need more ETH for deployment.");
   }
 
@@ -128,7 +128,7 @@ async function main() {
   try {
     // Test LDAOToken
     const totalSupply = await ldaoToken.totalSupply();
-    console.log(`✅ LDAOToken total supply: ${ethers.utils.formatEther(totalSupply)} LDAO`);
+    console.log(`✅ LDAOToken total supply: ${ethers.formatEther(totalSupply)} LDAO`);
     
     // Test ProfileRegistry
     const profileName = await profileRegistry.name();

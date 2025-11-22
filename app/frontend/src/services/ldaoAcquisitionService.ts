@@ -49,7 +49,7 @@ export interface EarnOpportunity {
 class LDAOAcquisitionService {
   private treasuryContract: ethers.Contract | null = null;
   private ldaoContract: ethers.Contract | null = null;
-  private provider: ethers.providers.Web3Provider | null = null;
+  private provider: ethers.BrowserProvider | null = null;
   private initializationAttempted: boolean = false;
 
   constructor() {
@@ -73,14 +73,14 @@ class LDAOAcquisitionService {
   private async initializeContracts() {
     if (typeof window !== 'undefined' && window.ethereum) {
       this.initializationAttempted = true;
-      this.provider = new ethers.providers.Web3Provider(window.ethereum);
+      this.provider = new ethers.BrowserProvider(window.ethereum);
 
       // Initialize contracts with deployed addresses
       const treasuryAddress = process.env.NEXT_PUBLIC_LDAO_TREASURY_ADDRESS;
       const ldaoAddress = process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS;
 
       if (treasuryAddress && ldaoAddress) {
-        const signer = this.provider.getSigner();
+        const signer = await this.provider.getSigner();
 
         // Treasury contract ABI (simplified)
         const treasuryABI = [
@@ -134,13 +134,13 @@ class LDAOAcquisitionService {
       const moonPayApiKey = process.env.NEXT_PUBLIC_MOONPAY_API_KEY || 'pk_test_placeholder';
       const redirectUrl = encodeURIComponent(`${window.location.origin}/token?purchase=success`);
       const moonPayUrl = `https://buy.moonpay.com?apiKey=${moonPayApiKey}&currencyCode=eth&baseCurrencyCode=${currency.toLowerCase()}&baseCurrencyAmount=${amount}&redirectURL=${redirectUrl}`;
-      
+
       // Open MoonPay widget in popup
       window.open(moonPayUrl, 'moonpay', 'width=400,height=600');
-      
+
       // For demo purposes, we'll simulate a successful purchase
       // In a real implementation, you would wait for a callback from MoonPay
-      
+
       return {
         success: true,
         ldaoAmount: (amount / 0.01).toString() // Calculate based on current price
@@ -166,15 +166,15 @@ class LDAOAcquisitionService {
         throw new Error('Contracts not initialized. Please check your network connection and try again.');
       }
 
-      const signer = this.provider.getSigner();
-      const ldaoAmountWei = ethers.utils.parseEther(ldaoAmount);
+      const signer = await this.provider.getSigner();
+      const ldaoAmountWei = ethers.parseEther(ldaoAmount);
 
       if (fromToken === 'ETH') {
         // Get quote for ETH purchase
         const quote = await this.getQuote(ldaoAmount);
 
         const tx = await this.treasuryContract.purchaseWithETH(ldaoAmountWei, {
-          value: ethers.utils.parseEther(quote.ethAmount)
+          value: ethers.parseEther(quote.ethAmount)
         });
 
         const receipt = await tx.wait();
@@ -219,15 +219,15 @@ class LDAOAcquisitionService {
 
         // Calculate USDC amount in wei (6 decimals)
         // quote.usdAmount is in USD (18 decimals), convert to 6 decimals
-        const usdAmountWei = ethers.utils.parseEther(quote.usdAmount);
-        const usdcAmountWei = usdAmountWei.div(ethers.BigNumber.from(10).pow(12));
+        const usdAmountWei = ethers.parseEther(quote.usdAmount);
+        const usdcAmountWei = usdAmountWei / (BigInt(10) ** BigInt(12));
 
         // Check current allowance
         const userAddress = await signer.getAddress();
         const currentAllowance = await usdcContract.allowance(userAddress, this.treasuryContract.address);
 
         // Approve USDC spending if needed
-        if (currentAllowance.lt(usdcAmountWei)) {
+        if (currentAllowance < usdcAmountWei) {
           const toastId = toast.loading('Please approve USDC spending in your wallet...');
 
           const approveTx = await usdcContract.approve(this.treasuryContract.address, usdcAmountWei);
@@ -246,7 +246,7 @@ class LDAOAcquisitionService {
 
         // Save purchase transaction
         this.savePurchaseTransaction({
-          hash: receipt.transactionHash,
+          hash: receipt.hash,
           user: userAddress,
           amount: ldaoAmount,
           cost: quote.usdcAmount,
@@ -259,7 +259,7 @@ class LDAOAcquisitionService {
 
         return {
           success: true,
-          transactionHash: receipt.transactionHash,
+          transactionHash: receipt.hash,
           ldaoAmount
         };
       }
@@ -293,16 +293,16 @@ class LDAOAcquisitionService {
     try {
       // Integrate with Uniswap V3 or other DEX
       const swapResult = await this.executeUniswapSwap(fromToken, amount);
-      
+
       if (swapResult.success) {
         toast.success(`Successfully swapped for ${swapResult.ldaoReceived} LDAO tokens!`);
       }
-      
+
       return swapResult;
     } catch (error) {
       console.error('Swap error:', error);
       toast.error('Swap failed. Please try again.');
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Swap failed'
@@ -322,24 +322,24 @@ class LDAOAcquisitionService {
         throw new Error('Treasury contract not initialized');
       }
 
-      const ldaoAmountWei = ethers.utils.parseEther(ldaoAmount);
+      const ldaoAmountWei = ethers.parseEther(ldaoAmount);
       const [usdAmount, ethAmount, usdcAmount, discount] = await this.treasuryContract.getQuote(ldaoAmountWei);
 
       // Calculate fees
-      const processingFee = ethers.utils.parseEther('0.01'); // $0.01 processing fee
-      const gasFee = ethers.utils.parseEther('0.005'); // Estimated gas fee
-      const totalFees = processingFee.add(gasFee);
+      const processingFee = ethers.parseEther('0.01'); // $0.01 processing fee
+      const gasFee = ethers.parseEther('0.005'); // Estimated gas fee
+      const totalFees = processingFee + gasFee;
 
       return {
         ldaoAmount,
-        usdAmount: ethers.utils.formatEther(usdAmount),
-        ethAmount: ethers.utils.formatEther(ethAmount),
-        usdcAmount: ethers.utils.formatUnits(usdcAmount, 6),
-        discount: discount.toNumber() / 100, // Convert from basis points (100 = 1%)
+        usdAmount: ethers.formatEther(usdAmount),
+        ethAmount: ethers.formatEther(ethAmount),
+        usdcAmount: ethers.formatUnits(usdcAmount, 6),
+        discount: Number(discount) / 100, // Convert from basis points (100 = 1%)
         fees: {
-          processing: ethers.utils.formatEther(processingFee),
-          gas: ethers.utils.formatEther(gasFee),
-          total: ethers.utils.formatEther(totalFees)
+          processing: ethers.formatEther(processingFee),
+          gas: ethers.formatEther(gasFee),
+          total: ethers.formatEther(totalFees)
         },
         estimatedTime: '2-5 minutes'
       };
@@ -427,9 +427,9 @@ class LDAOAcquisitionService {
         },
         body: JSON.stringify({ opportunityId })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success(`Claimed ${result.amount} LDAO tokens!`);
         return {
@@ -442,7 +442,7 @@ class LDAOAcquisitionService {
     } catch (error) {
       console.error('Claim error:', error);
       toast.error('Failed to claim tokens. Please try again.');
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Claim failed'
@@ -463,7 +463,7 @@ class LDAOAcquisitionService {
       }
 
       const balance = await this.ldaoContract.balanceOf(address);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       console.error('Balance error:', error);
       return '0';
@@ -504,12 +504,12 @@ class LDAOAcquisitionService {
           ldaoAmount: (options.amount / 0.01).toString() // Assuming $0.01 per LDAO
         })
       });
-      
+
       const { clientSecret, ldaoAmount } = await response.json();
-      
+
       // Process payment with Stripe (implementation depends on Stripe integration)
       // This would typically involve Stripe Elements or Payment Element
-      
+
       return {
         success: true,
         ldaoAmount
@@ -525,7 +525,7 @@ class LDAOAcquisitionService {
     try {
       // Integrate with Apple Pay / Google Pay
       // This would use the respective mobile wallet APIs
-      
+
       return {
         success: true,
         ldaoAmount: (options.amount / 0.01).toString()
@@ -539,7 +539,7 @@ class LDAOAcquisitionService {
     try {
       // Integrate with Uniswap V3 SDK
       // This would involve creating swap transactions through Uniswap router
-      
+
       return {
         success: true,
         transactionHash: '0x...',
@@ -557,17 +557,17 @@ class LDAOAcquisitionService {
     try {
       // In a real implementation, this would save to a backend database
       // For now, we'll save to localStorage for demo purposes
-      
+
       const existingTransactions = localStorage.getItem('ldao_purchase_transactions');
       const transactions = existingTransactions ? JSON.parse(existingTransactions) : [];
-      
+
       transactions.push(transaction);
-      
+
       // Keep only the last 100 transactions
       if (transactions.length > 100) {
         transactions.splice(0, transactions.length - 100);
       }
-      
+
       localStorage.setItem('ldao_purchase_transactions', JSON.stringify(transactions));
     } catch (error) {
       console.error('Failed to save purchase transaction:', error);

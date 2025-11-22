@@ -8,7 +8,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   const deploymentResults = {};
 
@@ -76,7 +76,7 @@ async function main() {
     console.log("Testing NFTCollectionFactory...");
     const creationFee = await nftCollectionFactory.creationFee();
     const feeRecipient = await nftCollectionFactory.feeRecipient();
-    console.log("- Creation fee:", ethers.utils.formatEther(creationFee), "ETH");
+    console.log("- Creation fee:", ethers.formatEther(creationFee), "ETH");
     console.log("- Fee recipient:", feeRecipient);
 
     // Test collection creation
@@ -86,7 +86,7 @@ async function main() {
       image: "https://example.com/image.png",
       externalUrl: "https://example.com",
       maxSupply: 1000,
-      mintPrice: ethers.utils.parseEther("0.1"),
+      mintPrice: ethers.parseEther("0.1"),
       isPublicMint: true,
       creator: deployer.address,
       createdAt: 0
@@ -195,7 +195,7 @@ async function main() {
       isVerified: false
     };
 
-    const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("phase4-test-content"));
+    const contentHash = ethers.keccak256(ethers.toUtf8Bytes("phase4-test-content"));
     const mintTx = await nftMarketplace.mintNFT(
       deployer.address,
       "https://example.com/metadata/phase4-test.json",

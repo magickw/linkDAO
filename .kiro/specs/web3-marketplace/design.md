@@ -864,10 +864,10 @@ describe('MarketplaceEscrow', () => {
     it('should create order with correct parameters', async () => {
       const orderId = await escrow.createOrder(
         seller.address,
-        ethers.utils.parseEther('1'),
+        ethers.parseEther('1'),
         token.address,
         Math.floor(Date.now() / 1000) + 86400,
-        ethers.utils.keccak256(ethers.utils.toUtf8Bytes('product-hash'))
+        ethers.keccak256(ethers.toUtf8Bytes('product-hash'))
       );
       
       const order = await escrow.orders(orderId);

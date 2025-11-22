@@ -113,18 +113,18 @@ export interface RevenueShare {
 
 export class MarketplaceFeeService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
   private static feeStructure: FeeStructure | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       MarketplaceFeeService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       MarketplaceFeeService.currentAddress = (await signer.getAddress()).toLowerCase();
-      
+
       // Load fee structure
       await MarketplaceFeeService.loadFeeStructure();
     } catch (error) {
@@ -276,7 +276,7 @@ export class MarketplaceFeeService {
 
     const structure = MarketplaceFeeService.feeStructure!;
     const price = parseFloat(salePrice);
-    
+
     let buyerFeeAmount = (price * structure.saleFee.buyerFee / 100).toString();
     let sellerFeeAmount = (price * structure.saleFee.sellerFee / 100).toString();
     const totalFeeAmount = (price * structure.saleFee.totalFee / 100).toString();
@@ -308,7 +308,7 @@ export class MarketplaceFeeService {
     // Calculate distributions
     const distributions: Record<string, string> = {};
     const actualTotalFee = parseFloat(buyerFeeAmount) + parseFloat(sellerFeeAmount);
-    
+
     distributions.daoTreasury = (actualTotalFee * structure.saleFee.distribution.daoTreasury / 100).toString();
     distributions.communityPool = (actualTotalFee * structure.saleFee.distribution.communityPool / 100).toString();
     distributions.subDAO = (actualTotalFee * structure.saleFee.distribution.subDAO / 100).toString();
@@ -617,11 +617,11 @@ export class MarketplaceFeeService {
 
     const structure = MarketplaceFeeService.feeStructure!;
     const escrowFee = parseFloat(amount) * structure.escrowFee.percentage / 100;
-    
+
     // Apply min/max limits
     const minFee = parseFloat(structure.escrowFee.minFee);
     const maxFee = parseFloat(structure.escrowFee.maxFee);
-    
+
     const finalFee = Math.max(minFee, Math.min(maxFee, escrowFee));
     return finalFee.toString();
   }

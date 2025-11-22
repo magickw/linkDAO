@@ -48,17 +48,17 @@ async function testVolumeDiscounts() {
     console.log('=====================================');
     
     for (const amount of testAmounts) {
-      const ldaoAmount = ethers.utils.parseEther(amount);
+      const ldaoAmount = ethers.parseEther(amount);
       const [usdAmount, ethAmount, usdcAmount, discount] = await treasury.getQuote(ldaoAmount);
       
       console.log(`\nAmount: ${parseInt(amount).toLocaleString()} LDAO`);
-      console.log(`   USD Cost: $${parseFloat(ethers.utils.formatEther(usdAmount)).toFixed(2)}`);
-      console.log(`   ETH Cost: ${ethers.utils.formatEther(ethAmount)} ETH`);
-      console.log(`   USDC Cost: ${ethers.utils.formatUnits(usdcAmount, 6)} USDC`);
+      console.log(`   USD Cost: $${parseFloat(ethers.formatEther(usdAmount)).toFixed(2)}`);
+      console.log(`   ETH Cost: ${ethers.formatEther(ethAmount)} ETH`);
+      console.log(`   USDC Cost: ${ethers.formatUnits(usdcAmount, 6)} USDC`);
       console.log(`   Discount: ${(discount.toNumber() / 100).toFixed(2)}%`);
       
       // Calculate effective price per LDAO
-      const usdPerLDAO = parseFloat(ethers.utils.formatEther(usdAmount)) / parseFloat(amount);
+      const usdPerLDAO = parseFloat(ethers.formatEther(usdAmount)) / parseFloat(amount);
       console.log(`   Effective Price: $${usdPerLDAO.toFixed(4)} per LDAO`);
     }
     
@@ -72,7 +72,7 @@ async function testVolumeDiscounts() {
         const [threshold, discountBps, active] = await treasury.getPricingTier(i);
         if (threshold.gt(0)) {
           console.log(`Tier ${i}:`);
-          console.log(`   Threshold: ${ethers.utils.formatEther(threshold)} LDAO`);
+          console.log(`   Threshold: ${ethers.formatEther(threshold)} LDAO`);
           console.log(`   Discount: ${(discountBps.toNumber() / 100).toFixed(2)}%`);
           console.log(`   Active: ${active ? 'YES' : 'NO'}`);
         }

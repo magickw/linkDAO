@@ -103,12 +103,12 @@ class GasOptimizer {
     user2: any
   ): Promise<GasReport[]> {
     const reports: GasReport[] = [];
-    const amount = ethers.utils.parseEther("1000");
+    const amount = ethers.parseEther("1000");
     
     try {
       // Transfer
       await contract.transfer(user1.address, amount);
-      const transferTx = await contract.connect(user1).transfer(user2.address, ethers.utils.parseEther("100"));
+      const transferTx = await contract.connect(user1).transfer(user2.address, ethers.parseEther("100"));
       const transferReceipt = await transferTx.wait();
       
       reports.push({
@@ -118,7 +118,7 @@ class GasOptimizer {
       });
       
       // Staking
-      const stakeTx = await contract.connect(user1).stake(ethers.utils.parseEther("500"), 1);
+      const stakeTx = await contract.connect(user1).stake(ethers.parseEther("500"), 1);
       const stakeReceipt = await stakeTx.wait();
       
       reports.push({
@@ -155,7 +155,7 @@ class GasOptimizer {
     user2: any
   ): Promise<GasReport[]> {
     const reports: GasReport[] = [];
-    const amount = ethers.utils.parseEther("1");
+    const amount = ethers.parseEther("1");
     
     try {
       // ETH payment
@@ -187,7 +187,7 @@ class GasOptimizer {
     user2: any
   ): Promise<GasReport[]> {
     const reports: GasReport[] = [];
-    const price = ethers.utils.parseEther("1");
+    const price = ethers.parseEther("1");
     
     try {
       // Create listing
@@ -236,7 +236,7 @@ class GasOptimizer {
     user2: any
   ): Promise<GasReport[]> {
     const reports: GasReport[] = [];
-    const amount = ethers.utils.parseEther("1");
+    const amount = ethers.parseEther("1");
     
     try {
       // Create escrow

@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Governance, LDAOToken } from "../typechain-types";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-const { parseEther, formatEther } = ethers.utils;
+const { parseEther, formatEther } = ethers;
 
 describe("Governance System", function () {
   let governance: Governance;
@@ -217,7 +217,7 @@ describe("Governance System", function () {
         const targets = [governance.address];
         const values = [0];
         const signatures = ["setVotingDelay(uint256)"];
-        const calldatas = [ethers.utils.defaultAbiCoder.encode(["uint256"], [14400])]; // 2 days
+        const calldatas = [ethers.defaultAbiCoder.encode(["uint256"], [14400])]; // 2 days
 
         await governance.connect(proposer).propose(
           "Update Voting Delay",
@@ -515,7 +515,7 @@ describe("Governance System", function () {
       const targets = [governance.address];
       const values = [0];
       const signatures = ["setVotingDelay(uint256)"];
-      const calldatas = [ethers.utils.defaultAbiCoder.encode(["uint256"], [14400])]; // 2 days
+      const calldatas = [ethers.defaultAbiCoder.encode(["uint256"], [14400])]; // 2 days
 
       await governance.connect(proposer).propose(
         "Update Voting Delay",

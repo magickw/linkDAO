@@ -512,10 +512,10 @@ export class SecurityTestSuite {
     try {
       await this.testContracts.escrow.createOrder(
         maliciousContract.address,
-        ethers.utils.parseEther('1'),
+        ethers.parseEther('1'),
         this.testContracts.token.address,
         Math.floor(Date.now() / 1000) + 86400,
-        ethers.utils.keccak256(ethers.utils.toUtf8Bytes('test'))
+        ethers.keccak256(ethers.toUtf8Bytes('test'))
       );
 
       // Attempt reentrancy attack
@@ -580,8 +580,8 @@ export class SecurityTestSuite {
 
   private async testFrontRunningAttacks(): Promise<void> {
     // Test MEV protection in trading functions
-    const originalGasPrice = ethers.utils.parseUnits('20', 'gwei');
-    const highGasPrice = ethers.utils.parseUnits('100', 'gwei');
+    const originalGasPrice = ethers.parseUnits('20', 'gwei');
+    const highGasPrice = ethers.parseUnits('100', 'gwei');
 
     // Submit transaction with normal gas price
     const tx1 = await this.testContracts.nftMarketplace

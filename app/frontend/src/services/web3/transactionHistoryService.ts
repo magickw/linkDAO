@@ -48,7 +48,7 @@ export interface PurchaseTransaction {
 export class TransactionHistoryService {
   private static instance: TransactionHistoryService;
   private contract: LDAOToken | null = null;
-  private provider: ethers.providers.Provider | null = null;
+  private provider: ethers.Provider | null = null;
   private apiBase: string;
 
   private constructor() {
@@ -80,7 +80,7 @@ export class TransactionHistoryService {
 
       this.contract = LDAOToken__factory.connect(
         deployedAddresses.contracts.LDAOToken.address,
-        this.provider
+        this.provider as any
       );
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
@@ -184,8 +184,8 @@ export class TransactionHistoryService {
 
       // Filter staking-related transactions from the combined history
       const allTransactions = data.data.transactions || data.data || [];
-      const stakingTransactions = allTransactions.filter((tx: any) => 
-        tx.type && 
+      const stakingTransactions = allTransactions.filter((tx: any) =>
+        tx.type &&
         (tx.type.includes('stake') || tx.type.includes('unstake') || tx.type.includes('claim') || tx.type.includes('rewards'))
       );
 
@@ -246,8 +246,8 @@ export class TransactionHistoryService {
 
       // Filter purchase-related transactions from the combined history
       const allTransactions = data.data.transactions || data.data || [];
-      const purchaseTransactions = allTransactions.filter((tx: any) => 
-        tx.type && 
+      const purchaseTransactions = allTransactions.filter((tx: any) =>
+        tx.type &&
         (tx.type.includes('purchase') || tx.type.includes('buy') || tx.type.includes('acquisition') || tx.type.includes('mint'))
       );
 
@@ -314,10 +314,10 @@ export class TransactionHistoryService {
 
       // In a real implementation, this would fetch transaction details from the blockchain
       // For now, we'll simulate a response
-      
+
       // Simulate fetching transaction details
       console.log(`Fetching details for transaction: ${transactionHash}`);
-      
+
       return null;
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
@@ -337,10 +337,10 @@ export class TransactionHistoryService {
   ): Promise<string> {
     try {
       const history = await this.getCombinedHistory(userAddress, 100);
-      
+
       // Create CSV header
       let csv = 'Date,Type,From,To,Amount,Status,Transaction Hash\n';
-      
+
       // Add transaction data
       history.forEach(tx => {
         if ('value' in tx) {
@@ -354,7 +354,7 @@ export class TransactionHistoryService {
           csv += `${new Date(tx.timestamp).toISOString()},${tx.type},${tx.user},,${tx.amount},${tx.status},${tx.hash}\n`;
         }
       });
-      
+
       return csv;
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {

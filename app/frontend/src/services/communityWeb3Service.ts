@@ -4,6 +4,7 @@
 import { ethers } from 'ethers';
 import { getProvider, getSigner } from '@/utils/web3';
 import { Governance__factory, LDAOToken__factory } from '@/types/typechain';
+import { Governance, LDAOToken } from '@/types/typechain';
 
 // Contract addresses (these should be configured in environment variables)
 const GOVERNANCE_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_GOVERNANCE_CONTRACT_ADDRESS || '0x...';
@@ -117,11 +118,11 @@ export class CommunityWeb3Service {
       }
 
       // Approve tokens for staking
-      const tokenWithSigner = this.tokenContract.connect(signer);
+      const tokenWithSigner = this.tokenContract.connect(signer) as unknown as LDAOToken;
       const tx = await tokenWithSigner.stake(
-        ethers.utils.parseEther(input.stakeAmount),
+        ethers.parseEther(input.stakeAmount),
         1 // Default to first staking tier
-      );
+      ) as any;
 
       await tx.wait();
       return tx.hash;
@@ -155,7 +156,7 @@ export class CommunityWeb3Service {
       const calldatas = actions.map(action => action.calldata);
 
       // Create proposal
-      const governanceWithSigner = this.governanceContract.connect(signer);
+      const governanceWithSigner = this.governanceContract.connect(signer) as unknown as Governance;
       const tx = await governanceWithSigner.propose(
         title,
         description,
@@ -164,7 +165,7 @@ export class CommunityWeb3Service {
         values,
         signatures,
         calldatas
-      );
+      ) as any;
 
       const receipt = await tx.wait();
 
@@ -198,12 +199,12 @@ export class CommunityWeb3Service {
       // Vote on proposal (0 = against, 1 = for, 2 = abstain)
       const voteChoice = support ? 1 : 0;
 
-      const governanceWithSigner = this.governanceContract.connect(signer);
+      const governanceWithSigner = this.governanceContract.connect(signer) as unknown as Governance;
       const tx = await governanceWithSigner.castVote(
         proposalId,
         voteChoice,
         "" // Empty reason for now
-      );
+      ) as any;
 
       await tx.wait();
       return tx.hash;
@@ -253,14 +254,14 @@ export class CommunityWeb3Service {
       const ldaoTokenContract = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, signer);
 
       // Convert amount to wei (LDAO has 18 decimals)
-      const amountWei = ethers.utils.parseUnits(input.amount, 18);
+      const amountWei = ethers.parseUnits(input.amount, 18);
 
       // Check user's LDAO balance
       const userAddress = await signer.getAddress();
       const balance = await ldaoTokenContract.balanceOf(userAddress);
 
       if (balance < amountWei) {
-        throw new Error(`Insufficient LDAO balance. You have ${ethers.utils.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
+        throw new Error(`Insufficient LDAO balance. You have ${ethers.formatUnits(balance, 18)} LDAO but need ${input.amount} LDAO`);
       }
 
       // Check current allowance
@@ -275,7 +276,7 @@ export class CommunityWeb3Service {
       }
 
       // Convert postId to bytes32
-      const postIdBytes32 = ethers.utils.id(input.postId);
+      const postIdBytes32 = ethers.id(input.postId);
 
       // Send tip (with or without comment)
       let tx;
@@ -320,8 +321,8 @@ export class CommunityWeb3Service {
       }
 
       // Claim all staking rewards
-      const tokenWithSigner = this.tokenContract.connect(signer);
-      const tx = await tokenWithSigner.claimAllStakeRewards();
+      const tokenWithSigner = this.tokenContract.connect(signer) as unknown as LDAOToken;
+      const tx = await tokenWithSigner.claimAllStakeRewards() as any;
 
       await tx.wait();
       return tx.hash;
@@ -341,16 +342,17 @@ export class CommunityWeb3Service {
       }
 
       // Get user's total staking rewards
-      const totalRewards = await this.tokenContract.getTotalStakeRewards(userAddress);
+      const tokenContract = this.tokenContract as unknown as LDAOToken;
+      const totalRewards = await tokenContract.getTotalStakeRewards(userAddress);
 
       // Mock implementation for now
       const mockRewards: StakingReward[] = [
         {
           user: userAddress,
           postId: 'post_1',
-          rewardAmount: ethers.utils.formatEther(totalRewards),
+          rewardAmount: ethers.formatEther(totalRewards),
           rewardToken: 'LDAO',
-          earned: parseFloat(ethers.utils.formatEther(totalRewards)) > 0
+          earned: parseFloat(ethers.formatEther(totalRewards)) > 0
         }
       ];
 
@@ -371,9 +373,10 @@ export class CommunityWeb3Service {
       }
 
       // Get user's voting power from the token contract
-      const votingPower = await this.tokenContract.votingPower(userAddress);
+      const tokenContract = this.tokenContract as unknown as LDAOToken;
+      const votingPower = await tokenContract.votingPower(userAddress);
 
-      return ethers.utils.formatEther(votingPower);
+      return ethers.formatEther(votingPower);
     } catch (error) {
       console.error('Error getting voting power:', error);
       throw error;
@@ -394,16 +397,17 @@ export class CommunityWeb3Service {
       }
 
       // Get user's staked amount
-      const stakedAmount = await this.tokenContract.totalStaked(userAddress);
+      const tokenContract = this.tokenContract as unknown as LDAOToken;
+      const stakedAmount = await tokenContract.totalStaked(userAddress);
 
       // For now, we'll use a simple requirement
       // In a real implementation, this would be configurable per community/action
-      const requiredStake = ethers.utils.parseEther("100"); // 100 LDAO tokens
+      const requiredStake = ethers.parseEther("100"); // 100 LDAO tokens
 
       return {
-        canPerform: stakedAmount.gte(requiredStake),
-        requiredStake: ethers.utils.formatEther(requiredStake),
-        currentStake: ethers.utils.formatEther(stakedAmount)
+        canPerform: stakedAmount >= requiredStake,
+        requiredStake: ethers.formatEther(requiredStake),
+        currentStake: ethers.formatEther(stakedAmount)
       };
     } catch (error) {
       console.error('Error checking staking requirement:', error);

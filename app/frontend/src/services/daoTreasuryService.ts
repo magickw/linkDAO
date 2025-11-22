@@ -242,18 +242,18 @@ export interface TreasuryReport {
 
 export class DAOTreasuryService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
   private static revenueSources: RevenueSource[] | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       DAOTreasuryService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       DAOTreasuryService.currentAddress = (await signer.getAddress()).toLowerCase();
-      
+
       // Load revenue sources
       await DAOTreasuryService.loadRevenueSources();
     } catch (error) {
@@ -501,7 +501,7 @@ export class DAOTreasuryService {
       }
 
       const distribution = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('treasury_distribution_processed', {
         period,
@@ -651,7 +651,7 @@ export class DAOTreasuryService {
       }
 
       const proposal = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('budget_proposal_created', {
         proposalId: proposal.id,
@@ -771,7 +771,7 @@ export class DAOTreasuryService {
       }
 
       const result = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('budget_proposal_executed', {
         proposalId,
@@ -861,7 +861,7 @@ export class DAOTreasuryService {
       }
 
       const updatedSource = await response.json();
-      
+
       // Update local cache
       if (DAOTreasuryService.revenueSources) {
         const index = DAOTreasuryService.revenueSources.findIndex(s => s.id === sourceId);
@@ -988,7 +988,7 @@ export class DAOTreasuryService {
       }
 
       const result = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('treasury_withdrawal_requested', {
         amount,

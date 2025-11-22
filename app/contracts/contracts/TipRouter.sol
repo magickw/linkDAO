@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract TipRouter is Ownable, ReentrancyGuard {
-    IERC20 public immutable ldao;
+    IERC20 public ldao;
     address public rewardPool;
     uint96 public feeBps = 1000; // 10%
     

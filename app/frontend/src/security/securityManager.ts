@@ -61,7 +61,7 @@ export class SecurityManager {
       maxRedirects: 3
     },
     transactionValidation: {
-      maxGasPrice: BigInt(ethers.utils.parseUnits('100', 'gwei').toString()),
+      maxGasPrice: BigInt(ethers.parseUnits('100', 'gwei').toString()),
       requireConfirmations: 1,
       enableSlippageProtection: true
     },
@@ -307,8 +307,8 @@ export class SecurityManager {
    * Validate token transaction
    */
   public async validateTokenTransaction(
-    transaction: ethers.providers.TransactionRequest,
-    provider: ethers.providers.Provider,
+    transaction: ethers.TransactionRequest,
+    provider: ethers.Provider,
     context: SecurityContext,
     config?: Partial<TransactionValidationConfig>
   ): Promise<SecurityValidationResult> {
@@ -352,7 +352,7 @@ export class SecurityManager {
   public async createSecureWalletSession(
     walletAddress: string,
     networkId: number,
-    provider: ethers.providers.Provider,
+    provider: ethers.Provider,
     context: SecurityContext,
     config?: Partial<WalletSecurityConfig>
   ): Promise<SecurityValidationResult> {
@@ -435,10 +435,10 @@ export class SecurityManager {
       content?: string;
       media?: File[];
       urls?: string[];
-      transaction?: ethers.providers.TransactionRequest;
+      transaction?: ethers.TransactionRequest;
     },
     context: SecurityContext,
-    provider?: ethers.providers.Provider
+    provider?: ethers.Provider
   ): Promise<SecurityValidationResult> {
     const allErrors: string[] = [];
     const allWarnings: string[] = [];

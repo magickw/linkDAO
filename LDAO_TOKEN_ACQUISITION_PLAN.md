@@ -80,8 +80,8 @@ async function deployLDAOLiquidity() {
     fee: 3000,
     tickLower: -887220, // Wide range
     tickUpper: 887220,
-    amount0Desired: ethers.utils.parseEther("10000000"), // 10M LDAO
-    amount1Desired: ethers.utils.parseUnits("100000", 6), // $100k USDC
+    amount0Desired: ethers.parseEther("10000000"), // 10M LDAO
+    amount1Desired: ethers.parseUnits("100000", 6), // $100k USDC
     recipient: treasury.address
   });
 }

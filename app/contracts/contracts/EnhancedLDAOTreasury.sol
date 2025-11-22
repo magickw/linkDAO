@@ -6,18 +6,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./LDAOToken.sol";
-import "./security/MultiSigWallet.sol";
 
-/**
- * @title EnhancedLDAOTreasury
- * @notice Enhanced Treasury contract for LDAO token sales with charity disbursement functionality
- */
 contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
-
-    // State variables
-    LDAOToken public immutable ldaoToken;
-    IERC20 public immutable usdcToken;
-    MultiSigWallet public multiSigWallet;
+    LDAOToken public ldaoToken;
+    IERC20 public usdcToken;
     
     uint256 public ldaoPriceInUSD = 1e16; // $0.01 in 18 decimals (1e16 = 0.01 * 1e18)
     uint256 public totalSold;
@@ -47,10 +39,6 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     mapping(address => uint256) public purchaseHistory;
     mapping(address => uint256) public dailyPurchases;
     mapping(address => uint256) public lastPurchaseDay;
-    
-    // Multi-sig controls
-    mapping(bytes32 => bool) public executedTransactions;
-    uint256 public constant MULTI_SIG_THRESHOLD = 2; // Require 2 signatures for admin functions
     
     // Pricing tiers based on volume
     struct PricingTier {
@@ -109,7 +97,6 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
     event FundsWithdrawn(address indexed token, uint256 amount, address recipient);
     event EmergencyStop(string reason, uint256 timestamp);
     event CircuitBreakerTriggered(uint256 dailyVolume, uint256 threshold);
-    event MultiSigWalletUpdated(address indexed oldWallet, address indexed newWallet);
     
     // Charity-specific events
     event CharityDisbursement(
@@ -125,12 +112,10 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
 
     constructor(
         address _ldaoToken,
-        address _usdcToken,
-        address payable _multiSigWallet
+        address _usdcToken
     ) Ownable(msg.sender) {
         ldaoToken = LDAOToken(_ldaoToken);
         usdcToken = IERC20(_usdcToken);
-        multiSigWallet = MultiSigWallet(_multiSigWallet);
         
         // Initialize timestamps
         lastResetDay = block.timestamp / 1 days;
@@ -236,7 +221,7 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      * @notice Purchase LDAO tokens with ETH
      * @param ldaoAmount Amount of LDAO tokens to purchase
      */
-    function purchaseWithETH(uint256 ldaoAmount) external payable nonReentrant whenNotPaused {
+    function purchaseWithETH(uint256 ldaoAmount) external payable nonReentrant {
         require(salesActive, "Sales not active");
         require(ldaoAmount >= minPurchaseAmount, "Below minimum purchase");
         require(ldaoAmount <= maxPurchaseAmount, "Exceeds maximum purchase");
@@ -285,7 +270,7 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      * @notice Purchase LDAO tokens with USDC
      * @param ldaoAmount Amount of LDAO tokens to purchase
      */
-    function purchaseWithUSDC(uint256 ldaoAmount) external nonReentrant whenNotPaused {
+    function purchaseWithUSDC(uint256 ldaoAmount) external nonReentrant {
         require(salesActive, "Sales not active");
         require(ldaoAmount >= minPurchaseAmount, "Below minimum purchase");
         require(ldaoAmount <= maxPurchaseAmount, "Exceeds maximum purchase");
@@ -415,19 +400,6 @@ contract EnhancedLDAOTreasury is Ownable, ReentrancyGuard, Pausable {
      */
     function unpause() external onlyOwner {
         _unpause();
-    }
-    
-    /**
-     * @notice Update multi-sig wallet (multi-sig protected)
-     * @param newMultiSigWallet New multi-sig wallet address
-     */
-    function updateMultiSigWallet(address payable newMultiSigWallet) external onlyOwner {
-        require(newMultiSigWallet != address(0), "Invalid address");
-        
-        address oldWallet = address(multiSigWallet);
-        multiSigWallet = MultiSigWallet(newMultiSigWallet);
-        
-        emit MultiSigWalletUpdated(oldWallet, newMultiSigWallet);
     }
 
     /**

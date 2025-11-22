@@ -7,12 +7,11 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./Governance.sol";
 import "./ReputationSystem.sol";
 
-/**
- * @title EnhancedRewardPool
- * @notice Community reward system with epoch-based funding and automatic distribution
- */
 contract EnhancedRewardPool is Ownable, ReentrancyGuard {
-
+    IERC20 public ldaoToken;
+    Governance public governance;
+    ReputationSystem public reputationSystem;
+    
     // Structs
     struct Epoch {
         uint256 id;
@@ -42,9 +41,6 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
     }
 
     // State variables
-    IERC20 public immutable ldaoToken;
-    Governance public governance;
-    ReputationSystem public reputationSystem;
     
     mapping(uint256 => Epoch) public epochs;
     mapping(address => UserStats) public userStats;

@@ -11,11 +11,11 @@ TEST_FILES=$(find test -name "*.ts" -type f)
 for file in $TEST_FILES; do
     echo "Processing: $file"
 
-    # Replace ethers.parseEther with ethers.utils.parseEther
-    sed -i '' 's/ethers\.parseEther/ethers.utils.parseEther/g' "$file"
+    # Replace ethers.parseEther with ethers.parseEther
+    sed -i '' 's/ethers\.parseEther/ethers.parseEther/g' "$file"
 
-    # Replace ethers.parseUnits with ethers.utils.parseUnits
-    sed -i '' 's/ethers\.parseUnits/ethers.utils.parseUnits/g' "$file"
+    # Replace ethers.parseUnits with ethers.parseUnits
+    sed -i '' 's/ethers\.parseUnits/ethers.parseUnits/g' "$file"
 
     # Replace .waitForDeployment() with .deployed()
     sed -i '' 's/\.waitForDeployment()/\.deployed()/g' "$file"

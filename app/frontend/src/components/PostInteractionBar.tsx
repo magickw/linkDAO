@@ -178,7 +178,7 @@ export default function PostInteractionBar({
 
         {/* Staked Value Display */}
         <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-          {post.stakedValue ? `${post.stakedValue} $LNK staked` : '0 $LNK staked'}
+          {post.stakedValue ? `${post.stakedValue} $LDAO staked` : '0 $LDAO staked'}
         </div>
       </div>
 

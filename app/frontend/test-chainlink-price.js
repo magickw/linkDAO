@@ -31,13 +31,13 @@ async function testChainlinkPrice() {
     
     console.log(`\n📋 Chainlink ETH/USD Price Feed Data:`);
     console.log(`   Round ID: ${roundId.toString()}`);
-    console.log(`   Price: $${ethers.utils.formatUnits(answer, decimals)}`);
+    console.log(`   Price: $${ethers.formatUnits(answer, decimals)}`);
     console.log(`   Decimals: ${decimals}`);
     console.log(`   Last Updated: ${new Date(updatedAt.toNumber() * 1000).toISOString()}`);
     
     // Convert to our internal format (18 decimals)
-    const priceInWei = ethers.utils.parseUnits(answer.toString(), 18 - decimals);
-    console.log(`   Price in 18 decimals: ${ethers.utils.formatEther(priceInWei)} USD per ETH`);
+    const priceInWei = ethers.parseUnits(answer.toString(), 18 - decimals);
+    console.log(`   Price in 18 decimals: ${ethers.formatEther(priceInWei)} USD per ETH`);
     
     // Test our fixed treasury contract (if deployed)
     console.log('\n📋 Testing Fixed Treasury Contract (if deployed):');
@@ -49,7 +49,7 @@ async function testChainlinkPrice() {
     console.log('   Conversion formula: price * 1e10 (to go from 8 to 18 decimals)');
     
     const convertedPrice = answer.mul(ethers.BigNumber.from(10).pow(10));
-    console.log(`   Converted price: ${ethers.utils.formatEther(convertedPrice)} USD per ETH`);
+    console.log(`   Converted price: ${ethers.formatEther(convertedPrice)} USD per ETH`);
     
     console.log('\n✅ Chainlink price feed test completed successfully!');
     console.log('\n📝 Key Benefits of Chainlink Integration:');

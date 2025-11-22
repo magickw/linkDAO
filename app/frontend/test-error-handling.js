@@ -36,7 +36,7 @@ async function testErrorHandling() {
     // Test 2: Invalid amount (zero)
     console.log('\n📋 Test 2: Invalid Amount (Zero)');
     try {
-      const zeroAmount = ethers.utils.parseEther('0');
+      const zeroAmount = ethers.parseEther('0');
       await treasury.getQuote(zeroAmount);
       console.log('   ❌ Zero amount should have failed but did not');
     } catch (error) {
@@ -49,10 +49,10 @@ async function testErrorHandling() {
     
     for (const amount of edgeCases) {
       try {
-        const ldaoAmount = ethers.utils.parseEther(amount);
+        const ldaoAmount = ethers.parseEther(amount);
         const [usdAmount, ethAmount, usdcAmount, discount] = await treasury.getQuote(ldaoAmount);
         console.log(`   Amount ${amount}: ✅ Quote retrieved successfully`);
-        console.log(`      USD: $${ethers.utils.formatEther(usdAmount)}`);
+        console.log(`      USD: $${ethers.formatEther(usdAmount)}`);
       } catch (error) {
         console.log(`   Amount ${amount}: ❌ Quote failed:`, error.message);
       }
@@ -62,7 +62,7 @@ async function testErrorHandling() {
     console.log('\n📋 Test 4: Network Resilience');
     try {
       // This should work with our valid provider
-      const ldaoAmount = ethers.utils.parseEther('100');
+      const ldaoAmount = ethers.parseEther('100');
       const [usdAmount, ethAmount, usdcAmount, discount] = await treasury.getQuote(ldaoAmount);
       console.log('   ✅ Network connectivity test passed');
     } catch (error) {
@@ -87,7 +87,7 @@ async function testErrorHandling() {
           await treasury.ldaoPriceInUSD();
           console.log(`   Function ${func}: ✅ Available`);
         } else if (func === 'getQuote(uint256)') {
-          const ldaoAmount = ethers.utils.parseEther('100');
+          const ldaoAmount = ethers.parseEther('100');
           await treasury.getQuote(ldaoAmount);
           console.log(`   Function ${func}: ✅ Available`);
         }

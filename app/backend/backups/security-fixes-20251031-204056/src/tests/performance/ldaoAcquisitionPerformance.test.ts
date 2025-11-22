@@ -314,16 +314,16 @@ describe('LDAO Acquisition System - Performance Tests', () => {
 
       // Test different purchase amounts for gas efficiency
       const purchaseAmounts = [
-        ethers.utils.parseEther('1000'),   // Small
-        ethers.utils.parseEther('10000'),  // Medium  
-        ethers.utils.parseEther('100000'), // Large with discount
-        ethers.utils.parseEther('1000000') // Very large with max discount
+        ethers.parseEther('1000'),   // Small
+        ethers.parseEther('10000'),  // Medium  
+        ethers.parseEther('100000'), // Large with discount
+        ethers.parseEther('1000000') // Very large with max discount
       ];
 
       const gasResults = [];
 
       for (const amount of purchaseAmounts) {
-        const ethValue = ethers.utils.parseEther('10'); // Generous ETH amount
+        const ethValue = ethers.parseEther('10'); // Generous ETH amount
         
         const tx = await treasury.connect(user1).purchaseWithETH(amount, {
           value: ethValue,
@@ -342,9 +342,9 @@ describe('LDAO Acquisition System - Performance Tests', () => {
       // Analyze gas efficiency
       gasResults.forEach((result, index) => {
         safeLogger.info(`Purchase ${index + 1}:
-          - Amount: ${ethers.utils.formatEther(result.amount)} LDAO
+          - Amount: ${ethers.formatEther(result.amount)} LDAO
           - Gas used: ${result.gasUsed}
-          - Gas cost: ${ethers.utils.formatEther(result.totalCost)} ETH
+          - Gas cost: ${ethers.formatEther(result.totalCost)} ETH
         `);
 
         // Gas should be reasonable (less than 300k for purchases)

@@ -81,6 +81,7 @@ export interface EnhancedLDAOStakingInterface extends utils.Interface {
     "emergencyWithdrawalPenalty()": FunctionFragment;
     "getUserStakePositions(address)": FunctionFragment;
     "getUserStakingInfo(address)": FunctionFragment;
+    "initializeTiers()": FunctionFragment;
     "ldaoToken()": FunctionFragment;
     "nextTierId()": FunctionFragment;
     "owner()": FunctionFragment;
@@ -120,6 +121,7 @@ export interface EnhancedLDAOStakingInterface extends utils.Interface {
       | "emergencyWithdrawalPenalty"
       | "getUserStakePositions"
       | "getUserStakingInfo"
+      | "initializeTiers"
       | "ldaoToken"
       | "nextTierId"
       | "owner"
@@ -204,6 +206,10 @@ export interface EnhancedLDAOStakingInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "getUserStakingInfo",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "initializeTiers",
+    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "ldaoToken", values?: undefined): string;
   encodeFunctionData(
@@ -344,6 +350,10 @@ export interface EnhancedLDAOStakingInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getUserStakingInfo",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "initializeTiers",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "ldaoToken", data: BytesLike): Result;
@@ -681,6 +691,10 @@ export interface EnhancedLDAOStaking extends BaseContract {
       }
     >;
 
+    initializeTiers(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     ldaoToken(overrides?: CallOverrides): Promise<[string]>;
 
     nextTierId(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -726,7 +740,7 @@ export interface EnhancedLDAOStaking extends BaseContract {
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
-      autoCompound: PromiseOrValue<boolean>,
+      enableAutoCompound: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -910,6 +924,10 @@ export interface EnhancedLDAOStaking extends BaseContract {
     }
   >;
 
+  initializeTiers(
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   ldaoToken(overrides?: CallOverrides): Promise<string>;
 
   nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -955,7 +973,7 @@ export interface EnhancedLDAOStaking extends BaseContract {
   stake(
     amount: PromiseOrValue<BigNumberish>,
     tierId: PromiseOrValue<BigNumberish>,
-    autoCompound: PromiseOrValue<boolean>,
+    enableAutoCompound: PromiseOrValue<boolean>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -1137,6 +1155,8 @@ export interface EnhancedLDAOStaking extends BaseContract {
       }
     >;
 
+    initializeTiers(overrides?: CallOverrides): Promise<void>;
+
     ldaoToken(overrides?: CallOverrides): Promise<string>;
 
     nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1178,7 +1198,7 @@ export interface EnhancedLDAOStaking extends BaseContract {
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
-      autoCompound: PromiseOrValue<boolean>,
+      enableAutoCompound: PromiseOrValue<boolean>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1474,6 +1494,10 @@ export interface EnhancedLDAOStaking extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    initializeTiers(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     ldaoToken(overrides?: CallOverrides): Promise<BigNumber>;
 
     nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1519,7 +1543,7 @@ export interface EnhancedLDAOStaking extends BaseContract {
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
-      autoCompound: PromiseOrValue<boolean>,
+      enableAutoCompound: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -1645,6 +1669,10 @@ export interface EnhancedLDAOStaking extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    initializeTiers(
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     ldaoToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     nextTierId(overrides?: CallOverrides): Promise<PopulatedTransaction>;
@@ -1692,7 +1720,7 @@ export interface EnhancedLDAOStaking extends BaseContract {
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
-      autoCompound: PromiseOrValue<boolean>,
+      enableAutoCompound: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

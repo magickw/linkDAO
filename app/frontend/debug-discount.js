@@ -37,7 +37,7 @@ async function debugDiscount() {
     ];
     
     for (const amount of testAmounts) {
-      const ldaoAmount = ethers.utils.parseEther(amount);
+      const ldaoAmount = ethers.parseEther(amount);
       
       // Get the raw discount value from the contract
       try {
@@ -62,7 +62,7 @@ async function debugDiscount() {
       try {
         const [threshold, discountBps, active] = await treasury.getPricingTier(i);
         console.log(`Tier ${i}:`);
-        console.log(`   Threshold: ${ethers.utils.formatEther(threshold)} LDAO`);
+        console.log(`   Threshold: ${ethers.formatEther(threshold)} LDAO`);
         console.log(`   Raw discountBps: ${discountBps.toString()}`);
         console.log(`   Calculated percentage: ${(discountBps.toNumber() / 10000).toFixed(4)}%`);
         console.log(`   Active: ${active ? 'YES' : 'NO'}`);

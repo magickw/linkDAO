@@ -8,7 +8,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()), "ETH");
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()), "ETH");
 
   // Load existing deployed addresses
   const deployedAddressesPath = path.join(__dirname, '../deployedAddresses-sepolia.json');
@@ -55,11 +55,11 @@ async function main() {
   const ldaoToken = await ethers.getContractAt("LDAOToken", ldaoTokenAddress);
 
   // Transfer LDAO tokens to treasury for sales
-  const treasuryAllocation = ethers.utils.parseEther("100000000"); // 100M LDAO for sales
+  const treasuryAllocation = ethers.parseEther("100000000"); // 100M LDAO for sales
   console.log("📝 Transferring LDAO tokens to treasury...");
   
   const currentBalance = await ldaoToken.balanceOf(deployer.address);
-  console.log("Deployer LDAO balance:", ethers.utils.formatEther(currentBalance));
+  console.log("Deployer LDAO balance:", ethers.formatEther(currentBalance));
 
   if (currentBalance.gte(treasuryAllocation)) {
     const transferTx = await ldaoToken.transfer(ldaoTreasury.address, treasuryAllocation);
@@ -70,27 +70,27 @@ async function main() {
     if (currentBalance.gt(0)) {
       const transferTx = await ldaoToken.transfer(ldaoTreasury.address, currentBalance);
       await transferTx.wait();
-      console.log("✅ Transferred", ethers.utils.formatEther(currentBalance), "LDAO tokens to treasury");
+      console.log("✅ Transferred", ethers.formatEther(currentBalance), "LDAO tokens to treasury");
     }
   }
 
   // Verify treasury balance
   const treasuryBalance = await ldaoToken.balanceOf(ldaoTreasury.address);
-  console.log("Treasury LDAO balance:", ethers.utils.formatEther(treasuryBalance));
+  console.log("Treasury LDAO balance:", ethers.formatEther(treasuryBalance));
 
   // Set initial configuration
   console.log("📝 Configuring treasury settings...");
   
   // Update purchase limits
   await ldaoTreasury.updatePurchaseLimits(
-    ethers.utils.parseEther("10"), // Min 10 LDAO
-    ethers.utils.parseEther("1000000") // Max 1M LDAO
+    ethers.parseEther("10"), // Min 10 LDAO
+    ethers.parseEther("1000000") // Max 1M LDAO
   );
 
   // Update circuit breaker parameters
   await ldaoTreasury.updateCircuitBreakerParams(
-    ethers.utils.parseEther("10000000"), // 10M LDAO daily limit
-    ethers.utils.parseEther("5000000")   // 5M LDAO emergency threshold
+    ethers.parseEther("10000000"), // 10M LDAO daily limit
+    ethers.parseEther("5000000")   // 5M LDAO emergency threshold
   );
 
   // Activate sales
@@ -107,24 +107,24 @@ async function main() {
   console.log("USDC Token:", usdcAddress);
   console.log("MultiSig Wallet:", multiSigWallet.address);
   console.log("LDAO Treasury:", ldaoTreasury.address);
-  console.log("Treasury Balance:", ethers.utils.formatEther(treasuryBalance), "LDAO");
+  console.log("Treasury Balance:", ethers.formatEther(treasuryBalance), "LDAO");
 
   // Get initial quote
-  const sampleAmount = ethers.utils.parseEther("1000"); // 1000 LDAO
+  const sampleAmount = ethers.parseEther("1000"); // 1000 LDAO
   const quote = await ldaoTreasury.getQuote(sampleAmount);
   
   console.log("\n💰 Sample Quote (1000 LDAO):");
-  console.log("USD Cost:", ethers.utils.formatEther(quote.usdAmount));
-  console.log("ETH Cost:", ethers.utils.formatEther(quote.ethAmount));
-  console.log("USDC Cost:", ethers.utils.formatUnits(quote.usdcAmount, 6));
+  console.log("USD Cost:", ethers.formatEther(quote.usdAmount));
+  console.log("ETH Cost:", ethers.formatEther(quote.ethAmount));
+  console.log("USDC Cost:", ethers.formatUnits(quote.usdcAmount, 6));
   console.log("Discount:", quote.discount.toNumber() / 100, "%");
 
   // Test circuit breaker status
   const circuitBreakerStatus = await ldaoTreasury.getCircuitBreakerStatus();
   console.log("\n🔒 Circuit Breaker Status:");
-  console.log("Daily Limit:", ethers.utils.formatEther(circuitBreakerStatus.dailyLimit), "LDAO");
-  console.log("Emergency Threshold:", ethers.utils.formatEther(circuitBreakerStatus.emergencyThreshold), "LDAO");
-  console.log("Current Volume:", ethers.utils.formatEther(circuitBreakerStatus.currentVolume), "LDAO");
+  console.log("Daily Limit:", ethers.formatEther(circuitBreakerStatus.dailyLimit), "LDAO");
+  console.log("Emergency Threshold:", ethers.formatEther(circuitBreakerStatus.emergencyThreshold), "LDAO");
+  console.log("Current Volume:", ethers.formatEther(circuitBreakerStatus.currentVolume), "LDAO");
   console.log("Near Emergency:", circuitBreakerStatus.nearEmergencyThreshold);
 
   // Update the deployed addresses file

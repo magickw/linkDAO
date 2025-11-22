@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BurnToDonate, LDAOToken, EnhancedLDAOTreasury, MultiSigWallet } from "../typechain-types";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-const { parseEther, formatEther } = ethers.utils;
+const { parseEther, formatEther } = ethers;
 
 describe("BurnToDonate System", function () {
   let burnToDonate: BurnToDonate;

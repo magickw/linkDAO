@@ -211,8 +211,8 @@ export class TestSuite {
   }
 
   private async setupTestTokenDistribution(): Promise<void> {
-    const testAmount = ethers.utils.parseEther("10000");
-    const usdcAmount = ethers.utils.parseUnits("10000", 6);
+    const testAmount = ethers.parseEther("10000");
+    const usdcAmount = ethers.parseUnits("10000", 6);
     
     // Distribute LDAO tokens
     await this.contracts.ldaoToken!.connect(this.accounts.treasury).transfer(this.accounts.user1.address, testAmount);
@@ -233,7 +233,7 @@ export class TestSuite {
     // Test common operations and record gas usage
     const tx1 = await this.contracts.ldaoToken!.connect(this.accounts.user1).transfer(
       this.accounts.user2.address, 
-      ethers.utils.parseEther("100")
+      ethers.parseEther("100")
     );
     const receipt1 = await tx1.wait();
     gasReport['LDAO Token Transfer'] = receipt1.gasUsed.toNumber();

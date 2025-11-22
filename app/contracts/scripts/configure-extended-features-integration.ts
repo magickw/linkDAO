@@ -442,39 +442,39 @@ class ExtendedFeaturesIntegrationManager {
     try {
       const contractsToRegister = [
         {
-          name: ethers.utils.formatBytes32String("NFTMarketplace"),
+          name: ethers.formatBytes32String("NFTMarketplace"),
           address: this.addresses.nftMarketplace || this.addresses.NFTMarketplace,
           version: 1,
           description: "NFT marketplace for trading digital assets",
-          category: ethers.utils.formatBytes32String("marketplace")
+          category: ethers.formatBytes32String("marketplace")
         },
         {
-          name: ethers.utils.formatBytes32String("NFTCollectionFactory"),
+          name: ethers.formatBytes32String("NFTCollectionFactory"),
           address: this.addresses.nftCollectionFactory || this.addresses.NFTCollectionFactory,
           version: 1,
           description: "Factory for creating NFT collections",
-          category: ethers.utils.formatBytes32String("nft")
+          category: ethers.formatBytes32String("nft")
         },
         {
-          name: ethers.utils.formatBytes32String("TipRouter"),
+          name: ethers.formatBytes32String("TipRouter"),
           address: this.addresses.tipRouter || this.addresses.TipRouter,
           version: 1,
           description: "Social tipping system for content creators",
-          category: ethers.utils.formatBytes32String("social")
+          category: ethers.formatBytes32String("social")
         },
         {
-          name: ethers.utils.formatBytes32String("FollowModule"),
+          name: ethers.formatBytes32String("FollowModule"),
           address: this.addresses.followModule || this.addresses.FollowModule,
           version: 1,
           description: "Social following and connection management",
-          category: ethers.utils.formatBytes32String("social")
+          category: ethers.formatBytes32String("social")
         },
         {
-          name: ethers.utils.formatBytes32String("EnhancedRewardPool"),
+          name: ethers.formatBytes32String("EnhancedRewardPool"),
           address: this.addresses.enhancedRewardPool || this.addresses.EnhancedRewardPool,
           version: 1,
           description: "Enhanced reward distribution system",
-          category: ethers.utils.formatBytes32String("rewards")
+          category: ethers.formatBytes32String("rewards")
         }
       ];
 
@@ -491,14 +491,14 @@ class ExtendedFeaturesIntegrationManager {
             await tx.wait();
             
             this.integrationResults.push({
-              feature: `Registry: ${ethers.utils.parseBytes32String(contract.name)}`,
+              feature: `Registry: ${ethers.parseBytes32String(contract.name)}`,
               status: "success",
               details: `Contract registered in central registry`,
               transactionHash: tx.hash
             });
-            console.log(`    ✅ Registered ${ethers.utils.parseBytes32String(contract.name)}`);
+            console.log(`    ✅ Registered ${ethers.parseBytes32String(contract.name)}`);
           } catch (error) {
-            console.log(`    ⚠️  Failed to register ${ethers.utils.parseBytes32String(contract.name)}: ${error}`);
+            console.log(`    ⚠️  Failed to register ${ethers.parseBytes32String(contract.name)}: ${error}`);
           }
         }
       }
@@ -589,10 +589,10 @@ class ExtendedFeaturesIntegrationManager {
       if (this.contracts.contractRegistry) {
         try {
           const nftMarketplaceRegistered = await this.contracts.contractRegistry.isContractActive(
-            ethers.utils.formatBytes32String("NFTMarketplace")
+            ethers.formatBytes32String("NFTMarketplace")
           );
           const tipRouterRegistered = await this.contracts.contractRegistry.isContractActive(
-            ethers.utils.formatBytes32String("TipRouter")
+            ethers.formatBytes32String("TipRouter")
           );
           
           validationResults.push({

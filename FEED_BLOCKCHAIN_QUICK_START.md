@@ -445,7 +445,7 @@ console.log('Reputation:', process.env.NEXT_PUBLIC_REPUTATION_ADDRESS);
 ```typescript
 // Check user has sufficient balance
 const balance = await ldaoToken.balanceOf(userAddress);
-console.log('User balance:', ethers.utils.formatEther(balance));
+console.log('User balance:', ethers.formatEther(balance));
 
 // Check allowance
 const allowance = await ldaoToken.allowance(userAddress, recipientAddress);

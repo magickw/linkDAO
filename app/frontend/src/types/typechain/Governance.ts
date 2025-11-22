@@ -3,22 +3,17 @@
 /* eslint-disable */
 import type {
   BaseContract,
-  BigNumber,
   BigNumberish,
   BytesLike,
-  CallOverrides,
-  ContractTransaction,
   Overrides,
-  PopulatedTransaction,
   Signer,
-  utils,
-} from "ethers";
-import type {
   FunctionFragment,
   Result,
   EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+  Listener,
+  Provider,
+  Interface
+} from "ethers";
 import type {
   TypedEventFilter,
   TypedEvent,
@@ -52,47 +47,47 @@ export declare namespace Governance {
   };
 
   export type ProposalStructOutput = [
-    BigNumber,
+    bigint,
     string,
     string,
     string,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    BigNumber,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
     number,
     number,
     string[],
-    BigNumber[],
+    bigint[],
     string[],
     string[],
-    BigNumber,
-    BigNumber,
+    bigint,
+    bigint,
     boolean,
-    BigNumber
+    bigint
   ] & {
-    id: BigNumber;
+    id: bigint;
     proposer: string;
     title: string;
     description: string;
-    startBlock: BigNumber;
-    endBlock: BigNumber;
-    forVotes: BigNumber;
-    againstVotes: BigNumber;
-    abstainVotes: BigNumber;
-    quorum: BigNumber;
+    startBlock: bigint;
+    endBlock: bigint;
+    forVotes: bigint;
+    againstVotes: bigint;
+    abstainVotes: bigint;
+    quorum: bigint;
     state: number;
     category: number;
     targets: string[];
-    values: BigNumber[];
+    values: bigint[];
     signatures: string[];
     calldatas: string[];
-    executionDelay: BigNumber;
-    queuedAt: BigNumber;
+    executionDelay: bigint;
+    queuedAt: bigint;
     requiresStaking: boolean;
-    minStakeToVote: BigNumber;
+    minStakeToVote: bigint;
   };
 
   export type ReceiptStruct = {
@@ -102,15 +97,15 @@ export declare namespace Governance {
     stakingPower: PromiseOrValue<BigNumberish>;
   };
 
-  export type ReceiptStructOutput = [boolean, number, BigNumber, BigNumber] & {
+  export type ReceiptStructOutput = [boolean, number, bigint, bigint] & {
     hasVoted: boolean;
     support: number;
-    votes: BigNumber;
-    stakingPower: BigNumber;
+    votes: bigint;
+    stakingPower: bigint;
   };
 }
 
-export interface GovernanceInterface extends utils.Interface {
+export interface GovernanceInterface extends Interface {
   functions: {
     "cancel(uint256)": FunctionFragment;
     "castVote(uint256,uint8,string)": FunctionFragment;
@@ -466,12 +461,12 @@ export interface GovernanceInterface extends utils.Interface {
 
 export interface CategoryParametersUpdatedEventObject {
   category: number;
-  quorum: BigNumber;
-  threshold: BigNumber;
+  quorum: bigint;
+  threshold: bigint;
   requiresStaking: boolean;
 }
 export type CategoryParametersUpdatedEvent = TypedEvent<
-  [number, BigNumber, BigNumber, boolean],
+  [number, bigint, bigint, boolean],
   CategoryParametersUpdatedEventObject
 >;
 
@@ -492,11 +487,11 @@ export type DelegateChangedEventFilter = TypedEventFilter<DelegateChangedEvent>;
 
 export interface DelegateVotesChangedEventObject {
   delegate: string;
-  previousBalance: BigNumber;
-  newBalance: BigNumber;
+  previousBalance: bigint;
+  newBalance: bigint;
 }
 export type DelegateVotesChangedEvent = TypedEvent<
-  [string, BigNumber, BigNumber],
+  [string, bigint, bigint],
   DelegateVotesChangedEventObject
 >;
 
@@ -516,10 +511,10 @@ export type OwnershipTransferredEventFilter =
   TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface ProposalCanceledEventObject {
-  id: BigNumber;
+  id: bigint;
 }
 export type ProposalCanceledEvent = TypedEvent<
-  [BigNumber],
+  [bigint],
   ProposalCanceledEventObject
 >;
 
@@ -527,25 +522,25 @@ export type ProposalCanceledEventFilter =
   TypedEventFilter<ProposalCanceledEvent>;
 
 export interface ProposalCreatedEventObject {
-  id: BigNumber;
+  id: bigint;
   proposer: string;
   title: string;
   description: string;
-  startBlock: BigNumber;
-  endBlock: BigNumber;
+  startBlock: bigint;
+  endBlock: bigint;
 }
 export type ProposalCreatedEvent = TypedEvent<
-  [BigNumber, string, string, string, BigNumber, BigNumber],
+  [bigint, string, string, string, bigint, bigint],
   ProposalCreatedEventObject
 >;
 
 export type ProposalCreatedEventFilter = TypedEventFilter<ProposalCreatedEvent>;
 
 export interface ProposalExecutedEventObject {
-  id: BigNumber;
+  id: bigint;
 }
 export type ProposalExecutedEvent = TypedEvent<
-  [BigNumber],
+  [bigint],
   ProposalExecutedEventObject
 >;
 
@@ -553,11 +548,11 @@ export type ProposalExecutedEventFilter =
   TypedEventFilter<ProposalExecutedEvent>;
 
 export interface ProposalQueuedEventObject {
-  id: BigNumber;
-  executionTime: BigNumber;
+  id: bigint;
+  executionTime: bigint;
 }
 export type ProposalQueuedEvent = TypedEvent<
-  [BigNumber, BigNumber],
+  [bigint, bigint],
   ProposalQueuedEventObject
 >;
 
@@ -565,20 +560,20 @@ export type ProposalQueuedEventFilter = TypedEventFilter<ProposalQueuedEvent>;
 
 export interface VoteCastEventObject {
   voter: string;
-  proposalId: BigNumber;
+  proposalId: bigint;
   support: number;
-  votes: BigNumber;
+  votes: bigint;
   reason: string;
 }
 export type VoteCastEvent = TypedEvent<
-  [string, BigNumber, number, BigNumber, string],
+  [string, bigint, number, bigint, string],
   VoteCastEventObject
 >;
 
 export type VoteCastEventFilter = TypedEventFilter<VoteCastEvent>;
 
-export interface Governance extends BaseContract {
-  connect(signerOrProvider: Signer | Provider | string): this;
+export interface Governance {
+  connect(runner: any): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
@@ -607,127 +602,127 @@ export interface Governance extends BaseContract {
     cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     castVote(
       proposalId: PromiseOrValue<BigNumberish>,
       support: PromiseOrValue<BigNumberish>,
       reason: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     categoryQuorum(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     categoryRequiresStaking(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[boolean]>;
 
     categoryThreshold(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     delegate(
       delegatee: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     delegatedVotes(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     delegates(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[string]>;
 
     execute(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
-    executionDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
+    executionDelay(overrides?: any): Promise<[bigint]>;
 
     getProposal(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[Governance.ProposalStructOutput]>;
 
     getReceipt(
       proposalId: PromiseOrValue<BigNumberish>,
       voter: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[Governance.ReceiptStructOutput]>;
 
     getVotingPower(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
-    governanceToken(overrides?: CallOverrides): Promise<[string]>;
+    governanceToken(overrides?: any): Promise<[string]>;
 
-    owner(overrides?: CallOverrides): Promise<[string]>;
+    owner(overrides?: any): Promise<[string]>;
 
-    proposalCount(overrides?: CallOverrides): Promise<[BigNumber]>;
+    proposalCount(overrides?: any): Promise<[bigint]>;
 
-    proposalThreshold(overrides?: CallOverrides): Promise<[BigNumber]>;
+    proposalThreshold(overrides?: any): Promise<[bigint]>;
 
     proposalVotes(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [boolean, number, BigNumber, BigNumber] & {
+      [boolean, number, bigint, bigint] & {
         hasVoted: boolean;
         support: number;
-        votes: BigNumber;
-        stakingPower: BigNumber;
+        votes: bigint;
+        stakingPower: bigint;
       }
     >;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
       [
-        BigNumber,
+        bigint,
         string,
         string,
         string,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
         number,
         number,
-        BigNumber,
-        BigNumber,
+        bigint,
+        bigint,
         boolean,
-        BigNumber
+        bigint
       ] & {
-        id: BigNumber;
+        id: bigint;
         proposer: string;
         title: string;
         description: string;
-        startBlock: BigNumber;
-        endBlock: BigNumber;
-        forVotes: BigNumber;
-        againstVotes: BigNumber;
-        abstainVotes: BigNumber;
-        quorum: BigNumber;
+        startBlock: bigint;
+        endBlock: bigint;
+        forVotes: bigint;
+        againstVotes: bigint;
+        abstainVotes: bigint;
+        quorum: bigint;
         state: number;
         category: number;
-        executionDelay: BigNumber;
-        queuedAt: BigNumber;
+        executionDelay: bigint;
+        queuedAt: bigint;
         requiresStaking: boolean;
-        minStakeToVote: BigNumber;
+        minStakeToVote: bigint;
       }
     >;
 
@@ -740,18 +735,18 @@ export interface Governance extends BaseContract {
       signatures: PromiseOrValue<string>[],
       calldatas: PromiseOrValue<BytesLike>[],
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     queue(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
-    quorumVotes(overrides?: CallOverrides): Promise<[BigNumber]>;
+    quorumVotes(overrides?: any): Promise<[bigint]>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setCategoryParameters(
       category: PromiseOrValue<BigNumberish>,
@@ -759,177 +754,177 @@ export interface Governance extends BaseContract {
       threshold: PromiseOrValue<BigNumberish>,
       requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setExecutionDelay(
       newExecutionDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setProposalThreshold(
       newProposalThreshold: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setQuorumVotes(
       newQuorumVotes: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setVotingDelay(
       newVotingDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     setVotingPeriod(
       newVotingPeriod: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     state(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[number]>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
-    votingDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
+    votingDelay(overrides?: any): Promise<[bigint]>;
 
-    votingPeriod(overrides?: CallOverrides): Promise<[BigNumber]>;
+    votingPeriod(overrides?: any): Promise<[bigint]>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
   };
 
   cancel(
     proposalId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   castVote(
     proposalId: PromiseOrValue<BigNumberish>,
     support: PromiseOrValue<BigNumberish>,
     reason: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   categoryQuorum(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   categoryRequiresStaking(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<boolean>;
 
   categoryThreshold(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   delegate(
     delegatee: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   delegatedVotes(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   delegates(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<string>;
 
   execute(
     proposalId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
-  executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+  executionDelay(overrides?: any): Promise<bigint>;
 
   getProposal(
     proposalId: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<Governance.ProposalStructOutput>;
 
   getReceipt(
     proposalId: PromiseOrValue<BigNumberish>,
     voter: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<Governance.ReceiptStructOutput>;
 
   getVotingPower(
     account: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
-  governanceToken(overrides?: CallOverrides): Promise<string>;
+  governanceToken(overrides?: any): Promise<string>;
 
-  owner(overrides?: CallOverrides): Promise<string>;
+  owner(overrides?: any): Promise<string>;
 
-  proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
+  proposalCount(overrides?: any): Promise<bigint>;
 
-  proposalThreshold(overrides?: CallOverrides): Promise<BigNumber>;
+  proposalThreshold(overrides?: any): Promise<bigint>;
 
   proposalVotes(
     arg0: PromiseOrValue<BigNumberish>,
     arg1: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<
-    [boolean, number, BigNumber, BigNumber] & {
+    [boolean, number, bigint, bigint] & {
       hasVoted: boolean;
       support: number;
-      votes: BigNumber;
-      stakingPower: BigNumber;
+      votes: bigint;
+      stakingPower: bigint;
     }
   >;
 
   proposals(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<
     [
-      BigNumber,
+      bigint,
       string,
       string,
       string,
-      BigNumber,
-      BigNumber,
-      BigNumber,
-      BigNumber,
-      BigNumber,
-      BigNumber,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
+      bigint,
       number,
       number,
-      BigNumber,
-      BigNumber,
+      bigint,
+      bigint,
       boolean,
-      BigNumber
+      bigint
     ] & {
-      id: BigNumber;
+      id: bigint;
       proposer: string;
       title: string;
       description: string;
-      startBlock: BigNumber;
-      endBlock: BigNumber;
-      forVotes: BigNumber;
-      againstVotes: BigNumber;
-      abstainVotes: BigNumber;
-      quorum: BigNumber;
+      startBlock: bigint;
+      endBlock: bigint;
+      forVotes: bigint;
+      againstVotes: bigint;
+      abstainVotes: bigint;
+      quorum: bigint;
       state: number;
       category: number;
-      executionDelay: BigNumber;
-      queuedAt: BigNumber;
+      executionDelay: bigint;
+      queuedAt: bigint;
       requiresStaking: boolean;
-      minStakeToVote: BigNumber;
+      minStakeToVote: bigint;
     }
   >;
 
@@ -942,18 +937,18 @@ export interface Governance extends BaseContract {
     signatures: PromiseOrValue<string>[],
     calldatas: PromiseOrValue<BytesLike>[],
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   queue(
     proposalId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
-  quorumVotes(overrides?: CallOverrides): Promise<BigNumber>;
+  quorumVotes(overrides?: any): Promise<bigint>;
 
   renounceOwnership(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setCategoryParameters(
     category: PromiseOrValue<BigNumberish>,
@@ -961,177 +956,177 @@ export interface Governance extends BaseContract {
     threshold: PromiseOrValue<BigNumberish>,
     requiresStaking: PromiseOrValue<boolean>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setExecutionDelay(
     newExecutionDelay: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setProposalThreshold(
     newProposalThreshold: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setQuorumVotes(
     newQuorumVotes: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setVotingDelay(
     newVotingDelay: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   setVotingPeriod(
     newVotingPeriod: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   state(
     proposalId: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<number>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
-  votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
+  votingDelay(overrides?: any): Promise<bigint>;
 
-  votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
+  votingPeriod(overrides?: any): Promise<bigint>;
 
   votingPower(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   callStatic: {
     cancel(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     castVote(
       proposalId: PromiseOrValue<BigNumberish>,
       support: PromiseOrValue<BigNumberish>,
       reason: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     categoryQuorum(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     categoryRequiresStaking(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     categoryThreshold(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     delegate(
       delegatee: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     delegatedVotes(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     delegates(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<string>;
 
     execute(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
-    executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+    executionDelay(overrides?: any): Promise<bigint>;
 
     getProposal(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<Governance.ProposalStructOutput>;
 
     getReceipt(
       proposalId: PromiseOrValue<BigNumberish>,
       voter: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<Governance.ReceiptStructOutput>;
 
     getVotingPower(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    governanceToken(overrides?: CallOverrides): Promise<string>;
+    governanceToken(overrides?: any): Promise<string>;
 
-    owner(overrides?: CallOverrides): Promise<string>;
+    owner(overrides?: any): Promise<string>;
 
-    proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
+    proposalCount(overrides?: any): Promise<bigint>;
 
-    proposalThreshold(overrides?: CallOverrides): Promise<BigNumber>;
+    proposalThreshold(overrides?: any): Promise<bigint>;
 
     proposalVotes(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [boolean, number, BigNumber, BigNumber] & {
+      [boolean, number, bigint, bigint] & {
         hasVoted: boolean;
         support: number;
-        votes: BigNumber;
-        stakingPower: BigNumber;
+        votes: bigint;
+        stakingPower: bigint;
       }
     >;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
       [
-        BigNumber,
+        bigint,
         string,
         string,
         string,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
-        BigNumber,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
+        bigint,
         number,
         number,
-        BigNumber,
-        BigNumber,
+        bigint,
+        bigint,
         boolean,
-        BigNumber
+        bigint
       ] & {
-        id: BigNumber;
+        id: bigint;
         proposer: string;
         title: string;
         description: string;
-        startBlock: BigNumber;
-        endBlock: BigNumber;
-        forVotes: BigNumber;
-        againstVotes: BigNumber;
-        abstainVotes: BigNumber;
-        quorum: BigNumber;
+        startBlock: bigint;
+        endBlock: bigint;
+        forVotes: bigint;
+        againstVotes: bigint;
+        abstainVotes: bigint;
+        quorum: bigint;
         state: number;
         category: number;
-        executionDelay: BigNumber;
-        queuedAt: BigNumber;
+        executionDelay: bigint;
+        queuedAt: bigint;
         requiresStaking: boolean;
-        minStakeToVote: BigNumber;
+        minStakeToVote: bigint;
       }
     >;
 
@@ -1143,72 +1138,72 @@ export interface Governance extends BaseContract {
       values: PromiseOrValue<BigNumberish>[],
       signatures: PromiseOrValue<string>[],
       calldatas: PromiseOrValue<BytesLike>[],
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     queue(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
-    quorumVotes(overrides?: CallOverrides): Promise<BigNumber>;
+    quorumVotes(overrides?: any): Promise<bigint>;
 
-    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+    renounceOwnership(overrides?: any): Promise<void>;
 
     setCategoryParameters(
       category: PromiseOrValue<BigNumberish>,
       quorum: PromiseOrValue<BigNumberish>,
       threshold: PromiseOrValue<BigNumberish>,
       requiresStaking: PromiseOrValue<boolean>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     setExecutionDelay(
       newExecutionDelay: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     setProposalThreshold(
       newProposalThreshold: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     setQuorumVotes(
       newQuorumVotes: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     setVotingDelay(
       newVotingDelay: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     setVotingPeriod(
       newVotingPeriod: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     state(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<number>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
-    votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
+    votingDelay(overrides?: any): Promise<bigint>;
 
-    votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
+    votingPeriod(overrides?: any): Promise<bigint>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
   };
 
-  filters: {
+  filters: Record<string, any> & {
     "CategoryParametersUpdated(uint8,uint256,uint256,bool)"(
       category?: null,
       quorum?: null,
@@ -1302,86 +1297,86 @@ export interface Governance extends BaseContract {
     cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     castVote(
       proposalId: PromiseOrValue<BigNumberish>,
       support: PromiseOrValue<BigNumberish>,
       reason: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     categoryQuorum(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     categoryRequiresStaking(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     categoryThreshold(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     delegate(
       delegatee: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     delegatedVotes(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     delegates(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     execute(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
-    executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+    executionDelay(overrides?: any): Promise<bigint>;
 
     getProposal(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getReceipt(
       proposalId: PromiseOrValue<BigNumberish>,
       voter: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getVotingPower(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    governanceToken(overrides?: CallOverrides): Promise<BigNumber>;
+    governanceToken(overrides?: any): Promise<bigint>;
 
-    owner(overrides?: CallOverrides): Promise<BigNumber>;
+    owner(overrides?: any): Promise<bigint>;
 
-    proposalCount(overrides?: CallOverrides): Promise<BigNumber>;
+    proposalCount(overrides?: any): Promise<bigint>;
 
-    proposalThreshold(overrides?: CallOverrides): Promise<BigNumber>;
+    proposalThreshold(overrides?: any): Promise<bigint>;
 
     proposalVotes(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     propose(
       title: PromiseOrValue<string>,
@@ -1392,18 +1387,18 @@ export interface Governance extends BaseContract {
       signatures: PromiseOrValue<string>[],
       calldatas: PromiseOrValue<BytesLike>[],
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     queue(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
-    quorumVotes(overrides?: CallOverrides): Promise<BigNumber>;
+    quorumVotes(overrides?: any): Promise<bigint>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setCategoryParameters(
       category: PromiseOrValue<BigNumberish>,
@@ -1411,137 +1406,137 @@ export interface Governance extends BaseContract {
       threshold: PromiseOrValue<BigNumberish>,
       requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setExecutionDelay(
       newExecutionDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setProposalThreshold(
       newProposalThreshold: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setQuorumVotes(
       newQuorumVotes: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setVotingDelay(
       newVotingDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     setVotingPeriod(
       newVotingPeriod: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     state(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
-    votingDelay(overrides?: CallOverrides): Promise<BigNumber>;
+    votingDelay(overrides?: any): Promise<bigint>;
 
-    votingPeriod(overrides?: CallOverrides): Promise<BigNumber>;
+    votingPeriod(overrides?: any): Promise<bigint>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
   };
 
   populateTransaction: {
     cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     castVote(
       proposalId: PromiseOrValue<BigNumberish>,
       support: PromiseOrValue<BigNumberish>,
       reason: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     categoryQuorum(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     categoryRequiresStaking(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     categoryThreshold(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     delegate(
       delegatee: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     delegatedVotes(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     delegates(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     execute(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
-    executionDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    executionDelay(overrides?: any): Promise<any>;
 
     getProposal(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     getReceipt(
       proposalId: PromiseOrValue<BigNumberish>,
       voter: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     getVotingPower(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    governanceToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    governanceToken(overrides?: any): Promise<any>;
 
-    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    owner(overrides?: any): Promise<any>;
 
-    proposalCount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    proposalCount(overrides?: any): Promise<any>;
 
-    proposalThreshold(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    proposalThreshold(overrides?: any): Promise<any>;
 
     proposalVotes(
       arg0: PromiseOrValue<BigNumberish>,
       arg1: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     proposals(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     propose(
       title: PromiseOrValue<string>,
@@ -1552,18 +1547,18 @@ export interface Governance extends BaseContract {
       signatures: PromiseOrValue<string>[],
       calldatas: PromiseOrValue<BytesLike>[],
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     queue(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
-    quorumVotes(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    quorumVotes(overrides?: any): Promise<any>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setCategoryParameters(
       category: PromiseOrValue<BigNumberish>,
@@ -1571,50 +1566,50 @@ export interface Governance extends BaseContract {
       threshold: PromiseOrValue<BigNumberish>,
       requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setExecutionDelay(
       newExecutionDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setProposalThreshold(
       newProposalThreshold: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setQuorumVotes(
       newQuorumVotes: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setVotingDelay(
       newVotingDelay: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     setVotingPeriod(
       newVotingPeriod: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     state(
       proposalId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
-    votingDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    votingDelay(overrides?: any): Promise<any>;
 
-    votingPeriod(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    votingPeriod(overrides?: any): Promise<any>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
   };
 }

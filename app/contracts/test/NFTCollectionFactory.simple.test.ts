@@ -23,7 +23,7 @@ describe("NFTCollectionFactory", function () {
     });
 
     it("Should set initial creation fee", async function () {
-      expect(await factory.creationFee()).to.equal(ethers.utils.parseEther("0.01"));
+      expect(await factory.creationFee()).to.equal(ethers.parseEther("0.01"));
     });
 
     it("Should set fee recipient to deployer", async function () {
@@ -38,7 +38,7 @@ describe("NFTCollectionFactory", function () {
         image: "https://example.com/image.png",
         externalUrl: "https://example.com",
         maxSupply: 1000,
-        mintPrice: ethers.utils.parseEther("0.1"),
+        mintPrice: ethers.parseEther("0.1"),
         isPublicMint: true,
         creator: creator.address,
         createdAt: 0
@@ -63,7 +63,7 @@ describe("NFTCollectionFactory", function () {
         image: "https://example.com/image.png",
         externalUrl: "https://example.com",
         maxSupply: 1000,
-        mintPrice: ethers.utils.parseEther("0.1"),
+        mintPrice: ethers.parseEther("0.1"),
         isPublicMint: true,
         creator: creator.address,
         createdAt: 0
@@ -96,7 +96,7 @@ describe("NFTCollectionFactory", function () {
         image: "https://example.com/image.png",
         externalUrl: "https://example.com",
         maxSupply: 1000,
-        mintPrice: ethers.utils.parseEther("0.1"),
+        mintPrice: ethers.parseEther("0.1"),
         isPublicMint: true,
         creator: creator.address,
         createdAt: 0
@@ -132,7 +132,7 @@ describe("NFTCollectionFactory", function () {
         image: "https://example.com/image.png",
         externalUrl: "https://example.com",
         maxSupply: 1000,
-        mintPrice: ethers.utils.parseEther("0.1"),
+        mintPrice: ethers.parseEther("0.1"),
         isPublicMint: true,
         creator: creator.address,
         createdAt: 0
@@ -157,7 +157,7 @@ describe("NFTCollectionFactory", function () {
       const collection = NFTCollection.attach(collectionAddress);
 
       // Mint an NFT
-      const mintPrice = ethers.utils.parseEther("0.1");
+      const mintPrice = ethers.parseEther("0.1");
       await expect(
         collection.connect(user1).mint(
           user1.address,

@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ethers } from 'ethers';
-import { formatEther, parseEther } from 'ethers/lib/utils';
+import { formatEther, parseEther } from 'ethers';
 
 // Import types from ethers
-type JsonRpcProvider = ethers.providers.JsonRpcProvider;
-type Web3Provider = ethers.providers.Web3Provider;
+type JsonRpcProvider = ethers.JsonRpcProvider;
+type Web3Provider = ethers.BrowserProvider;
 const { Contract } = ethers;
 
 declare global {
@@ -518,8 +518,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         throw new Error('Ethereum provider not found');
       }
       
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       const contract = new ethers.Contract(
         MARKETPLACE_ADDRESS,
         [updateOrderStatusAbi],

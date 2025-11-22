@@ -67,7 +67,7 @@ async function main() {
   console.log("Testing basic functionality...");
   
   const creationFee = await nftCollectionFactory.creationFee();
-  console.log("Creation fee:", ethers.utils.formatEther(creationFee), "ETH");
+  console.log("Creation fee:", ethers.formatEther(creationFee), "ETH");
   
   const feeRecipient = await nftCollectionFactory.feeRecipient();
   console.log("Fee recipient:", feeRecipient);

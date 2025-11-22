@@ -1,26 +1,26 @@
-import { BigNumber, ContractTransaction } from 'ethers';
+import { ContractTransaction, ContractTransactionResponse } from 'ethers';
 
 export interface RewardPool {
   rewardEngagement(
     recipient: string,
-    amount: BigNumber,
+    amount: bigint,
     commentId: string,
     overrides?: { gasLimit: number }
-  ): Promise<ContractTransaction>;
+  ): Promise<ContractTransactionResponse>;
   
   commentRewarded(commentId: string): Promise<boolean>;
   
-  userEngagementRewards(userAddress: string): Promise<BigNumber>;
+  userEngagementRewards(userAddress: string): Promise<bigint>;
   
   // Additional methods from the actual RewardPool contract
-  fund(amount: BigNumber): Promise<ContractTransaction>;
+  fund(amount: bigint): Promise<ContractTransactionResponse>;
   
-  credit(user: string, amount: BigNumber): Promise<void>;
+  credit(user: string, amount: bigint): Promise<void>;
   
-  claim(): Promise<ContractTransaction>;
+  claim(): Promise<ContractTransactionResponse>;
   
   accounts(user: string): Promise<{
-    earned: BigNumber;
-    lastEpochCounted: BigNumber;
+    earned: bigint;
+    lastEpochCounted: bigint;
   }>;
 }

@@ -208,7 +208,7 @@ Comprehensive guide including:
 ### Problem Discovered
 Test suite was completely broken due to ethers v6 syntax being used with ethers v5 dependencies:
 - 0 tests passing initially
-- Tests using `ethers.parseEther()` instead of `ethers.utils.parseEther()`
+- Tests using `ethers.parseEther()` instead of `ethers.parseEther()`
 - Tests using `.waitForDeployment()` instead of `.deployed()`
 - Tests using `.getAddress()` instead of `.address`
 
@@ -221,7 +221,7 @@ Created automated fix script and manually corrected imports:
 
 2. **Fixed Direct Imports**
    - Converted 7 files using `import { parseEther } from "ethers"`
-   - Changed to `const { parseEther } = ethers.utils`
+   - Changed to `const { parseEther } = ethers`
 
 3. **Fixed BigInt Arithmetic**
    - Converted BigInt operations to BigNumber methods

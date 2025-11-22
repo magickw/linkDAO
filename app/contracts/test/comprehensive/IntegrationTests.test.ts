@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { TestSuite } from "./TestSuite";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-const { parseEther, parseUnits } = ethers.utils;
+const { parseEther, parseUnits } = ethers;
 
 describe("Comprehensive Integration Tests", function () {
   let testSuite: TestSuite;

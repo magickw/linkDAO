@@ -17,8 +17,8 @@ describe("EnhancedEscrow", function () {
   let voter2: SignerWithAddress;
 
   const LISTING_ID = 1;
-  const ESCROW_AMOUNT = ethers.utils.parseEther("1");
-  const HIGH_VALUE_AMOUNT = ethers.utils.parseEther("15000"); // Above threshold
+  const ESCROW_AMOUNT = ethers.parseEther("1");
+  const HIGH_VALUE_AMOUNT = ethers.parseEther("15000"); // Above threshold
   const PLATFORM_FEE = 100; // 1%
 
   beforeEach(async function () {
@@ -45,8 +45,8 @@ describe("EnhancedEscrow", function () {
     await mockToken.deployed();
 
     // Setup initial balances and approvals
-    await mockToken.mint(buyer.address, ethers.utils.parseEther("100000"));
-    await mockToken.connect(buyer).approve(enhancedEscrow.address, ethers.utils.parseEther("100000"));
+    await mockToken.mint(buyer.address, ethers.parseEther("100000"));
+    await mockToken.connect(buyer).approve(enhancedEscrow.address, ethers.parseEther("100000"));
 
     // Set initial reputation scores for testing
     await enhancedEscrow.connect(owner).updateReputationForTesting(voter1.address, 100, "Initial reputation");
@@ -497,7 +497,7 @@ describe("EnhancedEscrow", function () {
     });
 
     it("Should set high-value threshold", async function () {
-      const newThreshold = ethers.utils.parseEther("20000");
+      const newThreshold = ethers.parseEther("20000");
       await enhancedEscrow.connect(owner).setHighValueThreshold(newThreshold);
       expect(await enhancedEscrow.highValueThreshold()).to.equal(newThreshold);
     });

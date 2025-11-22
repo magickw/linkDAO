@@ -141,14 +141,14 @@ describe("Extended Features Integration", function () {
     await contracts.reputationSystem.grantRole(MODERATOR_ROLE, signers.moderator.address);
 
     // Fund reward pool
-    await contracts.ldaoToken.mint(signers.deployer.address, ethers.utils.parseEther("10000"));
-    await contracts.ldaoToken.approve(contracts.enhancedRewardPool.address, ethers.utils.parseEther("5000"));
-    await contracts.enhancedRewardPool.fundEpoch(ethers.utils.parseEther("5000"));
+    await contracts.ldaoToken.mint(signers.deployer.address, ethers.parseEther("10000"));
+    await contracts.ldaoToken.approve(contracts.enhancedRewardPool.address, ethers.parseEther("5000"));
+    await contracts.enhancedRewardPool.fundEpoch(ethers.parseEther("5000"));
 
     // Mint tokens to users for testing
-    await contracts.ldaoToken.mint(signers.user1.address, ethers.utils.parseEther("1000"));
-    await contracts.ldaoToken.mint(signers.user2.address, ethers.utils.parseEther("1000"));
-    await contracts.ldaoToken.mint(signers.creator.address, ethers.utils.parseEther("1000"));
+    await contracts.ldaoToken.mint(signers.user1.address, ethers.parseEther("1000"));
+    await contracts.ldaoToken.mint(signers.user2.address, ethers.parseEther("1000"));
+    await contracts.ldaoToken.mint(signers.creator.address, ethers.parseEther("1000"));
 
     console.log("Contract integrations configured successfully");
   }
@@ -198,7 +198,7 @@ describe("Extended Features Integration", function () {
   describe("Reward Mechanisms Integration", function () {
     it("Should distribute marketplace trading rewards", async function () {
       const currentEpoch = await contracts.enhancedRewardPool.currentEpoch();
-      const baseReward = ethers.utils.parseEther("10");
+      const baseReward = ethers.parseEther("10");
       
       // Simulate marketplace trading reward
       await contracts.enhancedRewardPool.calculateReward(
@@ -217,8 +217,8 @@ describe("Extended Features Integration", function () {
     });
 
     it("Should distribute social activity rewards through tipping", async function () {
-      const tipAmount = ethers.utils.parseEther("50");
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const tipAmount = ethers.parseEther("50");
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       // Approve and tip
       await contracts.ldaoToken.connect(signers.user1).approve(contracts.tipRouter.address, tipAmount);
@@ -232,7 +232,7 @@ describe("Extended Features Integration", function () {
       const expectedToCreator = tipAmount.sub(expectedFee);
       
       expect(await contracts.ldaoToken.balanceOf(signers.creator.address)).to.be.gte(
-        ethers.utils.parseEther("1000").add(expectedToCreator)
+        ethers.parseEther("1000").add(expectedToCreator)
       );
     });
 
@@ -245,7 +245,7 @@ describe("Extended Features Integration", function () {
       );
 
       const currentEpoch = await contracts.enhancedRewardPool.currentEpoch();
-      const baseReward = ethers.utils.parseEther("10");
+      const baseReward = ethers.parseEther("10");
       
       // Calculate reward with reputation multiplier
       await contracts.enhancedRewardPool.calculateReward(
@@ -289,8 +289,8 @@ describe("Extended Features Integration", function () {
       expect(await contracts.followModule.followerCount(signers.creator.address)).to.equal(1);
 
       // 3. Tip creator
-      const tipAmount = ethers.utils.parseEther("25");
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("social-post-1"));
+      const tipAmount = ethers.parseEther("25");
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("social-post-1"));
 
       await contracts.ldaoToken.connect(signers.user1).approve(contracts.tipRouter.address, tipAmount);
       await contracts.tipRouter.connect(signers.user1).tip(postId, signers.creator.address, tipAmount);
@@ -303,7 +303,7 @@ describe("Extended Features Integration", function () {
       );
 
       // Creator should have enhanced rewards due to social engagement
-      const baseReward = ethers.utils.parseEther("20");
+      const baseReward = ethers.parseEther("20");
       await contracts.enhancedRewardPool.calculateReward(
         signers.creator.address,
         currentEpoch,
@@ -328,7 +328,7 @@ describe("Extended Features Integration", function () {
         image: "https://example.com/collection.png",
         externalUrl: "https://example.com",
         maxSupply: 100,
-        mintPrice: ethers.utils.parseEther("0.1"),
+        mintPrice: ethers.parseEther("0.1"),
         isPublicMint: true,
         creator: signers.creator.address,
         createdAt: 0
@@ -356,7 +356,7 @@ describe("Extended Features Integration", function () {
         isVerified: false
       };
 
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       await contracts.nftMarketplace.connect(signers.creator).mintNFT(
         signers.creator.address,
         "https://example.com/metadata.json",
@@ -367,7 +367,7 @@ describe("Extended Features Integration", function () {
 
       // 3. Verify NFT marketplace can distribute rewards
       const currentEpoch = await contracts.enhancedRewardPool.currentEpoch();
-      const nftReward = ethers.utils.parseEther("15");
+      const nftReward = ethers.parseEther("15");
       
       await contracts.enhancedRewardPool.calculateReward(
         signers.creator.address,
@@ -404,8 +404,8 @@ describe("Extended Features Integration", function () {
       // 2. User follows creator and tips content
       await contracts.followModule.connect(signers.user2).follow(signers.creator.address);
       
-      const tipAmount = ethers.utils.parseEther("30");
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("journey-post"));
+      const tipAmount = ethers.parseEther("30");
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("journey-post"));
       
       await contracts.ldaoToken.connect(signers.user2).approve(contracts.tipRouter.address, tipAmount);
       await contracts.tipRouter.connect(signers.user2).tip(postId, signers.creator.address, tipAmount);
@@ -414,7 +414,7 @@ describe("Extended Features Integration", function () {
       await contracts.marketplace.connect(signers.user2).createListing(
         ethers.constants.AddressZero,
         0,
-        ethers.utils.parseEther("1"),
+        ethers.parseEther("1"),
         1,
         0,
         0
@@ -428,7 +428,7 @@ describe("Extended Features Integration", function () {
         signers.user2.address,
         currentEpoch,
         3, // CONTENT_REWARDS
-        ethers.utils.parseEther("5")
+        ethers.parseEther("5")
       );
 
       // Trading activity reward
@@ -436,7 +436,7 @@ describe("Extended Features Integration", function () {
         signers.user2.address,
         currentEpoch,
         1, // TRADING_REWARDS
-        ethers.utils.parseEther("8")
+        ethers.parseEther("8")
       );
 
       // 5. Verify user has accumulated rewards
@@ -476,7 +476,7 @@ describe("Extended Features Integration", function () {
 
       expect(user1Balance).to.be.gte(0);
       expect(user2Balance).to.be.gte(0);
-      expect(creatorBalance).to.be.gt(ethers.utils.parseEther("1000")); // Should have received tips
+      expect(creatorBalance).to.be.gt(ethers.parseEther("1000")); // Should have received tips
     });
   });
 
@@ -484,9 +484,9 @@ describe("Extended Features Integration", function () {
     it("Should handle batch operations efficiently", async function () {
       const users = [signers.user1.address, signers.user2.address, signers.creator.address];
       const amounts = [
-        ethers.utils.parseEther("5"),
-        ethers.utils.parseEther("7"),
-        ethers.utils.parseEther("3")
+        ethers.parseEther("5"),
+        ethers.parseEther("7"),
+        ethers.parseEther("3")
       ];
 
       const currentEpoch = await contracts.enhancedRewardPool.currentEpoch();

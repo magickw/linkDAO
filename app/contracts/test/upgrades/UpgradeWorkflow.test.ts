@@ -34,7 +34,7 @@ describe("Upgrade Workflow", function () {
       expect(proxyAddress).to.not.equal(ethers.ZeroAddress);
       
       const totalSupply = await proxy.totalSupply();
-      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000")); // 1B tokens
+      expect(totalSupply).to.equal(ethers.parseEther("1000000000")); // 1B tokens
     });
 
     it("Should validate upgrade compatibility", async function () {
@@ -58,7 +58,7 @@ describe("Upgrade Workflow", function () {
       
       // Verify state is preserved
       const totalSupply = await upgraded.totalSupply();
-      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000"));
+      expect(totalSupply).to.equal(ethers.parseEther("1000000000"));
     });
   });
 
@@ -219,13 +219,13 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Mock voting power
-      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("1000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("1000"));
       
       // Cast vote
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
       const vote = await governanceProxy.getUpgradeVote(voteId);
-      expect(vote.forVotes).to.equal(ethers.utils.parseEther("1000"));
+      expect(vote.forVotes).to.equal(ethers.parseEther("1000"));
     });
 
     it("Should execute upgrade after successful vote", async function () {
@@ -242,8 +242,8 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Set up voting power and cast votes
-      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("3000"));
-      await mockGovernance.setTotalVotingPower(ethers.utils.parseEther("10000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("3000"));
+      await mockGovernance.setTotalVotingPower(ethers.parseEther("10000"));
       
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
@@ -273,8 +273,8 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Set up insufficient voting power
-      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("1000"));
-      await mockGovernance.setTotalVotingPower(ethers.utils.parseEther("10000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("1000"));
+      await mockGovernance.setTotalVotingPower(ethers.parseEther("10000"));
       
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
@@ -325,7 +325,7 @@ describe("Upgrade Workflow", function () {
 
     it("Should preserve state during upgrade", async function () {
       const totalSupply = await proxy.totalSupply();
-      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000"));
+      expect(totalSupply).to.equal(ethers.parseEther("1000000000"));
     });
 
     it("Should be able to rollback to previous version", async function () {

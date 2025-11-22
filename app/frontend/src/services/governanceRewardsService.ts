@@ -111,18 +111,18 @@ export interface SeasonalReward {
 
 export class GovernanceRewardsService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
   private static rewardTiers: RewardTier[] | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       GovernanceRewardsService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       GovernanceRewardsService.currentAddress = (await signer.getAddress()).toLowerCase();
-      
+
       // Load reward tiers
       await GovernanceRewardsService.loadRewardTiers();
     } catch (error) {
@@ -324,19 +324,19 @@ export class GovernanceRewardsService {
       // Get user's current tier
       const userStats = await GovernanceRewardsService.getUserRewardStats(userId);
       const tier = userStats.currentTier;
-      
+
       // Calculate base reward
       let baseReward = parseFloat(tier.rewards.vote);
-      
+
       // Apply bonuses
       const bonuses = await GovernanceRewardsService.calculateBonuses(userId, 'vote', {
         votingPower,
         proposalId,
         communityId
       });
-      
+
       const totalReward = baseReward * (1 + bonuses.totalBonus);
-      
+
       // Create reward record
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/governance/rewards/award`, {
         method: 'POST',
@@ -367,7 +367,7 @@ export class GovernanceRewardsService {
       }
 
       const reward = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('governance_reward_earned', {
         userId,
@@ -404,18 +404,18 @@ export class GovernanceRewardsService {
       // Get user's current tier
       const userStats = await GovernanceRewardsService.getUserRewardStats(userId);
       const tier = userStats.currentTier;
-      
+
       // Calculate base reward
       let baseReward = parseFloat(tier.rewards.propose);
-      
+
       // Apply bonuses for proposal quality
       const bonuses = await GovernanceRewardsService.calculateBonuses(userId, 'propose', {
         proposalId,
         communityId
       });
-      
+
       const totalReward = baseReward * (1 + bonuses.totalBonus);
-      
+
       // Create reward record
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/governance/rewards/award`, {
         method: 'POST',
@@ -445,7 +445,7 @@ export class GovernanceRewardsService {
       }
 
       const reward = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('governance_reward_earned', {
         userId,
@@ -483,13 +483,13 @@ export class GovernanceRewardsService {
       // Get user's current tier
       const userStats = await GovernanceRewardsService.getUserRewardStats(delegatorId);
       const tier = userStats.currentTier;
-      
+
       // Calculate base reward (percentage of voting power)
       const baseReward = Math.min(
         parseFloat(tier.rewards.delegate),
         parseFloat(votingPower) * 0.01 // 1% of voting power max
       );
-      
+
       // Create reward record
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/governance/rewards/award`, {
         method: 'POST',
@@ -519,7 +519,7 @@ export class GovernanceRewardsService {
       }
 
       const reward = await response.json();
-      
+
       // Send WebSocket notification
       webSocketService.send('governance_reward_earned', {
         userId: delegatorId,
@@ -613,7 +613,7 @@ export class GovernanceRewardsService {
       }
 
       const stats = await response.json();
-      
+
       // Transform monthly earnings
       if (stats.monthlyEarnings) {
         stats.monthlyEarnings = stats.monthlyEarnings.map((earning: any) => ({
@@ -711,7 +711,7 @@ export class GovernanceRewardsService {
       }
 
       const result = await response.json();
-      
+
       // Send WebSocket notification for claimed rewards
       if (result.claimed.length > 0) {
         webSocketService.send('governance_rewards_claimed', {

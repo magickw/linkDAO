@@ -39,14 +39,14 @@ discount: discount.toNumber() / 10000, // ✅ CORRECT - basis points to percenta
 
 **Issue:**
 ```typescript
-const usdcAmount = ethers.utils.parseUnits(quote.usdcAmount, 6); // ❌ Double conversion
+const usdcAmount = ethers.parseUnits(quote.usdcAmount, 6); // ❌ Double conversion
 ```
 `quote.usdcAmount` was already formatted string, causing incorrect USDC amounts.
 
 **Fix:**
 ```typescript
 // Calculate USDC amount in wei (6 decimals) directly from USD amount (18 decimals)
-const usdAmountWei = ethers.utils.parseEther(quote.usdAmount);
+const usdAmountWei = ethers.parseEther(quote.usdAmount);
 const usdcAmountWei = usdAmountWei.div(ethers.BigNumber.from(10).pow(12)); // 18 → 6 decimals
 ```
 
@@ -104,7 +104,7 @@ async purchaseWithCrypto(...) {
 ```typescript
 // Check network for crypto purchases
 if (purchaseMethod === 'crypto' && typeof window !== 'undefined' && window.ethereum) {
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const provider = new ethers.BrowserProvider(window.ethereum);
   const network = await provider.getNetwork();
   const expectedChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111'); // Sepolia
 

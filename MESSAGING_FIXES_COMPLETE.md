@@ -35,7 +35,7 @@ onClick={() => {
 **Fix Applied**: 
 ```typescript
 // Input validation
-if (!toAddress || !ethers.utils.isAddress(toAddress)) {
+if (!toAddress || !ethers.isAddress(toAddress)) {
   throw new Error('Invalid recipient address');
 }
 
@@ -70,7 +70,7 @@ try {
 - 🛡️ Secure storage requirements outlined
 
 ### Input Sanitization
-- ✅ Address validation using ethers.utils.isAddress()
+- ✅ Address validation using ethers.isAddress()
 - ✅ Content length limits (10,000 characters)
 - ✅ Basic XSS prevention for script tags
 - ✅ Empty content validation

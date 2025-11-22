@@ -107,9 +107,9 @@ export class FeedBlockchainService {
         this.reputation.getUserReputation(userAddress),
       ]);
 
-      const balanceFormatted = ethers.utils.formatEther(balance);
-      const stakedFormatted = ethers.utils.formatEther(staked);
-      const votingPowerFormatted = ethers.utils.formatEther(votingPower);
+      const balanceFormatted = ethers.formatEther(balance);
+      const stakedFormatted = ethers.formatEther(staked);
+      const votingPowerFormatted = ethers.formatEther(votingPower);
       const reputationValue = reputation.toNumber();
 
       // Calculate tiers
@@ -159,7 +159,7 @@ export class FeedBlockchainService {
           }
 
           const balance = await this.ldaoToken!.balanceOf(userAddress);
-          const required = ethers.utils.parseEther(gatingRequirement.minimumAmount);
+          const required = ethers.parseEther(gatingRequirement.minimumAmount);
           const hasAccess = balance.gte(required);
 
           return {
@@ -176,7 +176,7 @@ export class FeedBlockchainService {
           }
 
           const staked = await this.ldaoToken!.totalStaked(userAddress);
-          const required = ethers.utils.parseEther(gatingRequirement.minimumAmount);
+          const required = ethers.parseEther(gatingRequirement.minimumAmount);
           const hasAccess = staked.gte(required);
 
           return {
@@ -267,8 +267,10 @@ export class FeedBlockchainService {
         throw new Error('No signer available');
       }
 
-      const tokenWithSigner = this.ldaoToken!.connect(signer);
-      const amountWei = ethers.utils.parseEther(amount);
+      const tokenWithSigner = new ethers.Contract(LDAO_TOKEN_ADDRESS, ERC20_ABI, signer) as ethers.Contract & {
+        transfer: (to: string, amount: bigint) => Promise<ethers.ContractTransactionResponse>;
+      };
+      const amountWei = ethers.parseEther(amount);
 
       // Execute transfer
       const tx = await tokenWithSigner.transfer(recipientAddress, amountWei);
@@ -282,7 +284,7 @@ export class FeedBlockchainService {
         amount,
         token: 'LDAO',
         message,
-        txHash: receipt.transactionHash,
+        txHash: receipt.hash,
         timestamp: new Date(),
       };
     } catch (error) {

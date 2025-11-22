@@ -41,9 +41,9 @@ async function main() {
   
   try {
     const balance = await wallet.getBalance();
-    console.log("Account balance:", ethers.utils.formatEther(balance), "ETH");
+    console.log("Account balance:", ethers.formatEther(balance), "ETH");
     
-    if (balance.lt(ethers.utils.parseEther("0.01"))) {
+    if (balance.lt(ethers.parseEther("0.01"))) {
       console.log("⚠️  Warning: Low balance. You might need more ETH for deployment.");
       console.log("💡 Get testnet ETH from: https://www.alchemy.com/faucets/base-sepolia");
     }
@@ -190,7 +190,7 @@ async function main() {
     
     try {
       const totalSupply = await ldaoToken.totalSupply();
-      console.log(`✅ LDAOToken total supply: ${ethers.utils.formatEther(totalSupply)} LDAO`);
+      console.log(`✅ LDAOToken total supply: ${ethers.formatEther(totalSupply)} LDAO`);
       
       const profileName = await profileRegistry.name();
       console.log(`✅ ProfileRegistry name: ${profileName}`);

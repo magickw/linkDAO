@@ -13,7 +13,7 @@ async function main() {
   console.log('Signer address:', signer.address);
   
   const balance = await provider.getBalance(signer.address);
-  console.log('Balance:', ethers.utils.formatEther(balance), 'ETH');
+  console.log('Balance:', ethers.formatEther(balance), 'ETH');
 }
 
 main()

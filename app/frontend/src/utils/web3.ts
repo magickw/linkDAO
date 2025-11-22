@@ -14,7 +14,7 @@ export async function getProvider() {
       // If wagmi transport exposes an injected provider, use it.
       const injectedProvider = (client as any).transport?.provider;
       if (injectedProvider) {
-        return new ethers.providers.Web3Provider(injectedProvider as any);
+        return new ethers.BrowserProvider(injectedProvider as any);
       }
     }
 
@@ -25,7 +25,7 @@ export async function getProvider() {
     if (envRpc) {
       try {
         const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
-        return new ethers.providers.JsonRpcProvider(envRpc, chainId);
+        return new ethers.JsonRpcProvider(envRpc, chainId);
       } catch (e) {
         console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
       }
@@ -36,7 +36,7 @@ export async function getProvider() {
       const chainId = envChainId ? parseInt(envChainId, 10) : 1;
       const rpcUrl = getChainRpcUrl(chainId);
       if (rpcUrl) {
-        return new ethers.providers.JsonRpcProvider(rpcUrl);
+        return new ethers.JsonRpcProvider(rpcUrl);
       }
     } catch (e) {
       // ignore and use default provider below
@@ -62,7 +62,7 @@ export async function getSigner() {
     const injectedProvider = (client as any).transport?.provider;
     if (!injectedProvider) return null;
 
-    const provider = new ethers.providers.Web3Provider(injectedProvider as any);
+    const provider = new ethers.BrowserProvider(injectedProvider as any);
     const signer = provider.getSigner();
     return signer;
   } catch (error) {
@@ -90,7 +90,7 @@ export async function getAccount() {
  */
 export function formatEther(value: ethers.BigNumberish): string {
   try {
-    return ethers.utils.formatEther(value)
+    return ethers.formatEther(value)
   } catch (error) {
     console.error('Error formatting ether:', error)
     return '0'
@@ -100,12 +100,12 @@ export function formatEther(value: ethers.BigNumberish): string {
 /**
  * Parse ether value
  */
-export function parseEther(value: string): ethers.BigNumber {
+export function parseEther(value: string): bigint {
   try {
-    return ethers.utils.parseEther(value)
+    return ethers.parseEther(value)
   } catch (error) {
     console.error('Error parsing ether:', error)
-    return ethers.BigNumber.from(0)
+    return 0n
   }
 }
 
@@ -114,7 +114,7 @@ export function parseEther(value: string): ethers.BigNumber {
  */
 export function formatUnits(value: ethers.BigNumberish, decimals: number): string {
   try {
-    return ethers.utils.formatUnits(value, decimals)
+    return ethers.formatUnits(value, decimals)
   } catch (error) {
     console.error('Error formatting units:', error)
     return '0'
@@ -124,11 +124,11 @@ export function formatUnits(value: ethers.BigNumberish, decimals: number): strin
 /**
  * Parse units
  */
-export function parseUnits(value: string, decimals: number): ethers.BigNumber {
+export function parseUnits(value: string, decimals: number): bigint {
   try {
-    return ethers.utils.parseUnits(value, decimals)
+    return ethers.parseUnits(value, decimals)
   } catch (error) {
     console.error('Error parsing units:', error)
-    return ethers.BigNumber.from(0)
+    return 0n
   }
 }

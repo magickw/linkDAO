@@ -13,7 +13,7 @@ private async deriveKeyFromWallet(): Promise<CryptoKey> {
   const signature = await this.wallet.signMessage(message);
   
   const keyMaterial = await crypto.subtle.importKey(
-    'raw', ethers.utils.arrayify(signature), { name: 'HKDF' }, false, ['deriveKey']
+    'raw', ethers.arrayify(signature), { name: 'HKDF' }, false, ['deriveKey']
   );
   
   return await crypto.subtle.deriveKey({

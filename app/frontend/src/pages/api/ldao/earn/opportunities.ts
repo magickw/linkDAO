@@ -40,7 +40,7 @@ export default async function handler(
   }
 
   // Validate address format
-  if (!ethers.utils.isAddress(address)) {
+  if (!ethers.isAddress(address)) {
     return res.status(400).json({ error: 'Invalid Ethereum address' });
   }
 

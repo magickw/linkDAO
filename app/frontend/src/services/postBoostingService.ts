@@ -92,7 +92,7 @@ export const BOOST_PACKAGES: BoostPackage[] = [
 
 class PostBoostingService {
   private currentAddress: string | null = null;
-  private provider: ethers.providers.Web3Provider | null = null;
+  private provider: ethers.BrowserProvider | null = null;
   private listeners: Map<string, Function[]> = new Map();
   private activeBoosts: Map<string, PostBoost> = new Map();
 
@@ -103,15 +103,15 @@ class PostBoostingService {
   /**
    * Initialize the service with wallet connection
    */
-  async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       this.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       this.currentAddress = (await signer.getAddress()).toLowerCase();
-      
+
       // Load active boosts
       await this.loadActiveBoosts();
-      
+
       this.emit('initialized');
     } catch (error) {
       console.error('Failed to initialize post boosting service:', error);
@@ -156,11 +156,11 @@ class PostBoostingService {
       );
 
       // Get token contract
-      const tokenContract = await this.getTokenContract(params.currency);
-      
+      const tokenContract = (await this.getTokenContract(params.currency)) as any;
+
       // Get signer
-      const signer = this.provider.getSigner();
-      
+      const signer = await this.provider.getSigner();
+
       // Approve tokens
       const approveTx = await tokenContract.connect(signer).approve(
         process.env.NEXT_PUBLIC_TREASURY_ADDRESS,
@@ -170,7 +170,7 @@ class PostBoostingService {
 
       // Create boost through Treasury contract
       const treasuryContract = await this.getTreasuryContract();
-      const boostTx = await treasuryContract.connect(signer).createBoost({
+      const boostTx = await (treasuryContract.connect(signer) as any).createBoost({
         postId: params.postId,
         packageId: params.packageId,
         currency: params.currency,
@@ -188,7 +188,7 @@ class PostBoostingService {
 
       // Emit events
       this.emit('boost_created', boost);
-      
+
       // Send through WebSocket for real-time updates
       webSocketService.send('boost_created', {
         boostId: boost.id,
@@ -321,7 +321,7 @@ class PostBoostingService {
     postCreator: string;
   } {
     const amountNum = parseFloat(amount);
-    
+
     return {
       daoTreasury: (amountNum * 0.5).toString(),
       communityRewards: (amountNum * 0.3).toString(),

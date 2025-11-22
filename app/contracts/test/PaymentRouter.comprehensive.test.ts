@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { PaymentRouter, MockERC20 } from "../typechain-types";
 
-const { parseEther, parseUnits, formatEther, formatUnits } = ethers.utils;
+const { parseEther, parseUnits, formatEther, formatUnits } = ethers;
 
 describe("PaymentRouter System", function () {
   let paymentRouter: PaymentRouter;

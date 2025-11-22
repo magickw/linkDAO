@@ -25,14 +25,14 @@ describe("Marketplace", function () {
     await marketplace.deployed();
 
     // Mint some tokens for testing
-    await token.mint(seller.address, ethers.utils.parseEther("1000"));
-    await token.mint(buyer.address, ethers.utils.parseEther("1000"));
+    await token.mint(seller.address, ethers.parseEther("1000"));
+    await token.mint(buyer.address, ethers.parseEther("1000"));
   });
 
   describe("Fixed Price Listings", function () {
     it("Should create a fixed price listing", async function () {
       // Approve marketplace to spend seller's tokens
-      await token.connect(seller).approve(marketplace.address, ethers.utils.parseEther("100"));
+      await token.connect(seller).approve(marketplace.address, ethers.parseEther("100"));
 
       // Set seller reputation score
       await marketplace.connect(owner).updateReputationScore(seller.address, 100);
@@ -40,7 +40,7 @@ describe("Marketplace", function () {
       // Create listing
       await expect(marketplace.connect(seller).createFixedPriceListing(
         token.address,
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         5,
         1, // DIGITAL
         "ipfs://test-metadata"
@@ -49,7 +49,7 @@ describe("Marketplace", function () {
       // Check listing was created
       const listing = await marketplace.listings(1);
       expect(listing.seller).to.equal(seller.address);
-      expect(listing.price).to.equal(ethers.utils.parseEther("10"));
+      expect(listing.price).to.equal(ethers.parseEther("10"));
       expect(listing.quantity).to.equal(5);
     });
 
@@ -57,7 +57,7 @@ describe("Marketplace", function () {
       // Try to create listing without sufficient reputation
       await expect(marketplace.connect(seller).createFixedPriceListing(
         token.address,
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         5,
         1, // DIGITAL
         "ipfs://test-metadata"
@@ -69,17 +69,17 @@ describe("Marketplace", function () {
       await marketplace.connect(owner).updateReputationScore(seller.address, 100);
 
       // Create listing
-      await token.connect(seller).approve(marketplace.address, ethers.utils.parseEther("100"));
+      await token.connect(seller).approve(marketplace.address, ethers.parseEther("100"));
       await marketplace.connect(seller).createFixedPriceListing(
         token.address,
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         5,
         1, // DIGITAL
         "ipfs://test-metadata"
       );
 
       // Buyer approves marketplace to spend tokens
-      await token.connect(buyer).approve(marketplace.address, ethers.utils.parseEther("100"));
+      await token.connect(buyer).approve(marketplace.address, ethers.parseEther("100"));
 
       // Buy item
       await expect(marketplace.connect(buyer).buyFixedPriceItem(1, 2))
@@ -99,7 +99,7 @@ describe("Marketplace", function () {
       // Create auction listing
       await expect(marketplace.connect(seller).createAuctionListing(
         token.address,
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         1,
         1, // DIGITAL
         86400, // 1 day
@@ -109,7 +109,7 @@ describe("Marketplace", function () {
       // Check listing was created
       const listing = await marketplace.listings(1);
       expect(listing.seller).to.equal(seller.address);
-      expect(listing.price).to.equal(ethers.utils.parseEther("10"));
+      expect(listing.price).to.equal(ethers.parseEther("10"));
       expect(listing.listingType).to.equal(1); // AUCTION
     });
 
@@ -120,7 +120,7 @@ describe("Marketplace", function () {
       // Create auction listing
       await marketplace.connect(seller).createAuctionListing(
         ethers.ZeroAddress, // ETH
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         1,
         1, // DIGITAL
         86400, // 1 day
@@ -128,12 +128,12 @@ describe("Marketplace", function () {
       );
 
       // Place bid
-      await expect(marketplace.connect(buyer).placeBid(1, { value: ethers.utils.parseEther("15") }))
+      await expect(marketplace.connect(buyer).placeBid(1, { value: ethers.parseEther("15") }))
         .to.emit(marketplace, "BidPlaced");
 
       // Check highest bid updated
       const listing = await marketplace.listings(1);
-      expect(listing.highestBid).to.equal(ethers.utils.parseEther("15"));
+      expect(listing.highestBid).to.equal(ethers.parseEther("15"));
       expect(listing.highestBidder).to.equal(buyer.address);
     });
   });
@@ -167,10 +167,10 @@ describe("Marketplace", function () {
       await marketplace.connect(owner).setDAOApprovedVendor(seller.address, true);
 
       // Create listing without reputation
-      await token.connect(seller).approve(marketplace.address, ethers.utils.parseEther("100"));
+      await token.connect(seller).approve(marketplace.address, ethers.parseEther("100"));
       await expect(marketplace.connect(seller).createFixedPriceListing(
         token.address,
-        ethers.utils.parseEther("10"),
+        ethers.parseEther("10"),
         5,
         1, // DIGITAL
         "ipfs://test-metadata"

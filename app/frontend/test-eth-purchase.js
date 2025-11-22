@@ -54,9 +54,9 @@ async function testETHPurchase() {
     
     // Check wallet balance
     const ethBalance = await wallet.getBalance();
-    console.log(`💰 Wallet ETH balance: ${ethers.utils.formatEther(ethBalance)} ETH`);
+    console.log(`💰 Wallet ETH balance: ${ethers.formatEther(ethBalance)} ETH`);
     
-    if (ethBalance.lt(ethers.utils.parseEther('0.1'))) {
+    if (ethBalance.lt(ethers.parseEther('0.1'))) {
       console.log('⚠️  Low ETH balance. Please add Sepolia ETH to your wallet.');
       console.log(' Faucet: https://sepoliafaucet.com/');
       return;
@@ -64,16 +64,16 @@ async function testETHPurchase() {
     
     // Check current LDAO balance
     const initialLDAOBalance = await ldaoToken.balanceOf(wallet.address);
-    console.log(`💰 Wallet LDAO balance: ${ethers.utils.formatEther(initialLDAOBalance)} LDAO`);
+    console.log(`💰 Wallet LDAO balance: ${ethers.formatEther(initialLDAOBalance)} LDAO`);
     
     // Test quote for 100 LDAO tokens
-    const ldaoAmount = ethers.utils.parseEther('100');
+    const ldaoAmount = ethers.parseEther('100');
     const [usdAmount, ethAmount, usdcAmount, discount] = await treasury.getQuote(ldaoAmount);
     
     console.log(`\n📋 Quote for 100 LDAO tokens:`);
-    console.log(`   USD Amount: $${ethers.utils.formatEther(usdAmount)}`);
-    console.log(`   ETH Amount: ${ethers.utils.formatEther(ethAmount)} ETH`);
-    console.log(`   USDC Amount: ${ethers.utils.formatUnits(usdcAmount, 6)} USDC`);
+    console.log(`   USD Amount: $${ethers.formatEther(usdAmount)}`);
+    console.log(`   ETH Amount: ${ethers.formatEther(ethAmount)} ETH`);
+    console.log(`   USDC Amount: ${ethers.formatUnits(usdcAmount, 6)} USDC`);
     console.log(`   Discount: ${(discount.toNumber() / 10000).toFixed(2)}%`);
     
     // Proceed with purchase
@@ -93,9 +93,9 @@ async function testETHPurchase() {
     const tokensReceived = finalLDAOBalance.sub(initialLDAOBalance);
     
     console.log(`\n💰 LDAO balance change:`);
-    console.log(`   Before: ${ethers.utils.formatEther(initialLDAOBalance)} LDAO`);
-    console.log(`   After:  ${ethers.utils.formatEther(finalLDAOBalance)} LDAO`);
-    console.log(`   Received: ${ethers.utils.formatEther(tokensReceived)} LDAO`);
+    console.log(`   Before: ${ethers.formatEther(initialLDAOBalance)} LDAO`);
+    console.log(`   After:  ${ethers.formatEther(finalLDAOBalance)} LDAO`);
+    console.log(`   Received: ${ethers.formatEther(tokensReceived)} LDAO`);
     
     if (tokensReceived.gte(ldaoAmount)) {
       console.log('✅ ETH purchase test completed successfully!');

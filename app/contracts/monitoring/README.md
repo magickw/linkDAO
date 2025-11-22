@@ -189,9 +189,9 @@ Modify thresholds in `MONITORING_CONFIG.thresholds`:
 
 ```javascript
 thresholds: {
-  highGasPrice: ethers.utils.parseUnits("200", "gwei"),
-  largeTransfer: ethers.utils.parseEther("5000"),
-  lowBalance: ethers.utils.parseEther("5"),
+  highGasPrice: ethers.parseUnits("200", "gwei"),
+  largeTransfer: ethers.parseEther("5000"),
+  lowBalance: ethers.parseEther("5"),
   failedTxCount: 10,
 },
 ```

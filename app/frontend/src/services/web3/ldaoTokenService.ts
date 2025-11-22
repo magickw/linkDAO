@@ -43,7 +43,7 @@ export class LDAOTokenService {
       // Create contract instance
       this.contract = LDAOToken__factory.connect(
         LDAO_TOKEN_ADDRESS,
-        signer || provider
+        (signer || provider) as any
       );
 
       return this.contract;
@@ -68,7 +68,7 @@ export class LDAOTokenService {
       }
 
       const balance = await contract.balanceOf(userAddress);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'getUserBalance',
@@ -105,7 +105,7 @@ export class LDAOTokenService {
         name,
         symbol,
         decimals,
-        totalSupply: ethers.utils.formatEther(totalSupply)
+        totalSupply: ethers.formatEther(totalSupply)
       };
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
@@ -128,13 +128,13 @@ export class LDAOTokenService {
     try {
       // In a real implementation, this would interact with a payment processor
       // or a DEX contract to swap ETH/ERC20 for LDAO tokens
-      
+
       // For now, we'll simulate a successful purchase
       console.log(`Purchasing ${amount} LDAO tokens for user ${userAddress}`);
-      
+
       // This is where we would actually execute the token purchase
       // For example, calling a payment contract or DEX router
-      
+
       return {
         success: true,
         transactionHash: '0x' + Math.random().toString(16).substr(2, 64) // Mock transaction hash
@@ -144,7 +144,7 @@ export class LDAOTokenService {
         action: 'purchaseTokens',
         component: 'LDAOTokenService'
       });
-      
+
       return {
         success: false,
         error: errorResponse.message
@@ -172,25 +172,25 @@ export class LDAOTokenService {
       }
 
       // Convert amount to wei
-      const amountWei = ethers.utils.parseEther(amount);
-      
+      const amountWei = ethers.parseEther(amount);
+
       // Approve tokens for staking (if needed)
       // In a real implementation, you might need to approve a staking contract
-      
+
       // Execute staking
-      const tx = await contract.stake(amountWei, tierId);
+      const tx = await contract.stake(amountWei, tierId) as any;
       const receipt = await tx.wait();
-      
+
       return {
         success: true,
-        transactionHash: receipt.transactionHash
+        transactionHash: receipt.hash
       };
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'stakeTokens',
         component: 'LDAOTokenService'
       });
-      
+
       return {
         success: false,
         error: errorResponse.message
@@ -215,16 +215,16 @@ export class LDAOTokenService {
       }
 
       const tiers = [];
-      
+
       // Get the first 4 staking tiers (as per contract)
       for (let i = 1; i <= 4; i++) {
         try {
           const tier = await contract.stakingTiers(i);
           tiers.push({
             id: i,
-            lockPeriod: tier.lockPeriod.toNumber(),
-            rewardRate: tier.rewardRate.toNumber(),
-            minStakeAmount: ethers.utils.formatEther(tier.minStakeAmount),
+            lockPeriod: Number(tier.lockPeriod),
+            rewardRate: Number(tier.rewardRate),
+            minStakeAmount: ethers.formatEther(tier.minStakeAmount),
             isActive: tier.isActive
           });
         } catch (error) {
@@ -232,7 +232,7 @@ export class LDAOTokenService {
           continue;
         }
       }
-      
+
       return tiers;
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
@@ -255,7 +255,7 @@ export class LDAOTokenService {
       }
 
       const stakedAmount = await contract.totalStaked(userAddress);
-      return ethers.utils.formatEther(stakedAmount);
+      return ethers.formatEther(stakedAmount);
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'getUserStakedAmount',

@@ -38,7 +38,7 @@ describe("NFTMarketplace", function () {
 
   describe("NFT Minting", function () {
     const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-    const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+    const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
     const metadata = {
       name: "Test NFT",
       description: "A test NFT",
@@ -133,7 +133,7 @@ describe("NFTMarketplace", function () {
 
     beforeEach(async function () {
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -157,7 +157,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should list NFT for sale", async function () {
-      const price = ethers.utils.parseEther("1.0");
+      const price = ethers.parseEther("1.0");
       const duration = 86400; // 24 hours
 
       const tx = await nftMarketplace.connect(creator).listNFT(
@@ -185,7 +185,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should reject listing by non-owner", async function () {
-      const price = ethers.utils.parseEther("1.0");
+      const price = ethers.parseEther("1.0");
       const duration = 86400;
 
       await expect(
@@ -202,7 +202,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should reject listing with zero duration", async function () {
-      const price = ethers.utils.parseEther("1.0");
+      const price = ethers.parseEther("1.0");
 
       await expect(
         nftMarketplace.connect(creator).listNFT(tokenId, price, 0)
@@ -212,12 +212,12 @@ describe("NFTMarketplace", function () {
 
   describe("NFT Buying", function () {
     let tokenId: number;
-    const price = ethers.utils.parseEther("1.0");
+    const price = ethers.parseEther("1.0");
 
     beforeEach(async function () {
       // Mint NFT
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -283,7 +283,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should reject buying with insufficient payment", async function () {
-      const insufficientPrice = ethers.utils.parseEther("0.5");
+      const insufficientPrice = ethers.parseEther("0.5");
 
       await expect(
         nftMarketplace.connect(buyer).buyNFT(tokenId, {
@@ -304,7 +304,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should refund excess payment", async function () {
-      const excessPrice = ethers.utils.parseEther("2.0");
+      const excessPrice = ethers.parseEther("2.0");
       const buyerBalanceBefore = await buyer.getBalance();
 
       const tx = await nftMarketplace.connect(buyer).buyNFT(tokenId, {
@@ -323,14 +323,14 @@ describe("NFTMarketplace", function () {
 
   describe("NFT Auctions", function () {
     let tokenId: number;
-    const startingPrice = ethers.utils.parseEther("0.5");
-    const reservePrice = ethers.utils.parseEther("1.0");
+    const startingPrice = ethers.parseEther("0.5");
+    const reservePrice = ethers.parseEther("1.0");
     const duration = 86400; // 24 hours
 
     beforeEach(async function () {
       // Mint NFT
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -390,7 +390,7 @@ describe("NFTMarketplace", function () {
         duration
       );
 
-      const bidAmount = ethers.utils.parseEther("0.8");
+      const bidAmount = ethers.parseEther("0.8");
 
       const tx = await nftMarketplace.connect(buyer).placeBid(tokenId, {
         value: bidAmount,
@@ -418,7 +418,7 @@ describe("NFTMarketplace", function () {
         duration
       );
 
-      const lowBid = ethers.utils.parseEther("0.3");
+      const lowBid = ethers.parseEther("0.3");
 
       await expect(
         nftMarketplace.connect(buyer).placeBid(tokenId, {
@@ -450,8 +450,8 @@ describe("NFTMarketplace", function () {
         duration
       );
 
-      const firstBid = ethers.utils.parseEther("0.8");
-      const secondBid = ethers.utils.parseEther("1.2");
+      const firstBid = ethers.parseEther("0.8");
+      const secondBid = ethers.parseEther("1.2");
 
       // First bid
       await nftMarketplace.connect(buyer).placeBid(tokenId, {
@@ -479,7 +479,7 @@ describe("NFTMarketplace", function () {
         duration
       );
 
-      const bidAmount = ethers.utils.parseEther("1.5"); // Above reserve
+      const bidAmount = ethers.parseEther("1.5"); // Above reserve
 
       // Place bid
       await nftMarketplace.connect(buyer).placeBid(tokenId, {
@@ -516,7 +516,7 @@ describe("NFTMarketplace", function () {
 
       expect(creatorBalanceAfter.sub(creatorBalanceBefore)).to.be.closeTo(
         sellerAmount.add(royaltyAmount), // Creator gets both seller amount and royalty
-        ethers.utils.parseEther("0.01") // Allow small gas cost variance
+        ethers.parseEther("0.01") // Allow small gas cost variance
       );
       expect(ownerBalanceAfter.sub(ownerBalanceBefore)).to.equal(platformFeeAmount);
     });
@@ -528,7 +528,7 @@ describe("NFTMarketplace", function () {
     beforeEach(async function () {
       // Mint NFT
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -552,7 +552,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should make offer successfully", async function () {
-      const offerAmount = ethers.utils.parseEther("0.8");
+      const offerAmount = ethers.parseEther("0.8");
       const duration = 86400;
 
       const tx = await nftMarketplace.connect(buyer).makeOffer(tokenId, duration, {
@@ -569,7 +569,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should accept offer successfully", async function () {
-      const offerAmount = ethers.utils.parseEther("0.8");
+      const offerAmount = ethers.parseEther("0.8");
       const duration = 86400;
 
       // Make offer
@@ -604,7 +604,7 @@ describe("NFTMarketplace", function () {
 
       expect(creatorBalanceAfter.sub(creatorBalanceBefore)).to.be.closeTo(
         sellerAmount.add(royaltyAmount), // Creator gets both seller amount and royalty
-        ethers.utils.parseEther("0.01") // Allow small gas cost variance
+        ethers.parseEther("0.01") // Allow small gas cost variance
       );
       expect(ownerBalanceAfter.sub(ownerBalanceBefore)).to.equal(platformFeeAmount);
     });
@@ -624,7 +624,7 @@ describe("NFTMarketplace", function () {
     it("Should allow owner to verify NFT", async function () {
       // Mint NFT first
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -689,7 +689,7 @@ describe("NFTMarketplace", function () {
 
     beforeEach(async function () {
       const tokenURI = "https://ipfs.io/ipfs/QmTest123";
-      const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-content"));
+      const contentHash = ethers.keccak256(ethers.toUtf8Bytes("test-content"));
       const metadata = {
         name: "Test NFT",
         description: "A test NFT",
@@ -729,7 +729,7 @@ describe("NFTMarketplace", function () {
     });
 
     it("Should return active offers", async function () {
-      const offerAmount = ethers.utils.parseEther("0.8");
+      const offerAmount = ethers.parseEther("0.8");
       const duration = 86400;
 
       await nftMarketplace.connect(buyer).makeOffer(tokenId, duration, {

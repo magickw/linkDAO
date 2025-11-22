@@ -8,10 +8,10 @@ import { OfflineMessageQueueService } from './offlineMessageQueueService';
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocketService, webSocketService } from './webSocketService';
-import { 
-  Message, 
-  Conversation, 
-  MessageStatus, 
+import {
+  Message,
+  Conversation,
+  MessageStatus,
   TypingIndicator,
   MessagePriority
 } from '../types/messaging';
@@ -162,7 +162,7 @@ class MessagingService {
     if (typeof window !== 'undefined') {
       this.offlineQueueService = OfflineMessageQueueService.getInstance();
     }
-    
+
     // MEMORY OPTIMIZATION: Start periodic cleanup
     this.startPeriodicCleanup();
   }
@@ -232,19 +232,19 @@ class MessagingService {
    */
   private async deriveKeyFromWallet(): Promise<CryptoKey> {
     if (!this.wallet) throw new Error('Wallet not available');
-    
+
     const message = `LinkDAO Messaging Key Derivation - ${this.currentAddress}`;
     const signature = await this.wallet.signMessage(message);
-    
+
     // Import signature as key material
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
-      new Uint8Array(ethers.utils.arrayify(signature)),
+      new Uint8Array(ethers.getBytes(signature)),
       { name: 'HKDF' },
       false,
       ['deriveKey']
     );
-    
+
     // Derive AES key using HKDF
     const key = await crypto.subtle.deriveKey(
       {
@@ -258,7 +258,7 @@ class MessagingService {
       false,
       ['encrypt', 'decrypt']
     );
-    
+
     // Store key securely
     await this.storeKeySecurely(key);
     return key;
@@ -274,13 +274,13 @@ class MessagingService {
     } catch (error) {
       console.warn('Could not load stored key, generating new one');
     }
-    
+
     const key = await crypto.subtle.generateKey(
       { name: 'AES-GCM', length: 256 },
       false,
       ['encrypt', 'decrypt']
     );
-    
+
     await this.storeKeySecurely(key);
     return key;
   }
@@ -296,10 +296,10 @@ class MessagingService {
     try {
       const encoder = new TextEncoder();
       const data = encoder.encode(content);
-      
+
       // Generate a random IV
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      
+
       // Encrypt the data
       const encrypted = await crypto.subtle.encrypt(
         {
@@ -394,7 +394,7 @@ class MessagingService {
     };
 
     try {
-      return await this.wallet._signTypedData(domain, types, value);
+      return await this.wallet.signTypedData(domain, types, value);
     } catch (error) {
       console.error('EIP-712 signing failed:', error);
       throw error;
@@ -415,7 +415,7 @@ class MessagingService {
     }
 
     // Input validation
-    if (!toAddress || !ethers.utils.isAddress(toAddress)) {
+    if (!toAddress || !ethers.isAddress(toAddress)) {
       throw new Error('Invalid recipient address');
     }
 
@@ -437,7 +437,7 @@ class MessagingService {
     try {
       const now = new Date();
       const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Create message object
       const message: ChatMessage = {
         id: messageId,
@@ -456,7 +456,7 @@ class MessagingService {
       // Check if we're in a browser environment and if offline, queue the message
       const isBrowser = typeof window !== 'undefined';
       const isOnline = isBrowser ? (typeof navigator !== 'undefined' ? navigator.onLine : true) : true;
-      
+
       if (isBrowser && !isOnline && this.offlineQueueService) {
         // Queue message for sending when online
         await this.offlineQueueService.queueMessage(
@@ -464,10 +464,10 @@ class MessagingService {
           content,
           'text'
         );
-        
+
         // Add to local storage for immediate UI feedback
         this.addMessageToConversation(message);
-        
+
         // Update conversation
         const conversationId = this.getConversationId(this.currentAddress, toAddress);
         const conversation = this.conversations.get(conversationId);
@@ -490,13 +490,13 @@ class MessagingService {
 
         this.emit('message_queued', message);
         this.emit('conversation_updated', conversationId);
-        
+
         return message;
       }
 
       // Encrypt content
       message.encryptedContent = await this.encryptMessage(content, toAddress);
-      
+
       // Sign message
       message.signature = await this.signMessage(message);
 
@@ -547,7 +547,7 @@ class MessagingService {
     message?: string
   ): Promise<ChatMessage> {
     const content = message || `NFT Offer: ${offerAmount} ETH for token #${nftTokenId}`;
-    
+
     return this.sendMessage(toAddress, content, 'nft_offer', {
       nftContract,
       nftTokenId,
@@ -565,7 +565,7 @@ class MessagingService {
     message?: string
   ): Promise<ChatMessage> {
     const content = message || `Counter Offer: ${counterAmount} ETH`;
-    
+
     return this.sendMessage(toAddress, content, 'nft_counter', {
       originalMessageId,
       offerAmount: counterAmount
@@ -579,7 +579,7 @@ class MessagingService {
     const messages = this.messages.get(conversationId);
     if (!messages) return;
 
-    const unreadMessages = messages.filter(msg => 
+    const unreadMessages = messages.filter(msg =>
       !msg.isRead && msg.toAddress === this.currentAddress
     );
 
@@ -597,7 +597,7 @@ class MessagingService {
     // Check if we're in a browser environment
     const isBrowser = typeof window !== 'undefined';
     const isOnline = isBrowser ? (typeof navigator !== 'undefined' ? navigator.onLine : true) : true;
-    
+
     // If offline and we have offline queue service, queue the action
     if (isBrowser && !isOnline && this.offlineQueueService) {
       await this.offlineQueueService.queueOfflineAction({
@@ -673,7 +673,7 @@ class MessagingService {
    */
   async blockUser(address: string, reason?: string): Promise<void> {
     const normalizedAddress = address.toLowerCase();
-    
+
     if (this.blockedUsers.has(normalizedAddress)) {
       return; // Already blocked
     }
@@ -698,7 +698,7 @@ class MessagingService {
    */
   async unblockUser(address: string): Promise<void> {
     const normalizedAddress = address.toLowerCase();
-    
+
     if (!this.blockedUsers.has(normalizedAddress)) {
       return; // Not blocked
     }
@@ -733,7 +733,7 @@ class MessagingService {
         // Pinned conversations first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        
+
         // Then by last activity
         return b.lastActivity.getTime() - a.lastActivity.getTime();
       });
@@ -769,10 +769,10 @@ class MessagingService {
 
     // Search conversations by participant addresses
     for (const conversation of this.conversations.values()) {
-      const hasMatchingParticipant = conversation.participants.some(addr => 
+      const hasMatchingParticipant = conversation.participants.some(addr =>
         addr.toLowerCase().includes(queryLower)
       );
-      
+
       if (hasMatchingParticipant) {
         results.conversations.push(conversation);
       }
@@ -828,7 +828,7 @@ class MessagingService {
         // Update conversation
         const conversationId = this.getConversationId(message.fromAddress, message.toAddress);
         let conversation = this.conversations.get(conversationId);
-        
+
         if (!conversation) {
           conversation = {
             id: conversationId,
@@ -840,7 +840,7 @@ class MessagingService {
             isPinned: false
           };
           this.conversations.set(conversationId, conversation);
-          
+
           // MEMORY OPTIMIZATION: Enforce conversation limit
           if (this.conversations.size > this.MAX_CONVERSATIONS) {
             this.cleanupOldConversations();
@@ -924,21 +924,21 @@ class MessagingService {
 
   private addMessageToConversation(message: ChatMessage): void {
     const conversationId = this.getConversationId(message.fromAddress, message.toAddress);
-    
+
     if (!this.messages.has(conversationId)) {
       this.messages.set(conversationId, []);
     }
-    
+
     const messages = this.messages.get(conversationId)!;
     messages.push(message);
-    
+
     // MEMORY OPTIMIZATION: Enforce message limit per conversation
     if (messages.length > this.MAX_MESSAGES_PER_CONVERSATION) {
       // Remove oldest messages, keep only the most recent ones
       const toRemove = messages.splice(0, messages.length - this.MAX_MESSAGES_PER_CONVERSATION);
       console.log(`Cleaned up ${toRemove.length} old messages from conversation ${conversationId}`);
     }
-    
+
     // Sort by timestamp
     messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
@@ -956,7 +956,7 @@ class MessagingService {
       }
       if (data?.messages) {
         data.messages.forEach((msgData: any) => {
-          this.messages.set(msgData.conversationId, 
+          this.messages.set(msgData.conversationId,
             msgData.messages.map((msg: any) => ({
               ...msg,
               timestamp: new Date(msg.timestamp)
@@ -987,15 +987,15 @@ class MessagingService {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    
+
     const eventListeners = this.listeners.get(event)!;
-    
+
     // MEMORY OPTIMIZATION: Limit listeners per event
     if (eventListeners.length >= this.MAX_LISTENERS_PER_EVENT) {
       console.warn(`Too many listeners for event '${event}'. Removing oldest listener.`);
       eventListeners.shift();
     }
-    
+
     eventListeners.push(callback);
   }
 
@@ -1029,7 +1029,7 @@ class MessagingService {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
     }
-    
+
     this.cleanupInterval = setInterval(() => {
       this.performMemoryCleanup();
     }, this.CLEANUP_INTERVAL);
@@ -1039,16 +1039,16 @@ class MessagingService {
     try {
       // Clean up old conversations
       this.cleanupOldConversations();
-      
+
       // Clean up message history
       this.cleanupMessageHistory();
-      
+
       // Clean up typing timeouts
       this.cleanupTypingTimeouts();
-      
+
       // Clean up event listeners
       this.cleanupEventListeners();
-      
+
       console.log('Messaging service memory cleanup completed');
     } catch (error) {
       console.error('Error during messaging service cleanup:', error);
@@ -1059,25 +1059,25 @@ class MessagingService {
     if (this.conversations.size <= this.MAX_CONVERSATIONS) {
       return;
     }
-    
+
     // Sort conversations by last activity (oldest first)
     const sortedConversations = Array.from(this.conversations.entries())
       .sort(([, a], [, b]) => a.lastActivity.getTime() - b.lastActivity.getTime());
-    
+
     // Remove oldest conversations
     const toRemove = sortedConversations.slice(0, this.conversations.size - this.MAX_CONVERSATIONS);
-    
+
     toRemove.forEach(([conversationId]) => {
       this.conversations.delete(conversationId);
       this.messages.delete(conversationId); // Also remove associated messages
     });
-    
+
     console.log(`Cleaned up ${toRemove.length} old conversations`);
   }
 
   private cleanupMessageHistory(): void {
     let totalMessagesRemoved = 0;
-    
+
     for (const [conversationId, messages] of this.messages.entries()) {
       if (messages.length > this.MAX_MESSAGES_PER_CONVERSATION) {
         const originalLength = messages.length;
@@ -1086,7 +1086,7 @@ class MessagingService {
         totalMessagesRemoved += originalLength - messages.length;
       }
     }
-    
+
     if (totalMessagesRemoved > 0) {
       console.log(`Cleaned up ${totalMessagesRemoved} old messages across conversations`);
     }
@@ -1095,7 +1095,7 @@ class MessagingService {
   private cleanupTypingTimeouts(): void {
     const now = Date.now();
     const timeoutsToRemove: string[] = [];
-    
+
     for (const [conversationId, timeout] of this.typingTimeouts.entries()) {
       // Clear any timeout that's been running for more than 10 seconds
       if (now - parseInt(conversationId.split('_')[1] || '0') > 10000) {
@@ -1103,9 +1103,9 @@ class MessagingService {
         timeoutsToRemove.push(conversationId);
       }
     }
-    
+
     timeoutsToRemove.forEach(id => this.typingTimeouts.delete(id));
-    
+
     if (timeoutsToRemove.length > 0) {
       console.log(`Cleaned up ${timeoutsToRemove.length} expired typing timeouts`);
     }
@@ -1134,7 +1134,7 @@ class MessagingService {
   } {
     const totalMessages = Array.from(this.messages.values())
       .reduce((total, messages) => total + messages.length, 0);
-    
+
     return {
       conversations: this.conversations.size,
       messages: this.messages.size,
@@ -1154,19 +1154,19 @@ class MessagingService {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
-    
+
     // Clear all timeouts
     for (const timeout of this.typingTimeouts.values()) {
       clearTimeout(timeout);
     }
     this.typingTimeouts.clear();
-    
+
     // Clear all data
     this.conversations.clear();
     this.messages.clear();
     this.blockedUsers.clear();
     this.listeners.clear();
-    
+
     console.log('Messaging service cleanup completed');
   }
 
@@ -1186,7 +1186,7 @@ class MessagingService {
     try {
       const keyData = await this.loadFromIndexedDB('encryption_key');
       if (!keyData) return null;
-      
+
       return await crypto.subtle.importKey(
         'raw',
         new Uint8Array(keyData),
@@ -1213,62 +1213,62 @@ class MessagingService {
   private async loadFromSecureStorage(key: string): Promise<any> {
     const encrypted = await this.loadFromIndexedDB(key);
     if (!encrypted) return null;
-    
+
     const decrypted = await this.decryptFromStorage(encrypted);
     return JSON.parse(decrypted);
   }
 
   private async encryptForStorage(data: string): Promise<string> {
     if (!this.cryptoKey) throw new Error('Encryption key not available');
-    
+
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encrypted = await crypto.subtle.encrypt(
       { name: 'AES-GCM', iv },
       this.cryptoKey,
       new TextEncoder().encode(data)
     );
-    
+
     const combined = new Uint8Array(iv.length + encrypted.byteLength);
     combined.set(iv);
     combined.set(new Uint8Array(encrypted), iv.length);
-    
+
     return btoa(String.fromCharCode(...combined));
   }
 
   private async decryptFromStorage(encryptedData: string): Promise<string> {
     if (!this.cryptoKey) throw new Error('Encryption key not available');
-    
+
     const combined = new Uint8Array(
       atob(encryptedData).split('').map(char => char.charCodeAt(0))
     );
-    
+
     const iv = combined.slice(0, 12);
     const encrypted = combined.slice(12);
-    
+
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv },
       this.cryptoKey,
       encrypted
     );
-    
+
     return new TextDecoder().decode(decrypted);
   }
 
   private async storeInIndexedDB(key: string, data: any): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('LinkDAOMessaging', 1);
-      
+
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['secure_storage'], 'readwrite');
         const store = transaction.objectStore('secure_storage');
-        
+
         const putRequest = store.put({ id: `${this.currentAddress}_${key}`, data });
         putRequest.onsuccess = () => resolve();
         putRequest.onerror = () => reject(putRequest.error);
       };
-      
+
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains('secure_storage')) {
@@ -1281,20 +1281,20 @@ class MessagingService {
   private async loadFromIndexedDB(key: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('LinkDAOMessaging', 1);
-      
+
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(['secure_storage'], 'readonly');
         const store = transaction.objectStore('secure_storage');
-        
+
         const getRequest = store.get(`${this.currentAddress}_${key}`);
         getRequest.onsuccess = () => {
           resolve(getRequest.result?.data || null);
         };
         getRequest.onerror = () => reject(getRequest.error);
       };
-      
+
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains('secure_storage')) {

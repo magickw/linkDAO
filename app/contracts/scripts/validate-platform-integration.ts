@@ -240,7 +240,7 @@ class PlatformIntegrationValidator {
           category: "Rewards",
           test: "Reward Pool Funding",
           status: totalPoolBalance.gt(0) ? "pass" : "warning",
-          details: `Total pool balance: ${ethers.utils.formatEther(totalPoolBalance)} LDAO`
+          details: `Total pool balance: ${ethers.formatEther(totalPoolBalance)} LDAO`
         });
       }
 
@@ -284,10 +284,10 @@ class PlatformIntegrationValidator {
         const [deployer, user1, creator] = await ethers.getSigners();
         
         // Mint tokens to user1 for testing
-        await this.contracts.ldaoToken.mint(user1.address, ethers.utils.parseEther("100"));
+        await this.contracts.ldaoToken.mint(user1.address, ethers.parseEther("100"));
         
-        const tipAmount = ethers.utils.parseEther("10");
-        const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("validation-post"));
+        const tipAmount = ethers.parseEther("10");
+        const postId = ethers.keccak256(ethers.toUtf8Bytes("validation-post"));
         
         await this.contracts.ldaoToken.connect(user1).approve(this.contracts.tipRouter.address, tipAmount);
         const tx = await this.contracts.tipRouter.connect(user1).tip(postId, creator.address, tipAmount);
@@ -299,7 +299,7 @@ class PlatformIntegrationValidator {
           category: "Social",
           test: "Tipping Functionality",
           status: creatorBalance.gt(0) ? "pass" : "fail",
-          details: `Creator received: ${ethers.utils.formatEther(creatorBalance)} LDAO`,
+          details: `Creator received: ${ethers.formatEther(creatorBalance)} LDAO`,
           gasUsed: receipt.gasUsed.toString(),
           transactionHash: tx.hash
         });
@@ -335,7 +335,7 @@ class PlatformIntegrationValidator {
           isVerified: false
         };
 
-        const contentHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("validation-content"));
+        const contentHash = ethers.keccak256(ethers.toUtf8Bytes("validation-content"));
         const tx = await this.contracts.nftMarketplace.mintNFT(
           deployer.address,
           "https://example.com/validation-metadata.json",
@@ -462,9 +462,9 @@ class PlatformIntegrationValidator {
       // Step 3: Tip content
       if (this.contracts.tipRouter && this.contracts.ldaoToken) {
         try {
-          await this.contracts.ldaoToken.mint(user1.address, ethers.utils.parseEther("50"));
-          const tipAmount = ethers.utils.parseEther("5");
-          const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("workflow-post"));
+          await this.contracts.ldaoToken.mint(user1.address, ethers.parseEther("50"));
+          const tipAmount = ethers.parseEther("5");
+          const postId = ethers.keccak256(ethers.toUtf8Bytes("workflow-post"));
           
           await this.contracts.ldaoToken.connect(user1).approve(this.contracts.tipRouter.address, tipAmount);
           await this.contracts.tipRouter.connect(user1).tip(postId, creator.address, tipAmount);
@@ -481,7 +481,7 @@ class PlatformIntegrationValidator {
           await this.contracts.marketplace.connect(user1).createListing(
             ethers.constants.AddressZero,
             0,
-            ethers.utils.parseEther("1"),
+            ethers.parseEther("1"),
             1,
             0,
             0
@@ -519,9 +519,9 @@ class PlatformIntegrationValidator {
         const [deployer, user1, user2, user3] = await ethers.getSigners();
         const users = [user1.address, user2.address, user3.address];
         const amounts = [
-          ethers.utils.parseEther("1"),
-          ethers.utils.parseEther("2"),
-          ethers.utils.parseEther("3")
+          ethers.parseEther("1"),
+          ethers.parseEther("2"),
+          ethers.parseEther("3")
         ];
 
         const currentEpoch = await this.contracts.enhancedRewardPool.currentEpoch();

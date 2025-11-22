@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ProofOfDonationNFT, LDAOToken, CharityGovernance, EnhancedLDAOTreasury } from "../typechain-types";
 
-const { parseEther } = ethers.utils;
+const { parseEther } = ethers;
 
 describe("ProofOfDonationNFT System", function () {
   let proofNFT: ProofOfDonationNFT;

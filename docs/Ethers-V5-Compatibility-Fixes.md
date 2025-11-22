@@ -14,7 +14,7 @@ The components were written for ethers v6, but the project uses ethers v5.8.0.
 
 | ethers v6 (Original) | ethers v5 (Fixed) |
 |---------------------|-------------------|
-| `ethers.BrowserProvider` | `ethers.providers.Web3Provider` |
+| `ethers.BrowserProvider` | `ethers.BrowserProvider` |
 | `ethers.ZeroAddress` | `ethers.constants.AddressZero` |
 | `ethers.MaxUint256` | `ethers.constants.MaxUint256` |
 | `ethers.TransactionReceipt` | `ethers.ContractReceipt` |
@@ -22,15 +22,15 @@ The components were written for ethers v6, but the project uses ethers v5.8.0.
 | `network.chainId` (BigNumber) | `network.chainId` (number) |
 | `receipt.hash` | `receipt.transactionHash` |
 | `bigint` type | `ethers.BigNumber` type |
-| `ethers.formatUnits()` | `ethers.utils.formatUnits()` |
-| `ethers.parseUnits()` | `ethers.utils.parseUnits()` |
+| `ethers.formatUnits()` | `ethers.formatUnits()` |
+| `ethers.parseUnits()` | `ethers.parseUnits()` |
 | `balance >= amount` | `balance.gte(amount)` |
 | `allowance < amount` | `allowance.lt(amount)` |
 
 **Key Changes:**
 - All `bigint` types changed to `ethers.BigNumber`
 - Comparison operators changed to BigNumber methods (`.gte()`, `.lt()`)
-- Format/parse functions moved to `ethers.utils` namespace
+- Format/parse functions moved to `ethers` namespace
 - Used `ethers.BigNumber.from(0)` instead of `0n`
 
 ### 2. **BuyNFTModal.tsx** - Updated provider initialization
@@ -45,7 +45,7 @@ setTxHash(receipt.hash);
 
 **After:**
 ```typescript
-const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+const provider = new ethers.BrowserProvider((window as any).ethereum);
 const signer = provider.getSigner();
 const receipt = await tx.wait();
 setTxHash(receipt.transactionHash);

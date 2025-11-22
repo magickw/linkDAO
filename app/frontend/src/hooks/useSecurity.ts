@@ -27,7 +27,7 @@ export interface SecurityActions {
   validateContent: (content: string) => Promise<SecurityValidationResult>;
   validateMedia: (files: File[]) => Promise<SecurityValidationResult>;
   validateUrl: (url: string) => Promise<SecurityValidationResult>;
-  validateTransaction: (transaction: ethers.providers.TransactionRequest, provider: ethers.providers.Provider) => Promise<SecurityValidationResult>;
+  validateTransaction: (transaction: ethers.TransactionRequest, provider: ethers.Provider) => Promise<SecurityValidationResult>;
   performComprehensiveScan: (data: any) => Promise<SecurityValidationResult>;
   clearSecurityState: () => void;
   getSecurityRecommendations: () => string[];
@@ -223,8 +223,8 @@ export function useSecurity(
 
   // Validate transaction
   const validateTransaction = useCallback(async (
-    transaction: ethers.providers.TransactionRequest,
-    provider: ethers.providers.Provider
+    transaction: ethers.TransactionRequest,
+    provider: ethers.Provider
   ): Promise<SecurityValidationResult> => {
     if (!securityManager.current) {
       throw new Error('Security manager not initialized');
@@ -263,8 +263,8 @@ export function useSecurity(
     content?: string;
     media?: File[];
     urls?: string[];
-    transaction?: ethers.providers.TransactionRequest;
-    provider?: ethers.providers.Provider;
+    transaction?: ethers.TransactionRequest;
+    provider?: ethers.Provider;
   }): Promise<SecurityValidationResult> => {
     if (!securityManager.current) {
       throw new Error('Security manager not initialized');

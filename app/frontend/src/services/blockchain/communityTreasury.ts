@@ -78,9 +78,9 @@ export class CommunityTreasuryService {
       // Get native ETH balance
       const ethBalance = await provider.getBalance(treasuryAddress);
       balances.push({
-        tokenAddress: ethers.constants.AddressZero,
+        tokenAddress: ethers.ZeroAddress,
         tokenSymbol: 'ETH',
-        balance: ethers.utils.formatEther(ethBalance),
+        balance: ethers.formatEther(ethBalance),
       });
 
       // Get LDAO token balance
@@ -89,7 +89,7 @@ export class CommunityTreasuryService {
       balances.push({
         tokenAddress: LDAO_TOKEN_ADDRESS,
         tokenSymbol: 'LDAO',
-        balance: ethers.utils.formatEther(ldaoBalance),
+        balance: ethers.formatEther(ldaoBalance),
       });
 
       return balances;
@@ -131,7 +131,7 @@ export class CommunityTreasuryService {
       // Create calldata for token transfer
       const transferCalldata = tokenContract.interface.encodeFunctionData('transfer', [
         recipientAddress,
-        ethers.utils.parseEther(amount),
+        ethers.parseEther(amount),
       ]);
 
       const targets = [token];
@@ -217,7 +217,7 @@ export class CommunityTreasuryService {
       // In practice, this would be executed through a governance proposal
       const tx = await tokenContract.transfer(
         recipientAddress,
-        ethers.utils.parseEther(amount)
+        ethers.parseEther(amount)
       );
 
       const receipt = await tx.wait();
@@ -255,15 +255,20 @@ export class CommunityTreasuryService {
       const transactions: TreasuryTransaction[] = [];
 
       for (const event of transferEvents.slice(-limit)) {
-        if (!event.args) continue;
+        // In ethers v6, event data is accessed differently
+        if (!event.data || !event.topics) continue;
 
         const block = await event.getBlock();
+        
+        // Parse the event data
+        const parsedEvent = ldaoContract.interface.parseLog(event);
+        if (!parsedEvent || !parsedEvent.args) continue;
 
         transactions.push({
           hash: event.transactionHash,
-          from: event.args.from,
-          to: event.args.to,
-          amount: ethers.utils.formatEther(event.args.value),
+          from: parsedEvent.args.from,
+          to: parsedEvent.args.to,
+          amount: ethers.formatEther(parsedEvent.args.value),
           tokenAddress: LDAO_TOKEN_ADDRESS,
           timestamp: new Date(block.timestamp * 1000),
           type: 'deposit',
@@ -275,15 +280,20 @@ export class CommunityTreasuryService {
       const outgoingEvents = await ldaoContract.queryFilter(outgoingFilter, fromBlock, currentBlock);
 
       for (const event of outgoingEvents.slice(-limit)) {
-        if (!event.args) continue;
+        // In ethers v6, event data is accessed differently
+        if (!event.data || !event.topics) continue;
 
         const block = await event.getBlock();
+        
+        // Parse the event data
+        const parsedEvent = ldaoContract.interface.parseLog(event);
+        if (!parsedEvent || !parsedEvent.args) continue;
 
         transactions.push({
           hash: event.transactionHash,
-          from: event.args.from,
-          to: event.args.to,
-          amount: ethers.utils.formatEther(event.args.value),
+          from: parsedEvent.args.from,
+          to: parsedEvent.args.to,
+          amount: ethers.formatEther(parsedEvent.args.value),
           tokenAddress: LDAO_TOKEN_ADDRESS,
           timestamp: new Date(block.timestamp * 1000),
           type: 'withdrawal',
@@ -320,7 +330,7 @@ export class CommunityTreasuryService {
       // Transfer tokens to treasury
       const tx = await tokenContract.transfer(
         treasuryAddress,
-        ethers.utils.parseEther(amount)
+        ethers.parseEther(amount)
       );
 
       const receipt = await tx.wait();
@@ -419,7 +429,7 @@ export class CommunityTreasuryService {
 
       const tx = await tokenContract.approve(
         spenderAddress,
-        ethers.utils.parseEther(amount)
+        ethers.parseEther(amount)
       );
 
       const receipt = await tx.wait();
@@ -447,7 +457,7 @@ export class CommunityTreasuryService {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
       const allowance = await tokenContract.allowance(ownerAddress, spenderAddress);
 
-      return ethers.utils.formatEther(allowance);
+      return ethers.formatEther(allowance);
     } catch (error) {
       console.error('Error checking token allowance:', error);
       return '0';

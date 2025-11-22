@@ -20,10 +20,7 @@ import { CharityProposalForm, CharityProposalData } from '@/components/Governanc
 import { CharityProposalCard, CharityProposal } from '@/components/Governance/CharityProposalCard';
 import { ethers } from 'ethers';
 
-// Handler to cancel charity proposal creation and return to list view
-const handleCancelCharity = () => {
-  setCharityView('list');
-};
+
 
 function GovernanceContent() {
   const { address, isConnected } = useAccount();
@@ -176,7 +173,7 @@ function GovernanceContent() {
         description: charityData.description,
         charityName: charityData.charityName,
         charityRecipient: charityData.charityAddress,
-        donationAmount: ethers.utils.parseUnits(charityData.donationAmount, 18).toString(),
+        donationAmount: ethers.parseUnits(charityData.donationAmount, 18).toString(),
         charityDescription: charityData.charityDescription,
         proofOfVerification: charityData.proofOfVerification,
         impactMetrics: charityData.impactMetrics,

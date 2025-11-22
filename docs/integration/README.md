@@ -433,7 +433,7 @@ const marketplace = new Web3MarketplaceSDK(config[process.env.NODE_ENV]);
 async function verifyOrderSignature(order, signature, userAddress) {
   const message = `Order: ${order.id}, Amount: ${order.totalAmount}, Nonce: ${order.nonce}`;
   
-  const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+  const recoveredAddress = ethers.verifyMessage(message, signature);
   
   if (recoveredAddress.toLowerCase() !== userAddress.toLowerCase()) {
     throw new Error('Invalid signature');

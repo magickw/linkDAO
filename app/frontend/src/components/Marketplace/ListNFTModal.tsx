@@ -66,8 +66,8 @@ export const ListNFTModal: React.FC<ListNFTModalProps> = ({
       setError('');
       setStep('processing');
 
-      const provider = new ethers.providers.Web3Provider((window as any).ethereum);
-      const signer = provider.getSigner();
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
 
       // Get marketplace contract
       const marketplaceABI = [
@@ -100,7 +100,7 @@ export const ListNFTModal: React.FC<ListNFTModalProps> = ({
       );
 
       const receipt = await listTx.wait();
-      setTxHash(receipt.transactionHash);
+      setTxHash(receipt?.hash || '');
       setStep('success');
 
       setTimeout(() => {

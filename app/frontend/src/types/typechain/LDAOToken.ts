@@ -3,22 +3,17 @@
 /* eslint-disable */
 import type {
   BaseContract,
-  BigNumber,
   BigNumberish,
   BytesLike,
-  CallOverrides,
-  ContractTransaction,
   Overrides,
-  PopulatedTransaction,
   Signer,
-  utils,
-} from "ethers";
-import type {
   FunctionFragment,
   Result,
   EventFragment,
-} from "@ethersproject/abi";
-import type { Listener, Provider } from "@ethersproject/providers";
+  Listener,
+  Provider,
+  Interface
+} from "ethers";
 import type {
   TypedEventFilter,
   TypedEvent,
@@ -38,23 +33,23 @@ export declare namespace LDAOToken {
   };
 
   export type StakeInfoStructOutput = [
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    BigNumber,
-    BigNumber,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
+    bigint,
     boolean
   ] & {
-    amount: BigNumber;
-    stakingStartTime: BigNumber;
-    lockPeriod: BigNumber;
-    rewardRate: BigNumber;
-    lastRewardClaim: BigNumber;
+    amount: bigint;
+    stakingStartTime: bigint;
+    lockPeriod: bigint;
+    rewardRate: bigint;
+    lastRewardClaim: bigint;
     isActive: boolean;
   };
 }
 
-export interface LDAOTokenInterface extends utils.Interface {
+export interface LDAOTokenInterface extends Interface {
   functions: {
     "ACTIVITY_REWARD_COOLDOWN()": FunctionFragment;
     "DOMAIN_SEPARATOR()": FunctionFragment;
@@ -500,10 +495,10 @@ export interface LDAOTokenInterface extends utils.Interface {
 
 export interface ActivityRewardClaimedEventObject {
   user: string;
-  amount: BigNumber;
+  amount: bigint;
 }
 export type ActivityRewardClaimedEvent = TypedEvent<
-  [string, BigNumber],
+  [string, bigint],
   ActivityRewardClaimedEventObject
 >;
 
@@ -513,16 +508,16 @@ export type ActivityRewardClaimedEventFilter =
 export interface ApprovalEventObject {
   owner: string;
   spender: string;
-  value: BigNumber;
+  value: bigint;
 }
 export type ApprovalEvent = TypedEvent<
-  [string, string, BigNumber],
+  [string, string, bigint],
   ApprovalEventObject
 >;
 
 export type ApprovalEventFilter = TypedEventFilter<ApprovalEvent>;
 
-export interface EIP712DomainChangedEventObject {}
+export interface EIP712DomainChangedEventObject { }
 export type EIP712DomainChangedEvent = TypedEvent<
   [],
   EIP712DomainChangedEventObject
@@ -567,10 +562,10 @@ export type PremiumMembershipRevokedEventFilter =
 
 export interface RewardsClaimedEventObject {
   user: string;
-  amount: BigNumber;
+  amount: bigint;
 }
 export type RewardsClaimedEvent = TypedEvent<
-  [string, BigNumber],
+  [string, bigint],
   RewardsClaimedEventObject
 >;
 
@@ -578,24 +573,24 @@ export type RewardsClaimedEventFilter = TypedEventFilter<RewardsClaimedEvent>;
 
 export interface StakedEventObject {
   user: string;
-  amount: BigNumber;
-  tierId: BigNumber;
-  stakeIndex: BigNumber;
+  amount: bigint;
+  tierId: bigint;
+  stakeIndex: bigint;
 }
 export type StakedEvent = TypedEvent<
-  [string, BigNumber, BigNumber, BigNumber],
+  [string, bigint, bigint, bigint],
   StakedEventObject
 >;
 
 export type StakedEventFilter = TypedEventFilter<StakedEvent>;
 
 export interface StakingTierCreatedEventObject {
-  tierId: BigNumber;
-  lockPeriod: BigNumber;
-  rewardRate: BigNumber;
+  tierId: bigint;
+  lockPeriod: bigint;
+  rewardRate: bigint;
 }
 export type StakingTierCreatedEvent = TypedEvent<
-  [BigNumber, BigNumber, BigNumber],
+  [bigint, bigint, bigint],
   StakingTierCreatedEventObject
 >;
 
@@ -605,10 +600,10 @@ export type StakingTierCreatedEventFilter =
 export interface TransferEventObject {
   from: string;
   to: string;
-  value: BigNumber;
+  value: bigint;
 }
 export type TransferEvent = TypedEvent<
-  [string, string, BigNumber],
+  [string, string, bigint],
   TransferEventObject
 >;
 
@@ -616,11 +611,11 @@ export type TransferEventFilter = TypedEventFilter<TransferEvent>;
 
 export interface UnstakedEventObject {
   user: string;
-  amount: BigNumber;
-  stakeIndex: BigNumber;
+  amount: bigint;
+  stakeIndex: bigint;
 }
 export type UnstakedEvent = TypedEvent<
-  [string, BigNumber, BigNumber],
+  [string, bigint, bigint],
   UnstakedEventObject
 >;
 
@@ -628,18 +623,18 @@ export type UnstakedEventFilter = TypedEventFilter<UnstakedEvent>;
 
 export interface VotingPowerUpdatedEventObject {
   user: string;
-  newVotingPower: BigNumber;
+  newVotingPower: bigint;
 }
 export type VotingPowerUpdatedEvent = TypedEvent<
-  [string, BigNumber],
+  [string, bigint],
   VotingPowerUpdatedEventObject
 >;
 
 export type VotingPowerUpdatedEventFilter =
   TypedEventFilter<VotingPowerUpdatedEvent>;
 
-export interface LDAOToken extends BaseContract {
-  connect(signerOrProvider: Signer | Provider | string): this;
+export interface LDAOToken {
+  connect(runner: any): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
@@ -665,128 +660,128 @@ export interface LDAOToken extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    ACTIVITY_REWARD_COOLDOWN(overrides?: CallOverrides): Promise<[BigNumber]>;
+    ACTIVITY_REWARD_COOLDOWN(overrides?: any): Promise<[bigint]>;
 
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<[string]>;
+    DOMAIN_SEPARATOR(overrides?: any): Promise<[string]>;
 
-    INITIAL_SUPPLY(overrides?: CallOverrides): Promise<[BigNumber]>;
+    INITIAL_SUPPLY(overrides?: any): Promise<[bigint]>;
 
-    MAX_DISCOUNT_TIER(overrides?: CallOverrides): Promise<[BigNumber]>;
+    MAX_DISCOUNT_TIER(overrides?: any): Promise<[bigint]>;
 
     PREMIUM_MEMBERSHIP_THRESHOLD(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     addToRewardPool(
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     allowance(
       owner: PromiseOrValue<string>,
       spender: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     approve(
       spender: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     balanceOf(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     claimActivityReward(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     claimAllStakeRewards(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     claimStakeRewards(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     createStakingTier(
       lockPeriod: PromiseOrValue<BigNumberish>,
       rewardRate: PromiseOrValue<BigNumberish>,
       minStakeAmount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
-    decimals(overrides?: CallOverrides): Promise<[number]>;
+    decimals(overrides?: any): Promise<[number]>;
 
     decreaseAllowance(
       spender: PromiseOrValue<string>,
       subtractedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     eip712Domain(
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [string, string, string, BigNumber, string, string, BigNumber[]] & {
+      [string, string, string, bigint, string, string, bigint[]] & {
         fields: string;
         name: string;
         version: string;
-        chainId: BigNumber;
+        chainId: bigint;
         verifyingContract: string;
         salt: string;
-        extensions: BigNumber[];
+        extensions: bigint[];
       }
     >;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     getTotalStakeRewards(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
     getUserStakes(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[LDAOToken.StakeInfoStructOutput[]]>;
 
     hasPremiumMembership(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[boolean]>;
 
     increaseAllowance(
       spender: PromiseOrValue<string>,
       addedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     lastActivityReward(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
-    name(overrides?: CallOverrides): Promise<[string]>;
+    name(overrides?: any): Promise<[string]>;
 
-    nextTierId(overrides?: CallOverrides): Promise<[BigNumber]>;
+    nextTierId(overrides?: any): Promise<[bigint]>;
 
     nonces(
       owner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
-    owner(overrides?: CallOverrides): Promise<[string]>;
+    owner(overrides?: any): Promise<[string]>;
 
     permit(
       owner: PromiseOrValue<string>,
@@ -797,70 +792,70 @@ export interface LDAOToken extends BaseContract {
       r: PromiseOrValue<BytesLike>,
       s: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     premiumMembers(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<[boolean]>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
-    rewardPool(overrides?: CallOverrides): Promise<[BigNumber]>;
+    rewardPool(overrides?: any): Promise<[bigint]>;
 
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     stakingTiers(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, boolean] & {
-        lockPeriod: BigNumber;
-        rewardRate: BigNumber;
-        minStakeAmount: BigNumber;
+      [bigint, bigint, bigint, boolean] & {
+        lockPeriod: bigint;
+        rewardRate: bigint;
+        minStakeAmount: bigint;
         isActive: boolean;
       }
     >;
 
-    symbol(overrides?: CallOverrides): Promise<[string]>;
+    symbol(overrides?: any): Promise<[string]>;
 
     totalStaked(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
 
-    totalStakedSupply(overrides?: CallOverrides): Promise<[BigNumber]>;
+    totalStakedSupply(overrides?: any): Promise<[bigint]>;
 
-    totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>;
+    totalSupply(overrides?: any): Promise<[bigint]>;
 
     transfer(
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     unstake(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     updateStakingTier(
       tierId: PromiseOrValue<BigNumberish>,
@@ -869,149 +864,149 @@ export interface LDAOToken extends BaseContract {
       minStakeAmount: PromiseOrValue<BigNumberish>,
       isActive: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    ): Promise<any>;
 
     userStakes(
       arg0: PromiseOrValue<string>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, boolean] & {
-        amount: BigNumber;
-        stakingStartTime: BigNumber;
-        lockPeriod: BigNumber;
-        rewardRate: BigNumber;
-        lastRewardClaim: BigNumber;
+      [bigint, bigint, bigint, bigint, bigint, boolean] & {
+        amount: bigint;
+        stakingStartTime: bigint;
+        lockPeriod: bigint;
+        rewardRate: bigint;
+        lastRewardClaim: bigint;
         isActive: boolean;
       }
     >;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      overrides?: any
+    ): Promise<[bigint]>;
   };
 
-  ACTIVITY_REWARD_COOLDOWN(overrides?: CallOverrides): Promise<BigNumber>;
+  ACTIVITY_REWARD_COOLDOWN(overrides?: any): Promise<bigint>;
 
-  DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>;
+  DOMAIN_SEPARATOR(overrides?: any): Promise<string>;
 
-  INITIAL_SUPPLY(overrides?: CallOverrides): Promise<BigNumber>;
+  INITIAL_SUPPLY(overrides?: any): Promise<bigint>;
 
-  MAX_DISCOUNT_TIER(overrides?: CallOverrides): Promise<BigNumber>;
+  MAX_DISCOUNT_TIER(overrides?: any): Promise<bigint>;
 
-  PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
+  PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: any): Promise<bigint>;
 
   addToRewardPool(
     amount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   allowance(
     owner: PromiseOrValue<string>,
     spender: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   approve(
     spender: PromiseOrValue<string>,
     amount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   balanceOf(
     account: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   claimActivityReward(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   claimAllStakeRewards(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   claimStakeRewards(
     stakeIndex: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   createStakingTier(
     lockPeriod: PromiseOrValue<BigNumberish>,
     rewardRate: PromiseOrValue<BigNumberish>,
     minStakeAmount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
-  decimals(overrides?: CallOverrides): Promise<number>;
+  decimals(overrides?: any): Promise<number>;
 
   decreaseAllowance(
     spender: PromiseOrValue<string>,
     subtractedValue: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   discountTier(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   eip712Domain(
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<
-    [string, string, string, BigNumber, string, string, BigNumber[]] & {
+    [string, string, string, bigint, string, string, bigint[]] & {
       fields: string;
       name: string;
       version: string;
-      chainId: BigNumber;
+      chainId: bigint;
       verifyingContract: string;
       salt: string;
-      extensions: BigNumber[];
+      extensions: bigint[];
     }
   >;
 
   getDiscountTier(
     user: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   getTotalStakeRewards(
     user: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   getUserStakes(
     user: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<LDAOToken.StakeInfoStructOutput[]>;
 
   hasPremiumMembership(
     user: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<boolean>;
 
   increaseAllowance(
     spender: PromiseOrValue<string>,
     addedValue: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   lastActivityReward(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
-  name(overrides?: CallOverrides): Promise<string>;
+  name(overrides?: any): Promise<string>;
 
-  nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
+  nextTierId(overrides?: any): Promise<bigint>;
 
   nonces(
     owner: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
-  owner(overrides?: CallOverrides): Promise<string>;
+  owner(overrides?: any): Promise<string>;
 
   permit(
     owner: PromiseOrValue<string>,
@@ -1022,70 +1017,70 @@ export interface LDAOToken extends BaseContract {
     r: PromiseOrValue<BytesLike>,
     s: PromiseOrValue<BytesLike>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   premiumMembers(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<boolean>;
 
   renounceOwnership(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
-  rewardPool(overrides?: CallOverrides): Promise<BigNumber>;
+  rewardPool(overrides?: any): Promise<bigint>;
 
   stake(
     amount: PromiseOrValue<BigNumberish>,
     tierId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   stakingTiers(
     arg0: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<
-    [BigNumber, BigNumber, BigNumber, boolean] & {
-      lockPeriod: BigNumber;
-      rewardRate: BigNumber;
-      minStakeAmount: BigNumber;
+    [bigint, bigint, bigint, boolean] & {
+      lockPeriod: bigint;
+      rewardRate: bigint;
+      minStakeAmount: bigint;
       isActive: boolean;
     }
   >;
 
-  symbol(overrides?: CallOverrides): Promise<string>;
+  symbol(overrides?: any): Promise<string>;
 
   totalStaked(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
-  totalStakedSupply(overrides?: CallOverrides): Promise<BigNumber>;
+  totalStakedSupply(overrides?: any): Promise<bigint>;
 
-  totalSupply(overrides?: CallOverrides): Promise<BigNumber>;
+  totalSupply(overrides?: any): Promise<bigint>;
 
   transfer(
     to: PromiseOrValue<string>,
     amount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   transferFrom(
     from: PromiseOrValue<string>,
     to: PromiseOrValue<string>,
     amount: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   unstake(
     stakeIndex: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   updateStakingTier(
     tierId: PromiseOrValue<BigNumberish>,
@@ -1094,145 +1089,145 @@ export interface LDAOToken extends BaseContract {
     minStakeAmount: PromiseOrValue<BigNumberish>,
     isActive: PromiseOrValue<boolean>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  ): Promise<any>;
 
   userStakes(
     arg0: PromiseOrValue<string>,
     arg1: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
+    overrides?: any
   ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, boolean] & {
-      amount: BigNumber;
-      stakingStartTime: BigNumber;
-      lockPeriod: BigNumber;
-      rewardRate: BigNumber;
-      lastRewardClaim: BigNumber;
+    [bigint, bigint, bigint, bigint, bigint, boolean] & {
+      amount: bigint;
+      stakingStartTime: bigint;
+      lockPeriod: bigint;
+      rewardRate: bigint;
+      lastRewardClaim: bigint;
       isActive: boolean;
     }
   >;
 
   votingPower(
     arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    overrides?: any
+  ): Promise<bigint>;
 
   callStatic: {
-    ACTIVITY_REWARD_COOLDOWN(overrides?: CallOverrides): Promise<BigNumber>;
+    ACTIVITY_REWARD_COOLDOWN(overrides?: any): Promise<bigint>;
 
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>;
+    DOMAIN_SEPARATOR(overrides?: any): Promise<string>;
 
-    INITIAL_SUPPLY(overrides?: CallOverrides): Promise<BigNumber>;
+    INITIAL_SUPPLY(overrides?: any): Promise<bigint>;
 
-    MAX_DISCOUNT_TIER(overrides?: CallOverrides): Promise<BigNumber>;
+    MAX_DISCOUNT_TIER(overrides?: any): Promise<bigint>;
 
-    PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
+    PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: any): Promise<bigint>;
 
     addToRewardPool(
       amount: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     allowance(
       owner: PromiseOrValue<string>,
       spender: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     approve(
       spender: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     balanceOf(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    claimActivityReward(overrides?: CallOverrides): Promise<void>;
+    claimActivityReward(overrides?: any): Promise<void>;
 
-    claimAllStakeRewards(overrides?: CallOverrides): Promise<void>;
+    claimAllStakeRewards(overrides?: any): Promise<void>;
 
     claimStakeRewards(
       stakeIndex: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     createStakingTier(
       lockPeriod: PromiseOrValue<BigNumberish>,
       rewardRate: PromiseOrValue<BigNumberish>,
       minStakeAmount: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
-    decimals(overrides?: CallOverrides): Promise<number>;
+    decimals(overrides?: any): Promise<number>;
 
     decreaseAllowance(
       spender: PromiseOrValue<string>,
       subtractedValue: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     eip712Domain(
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [string, string, string, BigNumber, string, string, BigNumber[]] & {
+      [string, string, string, bigint, string, string, bigint[]] & {
         fields: string;
         name: string;
         version: string;
-        chainId: BigNumber;
+        chainId: bigint;
         verifyingContract: string;
         salt: string;
-        extensions: BigNumber[];
+        extensions: bigint[];
       }
     >;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getTotalStakeRewards(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getUserStakes(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<LDAOToken.StakeInfoStructOutput[]>;
 
     hasPremiumMembership(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     increaseAllowance(
       spender: PromiseOrValue<string>,
       addedValue: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     lastActivityReward(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    name(overrides?: CallOverrides): Promise<string>;
+    name(overrides?: any): Promise<string>;
 
-    nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
+    nextTierId(overrides?: any): Promise<bigint>;
 
     nonces(
       owner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    owner(overrides?: CallOverrides): Promise<string>;
+    owner(overrides?: any): Promise<string>;
 
     permit(
       owner: PromiseOrValue<string>,
@@ -1242,68 +1237,68 @@ export interface LDAOToken extends BaseContract {
       v: PromiseOrValue<BigNumberish>,
       r: PromiseOrValue<BytesLike>,
       s: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     premiumMembers(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
-    renounceOwnership(overrides?: CallOverrides): Promise<void>;
+    renounceOwnership(overrides?: any): Promise<void>;
 
-    rewardPool(overrides?: CallOverrides): Promise<BigNumber>;
+    rewardPool(overrides?: any): Promise<bigint>;
 
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     stakingTiers(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, boolean] & {
-        lockPeriod: BigNumber;
-        rewardRate: BigNumber;
-        minStakeAmount: BigNumber;
+      [bigint, bigint, bigint, boolean] & {
+        lockPeriod: bigint;
+        rewardRate: bigint;
+        minStakeAmount: bigint;
         isActive: boolean;
       }
     >;
 
-    symbol(overrides?: CallOverrides): Promise<string>;
+    symbol(overrides?: any): Promise<string>;
 
     totalStaked(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    totalStakedSupply(overrides?: CallOverrides): Promise<BigNumber>;
+    totalStakedSupply(overrides?: any): Promise<bigint>;
 
-    totalSupply(overrides?: CallOverrides): Promise<BigNumber>;
+    totalSupply(overrides?: any): Promise<bigint>;
 
     transfer(
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<boolean>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     unstake(
       stakeIndex: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     updateStakingTier(
@@ -1312,31 +1307,31 @@ export interface LDAOToken extends BaseContract {
       rewardRate: PromiseOrValue<BigNumberish>,
       minStakeAmount: PromiseOrValue<BigNumberish>,
       isActive: PromiseOrValue<boolean>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<void>;
 
     userStakes(
       arg0: PromiseOrValue<string>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
+      overrides?: any
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, BigNumber, boolean] & {
-        amount: BigNumber;
-        stakingStartTime: BigNumber;
-        lockPeriod: BigNumber;
-        rewardRate: BigNumber;
-        lastRewardClaim: BigNumber;
+      [bigint, bigint, bigint, bigint, bigint, boolean] & {
+        amount: bigint;
+        stakingStartTime: bigint;
+        lockPeriod: bigint;
+        rewardRate: bigint;
+        lastRewardClaim: bigint;
         isActive: boolean;
       }
     >;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
   };
 
-  filters: {
+  filters: Record<string, any> & {
     "ActivityRewardClaimed(address,uint256)"(
       user?: PromiseOrValue<string> | null,
       amount?: null
@@ -1449,114 +1444,114 @@ export interface LDAOToken extends BaseContract {
   };
 
   estimateGas: {
-    ACTIVITY_REWARD_COOLDOWN(overrides?: CallOverrides): Promise<BigNumber>;
+    ACTIVITY_REWARD_COOLDOWN(overrides?: any): Promise<bigint>;
 
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<BigNumber>;
+    DOMAIN_SEPARATOR(overrides?: any): Promise<bigint>;
 
-    INITIAL_SUPPLY(overrides?: CallOverrides): Promise<BigNumber>;
+    INITIAL_SUPPLY(overrides?: any): Promise<bigint>;
 
-    MAX_DISCOUNT_TIER(overrides?: CallOverrides): Promise<BigNumber>;
+    MAX_DISCOUNT_TIER(overrides?: any): Promise<bigint>;
 
-    PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
+    PREMIUM_MEMBERSHIP_THRESHOLD(overrides?: any): Promise<bigint>;
 
     addToRewardPool(
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     allowance(
       owner: PromiseOrValue<string>,
       spender: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     approve(
       spender: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     balanceOf(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     claimActivityReward(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     claimAllStakeRewards(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     claimStakeRewards(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     createStakingTier(
       lockPeriod: PromiseOrValue<BigNumberish>,
       rewardRate: PromiseOrValue<BigNumberish>,
       minStakeAmount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
-    decimals(overrides?: CallOverrides): Promise<BigNumber>;
+    decimals(overrides?: any): Promise<bigint>;
 
     decreaseAllowance(
       spender: PromiseOrValue<string>,
       subtractedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    eip712Domain(overrides?: CallOverrides): Promise<BigNumber>;
+    eip712Domain(overrides?: any): Promise<bigint>;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getTotalStakeRewards(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     getUserStakes(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     hasPremiumMembership(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     increaseAllowance(
       spender: PromiseOrValue<string>,
       addedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     lastActivityReward(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    name(overrides?: CallOverrides): Promise<BigNumber>;
+    name(overrides?: any): Promise<bigint>;
 
-    nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
+    nextTierId(overrides?: any): Promise<bigint>;
 
     nonces(
       owner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    owner(overrides?: CallOverrides): Promise<BigNumber>;
+    owner(overrides?: any): Promise<bigint>;
 
     permit(
       owner: PromiseOrValue<string>,
@@ -1567,63 +1562,63 @@ export interface LDAOToken extends BaseContract {
       r: PromiseOrValue<BytesLike>,
       s: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     premiumMembers(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
-    rewardPool(overrides?: CallOverrides): Promise<BigNumber>;
+    rewardPool(overrides?: any): Promise<bigint>;
 
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     stakingTiers(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    symbol(overrides?: CallOverrides): Promise<BigNumber>;
+    symbol(overrides?: any): Promise<bigint>;
 
     totalStaked(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
-    totalStakedSupply(overrides?: CallOverrides): Promise<BigNumber>;
+    totalStakedSupply(overrides?: any): Promise<bigint>;
 
-    totalSupply(overrides?: CallOverrides): Promise<BigNumber>;
+    totalSupply(overrides?: any): Promise<bigint>;
 
     transfer(
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     unstake(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     updateStakingTier(
       tierId: PromiseOrValue<BigNumberish>,
@@ -1632,133 +1627,133 @@ export interface LDAOToken extends BaseContract {
       minStakeAmount: PromiseOrValue<BigNumberish>,
       isActive: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    ): Promise<bigint>;
 
     userStakes(
       arg0: PromiseOrValue<string>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+      overrides?: any
+    ): Promise<bigint>;
   };
 
   populateTransaction: {
     ACTIVITY_REWARD_COOLDOWN(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    DOMAIN_SEPARATOR(overrides?: any): Promise<any>;
 
-    INITIAL_SUPPLY(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    INITIAL_SUPPLY(overrides?: any): Promise<any>;
 
-    MAX_DISCOUNT_TIER(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    MAX_DISCOUNT_TIER(overrides?: any): Promise<any>;
 
     PREMIUM_MEMBERSHIP_THRESHOLD(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     addToRewardPool(
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     allowance(
       owner: PromiseOrValue<string>,
       spender: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     approve(
       spender: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     balanceOf(
       account: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     claimActivityReward(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     claimAllStakeRewards(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     claimStakeRewards(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     createStakingTier(
       lockPeriod: PromiseOrValue<BigNumberish>,
       rewardRate: PromiseOrValue<BigNumberish>,
       minStakeAmount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
-    decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    decimals(overrides?: any): Promise<any>;
 
     decreaseAllowance(
       spender: PromiseOrValue<string>,
       subtractedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     discountTier(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    eip712Domain(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    eip712Domain(overrides?: any): Promise<any>;
 
     getDiscountTier(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     getTotalStakeRewards(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     getUserStakes(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     hasPremiumMembership(
       user: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     increaseAllowance(
       spender: PromiseOrValue<string>,
       addedValue: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     lastActivityReward(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    name(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    name(overrides?: any): Promise<any>;
 
-    nextTierId(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    nextTierId(overrides?: any): Promise<any>;
 
     nonces(
       owner: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    owner(overrides?: any): Promise<any>;
 
     permit(
       owner: PromiseOrValue<string>,
@@ -1769,63 +1764,63 @@ export interface LDAOToken extends BaseContract {
       r: PromiseOrValue<BytesLike>,
       s: PromiseOrValue<BytesLike>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     premiumMembers(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
-    rewardPool(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    rewardPool(overrides?: any): Promise<any>;
 
     stake(
       amount: PromiseOrValue<BigNumberish>,
       tierId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     stakingTiers(
       arg0: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    symbol(overrides?: any): Promise<any>;
 
     totalStaked(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
-    totalStakedSupply(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    totalStakedSupply(overrides?: any): Promise<any>;
 
-    totalSupply(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+    totalSupply(overrides?: any): Promise<any>;
 
     transfer(
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     transferFrom(
       from: PromiseOrValue<string>,
       to: PromiseOrValue<string>,
       amount: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     unstake(
       stakeIndex: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     updateStakingTier(
       tierId: PromiseOrValue<BigNumberish>,
@@ -1834,17 +1829,17 @@ export interface LDAOToken extends BaseContract {
       minStakeAmount: PromiseOrValue<BigNumberish>,
       isActive: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    ): Promise<any>;
 
     userStakes(
       arg0: PromiseOrValue<string>,
       arg1: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
 
     votingPower(
       arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+      overrides?: any
+    ): Promise<any>;
   };
 }

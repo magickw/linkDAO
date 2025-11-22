@@ -13,7 +13,7 @@ async function main() {
   console.log("Network:", network.name);
   console.log("Chain ID:", network.chainId);
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()), "ETH");
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()), "ETH");
 
   // Production treasury address configuration
   // For mainnet, this should be a multisig wallet

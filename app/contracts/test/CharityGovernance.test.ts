@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { CharityGovernance, LDAOToken, EnhancedLDAOTreasury, MultiSigWallet } from "../typechain-types";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
-const { parseEther, formatEther } = ethers.utils;
+const { parseEther, formatEther } = ethers;
 
 describe("CharityGovernance System", function () {
   let charityGovernance: CharityGovernance;

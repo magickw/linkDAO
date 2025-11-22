@@ -36,7 +36,7 @@ export interface ResolvedName {
 }
 
 class ENSService {
-  private provider: ethers.providers.BaseProvider | null = null;
+  private provider: ethers.JsonRpcProvider | null = null;
   private cache = new Map<string, ResolvedName>();
   private cacheExpiry = new Map<string, number>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -48,7 +48,7 @@ class ENSService {
   private initializeProvider() {
     try {
       // Use public provider for ENS resolution
-      this.provider = new ethers.providers.JsonRpcProvider(
+      this.provider = new ethers.JsonRpcProvider(
         process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://cloudflare-eth.com'
       );
     } catch (error) {
@@ -74,7 +74,7 @@ class ENSService {
    * Check if a string is an Ethereum address
    */
   isEthereumAddress(address: string): boolean {
-    return ethers.utils.isAddress(address);
+    return ethers.isAddress(address);
   }
 
   /**

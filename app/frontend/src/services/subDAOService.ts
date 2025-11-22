@@ -1,4 +1,11 @@
 import { ethers } from 'ethers';
+
+const ERC20_ABI = [
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function balanceOf(address) view returns (uint256)'
+];
+
 import { webSocketService } from './webSocketService';
 
 // Get the backend API base URL from environment variables
@@ -87,15 +94,15 @@ export interface SubDAOMember {
 
 export class SubDAOService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       SubDAOService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       SubDAOService.currentAddress = (await signer.getAddress()).toLowerCase();
     } catch (error) {
       console.error('Failed to initialize SubDAO service:', error);
@@ -283,20 +290,16 @@ export class SubDAOService {
       const subDAO = await SubDAOService.getSubDAO(params.subDAOId);
       const tokenContract = new ethers.Contract(
         subDAO.tokenAddress,
-        [
-          'function approve(address spender, uint256 amount) returns (bool)',
-          'function transfer(address to, uint256 amount) returns (bool)',
-          'function balanceOf(address) view returns (uint256)'
-        ],
+        ERC20_ABI,
         SubDAOService.provider
-      );
+      ) as any;
 
-      const signer = SubDAOService.provider.getSigner();
+      const signer = await SubDAOService.provider.getSigner();
 
       // Approve tokens for staking
       const approveTx = await tokenContract.connect(signer).approve(
         process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS,
-        ethers.utils.parseEther(params.amount)
+        ethers.parseEther(params.amount)
       );
       await approveTx.wait();
 
@@ -433,7 +436,7 @@ export class SubDAOService {
     try {
       // Get revenue sharing configuration
       const subDAO = await SubDAOService.getSubDAO(params.subDAOId);
-      
+
       // Calculate distributions
       const creatorAmount = (parseFloat(params.amount) * subDAO.revenueSharing.creatorShare / 100).toString();
       const poolAmount = (parseFloat(params.amount) * subDAO.revenueSharing.communityPoolShare / 100).toString();
@@ -563,7 +566,7 @@ export class SubDAOService {
       );
 
       const balance = await tokenContract.balanceOf(address);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       console.error('Error fetching SubDAO token balance:', error);
       return '0';

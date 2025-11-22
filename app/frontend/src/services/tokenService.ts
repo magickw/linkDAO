@@ -44,7 +44,7 @@ export const TOKEN_ADDRESSES: Record<number, { usdc: string; usdt: string }> = {
 };
 
 export class TokenService {
-  private provider: ethers.providers.Web3Provider | null = null;
+  private provider: ethers.BrowserProvider | null = null;
   private signer: ethers.Signer | null = null;
 
   /**
@@ -55,8 +55,8 @@ export class TokenService {
       throw new Error('Ethereum provider not found');
     }
 
-    this.provider = new ethers.providers.Web3Provider((window as any).ethereum);
-    this.signer = this.provider.getSigner();
+    this.provider = new ethers.BrowserProvider((window as any).ethereum);
+    this.signer = await this.provider.getSigner();
   }
 
   /**
@@ -74,7 +74,7 @@ export class TokenService {
    */
   async getTokenAddress(paymentMethod: PaymentMethod): Promise<string> {
     if (paymentMethod === PaymentMethod.ETH) {
-      return ethers.constants.AddressZero;
+      return ethers.ZeroAddress;
     }
 
     if (!this.provider) {
@@ -82,7 +82,7 @@ export class TokenService {
     }
 
     const network = await this.provider!.getNetwork();
-    const chainId = network.chainId;
+    const chainId = Number(network.chainId);
 
     if (!TOKEN_ADDRESSES[chainId]) {
       throw new Error(`Token addresses not configured for chain ${chainId}`);
@@ -99,7 +99,7 @@ export class TokenService {
   async getTokenInfo(paymentMethod: PaymentMethod): Promise<TokenInfo> {
     if (paymentMethod === PaymentMethod.ETH) {
       return {
-        address: ethers.constants.AddressZero,
+        address: ethers.ZeroAddress,
         symbol: 'ETH',
         decimals: 18,
         name: 'Ethereum'
@@ -127,8 +127,8 @@ export class TokenService {
    */
   async checkBalance(
     paymentMethod: PaymentMethod,
-    amount: ethers.BigNumber
-  ): Promise<{ hasBalance: boolean; balance: ethers.BigNumber }> {
+    amount: bigint
+  ): Promise<{ hasBalance: boolean; balance: bigint }> {
     if (!this.signer) {
       await this.initialize();
     }
@@ -138,7 +138,7 @@ export class TokenService {
     if (paymentMethod === PaymentMethod.ETH) {
       const balance = await this.provider!.getBalance(userAddress);
       return {
-        hasBalance: balance.gte(amount),
+        hasBalance: balance >= amount,
         balance
       };
     }
@@ -148,7 +148,7 @@ export class TokenService {
     const balance = await contract.balanceOf(userAddress);
 
     return {
-      hasBalance: balance.gte(amount),
+      hasBalance: balance >= amount,
       balance
     };
   }
@@ -159,9 +159,9 @@ export class TokenService {
   async checkAllowance(
     paymentMethod: PaymentMethod,
     spender: string
-  ): Promise<ethers.BigNumber> {
+  ): Promise<bigint> {
     if (paymentMethod === PaymentMethod.ETH) {
-      return ethers.constants.MaxUint256; // ETH doesn't need allowance
+      return ethers.MaxUint256; // ETH doesn't need allowance
     }
 
     if (!this.signer) {
@@ -181,8 +181,8 @@ export class TokenService {
   async approveToken(
     paymentMethod: PaymentMethod,
     spender: string,
-    amount: ethers.BigNumber
-  ): Promise<ethers.ContractReceipt> {
+    amount: bigint
+  ): Promise<ethers.ContractTransactionReceipt | null> {
     if (paymentMethod === PaymentMethod.ETH) {
       throw new Error('ETH does not require approval');
     }
@@ -204,22 +204,22 @@ export class TokenService {
   async approveUnlimited(
     paymentMethod: PaymentMethod,
     spender: string
-  ): Promise<ethers.ContractReceipt> {
-    return await this.approveToken(paymentMethod, spender, ethers.constants.MaxUint256);
+  ): Promise<ethers.ContractTransactionReceipt | null> {
+    return await this.approveToken(paymentMethod, spender, ethers.MaxUint256);
   }
 
   /**
    * Format token amount for display
    */
-  formatAmount(amount: ethers.BigNumber, decimals: number): string {
-    return ethers.utils.formatUnits(amount, decimals);
+  formatAmount(amount: bigint, decimals: number): string {
+    return ethers.formatUnits(amount, decimals);
   }
 
   /**
    * Parse token amount from user input
    */
-  parseAmount(amount: string, decimals: number): ethers.BigNumber {
-    return ethers.utils.parseUnits(amount, decimals);
+  parseAmount(amount: string, decimals: number): bigint {
+    return ethers.parseUnits(amount, decimals);
   }
 
   /**
@@ -227,7 +227,7 @@ export class TokenService {
    */
   async getFormattedBalance(paymentMethod: PaymentMethod): Promise<string> {
     const tokenInfo = await this.getTokenInfo(paymentMethod);
-    const { balance } = await this.checkBalance(paymentMethod, ethers.BigNumber.from(0));
+    const { balance } = await this.checkBalance(paymentMethod, BigInt(0));
     return `${this.formatAmount(balance, tokenInfo.decimals)} ${tokenInfo.symbol}`;
   }
 
@@ -237,14 +237,14 @@ export class TokenService {
   async needsApproval(
     paymentMethod: PaymentMethod,
     spender: string,
-    amount: ethers.BigNumber
+    amount: bigint
   ): Promise<boolean> {
     if (paymentMethod === PaymentMethod.ETH) {
       return false;
     }
 
     const allowance = await this.checkAllowance(paymentMethod, spender);
-    return allowance.lt(amount);
+    return allowance < amount;
   }
 }
 

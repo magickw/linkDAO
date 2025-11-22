@@ -514,14 +514,14 @@ class ContractInterconnectionManager {
     try {
       // Test LDAOToken transfer event
       if (this.contracts.ldaoToken) {
-        const transferAmount = ethers.utils.parseEther("100");
+        const transferAmount = ethers.parseEther("100");
         await this.contracts.ldaoToken.transfer(user1.address, transferAmount);
         console.log("  ✅ LDAOToken Transfer event emitted");
       }
       
       // Test Marketplace listing event
       if (this.contracts.marketplace) {
-        const price = ethers.utils.parseEther("1");
+        const price = ethers.parseEther("1");
         await this.contracts.marketplace.connect(user1).createListing(
           ethers.constants.AddressZero,
           0,
@@ -535,7 +535,7 @@ class ContractInterconnectionManager {
       
       // Test PaymentRouter payment event
       if (this.contracts.paymentRouter) {
-        const amount = ethers.utils.parseEther("0.1");
+        const amount = ethers.parseEther("0.1");
         await this.contracts.paymentRouter.connect(user1).processPayment(
           ethers.constants.AddressZero,
           amount,

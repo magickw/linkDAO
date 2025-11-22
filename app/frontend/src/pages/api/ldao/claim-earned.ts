@@ -38,7 +38,7 @@ export default async function handler(
     });
   }
 
-  if (!ethers.utils.isAddress(address)) {
+  if (!ethers.isAddress(address)) {
     return res.status(400).json({
       success: false,
       error: 'Invalid Ethereum address'
@@ -77,7 +77,7 @@ export default async function handler(
     // For now, simulate a successful claim
     // In production, you would:
     //
-    // const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+    // const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
     // const wallet = new ethers.Wallet(process.env.TREASURY_PRIVATE_KEY, provider);
     // const ldaoToken = new ethers.Contract(
     //   process.env.LDAO_TOKEN_ADDRESS!,
@@ -85,7 +85,7 @@ export default async function handler(
     //   wallet
     // );
     //
-    // const amount = ethers.utils.parseEther(rewardAmount);
+    // const amount = ethers.parseEther(rewardAmount);
     // const tx = await ldaoToken.transfer(address, amount);
     // await tx.wait();
     //
@@ -99,7 +99,7 @@ export default async function handler(
     // });
 
     // Mock response for development
-    const mockTxHash = '0x' + ethers.utils.hexlify(ethers.utils.randomBytes(32)).slice(2);
+    const mockTxHash = '0x' + ethers.hexlify(ethers.randomBytes(32)).slice(2);
 
     return res.status(200).json({
       success: true,

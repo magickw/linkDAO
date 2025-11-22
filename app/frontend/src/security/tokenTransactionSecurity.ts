@@ -18,7 +18,7 @@ export interface TransactionValidationConfig {
 
 export interface TransactionValidationResult {
   valid: boolean;
-  transaction?: ethers.providers.TransactionRequest;
+  transaction?: ethers.TransactionRequest;
   errors: string[];
   warnings: string[];
   estimatedGas?: bigint;
@@ -61,9 +61,9 @@ export interface ContractFunction {
 
 export class TokenTransactionSecurity {
   private static readonly DEFAULT_CONFIG: TransactionValidationConfig = {
-    maxGasPrice: BigInt(ethers.utils.parseUnits('100', 'gwei').toString()),
+    maxGasPrice: BigInt(ethers.parseUnits('100', 'gwei').toString()),
     maxGasLimit: BigInt(500000),
-    maxTokenAmount: BigInt(ethers.utils.parseEther('1000').toString()),
+    maxTokenAmount: BigInt(ethers.parseEther('1000').toString()),
     allowedTokens: [
       '0xA0b86a33E6441b8C4505E2c52C6b6046d4c7F4e0', // USDC
       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
@@ -103,8 +103,8 @@ export class TokenTransactionSecurity {
    * Validate token transaction before execution
    */
   static async validateTransaction(
-    transaction: ethers.providers.TransactionRequest,
-    provider: ethers.providers.Provider,
+    transaction: ethers.TransactionRequest,
+    provider: ethers.Provider,
     config: Partial<TransactionValidationConfig> = {}
   ): Promise<TransactionValidationResult> {
     const finalConfig = { ...this.DEFAULT_CONFIG, ...config };
@@ -127,8 +127,10 @@ export class TokenTransactionSecurity {
 
       // Contract validation if interacting with contract
       if (transaction.to && transaction.data && transaction.data !== '0x') {
+        // Resolve the AddressLike to a string
+        const toAddress = await ethers.resolveAddress(transaction.to);
         const contractValidation = await this.validateContractInteraction(
-          transaction.to,
+          toAddress,
           transaction.data?.toString() || '',
           provider,
           finalConfig
@@ -140,8 +142,10 @@ export class TokenTransactionSecurity {
 
       // Token validation if ERC20 transfer
       if (transaction.to && transaction.data) {
+        // Resolve the AddressLike to a string
+        const toAddress = await ethers.resolveAddress(transaction.to);
         const tokenValidation = await this.validateTokenTransfer(
-          transaction.to,
+          toAddress,
           transaction.data?.toString() || '',
           provider,
           finalConfig
@@ -204,7 +208,7 @@ export class TokenTransactionSecurity {
    */
   static async validateSmartContract(
     address: string,
-    provider: ethers.providers.Provider
+    provider: ethers.Provider
   ): Promise<SmartContractValidation> {
     const issues: string[] = [];
     const warnings: string[] = [];
@@ -253,7 +257,7 @@ export class TokenTransactionSecurity {
    * Validate basic transaction properties
    */
   private static async validateBasicTransaction(
-    transaction: ethers.providers.TransactionRequest,
+    transaction: ethers.TransactionRequest,
     config: TransactionValidationConfig
   ): Promise<{ errors: string[]; warnings: string[]; checks: SecurityCheck[] }> {
     const errors: string[] = [];
@@ -271,7 +275,8 @@ export class TokenTransactionSecurity {
       });
     } else {
       try {
-        ethers.utils.getAddress(transaction.to);
+        const toAddress = await ethers.resolveAddress(transaction.to);
+        ethers.getAddress(toAddress);
         checks.push({
           name: 'Recipient Address',
           passed: true,
@@ -290,7 +295,7 @@ export class TokenTransactionSecurity {
     }
 
     // Validate value
-    if (transaction.value && BigInt(transaction.value.toString()) > BigInt(ethers.utils.parseEther('10').toString())) {
+    if (transaction.value && BigInt(transaction.value.toString()) > BigInt(ethers.parseEther('10').toString())) {
       warnings.push('Large ETH transfer detected');
       checks.push({
         name: 'Transaction Value',
@@ -318,8 +323,8 @@ export class TokenTransactionSecurity {
    * Validate gas parameters
    */
   private static async validateGas(
-    transaction: ethers.providers.TransactionRequest,
-    provider: ethers.providers.Provider,
+    transaction: ethers.TransactionRequest,
+    provider: ethers.Provider,
     config: TransactionValidationConfig
   ): Promise<{ errors: string[]; warnings: string[]; checks: SecurityCheck[] }> {
     const errors: string[] = [];
@@ -334,7 +339,7 @@ export class TokenTransactionSecurity {
       // Validate gas price
       if (transaction.gasPrice) {
         if (BigInt(transaction.gasPrice.toString()) > config.maxGasPrice) {
-          errors.push(`Gas price ${ethers.utils.formatUnits(transaction.gasPrice, 'gwei')} gwei exceeds maximum ${ethers.utils.formatUnits(config.maxGasPrice.toString(), 'gwei')} gwei`);
+          errors.push(`Gas price ${ethers.formatUnits(transaction.gasPrice, 'gwei')} gwei exceeds maximum ${ethers.formatUnits(config.maxGasPrice.toString(), 'gwei')} gwei`);
           checks.push({
             name: 'Gas Price',
             passed: false,
@@ -398,7 +403,7 @@ export class TokenTransactionSecurity {
   private static async validateContractInteraction(
     contractAddress: string,
     data: string,
-    provider: ethers.providers.Provider,
+    provider: ethers.Provider,
     config: TransactionValidationConfig
   ): Promise<{ errors: string[]; warnings: string[]; checks: SecurityCheck[] }> {
     const errors: string[] = [];
@@ -473,7 +478,7 @@ export class TokenTransactionSecurity {
   private static async validateTokenTransfer(
     tokenAddress: string,
     data: string,
-    provider: ethers.providers.Provider,
+    provider: ethers.Provider,
     config: TransactionValidationConfig
   ): Promise<{ errors: string[]; warnings: string[]; checks: SecurityCheck[] }> {
     const errors: string[] = [];
@@ -489,7 +494,7 @@ export class TokenTransactionSecurity {
         if (decoded) {
           // Validate token amount
           if (decoded.amount > config.maxTokenAmount) {
-            errors.push(`Token amount ${ethers.utils.formatEther(decoded.amount.toString())} exceeds maximum ${ethers.utils.formatEther(config.maxTokenAmount.toString())}`);
+            errors.push(`Token amount ${ethers.formatEther(decoded.amount.toString())} exceeds maximum ${ethers.formatEther(config.maxTokenAmount.toString())}`);
             checks.push({
               name: 'Token Amount',
               passed: false,
@@ -517,7 +522,7 @@ export class TokenTransactionSecurity {
 
           // Validate recipient
           try {
-            ethers.utils.getAddress(decoded.recipient);
+            ethers.getAddress(decoded.recipient);
             checks.push({
               name: 'Token Recipient',
               passed: true,

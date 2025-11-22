@@ -9,7 +9,7 @@ async function main() {
   
   // Check balance
   const balance = await deployer.getBalance();
-  console.log('Account balance:', ethers.utils.formatEther(balance), 'ETH');
+  console.log('Account balance:', ethers.formatEther(balance), 'ETH');
   
   // Deploy a simple contract to test
   console.log('Deploying Counter contract...');

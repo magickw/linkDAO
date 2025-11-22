@@ -13,8 +13,8 @@ describe("LDAOTreasury", function () {
     let user2: SignerWithAddress;
     let user3: SignerWithAddress;
 
-    const INITIAL_SUPPLY = ethers.utils.parseEther("1000000000"); // 1B tokens
-    const INITIAL_PRICE = ethers.utils.parseEther("0.01"); // $0.01
+    const INITIAL_SUPPLY = ethers.parseEther("1000000000"); // 1B tokens
+    const INITIAL_PRICE = ethers.parseEther("0.01"); // $0.01
 
     beforeEach(async function () {
         [owner, user1, user2, user3] = await ethers.getSigners();
@@ -45,13 +45,13 @@ describe("LDAOTreasury", function () {
         await treasury.deployed();
 
         // Transfer tokens to treasury
-        const treasurySupply = ethers.utils.parseEther("100000000"); // 100M tokens for sales
+        const treasurySupply = ethers.parseEther("100000000"); // 100M tokens for sales
         await ldaoToken.transfer(treasury.address, treasurySupply);
 
         // Mint USDC to users for testing
-        await usdcToken.mint(user1.address, ethers.utils.parseUnits("10000", 6)); // 10k USDC
-        await usdcToken.mint(user2.address, ethers.utils.parseUnits("10000", 6));
-        await usdcToken.mint(user3.address, ethers.utils.parseUnits("10000", 6));
+        await usdcToken.mint(user1.address, ethers.parseUnits("10000", 6)); // 10k USDC
+        await usdcToken.mint(user2.address, ethers.parseUnits("10000", 6));
+        await usdcToken.mint(user3.address, ethers.parseUnits("10000", 6));
     });
 
     describe("Deployment", function () {

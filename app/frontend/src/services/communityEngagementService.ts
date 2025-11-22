@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { calculateEngagementReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
 import { RewardPool } from '../types/contracts/RewardPool';
@@ -124,7 +124,7 @@ export class CommunityEngagementService {
       });
 
       // If no reward is earned, return early
-      if (rewardAmount.eq(0)) {
+      if (rewardAmount === 0n) {
         return {
           success: false,
           error: 'Engagement metrics do not meet minimum threshold for rewards'
@@ -136,7 +136,7 @@ export class CommunityEngagementService {
         throw new Error('Reward pool not initialized');
       }
 
-      const tx = await this.rewardPool.rewardEngagement(
+      const tx: ethers.ContractTransactionResponse = await this.rewardPool.rewardEngagement(
         authorAddress,
         rewardAmount,
         commentId,
@@ -149,7 +149,7 @@ export class CommunityEngagementService {
 
       return {
         success: true,
-        transactionHash: receipt.transactionHash,
+        transactionHash: receipt.hash,
         rewardAmount: rewardAmount.toString()
       };
 

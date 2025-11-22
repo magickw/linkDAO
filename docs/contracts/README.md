@@ -86,12 +86,12 @@ const escrowContract = MarketplaceEscrow__factory.connect(
 async function createOrder(productDetails, buyerAddress, sellerAddress) {
   const tx = await escrowContract.createOrder(
     sellerAddress,
-    ethers.utils.parseEther(productDetails.price),
+    ethers.parseEther(productDetails.price),
     productDetails.tokenAddress, // ETH = 0x0000000000000000000000000000000000000000
     Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days delivery deadline
-    ethers.utils.keccak256(ethers.utils.toUtf8Bytes(productDetails.hash)),
+    ethers.keccak256(ethers.toUtf8Bytes(productDetails.hash)),
     {
-      value: ethers.utils.parseEther(productDetails.price) // For ETH payments
+      value: ethers.parseEther(productDetails.price) // For ETH payments
     }
   );
   
@@ -156,7 +156,7 @@ escrowContract.on('PaymentReleased', (orderId, seller, amount, event) => {
   console.log('Payment released:', {
     orderId: orderId.toString(),
     seller,
-    amount: ethers.utils.formatEther(amount),
+    amount: ethers.formatEther(amount),
     transactionHash: event.transactionHash
   });
 });
@@ -205,11 +205,11 @@ describe('MarketplaceEscrow', function () {
   it('Should create order correctly', async function () {
     const tx = await escrow.connect(buyer).createOrder(
       seller.address,
-      ethers.utils.parseEther('1'),
+      ethers.parseEther('1'),
       ethers.constants.AddressZero,
       Math.floor(Date.now() / 1000) + 86400,
-      ethers.utils.keccak256(ethers.utils.toUtf8Bytes('test-product')),
-      { value: ethers.utils.parseEther('1') }
+      ethers.keccak256(ethers.toUtf8Bytes('test-product')),
+      { value: ethers.parseEther('1') }
     );
     
     const receipt = await tx.wait();

@@ -214,7 +214,7 @@ export default function DEXTradingInterface({ userAddress, onClose }: DEXTrading
         toAmount: quote.toAmount,
         priceImpact: quote.priceImpact,
         minimumReceived: quote.toAmount,
-        gasFee: ethers.utils.formatEther(quote.estimatedGas),
+        gasFee: ethers.formatEther(quote.estimatedGas),
         route: quote.path,
         validUntil: Date.now() + 30000, // 30 seconds
         dex: quote.dex,

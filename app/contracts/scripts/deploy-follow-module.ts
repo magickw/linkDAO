@@ -8,7 +8,7 @@ async function main() {
   // Get the deployer account
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   // Deploy FollowModule (no constructor arguments needed)
   const FollowModule = await ethers.getContractFactory("FollowModule");

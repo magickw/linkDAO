@@ -50,7 +50,7 @@ export interface DexSwapTransaction {
 export class DexService {
   private static instance: DexService;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): DexService {
     if (!DexService.instance) {
@@ -94,7 +94,7 @@ export class DexService {
       }
 
       // Sort by best expected amount (highest first)
-      return quotes.sort((a, b) => 
+      return quotes.sort((a, b) =>
         parseFloat(b.expectedAmount) - parseFloat(a.expectedAmount)
       );
     } catch (error) {
@@ -125,7 +125,7 @@ export class DexService {
 
       const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
       const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
-      
+
       // Create contract instance
       const uniswapRouter = new ethers.Contract(
         UNISWAP_ROUTER_ADDRESS,
@@ -134,28 +134,28 @@ export class DexService {
       );
 
       // Convert amount to proper units based on token decimals
-      const amountIn = ethers.utils.parseUnits(fromAmount, fromTokenInfo.decimals);
-      
+      const amountIn = ethers.parseUnits(fromAmount, fromTokenInfo.decimals);
+
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
-      
+
       // Get amounts out
       const amountsOut = await uniswapRouter.getAmountsOut(amountIn, path);
       const expectedAmount = amountsOut[amountsOut.length - 1];
-      
+
       // Calculate minimum amount with slippage
-      const slippageFactor = 1000 - (slippage * 10);
-      const minAmount = expectedAmount.mul(slippageFactor).div(1000);
-      
+      const slippageFactor = BigInt(Math.floor(1000 - (slippage * 10)));
+      const minAmount = (expectedAmount * slippageFactor) / 1000n;
+
       // Estimate gas
-      let estimatedGas = ethers.BigNumber.from('200000');
+      let estimatedGas = 200000n;
       try {
         // Get signer address for gas estimation
         const signer = await getSigner();
-        const signerAddress = signer ? await signer.getAddress() : ethers.constants.AddressZero;
-        
+        const signerAddress = signer ? await signer.getAddress() : ethers.ZeroAddress;
+
         // Try to get a more accurate gas estimate
-        estimatedGas = await uniswapRouter.estimateGas.swapExactTokensForTokens(
+        estimatedGas = await (uniswapRouter.estimateGas as any).swapExactTokensForTokens(
           amountIn,
           minAmount,
           path,
@@ -165,17 +165,17 @@ export class DexService {
       } catch (gasError) {
         console.warn('Could not estimate gas, using default:', gasError);
       }
-      
+
       // Calculate price impact (simplified)
       const priceImpact = 0.1; // This would be calculated properly in a real implementation
-      
+
       return {
         dex: 'uniswap',
         fromToken,
         toToken,
         fromAmount,
-        toAmount: ethers.utils.formatUnits(minAmount, toTokenInfo.decimals),
-        expectedAmount: ethers.utils.formatUnits(expectedAmount, toTokenInfo.decimals),
+        toAmount: ethers.formatUnits(minAmount, toTokenInfo.decimals),
+        expectedAmount: ethers.formatUnits(expectedAmount, toTokenInfo.decimals),
         priceImpact,
         fee: '0.001', // Mock fee
         path,
@@ -207,7 +207,7 @@ export class DexService {
 
       const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
       const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
-      
+
       // Create contract instance
       const sushiswapRouter = new ethers.Contract(
         SUSHISWAP_ROUTER_ADDRESS,
@@ -216,28 +216,28 @@ export class DexService {
       );
 
       // Convert amount to proper units based on token decimals
-      const amountIn = ethers.utils.parseUnits(fromAmount, fromTokenInfo.decimals);
-      
+      const amountIn = ethers.parseUnits(fromAmount, fromTokenInfo.decimals);
+
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
-      
+
       // Get amounts out
       const amountsOut = await sushiswapRouter.getAmountsOut(amountIn, path);
       const expectedAmount = amountsOut[amountsOut.length - 1];
-      
+
       // Calculate minimum amount with slippage
-      const slippageFactor = 1000 - (slippage * 10);
-      const minAmount = expectedAmount.mul(slippageFactor).div(1000);
-      
+      const slippageFactor = BigInt(Math.floor(1000 - (slippage * 10)));
+      const minAmount = (expectedAmount * slippageFactor) / 1000n;
+
       // Estimate gas
-      let estimatedGas = ethers.BigNumber.from('200000');
+      let estimatedGas = 200000n;
       try {
         // Get signer address for gas estimation
         const signer = await getSigner();
-        const signerAddress = signer ? await signer.getAddress() : ethers.constants.AddressZero;
-        
+        const signerAddress = signer ? await signer.getAddress() : ethers.ZeroAddress;
+
         // Try to get a more accurate gas estimate
-        estimatedGas = await sushiswapRouter.estimateGas.swapExactTokensForTokens(
+        estimatedGas = await (sushiswapRouter.estimateGas as any).swapExactTokensForTokens(
           amountIn,
           minAmount,
           path,
@@ -247,17 +247,17 @@ export class DexService {
       } catch (gasError) {
         console.warn('Could not estimate gas, using default:', gasError);
       }
-      
+
       // Calculate price impact (simplified)
       const priceImpact = 0.15; // This would be calculated properly in a real implementation
-      
+
       return {
         dex: 'sushiswap',
         fromToken,
         toToken,
         fromAmount,
-        toAmount: ethers.utils.formatUnits(minAmount, toTokenInfo.decimals),
-        expectedAmount: ethers.utils.formatUnits(expectedAmount, toTokenInfo.decimals),
+        toAmount: ethers.formatUnits(minAmount, toTokenInfo.decimals),
+        expectedAmount: ethers.formatUnits(expectedAmount, toTokenInfo.decimals),
         priceImpact,
         fee: '0.0015', // Mock fee
         path,
@@ -293,11 +293,11 @@ export class DexService {
 
     const rate = exchangeRates[fromToken]?.[toToken] || 1;
     const expectedAmount = (parseFloat(fromAmount) * rate).toString();
-    
+
     // Apply slippage
     const slippageFactor = slippage / 100;
     const minAmount = (parseFloat(expectedAmount) * (1 - slippageFactor)).toString();
-    
+
     return {
       dex,
       fromToken,
@@ -331,7 +331,7 @@ export class DexService {
 
       const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
       const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
-      
+
       // Create contract instance
       const uniswapRouter = new ethers.Contract(
         UNISWAP_ROUTER_ADDRESS,
@@ -340,12 +340,12 @@ export class DexService {
       );
 
       // Convert amounts to proper units based on token decimals
-      const amountIn = ethers.utils.parseUnits(fromAmount, fromTokenInfo.decimals);
-      const amountOutMin = ethers.utils.parseUnits(minAmountOut, toTokenInfo.decimals);
-      
+      const amountIn = ethers.parseUnits(fromAmount, fromTokenInfo.decimals);
+      const amountOutMin = ethers.parseUnits(minAmountOut, toTokenInfo.decimals);
+
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
-      
+
       // Execute swap
       const tx = await uniswapRouter.swapExactTokensForTokens(
         amountIn,
@@ -357,14 +357,14 @@ export class DexService {
 
       // Wait for transaction
       const receipt = await tx.wait();
-      
+
       return {
         dex: 'uniswap',
         fromToken,
         toToken,
         fromAmount,
         toAmount: minAmountOut,
-        transactionHash: receipt.transactionHash,
+        transactionHash: receipt.hash,
         status: 'success'
       };
     } catch (error) {
@@ -372,7 +372,7 @@ export class DexService {
         action: 'swapOnUniswap',
         component: 'DexService'
       });
-      
+
       return {
         dex: 'uniswap',
         fromToken,
@@ -404,7 +404,7 @@ export class DexService {
 
       const fromTokenInfo = TOKEN_INFO[fromToken] || { address: fromToken, decimals: 18 };
       const toTokenInfo = TOKEN_INFO[toToken] || { address: toToken, decimals: 18 };
-      
+
       // Create contract instance
       const sushiswapRouter = new ethers.Contract(
         SUSHISWAP_ROUTER_ADDRESS,
@@ -413,12 +413,12 @@ export class DexService {
       );
 
       // Convert amounts to proper units based on token decimals
-      const amountIn = ethers.utils.parseUnits(fromAmount, fromTokenInfo.decimals);
-      const amountOutMin = ethers.utils.parseUnits(minAmountOut, toTokenInfo.decimals);
-      
+      const amountIn = ethers.parseUnits(fromAmount, fromTokenInfo.decimals);
+      const amountOutMin = ethers.parseUnits(minAmountOut, toTokenInfo.decimals);
+
       // Define token path
       const path = [fromTokenInfo.address, toTokenInfo.address];
-      
+
       // Execute swap
       const tx = await sushiswapRouter.swapExactTokensForTokens(
         amountIn,
@@ -430,14 +430,14 @@ export class DexService {
 
       // Wait for transaction
       const receipt = await tx.wait();
-      
+
       return {
         dex: 'sushiswap',
         fromToken,
         toToken,
         fromAmount,
         toAmount: minAmountOut,
-        transactionHash: receipt.transactionHash,
+        transactionHash: receipt.hash,
         status: 'success'
       };
     } catch (error) {
@@ -445,7 +445,7 @@ export class DexService {
         action: 'swapOnSushiswap',
         component: 'DexService'
       });
-      
+
       return {
         dex: 'sushiswap',
         fromToken,
@@ -492,22 +492,22 @@ export class DexService {
       );
 
       // Parse amount based on token decimals
-      const parsedAmount = ethers.utils.parseUnits(amount, tokenInfo.decimals);
-      
+      const parsedAmount = ethers.parseUnits(amount, tokenInfo.decimals);
+
       // Approve spending
       const tx = await tokenContract.approve(spenderAddress, parsedAmount);
       const receipt = await tx.wait();
-      
+
       return {
         success: true,
-        transactionHash: receipt.transactionHash
+        transactionHash: receipt.hash
       };
     } catch (error) {
       const errorResponse = web3ErrorHandler.handleError(error as Error, {
         action: 'approveToken',
         component: 'DexService'
       });
-      
+
       return {
         success: false,
         error: errorResponse.message

@@ -146,13 +146,13 @@ export class RefundPaymentService {
           "function balanceOf(address owner) view returns (uint256)"
         ];
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, wallet);
-        const tx = await tokenContract.transfer(recipientAddress, ethers.utils.parseEther(amount));
+        const tx = await tokenContract.transfer(recipientAddress, ethers.parseEther(amount));
         await tx.wait();
       } else {
         // Handle native token refund
         tx = await wallet.sendTransaction({
           to: recipientAddress,
-          value: ethers.utils.parseEther(amount),
+          value: ethers.parseEther(amount),
           gasLimit: 300000 // Set appropriate gas limit
         });
         await tx.wait();

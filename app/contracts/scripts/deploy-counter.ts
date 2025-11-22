@@ -6,7 +6,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   // Deploy Counter contract
   const CounterFactory = await ethers.getContractFactory("Counter");

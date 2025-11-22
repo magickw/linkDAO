@@ -54,10 +54,10 @@ this.cryptoKey = await crypto.subtle.generateKey({
 **Issue**: Raw hash signing without EIP-712 compliance
 ```typescript
 // PROBLEMATIC CODE
-const messageHash = ethers.utils.keccak256(
-  ethers.utils.toUtf8Bytes(`${message.fromAddress}${message.toAddress}${message.content}${message.timestamp.getTime()}`)
+const messageHash = ethers.keccak256(
+  ethers.toUtf8Bytes(`${message.fromAddress}${message.toAddress}${message.content}${message.timestamp.getTime()}`)
 );
-return await this.wallet.signMessage(ethers.utils.arrayify(messageHash));
+return await this.wallet.signMessage(ethers.arrayify(messageHash));
 ```
 
 **Impact**:

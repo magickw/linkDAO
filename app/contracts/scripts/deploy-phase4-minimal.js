@@ -8,7 +8,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   const addressesPath = path.join(__dirname, "../deployedAddresses.json");
   let addresses = {};

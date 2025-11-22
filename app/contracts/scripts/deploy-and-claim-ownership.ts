@@ -33,7 +33,7 @@ class DeploymentManager {
     console.log('🚀 Starting deployment process...');
     console.log('📍 Network:', this.config.network);
     console.log('👤 Deployer:', deployer.address);
-    console.log('💰 Balance:', ethers.utils.formatEther(await deployer.getBalance()), 'ETH');
+    console.log('💰 Balance:', ethers.formatEther(await deployer.getBalance()), 'ETH');
   }
 
   async deployAllContracts() {

@@ -14,7 +14,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1,
+            runs: 200,
           },
           viaIR: true,
         },
@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 1,
+            runs: 200,
           },
           viaIR: true,
         },
@@ -43,8 +43,8 @@ const config: HardhatUserConfig = {
       chainId: 31337,
     },
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
-      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY !== "your_wallet_private_key_here") ? [process.env.PRIVATE_KEY] : [],
+      url: "https://rpc.sepolia.org",
+      accounts: ["0x39f6e4aea4f11a15e6fab847e281bf97e4a138f321bbe8b9435369c7946d28e8"],
       chainId: 11155111,
       gas: 6000000,
       gasPrice: 20000000000, // 20 gwei
@@ -94,9 +94,6 @@ const config: HardhatUserConfig = {
       baseSepolia: process.env.BASESCAN_API_KEY || process.env.ETHERSCAN_API_KEY || "",
     },
     customChains: []
-  },
-  sourcify: {
-    enabled: false
   },
   mocha: {
     timeout: 60000,

@@ -49,23 +49,23 @@ async function testETHPurchase() {
     }
     
     // Test quote for 100 LDAO tokens
-    const ldaoAmount100 = ethers.utils.parseEther('100');
+    const ldaoAmount100 = ethers.parseEther('100');
     const [usdAmount100, ethAmount100, usdcAmount100, discount100] = await treasury.getQuote(ldaoAmount100);
     
     console.log(`\n📋 Quote for 100 LDAO tokens:`);
-    console.log(`   USD Amount: $${ethers.utils.formatEther(usdAmount100)}`);
-    console.log(`   ETH Amount: ${ethers.utils.formatEther(ethAmount100)} ETH`);
-    console.log(`   USDC Amount: ${ethers.utils.formatUnits(usdcAmount100, 6)} USDC`);
+    console.log(`   USD Amount: $${ethers.formatEther(usdAmount100)}`);
+    console.log(`   ETH Amount: ${ethers.formatEther(ethAmount100)} ETH`);
+    console.log(`   USDC Amount: ${ethers.formatUnits(usdcAmount100, 6)} USDC`);
     console.log(`   Discount: ${(discount100.toNumber() / 10000).toFixed(2)}%`);
     
     // Test quote for 10,000 LDAO tokens (should get volume discount)
-    const ldaoAmount10k = ethers.utils.parseEther('10000');
+    const ldaoAmount10k = ethers.parseEther('10000');
     const [usdAmount10k, ethAmount10k, usdcAmount10k, discount10k] = await treasury.getQuote(ldaoAmount10k);
     
     console.log(`\n📋 Quote for 10,000 LDAO tokens:`);
-    console.log(`   USD Amount: $${ethers.utils.formatEther(usdAmount10k)}`);
-    console.log(`   ETH Amount: ${ethers.utils.formatEther(ethAmount10k)} ETH`);
-    console.log(`   USDC Amount: ${ethers.utils.formatUnits(usdcAmount10k, 6)} USDC`);
+    console.log(`   USD Amount: $${ethers.formatEther(usdAmount10k)}`);
+    console.log(`   ETH Amount: ${ethers.formatEther(ethAmount10k)} ETH`);
+    console.log(`   USDC Amount: ${ethers.formatUnits(usdcAmount10k, 6)} USDC`);
     console.log(`   Discount: ${(discount10k.toNumber() / 10000).toFixed(2)}%`);
     
     console.log('\n✅ ETH purchase flow test completed successfully!');
@@ -86,23 +86,23 @@ async function testUSDCPurchase() {
     const treasury = new ethers.Contract(LDAO_TREASURY_ADDRESS, TREASURY_ABI, provider);
     
     // Test quote for 100 LDAO tokens
-    const ldaoAmount100 = ethers.utils.parseEther('100');
+    const ldaoAmount100 = ethers.parseEther('100');
     const [usdAmount100, ethAmount100, usdcAmount100, discount100] = await treasury.getQuote(ldaoAmount100);
     
     console.log(`\n📋 Quote for 100 LDAO tokens:`);
-    console.log(`   USD Amount: $${ethers.utils.formatEther(usdAmount100)}`);
-    console.log(`   ETH Amount: ${ethers.utils.formatEther(ethAmount100)} ETH`);
-    console.log(`   USDC Amount: ${ethers.utils.formatUnits(usdcAmount100, 6)} USDC`);
+    console.log(`   USD Amount: $${ethers.formatEther(usdAmount100)}`);
+    console.log(`   ETH Amount: ${ethers.formatEther(ethAmount100)} ETH`);
+    console.log(`   USDC Amount: ${ethers.formatUnits(usdcAmount100, 6)} USDC`);
     console.log(`   Discount: ${(discount100.toNumber() / 10000).toFixed(2)}%`);
     
     // Test quote for 10,000 LDAO tokens (should get volume discount)
-    const ldaoAmount10k = ethers.utils.parseEther('10000');
+    const ldaoAmount10k = ethers.parseEther('10000');
     const [usdAmount10k, ethAmount10k, usdcAmount10k, discount10k] = await treasury.getQuote(ldaoAmount10k);
     
     console.log(`\n📋 Quote for 10,000 LDAO tokens:`);
-    console.log(`   USD Amount: $${ethers.utils.formatEther(usdAmount10k)}`);
-    console.log(`   ETH Amount: ${ethers.utils.formatEther(ethAmount10k)} ETH`);
-    console.log(`   USDC Amount: ${ethers.utils.formatUnits(usdcAmount10k, 6)} USDC`);
+    console.log(`   USD Amount: $${ethers.formatEther(usdAmount10k)}`);
+    console.log(`   ETH Amount: ${ethers.formatEther(ethAmount10k)} ETH`);
+    console.log(`   USDC Amount: ${ethers.formatUnits(usdcAmount10k, 6)} USDC`);
     console.log(`   Discount: ${(discount10k.toNumber() / 10000).toFixed(2)}%`);
     
     console.log('\n✅ USDC purchase flow test completed successfully!');

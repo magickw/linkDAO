@@ -56,7 +56,7 @@ class DeploymentChecker {
     console.log('================');
     console.log(`Network: ${network.name} (Chain ID: ${network.chainId})`);
     console.log(`Block Number: ${blockNumber}`);
-    console.log(`Gas Price: ${ethers.utils.formatUnits(gasPrice, 'gwei')} gwei`);
+    console.log(`Gas Price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
 
     if (this.deploymentData) {
       const isCorrectNetwork = network.chainId === this.deploymentData.chainId;
@@ -171,7 +171,7 @@ class DeploymentChecker {
         case 'LDAOToken':
           const totalSupply = await contract.totalSupply();
           const symbol = await contract.symbol();
-          console.log(`   🪙 ${symbol} Total Supply: ${ethers.utils.formatEther(totalSupply)}`);
+          console.log(`   🪙 ${symbol} Total Supply: ${ethers.formatEther(totalSupply)}`);
           break;
 
         case 'Governance':
@@ -208,7 +208,7 @@ class DeploymentChecker {
       console.log('\n💼 Wallet Status');
       console.log('================');
       console.log(`Address: ${signer.address}`);
-      console.log(`Balance: ${ethers.utils.formatEther(balance)} ETH`);
+      console.log(`Balance: ${ethers.formatEther(balance)} ETH`);
 
       if (this.deploymentData) {
         const isDeployer = signer.address.toLowerCase() === this.deploymentData.deployer.toLowerCase();

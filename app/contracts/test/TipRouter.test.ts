@@ -30,7 +30,7 @@ describe("TipRouter", function () {
     await tipRouter.deployed();
 
     // Mint tokens to tipper
-    await ldaoToken.mint(tipper.address, ethers.utils.parseEther("1000"));
+    await ldaoToken.mint(tipper.address, ethers.parseEther("1000"));
   });
 
   describe("Deployment", function () {
@@ -73,15 +73,15 @@ describe("TipRouter", function () {
   describe("Tipping Functionality", function () {
     beforeEach(async function () {
       // Approve TipRouter to spend tipper's tokens
-      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.utils.parseEther("100"));
+      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.parseEther("100"));
     });
 
     it("Should allow tipping with correct fee distribution", async function () {
-      const tipAmount = ethers.utils.parseEther("10");
+      const tipAmount = ethers.parseEther("10");
       const expectedFee = tipAmount.mul(1000).div(10000); // 10% fee
       const expectedToCreator = tipAmount.sub(expectedFee);
 
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       await expect(
         tipRouter.connect(tipper).tip(postId, creator.address, tipAmount)
@@ -94,8 +94,8 @@ describe("TipRouter", function () {
     });
 
     it("Should fail if insufficient allowance", async function () {
-      const tipAmount = ethers.utils.parseEther("200"); // More than approved
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const tipAmount = ethers.parseEther("200"); // More than approved
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       await expect(
         tipRouter.connect(tipper).tip(postId, creator.address, tipAmount)
@@ -104,10 +104,10 @@ describe("TipRouter", function () {
 
     it("Should fail if insufficient balance", async function () {
       // Approve large amount but tipper doesn't have enough tokens
-      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.utils.parseEther("2000"));
+      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.parseEther("2000"));
       
-      const tipAmount = ethers.utils.parseEther("1500"); // More than balance
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const tipAmount = ethers.parseEther("1500"); // More than balance
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       await expect(
         tipRouter.connect(tipper).tip(postId, creator.address, tipAmount)
@@ -118,8 +118,8 @@ describe("TipRouter", function () {
       // Set fee to 0%
       await tipRouter.connect(owner).setFeeBps(0);
 
-      const tipAmount = ethers.utils.parseEther("10");
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const tipAmount = ethers.parseEther("10");
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       await tipRouter.connect(tipper).tip(postId, creator.address, tipAmount);
 
@@ -132,10 +132,10 @@ describe("TipRouter", function () {
       // Set fee to 20% (maximum)
       await tipRouter.connect(owner).setFeeBps(2000);
 
-      const tipAmount = ethers.utils.parseEther("10");
+      const tipAmount = ethers.parseEther("10");
       const expectedFee = tipAmount.mul(2000).div(10000); // 20% fee
       const expectedToCreator = tipAmount.sub(expectedFee);
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
 
       await tipRouter.connect(tipper).tip(postId, creator.address, tipAmount);
 
@@ -148,8 +148,8 @@ describe("TipRouter", function () {
     it("Should support permit and tip in one transaction", async function () {
       // This test verifies the function exists and can be called
       // Full permit testing would require signature generation
-      const tipAmount = ethers.utils.parseEther("10");
-      const postId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
+      const tipAmount = ethers.parseEther("10");
+      const postId = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
 
       // This will fail due to invalid signature, but verifies the function exists
@@ -169,14 +169,14 @@ describe("TipRouter", function () {
 
   describe("Multiple Tips", function () {
     beforeEach(async function () {
-      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.utils.parseEther("100"));
+      await ldaoToken.connect(tipper).approve(tipRouter.address, ethers.parseEther("100"));
     });
 
     it("Should handle multiple tips correctly", async function () {
-      const tipAmount1 = ethers.utils.parseEther("5");
-      const tipAmount2 = ethers.utils.parseEther("3");
-      const postId1 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
-      const postId2 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-2"));
+      const tipAmount1 = ethers.parseEther("5");
+      const tipAmount2 = ethers.parseEther("3");
+      const postId1 = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
+      const postId2 = ethers.keccak256(ethers.toUtf8Bytes("test-post-2"));
 
       await tipRouter.connect(tipper).tip(postId1, creator.address, tipAmount1);
       await tipRouter.connect(tipper).tip(postId2, creator.address, tipAmount2);
@@ -192,12 +192,12 @@ describe("TipRouter", function () {
     it("Should handle tips to different creators", async function () {
       const [, , , creator2] = await ethers.getSigners();
       
-      const tipAmount = ethers.utils.parseEther("10");
+      const tipAmount = ethers.parseEther("10");
       const expectedFee = tipAmount.mul(1000).div(10000); // 10% fee
       const expectedToCreator = tipAmount.sub(expectedFee);
       
-      const postId1 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-1"));
-      const postId2 = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test-post-2"));
+      const postId1 = ethers.keccak256(ethers.toUtf8Bytes("test-post-1"));
+      const postId2 = ethers.keccak256(ethers.toUtf8Bytes("test-post-2"));
 
       await tipRouter.connect(tipper).tip(postId1, creator.address, tipAmount);
       await tipRouter.connect(tipper).tip(postId2, creator2.address, tipAmount);

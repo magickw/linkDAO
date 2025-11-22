@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestSuite } from "./TestSuite";
 
-const { parseEther, parseUnits } = ethers.utils;
+const { parseEther, parseUnits } = ethers;
 
 describe("Comprehensive Security Tests", function () {
   let testSuite: TestSuite;
@@ -348,7 +348,7 @@ describe("Comprehensive Security Tests", function () {
       };
       
       const signature = await testSuite.accounts.user1._signTypedData(domain, types, value);
-      const { v, r, s } = ethers.utils.splitSignature(signature);
+      const { v, r, s } = ethers.splitSignature(signature);
       
       // Use permit
       await testSuite.contracts.ldaoToken.permit(
@@ -458,7 +458,7 @@ describe("Comprehensive Security Tests", function () {
       };
       
       const signature = await testSuite.accounts.user1._signTypedData(domain, types, value);
-      const { v, r, s } = ethers.utils.splitSignature(signature);
+      const { v, r, s } = ethers.splitSignature(signature);
       
       await testSuite.contracts.ldaoToken.permit(
         testSuite.accounts.user1.address,

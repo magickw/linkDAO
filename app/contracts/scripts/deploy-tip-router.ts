@@ -8,7 +8,7 @@ async function main() {
   // Get the deployer account
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   // Read deployed addresses to get LDAO token and RewardPool addresses
   const addressesPath = join(__dirname, "../deployedAddresses.json");

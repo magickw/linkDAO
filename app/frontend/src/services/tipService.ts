@@ -88,15 +88,15 @@ export const AWARDS: Award[] = [
 
 export class TipService {
   private static currentAddress: string | null = null;
-  private static provider: ethers.providers.Web3Provider | null = null;
+  private static provider: ethers.BrowserProvider | null = null;
 
   /**
    * Initialize the service with wallet connection
    */
-  static async initialize(provider: ethers.providers.Web3Provider): Promise<void> {
+  static async initialize(provider: ethers.BrowserProvider): Promise<void> {
     try {
       TipService.provider = provider;
-      const signer = provider.getSigner();
+      const signer = await provider.getSigner();
       TipService.currentAddress = (await signer.getAddress()).toLowerCase();
     } catch (error) {
       console.error('Failed to initialize tip service:', error);
@@ -121,18 +121,18 @@ export class TipService {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-    
+
     try {
       // Calculate fee (5% for DAO treasury)
       const feeAmount = TipService.calculateFee(amount, currency);
       const netAmount = TipService.subtractFee(amount, feeAmount, currency);
 
       // Get token contract
-      const tokenContract = await TipService.getTokenContract(currency);
-      
+      const tokenContract = (await TipService.getTokenContract(currency)) as any;
+
       // Get signer
-      const signer = TipService.provider.getSigner();
-      
+      const signer = await TipService.provider.getSigner();
+
       // Approve and transfer tokens
       const approveTx = await tokenContract.connect(signer).approve(
         process.env.NEXT_PUBLIC_TIP_ROUTER_ADDRESS,
@@ -142,13 +142,13 @@ export class TipService {
 
       // Send tip through TipRouter contract
       const tipRouterContract = await TipService.getTipRouterContract();
-      const tipTx = await tipRouterContract.connect(signer).sendTip({
-        to: creatorAddress,
-        postId: postId,
-        amount: amount,
-        currency: currency,
-        message: message || ''
-      });
+      const tipTx = await (tipRouterContract.connect(signer) as any).sendTip(
+        creatorAddress,
+        ethers.parseUnits(amount, 18), // Assuming 18 decimals for simplicity, should use token decimals
+        currency,
+        postId,
+        message || ''
+      );
 
       // Create tip record in database
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips`, {
@@ -170,16 +170,16 @@ export class TipService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create tip record');
       }
-      
+
       const tip = await response.json();
-      
+
       // Send through WebSocket for real-time updates
       webSocketService.send('tip_sent', {
         tipId: tip.id,
@@ -189,15 +189,15 @@ export class TipService {
         currency,
         message
       });
-      
+
       return { ...tip, transactionHash: tipTx.hash };
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -232,7 +232,7 @@ export class TipService {
   static async getUserEarnings(userId: string): Promise<UserEarnings> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/users/${userId}/earnings`, {
         method: 'GET',
@@ -241,22 +241,22 @@ export class TipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch user earnings');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -307,7 +307,7 @@ export class TipService {
   static async claimRewards(userAddress: string): Promise<any> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/rewards/claim`, {
         method: 'POST',
@@ -317,22 +317,22 @@ export class TipService {
         body: JSON.stringify({ userAddress }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to claim rewards');
       }
-      
+
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -343,7 +343,7 @@ export class TipService {
   static async getPostTips(postId: string): Promise<Tip[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/posts/${postId}/tips`, {
         method: 'GET',
@@ -352,14 +352,14 @@ export class TipService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to fetch post tips');
       }
-      
+
       const tips = await response.json();
       // Convert string dates to Date objects
       return tips.map((tip: any) => ({
@@ -368,11 +368,11 @@ export class TipService {
       }));
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
-      
+
       throw error;
     }
   }
@@ -461,7 +461,7 @@ export class TipService {
     );
 
     const balance = await ldaoContract.balanceOf(TipService.currentAddress);
-    return ethers.utils.formatEther(balance);
+    return ethers.formatEther(balance);
   }
 
   /**

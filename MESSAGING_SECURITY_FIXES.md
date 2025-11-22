@@ -104,7 +104,7 @@ async function deriveEncryptionKey(wallet: ethers.Wallet): Promise<CryptoKey> {
   const signature = await wallet.signMessage(message);
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
-    ethers.utils.arrayify(signature),
+    ethers.arrayify(signature),
     { name: "HKDF" },
     false,
     ["deriveKey"]

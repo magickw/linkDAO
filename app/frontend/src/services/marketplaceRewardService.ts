@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { calculateMarketplaceReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
 import { RewardPool } from '../types/contracts/RewardPool';
@@ -7,7 +7,7 @@ export interface MarketplaceTransaction {
   transactionId: string;
   seller: string;
   buyer: string;
-  transactionValue: BigNumber;
+  transactionValue: bigint;
   tokenAddress: string;  // Address of the token used for payment
   timestamp: number;
 }
@@ -85,7 +85,7 @@ export class MarketplaceRewardService {
   ): Promise<boolean> {
     try {
       // Check if transaction value is positive
-      if (transaction.transactionValue.lte(0)) {
+      if (transaction.transactionValue <= 0n) {
         return false;
       }
 

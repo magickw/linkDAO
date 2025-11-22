@@ -33,7 +33,7 @@ async function main() {
       "USD Coin",
       "USDC",
       6, // 6 decimals for USDC
-      ethers.utils.parseUnits("1000000", 6) // 1M USDC
+      ethers.parseUnits("1000000", 6) // 1M USDC
     );
     await mockUSDC.deployed();
     usdcAddress = mockUSDC.address;
@@ -51,7 +51,7 @@ async function main() {
   console.log("✅ LDAO Treasury deployed to:", ldaoTreasury.address);
 
   // Transfer LDAO tokens to treasury for sales
-  const treasuryAllocation = ethers.utils.parseEther("100000000"); // 100M LDAO for sales
+  const treasuryAllocation = ethers.parseEther("100000000"); // 100M LDAO for sales
   console.log("📝 Transferring LDAO tokens to treasury...");
   
   const transferTx = await ldaoToken.transfer(ldaoTreasury.address, treasuryAllocation);
@@ -60,15 +60,15 @@ async function main() {
 
   // Verify treasury balance
   const treasuryBalance = await ldaoToken.balanceOf(ldaoTreasury.address);
-  console.log("Treasury LDAO balance:", ethers.utils.formatEther(treasuryBalance));
+  console.log("Treasury LDAO balance:", ethers.formatEther(treasuryBalance));
 
   // Set initial configuration
   console.log("📝 Configuring treasury settings...");
   
   // Update purchase limits
   await ldaoTreasury.updatePurchaseLimits(
-    ethers.utils.parseEther("10"), // Min 10 LDAO
-    ethers.utils.parseEther("1000000") // Max 1M LDAO
+    ethers.parseEther("10"), // Min 10 LDAO
+    ethers.parseEther("1000000") // Max 1M LDAO
   );
 
   // Activate sales
@@ -82,16 +82,16 @@ async function main() {
   console.log("USDC Token:", usdcAddress);
   console.log("LDAO Treasury:", ldaoTreasury.address);
   console.log("Deployer:", deployer.address);
-  console.log("Treasury Balance:", ethers.utils.formatEther(treasuryBalance), "LDAO");
+  console.log("Treasury Balance:", ethers.formatEther(treasuryBalance), "LDAO");
 
   // Get initial quote
-  const sampleAmount = ethers.utils.parseEther("1000"); // 1000 LDAO
+  const sampleAmount = ethers.parseEther("1000"); // 1000 LDAO
   const [usdAmount, ethAmount, usdcAmount, discount] = await ldaoTreasury.getQuote(sampleAmount);
   
   console.log("\n💰 Sample Quote (1000 LDAO):");
-  console.log("USD Cost:", ethers.utils.formatEther(usdAmount));
-  console.log("ETH Cost:", ethers.utils.formatEther(ethAmount));
-  console.log("USDC Cost:", ethers.utils.formatUnits(usdcAmount, 6));
+  console.log("USD Cost:", ethers.formatEther(usdAmount));
+  console.log("ETH Cost:", ethers.formatEther(ethAmount));
+  console.log("USDC Cost:", ethers.formatUnits(usdcAmount, 6));
   console.log("Discount:", discount.toNumber() / 100, "%");
 
   // Save deployment addresses

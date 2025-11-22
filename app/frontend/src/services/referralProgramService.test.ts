@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { ReferralProgramService, ReferralInfo } from '../services/referralProgramService';
 
 describe('ReferralProgramService', () => {
@@ -11,7 +11,7 @@ describe('ReferralProgramService', () => {
   describe('Referral Program Operations', () => {
     const referrer = '0x123...';
     const referee = '0x456...';
-    const purchaseAmount = BigNumber.from('1000000000000000000000'); // 1000 LDAO
+    const purchaseAmount = ethers.parseEther('1000'); // 1000 LDAO
 
     it('should successfully record a new referral', async () => {
       const result = await referralService.recordReferral(referrer, referee);
@@ -48,9 +48,9 @@ describe('ReferralProgramService', () => {
 
       expect(result.success).toBe(true);
       expect(result.rewardAmount).toBeDefined();
-      expect(BigNumber.from(result.rewardAmount!).eq(
-        purchaseAmount.mul(10).div(100)
-      )).toBe(true);
+      expect(BigNumber(result.rewardAmount!) ===
+        (purchaseAmount * 10n) / 100n
+      ).toBe(true);
     });
 
     it('should prevent duplicate reward claims', async () => {
@@ -97,9 +97,9 @@ describe('ReferralProgramService', () => {
       await referralService.processReferralReward(referralInfo2);
 
       const totalRewards = await referralService.getTotalReferralRewards(referrer);
-      expect(BigNumber.from(totalRewards).eq(
-        purchaseAmount.mul(20).div(100) // 2 referrals * 10%
-      )).toBe(true);
+      expect(BigNumber(totalRewards) ===
+        (purchaseAmount * 20n) / 100n // 2 referrals * 10%
+      ).toBe(true);
     });
 
     it('should correctly retrieve referred users', async () => {

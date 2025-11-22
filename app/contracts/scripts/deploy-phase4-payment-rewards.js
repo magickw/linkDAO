@@ -8,7 +8,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.getBalance()));
+  console.log("Account balance:", ethers.formatEther(await deployer.getBalance()));
 
   const addressesPath = path.join(__dirname, "../deployedAddresses.json");
   let addresses = {};
@@ -110,7 +110,7 @@ async function main() {
       const minimumFunding = await enhancedRewardPool.minimumFunding();
       console.log(`   Current epoch: ${currentEpoch}`);
       console.log(`   Epoch duration: ${epochDuration} seconds (${epochDuration.toNumber() / 86400} days)`);
-      console.log(`   Minimum funding: ${ethers.utils.formatEther(minimumFunding)} LDAO`);
+      console.log(`   Minimum funding: ${ethers.formatEther(minimumFunding)} LDAO`);
 
     } else {
       console.log("\n⚠️  Skipping EnhancedRewardPool deployment - missing dependencies");

@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { rewardConfig, calculateContentReward, calculateEngagementReward, calculateReferralReward, calculateMarketplaceReward } from '../config/rewardConfig';
 
 describe('Reward Calculations', () => {
@@ -10,7 +10,7 @@ describe('Reward Calculations', () => {
 
     it('should return medium reward for medium quality content', () => {
       const reward = calculateContentReward(80);
-      expect(reward).toEqual(BigNumber.from('25000000000000000000')); // 25 LDAO
+      expect(reward).toEqual(ethers.parseEther('25')); // 25 LDAO
     });
 
     it('should return min reward for low quality content', () => {
@@ -20,7 +20,7 @@ describe('Reward Calculations', () => {
 
     it('should return 0 for poor quality content', () => {
       const reward = calculateContentReward(40);
-      expect(reward).toEqual(BigNumber.from(0));
+      expect(reward).toEqual(0n);
     });
   });
 
@@ -33,7 +33,7 @@ describe('Reward Calculations', () => {
       };
       const reward = calculateEngagementReward(metrics);
       // Expected: (10 * 0.5) + (5 * 1) + (2 * 2) = 14 LDAO
-      expect(reward).toEqual(BigNumber.from('14000000000000000000'));
+      expect(reward).toEqual(ethers.parseEther('14')); // 14 LDAO
     });
 
     it('should cap reward at maximum', () => {
@@ -59,17 +59,17 @@ describe('Reward Calculations', () => {
 
   describe('Referral Program Rewards', () => {
     it('should calculate 10% of purchase amount', () => {
-      const purchaseAmount = BigNumber.from('1000000000000000000000'); // 1000 LDAO
+      const purchaseAmount = ethers.parseEther('1000'); // 1000 LDAO
       const reward = calculateReferralReward(purchaseAmount);
-      expect(reward).toEqual(BigNumber.from('100000000000000000000')); // 100 LDAO
+      expect(reward).toEqual(ethers.parseEther('100')); // 100 LDAO
     });
   });
 
   describe('Marketplace Transaction Rewards', () => {
     it('should calculate 0.1% of transaction value', () => {
-      const transactionValue = BigNumber.from('1000000000000000000000'); // 1000 LDAO
+      const transactionValue = ethers.parseEther('1000'); // 1000 LDAO
       const reward = calculateMarketplaceReward(transactionValue);
-      expect(reward).toEqual(BigNumber.from('1000000000000000000')); // 1 LDAO
+      expect(reward).toEqual(ethers.parseEther('1')); // 1 LDAO
     });
   });
 });

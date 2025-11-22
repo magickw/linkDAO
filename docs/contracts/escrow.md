@@ -89,18 +89,18 @@ const escrowContract = MarketplaceEscrow__factory.connect(
 // Create order
 async function createOrder(productDetails) {
     const deliveryDeadline = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60); // 7 days
-    const productHash = ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes(JSON.stringify(productDetails))
+    const productHash = ethers.keccak256(
+        ethers.toUtf8Bytes(JSON.stringify(productDetails))
     );
     
     const tx = await escrowContract.createOrder(
         productDetails.sellerAddress,
-        ethers.utils.parseEther(productDetails.price),
+        ethers.parseEther(productDetails.price),
         ethers.constants.AddressZero, // ETH payment
         deliveryDeadline,
         productHash,
         {
-            value: ethers.utils.parseEther(productDetails.price)
+            value: ethers.parseEther(productDetails.price)
         }
     );
     
@@ -165,15 +165,15 @@ import { ERC20__factory } from './typechain';
 async function createOrderWithToken(productDetails, tokenAddress) {
     // First approve the escrow contract to spend tokens
     const tokenContract = ERC20__factory.connect(tokenAddress, signer);
-    const amount = ethers.utils.parseUnits(productDetails.price, 18); // Assuming 18 decimals
+    const amount = ethers.parseUnits(productDetails.price, 18); // Assuming 18 decimals
     
     const approveTx = await tokenContract.approve(escrowContract.address, amount);
     await approveTx.wait();
     
     // Create order with token payment
     const deliveryDeadline = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
-    const productHash = ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes(JSON.stringify(productDetails))
+    const productHash = ethers.keccak256(
+        ethers.toUtf8Bytes(JSON.stringify(productDetails))
     );
     
     const tx = await escrowContract.createOrder(
@@ -208,7 +208,7 @@ escrowContract.on('OrderCreated', (orderId, buyer, seller, amount, event) => {
         orderId: orderId.toString(),
         buyer,
         seller,
-        amount: ethers.utils.formatEther(amount),
+        amount: ethers.formatEther(amount),
         transactionHash: event.transactionHash
     });
 });
@@ -217,7 +217,7 @@ escrowContract.on('PaymentReleased', (orderId, seller, amount, event) => {
     console.log('Payment released:', {
         orderId: orderId.toString(),
         seller,
-        amount: ethers.utils.formatEther(amount),
+        amount: ethers.formatEther(amount),
         transactionHash: event.transactionHash
     });
 });
@@ -243,7 +243,7 @@ async function getBuyerOrders(buyerAddress) {
     return events.map(event => ({
         orderId: event.args.orderId.toString(),
         seller: event.args.seller,
-        amount: ethers.utils.formatEther(event.args.amount),
+        amount: ethers.formatEther(event.args.amount),
         blockNumber: event.blockNumber,
         transactionHash: event.transactionHash
     }));
@@ -256,7 +256,7 @@ async function getSellerPayments(sellerAddress) {
     
     return events.map(event => ({
         orderId: event.args.orderId.toString(),
-        amount: ethers.utils.formatEther(event.args.amount),
+        amount: ethers.formatEther(event.args.amount),
         blockNumber: event.blockNumber,
         transactionHash: event.transactionHash
     }));
@@ -272,24 +272,24 @@ For high-value transactions (>10 ETH), the contract requires multi-signature app
 ```javascript
 // Check if order requires multi-sig
 async function requiresMultiSig(amount) {
-    const threshold = ethers.utils.parseEther('10');
+    const threshold = ethers.parseEther('10');
     return amount.gte(threshold);
 }
 
 // Multi-sig order creation (for high-value items)
 async function createMultiSigOrder(productDetails, signers) {
-    if (await requiresMultiSig(ethers.utils.parseEther(productDetails.price))) {
+    if (await requiresMultiSig(ethers.parseEther(productDetails.price))) {
         // Collect signatures from multiple parties
         const signatures = await collectSignatures(productDetails, signers);
         
         const tx = await escrowContract.createMultiSigOrder(
             productDetails.sellerAddress,
-            ethers.utils.parseEther(productDetails.price),
+            ethers.parseEther(productDetails.price),
             ethers.constants.AddressZero,
             deliveryDeadline,
             productHash,
             signatures,
-            { value: ethers.utils.parseEther(productDetails.price) }
+            { value: ethers.parseEther(productDetails.price) }
         );
         
         return tx.wait();
@@ -344,11 +344,11 @@ async function batchConfirmDeliveries(orderIds) {
 async function estimateGasForOrder(productDetails) {
     const gasEstimate = await escrowContract.estimateGas.createOrder(
         productDetails.sellerAddress,
-        ethers.utils.parseEther(productDetails.price),
+        ethers.parseEther(productDetails.price),
         ethers.constants.AddressZero,
         deliveryDeadline,
         productHash,
-        { value: ethers.utils.parseEther(productDetails.price) }
+        { value: ethers.parseEther(productDetails.price) }
     );
     
     // Add 20% buffer
@@ -418,9 +418,9 @@ describe('MarketplaceEscrow', function () {
     });
     
     it('should create order correctly', async function () {
-        const amount = ethers.utils.parseEther('1');
+        const amount = ethers.parseEther('1');
         const deadline = Math.floor(Date.now() / 1000) + 86400;
-        const productHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('test'));
+        const productHash = ethers.keccak256(ethers.toUtf8Bytes('test'));
         
         const tx = await escrow.connect(buyer).createOrder(
             seller.address,

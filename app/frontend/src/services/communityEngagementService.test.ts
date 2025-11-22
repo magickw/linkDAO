@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { CommunityEngagementService, EngagementMetrics } from '../services/communityEngagementService';
 
 describe('CommunityEngagementService', () => {
@@ -26,7 +26,7 @@ describe('CommunityEngagementService', () => {
 
       expect(result.success).toBe(true);
       expect(result.rewardAmount).toBeDefined();
-      expect(BigNumber.from(result.rewardAmount!).gt(0)).toBe(true);
+      expect(BigNumber(result.rewardAmount!) > 0n).toBe(true);
     });
 
     it('should reject invalid metrics', async () => {
@@ -58,15 +58,15 @@ describe('CommunityEngagementService', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(BigNumber.from(result.rewardAmount!).lt(
-        BigNumber.from(
+      expect(BigNumber(result.rewardAmount!) <
+        BigNumber(
           (await engagementService.awardEngagementReward(
             'test-comment-4',
             '0x123...',
             validMetrics
           )).rewardAmount!
         )
-      )).toBe(true);
+      ).toBe(true);
     });
 
     it('should give bonus for answers', async () => {
@@ -87,9 +87,9 @@ describe('CommunityEngagementService', () => {
         notAnswerMetrics
       );
 
-      expect(BigNumber.from(answerResult.rewardAmount!).gt(
-        BigNumber.from(notAnswerResult.rewardAmount!)
-      )).toBe(true);
+      expect(BigNumber(answerResult.rewardAmount!) >
+        BigNumber(notAnswerResult.rewardAmount!)
+      ).toBe(true);
     });
 
     it('should track total user rewards correctly', async () => {
@@ -109,7 +109,7 @@ describe('CommunityEngagementService', () => {
       );
 
       const totalRewards = await engagementService.getTotalEngagementRewards(userAddress);
-      expect(BigNumber.from(totalRewards).gt(0)).toBe(true);
+      expect(BigNumber(totalRewards) > 0n).toBe(true);
     });
   });
 });

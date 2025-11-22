@@ -173,11 +173,11 @@ class MultichainAddressResolver {
    */
   private async validateEVMAddress(address: string): Promise<ResolvedAddress | null> {
     try {
-      if (!ethers.utils.isAddress(address)) {
+      if (!ethers.isAddress(address)) {
         return null;
       }
 
-      const checksumAddress = ethers.utils.getAddress(address);
+      const checksumAddress = ethers.getAddress(address);
       const ethereumChain = this.supportedChains.get('ethereum')!;
 
       // Try to resolve ENS name for this address

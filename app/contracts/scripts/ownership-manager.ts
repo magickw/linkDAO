@@ -30,7 +30,7 @@ class OwnershipManager {
     console.log('===================');
     console.log(`Network: ${this.network}`);
     console.log(`Your Address: ${signer.address}`);
-    console.log(`Balance: ${ethers.utils.formatEther(await signer.getBalance())} ETH\n`);
+    console.log(`Balance: ${ethers.formatEther(await signer.getBalance())} ETH\n`);
 
     // Load deployment data
     await this.loadDeploymentData();
@@ -382,7 +382,7 @@ async function analyzeOwnership() {
 }
 
 async function transferToMultiSig(multiSigAddress: string) {
-  if (!ethers.utils.isAddress(multiSigAddress)) {
+  if (!ethers.isAddress(multiSigAddress)) {
     throw new Error('Invalid multi-sig address');
   }
 
@@ -400,7 +400,7 @@ async function acceptAllPending() {
 }
 
 async function transferSingleContract(contractName: string, newOwner: string) {
-  if (!ethers.utils.isAddress(newOwner)) {
+  if (!ethers.isAddress(newOwner)) {
     throw new Error('Invalid new owner address');
   }
 

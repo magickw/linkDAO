@@ -33,9 +33,9 @@ const MONITORING_CONFIG = {
 
   // Monitoring thresholds
   thresholds: {
-    highGasPrice: ethers.utils.parseUnits("150", "gwei"),
-    largeTransfer: ethers.utils.parseEther("1000"), // 1000 LDAO
-    lowBalance: ethers.utils.parseEther("1"), // 1 ETH
+    highGasPrice: ethers.parseUnits("150", "gwei"),
+    largeTransfer: ethers.parseEther("1000"), // 1000 LDAO
+    lowBalance: ethers.parseEther("1"), // 1 ETH
     failedTxCount: 5, // Alert after 5 failed txs
   },
 
@@ -153,7 +153,7 @@ class ContractMonitor {
       if (balance.lt(this.config.thresholds.lowBalance)) {
         await this.sendAlert("⚠️  Low Deployer Balance", {
           severity: "warning",
-          message: `Deployer balance is low: ${ethers.utils.formatEther(balance)} ETH`,
+          message: `Deployer balance is low: ${ethers.formatEther(balance)} ETH`,
           block: blockNumber,
         });
       }
@@ -162,7 +162,7 @@ class ContractMonitor {
     // Check gas prices
     const gasPrice = await this.provider.getGasPrice();
     if (gasPrice.gt(this.config.thresholds.highGasPrice)) {
-      console.log(`⛽ High gas price detected: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
+      console.log(`⛽ High gas price detected: ${ethers.formatUnits(gasPrice, "gwei")} gwei`);
     }
   }
 

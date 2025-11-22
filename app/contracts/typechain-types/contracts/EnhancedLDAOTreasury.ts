@@ -63,7 +63,6 @@ export declare namespace EnhancedLDAOTreasury {
 
 export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
   functions: {
-    "MULTI_SIG_THRESHOLD()": FunctionFragment;
     "addPricingTier(uint256,uint256)": FunctionFragment;
     "basePriceInUSD()": FunctionFragment;
     "batchUpdateKYC(address[],bool)": FunctionFragment;
@@ -79,7 +78,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     "emergencyPause(string)": FunctionFragment;
     "emergencyStopThreshold()": FunctionFragment;
     "emergencyWithdrawLDAO(uint256,address)": FunctionFragment;
-    "executedTransactions(bytes32)": FunctionFragment;
     "getCharityDonation(uint256)": FunctionFragment;
     "getCharityDonationsHistory(address)": FunctionFragment;
     "getCharityFund()": FunctionFragment;
@@ -103,7 +101,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     "maxPurchaseAmount()": FunctionFragment;
     "minCharityDonationAmount()": FunctionFragment;
     "minPurchaseAmount()": FunctionFragment;
-    "multiSigWallet()": FunctionFragment;
     "nextCharityDonationId()": FunctionFragment;
     "nextTierId()": FunctionFragment;
     "owner()": FunctionFragment;
@@ -126,7 +123,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     "updateDynamicPricingParams(uint256,uint256)": FunctionFragment;
     "updateKYCStatus(address,bool)": FunctionFragment;
     "updateLDAOPrice(uint256)": FunctionFragment;
-    "updateMultiSigWallet(address)": FunctionFragment;
     "updatePricingTier(uint256,uint256,uint256,bool)": FunctionFragment;
     "updatePurchaseLimits(uint256,uint256)": FunctionFragment;
     "updateWhitelist(address,bool)": FunctionFragment;
@@ -141,7 +137,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "MULTI_SIG_THRESHOLD"
       | "addPricingTier"
       | "basePriceInUSD"
       | "batchUpdateKYC"
@@ -157,7 +152,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
       | "emergencyPause"
       | "emergencyStopThreshold"
       | "emergencyWithdrawLDAO"
-      | "executedTransactions"
       | "getCharityDonation"
       | "getCharityDonationsHistory"
       | "getCharityFund"
@@ -181,7 +175,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
       | "maxPurchaseAmount"
       | "minCharityDonationAmount"
       | "minPurchaseAmount"
-      | "multiSigWallet"
       | "nextCharityDonationId"
       | "nextTierId"
       | "owner"
@@ -204,7 +197,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
       | "updateDynamicPricingParams"
       | "updateKYCStatus"
       | "updateLDAOPrice"
-      | "updateMultiSigWallet"
       | "updatePricingTier"
       | "updatePurchaseLimits"
       | "updateWhitelist"
@@ -217,10 +209,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
       | "withdrawToken"
   ): FunctionFragment;
 
-  encodeFunctionData(
-    functionFragment: "MULTI_SIG_THRESHOLD",
-    values?: undefined
-  ): string;
   encodeFunctionData(
     functionFragment: "addPricingTier",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
@@ -285,10 +273,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "emergencyWithdrawLDAO",
     values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "executedTransactions",
-    values: [PromiseOrValue<BytesLike>]
   ): string;
   encodeFunctionData(
     functionFragment: "getCharityDonation",
@@ -380,10 +364,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "multiSigWallet",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "nextCharityDonationId",
     values?: undefined
   ): string;
@@ -460,10 +440,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateMultiSigWallet",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "updatePricingTier",
     values: [
       PromiseOrValue<BigNumberish>,
@@ -510,10 +486,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     ]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "MULTI_SIG_THRESHOLD",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "addPricingTier",
     data: BytesLike
@@ -572,10 +544,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "emergencyWithdrawLDAO",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "executedTransactions",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -665,10 +633,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "multiSigWallet",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "nextCharityDonationId",
     data: BytesLike
   ): Result;
@@ -742,10 +706,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateMultiSigWallet",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "updatePricingTier",
     data: BytesLike
   ): Result;
@@ -791,7 +751,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
     "FundsWithdrawn(address,uint256,address)": EventFragment;
     "KYCStatusUpdated(address,bool)": EventFragment;
     "LDAOPurchased(address,uint256,uint256,uint256,string)": EventFragment;
-    "MultiSigWalletUpdated(address,address)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address)": EventFragment;
     "PriceUpdated(uint256,uint256)": EventFragment;
@@ -811,7 +770,6 @@ export interface EnhancedLDAOTreasuryInterface extends utils.Interface {
   getEvent(nameOrSignatureOrTopic: "FundsWithdrawn"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "KYCStatusUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "LDAOPurchased"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "MultiSigWalletUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "PriceUpdated"): EventFragment;
@@ -944,18 +902,6 @@ export type LDAOPurchasedEvent = TypedEvent<
 
 export type LDAOPurchasedEventFilter = TypedEventFilter<LDAOPurchasedEvent>;
 
-export interface MultiSigWalletUpdatedEventObject {
-  oldWallet: string;
-  newWallet: string;
-}
-export type MultiSigWalletUpdatedEvent = TypedEvent<
-  [string, string],
-  MultiSigWalletUpdatedEventObject
->;
-
-export type MultiSigWalletUpdatedEventFilter =
-  TypedEventFilter<MultiSigWalletUpdatedEvent>;
-
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
   newOwner: string;
@@ -1056,8 +1002,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    MULTI_SIG_THRESHOLD(overrides?: CallOverrides): Promise<[BigNumber]>;
-
     addPricingTier(
       threshold: PromiseOrValue<BigNumberish>,
       discountBps: PromiseOrValue<BigNumberish>,
@@ -1147,11 +1091,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       recipient: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
-
-    executedTransactions(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
 
     getCharityDonation(
       donationId: PromiseOrValue<BigNumberish>,
@@ -1267,8 +1206,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
 
     minPurchaseAmount(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    multiSigWallet(overrides?: CallOverrides): Promise<[string]>;
-
     nextCharityDonationId(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     nextTierId(overrides?: CallOverrides): Promise<[BigNumber]>;
@@ -1362,11 +1299,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    updateMultiSigWallet(
-      newMultiSigWallet: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
     updatePricingTier(
       tierId: PromiseOrValue<BigNumberish>,
       threshold: PromiseOrValue<BigNumberish>,
@@ -1424,8 +1356,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
   };
-
-  MULTI_SIG_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
 
   addPricingTier(
     threshold: PromiseOrValue<BigNumberish>,
@@ -1516,11 +1446,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
     recipient: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
-
-  executedTransactions(
-    arg0: PromiseOrValue<BytesLike>,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
 
   getCharityDonation(
     donationId: PromiseOrValue<BigNumberish>,
@@ -1636,8 +1561,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
 
   minPurchaseAmount(overrides?: CallOverrides): Promise<BigNumber>;
 
-  multiSigWallet(overrides?: CallOverrides): Promise<string>;
-
   nextCharityDonationId(overrides?: CallOverrides): Promise<BigNumber>;
 
   nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1731,11 +1654,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  updateMultiSigWallet(
-    newMultiSigWallet: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
   updatePricingTier(
     tierId: PromiseOrValue<BigNumberish>,
     threshold: PromiseOrValue<BigNumberish>,
@@ -1794,8 +1712,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
   ): Promise<ContractTransaction>;
 
   callStatic: {
-    MULTI_SIG_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
-
     addPricingTier(
       threshold: PromiseOrValue<BigNumberish>,
       discountBps: PromiseOrValue<BigNumberish>,
@@ -1885,11 +1801,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       recipient: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
-
-    executedTransactions(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
 
     getCharityDonation(
       donationId: PromiseOrValue<BigNumberish>,
@@ -2005,8 +1916,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
 
     minPurchaseAmount(overrides?: CallOverrides): Promise<BigNumber>;
 
-    multiSigWallet(overrides?: CallOverrides): Promise<string>;
-
     nextCharityDonationId(overrides?: CallOverrides): Promise<BigNumber>;
 
     nextTierId(overrides?: CallOverrides): Promise<BigNumber>;
@@ -2093,11 +2002,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
 
     updateLDAOPrice(
       newPriceInUSD: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    updateMultiSigWallet(
-      newMultiSigWallet: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -2261,15 +2165,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       paymentMethod?: null
     ): LDAOPurchasedEventFilter;
 
-    "MultiSigWalletUpdated(address,address)"(
-      oldWallet?: PromiseOrValue<string> | null,
-      newWallet?: PromiseOrValue<string> | null
-    ): MultiSigWalletUpdatedEventFilter;
-    MultiSigWalletUpdated(
-      oldWallet?: PromiseOrValue<string> | null,
-      newWallet?: PromiseOrValue<string> | null
-    ): MultiSigWalletUpdatedEventFilter;
-
     "OwnershipTransferred(address,address)"(
       previousOwner?: PromiseOrValue<string> | null,
       newOwner?: PromiseOrValue<string> | null
@@ -2316,8 +2211,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
   };
 
   estimateGas: {
-    MULTI_SIG_THRESHOLD(overrides?: CallOverrides): Promise<BigNumber>;
-
     addPricingTier(
       threshold: PromiseOrValue<BigNumberish>,
       discountBps: PromiseOrValue<BigNumberish>,
@@ -2377,11 +2270,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       amount: PromiseOrValue<BigNumberish>,
       recipient: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
-    executedTransactions(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getCharityDonation(
@@ -2456,8 +2344,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
     minCharityDonationAmount(overrides?: CallOverrides): Promise<BigNumber>;
 
     minPurchaseAmount(overrides?: CallOverrides): Promise<BigNumber>;
-
-    multiSigWallet(overrides?: CallOverrides): Promise<BigNumber>;
 
     nextCharityDonationId(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -2546,11 +2432,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    updateMultiSigWallet(
-      newMultiSigWallet: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
     updatePricingTier(
       tierId: PromiseOrValue<BigNumberish>,
       threshold: PromiseOrValue<BigNumberish>,
@@ -2610,10 +2491,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
   };
 
   populateTransaction: {
-    MULTI_SIG_THRESHOLD(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     addPricingTier(
       threshold: PromiseOrValue<BigNumberish>,
       discountBps: PromiseOrValue<BigNumberish>,
@@ -2681,11 +2558,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
       amount: PromiseOrValue<BigNumberish>,
       recipient: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
-    executedTransactions(
-      arg0: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getCharityDonation(
@@ -2772,8 +2644,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     minPurchaseAmount(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    multiSigWallet(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     nextCharityDonationId(
       overrides?: CallOverrides
@@ -2863,11 +2733,6 @@ export interface EnhancedLDAOTreasury extends BaseContract {
 
     updateLDAOPrice(
       newPriceInUSD: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
-    updateMultiSigWallet(
-      newMultiSigWallet: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

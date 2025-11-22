@@ -403,7 +403,7 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
 
       // Verify tokens were distributed
       const userBalance = await ldaoToken.balanceOf(user1.address);
-      expect(userBalance).to.equal(ethers.utils.parseEther(response.body.tokensEarned.toString()));
+      expect(userBalance).to.equal(ethers.parseEther(response.body.tokensEarned.toString()));
     });
 
     test('should handle referral program with bonus calculations', async () => {
@@ -498,11 +498,11 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
   describe('5. Enhanced Staking Integration', () => {
     test('should complete end-to-end staking workflow', async () => {
       // First, user needs tokens
-      await treasury.connect(user1).purchaseWithETH(ethers.utils.parseEther('1000'), {
-        value: ethers.utils.parseEther('1')
+      await treasury.connect(user1).purchaseWithETH(ethers.parseEther('1000'), {
+        value: ethers.parseEther('1')
       });
 
-      const stakingAmount = ethers.utils.parseEther('500');
+      const stakingAmount = ethers.parseEther('500');
       const lockPeriod = 90; // 90 days
 
       // Approve staking contract
@@ -541,12 +541,12 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
     });
 
     test('should handle different APR rates based on lock periods', async () => {
-      const stakingAmount = ethers.utils.parseEther('1000');
+      const stakingAmount = ethers.parseEther('1000');
       const lockPeriods = [30, 90, 180, 365]; // Different lock periods
 
       // Purchase tokens for user
-      await treasury.connect(user1).purchaseWithETH(ethers.utils.parseEther('4000'), {
-        value: ethers.utils.parseEther('4')
+      await treasury.connect(user1).purchaseWithETH(ethers.parseEther('4000'), {
+        value: ethers.parseEther('4')
       });
 
       for (const lockPeriod of lockPeriods) {
@@ -582,11 +582,11 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
         .into('premium_memberships');
 
       // Purchase tokens
-      await treasury.connect(user1).purchaseWithETH(ethers.utils.parseEther('1000'), {
-        value: ethers.utils.parseEther('1')
+      await treasury.connect(user1).purchaseWithETH(ethers.parseEther('1000'), {
+        value: ethers.parseEther('1')
       });
 
-      const stakingAmount = ethers.utils.parseEther('1000');
+      const stakingAmount = ethers.parseEther('1000');
       await ldaoToken.connect(user1).approve(stakingContract.address, stakingAmount);
 
       const stakingResponse = await request(app)
@@ -612,8 +612,8 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
   describe('6. Cross-Chain Bridge Integration', () => {
     test('should complete end-to-end bridge workflow', async () => {
       // User needs tokens first
-      await treasury.connect(user1).purchaseWithETH(ethers.utils.parseEther('1000'), {
-        value: ethers.utils.parseEther('1')
+      await treasury.connect(user1).purchaseWithETH(ethers.parseEther('1000'), {
+        value: ethers.parseEther('1')
       });
 
       const bridgeRequest: BridgeRequest = {
@@ -707,13 +707,13 @@ describe('LDAO Token Acquisition System - Integration Tests', () => {
       // Verify tokens were locked on source chain
       const finalEthereumBalance = await ldaoToken.balanceOf(user1.address);
       expect(finalEthereumBalance).to.equal(
-        initialEthereumBalance.sub(ethers.utils.parseEther(bridgeAmount.toString()))
+        initialEthereumBalance.sub(ethers.parseEther(bridgeAmount.toString()))
       );
 
       // Simulate bridge completion and token minting on destination
       // (In real implementation, this would be handled by bridge validators)
-      const polygonBalance = ethers.utils.parseEther(bridgeAmount.toString());
-      expect(polygonBalance).to.equal(ethers.utils.parseEther(bridgeAmount.toString()));
+      const polygonBalance = ethers.parseEther(bridgeAmount.toString());
+      expect(polygonBalance).to.equal(ethers.parseEther(bridgeAmount.toString()));
     });
   });
 

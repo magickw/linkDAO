@@ -1,5 +1,5 @@
 import React from 'react';
-import { utils } from 'ethers';
+import { formatUnits } from 'ethers';
 
 export interface CharityProposal {
     id: string;

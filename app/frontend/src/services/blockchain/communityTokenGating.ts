@@ -93,17 +93,17 @@ export class CommunityTokenGatingService {
   private async checkTokenBalance(
     userAddress: string,
     requirement: TokenGatingRequirement,
-    provider: ethers.providers.Provider
+    provider: ethers.Provider
   ): Promise<AccessCheckResult> {
     try {
       const tokenAddress = requirement.tokenAddress || LDAO_TOKEN_ADDRESS;
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
       const balance = await tokenContract.balanceOf(userAddress);
-      const balanceFormatted = ethers.utils.formatEther(balance);
+      const balanceFormatted = ethers.formatEther(balance);
 
       const minimumBalance = requirement.minimumBalance || '0';
-      const minimumBalanceBN = ethers.utils.parseEther(minimumBalance);
+      const minimumBalanceBN = ethers.parseEther(minimumBalance);
 
       const hasAccess = balance.gte(minimumBalanceBN);
 
@@ -131,7 +131,7 @@ export class CommunityTokenGatingService {
   private async checkNFTOwnership(
     userAddress: string,
     requirement: TokenGatingRequirement,
-    provider: ethers.providers.Provider
+    provider: ethers.Provider
   ): Promise<AccessCheckResult> {
     try {
       const nftAddress = requirement.nftCollection || requirement.tokenAddress;
@@ -212,17 +212,17 @@ export class CommunityTokenGatingService {
   private async checkStakingAmount(
     userAddress: string,
     requirement: TokenGatingRequirement,
-    provider: ethers.providers.Provider
+    provider: ethers.Provider
   ): Promise<AccessCheckResult> {
     try {
       const tokenAddress = requirement.tokenAddress || LDAO_TOKEN_ADDRESS;
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
       const stakedAmount = await tokenContract.totalStaked(userAddress);
-      const stakedFormatted = ethers.utils.formatEther(stakedAmount);
+      const stakedFormatted = ethers.formatEther(stakedAmount);
 
       const minimumBalance = requirement.minimumBalance || '0';
-      const minimumBalanceBN = ethers.utils.parseEther(minimumBalance);
+      const minimumBalanceBN = ethers.parseEther(minimumBalance);
 
       const hasAccess = stakedAmount.gte(minimumBalanceBN);
 
@@ -250,17 +250,17 @@ export class CommunityTokenGatingService {
   private async checkVotingPower(
     userAddress: string,
     requirement: TokenGatingRequirement,
-    provider: ethers.providers.Provider
+    provider: ethers.Provider
   ): Promise<AccessCheckResult> {
     try {
       const tokenAddress = requirement.tokenAddress || LDAO_TOKEN_ADDRESS;
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
       const votingPower = await tokenContract.votingPower(userAddress);
-      const votingPowerFormatted = ethers.utils.formatEther(votingPower);
+      const votingPowerFormatted = ethers.formatEther(votingPower);
 
       const minimumPower = requirement.minimumBalance || '0';
-      const minimumPowerBN = ethers.utils.parseEther(minimumPower);
+      const minimumPowerBN = ethers.parseEther(minimumPower);
 
       const hasAccess = votingPower.gte(minimumPowerBN);
 
@@ -334,7 +334,7 @@ export class CommunityTokenGatingService {
       const tokenContract = new ethers.Contract(token, ERC20_ABI, provider);
 
       const balance = await tokenContract.balanceOf(userAddress);
-      return ethers.utils.formatEther(balance);
+      return ethers.formatEther(balance);
     } catch (error) {
       console.error('Error getting user token balance:', error);
       return '0';
@@ -358,7 +358,7 @@ export class CommunityTokenGatingService {
       const tokenContract = new ethers.Contract(token, ERC20_ABI, provider);
 
       const staked = await tokenContract.totalStaked(userAddress);
-      return ethers.utils.formatEther(staked);
+      return ethers.formatEther(staked);
     } catch (error) {
       console.error('Error getting user staked amount:', error);
       return '0';
@@ -382,7 +382,7 @@ export class CommunityTokenGatingService {
       const tokenContract = new ethers.Contract(token, ERC20_ABI, provider);
 
       const votingPower = await tokenContract.votingPower(userAddress);
-      return ethers.utils.formatEther(votingPower);
+      return ethers.formatEther(votingPower);
     } catch (error) {
       console.error('Error getting user voting power:', error);
       return '0';

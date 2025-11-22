@@ -11,7 +11,7 @@ async function main() {
   console.log("Network:", network.name);
   console.log("Chain ID:", network.chainId);
   console.log("Configuring with account:", deployer.address);
-  console.log("Account balance:", ethers.utils.formatEther(await deployer.provider!.getBalance(deployer.address)), "ETH");
+  console.log("Account balance:", ethers.formatEther(await deployer.provider!.getBalance(deployer.address)), "ETH");
 
   const isMainnet = network.chainId.toString() === "1";
 
@@ -118,9 +118,9 @@ async function main() {
     const deployerStaked = await ldaoToken.totalStaked(deployer.address);
     const votingPower = await governance.getVotingPower(deployer.address);
     
-    console.log(`✅ Deployer token balance: ${ethers.utils.formatEther(deployerBalance)} LDAO`);
-    console.log(`✅ Deployer staked amount: ${ethers.utils.formatEther(deployerStaked)} LDAO`);
-    console.log(`✅ Deployer voting power: ${ethers.utils.formatEther(votingPower)} votes`);
+    console.log(`✅ Deployer token balance: ${ethers.formatEther(deployerBalance)} LDAO`);
+    console.log(`✅ Deployer staked amount: ${ethers.formatEther(deployerStaked)} LDAO`);
+    console.log(`✅ Deployer voting power: ${ethers.formatEther(votingPower)} votes`);
 
   } catch (error: any) {
     console.log("⚠️  LDAO-Governance integration failed:", error.message);
@@ -246,7 +246,7 @@ async function main() {
     integrationTests.push({
       name: "Voting Power Calculation",
       passed: testVotingPower >= 0n,
-      details: `Voting power: ${ethers.utils.formatEther(testVotingPower)} votes`
+      details: `Voting power: ${ethers.formatEther(testVotingPower)} votes`
     });
 
     // Test 4: Verify reputation tier calculation

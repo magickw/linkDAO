@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { ContentRewardService, ContentQualityMetrics } from '../services/contentRewardService';
 
 describe('ContentRewardService', () => {
@@ -25,7 +25,7 @@ describe('ContentRewardService', () => {
 
       expect(result.success).toBe(true);
       expect(result.rewardAmount).toBeDefined();
-      expect(BigNumber.from(result.rewardAmount!).gt(0)).toBe(true);
+      expect(BigNumber(result.rewardAmount!) > 0n).toBe(true);
     });
 
     it('should reject invalid quality metrics', async () => {

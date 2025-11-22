@@ -249,7 +249,7 @@ class PreMainnetValidator {
   private async checkDeployerBalance() {
     try {
       const balance = await this.deployer.provider.getBalance(this.deployer.address);
-      const balanceEth = parseFloat(ethers.utils.formatEther(balance));
+      const balanceEth = parseFloat(ethers.formatEther(balance));
       const minRequired = 2.0; // Minimum 2 ETH for mainnet deployment
       const recommended = 5.0; // Recommended 5 ETH for safety
 
@@ -303,7 +303,7 @@ class PreMainnetValidator {
     const invalidAddresses: string[] = [];
 
     for (const [name, address] of Object.entries(multisigAddresses)) {
-      if (!address || !ethers.utils.isAddress(address)) {
+      if (!address || !ethers.isAddress(address)) {
         allValid = false;
         invalidAddresses.push(name);
       }
@@ -333,7 +333,7 @@ class PreMainnetValidator {
   private async checkTreasuryConfiguration() {
     const treasuryAddress = process.env.TREASURY_ADDRESS;
 
-    if (treasuryAddress && ethers.utils.isAddress(treasuryAddress)) {
+    if (treasuryAddress && ethers.isAddress(treasuryAddress)) {
       this.addResult({
         category: "Environment",
         check: "Treasury Configuration",
@@ -711,7 +711,7 @@ class PreMainnetValidator {
       const gasPrice = await this.deployer.provider.getGasPrice();
       const estimatedGasUnits = 50_000_000; // Rough estimate for full deployment
       const estimatedCostWei = ethers.BigNumber.from(estimatedGasUnits).mul(gasPrice);
-      const estimatedCostEth = parseFloat(ethers.utils.formatEther(estimatedCostWei));
+      const estimatedCostEth = parseFloat(ethers.formatEther(estimatedCostWei));
 
       this.addResult({
         category: "Deployment",

@@ -191,7 +191,7 @@ describe('StakingIndicator', () => {
     );
 
     const indicator = screen.getByTestId('staking-indicator');
-    expect(indicator).toHaveAttribute('aria-label', 'Staking indicator: 150.75 LNK staked by 12 users, gold tier');
+    expect(indicator).toHaveAttribute('aria-label', 'Staking indicator: 150.75 LDAO staked by 12 users, gold tier');
     expect(indicator).toHaveAttribute('role', 'status');
   });
 

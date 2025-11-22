@@ -13,6 +13,10 @@ import * as Contracts from ".";
 declare module "hardhat/types/runtime" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
     getContractFactory(
+      name: "AggregatorV3Interface",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AggregatorV3Interface__factory>;
+    getContractFactory(
       name: "OwnableUpgradeable",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.OwnableUpgradeable__factory>;
@@ -249,6 +253,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.EnhancedRewardPool__factory>;
     getContractFactory(
+      name: "FixedLDAOTreasury",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.FixedLDAOTreasury__factory>;
+    getContractFactory(
       name: "FollowModule",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FollowModule__factory>;
@@ -288,6 +296,14 @@ declare module "hardhat/types/runtime" {
       name: "Marketplace",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Marketplace__factory>;
+    getContractFactory(
+      name: "MinimalStaking",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MinimalStaking__factory>;
+    getContractFactory(
+      name: "MockERC20",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockERC20__factory>;
     getContractFactory(
       name: "ProofOfDonationNFT",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -377,6 +393,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TipRouter__factory>;
 
+    getContractAt(
+      name: "AggregatorV3Interface",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AggregatorV3Interface>;
     getContractAt(
       name: "OwnableUpgradeable",
       address: string,
@@ -673,6 +694,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.EnhancedRewardPool>;
     getContractAt(
+      name: "FixedLDAOTreasury",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.FixedLDAOTreasury>;
+    getContractAt(
       name: "FollowModule",
       address: string,
       signer?: ethers.Signer
@@ -722,6 +748,16 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.Marketplace>;
+    getContractAt(
+      name: "MinimalStaking",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MinimalStaking>;
+    getContractAt(
+      name: "MockERC20",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockERC20>;
     getContractAt(
       name: "ProofOfDonationNFT",
       address: string,

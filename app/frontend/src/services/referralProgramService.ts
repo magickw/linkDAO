@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import { calculateReferralReward } from '../config/rewardConfig';
 import { LDAOTokenService } from './web3/ldaoTokenService';
 import { RewardPool } from '../types/contracts/RewardPool';
@@ -6,7 +6,7 @@ import { RewardPool } from '../types/contracts/RewardPool';
 export interface ReferralInfo {
   referrer: string;    // Address of the referring user
   referee: string;     // Address of the referred user
-  purchaseAmount: BigNumber;  // Amount of first purchase in LDAO
+  purchaseAmount: bigint;  // Amount of first purchase in LDAO
   timestamp: number;   // Timestamp of the referral
 }
 
@@ -117,7 +117,7 @@ export class ReferralProgramService {
   private async isValidReferral(referralInfo: ReferralInfo): Promise<boolean> {
     try {
       // Check if the purchase amount is valid
-      if (referralInfo.purchaseAmount.lte(0)) {
+      if (referralInfo.purchaseAmount <= 0n) {
         return false;
       }
 

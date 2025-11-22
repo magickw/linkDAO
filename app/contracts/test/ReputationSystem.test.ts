@@ -15,7 +15,7 @@ describe("Enhanced Reputation System", function () {
   let reviewer2: SignerWithAddress;
 
   const LISTING_ID = 1;
-  const ESCROW_AMOUNT = ethers.utils.parseEther("1");
+  const ESCROW_AMOUNT = ethers.parseEther("1");
 
   beforeEach(async function () {
     [owner, buyer, seller, reviewer1, reviewer2] = await ethers.getSigners();

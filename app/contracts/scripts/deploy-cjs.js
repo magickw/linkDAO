@@ -8,7 +8,7 @@ async function main() {
   
   console.log("Deploying contracts with the account:", deployer.address);
   const balance = await deployer.getBalance();
-  console.log("Account balance:", ethers.utils.formatEther(balance));
+  console.log("Account balance:", ethers.formatEther(balance));
 
   // Deploy contracts in the correct order (dependencies first)
   
@@ -98,7 +98,7 @@ async function main() {
   try {
     // Test LDAOToken
     const totalSupply = await ldaoToken.totalSupply();
-    console.log(`✅ LDAOToken total supply: ${ethers.utils.formatEther(totalSupply)} LDAO`);
+    console.log(`✅ LDAOToken total supply: ${ethers.formatEther(totalSupply)} LDAO`);
     
     // Test ProfileRegistry
     const profileName = await profileRegistry.name();
