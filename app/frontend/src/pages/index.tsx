@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SupportWidget from '@/components/SupportWidget';
+import { newsletterService } from '@/services/newsletterService';
 
 // Lazy load heavy components
 const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar').catch(() => ({ default: () => <div>Failed to load sidebar</div> })));
@@ -70,6 +71,28 @@ export default function Home() {
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
+
+  // Newsletter subscription handler
+  const handleNewsletterSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get('email') as string;
+    
+    if (email) {
+      try {
+        const result = await newsletterService.subscribeEmail(email);
+        if (result.success) {
+          alert('Successfully subscribed to newsletter!');
+          (e.target as HTMLFormElement).reset();
+        } else {
+          alert(result.message || 'Failed to subscribe to newsletter');
+        }
+      } catch (error) {
+        console.error('[Home] Error subscribing to newsletter:', error);
+        alert('Failed to subscribe to newsletter. Please try again.');
+      }
+    }
+  };
 
   // Refs for accessibility and memory leak prevention
   const mainContentRef = useRef<HTMLDivElement>(null);
@@ -404,7 +427,7 @@ export default function Home() {
                         <div className="flex gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                           <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600"></div>
                           <div className="flex-1 space-y-2">
-                            <div className="w-1/4 h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                            <div className="w-1/33 h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
                             <div className="w-3/4 h-3 bg-gray-200 dark:bg-gray-600 rounded"></div>
                           </div>
                         </div>
@@ -819,6 +842,46 @@ export default function Home() {
                   >
                     Follow us on X
                   </a>
+                </div>
+
+                {/* Newsletter Signup Form */}
+                <div className="max-w-2xl mx-auto mb-8 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Stay in the Loop</h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Join our newsletter to get the latest updates, product announcements, and community news.
+                  </p>
+                  <form 
+                    className="flex flex-col sm:flex-row gap-4"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.target as HTMLFormElement);
+                      const email = formData.get('email') as string;
+                      
+                      if (email) {
+                        const result = await newsletterService.subscribeEmail(email);
+                        if (result.success) {
+                          alert('Successfully subscribed to newsletter!');
+                          (e.target as HTMLFormElement).reset();
+                        } else {
+                          alert(result.message || 'Failed to subscribe to newsletter');
+                        }
+                      }
+                    }}
+                  >
+                    <input 
+                      type="email" 
+                      name="email"
+                      placeholder="Enter your email" 
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" 
+                      required
+                    />
+                    <button 
+                      type="submit" 
+                      className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                    >
+                      Subscribe
+                    </button>
+                  </form>
                 </div>
 
                 <ConnectButton.Custom>

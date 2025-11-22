@@ -626,7 +626,6 @@ export class UnifiedSellerService {
 
   private convertUnifiedProfileToLegacy(unified: Partial<UnifiedSellerProfile>): Partial<SellerProfile> {
     return {
-      displayName: unified.displayName,
       storeName: unified.storeName,
       bio: unified.bio,
       description: unified.description,

@@ -150,7 +150,6 @@ class ProductionServerManager {
       const { default: followRoutes } = await import('../routes/followRoutes');
       const { default: communityRoutes } = await import('../routes/communityRoutes');
       const { default: communityTreasuryRoutes } = await import('../routes/communityTreasuryRoutes');
-      const { default: communityCommentRoutes } = await import('../routes/communityCommentRoutes');
       const { default: messagingRoutes } = await import('../routes/messagingRoutes');
       const { default: bookmarkRoutes } = await import('../routes/bookmarkRoutes');
       const { default: searchRoutes } = await import('../routes/searchRoutes');
@@ -165,6 +164,9 @@ class ProductionServerManager {
       const { default: userProfileRoutes } = await import('../routes/userProfileRoutes');
       const { default: communityCommentRoutes } = await import('../routes/communityCommentRoutes');
       const { default: contentReportRoutes } = await import('../routes/contentReportRoutes');
+
+      // Import newsletter routes
+      const { default: newsletterRoutes } = await import('../routes/newsletterRoutes');
 
       // Mount routes
       this.app.use('/api/marketplace', marketplaceSellerRoutes);
@@ -208,6 +210,9 @@ class ProductionServerManager {
       this.app.use('/api/user-profile', userProfileRoutes);
       this.app.use('/api/community-comments', communityCommentRoutes);
       this.app.use('/api/content-report', contentReportRoutes);
+      
+      // Mount newsletter routes
+      this.app.use('/api/newsletter', newsletterRoutes);
 
       safeLogger.info('✅ Application routes configured');
 

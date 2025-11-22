@@ -48,18 +48,18 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
             {profile?.profileImageCdn ? (
               <img 
                 src={profile.profileImageCdn} 
-                alt={profile.displayName}
+                alt={profile.storeName || 'Seller'}
                 className="avatar-image"
               />
             ) : (
               <div className="avatar-placeholder">
-                {profile?.displayName?.charAt(0) || '?'}
+                {profile?.storeName?.charAt(0) || '?'}
               </div>
             )}
           </div>
           <div className="seller-details">
             <h2 style={{ fontSize: getOptimalFontSize(18) }}>
-              {profile?.displayName || 'Seller Dashboard'}
+              {profile?.storeName || 'Seller Dashboard'}
             </h2>
             <p className="tier-badge">
               {profile?.tier || 'Bronze'} Tier

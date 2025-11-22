@@ -1004,7 +1004,7 @@ export class UnifiedMarketplaceService {
         return {
           id: sellerProfile.walletAddress,
           walletAddress: sellerProfile.walletAddress,
-          displayName: sellerProfile.displayName || sellerProfile.storeName,
+          displayName: sellerProfile.storeName,
           storeName: sellerProfile.storeName,
           rating: 4.5, // Default rating
           reputation: sellerProfile.daoReputation?.governanceParticipation || 0,

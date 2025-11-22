@@ -527,6 +527,72 @@ export class EmailService {
     return this.sendEmail({ to: email, subject: `Response to Ticket: ${ticketId}`, html });
   }
 
+  /**
+   * Send newsletter welcome email
+   */
+  async sendNewsletterWelcomeEmail(email: string): Promise<boolean> {
+    const html = this.getNewsletterWelcomeTemplate();
+    return this.sendEmail({
+      to: email,
+      subject: 'Welcome to LinkDAO Newsletter!',
+      html,
+    });
+  }
+
+  private getNewsletterWelcomeTemplate(): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to LinkDAO Newsletter</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f4f5f7;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">LinkDAO Newsletter</h1>
+          </div>
+
+          <div style="padding: 40px 30px;">
+            <h2 style="color: #1a1a1a; font-size: 24px; margin: 0 0 16px 0;">Welcome Aboard! 🎉</h2>
+
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              Thank you for subscribing to the LinkDAO newsletter! You're now part of our community of innovators and early adopters.
+            </p>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 24px 0;">
+              <h3 style="color: #1a1a1a; font-size: 18px; margin: 0 0 12px 0;">What to expect:</h3>
+              <ul style="color: #4a5568; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Latest updates on LinkDAO platform features</li>
+                <li>Exclusive insights into decentralized governance</li>
+                <li>Community highlights and success stories</li>
+                <li>Upcoming events and opportunities</li>
+              </ul>
+            </div>
+
+            <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+              We're excited to share our journey with you as we build the future of decentralized communities.
+            </p>
+
+            <a href="${process.env.FRONTEND_URL || 'https://linkdao.io'}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin-top: 20px;">
+              Visit LinkDAO
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 30px 20px; text-align: center; border-radius: 0 0 8px 8px; margin-top: 30px;">
+            <p style="color: #6c757d; font-size: 14px; margin: 0 0 10px 0;">LinkDAO - Decentralized Community Platform</p>
+            <p style="color: #6c757d; font-size: 12px; margin: 0;">
+              You received this email because you subscribed to our newsletter.
+              <a href="{{unsubscribeUrl}}" style="color: #667eea; text-decoration: none;">Unsubscribe</a>
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
   private getResponseTime(priority: string): string {
     const times = { urgent: '1 hour', high: '4 hours', medium: '12 hours', low: '24 hours' };
     return times[priority] || '24 hours';

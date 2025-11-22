@@ -185,7 +185,7 @@ const DragDropUpload: React.FC<DragDropUploadProps> = ({
 
 export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStepProps) {
   const [formData, setFormData] = useState({
-    displayName: data?.displayName || profile?.displayName || '',
+    displayName: data?.displayName || profile?.storeName || '',
     storeName: data?.storeName || profile?.storeName || '',
     bio: data?.bio || profile?.bio || '',
     description: data?.description || profile?.description || '',

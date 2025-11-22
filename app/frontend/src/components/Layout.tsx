@@ -11,6 +11,7 @@ import { CommunityMembershipService } from '@/services/communityMembershipServic
 import type { CommunityMembership } from '@/models/CommunityMembership';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import SEOHead from '@/components/SEO/SEOHead';
+import { newsletterService } from '@/services/newsletterService';
 
 import { ENV_CONFIG } from '@/config/environment';
 
@@ -488,9 +489,37 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
                   <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
-                  <form className="flex flex-col sm:flex-row">
-                    <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
-                    <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
+                  <form 
+                    className="flex flex-col sm:flex-row"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const formData = new FormData(e.target as HTMLFormElement);
+                      const email = formData.get('email') as string;
+                      
+                      if (email) {
+                        const result = await newsletterService.subscribeEmail(email);
+                        if (result.success) {
+                          alert('Successfully subscribed to newsletter!');
+                          (e.target as HTMLFormElement).reset();
+                        } else {
+                          alert(result.message || 'Failed to subscribe to newsletter');
+                        }
+                      }
+                    }}
+                  >
+                    <input 
+                      type="email" 
+                      name="email"
+                      placeholder="Enter your email" 
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" 
+                      required
+                    />
+                    <button 
+                      type="submit" 
+                      className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                    >
+                      Subscribe
+                    </button>
                   </form>
                 </div>
               </div>

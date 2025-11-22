@@ -48,18 +48,18 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
                 {profile.coverImage ? (
                   <img
                     src={profile.coverImage}
-                    alt={profile.displayName}
+                    alt={profile.storeName || 'Seller'}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                 ) : (
                   <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-bold">
-                      {profile.displayName?.charAt(0) || profile.storeName?.charAt(0) || 'S'}
+                      {profile.storeName?.charAt(0) || 'S'}
                     </span>
                   </div>
                 )}
                 <div>
-                  <p className="text-white font-medium text-sm">{profile.storeName || profile.displayName}</p>
+                  <p className="text-white font-medium text-sm">{profile.storeName}</p>
                   <p className="text-white/60 text-xs">Seller Dashboard</p>
                 </div>
               </>

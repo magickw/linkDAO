@@ -1639,6 +1639,22 @@ export const communityStakingRewards = pgTable("community_staking_rewards", {
   rewardTypeIdx: index("idx_community_staking_rewards_type").on(t.rewardType),
 }));
 
+// Newsletter Subscriptions
+export const newsletterSubscriptions = pgTable("newsletter_subscriptions", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+  subscriptionMetadata: text("subscription_metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  emailIdx: index("idx_newsletter_subscriptions_email").on(t.email),
+  activeIdx: index("idx_newsletter_subscriptions_active").on(t.isActive),
+  createdIdx: index("idx_newsletter_subscriptions_created").on(t.createdAt),
+}));
+
 // Community referral programs
 export const communityReferralPrograms = pgTable("community_referral_programs", {
   id: uuid("id").defaultRandom().primaryKey(),

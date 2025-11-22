@@ -346,7 +346,6 @@ export function transformSellerProfileToUnified(
       walletAddress: sellerProfile.walletAddress,
 
       // Basic profile information
-      displayName: sellerProfile.displayName,
       storeName: sellerProfile.storeName,
       bio: sellerProfile.bio,
       description: sellerProfile.description,
