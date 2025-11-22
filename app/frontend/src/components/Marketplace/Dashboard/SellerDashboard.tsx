@@ -738,8 +738,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <button
                       onClick={() => setProfileTab('basic')}
                       className={`px-4 py-2 rounded-lg font-medium transition-all ${profileTab === 'basic'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                         }`}
                     >
                       📝 Basic Info
@@ -747,8 +747,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <button
                       onClick={() => setProfileTab('images')}
                       className={`px-4 py-2 rounded-lg font-medium transition-all ${profileTab === 'images'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                         }`}
                     >
                       🖼️ Images
@@ -756,8 +756,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <button
                       onClick={() => setProfileTab('business')}
                       className={`px-4 py-2 rounded-lg font-medium transition-all ${profileTab === 'business'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                         }`}
                     >
                       🏢 Business Info
@@ -765,8 +765,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <button
                       onClick={() => setProfileTab('social')}
                       className={`px-4 py-2 rounded-lg font-medium transition-all ${profileTab === 'social'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
                         }`}
                     >
                       🔗 Social & Contact
@@ -1164,21 +1164,20 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     {saving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
-              </div>
               </GlassPanel>
             )}
 
-          {/* Other tabs would be implemented similarly */}
-          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && (
-            <GlassPanel className="p-6 text-center">
-              <p className="text-gray-400">
-                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
-              </p>
-            </GlassPanel>
-          )}
+            {/* Other tabs would be implemented similarly */}
+            {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && (
+              <GlassPanel className="p-6 text-center">
+                <p className="text-gray-400">
+                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
+                </p>
+              </GlassPanel>
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </TierProvider >
   );
 }
