@@ -2,12 +2,13 @@ import { ethers } from 'ethers';
 import { safeLogger } from '../utils/safeLogger';
 import { Token, CurrencyAmount, TradeType, Percent } from '@uniswap/sdk-core';
 import { Pool, Route, Trade, SwapQuoter, SwapRouter } from '@uniswap/v3-sdk';
-import { AlphaRouter, SwapType } from '@uniswap/smart-order-router';
+import type { AlphaRouter, SwapType } from '@uniswap/smart-order-router';
 import { IUniswapV3Service, SwapQuote, SwapParams, SwapResult, LiquidityInfo } from '../types/uniswapV3';
 
 export class UniswapV3Service implements IUniswapV3Service {
   private provider: ethers.JsonRpcProvider;
   private alphaRouter: AlphaRouter | null = null;
+  private swapTypeEnum: any = null;
   private chainId: number;
   private quoterAddress: string;
   private routerAddress: string;
@@ -22,16 +23,24 @@ export class UniswapV3Service implements IUniswapV3Service {
     this.chainId = chainId;
     this.quoterAddress = quoterAddress;
     this.routerAddress = routerAddress;
-    
+
+    // Try to initialize AlphaRouter, but handle compatibility issues gracefully
     // Try to initialize AlphaRouter, but handle compatibility issues gracefully
     try {
+      // Dynamic require to avoid crashing if dependency is incompatible (ethers v6 vs v5)
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { AlphaRouter, SwapType } = require('@uniswap/smart-order-router');
+
       this.alphaRouter = new AlphaRouter({
         chainId: this.chainId,
         provider: this.provider as any, // Type assertion to handle compatibility issues
       });
+      this.swapTypeEnum = SwapType;
+      safeLogger.info('AlphaRouter initialized successfully');
     } catch (error) {
       safeLogger.warn('Failed to initialize AlphaRouter, DEX swap functionality will be limited:', error);
       this.alphaRouter = null;
+      this.swapTypeEnum = null;
     }
   }
 
@@ -79,7 +88,10 @@ export class UniswapV3Service implements IUniswapV3Service {
           recipient: params.recipient || ethers.ZeroAddress,
           slippageTolerance: new Percent(Math.floor(slippageTolerance * 100), 10000),
           deadline: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
-          type: SwapType.SWAP_ROUTER_02,
+          recipient: params.recipient || ethers.ZeroAddress,
+          slippageTolerance: new Percent(Math.floor(slippageTolerance * 100), 10000),
+          deadline: Math.floor(Date.now() / 1000) + 60 * 20, // 20 minutes
+          type: this.swapTypeEnum.SWAP_ROUTER_02,
         }
       );
 
@@ -140,13 +152,13 @@ export class UniswapV3Service implements IUniswapV3Service {
   async executeSwap(params: SwapParams, privateKey: string): Promise<SwapResult> {
     try {
       const quote = await this.getSwapQuote(params);
-      
+
       if (!quote.methodParameters) {
         throw new Error('No method parameters available for swap');
       }
 
       const wallet = new ethers.Wallet(privateKey, this.provider);
-      
+
       // Execute the swap transaction
       const transaction = {
         to: quote.methodParameters.to,
@@ -182,7 +194,7 @@ export class UniswapV3Service implements IUniswapV3Service {
       // This is a simplified implementation
       // In a real implementation, you would query the pool contract directly
       const poolAddress = await this.getPoolAddress(tokenA, tokenB, fee);
-      
+
       return {
         poolAddress,
         liquidity: '0', // Would be fetched from pool contract
@@ -229,12 +241,12 @@ export class UniswapV3Service implements IUniswapV3Service {
     }
 
     safeLogger.info('Handling swap failure, looking for alternatives...');
-    
+
     const alternatives: SwapQuote[] = [];
-    
+
     // Try different fee tiers
     const feeTiers = [500, 3000, 10000];
-    
+
     for (const fee of feeTiers) {
       try {
         // This would involve modifying the route to use specific fee tiers
