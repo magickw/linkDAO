@@ -9,6 +9,13 @@
     "contracts",
     "mobile"
   ],
+  "overrides": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0",
+    "cookie": "^0.7.0",
+    "tmp": "^0.2.3",
+    "js-yaml": "^4.1.1"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
     "build": "npm run build --workspaces",
