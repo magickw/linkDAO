@@ -207,16 +207,20 @@ class SellerDashboardService {
       }
 
       // OPTIMIZED: Combined listing counts with aggregation
-      // Note: products.sellerId uses the sellers.id (integer), not users.id (UUID)
-      const [listingCounts] = await tx
-        .select({
-          active: sql<number>`COUNT(CASE WHEN ${products.status} = 'active' THEN 1 END)`,
-          draft: sql<number>`COUNT(CASE WHEN ${products.status} = 'draft' THEN 1 END)`,
-          soldOut: sql<number>`COUNT(CASE WHEN ${products.status} = 'sold_out' THEN 1 END)`,
-          total: sql<number>`COUNT(*)`,
-        })
-        .from(products)
-        .where(eq(products.sellerId, seller.id as any));
+      // Note: products.sellerId also references users.id (UUID), not sellers.id (integer)
+      let listingCounts: { active: number; draft: number; soldOut: number; total: number } | undefined;
+
+      if (sellerIdForOrders) {
+        [listingCounts] = await tx
+          .select({
+            active: sql<number>`COUNT(CASE WHEN ${products.status} = 'active' THEN 1 END)`,
+            draft: sql<number>`COUNT(CASE WHEN ${products.status} = 'draft' THEN 1 END)`,
+            soldOut: sql<number>`COUNT(CASE WHEN ${products.status} = 'sold_out' THEN 1 END)`,
+            total: sql<number>`COUNT(*)`,
+          })
+          .from(products)
+          .where(eq(products.sellerId, sellerIdForOrders));
+      }
 
       // OPTIMIZED: Single query for balance data with proper indexing
       const [balanceData] = await tx
