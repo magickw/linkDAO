@@ -48,16 +48,92 @@ export class SearchController {
       // Check cache first
       const cacheKey = `search:${query}:${JSON.stringify(searchParams)}:${limitNum}:${offsetNum}`;
       const cachedResults = await SearchController.redisService.get(cacheKey);
-      
+
       if (cachedResults) {
         return res.json(cachedResults);
       }
 
-      const results = await SearchController.searchService.advancedSearch(
-        { query, ...searchParams },
-        { field: 'createdAt', direction: 'desc' },
-        { page: Math.floor(offsetNum / limitNum) + 1, limit: limitNum }
-      );
+      // Check if query is a wallet address
+      const isWalletAddress = /^0x[a-fA-F0-9]{40}$/i.test(query);
+      const isPartialWalletAddress = /^0x[a-fA-F0-9]+$/i.test(query) && query.length >= 6;
+
+      let results: any = {
+        posts: [],
+        communities: [],
+        users: [],
+        hashtags: [],
+        totalResults: 0,
+        hasMore: false
+      };
+
+      // If it's a wallet address, prioritize user search
+      if (isWalletAddress || isPartialWalletAddress) {
+        // Search users by wallet address
+        const userResults = await SearchController.searchService.searchUsers(
+          query,
+          searchParams,
+          limitNum,
+          offsetNum
+        );
+
+        results.users = userResults.users || [];
+        results.totalResults = userResults.total || 0;
+        results.hasMore = userResults.hasMore || false;
+
+        // Also search posts by that wallet address (if exact match)
+        if (isWalletAddress && (type === 'all' || type === 'posts')) {
+          const postResults = await SearchController.searchService.searchPosts(
+            query,
+            searchParams,
+            limitNum,
+            offsetNum
+          );
+
+          results.posts = postResults.posts || [];
+          results.totalResults += postResults.total || 0;
+        }
+      } else {
+        // Regular search across all types
+        if (type === 'all' || type === 'posts') {
+          const postResults = await SearchController.searchService.searchPosts(
+            query,
+            searchParams,
+            limitNum,
+            offsetNum
+          );
+          results.posts = postResults.posts || [];
+          results.totalResults += postResults.total || 0;
+        }
+
+        if (type === 'all' || type === 'communities') {
+          const communityResults = await SearchController.searchService.searchCommunities(
+            query,
+            searchParams,
+            limitNum,
+            offsetNum
+          );
+          results.communities = communityResults.communities || [];
+          results.totalResults += communityResults.total || 0;
+        }
+
+        if (type === 'all' || type === 'users') {
+          const userResults = await SearchController.searchService.searchUsers(
+            query,
+            searchParams,
+            limitNum,
+            offsetNum
+          );
+          results.users = userResults.users || [];
+          results.totalResults += userResults.total || 0;
+        }
+
+        // Check for more results
+        results.hasMore = (
+          (results.posts.length >= limitNum) ||
+          (results.communities.length >= limitNum) ||
+          (results.users.length >= limitNum)
+        );
+      }
 
       // Cache results for 5 minutes
       await SearchController.redisService.set(cacheKey, results, 300);
@@ -316,12 +392,38 @@ export class SearchController {
 
       const limitNum = parseInt(limit as string, 10);
 
-      const results = await SearchController.searchService.getSearchSuggestions(
+      // Check if query looks like a wallet address
+      const isPartialWalletAddress = /^0x[a-fA-F0-9]+$/i.test(query) && query.length >= 6;
+
+      // If it's a wallet address, prioritize user suggestions
+      if (isPartialWalletAddress) {
+        const userResults = await SearchController.searchService.searchUsers(
+          query,
+          {},
+          limitNum,
+          0
+        );
+
+        return res.json({
+          posts: [],
+          communities: [],
+          users: userResults.users.map((u: any) => u.handle || u.ens || `${u.walletAddress.slice(0, 6)}...${u.walletAddress.slice(-4)}`),
+          hashtags: []
+        });
+      }
+
+      // Regular suggestions
+      const suggestions = await SearchController.searchService.getSearchSuggestions(
         query,
         limitNum
       );
 
-      return res.json(results);
+      return res.json({
+        posts: suggestions.slice(0, Math.ceil(limitNum / 4)),
+        communities: suggestions.slice(Math.ceil(limitNum / 4), Math.ceil(limitNum / 2)),
+        users: suggestions.slice(Math.ceil(limitNum / 2), Math.ceil(3 * limitNum / 4)),
+        hashtags: suggestions.slice(Math.ceil(3 * limitNum / 4), limitNum)
+      });
     } catch (error) {
       safeLogger.error('Search suggestions error:', error);
       return res.status(500).json({ error: 'Failed to fetch search suggestions' });

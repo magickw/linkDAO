@@ -28,7 +28,7 @@ export default function SearchInterface({
   const router = useRouter();
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  
+
   const [query, setQuery] = useState(initialQuery);
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
@@ -43,10 +43,14 @@ export default function SearchInterface({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
-  
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Detect if query is a wallet address
+  const isWalletAddress = /^0x[a-fA-F0-9]{40}$/i.test(query);
+  const isPartialWalletAddress = /^0x[a-fA-F0-9]+$/i.test(query) && query.length >= 6;
 
   // Debounced search function
   const performSearch = useCallback(async (searchQuery: string, searchFilters: SearchFilters, pageNum: number = 0) => {
@@ -238,6 +242,20 @@ export default function SearchInterface({
     <div className={`max-w-4xl mx-auto ${className}`}>
       {/* Search Header */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        {/* Wallet Address Indicator */}
+        {(isWalletAddress || isPartialWalletAddress) && (
+          <div className="mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center space-x-2">
+            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span className="text-sm text-blue-800 dark:text-blue-200">
+              {isWalletAddress
+                ? '🔍 Searching for wallet address - showing user profile and posts'
+                : '🔍 Searching wallet addresses - type more characters for better matches'}
+            </span>
+          </div>
+        )}
+
         {/* Search Input */}
         <div className="relative mb-4">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

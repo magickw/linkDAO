@@ -1210,17 +1210,234 @@ export class SearchService {
     }
   }
 
-  // Stub methods for missing functionality
-  async searchPosts(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
-    return { posts: [], total: 0 };
-  }
-
-  async searchCommunities(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
-    return { communities: [], total: 0 };
-  }
-
+  /**
+   * Search for users by wallet address, handle, display name, or ENS
+   */
   async searchUsers(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
-    return { users: [], total: 0 };
+    const db = this.databaseService.getDatabase();
+
+    try {
+      // Check if query looks like a wallet address (starts with 0x and has proper length)
+      const isWalletAddress = /^0x[a-fA-F0-9]{40}$/i.test(query);
+      const isPartialWalletAddress = /^0x[a-fA-F0-9]+$/i.test(query) && query.length >= 6;
+
+      let whereClause;
+
+      if (isWalletAddress) {
+        // Exact wallet address match (case-insensitive)
+        whereClause = sql`LOWER(${schema.userProfiles.walletAddress}) = LOWER(${query})`;
+      } else if (isPartialWalletAddress) {
+        // Partial wallet address match (starts with)
+        whereClause = sql`LOWER(${schema.userProfiles.walletAddress}) LIKE LOWER(${query + '%'})`;
+      } else {
+        // Search by handle, display name, or ENS
+        whereClause = or(
+          like(sql`LOWER(${schema.userProfiles.handle})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.userProfiles.displayName})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.userProfiles.ens})`, `%${query.toLowerCase()}%`)
+        );
+      }
+
+      // Get total count
+      const totalResult = await db.select({ count: sql`count(*)` })
+        .from(schema.userProfiles)
+        .where(whereClause);
+
+      const total = parseInt(totalResult[0]?.count || '0');
+
+      // Get users with pagination
+      const users = await db.select()
+        .from(schema.userProfiles)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(schema.userProfiles.createdAt));
+
+      return {
+        users: users.map(user => ({
+          walletAddress: user.walletAddress,
+          handle: user.handle,
+          displayName: user.displayName,
+          ens: user.ens,
+          avatarCid: user.avatarCid,
+          bioCid: user.bioCid,
+          bannerCid: user.bannerCid,
+          website: user.website,
+          location: user.location,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        })),
+        total,
+        hasMore: offset + limit < total,
+      };
+    } catch (error) {
+      safeLogger.error('Error searching users:', error);
+      return { users: [], total: 0, hasMore: false };
+    }
+  }
+
+  /**
+   * Search for posts by content, title, or author
+   */
+  async searchPosts(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
+    const db = this.databaseService.getDatabase();
+
+    try {
+      // Check if query is a wallet address to search by author
+      const isWalletAddress = /^0x[a-fA-F0-9]{40}$/i.test(query);
+
+      const conditions = [];
+
+      if (isWalletAddress) {
+        // Search posts by author wallet address
+        conditions.push(sql`LOWER(${schema.posts.walletAddress}) = LOWER(${query})`);
+      } else {
+        // Search by content
+        conditions.push(
+          or(
+            like(sql`LOWER(${schema.posts.content})`, `%${query.toLowerCase()}%`),
+            like(sql`LOWER(${schema.posts.title})`, `%${query.toLowerCase()}%`)
+          )
+        );
+      }
+
+      // Add filter conditions
+      if (filters.community) {
+        conditions.push(eq(schema.posts.communityId, filters.community));
+      }
+
+      if (filters.timeRange && filters.timeRange !== 'all') {
+        const now = new Date();
+        let timeThreshold: Date;
+
+        switch (filters.timeRange) {
+          case 'hour':
+            timeThreshold = new Date(now.getTime() - 60 * 60 * 1000);
+            break;
+          case 'day':
+            timeThreshold = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            break;
+          case 'week':
+            timeThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+          case 'month':
+            timeThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            break;
+          case 'year':
+            timeThreshold = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            break;
+          default:
+            timeThreshold = new Date(0);
+        }
+
+        conditions.push(gte(schema.posts.createdAt, timeThreshold));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count
+      const totalResult = await db.select({ count: sql`count(*)` })
+        .from(schema.posts)
+        .where(whereClause);
+
+      const total = parseInt(totalResult[0]?.count || '0');
+
+      // Determine sort order
+      let orderByClause;
+      switch (filters.sortBy) {
+        case 'recent':
+          orderByClause = desc(schema.posts.createdAt);
+          break;
+        case 'popular':
+          orderByClause = desc(sql`COALESCE(${schema.posts.upvotes}, 0) - COALESCE(${schema.posts.downvotes}, 0)`);
+          break;
+        default:
+          orderByClause = desc(schema.posts.createdAt);
+      }
+
+      // Get posts with pagination
+      const posts = await db.select()
+        .from(schema.posts)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(orderByClause);
+
+      return {
+        posts,
+        total,
+        hasMore: offset + limit < total,
+      };
+    } catch (error) {
+      safeLogger.error('Error searching posts:', error);
+      return { posts: [], total: 0, hasMore: false };
+    }
+  }
+
+  /**
+   * Search for communities by name, display name, description, or tags
+   */
+  async searchCommunities(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
+    const db = this.databaseService.getDatabase();
+
+    try {
+      const conditions = [
+        or(
+          like(sql`LOWER(${schema.communities.name})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.communities.displayName})`, `%${query.toLowerCase()}%`),
+          like(sql`LOWER(${schema.communities.description})`, `%${query.toLowerCase()}%`),
+          sql`LOWER(${schema.communities.tags}) LIKE ${`%${query.toLowerCase()}%`}`
+        )
+      ];
+
+      // Add filter conditions
+      if (filters.category) {
+        conditions.push(eq(schema.communities.category, filters.category));
+      }
+
+      // Only show public communities by default
+      conditions.push(eq(schema.communities.isPublic, true));
+
+      const whereClause = and(...conditions);
+
+      // Get total count
+      const totalResult = await db.select({ count: sql`count(*)` })
+        .from(schema.communities)
+        .where(whereClause);
+
+      const total = parseInt(totalResult[0]?.count || '0');
+
+      // Get communities with pagination
+      const communities = await db.select()
+        .from(schema.communities)
+        .where(whereClause)
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(schema.communities.memberCount));
+
+      return {
+        communities: communities.map(community => ({
+          id: community.id,
+          name: community.name,
+          slug: community.slug,
+          displayName: community.displayName,
+          description: community.description,
+          category: community.category,
+          tags: community.tags ? JSON.parse(community.tags) : [],
+          avatar: community.avatar,
+          banner: community.banner,
+          memberCount: community.memberCount,
+          postCount: community.postCount,
+          isPublic: community.isPublic,
+          createdAt: community.createdAt,
+        })),
+        total,
+        hasMore: offset + limit < total,
+      };
+    } catch (error) {
+      safeLogger.error('Error searching communities:', error);
+      return { communities: [], total: 0, hasMore: false };
+    }
   }
 
   async getTrendingContent(limit: number = 20, timeframe: string = 'day'): Promise<any> {
