@@ -215,9 +215,16 @@ export class CacheWarmingService {
   private async executeWarmupJob(job: WarmupJob): Promise<void> {
     try {
       safeLogger.info(`Warming cache: ${job.key} (priority: ${job.priority})`);
-      
+
       const data = await job.loader();
-      
+
+      // Skip caching if data is null, undefined, or empty
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        safeLogger.info(`⚠️ Skipped warming ${job.key}: No data returned`);
+        this.stats.failedJobs++;
+        return;
+      }
+
       // Use dynamic import to avoid circular dependencies
       // Explicitly import the JavaScript version
       const cacheModule: any = await import('./cacheService'); // Updated to use TypeScript version
@@ -233,12 +240,18 @@ export class CacheWarmingService {
         cacheService = cacheModule;
       }
       await cacheService.set(job.key, data, job.ttl);
-      
+
       this.stats.completedJobs++;
       safeLogger.info(`✅ Warmed: ${job.key}`);
     } catch (error) {
       this.stats.failedJobs++;
-      safeLogger.error(`❌ Failed to warm ${job.key}:`, error);
+      // Only log error details if it's not a "Not Found" error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('not found') || errorMessage.includes('Not found')) {
+        safeLogger.info(`⚠️ Skipped warming ${job.key}: Data not found (expected for fresh installs)`);
+      } else {
+        safeLogger.error(`❌ Failed to warm ${job.key}:`, error);
+      }
     }
   }
 
@@ -311,18 +324,25 @@ export class CacheWarmingService {
       const { db } = await import('../db');
       const { sellers } = await import('../db/schema');
       const { eq, desc } = await import('drizzle-orm');
-      
+
       // Query actual sellers from database
       const result = await db
         .select({ walletAddress: sellers.walletAddress })
         .from(sellers)
         .where(eq(sellers.onboardingCompleted, true))
         .limit(limit);
-      
-      return result.map(row => row.walletAddress);
+
+      const addresses = result.map(row => row.walletAddress);
+
+      // Log if no sellers found
+      if (addresses.length === 0) {
+        safeLogger.info('No onboarded sellers found for cache warming');
+      }
+
+      return addresses;
     } catch (error) {
       safeLogger.error('Error fetching popular seller addresses:', error);
-      // Return empty array if database query fails
+      // Return empty array if database query fails - this is expected on fresh installs
       return [];
     }
   }

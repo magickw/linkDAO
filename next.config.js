@@ -9,6 +9,9 @@ const nextConfig = {
   // Fix output file tracing issues
   outputFileTracingRoot: __dirname,
   
+  // Exclude playwright from page processing
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  
   // Performance optimizations
   experimental: {
     optimizeCss: true,
@@ -133,10 +136,17 @@ const nextConfig = {
   
   // Standard webpack config
   webpack: (config, { isServer }) => {
-    // Handle React Native dependencies for Web3 packages
+    // Exclude playwright from being processed as pages
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
+      // Exclude playwright packages from client-side builds
+      ...(isServer ? {} : {
+        'playwright': false,
+        'playwright-core': false,
+        '@playwright/test': false,
+      }),
+      
       // Core React Native polyfills
       '@react-native-async-storage/async-storage': require.resolve('./app/frontend/src/utils/asyncStorageFallback.js'),
       'react-native': false,
@@ -241,6 +251,22 @@ const nextConfig = {
           },
         },
       };
+    }
+    
+    // Add webpack plugins to ignore Playwright files
+    if (!isServer) {
+      const webpack = require('webpack');
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^playwright/,
+          contextRegExp: /node_modules/,
+        }),
+        new webpack.IgnorePlugin({
+          resourceRegExp: /@playwright/,
+          contextRegExp: /node_modules/,
+        })
+      );
     }
     
     return config;
