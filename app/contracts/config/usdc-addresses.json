@@ -1,0 +1,46 @@
+{
+    "mainnet": {
+        "8453": {
+            "name": "Base",
+            "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "decimals": 6
+        },
+        "137": {
+            "name": "Polygon",
+            "usdc": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+            "decimals": 6
+        },
+        "42161": {
+            "name": "Arbitrum",
+            "usdc": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+            "decimals": 6
+        },
+        "10": {
+            "name": "Optimism",
+            "usdc": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+            "decimals": 6
+        }
+    },
+    "testnet": {
+        "84532": {
+            "name": "Base Sepolia",
+            "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            "decimals": 6
+        },
+        "80001": {
+            "name": "Polygon Mumbai",
+            "usdc": "0x0FA8781a83E46826621b3BC094Ea2A0212e71B23",
+            "decimals": 6
+        },
+        "421613": {
+            "name": "Arbitrum Goerli",
+            "usdc": "0xfd064A18f3BF249cf1f87FC203E90D8f650f2d63",
+            "decimals": 6
+        },
+        "11155420": {
+            "name": "Optimism Sepolia",
+            "usdc": "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
+            "decimals": 6
+        }
+    }
+}

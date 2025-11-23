@@ -235,7 +235,7 @@ const EnhancedFeedView = React.memo(({
     return {
       id: feedPost.id,
       title: feedPost.title || '',
-      content: '', // Will be loaded from IPFS using contentCid
+      content: feedPost.content || '', // Use content from feed data
       contentCid: feedPost.contentCid, // Add the missing contentCid field
       author: feedPost.author,
       authorProfile: {

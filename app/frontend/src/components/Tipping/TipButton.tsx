@@ -31,7 +31,7 @@ const TipButton: React.FC<TipButtonProps> = ({
   const provider = signer ? new ethers.BrowserProvider(window.ethereum) : null;
   const [isOpen, setIsOpen] = useState(false);
   const [tipAmount, setTipAmount] = useState('1');
-  const [selectedCurrency, setSelectedCurrency] = useState<'LDAO' | 'USDC'>('LDAO');
+  const [selectedCurrency, setSelectedCurrency] = useState<'LDAO' | 'USDC' | 'USDT'>('LDAO');
   const [ldaoBalance, setLdaoBalance] = useState('0');
   const [message, setMessage] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -76,7 +76,7 @@ const TipButton: React.FC<TipButtonProps> = ({
     setIsProcessing(true);
     try {
       await TipService.initialize(provider);
-      
+
       const tip = await TipService.createTip(
         postId || '',
         toAddress,
@@ -89,10 +89,10 @@ const TipButton: React.FC<TipButtonProps> = ({
       setIsOpen(false);
       setTipAmount('1');
       setMessage('');
-      
+
       // Refresh balance after tip
       await fetchLdaoBalance();
-      
+
       // Show success notification
       alert(`Successfully sent ${tipAmount} ${selectedCurrency}!`);
     } catch (error) {
@@ -111,7 +111,7 @@ const TipButton: React.FC<TipButtonProps> = ({
     setIsProcessing(true);
     try {
       await TipService.initialize(provider);
-      
+
       const tip = await TipService.sendAward({
         toAddress,
         postId,
@@ -123,10 +123,10 @@ const TipButton: React.FC<TipButtonProps> = ({
       setTipCount(prev => prev + 1);
       setIsOpen(false);
       setMessage('');
-      
+
       // Refresh balance after award
       await fetchLdaoBalance();
-      
+
       // Show success notification
       alert(`Successfully sent ${awardType} award!`);
     } catch (error) {
@@ -199,7 +199,7 @@ const TipButton: React.FC<TipButtonProps> = ({
       {isOpen && (
         <div className="absolute bottom-full right-0 mb-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Send a Tip</h3>
-          
+
           <div className="space-y-3">
             {/* Balance Display */}
             <div className="flex justify-between text-sm">
@@ -224,11 +224,12 @@ const TipButton: React.FC<TipButtonProps> = ({
                 />
                 <select
                   value={selectedCurrency}
-                  onChange={(e) => setSelectedCurrency(e.target.value as 'LDAO' | 'USDC')}
+                  onChange={(e) => setSelectedCurrency(e.target.value as 'LDAO' | 'USDC' | 'USDT')}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="LDAO">LDAO</option>
                   <option value="USDC">USDC</option>
+                  <option value="USDT">USDT</option>
                 </select>
               </div>
             </div>
@@ -268,14 +269,12 @@ const TipButton: React.FC<TipButtonProps> = ({
               </label>
               <button
                 onClick={() => setIsPublic(!isPublic)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  isPublic ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublic ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    isPublic ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublic ? 'translate-x-6' : 'translate-x-1'
+                    }`}
                 />
               </button>
             </div>

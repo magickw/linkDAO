@@ -29,7 +29,7 @@ const CreatePostPage: React.FC = () => {
 
   const { addToast } = useToast();
 
-  // Fetch user's communities
+  // Fetch user's communities (both memberships and created)
   useEffect(() => {
     const fetchUserCommunities = async () => {
       if (isConnected && address) {
@@ -39,6 +39,7 @@ const CreatePostPage: React.FC = () => {
           const pageSize = 50;
           let hasMore = true;
 
+          // Fetch communities where user is a member
           while (hasMore) {
             try {
               const { communities, pagination } = await CommunityService.getMyCommunities(page, pageSize);
@@ -57,29 +58,47 @@ const CreatePostPage: React.FC = () => {
             }
           }
 
-          setUserCommunities(allUserCommunities);
+          // Also fetch communities created by the user (in case they're not auto-added as members)
+          try {
+            const { communities: createdCommunities } = await CommunityService.getMyCreatedCommunities(1, 100);
 
-          if (community && typeof community === 'string') {
-            let foundCommunity = allUserCommunities.find((c: any) =>
-              c.id === community || c.slug === community
-            );
+            // Merge and deduplicate using a Map
+            const communityMap = new Map();
+            [...allUserCommunities, ...createdCommunities].forEach(c => {
+              if (c && c.id) {
+                communityMap.set(c.id, c);
+              }
+            });
 
-            if (!foundCommunity) {
-              const normalizedCommunity = community.trim().toLowerCase();
-              const nameMatches = allUserCommunities.filter((c: any) =>
-                c.name && c.name.trim().toLowerCase() === normalizedCommunity
+            const mergedCommunities = Array.from(communityMap.values());
+            setUserCommunities(mergedCommunities);
+
+            if (community && typeof community === 'string') {
+              let foundCommunity = mergedCommunities.find((c: any) =>
+                c.id === community || c.slug === community
               );
 
-              if (nameMatches.length === 1) {
-                foundCommunity = nameMatches[0];
+              if (!foundCommunity) {
+                const normalizedCommunity = community.trim().toLowerCase();
+                const nameMatches = mergedCommunities.filter((c: any) =>
+                  c.name && c.name.trim().toLowerCase() === normalizedCommunity
+                );
+
+                if (nameMatches.length === 1) {
+                  foundCommunity = nameMatches[0];
+                }
+              }
+
+              if (foundCommunity) {
+                setSelectedCommunity(foundCommunity.id);
+              } else {
+                addToast('You must be a member of this community to post', 'error');
               }
             }
-
-            if (foundCommunity) {
-              setSelectedCommunity(foundCommunity.id);
-            } else {
-              addToast('You must be a member of this community to post', 'error');
-            }
+          } catch (createdError) {
+            console.error('Error fetching created communities:', createdError);
+            // Continue with just membership communities if created fetch fails
+            setUserCommunities(allUserCommunities);
           }
         } catch (error) {
           console.error('Error fetching user communities:', error);

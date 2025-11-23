@@ -462,6 +462,70 @@ export class CommunityService {
   }
 
   /**
+   * Get communities created by the current user
+   * @param page - Page number (default: 1)
+   * @param limit - Number of items per page (default: 100)
+   * @returns Paginated list of user's created communities
+   */
+  static async getMyCreatedCommunities(page: number = 1, limit: number = 100): Promise<{ communities: Community[]; pagination: any }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/user/created?page=${page}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        // If 401, user is not authenticated - return empty list instead of throwing
+        if (response.status === 401) {
+          console.warn('User not authenticated, returning empty created communities list');
+          return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+        }
+        // If 404, endpoint might not exist yet - return empty list
+        if (response.status === 404) {
+          console.warn('Created communities endpoint not found, returning empty list');
+          return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+        }
+        throw new Error((json && (json.error || json.message)) || 'Failed to fetch created communities');
+      }
+
+      // Normalize payload to expected structure
+      if (json && typeof json === 'object' && Array.isArray(json.communities)) {
+        return json as { communities: Community[]; pagination: any };
+      }
+      if (Array.isArray(json)) {
+        return { communities: json, pagination: { page: 1, limit, total: json.length, totalPages: 1 } };
+      }
+      return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('Request timeout fetching created communities, returning empty list');
+        return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+      }
+
+      // Return empty list instead of throwing to prevent UI crashes
+      console.warn('Error fetching created communities, returning empty list:', error);
+      return { communities: [], pagination: { page: 1, limit, total: 0, totalPages: 0 } };
+    }
+  }
+
+  /**
    * Get a community by its name with offline support
    * @param name - Community name (unique identifier)
    * @returns The community or null if not found

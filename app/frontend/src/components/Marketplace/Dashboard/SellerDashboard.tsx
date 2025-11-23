@@ -8,6 +8,9 @@ import { TierProvider } from '../../../contexts/TierContext';
 import { TierAwareComponent } from '../Seller';
 import { TierProgressBar } from '../Seller';
 import { TIER_ACTIONS } from '../../../types/sellerTier';
+import { UnifiedImageUpload } from '../Seller';
+import { useToast } from '../../../context/ToastContext';
+import { countries } from '../../../utils/countries';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -22,6 +25,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
+  const { addToast } = useToast();
 
   // Profile editing state
   const [formData, setFormData] = useState({
@@ -880,39 +884,58 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                               </div>
                             )}
                             <div className="flex-1">
-                              <input
-                                type="text"
-                                value={formData.profileImageCdn}
-                                onChange={(e) => setFormData({ ...formData, profileImageCdn: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-                                placeholder="Profile image URL"
+                              <UnifiedImageUpload
+                                context="profile"
+                                label="Profile Avatar"
+                                description="Upload a profile picture for your seller profile (recommended: square format, at least 400x400px)"
+                                onUploadSuccess={(results) => {
+                                  if (results.length > 0) {
+                                    setFormData({ ...formData, profileImageCdn: results[0].cdnUrl });
+                                  }
+                                }}
+                                onUploadError={(error) => {
+                                  console.error('Profile avatar upload error:', error);
+                                  addToast('Failed to upload profile avatar. Please try again.', 'error');
+                                }}
+                                initialImages={formData.profileImageCdn ? [{
+                                  originalUrl: formData.profileImageCdn,
+                                  cdnUrl: formData.profileImageCdn,
+                                  thumbnails: { small: formData.profileImageCdn, medium: formData.profileImageCdn, large: formData.profileImageCdn },
+                                  metadata: { width: 400, height: 400, size: 0, format: 'jpeg' }
+                                }] : []}
+                                onRemoveImage={() => setFormData({ ...formData, profileImageCdn: '' })}
+                                variant="compact"
+                                maxFiles={1}
                               />
-                              <p className="text-gray-500 text-xs">Recommended: Square image, at least 400x400px</p>
-                              <p className="text-gray-500 text-xs mt-1">Future: File upload will be available here</p>
                             </div>
                           </div>
                         </div>
 
                         <div>
                           <label className="block text-gray-400 text-sm mb-3">Cover Image</label>
-                          <div className="space-y-4">
-                            {formData.coverImageCdn && (
-                              <img
-                                src={formData.coverImageCdn}
-                                alt="Cover"
-                                className="w-full h-48 object-cover rounded-lg border-2 border-purple-500"
-                              />
-                            )}
-                            <input
-                              type="text"
-                              value={formData.coverImageCdn}
-                              onChange={(e) => setFormData({ ...formData, coverImageCdn: e.target.value })}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              placeholder="Cover image URL"
-                            />
-                            <p className="text-gray-500 text-xs">Recommended: Wide image, at least 1200x400px</p>
-                            <p className="text-gray-500 text-xs">Future: File upload will be available here</p>
-                          </div>
+                          <UnifiedImageUpload
+                            context="cover"
+                            label="Cover Image"
+                            description="Upload a cover image for your seller profile (recommended: wide format, at least 1200x400px)"
+                            onUploadSuccess={(results) => {
+                              if (results.length > 0) {
+                                setFormData({ ...formData, coverImageCdn: results[0].cdnUrl });
+                              }
+                            }}
+                            onUploadError={(error) => {
+                              console.error('Cover image upload error:', error);
+                              addToast('Failed to upload cover image. Please try again.', 'error');
+                            }}
+                            initialImages={formData.coverImageCdn ? [{
+                              originalUrl: formData.coverImageCdn,
+                              cdnUrl: formData.coverImageCdn,
+                              thumbnails: { small: formData.coverImageCdn, medium: formData.coverImageCdn, large: formData.coverImageCdn },
+                              metadata: { width: 1200, height: 400, size: 0, format: 'jpeg' }
+                            }] : []}
+                            onRemoveImage={() => setFormData({ ...formData, coverImageCdn: '' })}
+                            variant="compact"
+                            maxFiles={1}
+                          />
                         </div>
                       </div>
                     )}
@@ -996,13 +1019,19 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
                         <div>
                           <label className="block text-gray-400 text-sm mb-1">Country</label>
-                          <input
-                            type="text"
+                          <select
                             value={formData.registeredAddressCountry}
                             onChange={(e) => setFormData({ ...formData, registeredAddressCountry: e.target.value })}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="Country"
-                          />
+                            className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                            required
+                          >
+                            <option value="">Select Country</option>
+                            {countries.map((country) => (
+                              <option key={country.code} value={country.name}>
+                                {country.flag} {country.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     )}

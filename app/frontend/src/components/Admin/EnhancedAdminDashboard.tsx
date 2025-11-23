@@ -157,7 +157,10 @@ export function EnhancedAdminDashboard() {
       return;
     }
 
-    loadStats();
+    // Only load stats if user is authenticated (prevents 401 errors on initial load)
+    if (user) {
+      loadStats();
+    }
     loadFavorites();
 
     // Initialize WebSocket connection
@@ -165,7 +168,7 @@ export function EnhancedAdminDashboard() {
 
     // Set up periodic refresh as fallback - only if stats endpoint is available
     const interval = setInterval(() => {
-      if (statsAvailable && (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected)) {
+      if (user && statsAvailable && (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected)) {
         loadStats();
       }
     }, 60000); // Refresh every 60 seconds (increased from 30s) if WebSocket is not available
