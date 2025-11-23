@@ -71,7 +71,7 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
         <div className="quick-actions">
           <TouchOptimizedButton
             variant="primary"
-            size="small"
+            size="sm"
             onClick={() => {/* Navigate to create listing */}}
           >
             + List Item
@@ -86,7 +86,7 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
             <TouchOptimizedButton
               key={tab.id}
               variant={activeTab === tab.id ? 'primary' : 'secondary'}
-              size="small"
+              size="sm"
               onClick={() => setActiveTab(tab.id)}
               className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
             >

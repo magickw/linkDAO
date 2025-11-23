@@ -201,7 +201,7 @@ export const CommunityIconList: React.FC<ExtendedCommunityIconListProps> = ({
                         <GovernanceNotificationBadge
                           count={community.governanceNotifications}
                           type="pending"
-                          size="small"
+                          size="sm"
                           showIcon={false}
                         />
                       </div>
@@ -220,7 +220,7 @@ export const CommunityIconList: React.FC<ExtendedCommunityIconListProps> = ({
                         {showWeb3Features && userRoles[community.id] && (
                           <RoleBadge 
                             role={userRoles[community.id]} 
-                            size="small"
+                            size="sm"
                             showLabel={false}
                           />
                         )}

@@ -167,7 +167,7 @@ export const SwipeableSellerCard: React.FC<SwipeableSellerCardProps> = ({
           <div className="card-indicator">
             <TouchOptimizedButton
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => onView?.()}
               className="view-button"
             >

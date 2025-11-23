@@ -168,7 +168,7 @@ const MobileSellerDemo: React.FC = () => {
               <h2>Create New Listing</h2>
               <TouchOptimizedButton
                 variant="ghost"
-                size="small"
+                size="sm"
                 onClick={() => {
                   setShowForm(false);
                   setCurrentView('listings');
@@ -196,7 +196,7 @@ const MobileSellerDemo: React.FC = () => {
               <div className="button-demo">
                 <TouchOptimizedButton
                   variant="primary"
-                  size="small"
+                  size="sm"
                   onClick={() => alert('Small button clicked')}
                 >
                   Small

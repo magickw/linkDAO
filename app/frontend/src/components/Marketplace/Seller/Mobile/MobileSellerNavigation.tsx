@@ -75,7 +75,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
         <div className="header-actions">
           <TouchOptimizedButton
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => {/* Handle notifications */}}
           >
             🔔
@@ -103,7 +103,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
             
             <TouchOptimizedButton
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => setIsMenuOpen(false)}
               className="close-button"
             >
@@ -157,7 +157,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
             <TouchOptimizedButton
               key={item.id}
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => onNavigate(item.id)}
               className={`bottom-tab ${currentPage === item.id ? 'active' : ''}`}
             >

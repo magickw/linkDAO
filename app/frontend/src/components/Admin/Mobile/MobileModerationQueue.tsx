@@ -160,10 +160,10 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                 {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
               </span>
               <div className="flex space-x-2">
-                <TouchOptimizedButton variant="primary" size="small">
+                <TouchOptimizedButton variant="primary" size="sm">
                   Approve All
                 </TouchOptimizedButton>
-                <TouchOptimizedButton variant="danger" size="small">
+                <TouchOptimizedButton variant="danger" size="sm">
                   Reject All
                 </TouchOptimizedButton>
               </div>
@@ -249,7 +249,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'approve')}
                     variant="primary"
-                    size="small"
+                    size="sm"
                     className="flex-1"
                   >
                     <Check className="w-4 h-4 mr-1" />
@@ -258,7 +258,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'reject')}
                     variant="danger"
-                    size="small"
+                    size="sm"
                     className="flex-1"
                   >
                     <X className="w-4 h-4 mr-1" />
@@ -267,7 +267,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'view')}
                     variant="ghost"
-                    size="small"
+                    size="sm"
                   >
                     <Eye className="w-4 h-4" />
                   </TouchOptimizedButton>
