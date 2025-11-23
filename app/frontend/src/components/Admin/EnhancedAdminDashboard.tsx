@@ -62,6 +62,7 @@ import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/ser
 import { CharityVerificationPanel } from './CharityVerificationPanel';
 import { CharityVerification } from './CharityVerification';
 import { CharityProposal } from '../Governance/CharityProposalCard';
+import { UserMonitoringDashboard } from './UserMonitoringDashboard';
 
 interface AdminStats {
   pendingModerations: number;
@@ -313,6 +314,7 @@ export function EnhancedAdminDashboard() {
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view', category: 'user' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics', category: 'analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics', category: 'analytics' },
+    { id: 'monitoring', label: 'User Monitoring', icon: Activity, permission: 'system.analytics', category: 'analytics' },
     { id: 'charity-verification', label: 'Charity Verification', icon: Heart, permission: 'governance.verify', category: 'governance' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -797,6 +799,10 @@ export function EnhancedAdminDashboard() {
 
             {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
               <EnhancedAnalytics />
+            )}
+
+            {activeTab === 'monitoring' && hasPermission('system.analytics') && (
+              <UserMonitoringDashboard />
             )}
 
             {activeTab === 'workflows' && (

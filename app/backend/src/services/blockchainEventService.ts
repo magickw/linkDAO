@@ -3,6 +3,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
 import { BlockchainEvent, EscrowEvent } from '../models/Order';
+import { trackingService } from './trackingService';
 
 const databaseService = new DatabaseService();
 const notificationService = new NotificationService();
@@ -11,6 +12,7 @@ export class BlockchainEventService {
   private provider: ethers.JsonRpcProvider;
   private escrowContract: ethers.Contract | null = null;
   private marketplaceContract: ethers.Contract | null = null;
+  private ldaoContract: ethers.Contract | null = null;
   private eventListeners: Map<string, any> = new Map();
 
   constructor() {
@@ -50,6 +52,14 @@ export class BlockchainEventService {
         ];
 
         this.marketplaceContract = new ethers.Contract(marketplaceAddress, MARKETPLACE_ABI, this.provider);
+      }
+
+      const ldaoAddress = process.env.LDAO_TOKEN_ADDRESS;
+      if (ldaoAddress && ethers.isAddress(ldaoAddress)) {
+        const LDAO_ABI = [
+          "event Transfer(address indexed from, address indexed to, uint256 value)"
+        ];
+        this.ldaoContract = new ethers.Contract(ldaoAddress, LDAO_ABI, this.provider);
       }
     } catch (error) {
       safeLogger.error('Error initializing contracts:', error);
@@ -454,7 +464,7 @@ export class BlockchainEventService {
     try {
       // Process different types of events
       const eventName = event.fragment.name;
-      
+
       // Store the event in database
       await databaseService.storeBlockchainEvent({
         transactionHash: event.transactionHash,
@@ -515,4 +525,49 @@ export class BlockchainEventService {
       safeLogger.error('Error stopping event monitoring:', error);
     }
   }
+  /**
+   * Start global monitoring for LDAO token events
+   */
+  async startGlobalMonitoring(): Promise<void> {
+    try {
+      if (this.ldaoContract) {
+        this.ldaoContract.on('Transfer', async (from, to, value, event) => {
+          try {
+            const amount = ethers.formatEther(value);
+
+            // Track for sender
+            await trackingService.trackTransaction({
+              userId: from,
+              txHash: event.transactionHash,
+              eventType: 'LDAO_TRANSFER_SENT',
+              amount,
+              token: 'LDAO',
+              blockNumber: event.blockNumber,
+              status: 'confirmed'
+            });
+
+            // Track for receiver
+            await trackingService.trackTransaction({
+              userId: to,
+              txHash: event.transactionHash,
+              eventType: 'LDAO_TRANSFER_RECEIVED',
+              amount,
+              token: 'LDAO',
+              blockNumber: event.blockNumber,
+              status: 'confirmed'
+            });
+
+            safeLogger.info(`Tracked LDAO Transfer: ${from} -> ${to} (${amount} LDAO)`);
+          } catch (error) {
+            safeLogger.error('Error handling LDAO Transfer event:', error);
+          }
+        });
+        safeLogger.info('Started global monitoring for LDAO events');
+      }
+    } catch (error) {
+      safeLogger.error('Error starting global monitoring:', error);
+    }
+  }
 }
+
+export const blockchainEventService = new BlockchainEventService();

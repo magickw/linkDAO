@@ -4147,3 +4147,130 @@ export const fiatPaymentRecords = pgTable("fiat_payment_records", {
 // LDAO Earn-to-Own System Tables
 
 // Earning activities table to track all earning events
+
+// =================================================================================================
+// USER MONITORING SYSTEM TABLES
+// =================================================================================================
+
+// User Behavior Logs - Track frontend events
+export const userBehaviorLogs = pgTable("user_behavior_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // VIEW_PRODUCT, CLICK_BUTTON, SEARCH, etc.
+  metadata: text("metadata"), // JSON string with event details
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id", { length: 100 }),
+  path: varchar("path", { length: 255 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_user_behavior_logs_user_id").on(t.userId),
+  eventTypeIdx: index("idx_user_behavior_logs_event_type").on(t.eventType),
+  timestampIdx: index("idx_user_behavior_logs_timestamp").on(t.timestamp),
+  sessionIdIdx: index("idx_user_behavior_logs_session_id").on(t.sessionId),
+}));
+
+// User Transactions - Track on-chain transactions linked to users
+export const userTransactions = pgTable("user_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  txHash: varchar("tx_hash", { length: 66 }).notNull().unique(),
+  chain: varchar("chain", { length: 50 }).default("ethereum"),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // TRANSFER, SWAP, MINT, etc.
+  token: varchar("token", { length: 64 }),
+  amount: numeric("amount", { precision: 30, scale: 18 }),
+  status: varchar("status", { length: 20 }).default("pending"),
+  blockNumber: integer("block_number"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_user_transactions_user_id").on(t.userId),
+  txHashIdx: index("idx_user_transactions_tx_hash").on(t.txHash),
+  eventTypeIdx: index("idx_user_transactions_event_type").on(t.eventType),
+  timestampIdx: index("idx_user_transactions_timestamp").on(t.timestamp),
+}));
+
+// Purchases - Track marketplace purchases (distinct from payments)
+export const purchases = pgTable("purchases", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  buyerId: uuid("buyer_id").references(() => users.id).notNull(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(),
+  productId: uuid("product_id").references(() => products.id),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  escrowId: varchar("escrow_id", { length: 100 }),
+  status: varchar("status", { length: 32 }).default("pending"), // pending, completed, disputed, refunded
+  disputeStatus: varchar("dispute_status", { length: 32 }),
+  txHash: varchar("tx_hash", { length: 66 }),
+  metadata: text("metadata"), // JSON string
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  buyerIdx: index("idx_purchases_buyer_id").on(t.buyerId),
+  sellerIdx: index("idx_purchases_seller_id").on(t.sellerId),
+  productIdx: index("idx_purchases_product_id").on(t.productId),
+  statusIdx: index("idx_purchases_status").on(t.status),
+  timestampIdx: index("idx_purchases_timestamp").on(t.timestamp),
+}));
+
+// Wallet Activity - Track raw wallet events
+export const walletActivity = pgTable("wallet_activity", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  userId: uuid("user_id").references(() => users.id), // Optional link to user if known
+  activityType: varchar("activity_type", { length: 50 }).notNull(), // TRANSFER_IN, TRANSFER_OUT, VOTE, etc.
+  txHash: varchar("tx_hash", { length: 66 }),
+  amount: numeric("amount", { precision: 30, scale: 18 }),
+  token: varchar("token", { length: 64 }),
+  chainId: integer("chain_id"),
+  metadata: text("metadata"), // JSON string
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  walletIdx: index("idx_wallet_activity_wallet").on(t.walletAddress),
+  userIdIdx: index("idx_wallet_activity_user_id").on(t.userId),
+  activityTypeIdx: index("idx_wallet_activity_type").on(t.activityType),
+  timestampIdx: index("idx_wallet_activity_timestamp").on(t.timestamp),
+}));
+
+// Risk Flags - Store risk scores and flags
+export const riskFlags = pgTable("risk_flags", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  flagType: varchar("flag_type", { length: 100 }).notNull(), // "High Transaction Velocity", "Suspicious Wallet Cluster"
+  severity: varchar("severity", { length: 20 }).notNull(), // low, medium, high, critical
+  description: text("description"),
+  score: integer("score"), // Risk score contribution
+  status: varchar("status", { length: 20 }).default("active"), // active, resolved, ignored
+  resolvedBy: uuid("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  metadata: text("metadata"), // JSON string with supporting evidence
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_risk_flags_user_id").on(t.userId),
+  severityIdx: index("idx_risk_flags_severity").on(t.severity),
+  statusIdx: index("idx_risk_flags_status").on(t.status),
+  createdAtIdx: index("idx_risk_flags_created_at").on(t.createdAt),
+}));
+
+// Audit Logs - Immutable log of critical actions
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id), // Actor
+  action: varchar("action", { length: 100 }).notNull(),
+  resourceType: varchar("resource_type", { length: 50 }),
+  resourceId: varchar("resource_id", { length: 100 }),
+  payload: text("payload"), // JSON string of changes/data
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_audit_logs_user_id").on(t.userId),
+  actionIdx: index("idx_audit_logs_action").on(t.action),
+  resourceIdx: index("idx_audit_logs_resource").on(t.resourceType, t.resourceId),
+  timestampIdx: index("idx_audit_logs_timestamp").on(t.timestamp),
+}));

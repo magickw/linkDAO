@@ -115,6 +115,7 @@ import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adm
 import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
 import { memoryMonitoringService } from './services/memoryMonitoringService';
 import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
+import { blockchainEventService } from './services/blockchainEventService';
 
 // Import request logging middleware
 import {
@@ -190,6 +191,11 @@ async function initializeServices() {
 
   return { cacheService, cacheWarmingService };
 }
+
+// Start blockchain event monitoring
+blockchainEventService.startGlobalMonitoring().catch(err => {
+  console.error('Failed to start blockchain event monitoring:', err);
+});
 
 // Validate security configuration on startup
 try {
@@ -469,6 +475,8 @@ app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+import trackingRoutes from './routes/trackingRoutes';
+app.use('/api/track', trackingRoutes);
 app.use('/api/health', healthRoutes);
 // Onboarding routes for user preferences
 app.use('/api/onboarding', onboardingRoutes);
