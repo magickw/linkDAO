@@ -32,7 +32,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Build file path
-    const filePath = path.join(process.cwd(), 'public', 'docs', filename);
+    // Resolve correct docs directory relative to project root (app/frontend/public/docs)
+    const docsDir = path.join(process.cwd(), 'app', 'frontend', 'public', 'docs');
+    const filePath = path.join(docsDir, filename);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
@@ -83,11 +85,17 @@ function extractTitle(content: string): string | null {
  */
 function getAvailableDocuments(): string[] {
   try {
-    const docsPath = path.join(process.cwd(), 'public', 'docs');
+    // Resolve docs directory relative to project root (app/frontend/public/docs)
+    const docsPath = path.join(process.cwd(), 'app', 'frontend', 'public', 'docs');
     const files = fs.readdirSync(docsPath);
     return files
-      .filter(file => file.endsWith('.md') && file !== 'TECHNICAL_WHITEPAPER.md')
-      .map(file => file.replace('.md', ''))
+      .filter(file => file.endsWith('.md'))
+      .map(file => {
+        // Normalize filename to slug (lowercase, remove .md)
+        const base = file.replace('.md', '');
+        // Map TECHNICAL_WHITEPAPER.md to technical-whitepaper slug
+        return base.toLowerCase() === 'technical_whitepaper' ? 'technical-whitepaper' : base;
+      })
       .sort();
   } catch {
     return [];
