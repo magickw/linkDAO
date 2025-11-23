@@ -197,25 +197,25 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               
               <div className="flex flex-wrap gap-2 mb-4">
                 {product.trust.verified && (
-                  <AnimatedProductBadge variant="success" size="sm">
+                  <AnimatedProductBadge variant="success" size="small">
                     <CheckCircle size={14} className="mr-1" />
                     Verified
                   </AnimatedProductBadge>
                 )}
                 {product.trust.escrowProtected && (
-                  <AnimatedProductBadge variant="primary" size="sm">
+                  <AnimatedProductBadge variant="primary" size="small">
                     <Shield size={14} className="mr-1" />
                     Escrow Protected
                   </AnimatedProductBadge>
                 )}
                 {product.trust.onChainCertified && (
-                  <AnimatedProductBadge variant="secondary" size="sm">
+                  <AnimatedProductBadge variant="secondary" size="small">
                     <Vote size={14} className="mr-1" />
                     On-Chain Certified
                   </AnimatedProductBadge>
                 )}
                 {product.seller.daoApproved && (
-                  <AnimatedProductBadge variant="warning" size="sm">
+                  <AnimatedProductBadge variant="warning" size="small">
                     <Vote size={14} className="mr-1" />
                     DAO Approved
                   </AnimatedProductBadge>
@@ -226,7 +226,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {product.tags.map((tag, index) => (
-                    <AnimatedProductBadge key={index} variant="info" size="sm">
+                    <AnimatedProductBadge key={index} variant="info" size="small">
                       #{tag}
                     </AnimatedProductBadge>
                   ))}

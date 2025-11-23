@@ -1300,7 +1300,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">Default</span>
-                            <Button variant="outline" size="sm">Edit</Button>
+                            <Button variant="outline" size="small">Edit</Button>
                           </div>
                         </div>
                       </div>

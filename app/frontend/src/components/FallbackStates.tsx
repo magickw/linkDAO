@@ -226,7 +226,7 @@ export function RetryState({
       >
         {isRetrying ? (
           <>
-            <LoadingSpinner size="sm" className="mr-2" />
+            <LoadingSpinner size="small" className="mr-2" />
             Retrying...
           </>
         ) : (

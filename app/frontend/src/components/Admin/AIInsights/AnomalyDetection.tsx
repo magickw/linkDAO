@@ -272,10 +272,10 @@ export const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ anomalies, l
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="small">
                         Investigate
                       </Button>
-                      <Button size="sm">
+                      <Button size="small">
                         Resolve
                       </Button>
                     </div>

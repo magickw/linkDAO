@@ -241,7 +241,7 @@ export default function ProgressiveCommentLoader({
             <div className="text-center py-4">
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
-                  <LoadingSpinner size="sm" />
+                  <LoadingSpinner size="small" />
                   <span className="text-gray-600 dark:text-gray-300">Loading more comments...</span>
                 </div>
               ) : (

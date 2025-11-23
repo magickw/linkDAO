@@ -144,7 +144,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
               key={filterItem.id}
               onClick={() => setFilter(filterItem.id)}
               variant={filter === filterItem.id ? 'primary' : 'ghost'}
-              size="sm"
+              size="small"
               className="whitespace-nowrap"
             >
               {filterItem.label} ({filterItem.count})
@@ -160,10 +160,10 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                 {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
               </span>
               <div className="flex space-x-2">
-                <TouchOptimizedButton variant="primary" size="sm">
+                <TouchOptimizedButton variant="primary" size="small">
                   Approve All
                 </TouchOptimizedButton>
-                <TouchOptimizedButton variant="danger" size="sm">
+                <TouchOptimizedButton variant="danger" size="small">
                   Reject All
                 </TouchOptimizedButton>
               </div>
@@ -249,7 +249,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'approve')}
                     variant="primary"
-                    size="sm"
+                    size="small"
                     className="flex-1"
                   >
                     <Check className="w-4 h-4 mr-1" />
@@ -258,7 +258,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'reject')}
                     variant="danger"
-                    size="sm"
+                    size="small"
                     className="flex-1"
                   >
                     <X className="w-4 h-4 mr-1" />
@@ -267,7 +267,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <TouchOptimizedButton
                     onClick={() => handleAction(item.id, 'view')}
                     variant="ghost"
-                    size="sm"
+                    size="small"
                   >
                     <Eye className="w-4 h-4" />
                   </TouchOptimizedButton>

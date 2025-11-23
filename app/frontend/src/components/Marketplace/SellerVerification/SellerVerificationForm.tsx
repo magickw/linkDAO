@@ -224,7 +224,7 @@ export const SellerVerificationForm: React.FC<SellerVerificationFormProps> = ({
             >
               {isSubmitting ? (
                 <>
-                  <LoadingSpinner size="sm" className="mr-2" />
+                  <LoadingSpinner size="small" className="mr-2" />
                   Submitting...
                 </>
               ) : (

@@ -132,7 +132,7 @@ export const NotificationHistory: React.FC = () => {
           <TouchOptimizedButton
             onClick={handleClearHistory}
             variant="danger"
-            size="sm"
+            size="small"
           >
             <Trash2 className="w-4 h-4 mr-1" />
             Clear
@@ -232,7 +232,7 @@ export const NotificationHistory: React.FC = () => {
                               console.log(`Action ${action.id} clicked for notification ${notification.id}`);
                             }}
                             variant="secondary"
-                            size="sm"
+                            size="small"
                           >
                             {action.title}
                           </TouchOptimizedButton>

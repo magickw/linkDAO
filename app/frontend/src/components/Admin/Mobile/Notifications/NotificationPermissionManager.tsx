@@ -85,7 +85,7 @@ export const NotificationPermissionManager: React.FC<NotificationPermissionManag
             <TouchOptimizedButton
               onClick={() => setShowSettingsModal(true)}
               variant="ghost"
-              size="sm"
+              size="small"
             >
               <Settings className="w-4 h-4" />
             </TouchOptimizedButton>
@@ -137,7 +137,7 @@ export const NotificationPermissionManager: React.FC<NotificationPermissionManag
                 <TouchOptimizedButton
                   onClick={() => mobilePushNotificationService.showModerationAlert(5, 2)}
                   variant="secondary"
-                  size="sm"
+                  size="small"
                   className="flex-1"
                 >
                   Test Notification
@@ -146,7 +146,7 @@ export const NotificationPermissionManager: React.FC<NotificationPermissionManag
                   <TouchOptimizedButton
                     onClick={() => setShowSettingsModal(true)}
                     variant="secondary"
-                    size="sm"
+                    size="small"
                     className="flex-1"
                   >
                     Customize

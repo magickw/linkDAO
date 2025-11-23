@@ -206,13 +206,13 @@ const SellerInfo: React.FC<{
           </span>
           {seller.verified && <span className="text-sm">✅</span>}
           {seller.daoApproved && (
-            <AnimatedProductBadge variant="info" size="sm">
+            <AnimatedProductBadge variant="info" size="small">
               DAO
             </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <AnimatedProductBadge variant="warning" size="sm">
+            <AnimatedProductBadge variant="warning" size="small">
               ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
             </AnimatedProductBadge>
           )}
@@ -392,12 +392,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     {/* Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-1">
                       {product.isNFT && (
-                        <AnimatedProductBadge variant="secondary" size="sm">
+                        <AnimatedProductBadge variant="secondary" size="small">
                           NFT
                         </AnimatedProductBadge>
                       )}
                       {product.discount?.active && product.discount.percentage && (
-                        <AnimatedProductBadge variant="error" size="sm">
+                        <AnimatedProductBadge variant="error" size="small">
                           {product.discount.percentage}% OFF
                         </AnimatedProductBadge>
                       )}
@@ -590,7 +590,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                             <div className="text-white/60">Certifications</div>
                             <div className="flex flex-wrap gap-1">
                               {product.metadata.certifications.map((cert, index) => (
-                                <AnimatedProductBadge key={index} variant="info" size="sm">
+                                <AnimatedProductBadge key={index} variant="info" size="small">
                                   {cert}
                                 </AnimatedProductBadge>
                               ))}
@@ -635,7 +635,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       <h3 className="text-sm font-medium text-white/80 mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {product.tags.map((tag, index) => (
-                          <AnimatedProductBadge key={index} variant="secondary" size="sm">
+                          <AnimatedProductBadge key={index} variant="secondary" size="small">
                             {tag}
                           </AnimatedProductBadge>
                         ))}

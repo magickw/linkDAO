@@ -676,7 +676,7 @@ export const PerformanceAnalyticsPanel: React.FC<PerformanceAnalyticsPanelProps>
                           <Clock className="h-4 w-4 inline mr-1" />
                           {new Date(recommendation.timestamp).toLocaleString()}
                         </div>
-                        <Button size="sm" variant="outline">
+                        <Button size="small" variant="outline">
                           View Details
                         </Button>
                       </div>

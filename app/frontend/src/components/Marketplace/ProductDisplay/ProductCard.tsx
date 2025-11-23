@@ -179,13 +179,13 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
         <span className="text-sm font-medium text-white/90">{seller.name}</span>
         {seller.verified && <span className="text-xs">✅</span>}
         {seller.daoApproved && (
-          <AnimatedProductBadge variant="info" size="sm">
+          <AnimatedProductBadge variant="info" size="small">
             DAO
           </AnimatedProductBadge>
         )}
         {/* Reputation Score Badge */}
         {seller.reputationMetrics && (
-          <AnimatedProductBadge variant="warning" size="sm">
+          <AnimatedProductBadge variant="warning" size="small">
             ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
           </AnimatedProductBadge>
         )}
@@ -532,28 +532,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Product metadata */}
               <div className="flex flex-wrap gap-2 mb-2">
                 {product.condition && (
-                  <AnimatedProductBadge variant="primary" size="sm">
+                  <AnimatedProductBadge variant="primary" size="small">
                     {product.condition}
                   </AnimatedProductBadge>
                 )}
                 {product.brand && (
-                  <AnimatedProductBadge variant="secondary" size="sm">
+                  <AnimatedProductBadge variant="secondary" size="small">
                     {product.brand}
                   </AnimatedProductBadge>
                 )}
                 {product.hasWarranty && (
-                  <AnimatedProductBadge variant="success" size="sm">
+                  <AnimatedProductBadge variant="success" size="small">
                     Warranty
                   </AnimatedProductBadge>
                 )}
                 {product.isFeatured && (
-                  <AnimatedProductBadge variant="warning" size="sm">
+                  <AnimatedProductBadge variant="warning" size="small">
                     Featured
                   </AnimatedProductBadge>
                 )}
                 {/* Quality Score Badge */}
                 {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-                  <AnimatedProductBadge variant="success" size="sm">
+                  <AnimatedProductBadge variant="success" size="small">
                     High Quality
                   </AnimatedProductBadge>
                 )}
@@ -573,7 +573,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Discount badge */}
               {product.discount?.active && product.discount.percentage && (
                 <div className="mb-2">
-                  <AnimatedProductBadge variant="error" size="sm">
+                  <AnimatedProductBadge variant="error" size="small">
                     {product.discount.percentage}% OFF
                   </AnimatedProductBadge>
                 </div>
@@ -582,7 +582,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Auction Badge for List View */}
               {isAuction && (
                 <div className="mb-2">
-                  <AnimatedProductBadge variant="warning" size="sm">
+                  <AnimatedProductBadge variant="warning" size="small">
                     AUCTION
                   </AnimatedProductBadge>
                 </div>
@@ -707,28 +707,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {/* NFT badge */}
             {product.isNFT && (
-              <AnimatedProductBadge variant="secondary" size="sm">
+              <AnimatedProductBadge variant="secondary" size="small">
                 NFT
               </AnimatedProductBadge>
             )}
 
             {/* Discount badge */}
             {product.discount?.active && product.discount.percentage && (
-              <AnimatedProductBadge variant="error" size="sm">
+              <AnimatedProductBadge variant="error" size="small">
                 {product.discount.percentage}% OFF
               </AnimatedProductBadge>
             )}
 
             {/* Featured badge */}
             {product.isFeatured && (
-              <AnimatedProductBadge variant="warning" size="sm">
+              <AnimatedProductBadge variant="warning" size="small">
                 Featured
               </AnimatedProductBadge>
             )}
 
             {/* Quality Score Badge */}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-              <AnimatedProductBadge variant="success" size="sm">
+              <AnimatedProductBadge variant="success" size="small">
                 High Quality
               </AnimatedProductBadge>
             )}
@@ -738,7 +738,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
             <AnimatedProductBadge
               variant="warning"
-              size="sm"
+              size="small"
               className="absolute bottom-3 left-3"
             >
               Only {product.inventory} left
@@ -749,7 +749,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.inventory !== undefined && product.inventory === 0 && (
             <AnimatedProductBadge
               variant="error"
-              size="sm"
+              size="small"
               className="absolute bottom-3 left-3"
             >
               Out of Stock
@@ -791,23 +791,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Product metadata */}
           <div className="flex flex-wrap gap-1 mb-2">
             {product.condition && (
-              <AnimatedProductBadge variant="primary" size="sm">
+              <AnimatedProductBadge variant="primary" size="small">
                 {product.condition}
               </AnimatedProductBadge>
             )}
             {product.brand && (
-              <AnimatedProductBadge variant="secondary" size="sm">
+              <AnimatedProductBadge variant="secondary" size="small">
                 {product.brand}
               </AnimatedProductBadge>
             )}
             {product.hasWarranty && (
-              <AnimatedProductBadge variant="success" size="sm">
+              <AnimatedProductBadge variant="success" size="small">
                 Warranty
               </AnimatedProductBadge>
             )}
             {/* Certification badges */}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <AnimatedProductBadge variant="info" size="sm">
+              <AnimatedProductBadge variant="info" size="small">
                 Certified
               </AnimatedProductBadge>
             )}
@@ -849,7 +849,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Auction Badge */}
           {isAuction && (
             <div className="mb-3">
-              <AnimatedProductBadge variant="warning" size="sm">
+              <AnimatedProductBadge variant="warning" size="small">
                 AUCTION
               </AnimatedProductBadge>
             </div>

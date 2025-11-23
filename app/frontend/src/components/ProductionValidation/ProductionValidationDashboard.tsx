@@ -227,17 +227,17 @@ const ProductionValidationDashboard: React.FC = () => {
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            size="sm"
+            size="small"
             onClick={() => setIsMonitoring(!isMonitoring)}
           >
             {isMonitoring ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             {isMonitoring ? 'Pause' : 'Resume'}
           </Button>
-          <Button variant="outline" size="sm" onClick={fetchDashboardData} disabled={loading}>
+          <Button variant="outline" size="small" onClick={fetchDashboardData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={downloadReport}>
+          <Button variant="outline" size="small" onClick={downloadReport}>
             <Download className="h-4 w-4" />
             Report
           </Button>

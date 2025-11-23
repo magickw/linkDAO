@@ -329,7 +329,7 @@ export const AIInsightsOverview: React.FC<AIInsightsOverviewProps> = ({
                       </Badge>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="small">
                     Implement
                   </Button>
                 </div>

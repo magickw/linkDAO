@@ -259,10 +259,10 @@ export function VisualPolishSidebar({
           </div>
 
           <ResponsiveGrid cols={{ xs: 2 }} gap="sm" className="mb-4">
-            <AnimatedButton variant="primary" size="sm" className="text-xs">
+            <AnimatedButton variant="primary" size="small" className="text-xs">
               Send
             </AnimatedButton>
-            <AnimatedButton variant="secondary" size="sm" className="text-xs">
+            <AnimatedButton variant="secondary" size="small" className="text-xs">
               Receive
             </AnimatedButton>
           </ResponsiveGrid>

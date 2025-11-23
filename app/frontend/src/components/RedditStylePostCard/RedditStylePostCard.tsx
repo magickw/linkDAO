@@ -774,7 +774,7 @@ export default function RedditStylePostCard({
                       textColor: '#374151',
                       moderatorOnly: false
                     }}
-                    size="sm"
+                    size="small"
                     variant="subtle"
                     clickable={true}
                   />

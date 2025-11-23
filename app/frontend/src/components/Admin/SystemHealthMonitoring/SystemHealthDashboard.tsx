@@ -144,7 +144,7 @@ export const SystemHealthDashboard: React.FC<SystemHealthDashboardProps> = ({ cl
           <Button
             onClick={refreshData}
             disabled={isLoading}
-            size="sm"
+            size="small"
           >
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </Button>

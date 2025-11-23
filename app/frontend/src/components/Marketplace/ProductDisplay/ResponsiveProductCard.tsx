@@ -234,13 +234,13 @@ const SellerBadge: React.FC<{
           </span>
           {seller.verified && <CheckCircle size={12} className="text-green-400" />}
           {seller.daoApproved && (
-            <AnimatedProductBadge variant="info" size="sm">
+            <AnimatedProductBadge variant="info" size="small">
               DAO
             </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <AnimatedProductBadge variant="warning" size="sm">
+            <AnimatedProductBadge variant="warning" size="small">
               ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
             </AnimatedProductBadge>
           )}
@@ -350,7 +350,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                 <SellerBadge 
                   seller={product.seller} 
                   onClick={handleSellerClick}
-                  size="sm"
+                  size="small"
                 />
               </div>
 
@@ -449,12 +449,12 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             {/* Badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1">
               {product.isNFT && (
-                <AnimatedProductBadge variant="secondary" size="sm">
+                <AnimatedProductBadge variant="secondary" size="small">
                   NFT
                 </AnimatedProductBadge>
               )}
               {product.discount?.active && product.discount.percentage && (
-                <AnimatedProductBadge variant="error" size="sm">
+                <AnimatedProductBadge variant="error" size="small">
                   {product.discount.percentage}% OFF
                 </AnimatedProductBadge>
               )}
@@ -581,22 +581,22 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {product.isNFT && (
-              <AnimatedProductBadge variant="secondary" size="sm">
+              <AnimatedProductBadge variant="secondary" size="small">
                 NFT
               </AnimatedProductBadge>
             )}
             {product.discount?.active && product.discount.percentage && (
-              <AnimatedProductBadge variant="error" size="sm">
+              <AnimatedProductBadge variant="error" size="small">
                 {product.discount.percentage}% OFF
               </AnimatedProductBadge>
             )}
             {product.isFeatured && (
-              <AnimatedProductBadge variant="warning" size="sm">
+              <AnimatedProductBadge variant="warning" size="small">
                 Featured
               </AnimatedProductBadge>
             )}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-              <AnimatedProductBadge variant="success" size="sm">
+              <AnimatedProductBadge variant="success" size="small">
                 High Quality
               </AnimatedProductBadge>
             )}
@@ -606,7 +606,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
             <AnimatedProductBadge 
               variant="warning" 
-              size="sm"
+              size="small"
               className="absolute bottom-3 left-3"
             >
               Only {product.inventory} left
@@ -617,7 +617,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {product.inventory !== undefined && product.inventory === 0 && (
             <AnimatedProductBadge 
               variant="error" 
-              size="sm"
+              size="small"
               className="absolute bottom-3 left-3"
             >
               Out of Stock
@@ -658,22 +658,22 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Product metadata */}
           <div className="flex flex-wrap gap-2 mb-3">
             {product.condition && (
-              <AnimatedProductBadge variant="primary" size="sm">
+              <AnimatedProductBadge variant="primary" size="small">
                 {product.condition}
               </AnimatedProductBadge>
             )}
             {product.brand && (
-              <AnimatedProductBadge variant="secondary" size="sm">
+              <AnimatedProductBadge variant="secondary" size="small">
                 {product.brand}
               </AnimatedProductBadge>
             )}
             {product.hasWarranty && (
-              <AnimatedProductBadge variant="success" size="sm">
+              <AnimatedProductBadge variant="success" size="small">
                 Warranty
               </AnimatedProductBadge>
             )}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <AnimatedProductBadge variant="info" size="sm">
+              <AnimatedProductBadge variant="info" size="small">
                 Certified
               </AnimatedProductBadge>
             )}

@@ -248,7 +248,7 @@ export const NotificationCenter: React.FC = () => {
                       {!notification.read && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="small"
                           onClick={() => markAsRead(notification.id)}
                         >
                           <Check className="w-4 h-4" />
@@ -256,7 +256,7 @@ export const NotificationCenter: React.FC = () => {
                       )}
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="small"
                         onClick={() => markAsRead(notification.id)}
                       >
                         <X className="w-4 h-4" />
