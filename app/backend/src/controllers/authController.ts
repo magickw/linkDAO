@@ -77,18 +77,50 @@ class AuthController {
         if (existingUsers.length === 0) {
           safeLogger.info('User not found, creating new user', { walletAddress });
           isNewUser = true;
-          // Create new user
+
+          // Generate a default handle from wallet address
+          const shortAddress = walletAddress.slice(0, 8);
+          const defaultHandle = `user_${shortAddress}`;
+
+          // Create new user with comprehensive initial data
           const newUser = await db
             .insert(users)
             .values({
               walletAddress: walletAddress.toLowerCase(),
-              createdAt: new Date()
+              handle: defaultHandle,
+              displayName: defaultHandle,
+              role: 'user', // Default role
+              ldaoBalance: '0', // Initialize balance
+              createdAt: new Date(),
+              updatedAt: new Date()
             })
             .returning();
 
           user = newUser;
+
+          safeLogger.info('New user created successfully', {
+            walletAddress,
+            handle: defaultHandle,
+            userId: newUser[0]?.id
+          });
         } else {
           user = existingUsers;
+
+          // Update lastLogin timestamp for existing users
+          try {
+            await db
+              .update(users)
+              .set({
+                lastLogin: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(users.id, existingUsers[0].id));
+
+            safeLogger.info('Updated lastLogin for existing user', { walletAddress });
+          } catch (updateError) {
+            safeLogger.warn('Failed to update lastLogin timestamp', { error: updateError });
+            // Continue even if update fails
+          }
         }
       } catch (dbError) {
         safeLogger.error('Database error during user lookup/creation:', dbError);

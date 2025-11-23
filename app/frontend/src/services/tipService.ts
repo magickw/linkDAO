@@ -11,7 +11,7 @@ export interface Tip {
   postId?: string;
   commentId?: string;
   amount: string;
-  currency: 'LDAO' | 'USDC' | 'ETH';
+  currency: 'LDAO' | 'USDC' | 'USDT' | 'ETH';
   message?: string;
   timestamp: Date;
   isPublic: boolean;
@@ -43,6 +43,7 @@ export interface UserEarnings {
   totalEarnedByCurrency: {
     LDAO: string;
     USDC: string;
+    USDT: string;
     ETH: string;
   };
 }
@@ -111,7 +112,7 @@ export class TipService {
     postId: string,
     creatorAddress: string,
     amount: string,
-    currency: 'LDAO' | 'USDC' | 'ETH' = 'LDAO',
+    currency: 'LDAO' | 'USDC' | 'USDT' | 'ETH' = 'LDAO',
     message?: string,
     fromAddress?: string
   ): Promise<any> {
@@ -275,6 +276,7 @@ export class TipService {
       const totalEarnedByCurrency = {
         LDAO: '0',
         USDC: '0',
+        USDT: '0',
         ETH: '0'
       };
 
@@ -285,6 +287,9 @@ export class TipService {
       }
       if (totalTips.USDC !== '0') {
         totalEarnedByCurrency.USDC = totalTips.USDC;
+      }
+      if (totalTips.USDT !== '0') {
+        totalEarnedByCurrency.USDT = totalTips.USDT;
       }
       if (totalTips.ETH !== '0') {
         totalEarnedByCurrency.ETH = totalTips.ETH;
@@ -402,6 +407,7 @@ export class TipService {
     const tokenAddresses = {
       LDAO: process.env.NEXT_PUBLIC_LDAO_TOKEN_ADDRESS,
       USDC: process.env.NEXT_PUBLIC_USDC_TOKEN_ADDRESS,
+      USDT: process.env.NEXT_PUBLIC_USDT_TOKEN_ADDRESS,
       ETH: null
     };
 
@@ -533,7 +539,7 @@ export class TipService {
   /**
    * Get total tips received by a user
    */
-  static async getUserTotalTips(address: string): Promise<{ LDAO: string; USDC: string; ETH: string }> {
+  static async getUserTotalTips(address: string): Promise<{ LDAO: string; USDC: string; USDT: string; ETH: string }> {
     try {
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/tips/total/${address}`, {
         method: 'GET',
@@ -547,10 +553,10 @@ export class TipService {
       }
 
       const data = await response.json();
-      return data.totals || { LDAO: '0', USDC: '0', ETH: '0' };
+      return data.totals || { LDAO: '0', USDC: '0', USDT: '0', ETH: '0' };
     } catch (error) {
       console.error('Error fetching user total tips:', error);
-      return { LDAO: '0', USDC: '0', ETH: '0' };
+      return { LDAO: '0', USDC: '0', USDT: '0', ETH: '0' };
     }
   }
 }
