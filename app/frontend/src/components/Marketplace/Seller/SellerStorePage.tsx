@@ -265,13 +265,24 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         // Clear cache to ensure fresh data
         sellerService.clearProfileCache(sellerId);
         
-        // Re-fetch the data
+        // Add a small delay to ensure cache clearing is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Re-fetch the data with cache bypass
         const sellerProfile = await sellerService.getSellerProfile(sellerId);
         if (sellerProfile) {
+          console.log('🔍 Profile data received:', {
+            storeName: sellerProfile.storeName,
+            profilePicture: sellerProfile.profilePicture,
+            profileImageCdn: sellerProfile.profileImageCdn,
+            bio: sellerProfile.bio,
+            description: sellerProfile.description
+          });
+          
           // Transform and update seller data (same logic as in useEffect)
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
-            name: sellerProfile.storeName || 'Anonymous Seller',
+            name: sellerProfile.storeName || sellerProfile.displayName || 'Anonymous Seller',
             avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,
@@ -395,10 +406,19 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         const sellerProfile = await sellerService.getSellerProfile(sellerId);
         
         if (sellerProfile) {
+          console.log('🔍 Initial Profile data received:', {
+            storeName: sellerProfile.storeName,
+            displayName: sellerProfile.displayName,
+            profilePicture: sellerProfile.profilePicture,
+            profileImageCdn: sellerProfile.profileImageCdn,
+            bio: sellerProfile.bio,
+            description: sellerProfile.description
+          });
+          
           // Transform backend profile to store page format
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
-            name: sellerProfile.storeName || 'Anonymous Seller',
+            name: sellerProfile.storeName || sellerProfile.displayName || 'Anonymous Seller',
             avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,

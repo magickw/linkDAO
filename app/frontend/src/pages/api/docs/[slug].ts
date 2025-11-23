@@ -32,15 +32,38 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Build file path
-    // Resolve correct docs directory relative to project root (app/frontend/public/docs)
-    const docsDir = path.join(process.cwd(), 'app', 'frontend', 'public', 'docs');
-    const filePath = path.join(docsDir, filename);
-
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
+    // Handle different deployment scenarios - try multiple possible paths
+    let docsDir: string;
+    let filePath: string;
+    
+    // Try different paths based on deployment context
+    const possiblePaths = [
+      // Local development from frontend directory
+      path.join(process.cwd(), 'public', 'docs'),
+      // Vercel deployment from root directory
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
+      // Alternative path resolution
+      path.join(__dirname, '../../../../../../public/docs'),
+      // Direct relative path
+      path.resolve('./public/docs'),
+      path.resolve('./app/frontend/public/docs')
+    ];
+    
+    let fileFound = false;
+    for (const possiblePath of possiblePaths) {
+      filePath = path.join(possiblePath, filename);
+      if (fs.existsSync(filePath)) {
+        docsDir = possiblePath;
+        fileFound = true;
+        break;
+      }
+    }
+    
+    if (!fileFound) {
       return res.status(404).json({
         error: 'Document not found',
         slug: sanitizedSlug,
+        triedPaths: possiblePaths.map(p => path.join(p, filename)),
         availableDocuments: getAvailableDocuments()
       });
     }
@@ -85,18 +108,40 @@ function extractTitle(content: string): string | null {
  */
 function getAvailableDocuments(): string[] {
   try {
-    // Resolve docs directory relative to project root (app/frontend/public/docs)
-    const docsPath = path.join(process.cwd(), 'app', 'frontend', 'public', 'docs');
-    const files = fs.readdirSync(docsPath);
-    return files
-      .filter(file => file.endsWith('.md'))
-      .map(file => {
-        // Normalize filename to slug (lowercase, remove .md)
-        const base = file.replace('.md', '');
-        // Map TECHNICAL_WHITEPAPER.md to technical-whitepaper slug
-        return base.toLowerCase() === 'technical_whitepaper' ? 'technical-whitepaper' : base;
-      })
-      .sort();
+    // Try different paths based on deployment context
+    const possiblePaths = [
+      // Local development from frontend directory
+      path.join(process.cwd(), 'public', 'docs'),
+      // Vercel deployment from root directory
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
+      // Alternative path resolution
+      path.join(__dirname, '../../../../../../public/docs'),
+      // Direct relative path
+      path.resolve('./public/docs'),
+      path.resolve('./app/frontend/public/docs')
+    ];
+    
+    for (const docsPath of possiblePaths) {
+      try {
+        if (fs.existsSync(docsPath)) {
+          const files = fs.readdirSync(docsPath);
+          return files
+            .filter(file => file.endsWith('.md'))
+            .map(file => {
+              // Normalize filename to slug (lowercase, remove .md)
+              const base = file.replace('.md', '');
+              // Map TECHNICAL_WHITEPAPER.md to technical-whitepaper slug
+              return base.toLowerCase() === 'technical_whitepaper' ? 'technical-whitepaper' : base;
+            })
+            .sort();
+        }
+      } catch (error) {
+        // Continue to next path
+        continue;
+      }
+    }
+    
+    return [];
   } catch {
     return [];
   }

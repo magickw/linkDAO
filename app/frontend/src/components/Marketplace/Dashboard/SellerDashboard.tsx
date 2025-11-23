@@ -11,6 +11,7 @@ import { TIER_ACTIONS } from '../../../types/sellerTier';
 import { UnifiedImageUpload } from '../Seller';
 import { useToast } from '../../../context/ToastContext';
 import { countries } from '../../../utils/countries';
+import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -32,7 +33,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     // Basic Information
     storeName: '',
     bio: '',
-    description: '',
     sellerStory: '',
     storeDescription: '',
     location: '',
@@ -91,7 +91,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
         // Basic Information
         storeName: profile.storeName || '',
         bio: profile.bio || '',
-        description: profile.description || '',
         sellerStory: profile.sellerStory || '',
         storeDescription: profile.storeDescription || '',
         location: profile.location || '',
@@ -143,7 +142,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
         // Basic Information
         storeName: formData.storeName,
         bio: formData.bio,
-        description: formData.description,
         sellerStory: formData.sellerStory,
         storeDescription: formData.storeDescription,
         location: formData.location,
@@ -500,6 +498,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               { id: 'listings', label: 'Listings', icon: '🏪' },
               { id: 'analytics', label: 'Analytics', icon: '📈' },
               { id: 'messaging', label: 'Messaging', icon: '💬' },
+              { id: 'payouts', label: 'Payouts', icon: '💰' },
+              { id: 'billing', label: 'Billing', icon: '💳' },
               { id: 'notifications', label: 'Notifications', icon: '🔔' },
               { id: 'profile', label: 'Profile', icon: '👤' },
             ].map((tab) => (
@@ -819,17 +819,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         </div>
 
                         <div className="md:col-span-2">
-                          <label className="block text-gray-400 text-sm mb-1">Description</label>
-                          <textarea
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            rows={4}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="Detailed description of your store"
-                          />
-                        </div>
-
-                        <div className="md:col-span-2">
                           <label className="block text-gray-400 text-sm mb-1">Store Description</label>
                           <textarea
                             value={formData.storeDescription}
@@ -1143,7 +1132,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                           // Basic Information
                           storeName: profile.storeName || '',
                           bio: profile.bio || '',
-                          description: profile.description || '',
                           sellerStory: profile.sellerStory || '',
                           storeDescription: profile.storeDescription || '',
                           location: profile.location || '',
@@ -1196,8 +1184,173 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </GlassPanel>
             )}
 
+            {/* Payouts Tab */}
+            {activeTab === 'payouts' && (
+              <GlassPanel className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">💰 Payout Settings</h3>
+                <p className="text-gray-400 mb-6">
+                  Configure how you receive payments from your sales
+                </p>
+                
+                <div className="space-y-6">
+                  {/* Use the PayoutSetupStep component directly */}
+                  <PayoutSetupStep
+                    onComplete={(data: any) => {
+                      console.log('Payout settings saved:', data);
+                      addToast('Payout settings saved successfully!', 'success');
+                    }}
+                    data={{
+                      // Load existing payout data from profile if available
+                      defaultCrypto: profile?.payoutSettings?.defaultCrypto || 'USDC',
+                      cryptoAddresses: profile?.payoutSettings?.cryptoAddresses || {},
+                      fiatEnabled: profile?.payoutSettings?.fiatEnabled || false,
+                      offRampProvider: profile?.payoutSettings?.offRampProvider || '',
+                      bankAccount: profile?.payoutSettings?.bankAccount || {}
+                    }}
+                  />
+                </div>
+              </GlassPanel>
+            )}
+
+            {/* Billing Tab */}
+            {activeTab === 'billing' && (
+              <GlassPanel className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">💳 Billing & Payment Methods</h3>
+                <p className="text-gray-400 mb-6">
+                  Manage payment methods for listing fees and marketplace charges
+                </p>
+
+                <div className="space-y-8">
+                  {/* Listing Fee Information */}
+                  <div className="bg-blue-900 bg-opacity-50 rounded-lg p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-blue-300 font-semibold">Marketplace Fees</h4>
+                        <p className="text-blue-200 text-sm">Transparent pricing for your listings</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-400 text-sm">Listing Fee</span>
+                          <span className="text-white font-semibold">$0.10/month</span>
+                        </div>
+                        <p className="text-gray-500 text-xs">Per active listing</p>
+                      </div>
+                      
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-gray-400 text-sm">Transaction Fee</span>
+                          <span className="text-white font-semibold">2.5%</span>
+                        </div>
+                        <p className="text-gray-500 text-xs">Per successful sale</p>
+                      </div>
+                    </div>
+
+                    {/* Current Monthly Bill Estimate */}
+                    <div className="border-t border-blue-700 pt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-blue-300 font-medium">Est. Monthly Bill</span>
+                        <span className="text-white font-bold text-lg">
+                          ${((listings?.length || 0) * 0.1).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-blue-200 text-sm mt-1">
+                        Based on {listings?.length || 0} active listings
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Methods Section */}
+                  <div>
+                    <h4 className="text-white font-semibold mb-4">Payment Methods</h4>
+                    
+                    {/* Add Payment Method */}
+                    <div className="space-y-4">
+                      <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center">
+                        <div className="w-12 h-12 bg-purple-600 rounded-full mx-auto mb-3 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                        </div>
+                        <h5 className="text-white font-medium mb-2">Add Payment Method</h5>
+                        <p className="text-gray-400 text-sm mb-4">
+                          Add a credit card or bank account to pay for listing fees
+                        </p>
+                        <Button variant="primary">
+                          Add Payment Method
+                        </Button>
+                      </div>
+
+                      {/* Payment Method Cards (placeholder) */}
+                      <div className="bg-gray-800 rounded-lg p-4 opacity-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded mr-3"></div>
+                            <div>
+                              <p className="text-white font-medium">•••• •••• •••• 4242</p>
+                              <p className="text-gray-400 text-sm">Expires 12/25</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">Default</span>
+                            <Button variant="outline" size="sm">Edit</Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Billing History */}
+                  <div>
+                    <h4 className="text-white font-semibold mb-4">Billing History</h4>
+                    
+                    <div className="bg-gray-800 rounded-lg overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-700">
+                        <div className="grid grid-cols-4 text-sm font-medium text-gray-400">
+                          <span>Date</span>
+                          <span>Description</span>
+                          <span>Amount</span>
+                          <span>Status</span>
+                        </div>
+                      </div>
+                      
+                      {/* Sample billing entries */}
+                      {[
+                        { date: '2024-01-15', desc: 'Listing fees (10 listings)', amount: '$1.00', status: 'Paid' },
+                        { date: '2024-01-01', desc: 'Transaction fees', amount: '$2.50', status: 'Paid' },
+                      ].map((entry, index) => (
+                        <div key={index} className="px-6 py-4 border-b border-gray-700 last:border-b-0">
+                          <div className="grid grid-cols-4 text-sm">
+                            <span className="text-gray-300">{entry.date}</span>
+                            <span className="text-white">{entry.desc}</span>
+                            <span className="text-white font-medium">{entry.amount}</span>
+                            <span className="text-green-400">{entry.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Empty state */}
+                      <div className="px-6 py-8 text-center text-gray-400">
+                        <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p className="text-sm">No billing history yet</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </GlassPanel>
+            )}
+
             {/* Other tabs would be implemented similarly */}
-            {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && (
+            {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && activeTab !== 'payouts' && activeTab !== 'billing' && (
               <GlassPanel className="p-6 text-center">
                 <p className="text-gray-400">
                   {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
