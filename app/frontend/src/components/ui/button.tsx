@@ -1,24 +1,33 @@
 /**
  * Button Component
  * Provides button components with different variants and sizes
+ * 
+ * Updated to use standardized size types while maintaining backward compatibility
+ * with 'default' and 'icon' sizes
  */
 
 import React from 'react';
+import { ButtonSize, normalizeButtonSize } from '../design-system/types/button';
+
+type ExtendedButtonSize = ButtonSize | 'default' | 'icon';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  size?: ExtendedButtonSize;
   className?: string;
   children: React.ReactNode;
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  variant = 'default', 
+const Button: React.FC<ButtonProps> = ({
+  variant = 'default',
   size = 'default',
-  className = '', 
+  className = '',
   children,
   ...props
 }) => {
+  // Normalize size to standard format, mapping 'default' to 'md'
+  const normalizedSize = size === 'default' ? 'md' : size === 'icon' ? 'icon' : normalizeButtonSize(size);
+
   const getVariantStyles = () => {
     switch (variant) {
       case 'destructive':
@@ -37,13 +46,14 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const getSizeStyles = () => {
-    switch (size) {
+    switch (normalizedSize) {
       case 'sm':
         return 'h-9 rounded-md px-3 text-xs';
       case 'lg':
         return 'h-11 rounded-md px-8';
       case 'icon':
         return 'h-10 w-10';
+      case 'md':
       default:
         return 'h-10 px-4 py-2';
     }

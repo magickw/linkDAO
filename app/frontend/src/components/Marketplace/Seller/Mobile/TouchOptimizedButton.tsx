@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMobileOptimization } from '../../../../hooks/useMobileOptimization';
+import { ButtonSize, LegacyButtonSize, normalizeButtonSize } from '../../../design-system/types/button';
 
 export interface TouchOptimizedButtonProps {
   children: React.ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'small' | 'medium' | 'large';
+  size?: ButtonSize | LegacyButtonSize;
   disabled?: boolean;
   loading?: boolean;
   className?: string;
@@ -18,7 +19,7 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
   children,
   onClick,
   variant = 'primary',
-  size = 'medium',
+  size = 'md',
   disabled = false,
   loading = false,
   className = '',
@@ -35,7 +36,7 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
   // Touch event handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsPressed(true);
-    
+
     if (hapticFeedback && 'vibrate' in navigator) {
       navigator.vibrate(10); // Light haptic feedback
     }
@@ -45,15 +46,15 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
       const touch = e.touches[0];
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
-      
+
       const newRipple = {
         id: rippleIdRef.current++,
         x,
         y,
       };
-      
+
       setRipples(prev => [...prev, newRipple]);
-      
+
       // Remove ripple after animation
       setTimeout(() => {
         setRipples(prev => prev.filter(ripple => ripple.id !== newRipple.id));
@@ -71,21 +72,29 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
     }
   };
 
+  // Normalize size to standard format
+  const normalizedSize = normalizeButtonSize(size);
+
   // Size configurations
-  const sizeConfig = {
-    small: {
+  const sizeConfig: Record<ButtonSize, {
+    minHeight: number;
+    minWidth: number;
+    padding: string;
+    fontSize: number;
+  }> = {
+    sm: {
       minHeight: 36,
       minWidth: 36,
       padding: '8px 12px',
       fontSize: getOptimalFontSize(14),
     },
-    medium: {
+    md: {
       minHeight: 44, // iOS minimum touch target
       minWidth: 44,
       padding: '12px 16px',
       fontSize: getOptimalFontSize(16),
     },
-    large: {
+    lg: {
       minHeight: 52,
       minWidth: 52,
       padding: '16px 20px',
@@ -117,7 +126,7 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
     },
   };
 
-  const currentSizeConfig = sizeConfig[size];
+  const currentSizeConfig = sizeConfig[normalizedSize];
   const currentVariantStyle = variantStyles[variant];
 
   const buttonStyle: React.CSSProperties = {
@@ -160,7 +169,7 @@ export const TouchOptimizedButton: React.FC<TouchOptimizedButtonProps> = ({
           <div className="spinner"></div>
         </div>
       )}
-      
+
       {/* Button content */}
       <span className={`button-content ${loading ? 'loading' : ''}`}>
         {children}

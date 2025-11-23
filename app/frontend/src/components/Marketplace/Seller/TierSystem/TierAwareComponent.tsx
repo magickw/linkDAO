@@ -32,7 +32,7 @@ const TierAwareComponent: React.FC<TierAwareComponentProps> = ({
   if (loading) {
     return (
       <div className={`tier-aware-loading ${className}`}>
-        <LoadingSpinner size="small" />
+        <LoadingSpinner size="sm" />
         <span className="ml-2 text-sm text-gray-600">Loading tier information...</span>
       </div>
     );

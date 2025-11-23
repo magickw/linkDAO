@@ -365,7 +365,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 disabled={loading || (!selectedConversation && !recipientAddress)}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {loading ? <LoadingSpinner size="small" /> : 'Send Message'}
+                {loading ? <LoadingSpinner size="sm" /> : 'Send Message'}
               </button>
             </div>
           )}
@@ -422,7 +422,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 disabled={loading || selectedCommunities.length === 0}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                {loading ? <LoadingSpinner size="small" /> : `Cross-post to ${selectedCommunities.length} communities`}
+                {loading ? <LoadingSpinner size="sm" /> : `Cross-post to ${selectedCommunities.length} communities`}
               </button>
             </div>
           )}

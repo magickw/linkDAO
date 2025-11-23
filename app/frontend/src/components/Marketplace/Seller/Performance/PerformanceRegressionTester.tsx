@@ -124,7 +124,7 @@ const TestConfiguration: React.FC<{
           >
             {isRunning ? (
               <>
-                <LoadingSpinner size="small" />
+                <LoadingSpinner size="sm" />
                 <span className="ml-2">Running Test...</span>
               </>
             ) : (
