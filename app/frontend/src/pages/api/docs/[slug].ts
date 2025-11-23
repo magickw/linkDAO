@@ -25,8 +25,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     // Security: Prevent directory traversal
     const sanitizedSlug = slug.replace(/\.\./g, '').replace(/\//g, '');
 
+    // Special case: technical-whitepaper maps to TECHNICAL_WHITEPAPER.md
+    let filename = `${sanitizedSlug}.md`;
+    if (sanitizedSlug === 'technical-whitepaper') {
+      filename = 'TECHNICAL_WHITEPAPER.md';
+    }
+
     // Build file path
-    const filePath = path.join(process.cwd(), 'public', 'docs', `${sanitizedSlug}.md`);
+    const filePath = path.join(process.cwd(), 'public', 'docs', filename);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
