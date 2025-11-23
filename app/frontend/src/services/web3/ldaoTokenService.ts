@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 import { getSigner, getProvider } from '@/utils/web3';
 import { LDAOToken, LDAOToken__factory } from '@/types/typechain';
 import { web3ErrorHandler } from '@/utils/web3ErrorHandling';
-import deployedAddresses from '../../../../contracts/deployedAddresses-sepolia.json';
+import deployedAddresses from '@/config/deployedAddresses-sepolia.json';
 
 // Get the LDAO token contract address from deployed addresses
 const LDAO_TOKEN_ADDRESS = deployedAddresses.contracts.LDAOToken.address;

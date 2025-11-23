@@ -5,7 +5,7 @@
 import { ethers } from 'ethers';
 import { getProvider } from '@/utils/web3';
 import { LDAOToken, LDAOToken__factory } from '@/types/typechain';
-import deployedAddresses from '../../../../contracts/deployedAddresses-sepolia.json';
+import deployedAddresses from '@/config/deployedAddresses-sepolia.json';
 import { web3ErrorHandler } from '@/utils/web3ErrorHandling';
 
 export interface TokenTransaction {

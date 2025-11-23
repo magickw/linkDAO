@@ -5,7 +5,7 @@
 import { TokenActivity, TokenActivityType, TokenTransactionRequest, TokenTransactionResponse } from '../../types/tokenActivity';
 import { TokenInfo } from '../../types/web3Community';
 import { web3ErrorHandler } from '../../utils/web3ErrorHandling';
-import deployedAddresses from '../../../../contracts/deployedAddresses-sepolia.json';
+import deployedAddresses from '@/config/deployedAddresses-sepolia.json';
 import { ldaoTokenService } from './ldaoTokenService';
 
 export class TokenService {
