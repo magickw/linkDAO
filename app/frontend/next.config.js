@@ -10,6 +10,14 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
+  // TypeScript configuration
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
+  // Only look for pages in src/pages directory, not in node_modules
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+
   // Image optimization
   images: {
     domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com', 'linkdao.io', 'localhost', '127.0.0.1'],
@@ -215,15 +223,11 @@ const nextConfig = {
   // Optimize for faster builds
   // swcMinify is now enabled by default in Next.js 13+
 
-  // Enable experimental features that improve SEO
+  // Enable experimental features that improve SEO and performance
   experimental: {
-    // newNextLinkBehavior is now the default behavior
     // Optimize server-side rendering
     optimizeServerReact: true,
   },
-
-  // Custom page resolver to exclude Playwright files
-  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -232,6 +236,3 @@ const nextConfig = {
 
 // module.exports = withBundleAnalyzer(nextConfig);
 module.exports = nextConfig;
-
-// Ensure Playwright files are not treated as pages
-nextConfig.pageExtensions = ['tsx', 'ts', 'jsx', 'js'];
