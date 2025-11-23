@@ -164,7 +164,7 @@ export const UploadProgress: React.FC<{
             status={getStatusType(file.status) as any}
             message={getStatusMessage(file)}
             showPercentage={false}
-            size="small"
+            size="sm"
           />
         </div>
       ))}

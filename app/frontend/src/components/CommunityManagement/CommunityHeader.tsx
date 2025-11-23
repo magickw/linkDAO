@@ -155,7 +155,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
           <div className="absolute top-4 right-4">
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={triggerBannerUpload}
               disabled={isUploading}
               className="bg-black/50 hover:bg-black/70 text-white border-0"
@@ -263,7 +263,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                 }}
                 disabled={loading}
                 variant={isJoined ? "outline" : "primary"}
-                size="large"
+                size="lg"
                 className={cn(
                   "min-w-[120px] transition-all duration-200",
                   isJoined

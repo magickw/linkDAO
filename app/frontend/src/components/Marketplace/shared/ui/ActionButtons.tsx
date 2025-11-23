@@ -57,7 +57,7 @@ const actionVariants: Record<ActionType, 'primary' | 'secondary' | 'outline' | '
 interface ActionButtonsProps {
   actions: ActionButtonConfig[];
   className?: string;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   align?: 'start' | 'center' | 'end';
   spacing?: 'none' | 'xs' | 'sm' | 'md';
 }
@@ -65,7 +65,7 @@ interface ActionButtonsProps {
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   actions,
   className,
-  size = 'small',
+  size = 'sm',
   align = 'end',
   spacing = 'sm',
 }) => {

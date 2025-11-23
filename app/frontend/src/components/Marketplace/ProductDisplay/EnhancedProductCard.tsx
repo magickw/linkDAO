@@ -219,7 +219,7 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
               >
                 <Button
                   variant="primary"
-                  size="small"
+                  size="sm"
                   onClick={handleAddToCart}
                 >
                   <ShoppingCart size={16} />
@@ -227,7 +227,7 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
                 </Button>
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   onClick={handleCardClick}
                   className="border-white/30 text-white"
                 >
@@ -335,7 +335,7 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
             {product.listingType === 'AUCTION' ? (
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   onBidClick?.(product.id);
@@ -347,7 +347,7 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
             ) : (
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 onClick={handleAddToCart}
                 className="w-full mt-auto"
               >

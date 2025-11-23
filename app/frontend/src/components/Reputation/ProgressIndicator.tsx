@@ -5,7 +5,7 @@ interface ProgressIndicatorProps {
   milestones: ProgressMilestone[];
   animated?: boolean;
   showLabels?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   orientation?: 'horizontal' | 'vertical';
 }
 

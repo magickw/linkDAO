@@ -4,7 +4,7 @@ import { OnChainAchievement } from '../../types/onChainVerification';
 
 interface OnChainAchievementBadgeProps {
   achievement: OnChainAchievement;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showDetails?: boolean;
   showVerificationProof?: boolean;
   className?: string;

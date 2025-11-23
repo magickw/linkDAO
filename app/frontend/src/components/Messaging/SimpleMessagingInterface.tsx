@@ -159,18 +159,18 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
             <div className="flex items-center space-x-2">
               <Button 
                 variant="outline" 
-                size="small" 
+                size="sm" 
                 className="p-2"
                 onClick={() => setShowNewConversation(true)}
                 title="New Conversation"
               >
                 <User size={16} />
               </Button>
-              <Button variant="outline" size="small" className="p-2">
+              <Button variant="outline" size="sm" className="p-2">
                 <Settings size={16} />
               </Button>
               {onClose && (
-                <Button variant="outline" size="small" onClick={onClose} className="p-2">
+                <Button variant="outline" size="sm" onClick={onClose} className="p-2">
                   <X size={16} />
                 </Button>
               )}
@@ -197,7 +197,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
               <h3 className="text-sm font-medium text-white">New Conversation</h3>
               <Button 
                 variant="outline" 
-                size="small" 
+                size="sm" 
                 onClick={() => setShowNewConversation(false)}
                 className="p-1"
               >
@@ -219,7 +219,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
               />
               <Button 
                 variant="primary" 
-                size="small"
+                size="sm"
                 onClick={startNewConversation}
                 disabled={!newConversationAddress.trim()}
               >
@@ -376,7 +376,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
 
                 <Button 
                   variant="primary" 
-                  size="small" 
+                  size="sm" 
                   onClick={sendSimpleMessage}
                   disabled={!newMessage.trim()}
                   className="p-2"

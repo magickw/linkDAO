@@ -204,7 +204,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-white">Search Addresses</h3>
-          <Button variant="outline" size="small" onClick={onClose} className="p-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="p-2">
             <X size={16} />
           </Button>
         </div>
@@ -290,7 +290,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
-                      size="small"
+                      size="sm"
                       className="p-1"
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();

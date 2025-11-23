@@ -147,7 +147,7 @@ describe('Pricing Calculations', () => {
           cryptoPrice="0.15"
           cryptoSymbol="ETH"
           fiatPrice="260.00"
-          size="small"
+          size="sm"
         />
       );
 
@@ -161,7 +161,7 @@ describe('Pricing Calculations', () => {
           cryptoPrice="0.15"
           cryptoSymbol="ETH"
           fiatPrice="260.00"
-          size="large"
+          size="lg"
         />
       );
 

@@ -40,7 +40,7 @@ export const CommunityPerformanceDashboard: React.FC<CommunityPerformanceDashboa
   if (loading) {
     return (
       <div className="performance-dashboard-loading">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
         <p>Loading performance data...</p>
       </div>
     );

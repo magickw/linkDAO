@@ -11,7 +11,7 @@ interface TransactionHashDisplayProps {
   showCopyButton?: boolean;
   showExplorerLink?: boolean;
   format?: 'full' | 'short' | 'minimal';
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
   onVerificationComplete?: (proof: OnChainProof | null) => void;
 }

@@ -173,7 +173,7 @@ export const UserMonitoringDashboard: React.FC = () => {
                             <Clock className="w-5 h-5 text-purple-400" />
                             Recent Activity
                         </h3>
-                        <Button variant="ghost" size="small">View All</Button>
+                        <Button variant="ghost" size="sm">View All</Button>
                     </div>
                     <div className="space-y-4">
                         {recentActivity.length > 0 ? (
@@ -213,7 +213,7 @@ export const UserMonitoringDashboard: React.FC = () => {
                             <AlertTriangle className="w-5 h-5 text-orange-400" />
                             Active Risk Flags
                         </h3>
-                        <Button variant="ghost" size="small">View All</Button>
+                        <Button variant="ghost" size="sm">View All</Button>
                     </div>
                     <div className="space-y-4">
                         {riskFlags.length > 0 ? (

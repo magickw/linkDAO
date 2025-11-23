@@ -250,7 +250,7 @@ const SellerReturnsPage: React.FC = () => {
           </span>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => setSelectedReturn(ret.id)}
             className="p-2"
           >
@@ -298,7 +298,7 @@ const SellerReturnsPage: React.FC = () => {
           {ret.status === 'pending' && (
             <Button
               variant="primary"
-              size="small"
+              size="sm"
               onClick={() => {
                 setCurrentReturnId(ret.id);
                 setShowRespondModal(true);
@@ -312,7 +312,7 @@ const SellerReturnsPage: React.FC = () => {
           
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={() => setSelectedReturn(ret.id)}
             className="flex items-center gap-2"
           >

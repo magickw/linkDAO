@@ -283,7 +283,7 @@ export const GovernanceSystem: React.FC<GovernanceSystemProps> = ({
       <div className="proposals-section">
         {loading ? (
           <div className="loading-state">
-            <LoadingSpinner size="large" />
+            <LoadingSpinner size="lg" />
             <p>Loading proposals...</p>
           </div>
         ) : error ? (

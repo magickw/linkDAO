@@ -94,10 +94,10 @@ describe('Design System Components', () => {
     });
 
     it('applies correct size classes', () => {
-      const { rerender } = render(<Button size="small">Small</Button>);
+      const { rerender } = render(<Button size="sm">Small</Button>);
       expect(screen.getByRole('button')).toBeInTheDocument();
       
-      rerender(<Button size="large">Large</Button>);
+      rerender(<Button size="lg">Large</Button>);
       expect(screen.getByRole('button')).toBeInTheDocument();
     });
   });
@@ -281,7 +281,7 @@ describe('Design System Components', () => {
 
       render(
         <GlassPanel>
-          <Button size="medium">Responsive Button</Button>
+          <Button size="md">Responsive Button</Button>
           <TrustIndicators verified escrowProtected />
           <DualPricing cryptoPrice="0.15" fiatPrice="270.00" />
         </GlassPanel>

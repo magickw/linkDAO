@@ -229,9 +229,9 @@ export const AllVariants: Story = {
       <div>
         <h3 style={{ color: 'white', marginBottom: '1rem' }}>Button Sizes</h3>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Button variant="primary" size="small">Small</Button>
-          <Button variant="primary" size="medium">Medium</Button>
-          <Button variant="primary" size="large">Large</Button>
+          <Button variant="primary" size="sm">Small</Button>
+          <Button variant="primary" size="md">Medium</Button>
+          <Button variant="primary" size="lg">Large</Button>
         </div>
       </div>
       

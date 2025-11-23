@@ -212,7 +212,7 @@ export const MobileOptimizedForm: React.FC<MobileOptimizedFormProps> = ({
       <div className="form-actions">
         <TouchOptimizedButton
           variant="primary"
-          size="large"
+          size="lg"
           onClick={handleSubmit}
           loading={isLoading}
           disabled={isLoading}

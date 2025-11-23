@@ -137,7 +137,7 @@ const ReturnsPage: React.FC = () => {
           </span>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => setSelectedReturn(ret.id)}
             className="p-2"
           >
@@ -191,7 +191,7 @@ const ReturnsPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={() => setSelectedReturn(ret.id)}
             className="flex items-center gap-2"
           >

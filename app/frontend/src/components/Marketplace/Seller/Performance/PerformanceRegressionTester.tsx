@@ -4,11 +4,11 @@ import type { PerformanceTestResult } from '../../../../services/sellerPerforman
 import ErrorBoundary from '../../../ErrorBoundary';
 
 // Simple loading spinner component
-const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) => {
+const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const getSize = () => {
     switch (size) {
-      case 'small': return '16px';
-      case 'large': return '48px';
+      case 'sm': return '16px';
+      case 'lg': return '48px';
       default: return '32px';
     }
   };

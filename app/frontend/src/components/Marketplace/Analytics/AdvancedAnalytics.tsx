@@ -463,7 +463,7 @@ export const AdvancedAnalytics: React.FC<AdvancedAnalyticsProps> = ({
             {metrics.find(m => m.id === selectedMetric)?.name || 'Revenue'} Trend
           </h3>
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="small">
+            <Button variant="outline" size="sm">
               <Filter size={16} className="mr-2" />
               Filter
             </Button>

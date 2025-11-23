@@ -69,17 +69,17 @@ describe('ProgressIndicator', () => {
   });
 
   it('applies correct size classes', () => {
-    const { rerender } = render(<ProgressIndicator milestones={mockMilestones} size="small" />);
+    const { rerender } = render(<ProgressIndicator milestones={mockMilestones} size="sm" />);
     
     // Test small size
     expect(document.querySelector('.h-2')).toBeInTheDocument();
     
     // Test medium size
-    rerender(<ProgressIndicator milestones={mockMilestones} size="medium" />);
+    rerender(<ProgressIndicator milestones={mockMilestones} size="md" />);
     expect(document.querySelector('.h-3')).toBeInTheDocument();
     
     // Test large size
-    rerender(<ProgressIndicator milestones={mockMilestones} size="large" />);
+    rerender(<ProgressIndicator milestones={mockMilestones} size="lg" />);
     expect(document.querySelector('.h-4')).toBeInTheDocument();
   });
 

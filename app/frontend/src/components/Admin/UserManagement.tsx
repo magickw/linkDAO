@@ -532,7 +532,7 @@ export function UserManagement() {
               <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   onClick={() => setFilters({
                     role: '',
                     status: '',
@@ -572,7 +572,7 @@ export function UserManagement() {
                 onClick={() => setActionModal({ type: 'bulk-suspend', user: null })}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <Ban className="w-4 h-4" />
@@ -582,7 +582,7 @@ export function UserManagement() {
                 onClick={handleBulkUnsuspend}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <UserCheck className="w-4 h-4" />
@@ -592,7 +592,7 @@ export function UserManagement() {
                 onClick={() => setActionModal({ type: 'bulk-role', user: null })}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <Shield className="w-4 h-4" />
@@ -659,7 +659,7 @@ export function UserManagement() {
                   <Button
                     onClick={() => setActionModal({ type: 'role', user: selectedUser })}
                     variant="outline"
-                    size="small"
+                    size="sm"
                   >
                     Change Role
                   </Button>
@@ -667,7 +667,7 @@ export function UserManagement() {
                     <Button
                       onClick={() => handleUnsuspend(selectedUser.id)}
                       variant="primary"
-                      size="small"
+                      size="sm"
                     >
                       Unsuspend
                     </Button>
@@ -675,7 +675,7 @@ export function UserManagement() {
                     <Button
                       onClick={() => setActionModal({ type: 'suspend', user: selectedUser })}
                       variant="outline"
-                      size="small"
+                      size="sm"
                     >
                       Suspend
                     </Button>

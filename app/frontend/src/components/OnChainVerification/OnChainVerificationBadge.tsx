@@ -5,7 +5,7 @@ import { onChainVerificationService } from '../../services/web3/onChainVerificat
 
 interface OnChainVerificationBadgeProps {
   proof: OnChainProof;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   showTooltip?: boolean;
   className?: string;

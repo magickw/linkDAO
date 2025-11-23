@@ -97,7 +97,7 @@ export const GroupManagement: React.FC<GroupManagementProps> = ({
           />
           <Button 
             variant="primary" 
-            size="small"
+            size="sm"
             onClick={handleAddMember}
             disabled={!newMemberAddress.trim()}
           >

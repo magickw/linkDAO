@@ -104,7 +104,7 @@ export const SwipeableSellerCard: React.FC<SwipeableSellerCardProps> = ({
         {onShare && (
           <TouchOptimizedButton
             variant="secondary"
-            size="medium"
+            size="md"
             onClick={() => handleActionClick(onShare)}
             className="action-button share-button"
           >
@@ -114,7 +114,7 @@ export const SwipeableSellerCard: React.FC<SwipeableSellerCardProps> = ({
         {onEdit && (
           <TouchOptimizedButton
             variant="outline"
-            size="medium"
+            size="md"
             onClick={() => handleActionClick(onEdit)}
             className="action-button edit-button"
           >
@@ -124,7 +124,7 @@ export const SwipeableSellerCard: React.FC<SwipeableSellerCardProps> = ({
         {onDelete && (
           <TouchOptimizedButton
             variant="secondary"
-            size="medium"
+            size="md"
             onClick={() => handleActionClick(onDelete)}
             className="action-button delete-button"
           >

@@ -106,7 +106,7 @@ const OrderSearchFilters: React.FC<OrderSearchFiltersProps> = ({
           />
           <Button
             type="submit"
-            size="small"
+            size="sm"
             className="absolute right-2 top-1/2 transform -translate-y-1/2"
           >
             Search
@@ -350,14 +350,14 @@ const OrderSearchFilters: React.FC<OrderSearchFiltersProps> = ({
           <div className="flex space-x-3">
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={handleClearFilters}
             >
               <RotateCcw size={16} className="mr-2" />
               Reset
             </Button>
             <Button
-              size="small"
+              size="sm"
               onClick={() => onSearch({ filters: localFilters })}
             >
               Apply Filters

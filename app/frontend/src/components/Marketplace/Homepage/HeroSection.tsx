@@ -185,7 +185,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           >
             <div className="flex flex-col sm:flex-row gap-6">
               <GradientButton
-                size="large"
+                size="lg"
                 gradient="primary"
                 onClick={onBrowseMarketplace}
                 className="text-lg px-8 py-4 font-semibold shadow-2xl"
@@ -197,7 +197,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <>
                   <Button
                     variant="secondary"
-                    size="large"
+                    size="lg"
                     onClick={() => router.push('/marketplace/seller/dashboard')}
                     className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
                   >
@@ -206,7 +206,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   
                   <Button
                     variant="outline"
-                    size="large"
+                    size="lg"
                     onClick={() => router.push('/marketplace/seller/listings/create')}
                     className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
                   >
@@ -216,7 +216,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               ) : (
                 <Button
                   variant="secondary"
-                  size="large"
+                  size="lg"
                   onClick={onStartSelling}
                   className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
                 >

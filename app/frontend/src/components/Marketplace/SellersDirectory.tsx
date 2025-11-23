@@ -181,7 +181,7 @@ export const SellersDirectory: React.FC = () => {
               {/* Visit Store Button */}
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 className="w-full text-xs"
                 onClick={(e) => {
                   e.stopPropagation();

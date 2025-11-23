@@ -435,7 +435,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 <Button
                   onClick={() => router.push('/marketplace/seller/upgrade')}
                   variant="primary"
-                  size="small"
+                  size="sm"
                 >
                   Upgrade Now
                 </Button>
@@ -571,7 +571,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                             <Button
                               onClick={() => markNotificationRead(notification.id)}
                               variant="outline"
-                              size="small"
+                              size="sm"
                             >
                               Mark Read
                             </Button>
@@ -605,7 +605,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <Button
                       onClick={() => fetchListings()}
                       variant="outline"
-                      size="small"
+                      size="sm"
                       loading={listingsLoading}
                     >
                       Refresh
@@ -613,7 +613,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <Button
                       onClick={() => router.push('/marketplace/seller/listings/create')}
                       variant="primary"
-                      size="small"
+                      size="sm"
                     >
                       New Listing
                     </Button>
@@ -657,7 +657,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                             <Button
                               onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                               variant="outline"
-                              size="small"
+                              size="sm"
                             >
                               View
                             </Button>
@@ -1300,7 +1300,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">Default</span>
-                            <Button variant="outline" size="small">Edit</Button>
+                            <Button variant="outline" size="sm">Edit</Button>
                           </div>
                         </div>
                       </div>

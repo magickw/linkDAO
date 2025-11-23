@@ -336,7 +336,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
               <span className="text-white/70">View on Explorer:</span>
               <Button
                 variant="ghost"
-                size="small"
+                size="sm"
                 className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
               >
                 <ExternalLink className="w-3 h-3" />

@@ -81,12 +81,15 @@ class AvatarService {
    */
   async getUserAvatarUrl(
     userId: string,
-    size: 'small' | 'medium' | 'large' | 'xlarge' = 'medium',
+    size: 'sm' | 'md' | 'lg' | 'xlarge' | 'small' | 'medium' | 'large' = 'md',
     preferCDN = true
   ): Promise<string> {
+    // Normalize size to standard format
+    const normalizedSize = size === 'small' ? 'sm' : size === 'medium' ? 'md' : size === 'large' ? 'lg' : size;
+
     try {
-      const response = await fetch(`${this.baseUrl}/${userId}?size=${size}&preferCDN=${preferCDN}`);
-      
+      const response = await fetch(`${this.baseUrl}/${userId}?size=${normalizedSize}&preferCDN=${preferCDN}`);
+
       if (response.ok) {
         const data = await response.json();
         return data.url;
@@ -105,9 +108,9 @@ class AvatarService {
   async getUserAvatarSizes(userId: string): Promise<AvatarSizes> {
     try {
       const [small, medium, large, xlarge] = await Promise.all([
-        this.getUserAvatarUrl(userId, 'small'),
-        this.getUserAvatarUrl(userId, 'medium'),
-        this.getUserAvatarUrl(userId, 'large'),
+        this.getUserAvatarUrl(userId, 'sm'),
+        this.getUserAvatarUrl(userId, 'md'),
+        this.getUserAvatarUrl(userId, 'lg'),
         this.getUserAvatarUrl(userId, 'xlarge'),
       ]);
 
@@ -145,17 +148,20 @@ class AvatarService {
    */
   generateDefaultAvatar(
     identifier: string,
-    size: 'small' | 'medium' | 'large' | 'xlarge' = 'medium'
+    size: 'sm' | 'md' | 'lg' | 'xlarge' | 'small' | 'medium' | 'large' = 'md'
   ): string {
+    // Normalize size to standard format
+    const normalizedSize = size === 'small' ? 'sm' : size === 'medium' ? 'md' : size === 'large' ? 'lg' : size;
+
     const sizeMap = {
-      small: 40,
-      medium: 80,
-      large: 160,
+      sm: 40,
+      md: 80,
+      lg: 160,
       xlarge: 320,
     };
 
-    const pixelSize = sizeMap[size];
-    
+    const pixelSize = sizeMap[normalizedSize as 'sm' | 'md' | 'lg' | 'xlarge'];
+
     // Use different avatar styles based on identifier hash
     const avatarStyles = ['identicon', 'bottts', 'avataaars', 'personas'];
     const hash = this.simpleHash(identifier);
@@ -220,8 +226,8 @@ class AvatarService {
   async preloadAvatars(userIds: string[]): Promise<void> {
     const preloadPromises = userIds.map(async (userId) => {
       try {
-        const avatarUrl = await this.getUserAvatarUrl(userId, 'medium');
-        
+        const avatarUrl = await this.getUserAvatarUrl(userId, 'md');
+
         // Create image element to trigger browser preload
         const img = new Image();
         img.src = avatarUrl;
@@ -248,7 +254,7 @@ class AvatarService {
     };
 
     const size = contextSizes[context];
-    
+
     // If it's already a dicebear URL, update the size parameter
     if (baseUrl.includes('dicebear.com')) {
       const url = new URL(baseUrl);
@@ -272,19 +278,19 @@ class AvatarService {
   ): string {
     // Create a simple colored circle SVG as placeholder
     const colors = [
-      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
       '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'
     ];
-    
+
     const hash = this.simpleHash(identifier);
     const color = colors[hash % colors.length];
     const initials = this.getInitials(identifier);
 
     const svg = `
       <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="${size/2}" cy="${size/2}" r="${size/2}" fill="${color}"/>
-        <text x="${size/2}" y="${size/2 + 6}" text-anchor="middle" fill="white" 
-              font-family="Arial, sans-serif" font-size="${size/3}" font-weight="bold">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="${color}"/>
+        <text x="${size / 2}" y="${size / 2 + 6}" text-anchor="middle" fill="white" 
+              font-family="Arial, sans-serif" font-size="${size / 3}" font-weight="bold">
           ${initials}
         </text>
       </svg>
@@ -301,13 +307,13 @@ class AvatarService {
       // For wallet addresses, use first and last character
       return (identifier.charAt(2) + identifier.charAt(identifier.length - 1)).toUpperCase();
     }
-    
+
     // For handles or names, use first two characters or first letter of each word
     const words = identifier.split(/[\s_-]+/);
     if (words.length > 1) {
       return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
     }
-    
+
     return identifier.substring(0, 2).toUpperCase();
   }
 }

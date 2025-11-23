@@ -56,7 +56,7 @@ export function ExportButton({
             <Button
                 onClick={() => setShowDialog(true)}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2"
             >
                 <Download className="w-4 h-4" />

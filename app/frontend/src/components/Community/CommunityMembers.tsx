@@ -217,7 +217,7 @@ export const CommunityMembers: React.FC<CommunityMembersProps> = ({
   if (loading && members.length === 0) {
     return (
       <div className="members-loading">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
         <p>Loading members...</p>
       </div>
     );

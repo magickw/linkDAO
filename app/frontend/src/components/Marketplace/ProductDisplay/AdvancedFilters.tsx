@@ -218,7 +218,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   {getActiveFilterCount() > 0 && (
-                    <Button variant="ghost" size="small" onClick={onReset}>
+                    <Button variant="ghost" size="sm" onClick={onReset}>
                       Clear All
                     </Button>
                   )}

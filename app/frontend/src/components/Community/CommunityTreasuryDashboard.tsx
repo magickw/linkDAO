@@ -361,7 +361,7 @@ export const CommunityTreasuryDashboard: React.FC<CommunityTreasuryDashboardProp
     <GlassPanel className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-white">Recent Transactions</h3>
-        <Button variant="secondary" size="small">
+        <Button variant="secondary" size="sm">
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>

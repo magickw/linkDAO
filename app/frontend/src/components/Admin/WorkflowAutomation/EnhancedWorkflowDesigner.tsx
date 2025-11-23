@@ -323,7 +323,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
           <div className="flex gap-1">
             <Button 
               variant="ghost" 
-              size="small"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 duplicateNode(node);
@@ -333,7 +333,7 @@ export const EnhancedWorkflowDesigner: React.FC<EnhancedWorkflowDesignerProps> =
             </Button>
             <Button 
               variant="ghost" 
-              size="small"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 deleteNode(node.id);

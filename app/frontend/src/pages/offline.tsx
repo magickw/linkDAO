@@ -100,7 +100,7 @@ export default function OfflinePage() {
           >
             <Button
               variant="primary"
-              size="large"
+              size="lg"
               onClick={handleRetry}
               className="w-full"
             >
@@ -109,7 +109,7 @@ export default function OfflinePage() {
             
             <Button
               variant="outline"
-              size="large"
+              size="lg"
               onClick={handleGoHome}
               className="w-full"
             >

@@ -111,7 +111,7 @@ const TrackingDisplay: React.FC<TrackingDisplayProps> = ({
         {onRefresh && (
           <Button 
             variant="outline" 
-            size="small" 
+            size="sm" 
             onClick={onRefresh}
             disabled={loading}
           >

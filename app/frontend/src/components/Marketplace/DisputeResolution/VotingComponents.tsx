@@ -267,7 +267,7 @@ export const VotingPanel: React.FC<{
                 This dispute has been escalated to the DAO governance system due to its complexity or high value.
                 Token holders can now vote on the resolution through the governance portal.
               </p>
-              <Button variant="outline" size="small">
+              <Button variant="outline" size="sm">
                 <TrendingUp size={16} className="mr-2" />
                 View in Governance
               </Button>
@@ -301,7 +301,7 @@ export const CreateDisputeModal: React.FC<{
             </h3>
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={onClose}
             >
               <X size={16} />

@@ -672,7 +672,7 @@ export function AdminDashboard() {
               <Button
                 onClick={handleRefresh}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -681,7 +681,7 @@ export function AdminDashboard() {
               <Button
                 onClick={handleDisconnect}
                 variant="outline"
-                size="small"
+                size="sm"
                 className="flex items-center gap-2 text-red-400 hover:text-red-300 hover:border-red-400"
               >
                 <LogOut className="w-4 h-4" />
@@ -848,7 +848,7 @@ export function AdminDashboard() {
                   <Button
                     onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
                     variant="outline"
-                    size="small"
+                    size="sm"
                     className="flex items-center gap-2"
                   >
                     <Filter className="w-4 h-4" />
@@ -956,7 +956,7 @@ export function AdminDashboard() {
                       <Button
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         variant="outline"
-                        size="small"
+                        size="sm"
                         disabled={currentPage === 1}
                         className="px-2"
                       >
@@ -970,7 +970,7 @@ export function AdminDashboard() {
                       <Button
                         onClick={() => setCurrentPage(prev => Math.min(getTotalPages(), prev + 1))}
                         variant="outline"
-                        size="small"
+                        size="sm"
                         disabled={currentPage >= getTotalPages()}
                         className="px-2"
                       >
@@ -1153,14 +1153,14 @@ export function AdminDashboard() {
                 <Button
                   onClick={handleExtendSession}
                   className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                  size="small"
+                  size="sm"
                 >
                   Extend Session
                 </Button>
                 <Button
                   onClick={() => setShowSessionWarning(false)}
                   variant="ghost"
-                  size="small"
+                  size="sm"
                   className="text-gray-400 hover:text-white"
                 >
                   Dismiss

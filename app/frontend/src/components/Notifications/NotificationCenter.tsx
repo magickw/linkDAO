@@ -301,7 +301,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         <div className="flex-1 overflow-y-auto max-h-96">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <LoadingSpinner size="medium" />
+              <LoadingSpinner size="md" />
             </div>
           ) : Object.keys(groupedNotifications).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-gray-500 dark:text-gray-400">

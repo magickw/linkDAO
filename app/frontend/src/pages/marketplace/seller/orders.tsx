@@ -161,7 +161,7 @@ export default function SellerOrdersPage() {
                           <td className="py-4">
                             <Button
                               variant="outline"
-                              size="small"
+                              size="sm"
                               onClick={() => router.push(`/marketplace/seller/orders/${order.id}`)}
                             >
                               View

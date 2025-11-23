@@ -19,7 +19,7 @@ interface TrustIndicatorsProps {
   /** Display as badges or inline */
   layout?: 'badges' | 'inline' | 'compact';
   /** Size variant */
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   /** Additional CSS classes */
   className?: string;
 }
@@ -29,7 +29,7 @@ interface TrustBadgeProps {
   label: string;
   color: string;
   glowColor: string;
-  size: 'small' | 'medium' | 'large';
+  size: 'sm' | 'md' | 'lg';
   layout: 'badges' | 'inline' | 'compact';
 }
 
@@ -42,19 +42,19 @@ const TrustBadge: React.FC<TrustBadgeProps> = ({
   layout,
 }) => {
   const sizeConfig = {
-    small: {
+    sm: {
       fontSize: designTokens.typography.fontSize.xs,
       padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
       iconSize: '12px',
       borderRadius: '6px',
     },
-    medium: {
+    md: {
       fontSize: designTokens.typography.fontSize.sm,
       padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
       iconSize: '14px',
       borderRadius: '8px',
     },
-    large: {
+    lg: {
       fontSize: designTokens.typography.fontSize.base,
       padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
       iconSize: '16px',
@@ -112,7 +112,7 @@ export const TrustIndicators: React.FC<TrustIndicatorsProps> = ({
   onChainCertified = false,
   daoApproved = false,
   layout = 'badges',
-  size = 'medium',
+  size = 'md',
   className = '',
 }) => {
   const indicators = [];

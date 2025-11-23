@@ -258,7 +258,7 @@ export const WorkflowInstanceViewer: React.FC<WorkflowInstanceViewerProps> = ({
                       {step.status === 'failed' && (
                         <Button
                           variant="ghost"
-                          size="small"
+                          size="sm"
                           onClick={() => handleRetry(step.id)}
                         >
                           <RotateCcw className="w-4 h-4" />

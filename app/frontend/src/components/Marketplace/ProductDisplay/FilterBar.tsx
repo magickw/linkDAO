@@ -178,7 +178,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex items-center gap-2 flex-wrap mb-4">
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={() => setIsDrawerOpen(true)}
           className="border-white/30 text-white/80 hover:bg-white/10"
         >
@@ -220,7 +220,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {activeFilters.length > 0 && (
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={clearAllFilters}
             className="text-white/60 hover:text-white"
           >

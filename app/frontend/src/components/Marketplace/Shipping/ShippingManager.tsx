@@ -574,7 +574,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({
 
         <Button
           variant="primary"
-          size="large"
+          size="lg"
           onClick={handleDeliveryConfirmation}
           disabled={loading}
           className="w-full flex items-center justify-center gap-2"

@@ -140,7 +140,7 @@ const MobileSellerDemo: React.FC = () => {
               <h2>Your Listings</h2>
               <TouchOptimizedButton
                 variant="primary"
-                size="medium"
+                size="md"
                 onClick={() => setShowForm(true)}
               >
                 + Add Listing
@@ -203,14 +203,14 @@ const MobileSellerDemo: React.FC = () => {
                 </TouchOptimizedButton>
                 <TouchOptimizedButton
                   variant="secondary"
-                  size="medium"
+                  size="md"
                   onClick={() => alert('Medium button clicked')}
                 >
                   Medium
                 </TouchOptimizedButton>
                 <TouchOptimizedButton
                   variant="outline"
-                  size="large"
+                  size="lg"
                   onClick={() => alert('Large button clicked')}
                 >
                   Large

@@ -420,10 +420,10 @@ export const SecurityComplianceDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="small">
+                        <Button variant="outline" size="sm">
                           Investigate
                         </Button>
-                        <Button variant="outline" size="small">
+                        <Button variant="outline" size="sm">
                           Resolve
                         </Button>
                       </div>

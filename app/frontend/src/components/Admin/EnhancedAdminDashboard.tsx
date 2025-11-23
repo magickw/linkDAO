@@ -571,7 +571,7 @@ export function EnhancedAdminDashboard() {
                       </div>
                     </div>
                     <Button
-                      size="small"
+                      size="sm"
                       variant="outline"
                       className="border-yellow-500/50 text-yellow-200 hover:bg-yellow-500/20"
                       onClick={() => {
@@ -653,7 +653,7 @@ export function EnhancedAdminDashboard() {
                 <GlassPanel className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-bold text-white">Recent Admin Actions</h2>
-                    <Button variant="outline" size="small">
+                    <Button variant="outline" size="sm">
                       View All
                     </Button>
                   </div>

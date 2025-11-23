@@ -210,7 +210,7 @@ const MiniProfileCard: React.FC<MiniProfileCardProps> = ({
                 <BadgeCollection 
                   badges={reputation.badges} 
                   maxDisplay={4}
-                  size="small"
+                  size="sm"
                 />
               </div>
             )}

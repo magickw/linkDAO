@@ -51,7 +51,7 @@ export function usePerformanceMonitor(componentName: string) {
 // Optimized Community Icon Component
 interface CommunityIconProps {
   community: EnhancedCommunityData;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showBadge?: boolean;
   onClick?: (community: EnhancedCommunityData) => void;
   className?: string;
@@ -267,7 +267,7 @@ export const OptimizedPostCard = memo<PostCardProps>(({
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}>
       {/* Post Header */}
       <div className="flex items-center space-x-3 mb-3">
-        <OptimizedUserAvatar user={post.author} size="small" />
+        <OptimizedUserAvatar user={post.author} size="sm" />
         <div className="flex-1">
           <div className="flex items-center space-x-2">
             <span className="font-medium text-sm">{post.author.username}</span>
@@ -346,7 +346,7 @@ OptimizedPostCard.displayName = 'OptimizedPostCard';
 // Optimized User Avatar Component
 interface UserAvatarProps {
   user: UserProfile;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showStatus?: boolean;
   className?: string;
 }

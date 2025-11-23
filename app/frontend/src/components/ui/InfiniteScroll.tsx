@@ -56,7 +56,7 @@ export const InfiniteScroll: React.FC<InfiniteScrollProps> = ({
         <div ref={sentinelRef} className="sentinel">
           {loading && (
             <div className="loading-more">
-              <LoadingSpinner size="medium" />
+              <LoadingSpinner size="md" />
               <span>Loading more...</span>
             </div>
           )}

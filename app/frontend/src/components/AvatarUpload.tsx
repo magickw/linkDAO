@@ -6,7 +6,7 @@ interface AvatarUploadProps {
   currentAvatarUrl?: string;
   onUploadSuccess?: (result: AvatarUploadResult) => void;
   onUploadError?: (error: string) => void;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
 }
@@ -16,7 +16,7 @@ export default function AvatarUpload({
   currentAvatarUrl,
   onUploadSuccess,
   onUploadError,
-  size = 'medium',
+  size = 'md',
   className = '',
   disabled = false,
 }: AvatarUploadProps) {
@@ -26,9 +26,9 @@ export default function AvatarUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sizeClasses = {
-    small: 'w-16 h-16',
-    medium: 'w-24 h-24',
-    large: 'w-32 h-32',
+    sm: 'w-16 h-16',
+    md: 'w-24 h-24',
+    lg: 'w-32 h-32',
   };
 
   const handleFileSelect = useCallback(async (file: File) => {
@@ -123,7 +123,7 @@ export default function AvatarUpload({
             (e.target as HTMLImageElement).src = avatarService.generateDefaultAvatar(userId, size);
           }}
         />
-        
+
         {/* Upload overlay */}
         {!disabled && (
           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">

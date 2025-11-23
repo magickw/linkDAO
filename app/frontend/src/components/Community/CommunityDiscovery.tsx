@@ -372,7 +372,7 @@ const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({
       <div className="discovery-results">
         {loading && currentCommunities.length === 0 ? (
           <div className="loading-state">
-            <LoadingSpinner size="large" />
+            <LoadingSpinner size="lg" />
             <p>Loading communities...</p>
           </div>
         ) : error ? (

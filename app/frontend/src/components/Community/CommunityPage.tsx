@@ -288,7 +288,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   if (loading) {
     return (
       <div className="community-page-loading">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
         <p>Loading community...</p>
       </div>
     );

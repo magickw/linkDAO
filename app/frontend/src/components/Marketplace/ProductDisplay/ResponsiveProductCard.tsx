@@ -234,13 +234,13 @@ const SellerBadge: React.FC<{
           </span>
           {seller.verified && <CheckCircle size={12} className="text-green-400" />}
           {seller.daoApproved && (
-            <AnimatedProductBadge variant="info" size="small">
+            <AnimatedProductBadge variant="info" size="sm">
               DAO
             </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <AnimatedProductBadge variant="warning" size="small">
+            <AnimatedProductBadge variant="warning" size="sm">
               ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
             </AnimatedProductBadge>
           )}
@@ -350,7 +350,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                 <SellerBadge 
                   seller={product.seller} 
                   onClick={handleSellerClick}
-                  size="small"
+                  size="sm"
                 />
               </div>
 
@@ -361,7 +361,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                   cryptoSymbol={priceData.cryptoSymbol}
                   fiatPrice={priceData.fiat}
                   fiatSymbol={priceData.fiatSymbol}
-                  size="small"
+                  size="sm"
                   layout="horizontal"
                 />
               </div>
@@ -388,7 +388,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               <div className="flex gap-2">
                 <Button
                   variant="primary"
-                  size="small"
+                  size="sm"
                   onClick={handleAddToCart}
                   className="flex-1"
                   disabled={product.inventory === 0}
@@ -397,7 +397,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                 </Button>
                 <Button
                   variant="ghost"
-                  size="small"
+                  size="sm"
                   onClick={handleWishlistToggle}
                 >
                   {isWishlisted ? <Heart size={16} fill="currentColor" /> : <Heart size={16} />}
@@ -449,12 +449,12 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             {/* Badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1">
               {product.isNFT && (
-                <AnimatedProductBadge variant="secondary" size="small">
+                <AnimatedProductBadge variant="secondary" size="sm">
                   NFT
                 </AnimatedProductBadge>
               )}
               {product.discount?.active && product.discount.percentage && (
-                <AnimatedProductBadge variant="error" size="small">
+                <AnimatedProductBadge variant="error" size="sm">
                   {product.discount.percentage}% OFF
                 </AnimatedProductBadge>
               )}
@@ -509,7 +509,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                 cryptoSymbol={priceData.cryptoSymbol}
                 fiatPrice={priceData.fiat}
                 fiatSymbol={priceData.fiatSymbol}
-                size="medium"
+                size="md"
                 layout="vertical"
                 realTimeConversion
               />
@@ -519,7 +519,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             <div className="flex gap-2">
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 onClick={handleAddToCart}
                 className="flex-1"
                 disabled={product.inventory === 0}
@@ -528,7 +528,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               </Button>
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 onClick={handleAddToCart}
                 className="flex-1"
                 disabled={product.inventory === 0}
@@ -581,22 +581,22 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {product.isNFT && (
-              <AnimatedProductBadge variant="secondary" size="small">
+              <AnimatedProductBadge variant="secondary" size="sm">
                 NFT
               </AnimatedProductBadge>
             )}
             {product.discount?.active && product.discount.percentage && (
-              <AnimatedProductBadge variant="error" size="small">
+              <AnimatedProductBadge variant="error" size="sm">
                 {product.discount.percentage}% OFF
               </AnimatedProductBadge>
             )}
             {product.isFeatured && (
-              <AnimatedProductBadge variant="warning" size="small">
+              <AnimatedProductBadge variant="warning" size="sm">
                 Featured
               </AnimatedProductBadge>
             )}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-              <AnimatedProductBadge variant="success" size="small">
+              <AnimatedProductBadge variant="success" size="sm">
                 High Quality
               </AnimatedProductBadge>
             )}
@@ -606,7 +606,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
             <AnimatedProductBadge 
               variant="warning" 
-              size="small"
+              size="sm"
               className="absolute bottom-3 left-3"
             >
               Only {product.inventory} left
@@ -617,7 +617,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {product.inventory !== undefined && product.inventory === 0 && (
             <AnimatedProductBadge 
               variant="error" 
-              size="small"
+              size="sm"
               className="absolute bottom-3 left-3"
             >
               Out of Stock
@@ -658,22 +658,22 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Product metadata */}
           <div className="flex flex-wrap gap-2 mb-3">
             {product.condition && (
-              <AnimatedProductBadge variant="primary" size="small">
+              <AnimatedProductBadge variant="primary" size="sm">
                 {product.condition}
               </AnimatedProductBadge>
             )}
             {product.brand && (
-              <AnimatedProductBadge variant="secondary" size="small">
+              <AnimatedProductBadge variant="secondary" size="sm">
                 {product.brand}
               </AnimatedProductBadge>
             )}
             {product.hasWarranty && (
-              <AnimatedProductBadge variant="success" size="small">
+              <AnimatedProductBadge variant="success" size="sm">
                 Warranty
               </AnimatedProductBadge>
             )}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <AnimatedProductBadge variant="info" size="small">
+              <AnimatedProductBadge variant="info" size="sm">
                 Certified
               </AnimatedProductBadge>
             )}
@@ -698,7 +698,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               cryptoSymbol={priceData.cryptoSymbol}
               fiatPrice={priceData.fiat}
               fiatSymbol={priceData.fiatSymbol}
-              size="large"
+              size="lg"
               layout="vertical"
               realTimeConversion
             />
@@ -716,7 +716,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           <div className="flex gap-3">
             <Button
               variant="primary"
-              size="medium"
+              size="md"
               onClick={handleAddToCart}
               className="flex-1"
               disabled={product.inventory === 0}
@@ -725,7 +725,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             </Button>
             <Button
               variant="outline"
-              size="medium"
+              size="md"
               onClick={handleAddToCart}
               className="flex-1"
               disabled={product.inventory === 0}
@@ -734,7 +734,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="medium"
+              size="md"
               onClick={handleQuickView}
             >
               <Eye size={20} />

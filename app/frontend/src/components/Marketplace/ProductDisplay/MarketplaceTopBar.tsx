@@ -98,7 +98,7 @@ export const MarketplaceTopBar: React.FC<MarketplaceTopBarProps> = ({
             ) : (
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 onClick={() => {
                   /* Connect wallet logic */
                 }}

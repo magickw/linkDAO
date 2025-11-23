@@ -256,7 +256,7 @@ const EnhancedProductCard: React.FC<{
                 >
                   <Button
                     variant="primary"
-                    size="small"
+                    size="sm"
                     onClick={handleAddToCart}
                     className={`w-full font-medium backdrop-blur-sm ${
                       isAddedToCart 
@@ -393,7 +393,7 @@ const EnhancedProductCard: React.FC<{
         <div className="px-4 pb-4 space-y-2">
           <Button
             variant="primary"
-            size="small"
+            size="sm"
             onClick={handleAddToCart}
             className={`w-full font-medium backdrop-blur-sm ${
               isAddedToCart 
@@ -417,7 +417,7 @@ const EnhancedProductCard: React.FC<{
           {/* View Store Button */}
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={(e) => {
               e.stopPropagation();
               onProductClick?.(`seller-${product.seller.id}`);
@@ -656,7 +656,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             >
@@ -669,7 +669,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
                 <Button
                   key={page}
                   variant={currentPage === page ? "primary" : "outline"}
-                  size="small"
+                  size="sm"
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
@@ -679,7 +679,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
             
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             >

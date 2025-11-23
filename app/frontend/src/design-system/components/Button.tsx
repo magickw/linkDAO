@@ -11,7 +11,7 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'size' | 'whileHov
   /** Button variant */
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'gradient';
   /** Button size */
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   /** Gradient variant for gradient buttons */
   gradient?: GradientVariant;
   /** Enable ripple effect */
@@ -32,7 +32,7 @@ interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'size' | 'whileHov
 
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
-  size = 'medium',
+  size = 'md',
   gradient = 'primary',
   ripple = true,
   loading = false,
@@ -55,16 +55,16 @@ export const Button: React.FC<ButtonProps> = ({
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         const newRipple = { id: Date.now(), x, y };
-        
+
         setRipples(prev => [...prev, newRipple]);
-        
+
         // Remove ripple after animation
         setTimeout(() => {
           setRipples(prev => prev.filter(r => r.id !== newRipple.id));
         }, 600);
       }
     }
-    
+
     if (onClick && !disabled && !loading) {
       onClick(event);
     }
@@ -72,19 +72,19 @@ export const Button: React.FC<ButtonProps> = ({
 
   // Size configurations
   const sizeConfig = {
-    small: {
+    sm: {
       padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
       fontSize: designTokens.typography.fontSize.sm,
       borderRadius: '8px',
       minHeight: '32px',
     },
-    medium: {
+    md: {
       padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
       fontSize: designTokens.typography.fontSize.base,
       borderRadius: '12px',
       minHeight: '40px',
     },
-    large: {
+    lg: {
       padding: `${designTokens.spacing.lg} ${designTokens.spacing.xl}`,
       fontSize: designTokens.typography.fontSize.lg,
       borderRadius: '16px',
@@ -117,7 +117,7 @@ export const Button: React.FC<ButtonProps> = ({
           color: '#ffffff',
           backgroundImage: designTokens.gradients.primary,
         };
-      
+
       case 'secondary':
         return {
           ...baseStyle,
@@ -125,7 +125,7 @@ export const Button: React.FC<ButtonProps> = ({
           color: '#ffffff',
           backgroundImage: designTokens.gradients.secondary,
         };
-      
+
       case 'outline':
         return {
           ...baseStyle,
@@ -134,7 +134,7 @@ export const Button: React.FC<ButtonProps> = ({
           color: designTokens.colors.primary[500],
           backdropFilter: 'blur(8px)',
         };
-      
+
       case 'ghost':
         return {
           ...baseStyle,
@@ -142,7 +142,7 @@ export const Button: React.FC<ButtonProps> = ({
           color: '#ffffff',
           backdropFilter: 'blur(4px)',
         };
-      
+
       case 'gradient':
         return {
           ...baseStyle,
@@ -151,7 +151,7 @@ export const Button: React.FC<ButtonProps> = ({
           color: '#ffffff',
           border: 'none',
         };
-      
+
       default:
         return baseStyle;
     }

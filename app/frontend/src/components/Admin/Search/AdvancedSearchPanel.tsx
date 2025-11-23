@@ -209,7 +209,7 @@ export function AdvancedSearchPanel({
                     {/* Action Buttons */}
                     <div className="flex items-center justify-between pt-4 border-t border-gray-700">
                         <div className="flex gap-2">
-                            <Button onClick={handleClear} variant="outline" size="small">
+                            <Button onClick={handleClear} variant="outline" size="sm">
                                 <X className="w-4 h-4 mr-1" />
                                 Clear Filters
                             </Button>
@@ -217,14 +217,14 @@ export function AdvancedSearchPanel({
                                 <Button
                                     onClick={() => setShowSaveDialog(true)}
                                     variant="outline"
-                                    size="small"
+                                    size="sm"
                                 >
                                     <Save className="w-4 h-4 mr-1" />
                                     Save Filter
                                 </Button>
                             )}
                         </div>
-                        <Button onClick={handleSearch} variant="primary" size="small">
+                        <Button onClick={handleSearch} variant="primary" size="sm">
                             Apply Filters
                         </Button>
                     </div>

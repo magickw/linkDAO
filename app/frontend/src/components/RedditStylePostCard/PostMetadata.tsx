@@ -206,7 +206,7 @@ export default function PostMetadata({
           <span>•</span>
           <PostFlair
             flair={flair}
-            size="small"
+            size="sm"
             variant="filled"
             clickable={!!onFlairClick}
             onClick={onFlairClick}

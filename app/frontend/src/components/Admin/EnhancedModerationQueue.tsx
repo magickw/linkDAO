@@ -296,14 +296,14 @@ export function EnhancedModerationQueue() {
                                     <div className="flex gap-2 ml-4">
                                         <Button
                                             variant="primary"
-                                            size="small"
+                                            size="sm"
                                             onClick={() => handleBulkAction('approve')}
                                         >
                                             Approve
                                         </Button>
                                         <Button
                                             variant="secondary"
-                                            size="small"
+                                            size="sm"
                                             onClick={() => handleBulkAction('reject')}
                                         >
                                             Reject

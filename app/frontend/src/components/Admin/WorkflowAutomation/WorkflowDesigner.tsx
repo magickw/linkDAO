@@ -209,7 +209,7 @@ export const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           <h3 className="font-semibold text-gray-800">{node.data.label}</h3>
           <Button 
             variant="ghost" 
-            size="small"
+            size="sm"
             onClick={(e) => {
               e.stopPropagation();
               deleteNode(node.id);

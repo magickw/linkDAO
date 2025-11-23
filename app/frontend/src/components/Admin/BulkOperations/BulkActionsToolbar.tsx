@@ -136,7 +136,7 @@ export function BulkActionsToolbar({
                                     key={actionId}
                                     onClick={() => handleAction(actionId)}
                                     variant={config.variant}
-                                    size="small"
+                                    size="sm"
                                     disabled={loading}
                                     className="flex items-center gap-2"
                                 >
@@ -149,7 +149,7 @@ export function BulkActionsToolbar({
                         <Button
                             onClick={onClear}
                             variant="ghost"
-                            size="small"
+                            size="sm"
                             disabled={loading}
                         >
                             Clear Selection

@@ -85,7 +85,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       <div className="relative mb-4" ref={categoryFilterRef}>
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={() => setShowCategoryFilter(!showCategoryFilter)}
           className="flex items-center gap-2"
         >

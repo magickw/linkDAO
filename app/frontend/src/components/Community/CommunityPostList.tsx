@@ -244,7 +244,7 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
   if (loading && posts.length === 0) {
     return (
       <div className="posts-loading">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
         <p>Loading posts...</p>
       </div>
     );

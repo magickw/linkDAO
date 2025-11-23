@@ -505,7 +505,7 @@ export default function Dashboard() {
                   </div>
                   <AnimatedButton
                     variant="ghost"
-                    size="small"
+                    size="sm"
                     animation="scale"
                     className="ml-auto text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
                   >

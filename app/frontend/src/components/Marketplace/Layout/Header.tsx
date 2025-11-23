@@ -72,7 +72,7 @@ const Header = () => {
             </div>
 
             {/* Cart */}
-            <CartBadge size="medium" />
+            <CartBadge size="md" />
 
             {/* Profile Menu */}
             {isConnected && (

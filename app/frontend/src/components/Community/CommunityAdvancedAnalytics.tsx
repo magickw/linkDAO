@@ -572,7 +572,7 @@ export const CommunityAdvancedAnalytics: React.FC<CommunityAdvancedAnalyticsProp
             <option value="90d">Last 90 days</option>
           </select>
           
-          <Button variant="secondary" size="small">
+          <Button variant="secondary" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Export Report
           </Button>

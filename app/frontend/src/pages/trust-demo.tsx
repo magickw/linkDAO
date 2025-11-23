@@ -98,7 +98,7 @@ const TrustDemoPage: NextPage = () => {
               <NFTVerificationBadge
                 contractAddress={mockProductData.contractAddress}
                 tokenId={mockProductData.tokenId}
-                size="small"
+                size="sm"
                 verified={true}
               />
             </div>
@@ -108,7 +108,7 @@ const TrustDemoPage: NextPage = () => {
               <NFTVerificationBadge
                 contractAddress={mockProductData.contractAddress}
                 tokenId={mockProductData.tokenId}
-                size="medium"
+                size="md"
                 metadata={mockNFTMetadata}
                 showProvenance={true}
                 provenance={mockProvenance}
@@ -120,7 +120,7 @@ const TrustDemoPage: NextPage = () => {
               <NFTVerificationBadge
                 contractAddress={mockProductData.contractAddress}
                 tokenId={mockProductData.tokenId}
-                size="large"
+                size="lg"
                 metadata={mockNFTMetadata}
               />
             </div>

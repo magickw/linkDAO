@@ -121,7 +121,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     <div className="flex space-x-2 mt-2">
                       <Button 
                         variant="primary" 
-                        size="small"
+                        size="sm"
                         onClick={() => {
                           // Accept offer
                           const otherParticipant = getOtherParticipant(selectedConversation);
@@ -138,7 +138,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       </Button>
                       <Button 
                         variant="outline" 
-                        size="small"
+                        size="sm"
                         onClick={() => {
                           // Counter offer
                           const counterAmount = prompt('Enter counter offer (ETH):');
@@ -186,7 +186,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   {message.metadata.transactionHash && (
                     <Button
                       variant="outline"
-                      size="small"
+                      size="sm"
                       className="mt-2"
                       onClick={() => {
                         window.open(`https://etherscan.io/tx/${message.metadata?.transactionHash}`, '_blank');

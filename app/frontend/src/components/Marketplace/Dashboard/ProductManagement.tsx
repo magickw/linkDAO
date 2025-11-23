@@ -151,7 +151,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           {product.status === 'draft' && (
             <Button
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => handleStatusChange(product.id, 'active')}
               className="text-green-500 hover:bg-green-500/10"
             >
@@ -161,7 +161,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           {product.status === 'active' && (
             <Button
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => handleStatusChange(product.id, 'draft')}
               className="text-yellow-500 hover:bg-yellow-500/10"
             >
@@ -170,7 +170,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           )}
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => console.log('Edit', product.id)}
             className="text-blue-500 hover:bg-blue-500/10"
           >
@@ -178,7 +178,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           </Button>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => handleDelete(product.id)}
             className="text-red-500 hover:bg-red-500/10"
           >

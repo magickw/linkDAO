@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { sellerAnalyticsService, SellerBottleneckAnalysis } from '../../../../services/sellerAnalyticsService';
 
 // Simple loading spinner component to avoid import issues
-const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) => {
+const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const getSize = () => {
     switch (size) {
-      case 'small': return '16px';
-      case 'large': return '48px';
+      case 'sm': return '16px';
+      case 'lg': return '48px';
       default: return '32px';
     }
   };
@@ -14,7 +14,7 @@ const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'larg
   return (
     <div className="loading-spinner">
       <div className="spinner"></div>
-      
+
       <style jsx>{`
         .loading-spinner {
           display: inline-flex;
@@ -117,7 +117,7 @@ export const SellerBottlenecks: React.FC<SellerBottlenecksProps> = ({
     return (
       <div className={`seller-bottlenecks ${className}`}>
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="large" />
+          <LoadingSpinner size="lg" />
           <span className="ml-3">Analyzing performance bottlenecks...</span>
         </div>
       </div>
@@ -179,7 +179,7 @@ export const SellerBottlenecks: React.FC<SellerBottlenecksProps> = ({
               </div>
               <div className="mt-4">
                 <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${performanceScore}%` }}
                   ></div>
@@ -199,7 +199,7 @@ export const SellerBottlenecks: React.FC<SellerBottlenecksProps> = ({
               </div>
               <div className="mt-4">
                 <div className="w-full bg-green-200 rounded-full h-2">
-                  <div 
+                  <div
                     className="bg-green-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${improvementPotential}%` }}
                   ></div>
@@ -224,13 +224,13 @@ export const SellerBottlenecks: React.FC<SellerBottlenecksProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Identified Bottlenecks ({displayBottlenecks.length})
               </h3>
-              
+
               {displayBottlenecks.map((bottleneck, index) => (
                 <div
                   key={index}
                   className={`border rounded-lg ${getSeverityColor(bottleneck.severity)}`}
                 >
-                  <div 
+                  <div
                     className="p-6 cursor-pointer"
                     onClick={() => setExpandedBottleneck(expandedBottleneck === index ? null : index)}
                   >
@@ -257,9 +257,9 @@ export const SellerBottlenecks: React.FC<SellerBottlenecksProps> = ({
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-4">
-                        <svg 
+                        <svg
                           className={`w-5 h-5 transform transition-transform ${expandedBottleneck === index ? 'rotate-180' : ''}`}
-                          fill="currentColor" 
+                          fill="currentColor"
                           viewBox="0 0 20 20"
                         >
                           <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

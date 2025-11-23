@@ -299,7 +299,7 @@ export const ModerationDashboard: React.FC<ModerationDashboardProps> = ({
       <div className="moderation-items">
         {loading ? (
           <div className="loading-state">
-            <LoadingSpinner size="large" />
+            <LoadingSpinner size="lg" />
             <p>Loading moderation items...</p>
           </div>
         ) : error ? (

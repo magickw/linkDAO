@@ -6,20 +6,20 @@
 import React from 'react';
 
 interface LoadingSpinnerProps {
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   color?: string;
   className?: string;
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 'medium',
+  size = 'md',
   color = 'var(--primary-color)',
   className = ''
 }) => {
   const getSize = () => {
     switch (size) {
-      case 'small': return '16px';
-      case 'large': return '48px';
+      case 'sm': return '16px';
+      case 'lg': return '48px';
       default: return '32px';
     }
   };
@@ -27,7 +27,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   return (
     <div className={`loading-spinner ${className}`}>
       <div className="spinner"></div>
-      
+
       <style jsx>{`
         .loading-spinner {
           display: inline-flex;

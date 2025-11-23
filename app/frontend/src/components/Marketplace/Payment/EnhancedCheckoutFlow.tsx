@@ -286,7 +286,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
             </div>
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setShowSavedAddresses(!showSavedAddresses)}
               className="border-blue-400/30 text-blue-300 hover:bg-blue-500/20"
             >
@@ -582,7 +582,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
       {/* Final Payment Button */}
       <Button
         variant="primary"
-        size="large"
+        size="lg"
         onClick={processPayment}
         disabled={isProcessing || !escrowSetup}
         className="w-full flex items-center justify-center gap-2"

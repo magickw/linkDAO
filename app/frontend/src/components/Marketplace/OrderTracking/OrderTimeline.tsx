@@ -149,7 +149,7 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({
           Order events and status updates will appear here as they occur.
         </p>
         {onRefresh && (
-          <Button variant="outline" size="small" onClick={onRefresh}>
+          <Button variant="outline" size="sm" onClick={onRefresh}>
             <RefreshCw size={16} className="mr-2" />
             Refresh Timeline
           </Button>
@@ -166,7 +166,7 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({
           Order Timeline
         </h4>
         {onRefresh && (
-          <Button variant="outline" size="small" onClick={onRefresh}>
+          <Button variant="outline" size="sm" onClick={onRefresh}>
             <RefreshCw size={16} className="mr-2" />
             Refresh
           </Button>

@@ -29,7 +29,7 @@ interface SmartContractInteractionButtonProps {
   contractAddress: string;
   method: ContractMethod;
   chainId?: number;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'secondary' | 'outline';
   disabled?: boolean;
   className?: string;

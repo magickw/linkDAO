@@ -73,17 +73,17 @@ describe('BadgeCollection', () => {
   });
 
   it('applies correct size classes', () => {
-    const { rerender } = render(<BadgeCollection badges={mockBadges} size="small" />);
+    const { rerender } = render(<BadgeCollection badges={mockBadges} size="sm" />);
     
     // Test small size
     expect(document.querySelector('.w-8')).toBeInTheDocument();
     
     // Test medium size
-    rerender(<BadgeCollection badges={mockBadges} size="medium" />);
+    rerender(<BadgeCollection badges={mockBadges} size="md" />);
     expect(document.querySelector('.w-12')).toBeInTheDocument();
     
     // Test large size
-    rerender(<BadgeCollection badges={mockBadges} size="large" />);
+    rerender(<BadgeCollection badges={mockBadges} size="lg" />);
     expect(document.querySelector('.w-16')).toBeInTheDocument();
   });
 

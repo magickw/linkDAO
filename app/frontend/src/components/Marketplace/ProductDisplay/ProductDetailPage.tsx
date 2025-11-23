@@ -197,25 +197,25 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               
               <div className="flex flex-wrap gap-2 mb-4">
                 {product.trust.verified && (
-                  <AnimatedProductBadge variant="success" size="small">
+                  <AnimatedProductBadge variant="success" size="sm">
                     <CheckCircle size={14} className="mr-1" />
                     Verified
                   </AnimatedProductBadge>
                 )}
                 {product.trust.escrowProtected && (
-                  <AnimatedProductBadge variant="primary" size="small">
+                  <AnimatedProductBadge variant="primary" size="sm">
                     <Shield size={14} className="mr-1" />
                     Escrow Protected
                   </AnimatedProductBadge>
                 )}
                 {product.trust.onChainCertified && (
-                  <AnimatedProductBadge variant="secondary" size="small">
+                  <AnimatedProductBadge variant="secondary" size="sm">
                     <Vote size={14} className="mr-1" />
                     On-Chain Certified
                   </AnimatedProductBadge>
                 )}
                 {product.seller.daoApproved && (
-                  <AnimatedProductBadge variant="warning" size="small">
+                  <AnimatedProductBadge variant="warning" size="sm">
                     <Vote size={14} className="mr-1" />
                     DAO Approved
                   </AnimatedProductBadge>
@@ -226,7 +226,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               {product.tags && product.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {product.tags.map((tag, index) => (
-                    <AnimatedProductBadge key={index} variant="info" size="small">
+                    <AnimatedProductBadge key={index} variant="info" size="sm">
                       #{tag}
                     </AnimatedProductBadge>
                   ))}
@@ -256,7 +256,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   cryptoSymbol={product.price.cryptoSymbol}
                   fiatPrice={product.price.fiat}
                   fiatSymbol={product.price.fiatSymbol}
-                  size="large"
+                  size="lg"
                   layout="vertical"
                 />
               </div>
@@ -285,7 +285,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <div className="flex items-center">
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                   >
                     -
@@ -298,7 +298,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   />
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     onClick={() => setQuantity(q => q + 1)}
                   >
                     +
@@ -315,7 +315,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <Button 
                   variant="primary"
-                  size="medium"
+                  size="md"
                   onClick={handleBuyNow}
                   disabled={isBuying || (product.inventory === 0)}
                   className="flex-1"
@@ -336,7 +336,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </Button>
                 <Button 
                   variant="outline"
-                  size="medium"
+                  size="md"
                   onClick={handleAddToCart}
                   className="flex-1"
                   disabled={product.inventory === 0}
@@ -346,21 +346,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </Button>
                 <Button 
                   variant="ghost"
-                  size="medium"
+                  size="md"
                   onClick={handleAddToWishlist}
                 >
                   <Heart size={20} className="text-white" />
                 </Button>
                 <Button 
                   variant="ghost"
-                  size="medium"
+                  size="md"
                   onClick={handleAskSeller}
                 >
                   <MessageCircle size={20} className="text-white" />
                 </Button>
                 <Button 
                   variant="ghost"
-                  size="medium"
+                  size="md"
                 >
                   <Share2 size={20} className="text-white" />
                 </Button>
@@ -370,7 +370,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               <div className="mb-6">
                 <Button
                   variant="outline"
-                  size="medium"
+                  size="md"
                   onClick={handleAskSeller}
                   className="w-full flex items-center justify-center gap-2"
                 >
@@ -442,14 +442,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <div className="flex space-x-2">
                     <Button 
                       variant="outline"
-                      size="small"
+                      size="sm"
                       onClick={handleViewSellerProfile}
                     >
                       View Profile
                     </Button>
                     <Button 
                       variant="primary"
-                      size="small"
+                      size="sm"
                       onClick={handleContactSeller}
                     >
                       Contact

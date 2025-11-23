@@ -766,7 +766,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             <div className="flex items-center space-x-1 sm:space-x-2">
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 className="p-1.5 sm:p-2"
                 onClick={() => setShowAddressSearch(true)}
                 title="New Conversation"
@@ -775,18 +775,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               </Button>
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 className="p-1.5 sm:p-2"
                 onClick={() => setShowNFTBot(true)}
                 title="NFT Negotiation Bot"
               >
                 <Coins size={14} className="sm:w-4 sm:h-4" />
               </Button>
-              <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+              <Button variant="outline" size="sm" className="p-1.5 sm:p-2 hidden sm:flex">
                 <Settings size={14} className="sm:w-4 sm:h-4" />
               </Button>
               {onClose && (
-                <Button variant="outline" size="small" onClick={onClose} className="p-1.5 sm:p-2">
+                <Button variant="outline" size="sm" onClick={onClose} className="p-1.5 sm:p-2">
                   <X size={14} className="sm:w-4 sm:h-4" />
                 </Button>
               )}
@@ -894,7 +894,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 <div className="p-4 border-t border-gray-700">
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     className="w-full flex items-center justify-center gap-2"
                     onClick={loadMoreConversations}
                     disabled={conversationsLoading}
@@ -926,7 +926,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   {/* Mobile Back Button */}
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     className="p-1.5 md:hidden"
                     onClick={() => setShowMobileSidebar(true)}
                   >
@@ -957,15 +957,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-2">
-                  <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                  <Button variant="outline" size="sm" className="p-1.5 sm:p-2 hidden sm:flex">
                     <Phone size={14} className="sm:w-4 sm:h-4" />
                   </Button>
-                  <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                  <Button variant="outline" size="sm" className="p-1.5 sm:p-2 hidden sm:flex">
                     <Video size={14} className="sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     className="p-1.5 sm:p-2"
                     onClick={() => setShowConversationInfo(!showConversationInfo)}
                   >
@@ -1040,7 +1040,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             {/* Message Input */}
             <div className="p-2 sm:p-4 border-t border-gray-700 bg-gray-800">
               <div className="flex items-center space-x-1 sm:space-x-3">
-                <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                <Button variant="outline" size="sm" className="p-1.5 sm:p-2 hidden sm:flex">
                   <Paperclip size={14} className="sm:w-4 sm:h-4" />
                 </Button>
 
@@ -1065,13 +1065,13 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   />
                 </div>
 
-                <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                <Button variant="outline" size="sm" className="p-1.5 sm:p-2 hidden sm:flex">
                   <Smile size={14} className="sm:w-4 sm:h-4" />
                 </Button>
 
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   className="p-1.5 sm:p-2"
                   onClick={() => setShowVoiceRecorder(true)}
                   title="Send Voice Message"
@@ -1081,7 +1081,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   className="p-1.5 sm:p-2 hidden sm:flex"
                   onClick={() => {
                     const otherParticipant = getOtherParticipant(selectedConversation);
@@ -1106,7 +1106,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
                 <Button
                   variant="primary"
-                  size="small"
+                  size="sm"
                   className="p-1.5 sm:p-2"
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || (!isOnline && pendingMessages > 0)}
@@ -1154,7 +1154,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <h3 className="text-base sm:text-lg font-semibold text-white">Conversation Info</h3>
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 onClick={() => setShowConversationInfo(false)}
                 className="p-1.5 sm:p-2"
               >
@@ -1301,7 +1301,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   <Coins size={20} className="mr-2 text-yellow-500" />
                   NFT Negotiation Bot
                 </h3>
-                <Button variant="outline" size="small" onClick={() => setShowNFTBot(false)} className="p-2">
+                <Button variant="outline" size="sm" onClick={() => setShowNFTBot(false)} className="p-2">
                   <X size={16} />
                 </Button>
               </div>
@@ -1377,7 +1377,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   <Users size={20} className="mr-2 text-blue-400" />
                   Group Management
                 </h3>
-                <Button variant="outline" size="small" onClick={() => setShowGroupManagement(false)} className="p-2">
+                <Button variant="outline" size="sm" onClick={() => setShowGroupManagement(false)} className="p-2">
                   <X size={16} />
                 </Button>
               </div>

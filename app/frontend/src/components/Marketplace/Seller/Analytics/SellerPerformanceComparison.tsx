@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { sellerAnalyticsService, SellerPerformanceComparison as ComparisonType } from '../../../../services/sellerAnalyticsService';
 
 // Simple loading spinner component to avoid import issues
-const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) => {
+const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const getSize = () => {
     switch (size) {
-      case 'small': return '16px';
-      case 'large': return '48px';
+      case 'sm': return '16px';
+      case 'lg': return '48px';
       default: return '32px';
     }
   };
@@ -104,7 +104,7 @@ export const SellerPerformanceComparison: React.FC<SellerPerformanceComparisonPr
     return (
       <div className={`seller-performance-comparison ${className}`}>
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="large" />
+          <LoadingSpinner size="lg" />
           <span className="ml-3">Loading performance comparison...</span>
         </div>
       </div>

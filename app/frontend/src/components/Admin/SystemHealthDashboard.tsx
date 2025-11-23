@@ -152,7 +152,7 @@ export function SystemHealthDashboard() {
                         <div className={`w-3 h-3 rounded-full ${getStatusColor()} animate-pulse`}></div>
                         <span className="text-white font-medium">{getStatusText()}</span>
                     </div>
-                    <Button variant="outline" size="small" onClick={fetchMetrics}>
+                    <Button variant="outline" size="sm" onClick={fetchMetrics}>
                         Refresh
                     </Button>
                 </div>

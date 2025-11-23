@@ -308,7 +308,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={onClose}
             >
               <X size={16} />
@@ -559,7 +559,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 onClick={() => window.print()}
               >
                 <Download size={16} className="mr-2" />
@@ -574,7 +574,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <Button
                     key={action.key}
                     variant={action.variant}
-                    size="small"
+                    size="sm"
                     onClick={action.onClick}
                   >
                     <Icon size={16} className="mr-2" />

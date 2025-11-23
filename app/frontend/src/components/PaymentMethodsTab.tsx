@@ -158,7 +158,7 @@ export const PaymentMethodsTab: React.FC = () => {
                 {!method.isDefault && (
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     onClick={() => setDefault(method.id)}
                     className="border-yellow-400/30 text-yellow-300 hover:bg-yellow-500/20"
                   >
@@ -167,7 +167,7 @@ export const PaymentMethodsTab: React.FC = () => {
                 )}
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   onClick={() => handleDelete(method.id)}
                   className="border-red-400/30 text-red-300 hover:bg-red-500/20"
                 >

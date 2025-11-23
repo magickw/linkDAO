@@ -206,13 +206,13 @@ const SellerInfo: React.FC<{
           </span>
           {seller.verified && <span className="text-sm">✅</span>}
           {seller.daoApproved && (
-            <AnimatedProductBadge variant="info" size="small">
+            <AnimatedProductBadge variant="info" size="sm">
               DAO
             </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <AnimatedProductBadge variant="warning" size="small">
+            <AnimatedProductBadge variant="warning" size="sm">
               ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
             </AnimatedProductBadge>
           )}
@@ -392,12 +392,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     {/* Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-1">
                       {product.isNFT && (
-                        <AnimatedProductBadge variant="secondary" size="small">
+                        <AnimatedProductBadge variant="secondary" size="sm">
                           NFT
                         </AnimatedProductBadge>
                       )}
                       {product.discount?.active && product.discount.percentage && (
-                        <AnimatedProductBadge variant="error" size="small">
+                        <AnimatedProductBadge variant="error" size="sm">
                           {product.discount.percentage}% OFF
                         </AnimatedProductBadge>
                       )}
@@ -431,7 +431,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      size="small"
+                      size="sm"
                       onClick={handleWishlistToggle}
                       className="flex-1 flex items-center justify-center gap-2"
                     >
@@ -440,7 +440,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     </Button>
                     <Button
                       variant="outline"
-                      size="small"
+                      size="sm"
                       className="flex-1 flex items-center justify-center gap-2"
                     >
                       <Share2 size={16} />
@@ -590,7 +590,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                             <div className="text-white/60">Certifications</div>
                             <div className="flex flex-wrap gap-1">
                               {product.metadata.certifications.map((cert, index) => (
-                                <AnimatedProductBadge key={index} variant="info" size="small">
+                                <AnimatedProductBadge key={index} variant="info" size="sm">
                                   {cert}
                                 </AnimatedProductBadge>
                               ))}
@@ -635,7 +635,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       <h3 className="text-sm font-medium text-white/80 mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {product.tags.map((tag, index) => (
-                          <AnimatedProductBadge key={index} variant="secondary" size="small">
+                          <AnimatedProductBadge key={index} variant="secondary" size="sm">
                             {tag}
                           </AnimatedProductBadge>
                         ))}
@@ -666,7 +666,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       
                       <Button
                         variant="primary"
-                        size="large"
+                        size="lg"
                         onClick={handleAddToCart}
                         className="flex-1"
                         disabled={product.inventory === 0}
@@ -677,7 +677,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     
                     <Button
                       variant="outline"
-                      size="large"
+                      size="lg"
                       onClick={handleWishlistToggle}
                       disabled={product.inventory === 0}
                       className="flex items-center justify-center gap-2"

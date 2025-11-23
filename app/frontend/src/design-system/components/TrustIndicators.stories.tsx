@@ -144,25 +144,25 @@ export const LargeSize: Story = {
 // Specialized component stories
 export const VerifiedBadgeStory: Story = {
   render: () => (
-    <VerifiedBadge size="medium" />
+    <VerifiedBadge size="md" />
   ),
 };
 
 export const EscrowBadgeStory: Story = {
   render: () => (
-    <EscrowBadge size="medium" />
+    <EscrowBadge size="md" />
   ),
 };
 
 export const OnChainBadgeStory: Story = {
   render: () => (
-    <OnChainBadge size="medium" />
+    <OnChainBadge size="md" />
   ),
 };
 
 export const DAOBadgeStory: Story = {
   render: () => (
-    <DAOBadge size="medium" />
+    <DAOBadge size="md" />
   ),
 };
 
@@ -173,10 +173,10 @@ export const AllVariants: Story = {
       <div>
         <h3 style={{ color: 'white', marginBottom: '1rem' }}>Individual Badges</h3>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <TrustIndicators verified size="medium" />
-          <TrustIndicators escrowProtected size="medium" />
-          <TrustIndicators onChainCertified size="medium" />
-          <TrustIndicators daoApproved size="medium" />
+          <TrustIndicators verified size="md" />
+          <TrustIndicators escrowProtected size="md" />
+          <TrustIndicators onChainCertified size="md" />
+          <TrustIndicators daoApproved size="md" />
         </div>
       </div>
       
@@ -191,7 +191,7 @@ export const AllVariants: Story = {
               onChainCertified 
               daoApproved 
               layout="badges" 
-              size="medium" 
+              size="md" 
             />
           </div>
           <div>
@@ -201,7 +201,7 @@ export const AllVariants: Story = {
               escrowProtected 
               onChainCertified 
               layout="inline" 
-              size="medium" 
+              size="md" 
             />
           </div>
           <div>
@@ -212,7 +212,7 @@ export const AllVariants: Story = {
               onChainCertified 
               daoApproved 
               layout="compact" 
-              size="small" 
+              size="sm" 
             />
           </div>
         </div>
@@ -223,15 +223,15 @@ export const AllVariants: Story = {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Small</h4>
-            <TrustIndicators verified escrowProtected size="small" />
+            <TrustIndicators verified escrowProtected size="sm" />
           </div>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Medium</h4>
-            <TrustIndicators verified escrowProtected onChainCertified size="medium" />
+            <TrustIndicators verified escrowProtected onChainCertified size="md" />
           </div>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Large</h4>
-            <TrustIndicators verified escrowProtected onChainCertified daoApproved size="large" />
+            <TrustIndicators verified escrowProtected onChainCertified daoApproved size="lg" />
           </div>
         </div>
       </div>
@@ -241,15 +241,15 @@ export const AllVariants: Story = {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Basic Product</h4>
-            <TrustIndicators verified escrowProtected size="medium" />
+            <TrustIndicators verified escrowProtected size="md" />
           </div>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Premium Product</h4>
-            <TrustIndicators verified escrowProtected onChainCertified size="medium" />
+            <TrustIndicators verified escrowProtected onChainCertified size="md" />
           </div>
           <div>
             <h4 style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '0.5rem', fontSize: '0.9rem' }}>DAO Verified Seller</h4>
-            <TrustIndicators verified escrowProtected onChainCertified daoApproved size="medium" />
+            <TrustIndicators verified escrowProtected onChainCertified daoApproved size="md" />
           </div>
         </div>
       </div>

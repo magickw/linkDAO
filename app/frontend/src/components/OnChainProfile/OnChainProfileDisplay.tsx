@@ -323,7 +323,7 @@ export const OnChainProfileDisplay: React.FC<OnChainProfileDisplayProps> = ({
                             <NFTVerificationBadge
                               contractAddress={nft.contractAddress}
                               tokenId={nft.tokenId}
-                              size="small"
+                              size="sm"
                             />
                           </div>
                         )}

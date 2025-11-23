@@ -28,7 +28,7 @@ interface NFTVerificationBadgeProps {
   metadata?: NFTMetadata;
   provenance?: ProvenanceRecord[];
   verified?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showProvenance?: boolean;
   className?: string;
 }

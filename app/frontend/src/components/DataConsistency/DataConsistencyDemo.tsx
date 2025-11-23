@@ -136,7 +136,7 @@ export const DataConsistencyDemo: React.FC<DataConsistencyDemoProps> = ({
                 <Button
                   key={id}
                   variant={selectedProductId === id ? 'primary' : 'outline'}
-                  size="small"
+                  size="sm"
                   onClick={() => handleProductIdChange(id)}
                   className="w-full text-left"
                 >
@@ -147,7 +147,7 @@ export const DataConsistencyDemo: React.FC<DataConsistencyDemoProps> = ({
             
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={handleRefreshData}
               className="w-full mt-4"
               disabled={productLoading || priceLoading}

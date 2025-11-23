@@ -222,7 +222,7 @@ export const PaymentMethodAnalytics: React.FC<PaymentMethodAnalyticsProps> = ({
             <Button
               key={period}
               variant={selectedTimeframe === period ? 'primary' : 'outline'}
-              size="small"
+              size="sm"
               onClick={() => setSelectedTimeframe(period)}
               className="capitalize"
             >

@@ -136,14 +136,14 @@ export const DataConsistencyMonitor: React.FC<DataConsistencyMonitorProps> = ({
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="small"
+              size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
             >
               {isExpanded ? 'Hide Details' : 'Show Details'}
             </Button>
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={performValidation}
               disabled={isValidating}
             >
@@ -151,7 +151,7 @@ export const DataConsistencyMonitor: React.FC<DataConsistencyMonitorProps> = ({
             </Button>
             <Button
               variant="secondary"
-              size="small"
+              size="sm"
               onClick={handleInvalidateAll}
             >
               Clear Cache

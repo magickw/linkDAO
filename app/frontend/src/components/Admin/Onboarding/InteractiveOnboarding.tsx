@@ -580,7 +580,7 @@ export const InteractiveOnboarding: React.FC = () => {
                         {!task.completed && (
                           <Button
                             onClick={() => completeSandboxTask(task.id)}
-                            size="small"
+                            size="sm"
                             className="bg-purple-600 hover:bg-purple-700 text-white"
                           >
                             Complete Task

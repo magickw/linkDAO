@@ -311,7 +311,7 @@ export const StakingSystemDemo: React.FC = () => {
             <StakingIndicator 
               stakingInfo={stakingInfo}
               token={mockToken}
-              size="small"
+              size="sm"
             />
           </div>
 
@@ -335,7 +335,7 @@ export const StakingSystemDemo: React.FC = () => {
               userBalance={userBalance}
               token={mockToken}
               onBoost={handleBoost}
-              size="small"
+              size="sm"
               variant="outline"
             />
           </div>

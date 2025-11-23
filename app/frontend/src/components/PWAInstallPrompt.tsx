@@ -144,7 +144,7 @@ export function PWAInstallPrompt({
       {canInstall && !showPrompt && (
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={handleManualShow}
           className="fixed bottom-4 right-4 z-40 md:bottom-6 md:right-6"
         >
@@ -246,7 +246,7 @@ export function PWAInstallPrompt({
                   <div className="flex space-x-3">
                     <Button
                       variant="outline"
-                      size="medium"
+                      size="md"
                       onClick={handleDismiss}
                       className="flex-1"
                     >
@@ -254,7 +254,7 @@ export function PWAInstallPrompt({
                     </Button>
                     <Button
                       variant="primary"
-                      size="medium"
+                      size="md"
                       onClick={handleInstallClick}
                       className="flex-1"
                     >

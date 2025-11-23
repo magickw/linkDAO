@@ -439,7 +439,7 @@ export function SellerPerformance() {
                 <h3 className="text-lg font-bold text-white">Performance Details</h3>
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   className="flex items-center gap-2"
                 >
                   <Eye className="w-4 h-4" />

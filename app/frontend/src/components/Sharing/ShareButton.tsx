@@ -12,7 +12,7 @@ import { contentSharingService } from '../../services/contentSharingService';
 interface ShareButtonProps {
   content: ShareableContent;
   variant?: 'icon' | 'button' | 'text';
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
   showLabel?: boolean;
   onShareComplete?: (shareType: string, target: string) => void;

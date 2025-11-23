@@ -220,7 +220,7 @@ export const AllVariants: Story = {
               cryptoSymbol="ETH"
               fiatPrice="90.00"
               fiatSymbol="USD"
-              size="small"
+              size="sm"
               realTimeConversion={true}
             />
           </div>
@@ -231,7 +231,7 @@ export const AllVariants: Story = {
               cryptoSymbol="ETH"
               fiatPrice="270.00"
               fiatSymbol="USD"
-              size="medium"
+              size="md"
               realTimeConversion={true}
             />
           </div>
@@ -242,7 +242,7 @@ export const AllVariants: Story = {
               cryptoSymbol="ETH"
               fiatPrice="2700.00"
               fiatSymbol="USD"
-              size="large"
+              size="lg"
               realTimeConversion={true}
             />
           </div>
@@ -260,7 +260,7 @@ export const AllVariants: Story = {
               fiatPrice="450.00"
               fiatSymbol="USD"
               layout="horizontal"
-              size="medium"
+              size="md"
               realTimeConversion={true}
             />
           </div>
@@ -272,7 +272,7 @@ export const AllVariants: Story = {
               fiatPrice="450.00"
               fiatSymbol="USD"
               layout="vertical"
-              size="medium"
+              size="md"
               realTimeConversion={true}
             />
           </div>
@@ -289,7 +289,7 @@ export const AllVariants: Story = {
               cryptoSymbol="ETH"
               fiatPrice="270.00"
               fiatSymbol="USD"
-              size="medium"
+              size="md"
               realTimeConversion={true}
             />
           </div>
@@ -300,7 +300,7 @@ export const AllVariants: Story = {
               cryptoSymbol="BTC"
               fiatPrice="215.00"
               fiatSymbol="USD"
-              size="medium"
+              size="md"
               realTimeConversion={true}
             />
           </div>
@@ -311,7 +311,7 @@ export const AllVariants: Story = {
               cryptoSymbol="USDC"
               fiatPrice="150.00"
               fiatSymbol="USD"
-              size="medium"
+              size="md"
               realTimeConversion={false}
             />
           </div>
@@ -326,7 +326,7 @@ export const AllVariants: Story = {
             cryptoSymbol="ETH"
             fiatPrice="630.00"
             fiatSymbol="USD"
-            size="medium"
+            size="md"
             showToggle={true}
             realTimeConversion={true}
           />
@@ -335,7 +335,7 @@ export const AllVariants: Story = {
             cryptoSymbol="ETH"
             fiatPrice="1350.00"
             fiatSymbol="EUR"
-            size="medium"
+            size="md"
             showToggle={true}
             realTimeConversion={true}
           />

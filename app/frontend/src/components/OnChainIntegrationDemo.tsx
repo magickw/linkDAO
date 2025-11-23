@@ -157,17 +157,17 @@ export const OnChainIntegrationDemo: React.FC = () => {
                     <div className="space-y-3">
                       <OnChainVerificationBadge
                         proof={mockProof}
-                        size="medium"
+                        size="md"
                         showLabel={true}
                       />
                       <OnChainVerificationBadge
                         proof={{...mockProof, proofType: 'token_transfer', status: 'pending'}}
-                        size="small"
+                        size="sm"
                         showLabel={true}
                       />
                       <OnChainVerificationBadge
                         proof={{...mockProof, proofType: 'nft_mint', status: 'verified'}}
-                        size="large"
+                        size="lg"
                         showLabel={true}
                       />
                     </div>
@@ -193,13 +193,13 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       transactionHash={mockProof.transactionHash}
                       showVerification={true}
                       format="short"
-                      size="medium"
+                      size="md"
                     />
                     <TransactionHashDisplay
                       transactionHash="0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
                       showVerification={false}
                       format="full"
-                      size="small"
+                      size="sm"
                     />
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       <GovernanceVotingButton
                         proposal={mockProposal}
                         userVotingPower={1250}
-                        size="medium"
+                        size="md"
                         variant="detailed"
                       />
                     </div>
@@ -252,7 +252,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       <SmartContractInteractionButton
                         contractAddress={mockProof.contractAddress}
                         method={contractMethod}
-                        size="medium"
+                        size="md"
                         variant="primary"
                       />
                       <SmartContractInteractionButton
@@ -263,7 +263,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                           stateMutability: 'view',
                           description: 'Get token balance'
                         }}
-                        size="medium"
+                        size="md"
                         variant="secondary"
                       />
                     </div>
@@ -306,7 +306,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                 <div className="flex flex-wrap gap-4">
                   <OnChainAchievementBadge
                     achievement={mockAchievement}
-                    size="large"
+                    size="lg"
                     showDetails={true}
                   />
                   <OnChainAchievementBadge
@@ -318,7 +318,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       rarity: 'rare',
                       verified: true
                     }}
-                    size="medium"
+                    size="md"
                   />
                   <OnChainAchievementBadge
                     achievement={{
@@ -329,7 +329,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       rarity: 'legendary',
                       verified: true
                     }}
-                    size="medium"
+                    size="md"
                   />
                   <OnChainAchievementBadge
                     achievement={{
@@ -340,7 +340,7 @@ export const OnChainIntegrationDemo: React.FC = () => {
                       rarity: 'common',
                       verified: false
                     }}
-                    size="small"
+                    size="sm"
                   />
                 </div>
               </div>

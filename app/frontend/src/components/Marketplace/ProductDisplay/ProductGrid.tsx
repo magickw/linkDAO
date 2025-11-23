@@ -444,7 +444,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
       {/* Clear Filters */}
       <Button
         variant="outline"
-        size="small"
+        size="sm"
         onClick={() => onFiltersChange({})}
         className="w-full"
       >
@@ -562,7 +562,7 @@ const Pagination: React.FC<PaginationProps> = ({
     <div className="flex items-center justify-center gap-2 mt-8">
       <Button
         variant="outline"
-        size="small"
+        size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         data-testid="pagination-previous"
@@ -592,7 +592,7 @@ const Pagination: React.FC<PaginationProps> = ({
 
       <Button
         variant="outline"
-        size="small"
+        size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         data-testid="pagination-next"

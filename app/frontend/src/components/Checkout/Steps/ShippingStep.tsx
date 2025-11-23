@@ -86,7 +86,7 @@ export const ShippingStep: React.FC<ShippingStepProps> = ({
             </div>
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setShowSavedAddresses(!showSavedAddresses)}
               className="border-blue-400/30 text-blue-300 hover:bg-blue-500/20"
             >

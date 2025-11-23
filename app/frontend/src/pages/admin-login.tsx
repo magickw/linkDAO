@@ -347,7 +347,7 @@ const AdminLoginPage: NextPage = () => {
                               <Button 
                                 onClick={() => disconnect()} 
                                 variant="outline" 
-                                size="small"
+                                size="sm"
                                 className="mt-2"
                               >
                                 Disconnect & Try Again
@@ -357,7 +357,7 @@ const AdminLoginPage: NextPage = () => {
                         </div>
                       )}
                     </div>
-                    <Button onClick={() => disconnect()} variant="outline" size="small">
+                    <Button onClick={() => disconnect()} variant="outline" size="sm">
                       Disconnect Wallet
                     </Button>
                   </div>

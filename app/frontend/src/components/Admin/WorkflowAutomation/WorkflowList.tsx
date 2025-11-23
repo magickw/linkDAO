@@ -246,21 +246,21 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
             <div className="flex space-x-2">
               <Button 
                 variant="outline" 
-                size="small"
+                size="sm"
                 onClick={() => onEdit(workflow.id)}
               >
                 <Edit className="w-4 h-4" />
               </Button>
               <Button 
                 variant="outline" 
-                size="small"
+                size="sm"
                 onClick={() => onEditEnhanced(workflow.id)}
               >
                 <Palette className="w-4 h-4" />
               </Button>
               <Button 
                 variant="outline" 
-                size="small"
+                size="sm"
                 onClick={() => onExecute(workflow.id)}
               >
                 <Play className="w-4 h-4" />

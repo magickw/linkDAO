@@ -426,7 +426,7 @@ export function DisputeResolution() {
                     <Button
                       onClick={() => setResolutionModal(true)}
                       variant="primary"
-                      size="small"
+                      size="sm"
                     >
                       Resolve
                     </Button>
@@ -605,7 +605,7 @@ export function DisputeResolution() {
                             onClick={handleSendMessage}
                             disabled={!newMessage.trim() || sendingMessage}
                             variant="primary"
-                            size="small"
+                            size="sm"
                             className="flex items-center gap-2"
                           >
                             <Send className="w-4 h-4" />
@@ -635,7 +635,7 @@ export function DisputeResolution() {
                       />
                       <Button
                         variant="outline"
-                        size="small"
+                        size="sm"
                         disabled={evidenceUploading}
                         className="flex items-center gap-2"
                       >
@@ -693,7 +693,7 @@ export function DisputeResolution() {
                                     <div className="flex items-center gap-2">
                                       <Button
                                         variant="outline"
-                                        size="small"
+                                        size="sm"
                                         onClick={() => setSelectedEvidence(evidence)}
                                         className="flex items-center gap-1 text-xs"
                                       >
@@ -791,7 +791,7 @@ export function DisputeResolution() {
                                     <div className="flex items-center gap-2">
                                       <Button
                                         variant="outline"
-                                        size="small"
+                                        size="sm"
                                         onClick={() => setSelectedEvidence(evidence)}
                                         className="flex items-center gap-1 text-xs"
                                       >
@@ -880,7 +880,7 @@ export function DisputeResolution() {
                                     <div className="flex items-center gap-2">
                                       <Button
                                         variant="outline"
-                                        size="small"
+                                        size="sm"
                                         onClick={() => setSelectedEvidence(evidence)}
                                         className="flex items-center gap-1 text-xs"
                                       >

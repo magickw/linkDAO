@@ -84,7 +84,7 @@ export function DataTable<T extends Record<string, any>>({
         <thead>
           <tr className={cn('text-left text-xs font-medium text-white/60', headerClassName)}>
             {columns.map((column) => (
-              <th 
+              <th
                 key={column.key}
                 className={cn(
                   'px-3 py-2 sm:px-4 sm:py-3 first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 text-xs sm:text-sm',
@@ -102,13 +102,13 @@ export function DataTable<T extends Record<string, any>>({
         </thead>
         <tbody className="divide-y divide-white/5">
           {data.map((item, rowIndex) => (
-            <tr 
+            <tr
               key={item[keyField] || rowIndex}
               className={getRowClassName(item, rowIndex)}
               onClick={() => onRowClick?.(item)}
             >
               {columns.map((column) => (
-                <td 
+                <td
                   key={`${item[keyField]}-${column.key}`}
                   className={cn(
                     'whitespace-nowrap px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6',
@@ -120,13 +120,13 @@ export function DataTable<T extends Record<string, any>>({
                 </td>
               ))}
               {actions && (
-                <td 
+                <td
                   className="whitespace-nowrap px-3 py-2 sm:px-4 sm:py-3 text-right text-xs sm:text-sm"
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 >
-                  <ActionButtons 
-                    actions={typeof actions === 'function' ? actions(item) : actions} 
-                    size={compact ? 'small' : 'small'}
+                  <ActionButtons
+                    actions={typeof actions === 'function' ? actions(item) : actions}
+                    size={compact ? 'sm' : 'sm'}
                     spacing="xs"
                   />
                 </td>

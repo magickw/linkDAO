@@ -4,13 +4,13 @@
  */
 
 import React from 'react';
-import { 
-  Clock, 
-  CheckCircle, 
-  Package, 
-  Truck, 
-  AlertTriangle, 
-  X, 
+import {
+  Clock,
+  CheckCircle,
+  Package,
+  Truck,
+  AlertTriangle,
+  X,
   RefreshCw,
   CreditCard
 } from 'lucide-react';
@@ -18,7 +18,7 @@ import { OrderStatus } from '@/types/order';
 
 interface OrderStatusBadgeProps {
   status: OrderStatus;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   showIcon?: boolean;
   showText?: boolean;
   animated?: boolean;
@@ -27,7 +27,7 @@ interface OrderStatusBadgeProps {
 
 const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({
   status,
-  size = 'medium',
+  size = 'md',
   showIcon = true,
   showText = true,
   animated = false,
@@ -100,19 +100,19 @@ const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({
     return configs[status] || configs.CREATED;
   };
 
-  const getSizeClasses = (size: 'small' | 'medium' | 'large') => {
+  const getSizeClasses = (size: 'sm' | 'md' | 'lg') => {
     const sizes = {
-      small: {
+      sm: {
         container: 'px-2 py-1 text-xs',
         icon: 12,
         gap: 'space-x-1'
       },
-      medium: {
+      md: {
         container: 'px-2.5 py-1 text-sm',
         icon: 14,
         gap: 'space-x-1.5'
       },
-      large: {
+      lg: {
         container: 'px-3 py-1.5 text-base',
         icon: 16,
         gap: 'space-x-2'
@@ -138,8 +138,8 @@ const OrderStatusBadge: React.FC<OrderStatusBadgeProps> = ({
       `}
     >
       {showIcon && (
-        <Icon 
-          size={sizeClasses.icon} 
+        <Icon
+          size={sizeClasses.icon}
           className={animated && config.pulseColor ? 'animate-spin' : ''}
         />
       )}

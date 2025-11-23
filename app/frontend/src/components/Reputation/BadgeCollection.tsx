@@ -6,7 +6,7 @@ interface BadgeCollectionProps {
   onBadgeClick?: (badge: Badge) => void;
   maxDisplay?: number;
   showAll?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const BadgeCollection: React.FC<BadgeCollectionProps> = ({
@@ -14,10 +14,10 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
   onBadgeClick,
   maxDisplay = 6,
   showAll = false,
-  size = 'medium'
+  size = 'md'
 }) => {
   const [showAllBadges, setShowAllBadges] = useState(showAll);
-  
+
   const displayedBadges = showAllBadges ? badges : badges.slice(0, maxDisplay);
   const remainingCount = badges.length - maxDisplay;
 
@@ -51,19 +51,19 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
     return styles[rarity];
   };
 
-  const getSizeStyles = (size: 'small' | 'medium' | 'large') => {
+  const getSizeStyles = (size: 'sm' | 'md' | 'lg') => {
     const styles = {
-      small: {
+      sm: {
         container: 'w-8 h-8',
         icon: 'text-sm',
         tooltip: 'text-xs'
       },
-      medium: {
+      md: {
         container: 'w-12 h-12',
         icon: 'text-lg',
         tooltip: 'text-sm'
       },
-      large: {
+      lg: {
         container: 'w-16 h-16',
         icon: 'text-2xl',
         tooltip: 'text-base'
@@ -86,7 +86,7 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
         {displayedBadges.map((badge) => {
           const rarityStyles = getRarityStyles(badge.rarity);
           const sizeStyles = getSizeStyles(size);
-          
+
           return (
             <div
               key={badge.id}
@@ -136,7 +136,7 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
                 `}>
                   {badge.rarity.charAt(0).toUpperCase() + badge.rarity.slice(1)}
                 </div>
-                
+
                 {/* Tooltip Arrow */}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900" />
               </div>

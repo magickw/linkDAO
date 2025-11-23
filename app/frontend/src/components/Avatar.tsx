@@ -6,7 +6,7 @@ interface AvatarProps {
   userHandle?: string;
   walletAddress?: string;
   avatarUrl?: string;
-  size?: 'small' | 'medium' | 'large' | 'xlarge' | number;
+  size?: 'sm' | 'md' | 'lg' | 'xlarge' | number;
   className?: string;
   alt?: string;
   showOnlineStatus?: boolean;
@@ -20,7 +20,7 @@ export default function Avatar({
   userHandle,
   walletAddress,
   avatarUrl,
-  size = 'medium',
+  size = 'md',
   className = '',
   alt,
   showOnlineStatus = false,
@@ -37,9 +37,9 @@ export default function Avatar({
 
   // Size mapping
   const sizeMap = {
-    small: 40,
-    medium: 80,
-    large: 160,
+    sm: 40,
+    md: 80,
+    lg: 160,
     xlarge: 320,
   };
 
@@ -56,19 +56,19 @@ export default function Avatar({
 
         // If no direct URL provided, try to fetch from service
         if (!url && userId) {
-          const sizeKey = typeof size === 'string' ? size : 'medium';
+          const sizeKey = typeof size === 'string' ? size : 'md';
           url = await avatarService.getUserAvatarUrl(userId, sizeKey);
         }
 
         // Fallback to default avatar
         if (!url) {
-          url = avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'medium');
+          url = avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'md');
         }
 
         setImageUrl(url);
       } catch (error) {
         console.error('Error loading avatar:', error);
-        setImageUrl(avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'medium'));
+        setImageUrl(avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'md'));
         setImageError(true);
       } finally {
         setIsLoading(false);
@@ -81,7 +81,7 @@ export default function Avatar({
   const handleImageError = () => {
     if (!imageError) {
       setImageError(true);
-      setImageUrl(avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'medium'));
+      setImageUrl(avatarService.generateDefaultAvatar(identifier, typeof size === 'string' ? size : 'md'));
     }
   };
 
@@ -90,14 +90,14 @@ export default function Avatar({
   };
 
   return (
-    <div 
+    <div
       className={`relative inline-block ${sizeClass} ${className} ${onClick ? 'cursor-pointer' : ''}`}
       onClick={onClick}
       style={{ width: pixelSize, height: pixelSize }}
     >
       {/* Loading placeholder */}
       {isLoading && (
-        <div 
+        <div
           className="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"
           style={{ width: pixelSize, height: pixelSize }}
         />
@@ -157,7 +157,7 @@ interface AvatarGroupProps {
     avatarUrl?: string;
   }>;
   maxVisible?: number;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
   onOverflowClick?: () => void;
 }
@@ -165,7 +165,7 @@ interface AvatarGroupProps {
 export function AvatarGroup({
   users,
   maxVisible = 3,
-  size = 'small',
+  size = 'sm',
   className = '',
   onOverflowClick,
 }: AvatarGroupProps) {
@@ -173,9 +173,9 @@ export function AvatarGroup({
   const overflowCount = users.length - maxVisible;
 
   const sizeMap = {
-    small: 32,
-    medium: 40,
-    large: 48,
+    sm: 32,
+    md: 40,
+    lg: 48,
   };
 
   const pixelSize = sizeMap[size];
@@ -263,7 +263,7 @@ export function AvatarWithBadge({ badge, ...avatarProps }: AvatarWithBadgeProps)
   return (
     <div className="relative inline-block">
       <Avatar {...avatarProps} />
-      
+
       {badge && (
         <div
           className={`

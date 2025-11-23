@@ -603,7 +603,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 <div className="mt-6 flex justify-center">
                   <Button
                     variant="primary"
-                    size="large"
+                    size="lg"
                     onClick={() => setCurrentStep('payment-details')}
                     className="px-8"
                   >

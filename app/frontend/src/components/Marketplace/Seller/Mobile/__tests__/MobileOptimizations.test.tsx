@@ -67,7 +67,7 @@ describe('Mobile Seller Optimizations', () => {
       const handleClick = jest.fn();
       
       render(
-        <TouchOptimizedButton onClick={handleClick} variant="primary" size="medium">
+        <TouchOptimizedButton onClick={handleClick} variant="primary" size="md">
           Test Button
         </TouchOptimizedButton>
       );

@@ -9,11 +9,11 @@ import { SellerPerformanceComparison } from './SellerPerformanceComparison';
 import { SellerErrorBoundary } from '../ErrorHandling/SellerErrorBoundary';
 
 // Simple loading spinner component to avoid import issues
-const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) => {
+const LoadingSpinner = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) => {
   const getSize = () => {
     switch (size) {
-      case 'small': return '16px';
-      case 'large': return '48px';
+      case 'sm': return '16px';
+      case 'lg': return '48px';
       default: return '32px';
     }
   };
@@ -21,7 +21,7 @@ const LoadingSpinner = ({ size = 'medium' }: { size?: 'small' | 'medium' | 'larg
   return (
     <div className="loading-spinner">
       <div className="spinner"></div>
-      
+
       <style jsx>{`
         .loading-spinner {
           display: inline-flex;
@@ -137,7 +137,7 @@ export const SellerAnalyticsDashboard: React.FC<SellerAnalyticsDashboardProps> =
     return (
       <div className={`seller-analytics-dashboard ${className}`}>
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="large" />
+          <LoadingSpinner size="lg" />
           <span className="ml-3 text-lg">Loading analytics data...</span>
         </div>
       </div>
@@ -250,8 +250,8 @@ export const SellerAnalyticsDashboard: React.FC<SellerAnalyticsDashboardProps> =
               <div className="text-3xl font-bold">{dashboardData.performanceScore}/100</div>
               <div className="text-sm text-blue-100">
                 {dashboardData.performanceScore >= 80 ? 'Excellent' :
-                 dashboardData.performanceScore >= 60 ? 'Good' :
-                 dashboardData.performanceScore >= 40 ? 'Fair' : 'Needs Improvement'}
+                  dashboardData.performanceScore >= 60 ? 'Good' :
+                    dashboardData.performanceScore >= 40 ? 'Fair' : 'Needs Improvement'}
               </div>
             </div>
           </div>
@@ -270,11 +270,10 @@ export const SellerAnalyticsDashboard: React.FC<SellerAnalyticsDashboardProps> =
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.key
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.key
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <span className="mr-2">{tab.icon}</span>
                   {tab.label}

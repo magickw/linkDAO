@@ -141,7 +141,7 @@ const OrdersPage: React.FC = () => {
           </span>
           <Button
             variant="ghost"
-            size="small"
+            size="sm"
             onClick={() => setSelectedOrder(order.id)}
             className="p-2"
           >
@@ -197,7 +197,7 @@ const OrdersPage: React.FC = () => {
           <span className="text-white font-semibold">${order.totalAmount.toFixed(2)}</span>
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={() => setSelectedOrder(order.id)}
             className="flex items-center gap-2"
           >
@@ -211,7 +211,7 @@ const OrdersPage: React.FC = () => {
         <div className="mt-4 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-blue-400 text-sm">Tracking: {order.trackingNumber}</span>
-            <Button variant="ghost" size="small" className="text-blue-400 hover:text-blue-300">
+            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
               Track Package
             </Button>
           </div>

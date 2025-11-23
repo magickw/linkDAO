@@ -678,7 +678,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-2"
         >
@@ -718,7 +718,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                   {/* Clear Filters Button */}
                   <Button
                     variant="outline"
-                    size="small"
+                    size="sm"
                     onClick={clearAllFilters}
                     className="w-full mt-4 flex items-center gap-2"
                   >

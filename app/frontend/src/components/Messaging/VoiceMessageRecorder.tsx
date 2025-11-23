@@ -185,7 +185,7 @@ export const VoiceMessageRecorder: React.FC<VoiceMessageRecorderProps> = ({ onSe
           <div className="flex space-x-3">
             <Button 
               variant="outline" 
-              size="small"
+              size="sm"
               onClick={resetRecording}
               className="flex items-center"
             >
@@ -194,7 +194,7 @@ export const VoiceMessageRecorder: React.FC<VoiceMessageRecorderProps> = ({ onSe
             </Button>
             <Button 
               variant="primary" 
-              size="small"
+              size="sm"
               onClick={sendRecording}
             >
               Send

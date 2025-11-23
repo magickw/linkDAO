@@ -11,7 +11,7 @@ import { useCart } from '@/hooks/useCart';
 interface CartBadgeProps {
   className?: string;
   showText?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const CartBadge: React.FC<CartBadgeProps> = ({

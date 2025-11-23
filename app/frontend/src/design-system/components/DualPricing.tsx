@@ -26,7 +26,7 @@ interface DualPricingProps {
   /** Enable real-time conversion */
   realTimeConversion?: boolean;
   /** Price size variant */
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   /** Layout orientation */
   layout?: 'horizontal' | 'vertical' | 'stacked';
   /** Show conversion toggle */
@@ -499,13 +499,13 @@ export const DualPricing: React.FC<DualPricingProps> = ({
 
 // Specialized pricing components
 export const ProductPricing: React.FC<Omit<DualPricingProps, 'size'>> = (props) => (
-  <DualPricing size="large" showToggle {...props} />
+  <DualPricing size="lg" showToggle {...props} />
 );
 
 export const CardPricing: React.FC<Omit<DualPricingProps, 'size' | 'layout'>> = (props) => (
-  <DualPricing size="medium" layout="vertical" {...props} />
+  <DualPricing size="md" layout="vertical" {...props} />
 );
 
 export const CompactPricing: React.FC<Omit<DualPricingProps, 'size' | 'layout'>> = (props) => (
-  <DualPricing size="small" layout="horizontal" {...props} />
+  <DualPricing size="sm" layout="horizontal" {...props} />
 );

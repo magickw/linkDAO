@@ -168,10 +168,10 @@ export function UserSegmentation() {
               </div>
               
               <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="small" className="flex-1">
+                <Button variant="outline" size="sm" className="flex-1">
                   View Users
                 </Button>
-                <Button variant="primary" size="small" className="flex-1">
+                <Button variant="primary" size="sm" className="flex-1">
                   Take Action
                 </Button>
               </div>

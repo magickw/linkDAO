@@ -41,7 +41,7 @@ export function WalletConnectStep({ onComplete, onConnect }: WalletConnectStepPr
         </div>
         
         <div className="flex justify-center space-x-3">
-          <Button onClick={() => disconnect()} variant="outline" size="small">
+          <Button onClick={() => disconnect()} variant="outline" size="sm">
             Disconnect
           </Button>
           <Button onClick={() => onComplete({ walletAddress: address })} variant="primary">

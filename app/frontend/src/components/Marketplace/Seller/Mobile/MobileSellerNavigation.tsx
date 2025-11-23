@@ -57,7 +57,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
       <div className="mobile-seller-header">
         <TouchOptimizedButton
           variant="ghost"
-          size="medium"
+          size="md"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="menu-toggle"
         >
@@ -117,7 +117,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
               <TouchOptimizedButton
                 key={item.id}
                 variant="ghost"
-                size="large"
+                size="lg"
                 onClick={() => {
                   onNavigate(item.id);
                   setIsMenuOpen(false);
@@ -137,7 +137,7 @@ export const MobileSellerNavigation: React.FC<MobileSellerNavigationProps> = ({
           <div className="nav-quick-actions">
             <TouchOptimizedButton
               variant="primary"
-              size="medium"
+              size="md"
               onClick={() => {
                 onNavigate('create-listing');
                 setIsMenuOpen(false);

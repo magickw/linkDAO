@@ -80,7 +80,7 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
           <Button
             onClick={handleSellerAction}
             variant={profile ? "primary" : "outline"}
-            size="small"
+            size="sm"
           >
             {profile ? 'Go to Dashboard' : 'Start Selling'}
           </Button>
@@ -89,14 +89,14 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
               <Button
                 onClick={() => router.push('/marketplace/seller/profile')}
                 variant="outline"
-                size="small"
+                size="sm"
               >
                 Profile
               </Button>
               <Button
                 onClick={() => router.push('/marketplace/seller/listings/create')}
                 variant="outline"
-                size="small"
+                size="sm"
               >
                 Create Listing
               </Button>

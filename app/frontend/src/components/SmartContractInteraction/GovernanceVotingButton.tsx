@@ -9,7 +9,7 @@ interface GovernanceVotingButtonProps {
   userVotingPower: number;
   userVote?: UserVote;
   disabled?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
   variant?: 'compact' | 'detailed';
   className?: string;
   onVoteSubmitted?: (vote: UserVote) => void;

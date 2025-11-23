@@ -56,7 +56,7 @@ describe('NFTVerificationBadge', () => {
       <NFTVerificationBadge
         contractAddress="0x123"
         tokenId="1"
-        size="small"
+        size="sm"
         verified={true}
       />
     );
@@ -70,7 +70,7 @@ describe('NFTVerificationBadge', () => {
       <NFTVerificationBadge
         contractAddress="0x123"
         tokenId="1"
-        size="medium"
+        size="md"
       />
     );
     

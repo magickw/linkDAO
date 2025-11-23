@@ -179,13 +179,13 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
         <span className="text-sm font-medium text-white/90">{seller.name}</span>
         {seller.verified && <span className="text-xs">✅</span>}
         {seller.daoApproved && (
-          <AnimatedProductBadge variant="info" size="small">
+          <AnimatedProductBadge variant="info" size="sm">
             DAO
           </AnimatedProductBadge>
         )}
         {/* Reputation Score Badge */}
         {seller.reputationMetrics && (
-          <AnimatedProductBadge variant="warning" size="small">
+          <AnimatedProductBadge variant="warning" size="sm">
             ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
           </AnimatedProductBadge>
         )}
@@ -532,28 +532,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Product metadata */}
               <div className="flex flex-wrap gap-2 mb-2">
                 {product.condition && (
-                  <AnimatedProductBadge variant="primary" size="small">
+                  <AnimatedProductBadge variant="primary" size="sm">
                     {product.condition}
                   </AnimatedProductBadge>
                 )}
                 {product.brand && (
-                  <AnimatedProductBadge variant="secondary" size="small">
+                  <AnimatedProductBadge variant="secondary" size="sm">
                     {product.brand}
                   </AnimatedProductBadge>
                 )}
                 {product.hasWarranty && (
-                  <AnimatedProductBadge variant="success" size="small">
+                  <AnimatedProductBadge variant="success" size="sm">
                     Warranty
                   </AnimatedProductBadge>
                 )}
                 {product.isFeatured && (
-                  <AnimatedProductBadge variant="warning" size="small">
+                  <AnimatedProductBadge variant="warning" size="sm">
                     Featured
                   </AnimatedProductBadge>
                 )}
                 {/* Quality Score Badge */}
                 {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-                  <AnimatedProductBadge variant="success" size="small">
+                  <AnimatedProductBadge variant="success" size="sm">
                     High Quality
                   </AnimatedProductBadge>
                 )}
@@ -573,7 +573,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Discount badge */}
               {product.discount?.active && product.discount.percentage && (
                 <div className="mb-2">
-                  <AnimatedProductBadge variant="error" size="small">
+                  <AnimatedProductBadge variant="error" size="sm">
                     {product.discount.percentage}% OFF
                   </AnimatedProductBadge>
                 </div>
@@ -582,7 +582,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {/* Auction Badge for List View */}
               {isAuction && (
                 <div className="mb-2">
-                  <AnimatedProductBadge variant="warning" size="small">
+                  <AnimatedProductBadge variant="warning" size="sm">
                     AUCTION
                   </AnimatedProductBadge>
                 </div>
@@ -609,7 +609,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     cryptoSymbol={priceDisplayData.cryptoSymbol}
                     fiatPrice={priceDisplayData.fiat}
                     fiatSymbol={priceDisplayData.fiatSymbol}
-                    size="small"
+                    size="sm"
                     layout="horizontal"
                   />
                 )}
@@ -618,7 +618,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   {isAuction ? (
                     <Button
                       variant="primary"
-                      size="small"
+                      size="sm"
                       onClick={() => onBidClick && onBidClick(product.id)}
                     >
                       Place Bid
@@ -627,7 +627,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     <>
                       <Button
                         variant="primary"
-                        size="small"
+                        size="sm"
                         onClick={handleAddToCart}
                         disabled={product.inventory === 0 || isAddingToCart}
                       >
@@ -635,7 +635,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                       </Button>
                       <Button
                         variant="ghost"
-                        size="small"
+                        size="sm"
                         onClick={handleWishlistToggle}
                       >
                         {isWishlisted ? '❤️' : '🤍'}
@@ -707,28 +707,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {/* NFT badge */}
             {product.isNFT && (
-              <AnimatedProductBadge variant="secondary" size="small">
+              <AnimatedProductBadge variant="secondary" size="sm">
                 NFT
               </AnimatedProductBadge>
             )}
 
             {/* Discount badge */}
             {product.discount?.active && product.discount.percentage && (
-              <AnimatedProductBadge variant="error" size="small">
+              <AnimatedProductBadge variant="error" size="sm">
                 {product.discount.percentage}% OFF
               </AnimatedProductBadge>
             )}
 
             {/* Featured badge */}
             {product.isFeatured && (
-              <AnimatedProductBadge variant="warning" size="small">
+              <AnimatedProductBadge variant="warning" size="sm">
                 Featured
               </AnimatedProductBadge>
             )}
 
             {/* Quality Score Badge */}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-              <AnimatedProductBadge variant="success" size="small">
+              <AnimatedProductBadge variant="success" size="sm">
                 High Quality
               </AnimatedProductBadge>
             )}
@@ -738,7 +738,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
             <AnimatedProductBadge
               variant="warning"
-              size="small"
+              size="sm"
               className="absolute bottom-3 left-3"
             >
               Only {product.inventory} left
@@ -749,7 +749,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {product.inventory !== undefined && product.inventory === 0 && (
             <AnimatedProductBadge
               variant="error"
-              size="small"
+              size="sm"
               className="absolute bottom-3 left-3"
             >
               Out of Stock
@@ -791,23 +791,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Product metadata */}
           <div className="flex flex-wrap gap-1 mb-2">
             {product.condition && (
-              <AnimatedProductBadge variant="primary" size="small">
+              <AnimatedProductBadge variant="primary" size="sm">
                 {product.condition}
               </AnimatedProductBadge>
             )}
             {product.brand && (
-              <AnimatedProductBadge variant="secondary" size="small">
+              <AnimatedProductBadge variant="secondary" size="sm">
                 {product.brand}
               </AnimatedProductBadge>
             )}
             {product.hasWarranty && (
-              <AnimatedProductBadge variant="success" size="small">
+              <AnimatedProductBadge variant="success" size="sm">
                 Warranty
               </AnimatedProductBadge>
             )}
             {/* Certification badges */}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <AnimatedProductBadge variant="info" size="small">
+              <AnimatedProductBadge variant="info" size="sm">
                 Certified
               </AnimatedProductBadge>
             )}
@@ -832,7 +832,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               cryptoSymbol={priceDisplayData.cryptoSymbol}
               fiatPrice={priceDisplayData.fiat}
               fiatSymbol={priceDisplayData.fiatSymbol}
-              size="medium"
+              size="md"
               layout="vertical"
               realTimeConversion
             />
@@ -849,7 +849,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Auction Badge */}
           {isAuction && (
             <div className="mb-3">
-              <AnimatedProductBadge variant="warning" size="small">
+              <AnimatedProductBadge variant="warning" size="sm">
                 AUCTION
               </AnimatedProductBadge>
             </div>
@@ -886,7 +886,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {isAuction ? (
               <Button
                 variant="primary"
-                size="small"
+                size="sm"
                 onClick={() => onBidClick && onBidClick(product.id)}
                 className="flex-1"
               >
@@ -896,7 +896,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <>
                 <Button
                   variant="primary"
-                  size="small"
+                  size="sm"
                   onClick={handleProductClick}
                   className="flex-1"
                   disabled={product.inventory === 0}
@@ -905,7 +905,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 </Button>
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   onClick={handleAddToCart}
                   className="flex-1"
                   disabled={product.inventory === 0 || isAddingToCart}

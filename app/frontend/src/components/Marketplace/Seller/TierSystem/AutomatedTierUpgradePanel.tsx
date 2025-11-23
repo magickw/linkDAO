@@ -86,7 +86,7 @@ export const AutomatedTierUpgradePanel: React.FC<AutomatedTierUpgradePanelProps>
           <Button
             onClick={refreshProgression}
             variant="secondary"
-            size="small"
+            size="sm"
           >
             Try Again
           </Button>
@@ -202,7 +202,7 @@ export const AutomatedTierUpgradePanel: React.FC<AutomatedTierUpgradePanelProps>
               disabled={!canTriggerManualEvaluation || evaluationLoading}
               loading={evaluationLoading}
               variant="primary"
-              size="small"
+              size="sm"
               className="flex-1"
             >
               {evaluationLoading ? 'Evaluating...' : 'Check for Upgrade'}
@@ -212,7 +212,7 @@ export const AutomatedTierUpgradePanel: React.FC<AutomatedTierUpgradePanelProps>
           <Button
             onClick={() => setShowDetails(!showDetails)}
             variant="secondary"
-            size="small"
+            size="sm"
             className="flex-1"
           >
             {showDetails ? 'Hide Details' : 'View Details'}

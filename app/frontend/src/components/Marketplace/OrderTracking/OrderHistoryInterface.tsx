@@ -340,7 +340,7 @@ const OrderHistoryInterface = ({
         <div className="flex items-center space-x-3">
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={() => setShowFilters(!showFilters)}
           >
             <Filter size={16} className="mr-2" />
@@ -350,7 +350,7 @@ const OrderHistoryInterface = ({
           
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={handleExportOrders}
           >
             <Download size={16} className="mr-2" />
@@ -359,7 +359,7 @@ const OrderHistoryInterface = ({
           
           <Button
             variant="outline"
-            size="small"
+            size="sm"
             onClick={loadOrders}
             disabled={loading}
           >
@@ -542,7 +542,7 @@ const OrderHistoryInterface = ({
                     {displayPreferences.showColumns.actions && (
                       <div className="flex flex-col space-y-2">
                         <Button
-                          size="small"
+                          size="sm"
                           variant="outline"
                           onClick={() => setSelectedOrder(order)}
                         >
@@ -605,7 +605,7 @@ const OrderHistoryInterface = ({
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
             >
@@ -618,7 +618,7 @@ const OrderHistoryInterface = ({
             
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={() => setCurrentPage(prev => Math.min(orders.totalPages, prev + 1))}
               disabled={currentPage === orders.totalPages}
             >
