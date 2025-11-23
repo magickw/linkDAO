@@ -24,6 +24,7 @@ interface Community {
   createdAt: Date;
   isJoined: boolean;
   canModerate: boolean;
+  creatorAddress?: string; // Add creator address
 }
 
 interface CommunityHeaderProps {
@@ -33,6 +34,7 @@ interface CommunityHeaderProps {
   onBannerUpload?: (file: File) => void;
   canModerate: boolean;
   loading?: boolean;
+  userAddress?: string; // Add user address prop
 }
 
 const CommunityHeader: React.FC<CommunityHeaderProps> = ({
@@ -41,7 +43,8 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
   onJoinToggle,
   onBannerUpload,
   canModerate,
-  loading = false
+  loading = false,
+  userAddress
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +55,10 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
   const bannerUploadId = `banner-upload-${headerId}`;
 
   const { addToast } = useToast();
+
+  // Check if current user is the creator
+  const isCreator = userAddress && community.creatorAddress && 
+    userAddress.toLowerCase() === community.creatorAddress.toLowerCase();
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -236,35 +243,42 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Side - Join Button */}
+          {/* Right Side - Join Button or Creator Status */}
           <div className="flex-shrink-0">
-            <Button
-              onClick={() => {
-                onJoinToggle();
-                announceToScreenReader(
+            {isCreator ? (
+              // Show creator badge instead of join button
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg border border-yellow-300 dark:border-yellow-700">
+                <CheckIcon className="w-5 h-5" />
+                <span className="font-medium">Creator</span>
+              </div>
+            ) : (
+              <Button
+                onClick={() => {
+                  onJoinToggle();
+                  announceToScreenReader(
+                    isJoined 
+                      ? `Left ${community.displayName} community` 
+                      : `Joined ${community.displayName} community`
+                  );
+                }}
+                disabled={loading}
+                variant={isJoined ? "outline" : "primary"}
+                size="large"
+                className={cn(
+                  "min-w-[120px] transition-all duration-200",
                   isJoined 
-                    ? `Left ${community.displayName} community` 
-                    : `Joined ${community.displayName} community`
-                );
-              }}
-              disabled={loading}
-              variant={isJoined ? "outline" : "primary"}
-              size="large"
-              className={cn(
-                "min-w-[120px] transition-all duration-200",
-                isJoined 
-                  ? "hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400" 
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              )}
-              aria-pressed={isJoined}
-              aria-label={
-                loading 
-                  ? 'Processing membership change' 
-                  : isJoined 
-                    ? `Leave ${community.displayName} community` 
-                    : `Join ${community.displayName} community`
-              }
-            >
+                    ? "hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400" 
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                )}
+                aria-pressed={isJoined}
+                aria-label={
+                  loading 
+                    ? 'Processing membership change' 
+                    : isJoined 
+                      ? `Leave ${community.displayName} community` 
+                      : `Join ${community.displayName} community`
+                }
+              >
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div 

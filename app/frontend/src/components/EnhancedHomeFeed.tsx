@@ -1,177 +1,134 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MessageCircle, 
-  Send, 
-  Heart, 
-  Share2, 
-  Bookmark, 
-  MoreHorizontal, 
+import {
+  MessageCircle,
+  Heart,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
   Eye,
   TrendingUp,
-  Clock,
-  Award,
-  Zap,
   Hash,
   Play,
   ExternalLink,
-  Sparkles,
-  ThumbsUp,
-  Flame,
-  Star
+  Sparkles
 } from 'lucide-react';
 import { GlassPanel } from '@/design-system';
 import { useToast } from '@/context/ToastContext';
-import { useWebSocket } from '@/hooks/useWebSocket';
-import { useAccount } from 'wagmi';
 import { useInView } from 'react-intersection-observer';
-import { useMobileOptimization } from '@/hooks/useMobileOptimization';
-
-// ... existing imports ...
-
-interface EnhancedPost {
-  id: string;
-  author: string;
-  authorProfile: {
-    handle: string;
-    avatar?: string;
-    isOnline?: boolean;
-    verified?: boolean;
-    ens?: string;
-  };
-  content: string;
-  contentCid: string;  // Add the contentCid property
-  timestamp: string;
-  engagement: {
-    likes: number;
-    comments: number;
-    shares: number;
-    views: number;
-    hasLiked: boolean;
-    hasBookmarked: boolean;
-  };
-  hashtags: string[];
-  media?: {
-    type: 'image' | 'video' | 'link';
-    url: string;
-    title?: string;
-    description?: string;
-    thumbnail?: string;
-  }[];
-  trending?: boolean;
-  web3Data?: {
-    tokenAmount?: string;
-    tokenSymbol?: string;
-    transactionHash?: string;
-  };
-}
+import { FeedService } from '@/services/feedService';
+import { FeedFilter, FeedSortType, EnhancedPost } from '@/types/feed';
 
 interface EnhancedHomeFeedProps {
-  onPostSubmit: (content: string) => void;
-  isLoading: boolean;
   userProfile?: any;
   className?: string;
+  externalRefreshKey?: number;
 }
 
 export default function EnhancedHomeFeed({
-  onPostSubmit,
-  isLoading,
   userProfile,
-  className = ''
+  className = '',
+  externalRefreshKey = 0
 }: EnhancedHomeFeedProps) {
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [activeTab, setActiveTab] = useState<'following'>('following');
-  const [showNewPostsBanner, setShowNewPostsBanner] = useState(false);
-  const [newPostsCount, setNewPostsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'following'>('following');
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
+  const { addToast } = useToast();
+
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0.1,
     triggerOnce: false,
   });
 
-  // Initialize with empty posts array instead of mock data
+  // Fetch posts function
+  const fetchPosts = useCallback(async (pageNum: number, isRefresh: boolean = false) => {
+    try {
+      const filter: FeedFilter = {
+        feedSource: activeTab,
+        userAddress: userProfile?.walletAddress || userProfile?.address,
+        sortBy: FeedSortType.NEW
+      };
+
+      const response = await FeedService.getEnhancedFeed(filter, pageNum, LIMIT);
+
+      if (isRefresh) {
+        setPosts(response.posts);
+        setPage(2);
+      } else {
+        setPosts(prevPosts => [...prevPosts, ...response.posts]);
+        setPage(prevPage => prevPage + 1);
+      }
+
+      setHasMore(response.hasMore);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      addToast('Failed to load feed', 'error');
+    }
+  }, [activeTab, userProfile, addToast]);
+
+  // Initial load and refresh on tab/profile change
   useEffect(() => {
-    setPosts([]);
-  }, []);
+    fetchPosts(1, true);
+  }, [fetchPosts]);
+
+  // Handle external refresh
+  useEffect(() => {
+    if (externalRefreshKey > 0) {
+      fetchPosts(1, true);
+    }
+  }, [externalRefreshKey, fetchPosts]);
+
+  // Load more posts function
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    await fetchPosts(page, false);
+    setLoadingMore(false);
+  }, [loadingMore, hasMore, fetchPosts, page]);
 
   // Infinite scroll
   useEffect(() => {
     if (inView && hasMore && !loadingMore) {
       loadMorePosts();
     }
-  }, [inView, hasMore, loadingMore]);
-
-  // Load more posts function
-  const loadMorePosts = async () => {
-    if (loadingMore) return;
-    
-    setLoadingMore(true);
-    
-    try {
-      // In a real implementation, this would fetch from your API
-      // For now, we'll simulate loading more posts
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate reaching the end of posts
-      setHasMore(false);
-    } catch (error) {
-      console.error('Error loading more posts:', error);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  }, [inView, hasMore, loadingMore, loadMorePosts]);
 
   // Filter posts based on search query
   const filteredPosts = useMemo(() => {
     if (!searchQuery) return posts;
-    
+
     const query = searchQuery.toLowerCase();
-    return posts.filter(post => 
-      post.content.toLowerCase().includes(query) ||
-      post.authorProfile.handle.toLowerCase().includes(query) ||
-      post.hashtags.some(tag => tag.toLowerCase().includes(query))
+    return posts.filter(post =>
+      (post.content && post.content.toLowerCase().includes(query)) ||
+      (post.authorProfile?.handle && post.authorProfile.handle.toLowerCase().includes(query)) ||
+      (post.tags && post.tags.some(tag => tag.toLowerCase().includes(query)))
     );
   }, [posts, searchQuery]);
 
   // Handle bookmark toggle
   const handleBookmark = (postId: string) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
-          ? { 
-              ...post, 
-              engagement: { 
-                ...post.engagement, 
-                hasBookmarked: !post.engagement.hasBookmarked 
-              } 
-            }
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.id === postId
+          ? {
+            ...post,
+            isBookmarked: !post.isBookmarked
+          }
           : post
       )
     );
   };
 
   // Handle like toggle
+  // Note: This is a local optimistic update. In a real app, you'd call an API.
   const handleLike = (postId: string) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => 
-        post.id === postId 
-          ? { 
-              ...post, 
-              engagement: { 
-                ...post.engagement, 
-                likes: post.engagement.hasLiked 
-                  ? post.engagement.likes - 1 
-                  : post.engagement.likes + 1,
-                hasLiked: !post.engagement.hasLiked
-              } 
-            }
-          : post
-      )
-    );
+    // TODO: Implement API call for liking
+    console.log('Liked post:', postId);
   };
 
   return (
@@ -197,11 +154,10 @@ export default function EnhancedHomeFeed({
         <div className="flex space-x-1 bg-white dark:bg-gray-800 rounded-xl p-1 shadow-sm">
           <button
             onClick={() => setActiveTab('following')}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-              activeTab === 'following'
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'following'
+              ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
           >
             <MessageCircle className="w-4 h-4 inline mr-1" />
             Following + Yours
@@ -225,40 +181,32 @@ export default function EnhancedHomeFeed({
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <img
-                        src={post.authorProfile.avatar || `https://ui-avatars.com/api/?name=${post.authorProfile.handle}&background=random`}
-                        alt={post.authorProfile.handle}
+                        src={post.authorProfile?.avatar || `https://ui-avatars.com/api/?name=${post.authorProfile?.handle || post.author}&background=random`}
+                        alt={post.authorProfile?.handle || post.author}
                         className="w-12 h-12 rounded-full object-cover"
                       />
-                      {post.authorProfile.isOnline && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                      )}
                     </div>
                     <div>
                       <div className="flex items-center space-x-2">
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {post.authorProfile.handle}
+                          {post.authorProfile?.handle || post.author.slice(0, 8)}
                         </h3>
-                        {post.authorProfile.verified && (
+                        {post.authorProfile?.verified && (
                           <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           </div>
                         )}
-                        {post.authorProfile.ens && (
-                          <span className="text-sm text-primary-600 dark:text-primary-400">
-                            {post.authorProfile.ens}
-                          </span>
-                        )}
                       </div>
                       <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span>{new Date(post.timestamp).toLocaleDateString()}</span>
+                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                         <span>•</span>
                         <div className="flex items-center space-x-1">
                           <Eye className="w-4 h-4" />
-                          <span>{post.engagement.views.toLocaleString()}</span>
+                          <span>{post.views?.toLocaleString() || 0}</span>
                         </div>
-                        {post.trending && (
+                        {post.trendingStatus === 'trending' && (
                           <>
                             <span>•</span>
                             <div className="flex items-center space-x-1 text-orange-500">
@@ -272,11 +220,10 @@ export default function EnhancedHomeFeed({
                   </div>
                   <button
                     onClick={() => handleBookmark(post.id)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      post.engagement.hasBookmarked
-                        ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                        : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                    }`}
+                    className={`p-2 rounded-lg transition-colors ${post.isBookmarked
+                      ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                      : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                      }`}
                   >
                     <Bookmark className="w-5 h-5" />
                   </button>
@@ -288,13 +235,13 @@ export default function EnhancedHomeFeed({
                 <p className="text-gray-900 dark:text-white leading-relaxed">
                   {post.content}
                 </p>
-                
+
                 {/* Hashtags */}
-                {post.hashtags.length > 0 && (
+                {post.tags && post.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {post.hashtags.map((hashtag) => (
+                    {post.tags.map((hashtag, i) => (
                       <span
-                        key={hashtag}
+                        key={i}
                         className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
                       >
                         <Hash className="w-3 h-3 mr-1" />
@@ -306,85 +253,20 @@ export default function EnhancedHomeFeed({
               </div>
 
               {/* Media Content */}
-              {post.media && post.media.length > 0 && (
+              {/* Note: EnhancedPost has mediaCids (string[]) or media (string[]). We assume they are URLs or CIDs */}
+              {/* We'll check for 'media' property first which is added by convertBackendPostToPost */}
+              {((post as any).media && (post as any).media.length > 0) && (
                 <div className="px-6 pb-4">
                   <div className="grid grid-cols-1 gap-3">
-                    {post.media.map((media, mediaIndex) => (
+                    {(post as any).media.map((mediaUrl: string, mediaIndex: number) => (
                       <div key={mediaIndex} className="relative rounded-xl overflow-hidden">
-                        {media.type === 'image' && (
-                          <img
-                            src={media.url}
-                            alt={media.title || 'Post image'}
-                            className="w-full h-auto object-cover"
-                          />
-                        )}
-                        {media.type === 'video' && (
-                          <div className="relative">
-                            <img
-                              src={media.thumbnail || media.url}
-                              alt={media.title || 'Video thumbnail'}
-                              className="w-full h-64 object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                                <Play className="w-8 h-8 text-white ml-1" />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {media.type === 'link' && (
-                          <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-                            <div className="flex items-start space-x-3">
-                              <ExternalLink className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                              <div>
-                                <h4 className="font-medium text-gray-900 dark:text-white">
-                                  {media.title}
-                                </h4>
-                                {media.description && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                    {media.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <img
+                          src={mediaUrl.startsWith('http') ? mediaUrl : `https://ipfs.io/ipfs/${mediaUrl}`}
+                          alt="Post media"
+                          className="w-full h-auto object-cover"
+                        />
                       </div>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Web3 Data */}
-              {post.web3Data && (
-                <div className="px-6 pb-4">
-                  <div className="bg-gradient-to-r from-primary-50 to-purple-50 dark:from-primary-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-primary-200 dark:border-primary-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Sparkles className="w-5 h-5 text-primary-600" />
-                      <span className="text-sm font-medium text-primary-800 dark:text-primary-200">
-                        Web3 Transaction
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        {post.web3Data.tokenAmount && (
-                          <span className="text-lg font-bold text-primary-900 dark:text-primary-100">
-                            {post.web3Data.tokenAmount} {post.web3Data.tokenSymbol}
-                          </span>
-                        )}
-                      </div>
-                      {post.web3Data.transactionHash && (
-                        <a
-                          href={`https://etherscan.io/tx/${post.web3Data.transactionHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center"
-                        >
-                          View on Etherscan
-                          <ExternalLink className="w-4 h-4 ml-1" />
-                        </a>
-                      )}
-                    </div>
                   </div>
                 </div>
               )}
@@ -395,31 +277,27 @@ export default function EnhancedHomeFeed({
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 transition-colors ${
-                        post.engagement.hasLiked
-                          ? 'text-red-500'
-                          : 'text-gray-500 hover:text-red-500'
-                      }`}
+                      className={`flex items-center space-x-2 transition-colors text-gray-500 hover:text-red-500`}
                     >
-                      <Heart className={`w-5 h-5 ${post.engagement.hasLiked ? 'fill-current' : ''}`} />
+                      <Heart className="w-5 h-5" />
                       <span className="text-sm font-medium">
-                        {post.engagement.likes > 0 ? post.engagement.likes : 'Like'}
+                        {post.reactionCount || post.reactions?.length || 0}
                       </span>
                     </button>
-                    
+
                     <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
                       <MessageCircle className="w-5 h-5" />
                       <span className="text-sm font-medium">
-                        {post.engagement.comments > 0 ? post.engagement.comments : 'Comment'}
+                        {post.comments || 0}
                       </span>
                     </button>
-                    
+
                     <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
                       <Share2 className="w-5 h-5" />
                       <span className="text-sm font-medium">Share</span>
                     </button>
                   </div>
-                  
+
                   <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                     <MoreHorizontal className="w-5 h-5" />
                   </button>
@@ -446,6 +324,19 @@ export default function EnhancedHomeFeed({
           <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
             🎉 You've reached the end!
           </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loadingMore && posts.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No posts yet</h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            Be the first to post something!
+          </p>
         </div>
       )}
     </div>

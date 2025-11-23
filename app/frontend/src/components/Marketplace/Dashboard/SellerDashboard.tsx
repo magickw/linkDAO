@@ -1200,12 +1200,12 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                       addToast('Payout settings saved successfully!', 'success');
                     }}
                     data={{
-                      // Load existing payout data from profile if available
-                      defaultCrypto: profile?.payoutSettings?.defaultCrypto || 'USDC',
-                      cryptoAddresses: profile?.payoutSettings?.cryptoAddresses || {},
-                      fiatEnabled: profile?.payoutSettings?.fiatEnabled || false,
-                      offRampProvider: profile?.payoutSettings?.offRampProvider || '',
-                      bankAccount: profile?.payoutSettings?.bankAccount || {}
+                      // Use default values for now - payout settings integration will be added later
+                      defaultCrypto: 'USDC',
+                      cryptoAddresses: {},
+                      fiatEnabled: false,
+                      offRampProvider: '',
+                      bankAccount: {}
                     }}
                   />
                 </div>

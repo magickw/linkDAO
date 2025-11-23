@@ -282,7 +282,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           // Transform and update seller data (same logic as in useEffect)
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
-            name: sellerProfile.storeName || sellerProfile.displayName || 'Anonymous Seller',
+            name: sellerProfile.storeName || 'Anonymous Seller',
             avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,
@@ -408,7 +408,6 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         if (sellerProfile) {
           console.log('🔍 Initial Profile data received:', {
             storeName: sellerProfile.storeName,
-            displayName: sellerProfile.displayName,
             profilePicture: sellerProfile.profilePicture,
             profileImageCdn: sellerProfile.profileImageCdn,
             bio: sellerProfile.bio,
@@ -418,7 +417,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           // Transform backend profile to store page format
           const transformedSeller: SellerInfo = {
             id: sellerProfile.walletAddress,
-            name: sellerProfile.storeName || sellerProfile.displayName || 'Anonymous Seller',
+            name: sellerProfile.storeName || 'Anonymous Seller',
             avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
             coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
             walletAddress: sellerProfile.walletAddress,

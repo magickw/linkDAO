@@ -146,8 +146,8 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   };
 
   const handleCreatePost = () => {
-    // Redirect to the global create post page with community parameter
-    router.push(`/create-post?community=${communitySlug}`);
+    // Show the inline post creator modal instead of redirecting
+    setShowPostCreator(true);
   };
 
   if (loading) {

@@ -20,6 +20,7 @@ interface CommunityJoinButtonProps {
   isPublic?: boolean;
   className?: string;
   onMembershipChange?: (isMember: boolean) => void;
+  creatorAddress?: string; // Add creator address prop
 }
 
 export default function CommunityJoinButton({
@@ -28,7 +29,8 @@ export default function CommunityJoinButton({
   memberCount,
   isPublic = true,
   className = '',
-  onMembershipChange
+  onMembershipChange,
+  creatorAddress
 }: CommunityJoinButtonProps) {
   const { address } = useAccount();
   const { joinCommunity, leaveCommunity, loading, error, clearError } = useCommunityInteractions();
@@ -38,12 +40,23 @@ export default function CommunityJoinButton({
   const [checkingMembership, setCheckingMembership] = useState(true);
   const [showConfirmLeave, setShowConfirmLeave] = useState(false);
 
+  // Check if current user is the creator
+  const isCreator = address && creatorAddress && address.toLowerCase() === creatorAddress.toLowerCase();
+
   // Check membership status on component mount and address change
   useEffect(() => {
     const checkMembership = async () => {
       if (!address) {
         setIsMember(false);
         setMemberRole(null);
+        setCheckingMembership(false);
+        return;
+      }
+
+      // If user is the creator, set them as owner immediately
+      if (isCreator) {
+        setIsMember(true);
+        setMemberRole('owner');
         setCheckingMembership(false);
         return;
       }
@@ -69,7 +82,7 @@ export default function CommunityJoinButton({
     };
 
     checkMembership();
-  }, [address, communityId]);
+  }, [address, communityId, isCreator]);
 
   const handleJoin = async () => {
     if (!address) {
@@ -187,8 +200,8 @@ export default function CommunityJoinButton({
             <span>{memberRole ? getRoleLabel(memberRole) : 'Member'}</span>
           </div>
 
-          {/* Leave Button (only for regular members) */}
-          {memberRole === 'member' && (
+          {/* Leave Button (only for regular members, not creators/owners) */}
+          {memberRole === 'member' && !isCreator && (
             <>
               {!showConfirmLeave ? (
                 <button

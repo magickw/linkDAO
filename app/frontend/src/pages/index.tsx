@@ -21,7 +21,7 @@ const NavigationSidebar = lazy(() => import('@/components/NavigationSidebar').ca
 const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStylePostComposer'));
 const PostCreationModal = lazy(() => import('@/components/PostCreationModal').catch(() => ({ default: () => <div>Failed to load post modal</div> })));
 const BottomSheet = lazy(() => import('@/components/BottomSheet'));
-const EnhancedFeedView = lazy(() => import('@/components/Feed/EnhancedFeedView'));
+const EnhancedHomeFeed = lazy(() => import('@/components/EnhancedHomeFeed'));
 
 import SEOHead from '@/components/SEO/SEOHead';
 
@@ -77,7 +77,7 @@ export default function Home() {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const email = formData.get('email') as string;
-    
+
     if (email) {
       try {
         const result = await newsletterService.subscribeEmail(email);
@@ -850,13 +850,13 @@ export default function Home() {
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
                     Join our newsletter to get the latest updates, product announcements, and community news.
                   </p>
-                  <form 
+                  <form
                     className="flex flex-col sm:flex-row gap-4"
                     onSubmit={async (e) => {
                       e.preventDefault();
                       const formData = new FormData(e.target as HTMLFormElement);
                       const email = formData.get('email') as string;
-                      
+
                       if (email) {
                         const result = await newsletterService.subscribeEmail(email);
                         if (result.success) {
@@ -868,15 +868,15 @@ export default function Home() {
                       }
                     }}
                   >
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       name="email"
-                      placeholder="Enter your email" 
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" 
+                      placeholder="Enter your email"
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500"
                       required
                     />
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
                     >
                       Subscribe
@@ -982,10 +982,9 @@ export default function Home() {
                     {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
                       <CommunityView communitySlug={navigationState.activeCommunity} />
                     ) : (
-                      <EnhancedFeedView
+                      <EnhancedHomeFeed
                         externalRefreshKey={feedRefreshKey}
-                        communityId={navigationState.activeCommunity}
-                        showCommunityMetrics={false}
+                        userProfile={profile}
                         className=""
                       />
                     )}
