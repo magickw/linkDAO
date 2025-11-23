@@ -202,10 +202,10 @@ export const PredictiveAnalytics: React.FC<PredictiveAnalyticsProps> = ({ predic
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="small">
+                      <Button variant="outline" size="sm">
                         View Details
                       </Button>
-                      <Button size="small">
+                      <Button size="sm">
                         Take Action
                       </Button>
                     </div>

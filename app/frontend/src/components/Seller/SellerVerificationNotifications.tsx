@@ -236,7 +236,7 @@ export const SellerVerificationNotifications: React.FC = () => {
             </div>
             <Button
               variant={preferences.email ? "default" : "outline"}
-              size="small"
+              size="sm"
               onClick={() => updatePreferences({ ...preferences, email: !preferences.email })}
             >
               {preferences.email ? 'Enabled' : 'Disabled'}
@@ -253,7 +253,7 @@ export const SellerVerificationNotifications: React.FC = () => {
             </div>
             <Button
               variant={preferences.push ? "default" : "outline"}
-              size="small"
+              size="sm"
               onClick={() => updatePreferences({ ...preferences, push: !preferences.push })}
             >
               {preferences.push ? 'Enabled' : 'Disabled'}
@@ -270,7 +270,7 @@ export const SellerVerificationNotifications: React.FC = () => {
             </div>
             <Button
               variant={preferences.sms ? "default" : "outline"}
-              size="small"
+              size="sm"
               onClick={() => updatePreferences({ ...preferences, sms: !preferences.sms })}
             >
               {preferences.sms ? 'Enabled' : 'Disabled'}
@@ -336,7 +336,7 @@ export const SellerVerificationNotifications: React.FC = () => {
                       {!notification.read && (
                         <Button
                           variant="ghost"
-                          size="small"
+                          size="sm"
                           onClick={() => markAsRead(notification.id)}
                         >
                           Mark as read

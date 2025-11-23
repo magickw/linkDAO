@@ -450,7 +450,7 @@ export const SellerVerificationReview: React.FC = () => {
               <Button
                 onClick={toggleSelectAll}
                 variant="outline"
-                size="small"
+                size="sm"
               >
                 {selectedVerifications.size === verificationRequests.length ? (
                   <>
@@ -478,7 +478,7 @@ export const SellerVerificationReview: React.FC = () => {
               >
                 {bulkActionLoading ? (
                   <>
-                    <LoadingSpinner size="small" className="mr-2" />
+                    <LoadingSpinner size="sm" className="mr-2" />
                     Processing...
                   </>
                 ) : (
@@ -505,7 +505,7 @@ export const SellerVerificationReview: React.FC = () => {
                 >
                   {bulkActionLoading ? (
                     <>
-                      <LoadingSpinner size="small" className="mr-2" />
+                      <LoadingSpinner size="sm" className="mr-2" />
                       Processing...
                     </>
                   ) : (
@@ -743,14 +743,14 @@ export const SellerVerificationReview: React.FC = () => {
                               <div className="flex gap-1">
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentPreview(request.einDocumentId!)}
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentDownload(request.einDocumentId!)}
                                 >
                                   <Download className="w-4 h-4" />
@@ -767,14 +767,14 @@ export const SellerVerificationReview: React.FC = () => {
                               <div className="flex gap-1">
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentPreview(request.businessLicenseId!)}
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentDownload(request.businessLicenseId!)}
                                 >
                                   <Download className="w-4 h-4" />
@@ -791,14 +791,14 @@ export const SellerVerificationReview: React.FC = () => {
                               <div className="flex gap-1">
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentPreview(request.addressProofId!)}
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
                                 <Button 
                                   variant="outline" 
-                                  size="small"
+                                  size="sm"
                                   onClick={() => handleDocumentDownload(request.addressProofId!)}
                                 >
                                   <Download className="w-4 h-4" />
@@ -898,7 +898,7 @@ export const SellerVerificationReview: React.FC = () => {
                       >
                         {actionLoading === request.id ? (
                           <>
-                            <LoadingSpinner size="small" className="mr-2" />
+                            <LoadingSpinner size="sm" className="mr-2" />
                             Approving...
                           </>
                         ) : (
@@ -927,7 +927,7 @@ export const SellerVerificationReview: React.FC = () => {
                         >
                           {actionLoading === request.id ? (
                             <>
-                              <LoadingSpinner size="small" className="mr-2" />
+                              <LoadingSpinner size="sm" className="mr-2" />
                               Rejecting...
                             </>
                           ) : (

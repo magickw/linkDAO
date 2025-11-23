@@ -144,7 +144,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
               key={filterItem.id}
               onClick={() => setFilter(filterItem.id)}
               variant={filter === filterItem.id ? 'primary' : 'ghost'}
-              size="small"
+              size="sm"
               className="whitespace-nowrap"
             >
               {filterItem.label} ({filterItem.count})

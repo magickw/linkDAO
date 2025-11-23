@@ -271,7 +271,7 @@ export const SupportTicketDashboard: React.FC<SupportTicketDashboardProps> = ({
                         <div className="ml-4 space-y-2">
                           {ticket.status === 'open' && (
                             <Button
-                              size="small"
+                              size="sm"
                               onClick={() => updateTicketStatus(ticket.id, 'in_progress')}
                               className="w-full"
                             >
@@ -280,7 +280,7 @@ export const SupportTicketDashboard: React.FC<SupportTicketDashboardProps> = ({
                           )}
                           {ticket.status === 'in_progress' && (
                             <Button
-                              size="small"
+                              size="sm"
                               onClick={() => updateTicketStatus(ticket.id, 'resolved')}
                               className="w-full bg-green-600 hover:bg-green-700"
                             >
@@ -289,7 +289,7 @@ export const SupportTicketDashboard: React.FC<SupportTicketDashboardProps> = ({
                           )}
                           {ticket.status === 'resolved' && (
                             <Button
-                              size="small"
+                              size="sm"
                               onClick={() => updateTicketStatus(ticket.id, 'closed')}
                               className="w-full bg-gray-600 hover:bg-gray-700"
                             >

@@ -417,17 +417,17 @@ export const IntelligentAlertsPanel: React.FC<IntelligentAlertsPanelProps> = ({
                     <div className="flex flex-col space-y-2 ml-4">
                       {alert.status === 'active' && (
                         <>
-                          <Button size="small" variant="outline">
+                          <Button size="sm" variant="outline">
                             <Eye className="h-4 w-4 mr-1" />
                             Acknowledge
                           </Button>
-                          <Button size="small" variant="outline">
+                          <Button size="sm" variant="outline">
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Resolve
                           </Button>
                         </>
                       )}
-                      <Button size="small" variant="ghost">
+                      <Button size="sm" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </div>
