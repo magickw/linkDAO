@@ -15,6 +15,7 @@ import ReturnRefundModal from '@/components/Marketplace/ReturnRefundModal';
 import { returnRefundService } from '@/services/returnRefundService';
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
+import SEO from '@/components/SEO';
 
 // New redesigned components
 import { ProductCard } from '@/components/Marketplace/ProductDisplay/ProductCard';
@@ -1146,7 +1147,14 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
 
 const MarketplacePage: React.FC = () => {
   return (
-    <NavigationLoadingStates showProgressBar={true} showSkeletons={true}>
+    <>
+      <SEO
+        title="Decentralized Marketplace"
+        description="Buy and sell securely on LinkDAO's decentralized marketplace. Browse products, NFTs, and services with blockchain-powered escrow protection. Trade with confidence using LDAO tokens."
+        keywords={['decentralized marketplace', 'blockchain marketplace', 'web3 commerce', 'crypto marketplace', 'NFT marketplace', 'LDAO trading', 'secure escrow', 'peer-to-peer trading', 'ethereum marketplace', 'defi shopping']}
+        type="website"
+      />
+      <NavigationLoadingStates showProgressBar={true} showSkeletons={true}>
       <MarketplacePreloader 
         config={{
           preloadCategories: true,
@@ -1163,6 +1171,7 @@ const MarketplacePage: React.FC = () => {
       {/* Performance Indicator - Development only */}
       <PerformanceIndicator />
     </NavigationLoadingStates>
+    </>
   );
 };
 
