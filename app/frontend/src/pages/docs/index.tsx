@@ -341,7 +341,17 @@ const DocsPage: NextPage = () => {
       const response = await fetch(`/api/docs/${slug}`);
 
       if (!response.ok) {
-        throw new Error(`Failed to load document: ${response.statusText}`);
+        // Try to parse error message from JSON response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to load document: ${response.statusText}`);
+        } catch (e) {
+          // If JSON parse fails, use status text
+          if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+            throw e;
+          }
+          throw new Error(`Failed to load document: ${response.statusText}`);
+        }
       }
 
       const data = await response.json();

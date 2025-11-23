@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
-import path from 'path';
+import { getDocPath, getAvailableDocuments } from '../../../utils/docUtils';
 
 /**
  * Universal Document API Endpoint
@@ -22,48 +22,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // Security: Prevent directory traversal
-    const sanitizedSlug = slug.replace(/\.\./g, '').replace(/\//g, '');
+    const filePath = getDocPath(slug);
 
-    // Special case: technical-whitepaper maps to TECHNICAL_WHITEPAPER.md
-    let filename = `${sanitizedSlug}.md`;
-    if (sanitizedSlug === 'technical-whitepaper') {
-      filename = 'TECHNICAL_WHITEPAPER.md';
-    }
-
-    // Build file path
-    // Handle different deployment scenarios - try multiple possible paths
-    let docsDir: string;
-    let filePath: string;
-    
-    // Try different paths based on deployment context
-    const possiblePaths = [
-      // Local development from frontend directory
-      path.join(process.cwd(), 'public', 'docs'),
-      // Vercel deployment from root directory
-      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
-      // Alternative path resolution
-      path.join(__dirname, '../../../../../../public/docs'),
-      // Direct relative path
-      path.resolve('./public/docs'),
-      path.resolve('./app/frontend/public/docs')
-    ];
-    
-    let fileFound = false;
-    for (const possiblePath of possiblePaths) {
-      filePath = path.join(possiblePath, filename);
-      if (fs.existsSync(filePath)) {
-        docsDir = possiblePath;
-        fileFound = true;
-        break;
-      }
-    }
-    
-    if (!fileFound) {
+    if (!filePath) {
       return res.status(404).json({
         error: 'Document not found',
-        slug: sanitizedSlug,
-        triedPaths: possiblePaths.map(p => path.join(p, filename)),
+        slug,
         availableDocuments: getAvailableDocuments()
       });
     }
@@ -79,8 +43,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     // Return content with metadata
     res.status(200).json({
       content: fileContent,
-      slug: sanitizedSlug,
-      title: extractTitle(fileContent) || sanitizedSlug,
+      slug,
+      title: extractTitle(fileContent) || slug,
       lastUpdated: stats.mtime.toISOString(),
       wordCount,
       estimatedReadingTime,
@@ -101,48 +65,4 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 function extractTitle(content: string): string | null {
   const match = content.match(/^#\s+(.+)$/m);
   return match ? match[1] : null;
-}
-
-/**
- * Get list of available documents
- */
-function getAvailableDocuments(): string[] {
-  try {
-    // Try different paths based on deployment context
-    const possiblePaths = [
-      // Local development from frontend directory
-      path.join(process.cwd(), 'public', 'docs'),
-      // Vercel deployment from root directory
-      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
-      // Alternative path resolution
-      path.join(__dirname, '../../../../../../public/docs'),
-      // Direct relative path
-      path.resolve('./public/docs'),
-      path.resolve('./app/frontend/public/docs')
-    ];
-    
-    for (const docsPath of possiblePaths) {
-      try {
-        if (fs.existsSync(docsPath)) {
-          const files = fs.readdirSync(docsPath);
-          return files
-            .filter(file => file.endsWith('.md'))
-            .map(file => {
-              // Normalize filename to slug (lowercase, remove .md)
-              const base = file.replace('.md', '');
-              // Map TECHNICAL_WHITEPAPER.md to technical-whitepaper slug
-              return base.toLowerCase() === 'technical_whitepaper' ? 'technical-whitepaper' : base;
-            })
-            .sort();
-        }
-      } catch (error) {
-        // Continue to next path
-        continue;
-      }
-    }
-    
-    return [];
-  } catch {
-    return [];
-  }
 }
