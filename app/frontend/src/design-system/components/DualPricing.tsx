@@ -337,11 +337,10 @@ export const DualPricing: React.FC<DualPricingProps> = ({
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-              priceChange > 0
-                ? 'text-green-400 bg-green-400/10'
-                : 'text-red-400 bg-red-400/10'
-            }`}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${priceChange > 0
+              ? 'text-green-400 bg-green-400/10'
+              : 'text-red-400 bg-red-400/10'
+              }`}
           >
             {priceChange > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {Math.abs(priceChange).toFixed(2)}%
@@ -433,9 +432,8 @@ export const DualPricing: React.FC<DualPricingProps> = ({
                     <button
                       key={currency}
                       onClick={() => handleCurrencyChange(currency)}
-                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-white/10 ${
-                        currency === currentCurrency ? 'text-blue-400' : 'text-white/80'
-                      }`}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-white/10 ${currency === currentCurrency ? 'text-blue-400' : 'text-white/80'
+                        }`}
                     >
                       {currency}
                     </button>

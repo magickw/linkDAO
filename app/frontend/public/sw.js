@@ -1804,6 +1804,14 @@ function checkRateLimit(requestKey, now) {
     return true;
   }
 
+  // Skip rate limiting for IPFS gateways
+  if (url.hostname.includes('gateway.pinata.cloud') ||
+    url.hostname.includes('ipfs.io') ||
+    url.hostname.includes('cloudflare-ipfs.com') ||
+    url.hostname.includes('dweb.link')) {
+    return true;
+  }
+
   // Skip rate limiting for WebSocket endpoints
   if (url.pathname.includes('socket.io')) {
     return true;

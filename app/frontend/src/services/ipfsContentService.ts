@@ -3,8 +3,50 @@ import { ENV_CONFIG } from '@/config/environment';
 const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 
 export class IPFSContentService {
-  private static cache = new Map<string, { content: string; timestamp: number }>();
+  private static cache = new Map<string, { content: string | null; timestamp: number }>();
+  private static rateLimitCache = new Map<string, { timestamp: number; count: number }>();
   private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private static readonly FAILURE_TTL = 60 * 1000; // 1 minute for failures
+  private static readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
+  private static readonly RATE_LIMIT_MAX = 30; // Max 30 requests per window per gateway
+
+  /**
+   * Check if a gateway is rate limited
+   */
+  private static isGatewayRateLimited(gateway: string): boolean {
+    const now = Date.now();
+    const entry = this.rateLimitCache.get(gateway);
+    
+    if (!entry) {
+      return false; // Not in cache, not rate limited
+    }
+    
+    // Check if the window has expired
+    if (now - entry.timestamp > this.RATE_LIMIT_WINDOW) {
+      // Expired, remove from cache
+      this.rateLimitCache.delete(gateway);
+      return false;
+    }
+    
+    // Check if we've exceeded the rate limit
+    return entry.count >= this.RATE_LIMIT_MAX;
+  }
+
+  /**
+   * Record a request to a gateway for rate limiting
+   */
+  private static recordGatewayRequest(gateway: string): void {
+    const now = Date.now();
+    const entry = this.rateLimitCache.get(gateway);
+    
+    if (!entry || now - entry.timestamp > this.RATE_LIMIT_WINDOW) {
+      // Reset counter if window expired or entry doesn't exist
+      this.rateLimitCache.set(gateway, { timestamp: now, count: 1 });
+    } else {
+      // Increment counter
+      this.rateLimitCache.set(gateway, { timestamp: entry.timestamp, count: entry.count + 1 });
+    }
+  }
 
   /**
    * Get content from IPFS by CID
@@ -13,9 +55,16 @@ export class IPFSContentService {
    */
   static async getContentFromIPFS(cid: string): Promise<string> {
     // Check cache first
+    // Check cache first
     const cached = this.cache.get(cid);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      return cached.content;
+    if (cached) {
+      const ttl = cached.content === null ? this.FAILURE_TTL : this.CACHE_TTL;
+      if (Date.now() - cached.timestamp < ttl) {
+        if (cached.content === null) {
+          throw new Error(`Content for CID ${cid} previously failed to load`);
+        }
+        return cached.content;
+      }
     }
 
     try {
@@ -38,7 +87,7 @@ export class IPFSContentService {
 
         if (response.ok) {
           const data = await response.json();
-          
+
           // Handle different response formats from the backend
           let content = '';
           if (data.data && data.data.content) {
@@ -64,7 +113,7 @@ export class IPFSContentService {
         } else {
           // Log the specific error status for debugging
           console.warn(`Backend API returned status ${response.status} for CID: ${cid}`);
-          
+
           // Check if it's a backend IPFS service error (500)
           if (response.status === 500) {
             try {
@@ -82,7 +131,7 @@ export class IPFSContentService {
           } else if (response.status === 404) {
             console.info(`Content not found in backend for CID: ${cid}, trying gateways...`);
           }
-          
+
           // For other errors (404, etc.), continue to try gateways
           console.warn(`Backend API failed with status ${response.status}, trying direct IPFS gateways...`);
         }
@@ -92,7 +141,16 @@ export class IPFSContentService {
 
       // Fallback to direct IPFS gateways if backend API fails
       for (const gateway of ipfsGateways) {
+        // Check if gateway is rate limited
+        if (this.isGatewayRateLimited(gateway)) {
+          console.warn(`Gateway ${gateway} is rate limited, skipping...`);
+          continue;
+        }
+
         try {
+          // Record the request for rate limiting
+          this.recordGatewayRequest(gateway);
+
           // Add a timeout using AbortController
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -128,7 +186,16 @@ export class IPFSContentService {
       // If all gateways fail, try with different content-type header
       console.warn(`All primary gateways failed, trying with no content-type header...`);
       for (const gateway of ipfsGateways) {
+        // Check if gateway is rate limited
+        if (this.isGatewayRateLimited(gateway)) {
+          console.warn(`Gateway ${gateway} is rate limited, skipping retry...`);
+          continue;
+        }
+
         try {
+          // Record the request for rate limiting
+          this.recordGatewayRequest(gateway);
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -156,6 +223,8 @@ export class IPFSContentService {
         }
       }
 
+      // Cache the failure to prevent immediate retries
+      this.cache.set(cid, { content: null, timestamp: Date.now() });
       throw new Error(`All IPFS gateways failed for CID: ${cid}`);
     } catch (error) {
       console.error('Error fetching content from IPFS:', error);
