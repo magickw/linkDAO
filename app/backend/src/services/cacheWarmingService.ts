@@ -245,12 +245,20 @@ export class CacheWarmingService {
       safeLogger.info(`✅ Warmed: ${job.key}`);
     } catch (error) {
       this.stats.failedJobs++;
-      // Only log error details if it's not a "Not Found" error
+      // Extract error details for better logging
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      // Only log error details if it's not a "Not Found" error
       if (errorMessage.includes('not found') || errorMessage.includes('Not found')) {
         safeLogger.info(`⚠️ Skipped warming ${job.key}: Data not found (expected for fresh installs)`);
       } else {
-        safeLogger.error(`❌ Failed to warm ${job.key}:`, error);
+        safeLogger.error(`❌ Failed to warm ${job.key}:`, {
+          error: errorMessage,
+          stack: errorStack,
+          key: job.key,
+          priority: job.priority
+        });
       }
     }
   }

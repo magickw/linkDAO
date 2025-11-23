@@ -26,18 +26,37 @@ export const safeLogger = {
 
 function sanitizeMeta(meta: any): any {
   if (!meta) return meta;
-  
+
+  // Handle Error objects specially
+  if (meta instanceof Error) {
+    return {
+      message: sanitizeForLog(meta.message),
+      name: meta.name,
+      stack: meta.stack ? sanitizeForLog(meta.stack) : undefined,
+      ...Object.getOwnPropertyNames(meta).reduce((acc, key) => {
+        if (key !== 'message' && key !== 'stack' && key !== 'name') {
+          acc[key] = (meta as any)[key];
+        }
+        return acc;
+      }, {} as any)
+    };
+  }
+
   if (typeof meta === 'object') {
     const sanitized: any = {};
     for (const key in meta) {
       if (meta.hasOwnProperty(key)) {
-        sanitized[key] = typeof meta[key] === 'string' 
-          ? sanitizeForLog(meta[key])
-          : meta[key];
+        if (meta[key] instanceof Error) {
+          sanitized[key] = sanitizeMeta(meta[key]); // Recursively handle nested errors
+        } else {
+          sanitized[key] = typeof meta[key] === 'string'
+            ? sanitizeForLog(meta[key])
+            : meta[key];
+        }
       }
     }
     return sanitized;
   }
-  
-  return sanitizeForLog(meta);
+
+  return typeof meta === 'string' ? sanitizeForLog(meta) : meta;
 }
