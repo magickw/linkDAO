@@ -18,6 +18,7 @@ import { useToast } from '@/context/ToastContext';
 import { useInView } from 'react-intersection-observer';
 import { FeedService } from '@/services/feedService';
 import { FeedFilter, FeedSortType, EnhancedPost } from '@/types/feed';
+import EnhancedPostCard from '@/components/Feed/EnhancedPostCard';
 
 interface EnhancedHomeFeedProps {
   userProfile?: any;
@@ -110,26 +111,7 @@ export default function EnhancedHomeFeed({
     );
   }, [posts, searchQuery]);
 
-  // Handle bookmark toggle
-  const handleBookmark = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? {
-            ...post,
-            isBookmarked: !post.isBookmarked
-          }
-          : post
-      )
-    );
-  };
-
-  // Handle like toggle
-  // Note: This is a local optimistic update. In a real app, you'd call an API.
-  const handleLike = (postId: string) => {
-    // TODO: Implement API call for liking
-    console.log('Liked post:', postId);
-  };
+  
 
   return (
     <div className={className}>
@@ -174,136 +156,22 @@ export default function EnhancedHomeFeed({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <GlassPanel className="p-0 overflow-hidden hover:shadow-lg transition-all duration-300">
-              {/* Post Header */}
-              <div className="p-6 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <img
-                        src={post.authorProfile?.avatar || `https://ui-avatars.com/api/?name=${post.authorProfile?.handle || post.author}&background=random`}
-                        alt={post.authorProfile?.handle || post.author}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {post.authorProfile?.handle || post.author.slice(0, 8)}
-                        </h3>
-                        {post.authorProfile?.verified && (
-                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                        <span>•</span>
-                        <div className="flex items-center space-x-1">
-                          <Eye className="w-4 h-4" />
-                          <span>{post.views?.toLocaleString() || 0}</span>
-                        </div>
-                        {post.trendingStatus === 'trending' && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center space-x-1 text-orange-500">
-                              <TrendingUp className="w-4 h-4" />
-                              <span>Trending</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleBookmark(post.id)}
-                    className={`p-2 rounded-lg transition-colors ${post.isBookmarked
-                      ? 'text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                      : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-                      }`}
-                  >
-                    <Bookmark className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Post Content */}
-              <div className="px-6 pb-4">
-                <p className="text-gray-900 dark:text-white leading-relaxed">
-                  {post.content}
-                </p>
-
-                {/* Hashtags */}
-                {post.tags && post.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {post.tags.map((hashtag, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200 cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
-                      >
-                        <Hash className="w-3 h-3 mr-1" />
-                        {hashtag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Media Content */}
-              {/* Note: EnhancedPost has mediaCids (string[]) or media (string[]). We assume they are URLs or CIDs */}
-              {/* We'll check for 'media' property first which is added by convertBackendPostToPost */}
-              {((post as any).media && (post as any).media.length > 0) && (
-                <div className="px-6 pb-4">
-                  <div className="grid grid-cols-1 gap-3">
-                    {(post as any).media.map((mediaUrl: string, mediaIndex: number) => (
-                      <div key={mediaIndex} className="relative rounded-xl overflow-hidden">
-                        <img
-                          src={mediaUrl.startsWith('http') ? mediaUrl : `https://ipfs.io/ipfs/${mediaUrl}`}
-                          alt="Post media"
-                          className="w-full h-auto object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Post Actions */}
-              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-6">
-                    <button
-                      onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 transition-colors text-gray-500 hover:text-red-500`}
-                    >
-                      <Heart className="w-5 h-5" />
-                      <span className="text-sm font-medium">
-                        {post.reactionCount || post.reactions?.length || 0}
-                      </span>
-                    </button>
-
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors">
-                      <MessageCircle className="w-5 h-5" />
-                      <span className="text-sm font-medium">
-                        {post.comments || 0}
-                      </span>
-                    </button>
-
-                    <button className="flex items-center space-x-2 text-gray-500 hover:text-green-500 transition-colors">
-                      <Share2 className="w-5 h-5" />
-                      <span className="text-sm font-medium">Share</span>
-                    </button>
-                  </div>
-
-                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </GlassPanel>
+            <EnhancedPostCard
+              post={post}
+              onReaction={async (postId, type, amount) => {
+                await FeedService.addReaction(postId, type, amount || 0);
+                addToast('Reaction added successfully!', 'success');
+              }}
+              onTip={async (postId, amount, token) => {
+                if (amount && token) {
+                  await FeedService.sendTip(postId, parseFloat(amount), token, '');
+                  addToast('Tip sent successfully!', 'success');
+                }
+              }}
+              onExpand={() => {
+                // Expand the post when clicked
+              }}
+            />
           </motion.div>
         ))}
       </div>

@@ -91,71 +91,75 @@ export const darkAdminTheme: ChartTheme = {
 };
 
 // Chart.js theme configuration generator
-export const generateChartJsTheme = (theme: ChartTheme = defaultAdminTheme) => ({
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      labels: {
-        color: theme.colors.text,
-        font: {
-          family: theme.fonts.family,
-          size: theme.fonts.size.medium,
+export const generateChartJsTheme = (theme: ChartTheme = defaultAdminTheme) => {
+  // Ensure theme is defined, fallback to defaultAdminTheme if undefined
+  const validTheme = theme || defaultAdminTheme;
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: validTheme.colors.text,
+          font: {
+            family: validTheme.fonts.family,
+            size: validTheme.fonts.size.medium,
+          },
+          padding: validTheme.spacing.padding,
         },
-        padding: theme.spacing.padding,
       },
-    },
-    tooltip: {
-      backgroundColor: theme.colors.background,
-      titleColor: theme.colors.text,
-      bodyColor: theme.colors.text,
-      borderColor: theme.colors.grid,
-      borderWidth: 1,
-      cornerRadius: 8,
-      titleFont: {
-        family: theme.fonts.family,
-        size: theme.fonts.size.medium,
-        weight: 'bold',
-      },
-      bodyFont: {
-        family: theme.fonts.family,
-        size: theme.fonts.size.small,
-      },
-    },
-  },
-  scales: {
-    x: {
-      grid: {
-        color: theme.colors.grid,
-        borderColor: theme.colors.axis,
-      },
-      ticks: {
-        color: theme.colors.text,
-        font: {
-          family: theme.fonts.family,
-          size: theme.fonts.size.small,
+      tooltip: {
+        backgroundColor: validTheme.colors.background,
+        titleColor: validTheme.colors.text,
+        bodyColor: validTheme.colors.text,
+        borderColor: validTheme.colors.grid,
+        borderWidth: 1,
+        cornerRadius: 8,
+        titleFont: {
+          family: validTheme.fonts.family,
+          size: validTheme.fonts.size.medium,
+          weight: 'bold',
+        },
+        bodyFont: {
+          family: validTheme.fonts.family,
+          size: validTheme.fonts.size.small,
         },
       },
     },
-    y: {
-      grid: {
-        color: theme.colors.grid,
-        borderColor: theme.colors.axis,
+    scales: {
+      x: {
+        grid: {
+          color: validTheme.colors.grid,
+          borderColor: validTheme.colors.axis,
+        },
+        ticks: {
+          color: validTheme.colors.text,
+          font: {
+            family: validTheme.fonts.family,
+            size: validTheme.fonts.size.small,
+          },
+        },
       },
-      ticks: {
-        color: theme.colors.text,
-        font: {
-          family: theme.fonts.family,
-          size: theme.fonts.size.small,
+      y: {
+        grid: {
+          color: validTheme.colors.grid,
+          borderColor: validTheme.colors.axis,
+        },
+        ticks: {
+          color: validTheme.colors.text,
+          font: {
+            family: validTheme.fonts.family,
+            size: validTheme.fonts.size.small,
+          },
         },
       },
     },
-  },
-  animation: {
-    duration: theme.animation.duration,
-    easing: theme.animation.easing,
-  },
-});
+    animation: {
+      duration: validTheme.animation.duration,
+      easing: validTheme.animation.easing,
+    },
+  };
+};
 
 // D3.js color scales
 export const d3ColorScales = {
@@ -249,12 +253,14 @@ export const generateGradient = (ctx: CanvasRenderingContext2D, colorStart: stri
   return gradient;
 };
 
-export const applyThemeToChart = (chartConfig: any, theme: ChartTheme = defaultAdminTheme): any => {
+export const applyThemeToChart = (chartConfig: any, theme: ChartTheme | undefined = defaultAdminTheme): any => {
+  // Ensure theme is defined, fallback to defaultAdminTheme if undefined
+  const validTheme = theme || defaultAdminTheme;
   return {
     ...chartConfig,
     options: {
       ...chartConfig.options,
-      ...generateChartJsTheme(theme),
+      ...generateChartJsTheme(validTheme),
     },
   };
 };

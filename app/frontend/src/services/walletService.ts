@@ -127,7 +127,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'LINK',
           name: 'Chainlink',
-          address: '0x7DFf5DffFE94314E2862C0Ea2574fD9763F03633' as Address,
+          address: '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196' as Address,
           decimals: 18
         },
         ...(baseDai ? [{ symbol: 'DAI', name: 'Dai (Base)', address: baseDai as Address, decimals: 18 }] : []),

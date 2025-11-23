@@ -459,6 +459,8 @@ import searchRoutes from './routes/searchRoutes';
 import reputationRoutes from './routes/reputationRoutes';
 // Import onboarding routes
 import onboardingRoutes from './routes/onboardingRoutes';
+// Import API documentation routes
+import apiDocsRoutes from './routes/apiDocsRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
@@ -478,6 +480,8 @@ app.use('/api/analytics', analyticsRoutes);
 import trackingRoutes from './routes/trackingRoutes';
 app.use('/api/track', trackingRoutes);
 app.use('/api/health', healthRoutes);
+// API documentation routes
+app.use('/api/docs', apiDocsRoutes);
 // Onboarding routes for user preferences
 app.use('/api/onboarding', onboardingRoutes);
 
