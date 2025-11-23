@@ -1,11 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
-import { getDocPath } from '../../../utils/docUtils';
+import path from 'path';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Read the technical whitepaper file
-    const filePath = getDocPath('technical-whitepaper');
+    // Build file path - try multiple possible locations
+    let filePath: string | null = null;
+    const filename = 'TECHNICAL_WHITEPAPER.md';
+
+    const possiblePaths = [
+      // Local development from frontend directory
+      path.join(process.cwd(), 'public', 'docs'),
+      // Vercel deployment from root directory
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
+      // Direct relative path
+      path.resolve('./public/docs'),
+      path.resolve('./app/frontend/public/docs')
+    ];
+
+    for (const possiblePath of possiblePaths) {
+      const tryPath = path.join(possiblePath, filename);
+      if (fs.existsSync(tryPath)) {
+        filePath = tryPath;
+        break;
+      }
+    }
 
     if (!filePath) {
       return res.status(404).json({ error: 'Technical whitepaper not found' });

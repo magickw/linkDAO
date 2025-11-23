@@ -204,15 +204,16 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      // Redirect sub-paths to main pages if they don't exist (using :path+ instead of :path* to avoid loops)
       {
-        source: '/marketplace/:path*',
+        source: '/marketplace/:path+',
         destination: '/marketplace',
-        permanent: true,
+        permanent: false, // Changed to false to allow recovery if this was a mistake
       },
       {
-        source: '/governance/:path*',
+        source: '/governance/:path+',
         destination: '/governance',
-        permanent: true,
+        permanent: false,
       }
     ];
   },
