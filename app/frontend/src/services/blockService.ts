@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { csrfService } from './csrfService';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.linkdao.io';
 
@@ -10,11 +11,14 @@ export class BlockService {
    * @returns True if successful
    */
   static async block(blocker: string, blocked: string): Promise<boolean> {
+    const authHeaders = authService.getAuthHeaders();
+    const csrfHeaders = await csrfService.getCSRFHeaders();
+
     const response = await fetch(`${API_BASE_URL}/api/block/block`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...authService.getAuthHeaders(),
+        ...csrfHeaders,
+        ...authHeaders,
       },
       body: JSON.stringify({ blocker, blocked }),
     });
@@ -34,11 +38,14 @@ export class BlockService {
    * @returns True if successful
    */
   static async unblock(blocker: string, blocked: string): Promise<boolean> {
+    const authHeaders = authService.getAuthHeaders();
+    const csrfHeaders = await csrfService.getCSRFHeaders();
+
     const response = await fetch(`${API_BASE_URL}/api/block/unblock`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...authService.getAuthHeaders(),
+        ...csrfHeaders,
+        ...authHeaders,
       },
       body: JSON.stringify({ blocker, blocked }),
     });

@@ -40,9 +40,7 @@ export const useFollow = () => {
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
-    },
-    onSettled: (_, __, variables) => {
-      // Always refetch after error or success to ensure server state
+      // Also invalidate followStatus to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
     },
   });
@@ -79,9 +77,7 @@ export const useFollow = () => {
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
-    },
-    onSettled: (_, __, variables) => {
-      // Always refetch after error or success to ensure server state
+      // Also invalidate followStatus to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
     },
   });

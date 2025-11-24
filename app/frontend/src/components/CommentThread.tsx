@@ -5,6 +5,7 @@ import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import EnhancedReactionSystem from './EnhancedReactionSystem';
+import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
 
 interface CommentThreadProps {
   comment: Comment;
@@ -130,8 +131,8 @@ export default function CommentThread({
             onClick={() => handleVote('upvote')}
             disabled={!userMembership}
             className={`p-1 rounded transition-colors duration-200 ${userVote === 'upvote'
-                ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
-                : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+              ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
+              : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
               } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -141,10 +142,10 @@ export default function CommentThread({
 
           {/* Vote Score */}
           <span className={`text-xs font-bold ${voteScore > 0
-              ? 'text-orange-500'
-              : voteScore < 0
-                ? 'text-blue-500'
-                : 'text-gray-500 dark:text-gray-400'
+            ? 'text-orange-500'
+            : voteScore < 0
+              ? 'text-blue-500'
+              : 'text-gray-500 dark:text-gray-400'
             }`}>
             {voteScore}
           </span>
@@ -154,8 +155,8 @@ export default function CommentThread({
             onClick={() => handleVote('downvote')}
             disabled={!userMembership}
             className={`p-1 rounded transition-colors duration-200 ${userVote === 'downvote'
-                ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
-                : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+              ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
+              : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
               } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -169,23 +170,7 @@ export default function CommentThread({
           {/* Comment Header */}
           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="font-medium text-gray-900 dark:text-white">
-              {(() => {
-                const author = (comment as any).author;
-                const authorId = (comment as any).authorId;
-
-                let displayAuthor = '';
-                if (typeof author === 'string') {
-                  displayAuthor = author;
-                } else if (author && typeof author === 'object') {
-                  displayAuthor = author.walletAddress || author.handle || '';
-                }
-
-                if (!displayAuthor && authorId) {
-                  displayAuthor = authorId;
-                }
-
-                return displayAuthor ? `u/${displayAuthor.slice(0, 6)}...${displayAuthor.slice(-4)}` : 'u/unknown';
-              })()}
+              u/{getDisplayName(comment)}
             </span>
             <span>•</span>
             <span>{formatTimestamp((comment as any).createdAt || new Date())}</span>
@@ -298,7 +283,7 @@ export default function CommentThread({
                   <div className="flex space-x-2">
                     <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
                       <span className="text-white font-bold text-xs">
-                        {address ? address.slice(2, 4).toUpperCase() : 'U'}
+                        {getDefaultAvatar(getDisplayName({ author: address }))}
                       </span>
                     </div>
                     <div className="flex-1">

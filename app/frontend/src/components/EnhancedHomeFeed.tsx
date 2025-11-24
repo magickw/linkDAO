@@ -60,7 +60,22 @@ export default function EnhancedHomeFeed({
         setPosts(response.posts);
         setPage(2);
       } else {
-        setPosts(prevPosts => [...prevPosts, ...response.posts]);
+        setPosts(prevPosts => {
+          // Create a Set of existing post IDs for O(1) lookup
+          const existingIds = new Set(prevPosts.map(p => p.id));
+
+          // Filter out posts that already exist
+          const newPosts = response.posts.filter(p => !existingIds.has(p.id));
+
+          console.log('[FEED] Deduplication:', {
+            existingCount: prevPosts.length,
+            receivedCount: response.posts.length,
+            newCount: newPosts.length,
+            duplicatesFiltered: response.posts.length - newPosts.length
+          });
+
+          return [...prevPosts, ...newPosts];
+        });
         setPage(prevPage => prevPage + 1);
       }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useWeb3 } from '@/context/Web3Context';
 import { ToastContext } from '@/context/ToastContext';
+import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
 
 // Custom hook to safely access toast context with fallback for portal components
 const useToastOrFallback = () => {
@@ -270,14 +271,14 @@ export default function SharePostModal({
                 style={{ display: post.authorProfile?.avatar ? 'none' : 'flex' }}
               >
                 <span className="text-white font-bold text-sm">
-                  {(post.authorProfile?.handle || post.author).slice(0, 2).toUpperCase()}
+                  {getDefaultAvatar(getDisplayName(post))}
                 </span>
               </div>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {post.authorProfile?.handle || `${post.author.slice(0, 6)}...${post.author.slice(-4)}`}
+                  {getDisplayName(post)}
                 </span>
                 {post.communityName && (
                   <>

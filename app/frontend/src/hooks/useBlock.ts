@@ -37,9 +37,7 @@ export function useBlock() {
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['blockedUsers', variables.blocker] });
       queryClient.invalidateQueries({ queryKey: ['blockedBy', variables.blocked] });
-    },
-    onSettled: (_, __, variables) => {
-      // Always refetch after error or success to ensure server state
+      // Also invalidate blockStatus to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['blockStatus', variables.blocker, variables.blocked] });
     },
   });
@@ -74,9 +72,7 @@ export function useBlock() {
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['blockedUsers', variables.blocker] });
       queryClient.invalidateQueries({ queryKey: ['blockedBy', variables.blocked] });
-    },
-    onSettled: (_, __, variables) => {
-      // Always refetch after error or success to ensure server state
+      // Also invalidate blockStatus to ensure it's in sync with the server
       queryClient.invalidateQueries({ queryKey: ['blockStatus', variables.blocker, variables.blocked] });
     },
   });

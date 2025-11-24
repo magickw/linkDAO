@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { csrfService } from './csrfService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
@@ -16,11 +17,12 @@ export class FollowService {
    */
   static async follow(follower: string, following: string): Promise<boolean> {
     const authHeaders = authService.getAuthHeaders();
+    const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/follow`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        ...csrfHeaders,
         ...authHeaders,
       },
       body: JSON.stringify({ follower, following }),
@@ -28,7 +30,7 @@ export class FollowService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to follow user');
+      throw new Error(error.message || error.error || 'Failed to follow user');
     }
 
     return true;
@@ -42,11 +44,12 @@ export class FollowService {
    */
   static async unfollow(follower: string, following: string): Promise<boolean> {
     const authHeaders = authService.getAuthHeaders();
+    const csrfHeaders = await csrfService.getCSRFHeaders();
 
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/unfollow`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        ...csrfHeaders,
         ...authHeaders,
       },
       body: JSON.stringify({ follower, following }),
@@ -54,7 +57,7 @@ export class FollowService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to unfollow user');
+      throw new Error(error.message || error.error || 'Failed to unfollow user');
     }
 
     return true;

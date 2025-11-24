@@ -10,6 +10,7 @@ import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
 import { IPFSContentService } from '../../services/ipfsContentService';
+import { getDisplayName, getUserAddress } from '../../utils/userDisplay';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -264,8 +265,8 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {/* Header */}
       <div>
         <div>
-          <a href={`/u/${post.author}`}>
-            {post.author.slice(0, 8)}...{post.author.slice(-4)}
+          <a href={`/u/${getUserAddress(post)}`}>
+            {getDisplayName(post)}
           </a>
           <span>{formatTimestamp(post.createdAt)}</span>
         </div>
