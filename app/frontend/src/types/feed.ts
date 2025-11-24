@@ -46,7 +46,7 @@ export interface EnhancedPost {
   author: string;
   authorId?: string; // Optional for compatibility with backend
   handle?: string; // User handle from backend
-  authorProfile?: AuthorProfile; // Author profile information
+  authorProfile: AuthorProfile; // Author profile information - required
   parentId: string | null;
   title?: string; // Optional for quickPosts
   content: string; // Required - content text
