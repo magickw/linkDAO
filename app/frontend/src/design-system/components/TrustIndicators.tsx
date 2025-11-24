@@ -43,35 +43,35 @@ const TrustBadge: React.FC<TrustBadgeProps> = ({
 }) => {
   const sizeConfig = {
     sm: {
-      fontSize: designTokens.typography.fontSize.xs,
-      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+      fontSize: designTokens?.typography?.fontSize?.xs || '0.75rem',
+      padding: `${designTokens?.spacing?.xs || '0.25rem'} ${designTokens?.spacing?.sm || '0.5rem'}`,
       iconSize: '12px',
       borderRadius: '6px',
     },
     md: {
-      fontSize: designTokens.typography.fontSize.sm,
-      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+      fontSize: designTokens?.typography?.fontSize?.sm || '0.875rem',
+      padding: `${designTokens?.spacing?.sm || '0.5rem'} ${designTokens?.spacing?.md || '1rem'}`,
       iconSize: '14px',
       borderRadius: '8px',
     },
     lg: {
-      fontSize: designTokens.typography.fontSize.base,
-      padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+      fontSize: designTokens?.typography?.fontSize?.base || '1rem',
+      padding: `${designTokens?.spacing?.md || '1rem'} ${designTokens?.spacing?.lg || '1.5rem'}`,
       iconSize: '16px',
       borderRadius: '10px',
     },
   };
 
-  const config = sizeConfig[size];
+  const config = sizeConfig[size] || sizeConfig.md;
 
   const badgeStyle = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: designTokens.spacing.xs,
+    gap: designTokens?.spacing?.xs || '0.25rem',
     padding: config.padding,
     borderRadius: config.borderRadius,
     fontSize: config.fontSize,
-    fontWeight: designTokens.typography.fontWeight.medium,
+    fontWeight: designTokens?.typography?.fontWeight?.medium || '500',
     color: '#ffffff',
     background: `linear-gradient(135deg, ${color}dd, ${color}aa)`,
     border: `1px solid ${color}66`,

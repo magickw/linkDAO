@@ -73,20 +73,20 @@ export const Button: React.FC<ButtonProps> = ({
   // Size configurations
   const sizeConfig = {
     sm: {
-      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-      fontSize: designTokens.typography.fontSize.sm,
+      padding: `${designTokens?.spacing?.sm || '0.5rem'} ${designTokens?.spacing?.md || '1rem'}`,
+      fontSize: designTokens?.typography?.fontSize?.sm || '0.875rem',
       borderRadius: '8px',
       minHeight: '32px',
     },
     md: {
-      padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-      fontSize: designTokens.typography.fontSize.base,
+      padding: `${designTokens?.spacing?.md || '1rem'} ${designTokens?.spacing?.lg || '1.5rem'}`,
+      fontSize: designTokens?.typography?.fontSize?.base || '1rem',
       borderRadius: '12px',
       minHeight: '40px',
     },
     lg: {
-      padding: `${designTokens.spacing.lg} ${designTokens.spacing.xl}`,
-      fontSize: designTokens.typography.fontSize.lg,
+      padding: `${designTokens?.spacing?.lg || '1.5rem'} ${designTokens?.spacing?.xl || '2rem'}`,
+      fontSize: designTokens?.typography?.fontSize?.lg || '1.125rem',
       borderRadius: '16px',
       minHeight: '48px',
     },
@@ -99,11 +99,11 @@ export const Button: React.FC<ButtonProps> = ({
       overflow: 'hidden' as const,
       border: 'none',
       cursor: disabled || loading ? 'not-allowed' : 'pointer',
-      fontWeight: designTokens.typography.fontWeight.medium,
+      fontWeight: designTokens?.typography?.fontWeight?.medium || '500',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: designTokens.spacing.sm,
+      gap: designTokens?.spacing?.sm || '0.5rem',
       width: fullWidth ? '100%' : 'auto',
       opacity: disabled || loading ? 0.6 : 1,
       ...sizeConfig[size],
@@ -113,25 +113,25 @@ export const Button: React.FC<ButtonProps> = ({
       case 'primary':
         return {
           ...baseStyle,
-          ...designTokens.glassmorphism.primary,
+          ...(designTokens?.glassmorphism?.primary || {}),
           color: '#ffffff',
-          backgroundImage: designTokens.gradients.primary,
+          backgroundImage: designTokens?.gradients?.primary || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         };
 
       case 'secondary':
         return {
           ...baseStyle,
-          ...designTokens.glassmorphism.secondary,
+          ...(designTokens?.glassmorphism?.secondary || {}),
           color: '#ffffff',
-          backgroundImage: designTokens.gradients.secondary,
+          backgroundImage: designTokens?.gradients?.secondary || 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
         };
 
       case 'outline':
         return {
           ...baseStyle,
           background: 'transparent',
-          border: `2px solid ${designTokens.colors.primary[500]}`,
-          color: designTokens.colors.primary[500],
+          border: `2px solid ${designTokens?.colors?.primary?.[500] || '#667eea'}`,
+          color: designTokens?.colors?.primary?.[500] || '#667eea',
           backdropFilter: 'blur(8px)',
         };
 
@@ -147,7 +147,7 @@ export const Button: React.FC<ButtonProps> = ({
         return {
           ...baseStyle,
           background: 'transparent',
-          backgroundImage: designTokens.gradients[gradient],
+          backgroundImage: designTokens?.gradients?.[gradient] || designTokens?.gradients?.primary || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: '#ffffff',
           border: 'none',
         };

@@ -44,7 +44,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   const baseSkeletonStyle = {
     background: 'linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%)',
     backgroundSize: '200% 100%',
-    borderRadius: borderRadius || designTokens.glassmorphism.primary.borderRadius,
+    borderRadius: borderRadius || designTokens?.glassmorphism?.primary?.borderRadius || '16px',
     backdropFilter: 'blur(4px)',
   };
 
@@ -67,35 +67,35 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
           height,
           borderRadius: '4px',
         };
-      
+
       case 'card':
         return {
           width: width || '300px',
           height: height || '200px',
-          borderRadius: designTokens.glassmorphism.secondary.borderRadius,
+          borderRadius: designTokens?.glassmorphism?.secondary?.borderRadius || '12px',
         };
-      
+
       case 'image':
         return {
           width: width || '100%',
           height: height || '200px',
           borderRadius: '8px',
         };
-      
+
       case 'button':
         return {
           width: width || '120px',
           height: height || '40px',
           borderRadius: '12px',
         };
-      
+
       case 'avatar':
         return {
           width: width || '40px',
           height: height || '40px',
           borderRadius: '50%',
         };
-      
+
       case 'custom':
       default:
         return {
@@ -120,7 +120,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
             style={{
               ...skeletonStyle,
               width: index === lines - 1 ? '75%' : '100%',
-              marginBottom: index < lines - 1 ? designTokens.spacing.xs : 0,
+              marginBottom: index < lines - 1 ? (designTokens?.spacing?.xs || '0.25rem') : 0,
             }}
             variants={shimmerVariants}
             animate="animate"
@@ -167,15 +167,15 @@ interface ProductCardSkeletonProps {
 }
 
 export const ProductCardSkeleton: React.FC<ProductCardSkeletonProps> = ({ className = '' }) => (
-  <div className={`product-card-skeleton ${className}`} style={{ padding: designTokens.spacing.lg }}>
+  <div className={`product-card-skeleton ${className}`} style={{ padding: designTokens?.spacing?.lg || '1.5rem' }}>
     <ImageSkeleton height="200px" className="mb-4" />
-    <div style={{ marginBottom: designTokens.spacing.sm }}>
+    <div style={{ marginBottom: designTokens?.spacing?.sm || '0.5rem' }}>
       <TextSkeleton lines={2} />
     </div>
-    <div style={{ marginBottom: designTokens.spacing.md }}>
+    <div style={{ marginBottom: designTokens?.spacing?.md || '1rem' }}>
       <TextSkeleton width="60%" height="1.5rem" />
     </div>
-    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+    <div style={{ display: 'flex', gap: designTokens?.spacing?.sm || '0.5rem' }}>
       <ButtonSkeleton width="80px" />
       <ButtonSkeleton width="80px" />
     </div>
@@ -187,10 +187,10 @@ interface UserProfileSkeletonProps {
 }
 
 export const UserProfileSkeleton: React.FC<UserProfileSkeletonProps> = ({ className = '' }) => (
-  <div className={`user-profile-skeleton ${className}`} style={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: designTokens.spacing.md 
+  <div className={`user-profile-skeleton ${className}`} style={{
+    display: 'flex',
+    alignItems: 'center',
+    gap: designTokens?.spacing?.md || '1rem'
   }}>
     <AvatarSkeleton width="48px" height="48px" />
     <div style={{ flex: 1 }}>
@@ -209,11 +209,11 @@ export const NavbarSkeleton: React.FC<NavbarSkeletonProps> = ({ className = '' }
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+    padding: `${designTokens?.spacing?.md || '1rem'} ${designTokens?.spacing?.lg || '1.5rem'}`,
   }}>
     <TextSkeleton width="120px" height="32px" />
     <TextSkeleton width="300px" height="40px" borderRadius="20px" />
-    <div style={{ display: 'flex', gap: designTokens.spacing.md }}>
+    <div style={{ display: 'flex', gap: designTokens?.spacing?.md || '1rem' }}>
       <ButtonSkeleton width="100px" />
       <AvatarSkeleton width="40px" height="40px" />
     </div>

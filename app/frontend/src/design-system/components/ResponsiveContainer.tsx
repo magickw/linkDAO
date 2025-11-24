@@ -88,9 +88,11 @@ export const useResponsive = () => {
   React.useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      setIsMobile(width < parseInt(designTokens.breakpoints.md));
-      setIsTablet(width >= parseInt(designTokens.breakpoints.md) && width < parseInt(designTokens.breakpoints.lg));
-      setIsDesktop(width >= parseInt(designTokens.breakpoints.lg));
+      const mdBreakpoint = parseInt(designTokens?.breakpoints?.md || '768');
+      const lgBreakpoint = parseInt(designTokens?.breakpoints?.lg || '1024');
+      setIsMobile(width < mdBreakpoint);
+      setIsTablet(width >= mdBreakpoint && width < lgBreakpoint);
+      setIsDesktop(width >= lgBreakpoint);
     };
 
     // Initial check

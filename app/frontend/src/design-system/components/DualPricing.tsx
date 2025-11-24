@@ -57,7 +57,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   fiatPrice,
   fiatSymbol = 'USD',
   realTimeConversion = true,
-  size = 'medium',
+  size = 'md',
   layout = 'horizontal',
   showToggle = false,
   showChange = true,
@@ -216,24 +216,24 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   }, [fiatPrice, currentCurrency]);
 
   const sizeConfig = {
-    small: {
-      primarySize: designTokens.typography.fontSize.base,
-      secondarySize: designTokens.typography.fontSize.sm,
-      spacing: designTokens.spacing.xs,
+    sm: {
+      primarySize: designTokens?.typography?.fontSize?.base || '1rem',
+      secondarySize: designTokens?.typography?.fontSize?.sm || '0.875rem',
+      spacing: designTokens?.spacing?.xs || '0.25rem',
     },
-    medium: {
-      primarySize: designTokens.typography.fontSize.xl,
-      secondarySize: designTokens.typography.fontSize.base,
-      spacing: designTokens.spacing.sm,
+    md: {
+      primarySize: designTokens?.typography?.fontSize?.xl || '1.25rem',
+      secondarySize: designTokens?.typography?.fontSize?.base || '1rem',
+      spacing: designTokens?.spacing?.sm || '0.5rem',
     },
-    large: {
-      primarySize: designTokens.typography.fontSize['2xl'],
-      secondarySize: designTokens.typography.fontSize.lg,
-      spacing: designTokens.spacing.md,
+    lg: {
+      primarySize: designTokens?.typography?.fontSize?.['2xl'] || '1.5rem',
+      secondarySize: designTokens?.typography?.fontSize?.lg || '1.125rem',
+      spacing: designTokens?.spacing?.md || '1rem',
     },
   };
 
-  const config = sizeConfig[size];
+  const config = sizeConfig[size] || sizeConfig.md;
 
   const handleToggle = () => {
     setPrimaryDisplay(prev => prev === 'crypto' ? 'fiat' : 'crypto');
