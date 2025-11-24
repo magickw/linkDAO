@@ -16,6 +16,7 @@ import { returnRefundService } from '@/services/returnRefundService';
 import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
 import SEO from '@/components/SEO';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // New redesigned components
 import { ProductCard } from '@/components/Marketplace/ProductDisplay/ProductCard';
