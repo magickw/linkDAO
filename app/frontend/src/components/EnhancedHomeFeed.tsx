@@ -18,7 +18,7 @@ import { useToast } from '@/context/ToastContext';
 import { useInView } from 'react-intersection-observer';
 import { FeedService } from '@/services/feedService';
 import { FeedFilter, FeedSortType, EnhancedPost } from '@/types/feed';
-import EnhancedPostCard from '@/components/Feed/EnhancedPostCard';
+import EnhancedPostCard from '@/components/EnhancedPostCard/EnhancedPostCard';
 
 interface EnhancedHomeFeedProps {
   userProfile?: any;
