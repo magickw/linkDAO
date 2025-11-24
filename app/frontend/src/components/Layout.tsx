@@ -233,7 +233,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
 
         <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
+          <div className="max-w-7xl mx-auto px-2 py-4 sm:px-3 lg:px-4 flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
               <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
               <span>LinkDAO</span>
@@ -432,13 +432,13 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           )}
         </header>
 
-        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
+        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-6"}>
           {children}
         </main>
 
         {!hideFooter && (
           <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto py-12 px-2 sm:px-3 lg:px-4">
               <div className="flex items-center gap-2 mb-8">
                 <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
                 <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
@@ -489,13 +489,13 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
                   <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
-                  <form 
+                  <form
                     className="flex flex-col sm:flex-row"
                     onSubmit={async (e) => {
                       e.preventDefault();
                       const formData = new FormData(e.target as HTMLFormElement);
                       const email = formData.get('email') as string;
-                      
+
                       if (email) {
                         const result = await newsletterService.subscribeEmail(email);
                         if (result.success) {
@@ -507,15 +507,15 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                       }
                     }}
                   >
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       name="email"
-                      placeholder="Enter your email" 
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" 
+                      placeholder="Enter your email"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500"
                       required
                     />
-                    <button 
-                      type="submit" 
+                    <button
+                      type="submit"
                       className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
                     >
                       Subscribe

@@ -16,7 +16,7 @@ import { AuthorProfile } from '@/types/feed';
 
 export interface EnhancedPost {
   id: string;
-  title: string;
+  title?: string; // Optional for compatibility with quickPosts
   content: string;
   contentCid: string;  // Add the contentCid property
   author: string;
