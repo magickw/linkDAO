@@ -23,10 +23,11 @@ export interface UploadProgress {
 }
 
 class IPFSUploadService {
-  private readonly maxFileSize = 10 * 1024 * 1024; // 10MB
+  private readonly maxFileSize = 50 * 1024 * 1024; // 50MB to support videos
   private readonly maxDocumentSize = 25 * 1024 * 1024; // 25MB for charity documents
   private readonly allowedTypes = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
     'application/pdf', 'text/plain', 'application/json'
   ];
   private readonly allowedDocumentTypes = [
@@ -186,7 +187,7 @@ class IPFSUploadService {
     }
 
     if (!this.allowedTypes.includes(file.type)) {
-      throw new Error(`File type ${file.type} not allowed`);
+      throw new Error(`File type ${file.type} not allowed. Supported types: images (JPEG, PNG, GIF, WebP), videos (MP4, WebM, OGG, QuickTime), PDF, JSON`);
     }
   }
 

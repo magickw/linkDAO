@@ -111,14 +111,149 @@ export class IPFSService {
   }
 
   /**
+   * Upload file to IPFS using Pinata API
+   */
+  private async uploadFileToPinata(
+    content: Buffer | string,
+    options?: IPFSUploadOptions
+  ): Promise<IPFSFileMetadata> {
+    // Import form-data dynamically
+    let FormData: any;
+    try {
+      FormData = require('form-data');
+    } catch (e) {
+      // If form-data is not available, throw a helpful error
+      throw new Error('form-data package is required for Pinata uploads. Please install it with: npm install form-data');
+    }
+
+    const formData = new FormData();
+
+    // Convert string content to Buffer if needed
+    const bufferContent = typeof content === 'string' ? Buffer.from(content) : content;
+
+    // Add file to form data
+    formData.append('file', bufferContent, {
+      filename: options?.metadata?.name || `file-${Date.now()}`,
+      contentType: options?.metadata?.mimeType || 'application/octet-stream'
+    });
+
+    // Add optional metadata
+    const pinataMetadata = {
+      name: options?.metadata?.name || `file-${Date.now()}`,
+      keyvalues: {
+        description: options?.metadata?.description || '',
+        tags: options?.metadata?.tags?.join(',') || '',
+        mimeType: options?.metadata?.mimeType || ''
+      }
+    };
+    formData.append('pinataMetadata', JSON.stringify(pinataMetadata));
+
+    // Add pinning options
+    const pinataOptions = {
+      cidVersion: 1
+    };
+    formData.append('pinataOptions', JSON.stringify(pinataOptions));
+
+    // Determine which auth method to use
+    let authHeader = '';
+    if (process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) {
+      // Use API key and secret (recommended)
+      authHeader = '';  // Pinata API key auth uses separate headers
+    } else if (process.env.PINATA_JWT) {
+      // Use JWT as fallback
+      authHeader = `Bearer ${process.env.PINATA_JWT}`;
+    } else {
+      throw new Error('Pinata credentials not configured. Please set PINATA_API_KEY and PINATA_API_KEY_SECRET');
+    }
+
+    try {
+      const headers: any = {
+        ...formData.getHeaders()
+      };
+
+      // Add authentication headers
+      if (process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) {
+        headers['pinata_api_key'] = process.env.PINATA_API_KEY;
+        headers['pinata_secret_api_key'] = process.env.PINATA_API_KEY_SECRET;
+      } else if (authHeader) {
+        headers['Authorization'] = authHeader;
+      }
+
+      const response = await axios.post(
+        'https://api.pinata.cloud/pinning/pinFileToIPFS',
+        formData,
+        {
+          headers,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity
+        }
+      );
+
+      const ipfsHash = response.data.IpfsHash;
+
+      const metadata: IPFSFileMetadata = {
+        id: ipfsHash,
+        name: options?.metadata?.name || 'file',
+        size: bufferContent.length,
+        mimeType: options?.metadata?.mimeType,
+        createdAt: new Date(),
+        ipfsHash: ipfsHash,
+        gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`,
+        tags: options?.metadata?.tags,
+        description: options?.metadata?.description
+      };
+
+      return metadata;
+    } catch (error: any) {
+      safeLogger.error('Pinata upload failed:', {
+        error: error.message,
+        response: error.response?.data
+      });
+      throw new Error(`Pinata upload failed: ${error.response?.data?.error?.reason || error.response?.data?.error || error.message}`);
+    }
+  }
+
+  /**
    * Upload file to IPFS
    */
   async uploadFile(
     content: Buffer | string | Readable,
     options?: IPFSUploadOptions
   ): Promise<IPFSFileMetadata> {
+    // If Pinata credentials are available, use Pinata API directly
+    const hasPinataCredentials = (process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) || process.env.PINATA_JWT;
+
+    if (hasPinataCredentials) {
+      // Convert Readable to Buffer if needed
+      if (content instanceof Readable) {
+        const chunks: Buffer[] = [];
+        for await (const chunk of content) {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+        content = Buffer.concat(chunks);
+      }
+
+      const startTime = Date.now();
+      safeLogger.info('Starting Pinata upload', {
+        size: Buffer.isBuffer(content) ? content.length : (typeof content === 'string' ? content.length : 'unknown'),
+        name: options?.metadata?.name
+      });
+
+      const result = await this.uploadFileToPinata(content, options);
+
+      const endTime = Date.now();
+      safeLogger.info(`Pinata upload completed`, {
+        hash: result.ipfsHash,
+        size: result.size,
+        duration: endTime - startTime
+      });
+
+      return result;
+    }
+
+    // Fallback to standard IPFS client
     if (!this.client) {
-      throw new Error('IPFS client not initialized');
+      throw new Error('IPFS client not initialized and Pinata credentials not configured');
     }
 
     try {

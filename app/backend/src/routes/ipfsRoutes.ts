@@ -38,12 +38,25 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const { pin, name, description, tags, contentType } = req.body;
     const userId = req.headers['x-user-id'] as string || 'anonymous';
 
+    // Detect content type from MIME type if not provided
+    let detectedContentType = contentType || 'document';
+    if (!contentType && req.file.mimetype) {
+      if (req.file.mimetype.startsWith('image/')) {
+        detectedContentType = 'image';
+      } else if (req.file.mimetype.startsWith('video/')) {
+        detectedContentType = 'video';
+      } else if (req.file.mimetype === 'application/pdf') {
+        detectedContentType = 'document';
+      }
+    }
+
     const metadata = await ipfsIntegrationService.uploadDocument(req.file.buffer, {
-      title: name,
+      title: name || req.file.originalname,
       description: description,
-      contentType: contentType || 'document',
+      contentType: detectedContentType,
       userId: userId,
-      tags: tags ? tags.split(',') : []
+      tags: tags ? tags.split(',') : [],
+      mimeType: req.file.mimetype // Pass the actual MIME type
     });
 
     // Pin the content if requested
@@ -58,7 +71,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     safeLogger.error('IPFS file upload error:', error);
-    
+
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'

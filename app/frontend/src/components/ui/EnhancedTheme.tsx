@@ -6,6 +6,7 @@ interface ThemeContextType {
   actualTheme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   toggleTheme: () => void;
+  spacing: (factor: number) => string;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -59,7 +60,7 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   // Apply theme to document
   useEffect(() => {
     const root = document.documentElement;
-    
+
     if (actualTheme === 'dark') {
       root.classList.add('dark');
     } else {
@@ -74,11 +75,15 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
     setTheme(current => current === 'dark' ? 'light' : 'dark');
   };
 
+  // Material-UI compatible spacing function (8px base)
+  const spacing = (factor: number) => `${factor * 8}px`;
+
   const value = {
     theme,
     actualTheme,
     setTheme,
-    toggleTheme
+    toggleTheme,
+    spacing
   };
 
   return (
@@ -121,9 +126,8 @@ export function ThemeToggle({ className = '', size = 'md', variant = 'icon' }: T
         <div className="relative">
           {/* Sun Icon */}
           <svg
-            className={`${iconSizeClasses[size]} text-yellow-500 transition-all duration-300 ${
-              actualTheme === 'dark' ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'
-            }`}
+            className={`${iconSizeClasses[size]} text-yellow-500 transition-all duration-300 ${actualTheme === 'dark' ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -138,9 +142,8 @@ export function ThemeToggle({ className = '', size = 'md', variant = 'icon' }: T
 
           {/* Moon Icon */}
           <svg
-            className={`${iconSizeClasses[size]} text-blue-400 absolute inset-0 transition-all duration-300 ${
-              actualTheme === 'dark' ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'
-            }`}
+            className={`${iconSizeClasses[size]} text-blue-400 absolute inset-0 transition-all duration-300 ${actualTheme === 'dark' ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -165,14 +168,12 @@ export function ThemeToggle({ className = '', size = 'md', variant = 'icon' }: T
         </span>
         <button
           onClick={toggleTheme}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-            actualTheme === 'dark' ? 'bg-primary-600' : 'bg-gray-200'
-          }`}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${actualTheme === 'dark' ? 'bg-primary-600' : 'bg-gray-200'
+            }`}
         >
           <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-              actualTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-            }`}
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${actualTheme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+              }`}
           />
         </button>
       </div>
@@ -201,33 +202,30 @@ export function ThemeToggle({ className = '', size = 'md', variant = 'icon' }: T
         <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 animate-fadeInDown">
           <button
             onClick={() => { setTheme('light'); setIsOpen(false); }}
-            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${
-              theme === 'light' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-            }`}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${theme === 'light' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+              }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span>Light</span>
           </button>
-          
+
           <button
             onClick={() => { setTheme('dark'); setIsOpen(false); }}
-            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${
-              theme === 'dark' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-            }`}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${theme === 'dark' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+              }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
             <span>Dark</span>
           </button>
-          
+
           <button
             onClick={() => { setTheme('system'); setIsOpen(false); }}
-            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${
-              theme === 'system' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-            }`}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 ${theme === 'system' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+              }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -265,7 +263,7 @@ export function EnhancedCard({
   hover = true
 }: EnhancedCardProps) {
   const baseClasses = 'rounded-2xl transition-all duration-300';
-  
+
   const variantClasses = {
     default: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
     elevated: 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg shadow-lg border border-white/30 dark:border-gray-700/50',
@@ -313,7 +311,7 @@ export function EnhancedButton({
   fullWidth = false
 }: EnhancedButtonProps) {
   const baseClasses = 'font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden';
-  
+
   const variantClasses = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-lg hover:shadow-xl',
     secondary: 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-gray-500',

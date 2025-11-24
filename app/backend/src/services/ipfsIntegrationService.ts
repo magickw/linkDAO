@@ -10,6 +10,7 @@ export interface ContentMetadata {
   contentType: 'post' | 'proposal' | 'document' | 'image' | 'video' | 'governance' | 'nft';
   userId: string;
   relatedContent?: string[]; // IPFS hashes of related content
+  mimeType?: string; // Optional MIME type to preserve file type information
 }
 
 export interface GovernanceProposal {
@@ -177,15 +178,24 @@ export class IPFSIntegrationService {
   ): Promise<IPFSFileMetadata> {
     try {
       const startTime = Date.now();
-      safeLogger.info('Uploading document to IPFS', { 
+      safeLogger.info('Uploading document to IPFS', {
         title: metadata.title,
-        contentType: metadata.contentType 
+        contentType: metadata.contentType
       });
 
-      // Determine MIME type
-      let mimeType = metadata.contentType === 'document' ? 'application/pdf' : 'application/octet-stream';
-      if (typeof content === 'string') {
-        mimeType = 'text/plain';
+      // Determine MIME type - use provided mimeType if available
+      let mimeType = metadata.mimeType || 'application/octet-stream';
+      if (!metadata.mimeType) {
+        // Fallback to determining from content type
+        if (metadata.contentType === 'document') {
+          mimeType = 'application/pdf';
+        } else if (metadata.contentType === 'image') {
+          mimeType = 'image/jpeg';
+        } else if (metadata.contentType === 'video') {
+          mimeType = 'video/mp4';
+        } else if (typeof content === 'string') {
+          mimeType = 'text/plain';
+        }
       }
 
       // Upload to IPFS
