@@ -133,8 +133,8 @@ export class FollowService {
       }
 
       const data = await response.json();
-      // Handle different response formats
-      return data.isFollowing || data || false;
+      // Backend returns { isFollowing: boolean }
+      return data.isFollowing === true;
     } catch (error) {
       console.error('Error checking follow status:', error);
       return false; // Default to not following on error

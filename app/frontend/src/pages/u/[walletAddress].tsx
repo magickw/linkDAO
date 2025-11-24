@@ -6,6 +6,7 @@ import { useToast } from '@/context/ToastContext';
 import { useFollowCount } from '@/hooks/useFollow';
 import { usePostsByAuthor } from '@/hooks/usePosts';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
+import { useBlock, useBlockStatus } from '@/hooks/useBlock';
 import { useAuth } from '@/hooks/useAuth';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
@@ -58,7 +59,14 @@ export default function PublicProfile() {
 
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
-  const { data: isFollowing, isLoading: isFollowStatusLoading, refetch: refetchFollowStatus } = useFollowStatus(
+  const { data: isFollowing, isLoading: isFollowStatusLoading } = useFollowStatus(
+    currentUserAddress || '',
+    typeof walletAddress === 'string' ? walletAddress : ''
+  );
+
+  // Block/unblock functionality
+  const { block, unblock, isLoading: isBlockLoading } = useBlock();
+  const { data: isBlocked, isLoading: isBlockStatusLoading } = useBlockStatus(
     currentUserAddress || '',
     typeof walletAddress === 'string' ? walletAddress : ''
   );
@@ -124,7 +132,6 @@ export default function PublicProfile() {
 
     try {
       await follow({ follower: currentUserAddress, following: walletAddress });
-      refetchFollowStatus();
       addToast(`Successfully followed ${profile?.handle || walletAddress}`, 'success');
     } catch (error) {
       console.error('Error following user:', error);
@@ -150,11 +157,61 @@ export default function PublicProfile() {
 
     try {
       await unfollow({ follower: currentUserAddress, following: walletAddress });
-      refetchFollowStatus();
       addToast(`Successfully unfollowed ${profile?.handle || walletAddress}`, 'success');
     } catch (error) {
       console.error('Error unfollowing user:', error);
       addToast(`Failed to unfollow user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
+  // Handle block/unblock actions
+  const handleBlock = async () => {
+    if (!currentUserAddress || !walletAddress || typeof walletAddress !== 'string') {
+      addToast('Please connect your wallet first', 'error');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      addToast('Please authenticate with your wallet first', 'error');
+      return;
+    }
+
+    if (currentUserAddress === walletAddress) {
+      addToast('You cannot block yourself', 'error');
+      return;
+    }
+
+    try {
+      await block({ blocker: currentUserAddress, blocked: walletAddress });
+      addToast(`Successfully blocked ${profile?.handle || walletAddress}`, 'success');
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      addToast(`Failed to block user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!currentUserAddress || !walletAddress || typeof walletAddress !== 'string') {
+      addToast('Please connect your wallet first', 'error');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      addToast('Please authenticate with your wallet first', 'error');
+      return;
+    }
+
+    if (currentUserAddress === walletAddress) {
+      addToast('You cannot unblock yourself', 'error');
+      return;
+    }
+
+    try {
+      await unblock({ blocker: currentUserAddress, blocked: walletAddress });
+      addToast(`Successfully unblocked ${profile?.handle || walletAddress}`, 'success');
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      addToast(`Failed to unblock user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -362,22 +419,42 @@ export default function PublicProfile() {
                 <div className="flex flex-col sm:flex-row gap-3 mt-4 lg:mt-0">
                   {/* Follow/Unfollow Button - Only show if not viewing own profile */}
                   {currentUserAddress && currentUserAddress !== profile.walletAddress && (
-                    <button
-                      onClick={isFollowing ? handleUnfollow : handleFollow}
-                      disabled={isFollowLoading || isFollowStatusLoading}
-                      className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                        isFollowing
-                          ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                          : 'bg-primary-500 hover:bg-primary-600 text-white'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isFollowLoading || isFollowStatusLoading
-                        ? 'Loading...'
-                        : isFollowing
-                        ? 'Following'
-                        : 'Follow'
-                      }
-                    </button>
+                    <>
+                      <button
+                        onClick={isFollowing ? handleUnfollow : handleFollow}
+                        disabled={isFollowLoading || isFollowStatusLoading}
+                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                          isFollowing
+                            ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                            : 'bg-primary-500 hover:bg-primary-600 text-white'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {isFollowLoading || isFollowStatusLoading
+                          ? 'Loading...'
+                          : isFollowing
+                          ? 'Following'
+                          : 'Follow'
+                        }
+                      </button>
+
+                      {/* Block/Unblock Button */}
+                      <button
+                        onClick={isBlocked ? handleUnblock : handleBlock}
+                        disabled={isBlockLoading || isBlockStatusLoading}
+                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                          isBlocked
+                            ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                            : 'bg-red-500 hover:bg-red-600 text-white'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {isBlockLoading || isBlockStatusLoading
+                          ? 'Loading...'
+                          : isBlocked
+                          ? 'Unblock'
+                          : 'Block'
+                        }
+                      </button>
+                    </>
                   )}
 
                   {/* Share Profile Button */}

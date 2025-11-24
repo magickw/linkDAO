@@ -77,7 +77,7 @@ export class PostService {
   static async getPost(id: string): Promise<Post | null> {
     try {
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${id}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

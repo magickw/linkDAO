@@ -8,26 +8,80 @@ import { FollowService } from '../services/followService';
 export const useFollow = () => {
   const queryClient = useQueryClient();
 
-  const followMutation = useMutation<boolean, Error, { follower: string, following: string }>({
+  const followMutation = useMutation<
+    boolean,
+    Error,
+    { follower: string, following: string },
+    { previousFollowStatus: boolean | undefined }
+  >({
     mutationFn: ({ follower, following }) => FollowService.follow(follower, following),
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
+
+      // Snapshot previous value
+      const previousFollowStatus = queryClient.getQueryData<boolean>(['followStatus', variables.follower, variables.following]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['followStatus', variables.follower, variables.following], true);
+
+      // Return context with previous value
+      return { previousFollowStatus };
+    },
+    onError: (err, variables, context) => {
+      // Rollback to previous value on error
+      if (context?.previousFollowStatus !== undefined) {
+        queryClient.setQueryData(['followStatus', variables.follower, variables.following], context.previousFollowStatus);
+      }
+    },
     onSuccess: (_, variables) => {
       // Invalidate follow counts for both users
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.follower] });
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success to ensure server state
       queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
     },
   });
 
-  const unfollowMutation = useMutation<boolean, Error, { follower: string, following: string }>({
+  const unfollowMutation = useMutation<
+    boolean,
+    Error,
+    { follower: string, following: string },
+    { previousFollowStatus: boolean | undefined }
+  >({
     mutationFn: ({ follower, following }) => FollowService.unfollow(follower, following),
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
+
+      // Snapshot previous value
+      const previousFollowStatus = queryClient.getQueryData<boolean>(['followStatus', variables.follower, variables.following]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['followStatus', variables.follower, variables.following], false);
+
+      // Return context with previous value
+      return { previousFollowStatus };
+    },
+    onError: (err, variables, context) => {
+      // Rollback to previous value on error
+      if (context?.previousFollowStatus !== undefined) {
+        queryClient.setQueryData(['followStatus', variables.follower, variables.following], context.previousFollowStatus);
+      }
+    },
     onSuccess: (_, variables) => {
       // Invalidate follow counts for both users
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.follower] });
       queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
       queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
+    },
+    onSettled: (_, __, variables) => {
+      // Always refetch after error or success to ensure server state
       queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
     },
   });

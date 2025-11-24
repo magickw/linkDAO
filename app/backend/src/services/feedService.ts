@@ -1,7 +1,7 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows } from '../db/schema';
-import { eq, desc, and, or, inArray, sql, gt, isNull } from 'drizzle-orm';
+import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows, comments } from '../db/schema';
+import { eq, desc, and, or, inArray, sql, gt, isNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
 import { MetadataService } from './metadataService';
@@ -356,58 +356,45 @@ export class FeedService {
           // Determine which reactions/tips tables to use based on post type
           let reactionCount, tipCount, tipTotal, commentCount, viewCount;
 
-          if (post.isQuickPost) {
-            // For quick posts, use quick post tables
-            [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(quickPostReactions)
-                .where(eq(quickPostReactions.quickPostId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(quickPostTips)
-                .where(eq(quickPostTips.quickPostId, post.id)),
-              db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
-                .from(quickPostTips)
-                .where(eq(quickPostTips.quickPostId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(quickPosts)
-                .where(eq(quickPosts.parentId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(quickPostViews)
-                .where(eq(quickPostViews.quickPostId, post.id))
-            ]);
-          } else {
-            // For regular posts, use regular post tables
-            [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(reactions)
-                .where(eq(reactions.postId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(tips)
-                .where(eq(tips.postId, post.id)),
-              db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
-                .from(tips)
-                .where(eq(tips.postId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(posts)
-                .where(eq(posts.parentId, post.id)),
-              db.select({ count: sql<number>`COUNT(*)` })
-                .from(views)
-                .where(eq(views.postId, post.id))
-            ]);
-          }
+          // Determine which reactions/tips tables to use based on post type
+          const isQuickPost = typeof post.id === 'string';
+
+          [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(isQuickPost ? quickPostReactions : reactions)
+              .where(eq(isQuickPost ? quickPostReactions.quickPostId : reactions.postId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(isQuickPost ? quickPostTips : tips)
+              .where(eq(isQuickPost ? quickPostTips.quickPostId : tips.postId, post.id)),
+            db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
+              .from(isQuickPost ? quickPostTips : tips)
+              .where(eq(isQuickPost ? quickPostTips.quickPostId : tips.postId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(comments)
+              .where(and(
+                eq(isQuickPost ? comments.quickPostId : comments.postId, post.id),
+                sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
+              )),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(isQuickPost ? quickPostViews : views)
+              .where(eq(isQuickPost ? quickPostViews.quickPostId : views.postId, post.id))
+          ]);
+
+
+          const score = this.calculateEngagementScore(
+            Number(reactionCount[0]?.count || 0),
+            Number(tipCount[0]?.count || 0),
+            Number(commentCount[0]?.count || 0)
+          );
 
           return {
             ...post,
-            reactionCount: reactionCount[0]?.count || 0,
-            tipCount: tipCount[0]?.count || 0,
-            totalTipAmount: tipTotal[0]?.total || 0,
-            commentCount: commentCount[0]?.count || 0,
-            viewCount: viewCount[0]?.count || 0,
-            engagementScore: this.calculateEngagementScore(
-              reactionCount[0]?.count || 0,
-              tipCount[0]?.count || 0,
-              commentCount[0]?.count || 0
-            )
+            reactionCount: Number(reactionCount[0]?.count || 0),
+            tipCount: Number(tipCount[0]?.count || 0),
+            totalTipAmount: Number(tipTotal[0]?.total || 0),
+            commentCount: Number(commentCount[0]?.count || 0),
+            viewCount: Number(viewCount[0]?.count || 0),
+            engagementScore: score
           };
         })
       );
@@ -548,7 +535,7 @@ export class FeedService {
       // Update cache for first page
       if (page === 1) {
         try {
-          await trendingCacheService.updateTrendingScores(timeRange, enrichedPosts);
+          await trendingCacheService.setTrendingScores(timeRange, enrichedPosts);
         } catch (cacheError) {
           safeLogger.warn('Error updating trending cache:', cacheError);
         }
@@ -935,8 +922,11 @@ export class FeedService {
         db.select({
           count: sql<number>`COUNT(*)`
         })
-          .from(posts)
-          .where(eq(posts.parentId, postIdInt)),
+          .from(comments)
+          .where(and(
+            eq(comments.postId, postIdInt),
+            sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+          )),
 
         db.select({
           count: sql<number>`COUNT(*)`
@@ -1025,7 +1015,15 @@ export class FeedService {
     const offset = (page - 1) * limit;
 
     try {
-      const postIdInt = parseInt(postId);
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
+
+      let whereClause;
+      if (isIntegerId) {
+        whereClause = eq(comments.postId, parseInt(postId));
+      } else {
+        whereClause = eq(comments.quickPostId, postId);
+      }
 
       // Build sort order
       let orderByClause;
@@ -1041,6 +1039,7 @@ export class FeedService {
         .select({
           id: comments.id,
           postId: comments.postId,
+          quickPostId: comments.quickPostId,
           authorId: comments.authorId,
           content: comments.content,
           upvotes: comments.upvotes,
@@ -1049,12 +1048,13 @@ export class FeedService {
           updatedAt: comments.updatedAt,
           parentCommentId: comments.parentCommentId,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          avatarCid: users.avatarCid
         })
         .from(comments)
         .leftJoin(users, eq(comments.authorId, users.id))
         .where(and(
-          eq(comments.postId, postIdInt),
+          whereClause,
           sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
         ))
         .orderBy(orderByClause)
@@ -1066,7 +1066,7 @@ export class FeedService {
         .select({ count: sql<number>`COUNT(*)` })
         .from(comments)
         .where(and(
-          eq(comments.postId, postIdInt),
+          whereClause,
           sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
         ));
 
@@ -1099,22 +1099,38 @@ export class FeedService {
         throw new Error('User not found');
       }
 
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
+
+      const commentValues: any = {
+        authorId: user[0].id,
+        content,
+        parentCommentId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      if (isIntegerId) {
+        commentValues.postId = parseInt(postId);
+      } else {
+        commentValues.quickPostId = postId;
+      }
+
       const comment = await db
         .insert(comments)
-        .values({
-          postId: parseInt(postId),
-          authorId: user[0].id,
-          content,
-          parentCommentId,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
+        .values(commentValues)
         .returning();
 
       // Update post engagement score
       await this.updateEngagementScore(postId);
 
-      return comment[0];
+      // Return enriched comment with author info
+      return {
+        ...comment[0],
+        walletAddress: user[0].walletAddress,
+        handle: user[0].handle,
+        avatarCid: user[0].avatarCid
+      };
     } catch (error) {
       safeLogger.error('Error adding comment:', error);
       throw new Error('Failed to add comment');

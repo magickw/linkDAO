@@ -450,6 +450,7 @@ import viewRoutes from './routes/viewRoutes';
 import bookmarkRoutes from './routes/bookmarkRoutes';
 import shareRoutes from './routes/shareRoutes';
 import followRoutes from './routes/followRoutes';
+import blockRoutes from './routes/blockRoutes';
 import messagingRoutes from './routes/messagingRoutes';
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
 import mobileRoutes from './routes/mobileRoutes';
@@ -658,6 +659,9 @@ app.use('/api/follows', followRoutes);
 
 // Alias for backward compatibility (frontend uses /api/follow in some places)
 app.use('/api/follow', followRoutes);
+
+// Use block routes
+app.use('/api/block', blockRoutes);
 
 // Use community routes
 app.use('/api/communities', communityRoutes);
