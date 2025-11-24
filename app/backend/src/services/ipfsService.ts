@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { create, IPFSHTTPClient } from 'ipfs-http-client';
 import { safeLogger } from '../utils/safeLogger';
 import { Readable } from 'stream';
@@ -44,10 +45,10 @@ export class IPFSService {
   constructor(config?: IPFSConnectionConfig) {
     // Check if we're in a memory-constrained environment
     this.isMemoryConstrained = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
-    
+
     // Use environment variables for configuration
     let apiUrl = config?.url || process.env.IPFS_API_URL;
-    
+
     // If no explicit API URL is provided, construct it from Pinata environment variables
     if (!apiUrl) {
       const host = process.env.IPFS_HOST || 'api.pinata.cloud';
@@ -55,12 +56,12 @@ export class IPFSService {
       const protocol = process.env.IPFS_PROTOCOL || 'https';
       apiUrl = `${protocol}://${host}:${port}`;
     }
-    
+
     // Fallback to localhost if no configuration is available
     if (!apiUrl) {
       apiUrl = 'http://localhost:5001';
     }
-    
+
     this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs';
     this.defaultPinning = process.env.IPFS_DEFAULT_PINNING !== 'false' && !this.isMemoryConstrained; // Disable pinning in constrained environments
 
@@ -69,15 +70,15 @@ export class IPFSService {
       const ipfsConfig: any = {
         url: apiUrl,
       };
-      
+
       // Try to determine the authentication method - Pinata supports both Basic auth and JWT tokens
       let authHeader = null;
-      
+
       // If PINATA_JWT is provided, use JWT authentication (recommended for Pinata)
       if (process.env.PINATA_JWT) {
         authHeader = `Bearer ${process.env.PINATA_JWT}`;
         safeLogger.info('Using JWT authentication for Pinata');
-      } 
+      }
       // Otherwise, try the project ID and secret combination
       else if (config?.projectId && config?.projectSecret) {
         authHeader = `Basic ${Buffer.from(`${config.projectId}:${config.projectSecret}`).toString('base64')}`;
@@ -86,13 +87,13 @@ export class IPFSService {
         authHeader = `Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`;
         safeLogger.info('Using Basic authentication with environment credentials');
       }
-      
+
       if (authHeader) {
         ipfsConfig.headers = {
           'Authorization': authHeader
         };
       }
-      
+
       // Only create client if not in memory-constrained environment
       if (!this.isMemoryConstrained) {
         this.client = create(ipfsConfig);
@@ -122,9 +123,9 @@ export class IPFSService {
 
     try {
       const startTime = Date.now();
-      safeLogger.info('Starting IPFS upload', { 
+      safeLogger.info('Starting IPFS upload', {
         size: Buffer.isBuffer(content) ? content.length : 'unknown',
-        name: options?.metadata?.name 
+        name: options?.metadata?.name
       });
 
       // Prepare file object
@@ -139,21 +140,24 @@ export class IPFSService {
         wrapWithDirectory: false
       });
 
+      // Handle different IPFS client versions (some return hash, some return cid)
+      const ipfsHash = result.cid ? result.cid.toString() : (result as any).hash || result.path;
+
       const metadata: IPFSFileMetadata = {
-        id: result.hash,
+        id: ipfsHash,
         name: options?.metadata?.name || result.path,
         size: result.size,
         mimeType: options?.metadata?.mimeType,
         createdAt: new Date(),
-        ipfsHash: result.hash,
-        gatewayUrl: `${this.gatewayUrl}/${result.hash}`,
+        ipfsHash: ipfsHash,
+        gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`,
         tags: options?.metadata?.tags,
         description: options?.metadata?.description
       };
 
       const endTime = Date.now();
       safeLogger.info(`IPFS upload completed`, {
-        hash: result.hash,
+        hash: ipfsHash,
         size: result.size,
         duration: endTime - startTime
       });
@@ -202,27 +206,43 @@ export class IPFSService {
       });
 
       // Convert results to metadata
-      const fileMetadata = results.map((result, index) => ({
-        id: result.hash,
-        name: files[index].path,
-        size: result.size,
-        mimeType: this.getMimeType(files[index].path),
-        createdAt: new Date(),
-        ipfsHash: result.hash,
-        gatewayUrl: `${this.gatewayUrl}/${result.hash}`,
-        tags: options?.metadata?.tags,
-        description: options?.metadata?.description
-      }));
+      const fileMetadata = results.map((result, index) => {
+        const ipfsHash = result.cid ? result.cid.toString() : (result as any).hash || result.path;
+        return {
+          id: ipfsHash,
+          name: files[index].path,
+          size: result.size,
+          mimeType: this.getMimeType(files[index].path),
+          createdAt: new Date(),
+          ipfsHash: ipfsHash,
+          gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`,
+          tags: options?.metadata?.tags,
+          description: options?.metadata?.description
+        };
+      });
+
+      // Handle root CID
+      let rootHash = '';
+      // @ts-ignore - root might be an async iterable or a single result depending on client version
+      if (root && typeof root[Symbol.asyncIterator] === 'function') {
+        for await (const item of root) {
+          // The last item is usually the root directory
+          rootHash = item.cid ? item.cid.toString() : (item as any).hash || item.path;
+        }
+      } else if (root) {
+        // @ts-ignore
+        rootHash = root.cid ? root.cid.toString() : (root as any).hash || root.path;
+      }
 
       const endTime = Date.now();
       safeLogger.info(`IPFS directory upload completed`, {
-        rootHash: root.cid.toString(),
+        rootHash: rootHash,
         fileCount: files.length,
         duration: endTime - startTime
       });
 
       return {
-        rootHash: root.cid.toString(),
+        rootHash: rootHash,
         files: fileMetadata
       };
     } catch (error) {
@@ -241,16 +261,16 @@ export class IPFSService {
         try {
           const startTime = Date.now();
           safeLogger.info('Starting IPFS download via gateway (memory-constrained)', { hash: ipfsHash });
-          
+
           // Use axios directly to avoid loading IPFS client
           const response = await axios.get(`${this.gatewayUrl}/${ipfsHash}`, {
             timeout: 10000,
             responseType: 'arraybuffer' // More memory efficient
           });
-          
+
           const content = Buffer.from(response.data);
           const size = content.length;
-          
+
           // Create metadata
           const metadata: IPFSFileMetadata = {
             id: ipfsHash,
@@ -260,21 +280,21 @@ export class IPFSService {
             ipfsHash: ipfsHash,
             gatewayUrl: `${this.gatewayUrl}/${ipfsHash}`
           };
-          
+
           const endTime = Date.now();
           safeLogger.info(`IPFS download completed via gateway`, {
             hash: ipfsHash,
             size: size,
             duration: endTime - startTime
           });
-          
+
           return { content, metadata };
         } catch (error) {
           safeLogger.error(`IPFS gateway download failed for ${ipfsHash}:`, error);
           throw new Error(`IPFS download failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
-      
+
       throw new Error('IPFS client not initialized');
     }
 
@@ -382,10 +402,10 @@ export class IPFSService {
 
     try {
       const stats = await this.client.files.stat(`/${ipfsHash}`);
-      
+
       return {
         id: ipfsHash,
-        name: stats.name,
+        name: ipfsHash, // stats.name doesn't exist, use hash as name
         size: stats.size,
         createdAt: new Date(),
         ipfsHash: ipfsHash,
