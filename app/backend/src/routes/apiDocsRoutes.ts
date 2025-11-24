@@ -693,4 +693,106 @@ const cart = await response.json();`
   successResponse(res, examples);
 });
 
+/**
+ * @route GET /api/docs/:slug
+ * @desc Serve individual documentation files
+ * @access Public
+ */
+router.get('/:slug', (req, res) => {
+  const { slug } = req.params;
+
+  if (!slug || typeof slug !== 'string') {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_SLUG',
+        message: 'Document slug is required'
+      }
+    });
+  }
+
+  try {
+    // Security: Prevent directory traversal
+    const sanitizedSlug = slug.replace(/\.\./g, '').replace(/\//g, '');
+
+    // Special case: technical-whitepaper maps to TECHNICAL_WHITEPAPER.md
+    let filename = `${sanitizedSlug}.md`;
+    if (sanitizedSlug === 'technical-whitepaper') {
+      filename = 'TECHNICAL_WHITEPAPER.md';
+    }
+
+    // Build file path - look in the docs directory relative to the project
+    // Try multiple possible paths based on deployment context
+    const possiblePaths = [
+      // Production: docs in the same directory structure
+      path.join(__dirname, '../docs', filename),
+      // Alternative: docs in public directory
+      path.join(__dirname, '../../public/docs', filename),
+      // For different deployment scenarios
+      path.join(process.cwd(), 'public', 'docs', filename),
+      // Direct path resolution
+      path.resolve('./public/docs', filename),
+      path.resolve('./docs', filename)
+    ];
+    
+    let filePath: string | null = null;
+    let fileFound = false;
+    
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        filePath = possiblePath;
+        fileFound = true;
+        break;
+      }
+    }
+    
+    if (!fileFound || !filePath) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'DOC_NOT_FOUND',
+          message: 'Document not found',
+          slug: sanitizedSlug
+        }
+      });
+    }
+
+    // Read file content
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+
+    // Get file stats for metadata
+    const stats = fs.statSync(filePath);
+    const wordCount = fileContent.split(/\s+/).length;
+    const estimatedReadingTime = Math.ceil(wordCount / 200); // 200 words per minute
+
+    // Extract title from markdown content (first H1)
+    const titleMatch = fileContent.match(/^#\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1] : sanitizedSlug;
+
+    // Return content with metadata
+    res.status(200).json({
+      success: true,
+      data: {
+        content: fileContent,
+        slug: sanitizedSlug,
+        title: title,
+        lastUpdated: stats.mtime.toISOString(),
+        wordCount,
+        estimatedReadingTime,
+        fileSize: stats.size
+      }
+    });
+  } catch (error) {
+    safeLogger.error(`Error reading document ${slug}:`, error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'DOC_READ_ERROR',
+        message: 'Failed to load document',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }
+    });
+  }
+});
+
 export default router;

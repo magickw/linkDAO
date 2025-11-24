@@ -287,7 +287,10 @@ export class PostController {
         });
       }
 
-      return res.status(204).send();
+      return res.status(200).json({
+        success: true,
+        message: 'Post deleted successfully'
+      });
     } catch (error: any) {
       return res.status(500).json({
         success: false,
