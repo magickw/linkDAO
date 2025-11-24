@@ -104,7 +104,7 @@ export class PostService {
   static async updatePost(id: string, data: UpdatePostInput): Promise<Post> {
     try {
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${id}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ export class PostService {
   static async deletePost(id: string): Promise<boolean> {
     try {
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/posts/${id}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

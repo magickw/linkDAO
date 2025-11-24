@@ -25,6 +25,23 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const [nftAddress, setNftAddress] = useState('');
   const [nftTokenId, setNftTokenId] = useState('');
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/ipfs/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload file');
+    }
+
+    const data = await response.json();
+    return data.data.ipfsHash;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -46,47 +63,52 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
         finalContent = proposal ? `Proposal: ${proposal.title}` : '';
         break;
     }
-    
+
     if (!isValid) {
       return;
     }
-    
+
     try {
       // Extract tags from input (comma separated)
       const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      
+
       // Add content type as a tag
       tagArray.push(contentType.toLowerCase());
-      
+
       // Add post type as a tag
       if (postType !== 'standard') {
         tagArray.push(postType);
       }
-      
+
       const postData: CreatePostInput = {
         author: '', // This will be filled by the parent component
         content: finalContent,
         tags: tagArray,
       };
-      
+
       // Add type-specific data
       if (contentType === ContentType.POLL && poll) {
         postData.poll = poll;
       } else if (contentType === ContentType.PROPOSAL && proposal) {
         postData.proposal = proposal;
       }
-      
+
       if (media) {
-        // In a real implementation, we would upload the media to IPFS and store the CID
-        // For now, we'll just add a placeholder
-        postData.media = ['https://placehold.co/300'];
+        try {
+          const mediaCid = await uploadFile(media);
+          postData.media = [mediaCid];
+        } catch (uploadError) {
+          console.error('Error uploading media:', uploadError);
+          // You might want to show an error toast here
+          return;
+        }
       }
-      
+
       // Add NFT information if it's an NFT post
       if (postType === 'nft' && nftAddress && nftTokenId) {
         postData.onchainRef = `${nftAddress}:${nftTokenId}`;
       }
-      
+
       console.log('Submitting post data:', postData);
       await onSubmit(postData);
       handleClose();
@@ -114,7 +136,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setMedia(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -133,7 +155,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Post</h2>
-          <button 
+          <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200"
           >
@@ -142,7 +164,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
             </svg>
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6">
           {/* Content Type Tabs */}
           <div className="mb-6">
@@ -161,7 +183,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
               disabled={isLoading}
             />
           </div>
-          
+
           {/* NFT Fields (only show for NFT post type) */}
           {postType === 'nft' && (
             <div className="mb-4 grid grid-cols-2 gap-4">
@@ -195,7 +217,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
               </div>
             </div>
           )}
-          
+
           {/* Content Editor based on type */}
           {contentType === ContentType.POST && (
             <div className="mb-6">
@@ -236,7 +258,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
               <img src={preview} alt="Preview" className="rounded-lg max-h-60 object-cover" />
             </div>
           )}
-          
+
           <div className="mb-4">
             <label htmlFor="media" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Add Media
@@ -256,7 +278,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="mb-6">
             <label htmlFor="tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Tags (comma separated)
@@ -274,7 +296,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
               Add relevant tags to help others discover your post
             </p>
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"

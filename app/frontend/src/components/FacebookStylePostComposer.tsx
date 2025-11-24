@@ -66,6 +66,23 @@ const FacebookStylePostComposer = React.memo(({
     return matches ? matches.map(tag => tag.substring(1)) : [];
   }, []);
 
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/ipfs/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload file');
+    }
+
+    const data = await response.json();
+    return data.data.ipfsHash;
+  };
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -81,11 +98,25 @@ const FacebookStylePostComposer = React.memo(({
       if (location) finalContent += ` at ${location}`;
       if (linkUrl) finalContent += ` ${linkUrl}`;
 
+      // Upload files if any
+      let mediaCids: string[] = [];
+      if (selectedFiles.length > 0) {
+        try {
+          // Show loading state or toast here if needed
+          const uploadPromises = selectedFiles.map(file => uploadFile(file));
+          mediaCids = await Promise.all(uploadPromises);
+        } catch (uploadError) {
+          console.error('Error uploading files:', uploadError);
+          // You might want to show an error toast here
+          return;
+        }
+      }
+
       const postData: CreatePostInput = {
         author: userName || '', // Use the userName prop as author
         content: finalContent,
         tags: tagArray,
-        media: selectedFiles.length > 0 ? ['https://placehold.co/300'] : undefined
+        media: mediaCids.length > 0 ? mediaCids : undefined
       };
 
       await onSubmit(postData);
