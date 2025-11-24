@@ -24,7 +24,7 @@ export class FollowService {
           bioCid: ''
         });
       }
-      
+
       let followingUser = await userProfileService.getProfileByAddress(followingAddress);
       if (!followingUser) {
         // Create user if they don't exist
@@ -36,16 +36,16 @@ export class FollowService {
           bioCid: ''
         });
       }
-      
+
       // Check if already following
       const isAlreadyFollowing = await this.isFollowing(followerAddress, followingAddress);
       if (isAlreadyFollowing) {
         return true; // Already following
       }
-      
+
       // Add follow relationship to database
       await databaseService.followUser(followerUser.id, followingUser.id);
-      
+
       return true;
     } catch (error) {
       console.error('Error in follow:', error);
@@ -59,14 +59,14 @@ export class FollowService {
       // Get user IDs from addresses
       const followerUser = await userProfileService.getProfileByAddress(followerAddress);
       const followingUser = await userProfileService.getProfileByAddress(followingAddress);
-      
+
       if (!followerUser || !followingUser) {
         return false; // One or both users don't exist
       }
-      
+
       // Remove follow relationship from database
       await databaseService.unfollowUser(followerUser.id, followingUser.id);
-      
+
       return true;
     } catch (error) {
       console.error('Error in unfollow:', error);
@@ -82,16 +82,20 @@ export class FollowService {
       if (!user) {
         return [];
       }
-      
-      // Get followers from database
+
+      // Get followers from database with wallet addresses
       const dbFollowers = await databaseService.getFollowers(user.id);
-      
-      // Convert to expected format
-      return dbFollowers.map((f: any) => ({
-        follower: f.followerId,
-        following: f.followingId,
-        createdAt: f.createdAt
-      }));
+
+      // Get wallet addresses for all follower IDs
+      const followerAddresses = await Promise.all(
+        dbFollowers.map(async (f: any) => {
+          const followerProfile = await userProfileService.getProfileById(f.followerId);
+          return followerProfile?.walletAddress || null;
+        })
+      );
+
+      // Filter out null values and return wallet addresses
+      return followerAddresses.filter((addr): addr is string => addr !== null);
     } catch (error) {
       console.error('Error in getFollowers:', error);
       // Return empty array instead of throwing to prevent crashes
@@ -106,16 +110,20 @@ export class FollowService {
       if (!user) {
         return [];
       }
-      
-      // Get following from database
+
+      // Get following from database with wallet addresses
       const dbFollowing = await databaseService.getFollowing(user.id);
-      
-      // Convert to expected format
-      return dbFollowing.map((f: any) => ({
-        follower: f.followerId,
-        following: f.followingId,
-        createdAt: f.createdAt
-      }));
+
+      // Get wallet addresses for all following IDs
+      const followingAddresses = await Promise.all(
+        dbFollowing.map(async (f: any) => {
+          const followingProfile = await userProfileService.getProfileById(f.followingId);
+          return followingProfile?.walletAddress || null;
+        })
+      );
+
+      // Filter out null values and return wallet addresses
+      return followingAddresses.filter((addr): addr is string => addr !== null);
     } catch (error) {
       console.error('Error in getFollowing:', error);
       // Return empty array instead of throwing to prevent crashes
@@ -128,11 +136,11 @@ export class FollowService {
       // Get user IDs from addresses
       const followerUser = await userProfileService.getProfileByAddress(followerAddress);
       const followingUser = await userProfileService.getProfileByAddress(followingAddress);
-      
+
       if (!followerUser || !followingUser) {
         return false;
       }
-      
+
       // Check the database for the follow relationship
       const result = await db.select().from(follows).where(
         and(
@@ -140,7 +148,7 @@ export class FollowService {
           eq(follows.followingId, followingUser.id)
         )
       );
-      
+
       return result.length > 0;
     } catch (error) {
       console.error('Error in isFollowing:', error);
@@ -156,11 +164,11 @@ export class FollowService {
       if (!user) {
         return { followers: 0, following: 0 };
       }
-      
+
       // Get counts from database
       const followers = (await databaseService.getFollowers(user.id)).length;
       const following = (await databaseService.getFollowing(user.id)).length;
-      
+
       return { followers, following };
     } catch (error) {
       console.error('Error in getFollowCount:', error);

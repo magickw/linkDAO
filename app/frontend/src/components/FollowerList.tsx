@@ -16,6 +16,18 @@ export default function FollowerList({ userAddress, className = '', isOwnProfile
   const { data: followers, isLoading, error } = useFollowers(userAddress);
   const { data: followerProfiles, isLoading: isProfilesLoading } = useProfiles(followers as string[] | undefined);
 
+  // Debug logging
+  console.log('[FollowerList] Debug:', {
+    userAddress,
+    followers,
+    followersLength: followers?.length,
+    followerProfiles,
+    followerProfilesLength: followerProfiles?.length,
+    isLoading,
+    isProfilesLoading,
+    error
+  });
+
   if (isLoading || isProfilesLoading) {
     return (
       <div className={className}>
@@ -54,9 +66,9 @@ export default function FollowerList({ userAddress, className = '', isOwnProfile
       <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers ({(followers as string[]).length})</h2>
       <div className="space-y-4">
         {followerProfiles?.map((profile) => (
-          <ProfileCard 
-            key={profile.walletAddress} 
-            profile={profile} 
+          <ProfileCard
+            key={profile.walletAddress}
+            profile={profile}
             currentUserAddress={currentUserAddress}
           />
         ))}

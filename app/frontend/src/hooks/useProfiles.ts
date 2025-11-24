@@ -11,16 +11,35 @@ export const useProfiles = (addresses: string[] | undefined) => {
   return useQuery<UserProfile[], Error>({
     queryKey: ['profiles', addresses],
     queryFn: async () => {
-      if (!addresses || addresses.length === 0) return [];
-      
+      console.log('[useProfiles] Fetching profiles for addresses:', addresses);
+
+      if (!addresses || addresses.length === 0) {
+        console.log('[useProfiles] No addresses provided, returning empty array');
+        return [];
+      }
+
       // Fetch profiles for all addresses concurrently
-      const profilePromises = addresses.map(address => 
-        ProfileService.getProfileByAddress(address).catch(() => null)
-      );
-      
+      const profilePromises = addresses.map(address => {
+        console.log('[useProfiles] Fetching profile for:', address);
+        return ProfileService.getProfileByAddress(address)
+          .then(profile => {
+            console.log('[useProfiles] Profile result for', address, ':', profile);
+            return profile;
+          })
+          .catch(error => {
+            console.error('[useProfiles] Error fetching profile for', address, ':', error);
+            return null;
+          });
+      });
+
       const profiles = await Promise.all(profilePromises);
+      console.log('[useProfiles] All profiles fetched:', profiles);
+
       // Filter out null values (profiles that weren't found)
-      return profiles.filter((profile): profile is UserProfile => profile !== null);
+      const validProfiles = profiles.filter((profile): profile is UserProfile => profile !== null);
+      console.log('[useProfiles] Valid profiles after filtering:', validProfiles);
+
+      return validProfiles;
     },
     enabled: !!addresses && addresses.length > 0,
     staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes

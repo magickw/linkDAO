@@ -16,6 +16,18 @@ export default function FollowingList({ userAddress, className = '', isOwnProfil
   const { data: following, isLoading, error } = useFollowing(userAddress);
   const { data: followingProfiles, isLoading: isProfilesLoading } = useProfiles(following as string[] | undefined);
 
+  // Debug logging
+  console.log('[FollowingList] Debug:', {
+    userAddress,
+    following,
+    followingLength: following?.length,
+    followingProfiles,
+    followingProfilesLength: followingProfiles?.length,
+    isLoading,
+    isProfilesLoading,
+    error
+  });
+
   if (isLoading || isProfilesLoading) {
     return (
       <div className={className}>
@@ -29,7 +41,7 @@ export default function FollowingList({ userAddress, className = '', isOwnProfil
 
   if (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     return (
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h2>
@@ -56,9 +68,9 @@ export default function FollowingList({ userAddress, className = '', isOwnProfil
       <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following ({(following as string[]).length})</h2>
       <div className="space-y-4">
         {followingProfiles?.map((profile) => (
-          <ProfileCard 
-            key={profile.walletAddress} 
-            profile={profile} 
+          <ProfileCard
+            key={profile.walletAddress}
+            profile={profile}
             currentUserAddress={currentUserAddress}
           />
         ))}
