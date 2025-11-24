@@ -6,16 +6,16 @@ import { ToastContext } from '@/context/ToastContext';
 // Custom hook to safely access toast context with fallback for portal components
 const useToastOrFallback = () => {
   const context = useContext(ToastContext);
-  
+
   if (context) {
     return context;
   }
-  
+
   // Fallback implementation when no provider is present (e.g. for portal components)
   const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
     console.log(`[Toast fallback] ${type.toUpperCase()}: ${message}`);
   };
-  
+
   return { addToast };
 };
 
@@ -55,7 +55,7 @@ export default function SharePostModal({
   addToast: providedAddToast
 }: SharePostModalWithToastProps) {
   const { address, isConnected } = useWeb3();
-  
+
   const { addToast: contextAddToast } = useToastOrFallback();
 
   const addToast = providedAddToast || contextAddToast;
@@ -67,8 +67,9 @@ export default function SharePostModal({
   // Generate post URL
   const getPostUrl = () => {
     const baseUrl = window.location.origin;
-    if (postType === 'community') {
-      return `${baseUrl}/dao/${post.communityId}/post/${post.id}`;
+    if (postType === 'community' && post.communityId) {
+      // Use /communities/ instead of /dao/ since dao concept was removed
+      return `${baseUrl}/communities/${post.communityId}/posts/${post.id}`;
     }
     return `${baseUrl}/post/${post.id}`;
   };
@@ -76,10 +77,10 @@ export default function SharePostModal({
   // Generate share text
   const getShareText = () => {
     const content = post.title || post.contentCid;
-    const truncatedContent = content.length > 100 
-      ? content.substring(0, 100) + '...' 
+    const truncatedContent = content.length > 100
+      ? content.substring(0, 100) + '...'
       : content;
-    
+
     return `Check out this post by ${post.author}: "${truncatedContent}"`;
   };
 
@@ -155,11 +156,11 @@ export default function SharePostModal({
   const handleInternalShare = async (shareType: string) => {
     try {
       setIsSharing(true);
-      
+
       if (onShare) {
         await onShare(post.id, shareType, shareMessage.trim() || undefined);
       }
-      
+
       addToast('Post shared successfully!', 'success');
       onClose();
     } catch (error) {
@@ -175,14 +176,14 @@ export default function SharePostModal({
     const url = getPostUrl();
     const title = post.title || 'Web3 Social Post';
     const text = getShareText();
-    
+
     option.action(url, title, text);
-    
+
     // Track the share
     if (onShare) {
       onShare(post.id, option.id).catch(console.error);
     }
-    
+
     onClose();
   };
 
@@ -193,13 +194,13 @@ export default function SharePostModal({
         onClose();
       }
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
@@ -209,7 +210,7 @@ export default function SharePostModal({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
       onClick={(e) => {
         // Close modal when clicking backdrop
@@ -221,7 +222,7 @@ export default function SharePostModal({
       aria-modal="true"
       aria-labelledby="share-modal-title"
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -265,8 +266,8 @@ export default function SharePostModal({
                   <div className="font-medium mb-1">{post.title}</div>
                 )}
                 <div className="line-clamp-3">
-                  {post.contentCid.length > 150 
-                    ? post.contentCid.substring(0, 150) + '...' 
+                  {post.contentCid.length > 150
+                    ? post.contentCid.substring(0, 150) + '...'
                     : post.contentCid}
                 </div>
               </div>
@@ -359,7 +360,7 @@ export default function SharePostModal({
   // Use portal to render modal at document root level
   // Since this is rendered via portal, it's no longer in the ToastProvider context,
   // so we need to ensure the parent component provides the toast context
-  return typeof window !== 'undefined' 
+  return typeof window !== 'undefined'
     ? createPortal(modalContent, document.body)
     : null;
 }
