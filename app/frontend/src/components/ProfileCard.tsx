@@ -17,16 +17,16 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-4 ${className}`}>
       <div className="flex items-center">
         <div className="flex-shrink-0">
-          <img 
-            className="h-12 w-12 rounded-full border-2 border-primary-500" 
-            src={profile.avatarCid || 'https://placehold.co/48'} 
-            alt={profile.handle} 
+          <img
+            className="h-12 w-12 rounded-full border-2 border-primary-500"
+            src={profile.avatarCid || 'https://placehold.co/48'}
+            alt={profile.handle}
           />
         </div>
         <div className="ml-4 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <Link href={`/profile/${profile.walletAddress}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
+              <Link href={`/public-profile/${profile.walletAddress}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
                 {profile.handle}
               </Link>
               {profile.ens && (
@@ -34,9 +34,9 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
               )}
             </div>
             {showFollowButton && (
-              <FollowButton 
-                targetUserAddress={profile.walletAddress} 
-                className="text-xs px-2 py-1" 
+              <FollowButton
+                targetUserAddress={profile.walletAddress}
+                className="text-xs px-2 py-1"
               />
             )}
           </div>

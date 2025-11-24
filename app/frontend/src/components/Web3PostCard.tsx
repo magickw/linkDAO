@@ -12,7 +12,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
   const formatTimestamp = (date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) {
       return `${diffInSeconds} seconds ago`;
     } else if (diffInSeconds < 3600) {
@@ -27,23 +27,23 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
     }
   };
 
-  const timestamp = post.createdAt instanceof Date ? 
-    formatTimestamp(post.createdAt) : 
+  const timestamp = post.createdAt instanceof Date ?
+    formatTimestamp(post.createdAt) :
     'Unknown time';
 
   return (
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-6 ${className}`}>
       <div className="flex">
         <div className="flex-shrink-0 mr-4">
-          <img 
-            className="h-12 w-12 rounded-full border-2 border-primary-500" 
-            src={profile.avatarCid || 'https://placehold.co/48'} 
-            alt={profile.handle} 
+          <img
+            className="h-12 w-12 rounded-full border-2 border-primary-500"
+            src={profile.avatarCid || 'https://placehold.co/48'}
+            alt={profile.handle}
           />
         </div>
         <div className="flex-1">
           <div className="flex items-center">
-            <Link href={`/profile/${post.author}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
+            <Link href={`/public-profile/${post.author}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
               {profile.handle}
             </Link>
             {profile.ens && (
@@ -53,7 +53,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
             <span className="text-sm text-gray-500 dark:text-gray-400">{timestamp}</span>
           </div>
           <p className="mt-2 text-gray-700 dark:text-gray-300">{post.contentCid}</p>
-          
+
           {post.tags && post.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {post.tags.map((tag: string, index: number) => (
@@ -63,7 +63,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
               ))}
             </div>
           )}
-          
+
           <div className="mt-4 flex space-x-6">
             <button className="flex items-center text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors">
               <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

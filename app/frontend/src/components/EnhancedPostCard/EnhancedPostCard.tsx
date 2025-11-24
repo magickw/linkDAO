@@ -72,7 +72,7 @@ const EnhancedPostCard = React.memo(({
   const trendingLevel = useMemo(() => {
     // If trendingStatus is already a valid TrendingLevel, use it
     if (post.trendingStatus && typeof post.trendingStatus === 'string' &&
-        ['hot', 'rising', 'viral', 'breaking'].includes(post.trendingStatus)) {
+      ['hot', 'rising', 'viral', 'breaking'].includes(post.trendingStatus)) {
       return post.trendingStatus as TrendingLevel;
     }
 
@@ -278,7 +278,7 @@ const EnhancedPostCard = React.memo(({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <Link
-                        href={`/profile/${post.author}`}
+                        href={`/public-profile/${post.author}`}
                         className="font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
                         aria-label={`View profile of ${post.authorProfile.handle}`}
                       >

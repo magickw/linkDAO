@@ -25,10 +25,10 @@ interface EnhancedPostCardProps {
   onExpand?: () => void;
 }
 
-export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({ 
-  post, 
-  onLike, 
-  onComment, 
+export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
+  post,
+  onLike,
+  onComment,
   onShare,
   onTip,
   onReaction,
@@ -57,7 +57,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
-  
+
   // Add a safety check for the toast function
   const safeAddToast = (...args: Parameters<typeof addToast>) => {
     if (typeof addToast === 'function') {
@@ -76,23 +76,23 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       // Reset states when fetching new content
       setLoading(true);
       setError(null);
-      
+
       try {
         // First, check if post has direct content (not empty and not a CID)
-        if (post.content && typeof post.content === 'string' && post.content.length > 0 && 
-            !post.content.startsWith('Qm') && !post.content.startsWith('bafy')) {
+        if (post.content && typeof post.content === 'string' && post.content.length > 0 &&
+          !post.content.startsWith('Qm') && !post.content.startsWith('bafy')) {
           console.log('Using direct content for post:', { id: post.id, contentLength: post.content.length });
           setContent(post.content);
           setLoading(false);
           return;
         }
-        
+
         // If post has contentCid that looks like a valid IPFS CID, fetch from IPFS
         if (post.contentCid && (post.contentCid.startsWith('Qm') || post.contentCid.startsWith('bafy'))) {
           console.log('Fetching content from IPFS for CID:', post.contentCid);
           const contentText = await IPFSContentService.getContentFromIPFS(post.contentCid);
           console.log('Received content from IPFS:', { contentText, length: contentText?.length });
-          
+
           if (contentText && contentText.length > 0) {
             // Try to parse as JSON if it looks like JSON
             try {
@@ -168,10 +168,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onLike) {
         await onLike(post.id);
         safeAddToast('Post liked successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated like counts
         await invalidateFeedCache();
-        
+
         // Invalidate user cache for like history
         if (post.author) {
           await invalidateUserCache(post.author, ['likes', 'earnings']);
@@ -187,7 +187,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onComment) {
         await onComment(post.id);
         safeAddToast('Comment posted successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated comment counts
         await invalidateFeedCache();
       }
@@ -201,10 +201,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onShare) {
         await onShare(post.id);
         safeAddToast('Post shared successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated share counts
         await invalidateFeedCache();
-        
+
         // If sharing to a community, invalidate community cache
         if (post.communityId) {
           await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
@@ -221,15 +221,15 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onTip) {
         await onTip(post.id, amount, token, message);
         safeAddToast('Tip sent successfully!', 'success');
-        
+
         // Invalidate feed cache to reflect updated tip counts
         await invalidateFeedCache();
-        
+
         // Invalidate user cache for tip history
         if (post.author) {
           await invalidateUserCache(post.author, ['tips', 'earnings']);
         }
-        
+
         // If tipping in a community, invalidate community cache
         if (post.communityId) {
           await invalidateCommunityCache(post.communityId, ['posts', 'activity']);
@@ -244,7 +244,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const handleBookmark = async () => {
     setIsBookmarked(!isBookmarked);
     safeAddToast(isBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks', 'success');
-    
+
     // Invalidate user cache for bookmarks
     try {
       await invalidateUserCache('current', ['bookmarks']);
@@ -264,17 +264,17 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {/* Header */}
       <div>
         <div>
-          <a href={`/profile/${post.author}`}>
+          <a href={`/public-profile/${post.author}`}>
             {post.author.slice(0, 8)}...{post.author.slice(-4)}
           </a>
           <span>{formatTimestamp(post.createdAt)}</span>
         </div>
-        
+
         <div>
           {showTrending && post.trendingStatus && (
             <TrendingBadge level={post.trendingStatus} score={post.engagementScore} showScore />
           )}
-          
+
           <button
             onClick={handleBookmark}
             title={isBookmarked ? 'Remove bookmark' : 'Bookmark post'}
@@ -467,7 +467,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
       {/* Action Buttons */}
       <div>
-        <button onClick={() => {}}>
+        <button onClick={() => { }}>
           {post.comments}
         </button>
 
@@ -498,7 +498,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
             const amount = formData.get('amount');
             const token = formData.get('token');
             const message = formData.get('message');
-            
+
             // Pass the tip data to the handleTip function
             handleTip(
               amount as string,
