@@ -34,6 +34,29 @@ export default function CommentThread({
   const [collapsed, setCollapsed] = useState(false);
   const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
+  const [loadingReplies, setLoadingReplies] = useState(false);
+  const [repliesLoaded, setRepliesLoaded] = useState(false);
+
+  // Fetch replies when comment is expanded (not collapsed)
+  React.useEffect(() => {
+    const fetchReplies = async () => {
+      // Only fetch if not collapsed, not already loaded, and comment has no pre-loaded replies
+      if (!collapsed && !repliesLoaded && (!comment.replies || comment.replies.length === 0)) {
+        setLoadingReplies(true);
+        try {
+          const fetchedReplies = await CommunityPostService.getCommentReplies(comment.id);
+          setReplies(fetchedReplies);
+          setRepliesLoaded(true);
+        } catch (error) {
+          console.error('Error fetching replies:', error);
+        } finally {
+          setLoadingReplies(false);
+        }
+      }
+    };
+
+    fetchReplies();
+  }, [collapsed, comment.id, comment.replies, repliesLoaded]);
 
   // Calculate vote score
   const voteScore = comment.upvotes - comment.downvotes;

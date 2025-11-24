@@ -56,6 +56,66 @@ export class CommunityPostService {
     });
   }
 
+  static async getPostStats(postId: string): Promise<{ commentCount: number }> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch post stats');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching post stats:', error);
+      return { commentCount: 0 };
+    }
+  }
+
+  /**
+   * Get replies to a specific comment
+   */
+  static async getCommentReplies(
+    commentId: string,
+    options?: {
+      limit?: number;
+    }
+  ): Promise<Comment[]> {
+    try {
+      const params = new URLSearchParams();
+      if (options?.limit) params.append('limit', options.limit.toString());
+
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(
+        `${BACKEND_API_BASE_URL}/api/comments/${commentId}/replies?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to fetch comment replies: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching comment replies:', error);
+      return []; // Return empty array on error to prevent UI breakage
+    }
+  }
+
   static async getPost(communityId: string, postId: string): Promise<Post | null> {
     try {
       const authHeaders = authService.getAuthHeaders();
@@ -300,22 +360,7 @@ export class CommunityPostService {
     }
   }
 
-  static async getPostStats(postId: string): Promise<{ commentCount: number }> {
-    try {
-      // Get all comments to count them
-      // Note: This is a temporary implementation. Ideally, the backend should have a dedicated stats endpoint
-      const comments = await this.getPostComments(postId, { limit: 1000 });
-      return {
-        commentCount: comments.length
-      };
-    } catch (error) {
-      console.error('Error fetching post stats:', error);
-      // Return default stats on error
-      return {
-        commentCount: 0
-      };
-    }
-  }
+
 
   static async getPinnedPosts(communityId: string): Promise<CommunityPost[]> {
     try {

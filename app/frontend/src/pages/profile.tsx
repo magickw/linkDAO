@@ -984,6 +984,19 @@ export default function Profile() {
                         </svg>
                       </button>
                       <button
+                        onClick={() => {
+                          const profileUrl = `${window.location.origin}/u/${targetUserAddress}`;
+                          if (navigator.share) {
+                            navigator.share({
+                              title: `${profile.displayName || profile.handle || 'User'} on LinkDAO`,
+                              text: `Check out ${profile.displayName || profile.handle || 'this user'}'s profile on LinkDAO`,
+                              url: profileUrl,
+                            }).catch(err => console.log('Error sharing:', err));
+                          } else {
+                            copyToClipboard(profileUrl);
+                            addToast('Profile link copied to clipboard!', 'success');
+                          }
+                        }}
                         className="p-2.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
                         title="Share profile"
                       >
