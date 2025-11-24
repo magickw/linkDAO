@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { ENV_CONFIG } from '@/config/environment';
 
 export interface UploadResult {
   cid: string;
@@ -51,7 +52,7 @@ class IPFSUploadService {
       headers[key] = value;
     });
 
-    const response = await fetch('/api/ipfs/upload', {
+    const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/ipfs/upload`, {
       method: 'POST',
       headers,
       body: formData,

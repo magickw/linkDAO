@@ -1145,9 +1145,46 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   );
 };
 
+// Custom error fallback component for marketplace
+const MarketplaceErrorFallback: React.FC<{ error?: Error; resetError: () => void }> = ({ error, resetError }) => (
+  <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-6">
+    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 max-w-md text-center">
+      <h2 className="text-2xl font-bold text-white mb-4">Oops! Something went wrong</h2>
+      <p className="text-white/80 mb-6">
+        We're having trouble loading the marketplace. This might be a temporary issue.
+      </p>
+      {process.env.NODE_ENV === 'development' && error && (
+        <details className="mb-4 p-3 bg-white/5 rounded text-sm text-left">
+          <summary className="cursor-pointer font-medium text-white/90">
+            Error Details
+          </summary>
+          <pre className="mt-2 text-xs text-white/70 overflow-auto max-h-40">
+            {error.message}
+            {error.stack && `\n\n${error.stack}`}
+          </pre>
+        </details>
+      )}
+      <div className="flex gap-3">
+        <button
+          onClick={resetError}
+          className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors"
+        >
+          Reload Page
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const MarketplacePage: React.FC = () => {
   return (
-    <>
+    <ErrorBoundary fallback={MarketplaceErrorFallback}>
       <SEO
         title="Decentralized Marketplace"
         description="Buy and sell securely on LinkDAO's decentralized marketplace. Browse products, NFTs, and services with blockchain-powered escrow protection. Trade with confidence using LDAO tokens."
@@ -1171,7 +1208,7 @@ const MarketplacePage: React.FC = () => {
         {/* Performance Indicator - Development only */}
         <PerformanceIndicator />
       </NavigationLoadingStates>
-    </>
+    </ErrorBoundary>
   );
 };
 
