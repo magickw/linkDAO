@@ -46,10 +46,18 @@ class IPFSUploadService {
     const authHeaders = authService.getAuthHeaders();
 
     // Create headers object for fetch
+    // IMPORTANT: Do NOT set Content-Type for FormData - browser will set it automatically with boundary
     const headers: Record<string, string> = {};
-    // Copy auth headers
-    Object.entries(authHeaders).forEach(([key, value]) => {
-      headers[key] = value;
+    // Only copy Authorization header, not Content-Type
+    if (authHeaders['Authorization']) {
+      headers['Authorization'] = authHeaders['Authorization'];
+    }
+
+    console.log('[ipfsUploadService] Uploading file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: `${ENV_CONFIG.BACKEND_URL}/api/ipfs/upload`
     });
 
     const response = await fetch(`${ENV_CONFIG.BACKEND_URL}/api/ipfs/upload`, {
@@ -59,12 +67,21 @@ class IPFSUploadService {
     });
 
     if (!response.ok) {
-      let errorMessage = 'Upload failed';
+      let errorMessage = `Upload failed (${response.status})`;
       try {
         const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
+        console.error('[ipfsUploadService] Backend error:', errorData);
+        errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
       } catch (e) {
-        // Ignore JSON parse error
+        // If we can't parse JSON, try to get text
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        } catch (textError) {
+          // Ignore
+        }
       }
       throw new Error(errorMessage);
     }

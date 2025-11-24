@@ -15,10 +15,16 @@ import path from 'path';
  */
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Set JSON content type to ensure proper response format
+  res.setHeader('Content-Type', 'application/json');
+
   const { slug } = req.query;
 
   if (!slug || typeof slug !== 'string') {
-    return res.status(400).json({ error: 'Document slug is required' });
+    return res.status(400).json({
+      success: false,
+      error: 'Document slug is required'
+    });
   }
 
   try {
@@ -46,18 +52,26 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     ];
 
     for (const possiblePath of possiblePaths) {
-      const tryPath = path.join(possiblePath, filename);
-      if (fs.existsSync(tryPath)) {
-        docsDir = possiblePath;
-        filePath = tryPath;
-        break;
+      try {
+        const tryPath = path.join(possiblePath, filename);
+        if (fs.existsSync(tryPath)) {
+          docsDir = possiblePath;
+          filePath = tryPath;
+          break;
+        }
+      } catch (error) {
+        // Continue to next path if this one fails
+        console.error(`Error checking path ${possiblePath}:`, error);
+        continue;
       }
     }
 
     if (!filePath) {
       return res.status(404).json({
+        success: false,
         error: 'Document not found',
         slug: sanitizedSlug,
+        message: `Could not find ${filename} in any of the expected locations`,
         triedPaths: possiblePaths.map(p => path.join(p, filename))
       });
     }
@@ -71,7 +85,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const estimatedReadingTime = Math.ceil(wordCount / 200); // 200 words per minute
 
     // Return content with metadata
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       content: fileContent,
       slug: sanitizedSlug,
       title: extractTitle(fileContent) || sanitizedSlug,
@@ -82,9 +97,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     });
   } catch (error) {
     console.error(`Error reading document ${slug}:`, error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       error: 'Failed to load document',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: error instanceof Error ? error.message : 'Unknown error',
+      slug: slug
     });
   }
 }

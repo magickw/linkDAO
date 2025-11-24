@@ -340,21 +340,21 @@ const DocsPage: NextPage = () => {
       // Fetch document from API
       const response = await fetch(`/api/docs/${slug}`);
 
+      // Always parse response as JSON
+      const data = await response.json();
+
       if (!response.ok) {
-        // Try to parse error message from JSON response
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to load document: ${response.statusText}`);
-        } catch (e) {
-          // If JSON parse fails, use status text
-          if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
-            throw e;
-          }
-          throw new Error(`Failed to load document: ${response.statusText}`);
-        }
+        // Handle error response
+        const errorMessage = data.message || data.error || `Failed to load document: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      // Check if response has success flag
+      if (data.success === false) {
+        throw new Error(data.message || data.error || 'Failed to load document');
+      }
+
+      // Set document content
       setDocumentContent(data.content);
       generateToc(data.content);
     } catch (error) {
