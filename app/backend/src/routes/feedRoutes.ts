@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(feedRateLimit);
 
 // Get personalized feed with filtering (optional authentication for personalization)
-router.get('/', 
+router.get('/',
   // Use optional auth - if user is authenticated, personalize feed; if not, show public feed
   (req, res, next) => {
     // Try to authenticate but don't fail if no token
@@ -23,7 +23,7 @@ router.get('/',
         try {
           const jwt = require('jsonwebtoken');
           const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-          
+
           // Attach user to request
           (req as any).user = {
             address: decoded.walletAddress || decoded.address,
@@ -69,9 +69,9 @@ router.get('/trending',
 );
 
 // Create new post (requires authentication)
-router.post('/', 
+router.post('/',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     body: {
       content: { type: 'string', required: true, minLength: 1, maxLength: 5000 },
@@ -85,9 +85,9 @@ router.post('/',
 );
 
 // Update post (requires authentication)
-router.put('/:id', 
+router.put('/:id',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -101,9 +101,21 @@ router.put('/:id',
 );
 
 // Delete post (requires authentication)
-router.delete('/:id', 
+router.delete('/:id',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.deletePost
+);
+
+// Alias for delete post to handle legacy/stale client requests to /api/feed/posts/:id
+router.delete('/posts/:id',
+  authMiddleware, // Apply auth only to this route
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -113,9 +125,9 @@ router.delete('/:id',
 );
 
 // Add reaction to post (requires authentication)
-router.post('/:id/react', 
+router.post('/:id/react',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -129,9 +141,9 @@ router.post('/:id/react',
 );
 
 // Send tip to post author (requires authentication)
-router.post('/:id/tip', 
+router.post('/:id/tip',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -156,9 +168,9 @@ router.get('/:id/engagement',
 );
 
 // Share post (requires authentication)
-router.post('/:id/share', 
+router.post('/:id/share',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }
@@ -188,9 +200,9 @@ router.get('/:id/comments',
 );
 
 // Add comment to post (requires authentication)
-router.post('/:id/comments', 
+router.post('/:id/comments',
   authMiddleware, // Apply auth only to this route
-  csrfProtection, 
+  csrfProtection,
   validateRequest({
     params: {
       id: { type: 'string', required: true }

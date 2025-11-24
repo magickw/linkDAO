@@ -609,7 +609,10 @@ export class FeedController {
       }
     } catch (error) {
       safeLogger.error('Error in getContentFromIPFS:', error);
-      res.status(500).json(apiResponse.error('Internal server error'));
+      // Ensure we return a 500 JSON response instead of crashing or timing out
+      if (!res.headersSent) {
+        res.status(500).json(apiResponse.error('Internal server error during content retrieval'));
+      }
     }
   }
 }

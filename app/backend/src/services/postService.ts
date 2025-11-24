@@ -118,8 +118,16 @@ export class PostService {
       const mediaCids: string[] = [];
       if (input.media) {
         for (let i = 0; i < input.media.length; i++) {
+          const mediaItem = input.media[i];
+
+          // Check if it's already a valid IPFS CID
+          if (mediaItem && (mediaItem.startsWith('Qm') || mediaItem.startsWith('bafy'))) {
+            mediaCids.push(mediaItem);
+            continue;
+          }
+
           try {
-            const mediaCid = await this.metadataService.uploadToIPFS(input.media[i]);
+            const mediaCid = await this.metadataService.uploadToIPFS(mediaItem);
             mediaCids.push(mediaCid);
           } catch (ipfsError) {
             safeLogger.warn(`IPFS upload failed for media ${i}, using fallback CID:`, ipfsError);
