@@ -12,6 +12,7 @@ import GestureHandler from '@/components/GestureHandler';
 import PostInteractionBar from '@/components/PostInteractionBar';
 import OptimizedImage from '@/components/OptimizedImage';
 import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
+import PostModal from '@/components/PostModal';
 import { generateAvatarPlaceholder, generateSVGPlaceholder } from '../utils/placeholderService';
 
 interface Reaction {
@@ -65,6 +66,7 @@ export default function Web3SocialPostCard({
   const [showTipInput, setShowTipInput] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([
     { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 120, userStaked: 0, contributors: [], rewardsEarned: 24.5 },
     { type: 'diamond', emoji: '💎', label: 'Diamond Hands', totalStaked: 85, userStaked: 0, contributors: [], rewardsEarned: 17.2 },
@@ -446,7 +448,8 @@ export default function Web3SocialPostCard({
       <GestureHandler
         onDoubleTap={handleDoubleTap}
         onLongPress={handleLongPress}
-        className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 ${postTypeStyles.borderColor} transition-all duration-300 hover:shadow-xl ${className}`}
+        onTap={() => setShowPostModal(true)}
+        className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border-l-4 ${postTypeStyles.borderColor} transition-all duration-300 hover:shadow-xl cursor-pointer ${className}`}
       >
         {/* Background gradient overlay */}
         <div className={`absolute inset-0 bg-gradient-to-br ${postTypeStyles.bgGradient} opacity-30 rounded-xl`} />
@@ -800,13 +803,25 @@ export default function Web3SocialPostCard({
 
       {/* Comments Section */}
       <div className="px-4 pb-4">
-        <EnhancedCommentSystem 
+        <EnhancedCommentSystem
           postId={post.id}
           initialComments={post.comments || []}
           postType="feed"
         />
       </div>
     </GestureHandler>
+
+    {/* Post Modal for full post view */}
+    <PostModal
+      post={post}
+      isOpen={showPostModal}
+      onClose={() => setShowPostModal(false)}
+      onReaction={onReaction}
+      onTip={onTip}
+      onShare={async (postId: string, shareType: string, message?: string) => {
+        console.log('Share clicked', postId, shareType, message);
+      }}
+    />
     </>
   );
 }
