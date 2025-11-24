@@ -8,6 +8,7 @@ interface EnhancedThemeContextType {
   accentColor: string;
   glassmorphismIntensity: 'low' | 'medium' | 'high';
   animationsEnabled: boolean;
+  spacing: (factor: number) => string;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setAccentColor: (color: string) => void;
   setGlassmorphismIntensity: (intensity: 'low' | 'medium' | 'high') => void;
@@ -83,7 +84,7 @@ export function EnhancedThemeProvider({
   // Apply theme and settings to document
   useEffect(() => {
     const root = document.documentElement;
-    
+
     // Apply theme class
     if (actualTheme === 'dark') {
       root.classList.add('dark');
@@ -93,7 +94,7 @@ export function EnhancedThemeProvider({
 
     // Apply accent color CSS variables
     root.style.setProperty('--accent-color', accentColor);
-    
+
     // Apply glassmorphism intensity
     const intensityValues = {
       low: {
@@ -136,12 +137,16 @@ export function EnhancedThemeProvider({
     setTheme(current => current === 'dark' ? 'light' : 'dark');
   };
 
+  // Material-UI compatible spacing function (8px base)
+  const spacing = (factor: number) => `${factor * 8}px`;
+
   const value = {
     theme,
     actualTheme,
     accentColor,
     glassmorphismIntensity,
     animationsEnabled,
+    spacing,
     setTheme,
     setAccentColor,
     setGlassmorphismIntensity,
@@ -274,11 +279,10 @@ export function EnhancedThemeToggle({
                     <motion.button
                       key={themeOption}
                       onClick={() => setTheme(themeOption)}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        theme === themeOption
+                      className={`p-2 rounded-lg text-sm font-medium transition-all duration-200 ${theme === themeOption
                           ? 'bg-primary-500 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
+                        }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -296,11 +300,10 @@ export function EnhancedThemeToggle({
                     <motion.button
                       key={color.value}
                       onClick={() => setAccentColor(color.value)}
-                      className={`w-8 h-8 rounded-lg border-2 transition-all duration-200 ${
-                        accentColor === color.value
+                      className={`w-8 h-8 rounded-lg border-2 transition-all duration-200 ${accentColor === color.value
                           ? 'border-gray-400 dark:border-gray-300 scale-110'
                           : 'border-gray-200 dark:border-gray-600'
-                      }`}
+                        }`}
                       style={{ backgroundColor: color.value }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
@@ -318,11 +321,10 @@ export function EnhancedThemeToggle({
                     <motion.button
                       key={intensity}
                       onClick={() => setGlassmorphismIntensity(intensity)}
-                      className={`p-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        glassmorphismIntensity === intensity
+                      className={`p-2 rounded-lg text-sm font-medium transition-all duration-200 ${glassmorphismIntensity === intensity
                           ? 'bg-primary-500 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
+                        }`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -338,9 +340,8 @@ export function EnhancedThemeToggle({
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Animations</h3>
                   <motion.button
                     onClick={() => setAnimationsEnabled(!animationsEnabled)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-                      animationsEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${animationsEnabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
                     whileTap={{ scale: 0.95 }}
                   >
                     <motion.span
@@ -376,9 +377,9 @@ export function ThemeAware({
   className = ''
 }: ThemeAwareProps) {
   const { actualTheme } = useEnhancedTheme();
-  
+
   const themeClass = actualTheme === 'dark' ? darkClass : lightClass;
-  
+
   return (
     <div className={`${className} ${themeClass}`}>
       {children}
@@ -392,7 +393,7 @@ export function useSystemTheme() {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const updateSystemTheme = () => {
       setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
     };

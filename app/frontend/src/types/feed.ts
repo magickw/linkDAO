@@ -59,7 +59,7 @@ export interface EnhancedPost {
   stakedValue: number;
   reputationScore: number;
   dao?: string; // Optional for quickPosts
-  
+
   // Engagement data
   reactions: Reaction[];
   tips: Tip[];
@@ -67,16 +67,18 @@ export interface EnhancedPost {
   shares: number;
   views: number;
   engagementScore: number;
-  
+
   // Enhanced features
   previews?: ContentPreview[]; // Made optional
+  hashtags?: string[]; // Hashtags extracted from content
+  mentions?: string[]; // User mentions in the post
   socialProof?: SocialProof;
   trendingStatus?: string | null;
   trendingScore?: number;
   isBookmarked?: boolean;
   communityId?: string; // Optional for quickPosts
   contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
-  
+
   // Additional fields from backend
   walletAddress?: string;
   profileCid?: string; // For avatar
@@ -88,7 +90,7 @@ export interface EnhancedPost {
   totalTipAmount?: number;
   commentCount?: number;
   viewCount?: number;
-  
+
   // Flag to distinguish quickPosts from regular posts
   isQuickPost?: boolean;
 }
