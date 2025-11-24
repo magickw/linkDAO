@@ -264,7 +264,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       {/* Header */}
       <div>
         <div>
-          <a href={`/public-profile/${post.author}`}>
+          <a href={`/u/${post.author}`}>
             {post.author.slice(0, 8)}...{post.author.slice(-4)}
           </a>
           <span>{formatTimestamp(post.createdAt)}</span>

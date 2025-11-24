@@ -43,7 +43,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
         </div>
         <div className="flex-1">
           <div className="flex items-center">
-            <Link href={`/public-profile/${post.author}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
+            <Link href={`/u/${post.author}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
               {profile.handle}
             </Link>
             {profile.ens && (

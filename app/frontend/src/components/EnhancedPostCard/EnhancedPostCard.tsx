@@ -278,7 +278,7 @@ const EnhancedPostCard = React.memo(({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <Link
-                        href={`/public-profile/${post.author}`}
+                        href={`/u/${post.author}`}
                         className="font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
                         aria-label={`View profile of ${post.authorProfile.handle}`}
                       >

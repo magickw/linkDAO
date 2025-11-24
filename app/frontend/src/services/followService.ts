@@ -1,3 +1,5 @@
+import { authService } from './authService';
+
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
@@ -13,10 +15,13 @@ export class FollowService {
    * @returns True if successful
    */
   static async follow(follower: string, following: string): Promise<boolean> {
+    const authHeaders = authService.getAuthHeaders();
+
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/follow`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       body: JSON.stringify({ follower, following }),
     });
@@ -36,10 +41,13 @@ export class FollowService {
    * @returns True if successful
    */
   static async unfollow(follower: string, following: string): Promise<boolean> {
+    const authHeaders = authService.getAuthHeaders();
+
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/unfollow`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
       body: JSON.stringify({ follower, following }),
     });
@@ -58,10 +66,13 @@ export class FollowService {
    * @returns Array of follower addresses
    */
   static async getFollowers(address: string): Promise<string[]> {
+    const authHeaders = authService.getAuthHeaders();
+
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/followers/${address}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     });
 
@@ -79,10 +90,13 @@ export class FollowService {
    * @returns Array of following addresses
    */
   static async getFollowing(address: string): Promise<string[]> {
+    const authHeaders = authService.getAuthHeaders();
+
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/following/${address}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     });
 
@@ -101,19 +115,30 @@ export class FollowService {
    * @returns True if following, false otherwise
    */
   static async isFollowing(follower: string, following: string): Promise<boolean> {
-    const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/is-following/${follower}/${following}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const authHeaders = authService.getAuthHeaders();
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to check follow status');
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/is-following/${follower}/${following}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
+      });
+
+      if (!response.ok) {
+        // If not authenticated or error, assume not following
+        console.warn('Failed to check follow status:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      // Handle different response formats
+      return data.isFollowing || data || false;
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+      return false; // Default to not following on error
     }
-
-    return response.json();
   }
 
   /**
@@ -122,10 +147,13 @@ export class FollowService {
    * @returns Object with followers and following counts
    */
   static async getFollowCount(address: string): Promise<{ followers: number, following: number }> {
+    const authHeaders = authService.getAuthHeaders();
+
     const response = await fetch(`${BACKEND_API_BASE_URL}/api/follow/count/${address}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
       },
     });
 

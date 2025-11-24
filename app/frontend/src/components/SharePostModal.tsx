@@ -37,6 +37,11 @@ interface SharePostModalProps {
     author: string;
     dao?: string;
     communityId?: string;
+    communityName?: string;
+    authorProfile?: {
+      avatar?: string;
+      handle?: string;
+    };
   };
   postType: 'feed' | 'community' | 'enhanced';
   onShare?: (postId: string, shareType: string, message?: string) => Promise<void>;
@@ -244,20 +249,40 @@ export default function SharePostModal({
         {/* Post Preview */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
           <div className="flex items-start space-x-3">
-            <div className="bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm">
-                {post.author.slice(0, 2).toUpperCase()}
-              </span>
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              {post.authorProfile?.avatar ? (
+                <img
+                  src={post.authorProfile.avatar}
+                  alt={post.authorProfile.handle || post.author}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to gradient on error
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextSibling) {
+                      (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <div
+                className="bg-gradient-to-br from-primary-400 to-secondary-500 w-full h-full flex items-center justify-center"
+                style={{ display: post.authorProfile?.avatar ? 'none' : 'flex' }}
+              >
+                <span className="text-white font-bold text-sm">
+                  {(post.authorProfile?.handle || post.author).slice(0, 2).toUpperCase()}
+                </span>
+              </div>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {post.author.slice(0, 6)}...{post.author.slice(-4)}
+                  {post.authorProfile?.handle || `${post.author.slice(0, 6)}...${post.author.slice(-4)}`}
                 </span>
-                {post.dao && (
+                {post.communityName && (
                   <>
                     <span>•</span>
-                    <span>/dao/{post.dao}</span>
+                    <span>{post.communityName}</span>
                   </>
                 )}
               </div>
