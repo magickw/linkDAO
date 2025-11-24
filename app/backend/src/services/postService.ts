@@ -120,8 +120,11 @@ export class PostService {
         for (let i = 0; i < input.media.length; i++) {
           const mediaItem = input.media[i];
 
-          // Check if it's already a valid IPFS CID
-          if (mediaItem && (mediaItem.startsWith('Qm') || mediaItem.startsWith('bafy'))) {
+          // Check if it's already a valid IPFS CID (supports all CIDv0 and CIDv1 formats)
+          // CIDv0: starts with 'Qm' (base58btc, 46 characters)
+          // CIDv1: starts with 'b' (typically 'bafy', 'bafk', 'bafkrei', etc.)
+          if (mediaItem && (mediaItem.startsWith('Qm') || mediaItem.startsWith('b'))) {
+            safeLogger.info(`Media item ${i} is already a valid IPFS CID: ${mediaItem.substring(0, 20)}...`);
             mediaCids.push(mediaItem);
             continue;
           }
