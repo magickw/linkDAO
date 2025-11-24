@@ -22,13 +22,17 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   quality = 75,
   onError
 }) => {
+  // Handle IPFS CIDs
+  const isIpfsCid = src.startsWith('Qm') || src.startsWith('baf');
+  const finalSrc = isIpfsCid ? `https://gateway.pinata.cloud/ipfs/${src}` : src;
+
   // Handle external URLs by using img tag with loading optimization
-  if (src.startsWith('http')) {
+  if (finalSrc.startsWith('http')) {
     return (
       <div className={className} style={{ position: 'relative', width, height }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={src}
+          src={finalSrc}
           alt={alt}
           width={width}
           height={height}

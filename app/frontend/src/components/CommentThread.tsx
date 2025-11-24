@@ -66,10 +66,10 @@ export default function CommentThread({
 
     // Toggle vote if clicking the same type
     const finalVoteType = userVote === voteType ? 'remove' : voteType;
-    
+
     // Optimistically update UI
     setUserVote(finalVoteType === 'remove' ? null : voteType);
-    
+
     // Call parent handler
     onVote(comment.id, finalVoteType as 'upvote' | 'downvote');
   };
@@ -77,9 +77,9 @@ export default function CommentThread({
   // Handle reply submission
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!replyContent.trim()) return;
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to reply', 'error');
       return;
@@ -92,7 +92,7 @@ export default function CommentThread({
 
     try {
       setReplySubmitting(true);
-      
+
       const replyData: CreateCommentInput = {
         postId: comment.postId,
         parentId: comment.id,
@@ -101,12 +101,12 @@ export default function CommentThread({
       };
 
       const newReply = await CommunityPostService.createComment(replyData);
-      
+
       // Add new reply to the list
       setReplies(prevReplies => [...prevReplies, newReply]);
       setReplyContent('');
       setShowReplyForm(false);
-      
+
       addToast('Reply posted!', 'success');
     } catch (err) {
       console.error('Error posting reply:', err);
@@ -129,11 +129,10 @@ export default function CommentThread({
           <button
             onClick={() => handleVote('upvote')}
             disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${
-              userVote === 'upvote'
+            className={`p-1 rounded transition-colors duration-200 ${userVote === 'upvote'
                 ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
                 : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-            } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -141,13 +140,12 @@ export default function CommentThread({
           </button>
 
           {/* Vote Score */}
-          <span className={`text-xs font-bold ${
-            voteScore > 0 
-              ? 'text-orange-500' 
-              : voteScore < 0 
-                ? 'text-blue-500' 
+          <span className={`text-xs font-bold ${voteScore > 0
+              ? 'text-orange-500'
+              : voteScore < 0
+                ? 'text-blue-500'
                 : 'text-gray-500 dark:text-gray-400'
-          }`}>
+            }`}>
             {voteScore}
           </span>
 
@@ -155,11 +153,10 @@ export default function CommentThread({
           <button
             onClick={() => handleVote('downvote')}
             disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${
-              userVote === 'downvote'
+            className={`p-1 rounded transition-colors duration-200 ${userVote === 'downvote'
                 ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
                 : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-            } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           >
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -173,8 +170,21 @@ export default function CommentThread({
           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="font-medium text-gray-900 dark:text-white">
               {(() => {
-                const author = (comment as any).author || (comment as any).authorId || '';
-                return author ? `u/${author.slice(0, 6)}...${author.slice(-4)}` : 'u/unknown';
+                const author = (comment as any).author;
+                const authorId = (comment as any).authorId;
+
+                let displayAuthor = '';
+                if (typeof author === 'string') {
+                  displayAuthor = author;
+                } else if (author && typeof author === 'object') {
+                  displayAuthor = author.walletAddress || author.handle || '';
+                }
+
+                if (!displayAuthor && authorId) {
+                  displayAuthor = authorId;
+                }
+
+                return displayAuthor ? `u/${displayAuthor.slice(0, 6)}...${displayAuthor.slice(-4)}` : 'u/unknown';
               })()}
             </span>
             <span>•</span>
@@ -240,8 +250,8 @@ export default function CommentThread({
                     <span>Reply</span>
                   </button>
                 )}
-                
-                <button 
+
+                <button
                   onClick={() => {
                     const commentUrl = `${window.location.href}#comment-${comment.id}`;
                     navigator.clipboard.writeText(commentUrl);
@@ -254,8 +264,8 @@ export default function CommentThread({
                   </svg>
                   <span>Share</span>
                 </button>
-                
-                <button 
+
+                <button
                   onClick={() => {
                     // TODO: Implement save comment functionality
                     addToast('Comment saved!', 'success');
@@ -270,7 +280,7 @@ export default function CommentThread({
 
                 {/* Report/More options */}
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={() => {
                       // TODO: Implement more options menu
                       addToast('More options coming soon!', 'info');

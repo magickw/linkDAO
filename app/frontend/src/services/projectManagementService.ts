@@ -1,10 +1,10 @@
-import { 
-  TimeTracking, 
-  ProjectDeliverable, 
-  MilestonePayment, 
-  ProjectThread, 
-  ProjectMessage, 
-  ProjectApproval, 
+import {
+  TimeTracking,
+  ProjectDeliverable,
+  MilestonePayment,
+  ProjectThread,
+  ProjectMessage,
+  ProjectApproval,
   ProjectFile,
   ProjectDashboard,
   StartTimeTrackingRequest,
@@ -24,7 +24,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10
 class ProjectManagementService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken') || localStorage.getItem('auth_token') || '';
-    
+
     const response = await fetch(`${API_BASE_URL}/api/project-management${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -165,14 +165,14 @@ class ProjectManagementService {
   async downloadFile(fileHash: string, fileName: string): Promise<void> {
     // This would integrate with IPFS service to download files
     // Implementation would depend on how files are stored and retrieved
-    const ipfsGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://ipfs.io/ipfs/';
+    const ipfsGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/';
     const url = `${ipfsGateway}${fileHash}`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to download file');
     }
-    
+
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -188,7 +188,7 @@ class ProjectManagementService {
   subscribeToProjectUpdates(bookingId: string, callback: (update: any) => void): () => void {
     // This would set up real-time subscriptions for project updates
     // For now, return a no-op unsubscribe function
-    return () => {};
+    return () => { };
   }
 
   // Analytics and reporting
@@ -203,7 +203,7 @@ class ProjectManagementService {
     }>;
   }> {
     const timeRecords = await this.getTimeTrackingByBooking(bookingId);
-    
+
     let filteredRecords = timeRecords;
     if (startDate || endDate) {
       filteredRecords = timeRecords.filter(record => {
