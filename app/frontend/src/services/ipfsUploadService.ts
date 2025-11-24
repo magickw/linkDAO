@@ -1,3 +1,5 @@
+import { authService } from './authService';
+
 export interface UploadResult {
   cid: string;
   url: string;
@@ -39,15 +41,43 @@ class IPFSUploadService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/support/upload', {
+    // Get auth headers
+    const authHeaders = authService.getAuthHeaders();
+
+    // Create headers object for fetch
+    const headers: Record<string, string> = {};
+    // Copy auth headers
+    Object.entries(authHeaders).forEach(([key, value]) => {
+      headers[key] = value;
+    });
+
+    const response = await fetch('/api/ipfs/upload', {
       method: 'POST',
+      headers,
       body: formData,
     });
 
-    if (!response.ok) throw new Error('Upload failed');
+    if (!response.ok) {
+      let errorMessage = 'Upload failed';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore JSON parse error
+      }
+      throw new Error(errorMessage);
+    }
 
     const data = await response.json();
-    return data.data;
+
+    // Map backend response to UploadResult
+    // Backend returns: { success: true, data: { ipfsHash: '...', ... } }
+    return {
+      cid: data.data.ipfsHash,
+      url: data.data.url || `https://ipfs.io/ipfs/${data.data.ipfsHash}`,
+      size: data.data.size || file.size,
+      type: data.data.mimeType || file.type
+    };
   }
 
   async uploadMultiple(files: File[]): Promise<UploadResult[]> {

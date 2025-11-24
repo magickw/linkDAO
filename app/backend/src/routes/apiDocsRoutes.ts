@@ -721,18 +721,22 @@ router.get('/:slug', (req, res) => {
       filename = 'TECHNICAL_WHITEPAPER.md';
     }
 
-    // Build file path - look in the docs directory relative to the project
-    // Try multiple possible paths based on deployment context
+    // Build file path - look for docs in multiple possible locations
+    // Since docs are in frontend/public/docs, we need to check the relative path from backend
     const possiblePaths = [
-      // Production: docs in the same directory structure
-      path.join(__dirname, '../docs', filename),
-      // Alternative: docs in public directory
+      // Standard relative path from backend to frontend docs
+      path.join(__dirname, '../../../frontend/public/docs', filename),
+      // Alternative path when running from project root
+      path.join(process.cwd(), 'app', 'frontend', 'public', 'docs', filename),
+      // Path when backend and docs are deployed together
       path.join(__dirname, '../../public/docs', filename),
-      // For different deployment scenarios
-      path.join(process.cwd(), 'public', 'docs', filename),
       // Direct path resolution
-      path.resolve('./public/docs', filename),
-      path.resolve('./docs', filename)
+      path.resolve(__dirname, '../../../frontend/public/docs', filename),
+      path.resolve(process.cwd(), 'app/frontend/public/docs', filename),
+      path.resolve('./app/frontend/public/docs', filename),
+      // In case docs are copied to backend
+      path.join(__dirname, '../public/docs', filename),
+      path.join(__dirname, '../../docs', filename)
     ];
     
     let filePath: string | null = null;
@@ -752,7 +756,8 @@ router.get('/:slug', (req, res) => {
         error: {
           code: 'DOC_NOT_FOUND',
           message: 'Document not found',
-          slug: sanitizedSlug
+          slug: sanitizedSlug,
+          triedPaths: possiblePaths // Include this for debugging purposes
         }
       });
     }

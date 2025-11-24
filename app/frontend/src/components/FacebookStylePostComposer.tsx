@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { ipfsUploadService } from '@/services/ipfsUploadService';
 import { CreatePostInput } from '@/models/Post';
 import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X } from 'lucide-react';
 
@@ -66,22 +67,17 @@ const FacebookStylePostComposer = React.memo(({
     return matches ? matches.map(tag => tag.substring(1)) : [];
   }, []);
 
-  const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
+  // ... (imports)
 
-    const response = await fetch('/api/ipfs/upload', {
-      method: 'POST',
-      body: formData,
-    });
+  // ... (interface)
 
-    if (!response.ok) {
-      throw new Error('Failed to upload file');
-    }
+  // ... (component start)
 
-    const data = await response.json();
-    return data.data.ipfsHash;
-  };
+  // ... (state)
+
+  // ... (effects)
+
+  // ... (extractHashtags)
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +99,10 @@ const FacebookStylePostComposer = React.memo(({
       if (selectedFiles.length > 0) {
         try {
           // Show loading state or toast here if needed
-          const uploadPromises = selectedFiles.map(file => uploadFile(file));
+          const uploadPromises = selectedFiles.map(async (file) => {
+            const result = await ipfsUploadService.uploadFile(file);
+            return result.cid;
+          });
           mediaCids = await Promise.all(uploadPromises);
         } catch (uploadError) {
           console.error('Error uploading files:', uploadError);

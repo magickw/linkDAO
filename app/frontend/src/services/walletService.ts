@@ -423,10 +423,11 @@ export class WalletService {
     const chainId = this.publicClient.chain?.id || 1;
 
     // Map chain IDs to their explorer APIs
+    // Note: Basescan has been deprecated - use Etherscan V2 API for Base chains
     const explorerConfigs: Record<number, { baseUrl: string; apiKey?: string }> = {
       1: { baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY },
-      8453: { baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY },
-      84532: { baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY },
+      8453: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY }, // Base uses Etherscan V2
+      84532: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY }, // Base Sepolia uses Etherscan V2
       137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY },
       42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY },
       11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY },
@@ -438,9 +439,9 @@ export class WalletService {
       return [];
     }
 
-    // Try unified v2 endpoint first
+    // Try unified v2 endpoint first (for chains that support it)
     const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-    if (unifiedKey && chainId !== 11155111) {
+    if (unifiedKey && [8453, 84532, 42161, 137].includes(chainId)) { // Base, Base Sepolia, Arbitrum, Polygon
       try {
         const url = new URL('https://api.etherscan.io/v2/api');
         url.searchParams.set('chainid', String(chainId));
@@ -605,10 +606,11 @@ export class WalletService {
   async getTransactionHistory(address: Address, limit: number = 20): Promise<Transaction[]> {
     try {
       // Map chain IDs to their explorer APIs
+      // Note: Basescan has been deprecated - use Etherscan V2 API for Base chains
       const explorerConfigs: Record<number, { baseUrl: string; apiKey?: string; nativeSymbol: string }> = {
         1: { baseUrl: 'https://api.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
-        8453: { baseUrl: 'https://api.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
-        84532: { baseUrl: 'https://api-sepolia.basescan.org/api', apiKey: process.env.NEXT_PUBLIC_BASESCAN_API_KEY, nativeSymbol: 'ETH' },
+        8453: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' }, // Base uses Etherscan V2
+        84532: { baseUrl: 'https://api.etherscan.io/v2/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' }, // Base Sepolia uses Etherscan V2
         137: { baseUrl: 'https://api.polygonscan.com/api', apiKey: process.env.NEXT_PUBLIC_POLYGONSCAN_API_KEY, nativeSymbol: 'MATIC' },
         42161: { baseUrl: 'https://api.arbiscan.io/api', apiKey: process.env.NEXT_PUBLIC_ARBISCAN_API_KEY, nativeSymbol: 'ETH' },
         11155111: { baseUrl: 'https://api-sepolia.etherscan.io/api', apiKey: process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY, nativeSymbol: 'ETH' },
@@ -622,9 +624,9 @@ export class WalletService {
 
       const transactions: Transaction[] = [];
 
-      // Try unified v2 endpoint first if API key is available
+      // Try unified v2 endpoint first if API key is available (for chains that support it)
       const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-      if (unifiedKey && this.chainId !== 11155111) {
+      if (unifiedKey && [8453, 84532, 42161, 137].includes(this.chainId)) { // Base, Base Sepolia, Arbitrum, Polygon
         try {
           // Fetch native token transactions
           const nativeUrl = new URL('https://api.etherscan.io/v2/api');

@@ -111,42 +111,10 @@ export default function EnhancedHomeFeed({
     );
   }, [posts, searchQuery]);
 
-  
+
 
   return (
     <div className={className}>
-      {/* Enhanced Feed Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Feed</h2>
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-              <MessageCircle className="w-4 h-4 mr-1" />
-              Following + Yours
-            </span>
-          </div>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          See the latest posts from accounts you follow and your own posts
-        </p>
-      </div>
-
-      {/* Feed Filter - Simplified to only show Following */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex space-x-1 bg-white dark:bg-gray-800 rounded-xl p-1 shadow-sm">
-          <button
-            onClick={() => setActiveTab('following')}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'following'
-              ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-          >
-            <MessageCircle className="w-4 h-4 inline mr-1" />
-            Following + Yours
-          </button>
-        </div>
-      </div>
-
       {/* Enhanced Posts Feed */}
       <div className="space-y-6">
         {filteredPosts.map((post, index) => (
