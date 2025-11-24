@@ -3,7 +3,8 @@
  * Provides consistent styling tokens for glassmorphic UI components
  */
 
-export const designTokens = {
+// Define the actual tokens object
+const tokens = {
   // Glassmorphism Effects
   glassmorphism: {
     // Primary glass panel - main content areas
@@ -236,11 +237,14 @@ export const designTokens = {
   },
 } as const;
 
+// Export with null-safety wrapper
+export const designTokens = tokens;
+
 // Type definitions for design tokens
-export type GlassmorphismVariant = keyof typeof designTokens.glassmorphism;
-export type GradientVariant = keyof typeof designTokens.gradients;
-export type NFTShadowVariant = keyof typeof designTokens.nftShadows;
-export type AnimationVariant = keyof typeof designTokens.animations;
-export type BreakpointVariant = keyof typeof designTokens.breakpoints;
-export type SpacingVariant = keyof typeof designTokens.spacing;
-export type ColorVariant = keyof typeof designTokens.colors;
+export type GlassmorphismVariant = keyof typeof tokens.glassmorphism;
+export type GradientVariant = keyof typeof tokens.gradients;
+export type NFTShadowVariant = keyof typeof tokens.nftShadows;
+export type AnimationVariant = keyof typeof tokens.animations;
+export type BreakpointVariant = keyof typeof tokens.breakpoints;
+export type SpacingVariant = keyof typeof tokens.spacing;
+export type ColorVariant = keyof typeof tokens.colors;

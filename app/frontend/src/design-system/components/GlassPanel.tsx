@@ -28,15 +28,15 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
   variant = 'primary',
   nftShadow,
   hoverable = false,
-  padding = designTokens.spacing.lg,
+  padding = designTokens?.spacing?.lg || '1.5rem',
   margin = '0',
   className = '',
   children,
   ...motionProps
 }) => {
-  const glassStyle = designTokens.glassmorphism[variant];
-  const nftShadowStyle = nftShadow ? designTokens.nftShadows[nftShadow] : null;
-  const hoverAnimation = hoverable ? designTokens.animations.hover : {};
+  const glassStyle = designTokens?.glassmorphism?.[variant] || designTokens.glassmorphism.primary;
+  const nftShadowStyle = nftShadow ? (designTokens?.nftShadows?.[nftShadow] || null) : null;
+  const hoverAnimation = hoverable ? (designTokens?.animations?.hover || {}) : {};
 
   const combinedStyle = {
     ...glassStyle,

@@ -21,7 +21,21 @@ const EnhancedThemeContext = createContext<EnhancedThemeContextType | undefined>
 export function useEnhancedTheme() {
   const context = useContext(EnhancedThemeContext);
   if (!context) {
-    throw new Error('useEnhancedTheme must be used within an EnhancedThemeProvider');
+    // Return a fallback context instead of throwing
+    console.warn('useEnhancedTheme used outside of EnhancedThemeProvider, using fallback values');
+    return {
+      theme: 'system' as const,
+      actualTheme: 'light' as const,
+      accentColor: '#3b82f6',
+      glassmorphismIntensity: 'medium' as const,
+      animationsEnabled: true,
+      spacing: (factor: number) => `${factor * 8}px`,
+      setTheme: () => {},
+      setAccentColor: () => {},
+      setGlassmorphismIntensity: () => {},
+      setAnimationsEnabled: () => {},
+      toggleTheme: () => {},
+    };
   }
   return context;
 }
