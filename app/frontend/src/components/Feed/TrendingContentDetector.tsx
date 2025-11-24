@@ -109,7 +109,7 @@ function calculateTrendingScore(post: EnhancedPost, config: TrendingAlgorithmCon
 
   // Engagement score (reactions, tips, comments, shares)
   const engagementScore = (
-    post.reactions.reduce((sum, r) => sum + r.totalStaked, 0) * 2 +
+    post.reactions.reduce((sum, r) => sum + r.totalAmount, 0) * 2 +
     post.tips.reduce((sum, t) => sum + t.amount, 0) * 3 +
     post.comments * 1.5 +
     post.shares * 2

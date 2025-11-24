@@ -47,31 +47,18 @@ const PostItem: React.FC<{
     id: preview.id || `${post.id}-${preview.url}`,
     type: preview.type as 'nft' | 'link' | 'proposal' | 'token',
     url: preview.url,
-    data: preview.data || {},
+    data: preview.data || {} as any,
     metadata: preview.metadata || {},
     cached: preview.cached || false,
-    securityStatus: preview.securityStatus === 'danger' ? 'blocked' : (preview.securityStatus as 'safe' | 'warning' | 'blocked') || 'safe'
+    securityStatus: (preview.securityStatus as 'safe' | 'warning' | 'blocked') || 'safe'
   }));
-  
-  // Map feed reactions to TokenReaction type
-  const mappedReactions = (post.reactions || []).map((reaction: FeedReaction) => ({
-    type: reaction.type as 'hot' | 'diamond' | 'bullish' | 'governance' | 'art',
-    emoji: reaction.type, // Using type as emoji for now
-    label: reaction.type,
-    totalStaked: reaction.totalAmount || 0,
-    userStaked: 0, // Default value
-    contributors: reaction.users?.map(user => user.address) || [],
-    rewardsEarned: 0 // Default value
-  }));
-  
-  // Map feed tips to TipActivity type
-  const mappedTips = (post.tips || []).map((tip: FeedTip) => ({
-    amount: tip.amount,
-    token: tip.tokenType, // Map tokenType to token
-    from: tip.from,
-    timestamp: tip.timestamp
-  }));
-  
+
+  // Use reactions directly from post (already in correct format)
+  const mappedReactions = post.reactions || [];
+
+  // Use tips directly from post (already in correct format)
+  const mappedTips = post.tips || [];
+
   // Map trending status to correct type
   let trendingStatus: 'hot' | 'rising' | 'viral' | 'breaking' | undefined = undefined;
   if (post.trendingStatus) {
@@ -122,6 +109,12 @@ const PostItem: React.FC<{
           shares: post.shares || 0,
           views: post.views || 0,
           engagementScore: post.engagementScore || 0,
+          // Required fields from SharedEnhancedPost
+          reputationScore: post.reputationScore || 0,
+          parentId: post.parentId || null,
+          mediaCids: post.mediaCids || [],
+          onchainRef: post.onchainRef || '',
+          stakedValue: post.stakedValue || 0,
           socialProof: post.socialProof || {
             followedUsersWhoEngaged: [],
             totalEngagementFromFollowed: 0,

@@ -5,7 +5,7 @@ import InfiniteScrollFeed from './InfiniteScrollFeed';
 import LikedByModal from './LikedByModal';
 import TrendingContentDetector, { TrendingBadge } from './TrendingContentDetector';
 import CommunityEngagementMetrics from './CommunityEngagementMetrics';
-import EnhancedPostCard from '../EnhancedPostCard/EnhancedPostCard';
+import EnhancedPostCard, { EnhancedPost as CardEnhancedPost } from '../EnhancedPostCard/EnhancedPostCard';
 import { useToast } from '@/context/ToastContext';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { analyticsService } from '@/services/analyticsService';
@@ -147,8 +147,8 @@ const EnhancedFeedView = React.memo(({
     userAddress: address || '', // Add user address for personalized feed
     ...initialFilter
   });
-  const [posts, setPosts] = useState<EnhancedPost[]>([]);
-  const [trendingPosts, setTrendingPosts] = useState<EnhancedPost[]>([]);
+  const [posts, setPosts] = useState<CardEnhancedPost[]>([]);
+  const [trendingPosts, setTrendingPosts] = useState<CardEnhancedPost[]>([]);
   const [likedByModal, setLikedByModal] = useState<{ isOpen: boolean; postId: string }>({
     isOpen: false,
     postId: ''
@@ -208,7 +208,7 @@ const EnhancedFeedView = React.memo(({
   }, [updateTimeRange]);
 
   // Convert feed post to card post format with profile fetching - memoized
-  const convertFeedPostToCardPost = useCallback(async (feedPost: FeedEnhancedPost): Promise<EnhancedPost> => {
+  const convertFeedPostToCardPost = useCallback(async (feedPost: FeedEnhancedPost): Promise<CardEnhancedPost> => {
     // Fetch profile if not cached
     let profile = profileCacheRef.current.get(feedPost.author);
     if (!profile) {
@@ -252,32 +252,24 @@ const EnhancedFeedView = React.memo(({
         id: p.id || `${feedPost.id}-${p.url}`,
         type: p.type as 'nft' | 'link' | 'proposal' | 'token',
         url: p.url,
-        data: p.data || {},
+        data: p.data || {} as any,
         metadata: p.metadata || {},
         cached: p.cached || false,
-        securityStatus: p.securityStatus === 'danger' ? 'blocked' : (p.securityStatus as 'safe' | 'warning' | 'blocked') || 'safe'
+        securityStatus: (p.securityStatus as 'safe' | 'warning' | 'blocked') || 'safe'
       })),
       hashtags: feedPost.tags || [],
       mentions: [],
-      reactions: feedPost.reactions?.map(r => ({
-        type: r.type as 'hot' | 'diamond' | 'bullish' | 'governance' | 'art',
-        emoji: r.type,
-        label: r.type,
-        totalStaked: r.totalAmount,
-        userStaked: 0,
-        contributors: r.users.map(u => u.address),
-        rewardsEarned: 0
-      })) || [],
-      tips: feedPost.tips?.map(t => ({
-        amount: t.amount,
-        token: t.tokenType,
-        from: t.from,
-        timestamp: t.timestamp
-      })) || [],
+      reactions: feedPost.reactions || [],
+      tips: feedPost.tips || [],
       comments: feedPost.comments || 0,
       shares: feedPost.shares || 0,
       views: feedPost.views || 0,
       engagementScore: feedPost.engagementScore || 0,
+      reputationScore: feedPost.reputationScore || 0,
+      parentId: feedPost.parentId || null,
+      mediaCids: feedPost.mediaCids || [],
+      onchainRef: feedPost.onchainRef || '',
+      stakedValue: feedPost.stakedValue || 0,
       socialProof: feedPost.socialProof ? {
         followedUsersWhoEngaged: feedPost.socialProof.followedUsersWhoEngaged.map((u: any) => ({
           ...u,
@@ -331,7 +323,7 @@ const EnhancedFeedView = React.memo(({
   }, [convertFeedPostToCardPost]);
 
   // Handle trending updates - memoized
-  const handleTrendingUpdate = useCallback((trending: EnhancedPost[]) => {
+  const handleTrendingUpdate = useCallback((trending: CardEnhancedPost[]) => {
     setTrendingPosts(trending);
   }, []);
 
@@ -379,7 +371,7 @@ const EnhancedFeedView = React.memo(({
   }, [filter, communityId]);
 
   // Render post card with enhanced features - memoized
-  const renderPost = useCallback((post: EnhancedPost) => (
+  const renderPost = useCallback((post: CardEnhancedPost) => (
     <div key={post.id} className="mb-4">
       <EnhancedPostCard
         post={post}
@@ -723,14 +715,14 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
 interface PaginatedFeedProps {
   filter: FeedFilter;
   postsPerPage: number;
-  renderPost: (post: EnhancedPost) => React.ReactNode;
-  onPostsUpdate: (posts: EnhancedPost[]) => void;
-  convertPost: (feedPost: FeedEnhancedPost) => EnhancedPost | Promise<EnhancedPost>;
+  renderPost: (post: CardEnhancedPost) => React.ReactNode;
+  onPostsUpdate: (posts: CardEnhancedPost[]) => void;
+  convertPost: (feedPost: FeedEnhancedPost) => CardEnhancedPost | Promise<CardEnhancedPost>;
   onError: (error: FeedError) => void;
 }
 
 function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, convertPost, onError }: PaginatedFeedProps) {
-  const [posts, setPosts] = useState<EnhancedPost[]>([]);
+  const [posts, setPosts] = useState<CardEnhancedPost[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);

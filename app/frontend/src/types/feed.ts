@@ -69,9 +69,9 @@ export interface EnhancedPost {
   engagementScore: number;
 
   // Enhanced features
-  previews?: ContentPreview[]; // Made optional
-  hashtags?: string[]; // Hashtags extracted from content
-  mentions?: string[]; // User mentions in the post
+  previews: ContentPreview[]; // Required for consistency with components
+  hashtags: string[]; // Hashtags extracted from content - required
+  mentions: string[]; // User mentions in the post - required
   socialProof?: SocialProof;
   trendingStatus?: string | null;
   trendingScore?: number;
@@ -118,15 +118,9 @@ export interface Tip {
   timestamp: Date;
 }
 
-export interface ContentPreview {
-  id?: string;
-  type: string;
-  url: string;
-  data?: any;
-  metadata?: any;
-  cached?: boolean;
-  securityStatus?: 'safe' | 'warning' | 'danger';
-}
+// Import ContentPreview from the dedicated types file to avoid duplication
+import type { ContentPreview } from './contentPreview';
+export type { ContentPreview } from './contentPreview';
 
 export interface SocialProof {
   followedUsersWhoEngaged: User[];

@@ -76,6 +76,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
 
     // Enhanced features (will be populated by services)
     previews: [] as ContentPreview[],
+    hashtags: [],  // Required field
+    mentions: [],  // Required field
     socialProof: undefined,
     trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
     trendingScore: backendPost.trendingScore || 0,

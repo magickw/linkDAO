@@ -12,59 +12,18 @@ import GestureHandler from '../GestureHandler';
 import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../VisualPolish';
 import EnhancedCommentSystem from '../EnhancedCommentSystem';
 import { analyticsService } from '@/services/analyticsService';
-import { AuthorProfile } from '@/types/feed';
+import { EnhancedPost as SharedEnhancedPost, AuthorProfile, Reaction, Tip } from '@/types/feed';
 
-export interface EnhancedPost {
-  id: string;
-  title?: string; // Optional for compatibility with quickPosts
-  content: string;
-  contentCid: string;  // Add the contentCid property
-  author: string;
-  authorProfile: AuthorProfile;
-  createdAt: Date;
-  updatedAt: Date;
-
-  // Enhanced content
-  contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
-  media?: string[];
-  previews: ContentPreview[];
-  hashtags: string[];
-  mentions: string[];
-
-  // Engagement data
-  reactions: TokenReaction[];
-  tips: TipActivity[];
-  comments: number;
-  shares: number;
-  views: number;
-  engagementScore: number;
-
-  // Social proof
-  socialProof: SocialProofData;
-  trendingStatus?: TrendingLevel;
+// Use the shared EnhancedPost type with extended properties for component-specific needs
+export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' | 'socialProof'> {
+  // Social proof - optional and uses component-specific type
+  socialProof?: SocialProofData;
+  trendingStatus?: TrendingLevel | string | null; // Allow both TrendingLevel and string
   pinnedUntil?: Date;
 
   // Community context
-  communityId?: string;
   communityName?: string;
-  tags?: string[];
-}
-
-interface TokenReaction {
-  type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
-  emoji: string;
-  label: string;
-  totalStaked: number;
-  userStaked: number;
-  contributors: string[];
-  rewardsEarned: number;
-}
-
-interface TipActivity {
-  amount: number;
-  token: string;
-  from: string;
-  timestamp: Date;
+  media?: string[];
 }
 
 interface EnhancedPostCardProps {
@@ -111,10 +70,17 @@ const EnhancedPostCard = React.memo(({
 
   // Calculate trending level if not provided - memoized
   const trendingLevel = useMemo(() => {
-    return post.trendingStatus || calculateTrendingLevel(
+    // If trendingStatus is already a valid TrendingLevel, use it
+    if (post.trendingStatus && typeof post.trendingStatus === 'string' &&
+        ['hot', 'rising', 'viral', 'breaking'].includes(post.trendingStatus)) {
+      return post.trendingStatus as TrendingLevel;
+    }
+
+    // Otherwise calculate it
+    return calculateTrendingLevel(
       post.engagementScore,
       post.createdAt,
-      post.reactions.reduce((sum, r) => sum + r.totalStaked, 0),
+      post.reactions.reduce((sum, r) => sum + r.totalAmount, 0),
       post.comments,
       post.shares
     );
@@ -481,7 +447,7 @@ const EnhancedPostCard = React.memo(({
                   author: post.author,
                   dao: post.communityName || 'general',
                   commentCount: post.comments,
-                  stakedValue: post.reactions.reduce((sum, r) => sum + r.totalStaked, 0)
+                  stakedValue: post.reactions.reduce((sum, r) => sum + r.totalAmount, 0)
                 }}
                 postType={post.communityId ? 'community' : 'feed'} // Use appropriate post type
                 onComment={() => {
