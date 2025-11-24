@@ -127,11 +127,11 @@ class AuthService {
         }
       }
 
-      // Check if we already have a valid session for this address
+      // Check if we already have a valid session for this address (case-insensitive)
       if (this.token && !this.token.startsWith('mock_token_')) {
         try {
           const currentUser = await this.getCurrentUser();
-          if (currentUser && currentUser.address === address) {
+          if (currentUser && currentUser.address?.toLowerCase() === address.toLowerCase()) {
             console.log('✅ Reusing existing valid session for address:', address);
             return {
               success: true,
@@ -157,7 +157,8 @@ class AuthService {
         const storedUserData = localStorage.getItem('linkdao_user_data') ||
           localStorage.getItem('user_data');
 
-        if (storedToken && storedAddress === address && storedTimestamp && storedUserData) {
+        // Case-insensitive address comparison for session validation
+        if (storedToken && storedAddress?.toLowerCase() === address.toLowerCase() && storedTimestamp && storedUserData) {
           const timestamp = parseInt(storedTimestamp);
           const now = Date.now();
           const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours

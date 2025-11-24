@@ -724,6 +724,8 @@ app.use('/', proxyRoutes);
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';
 // Import link safety routes
 import linkSafetyRoutes from './routes/linkSafetyRoutes';
+// Import auth middleware for admin routes
+import { authMiddleware } from './middleware/authMiddleware';
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
@@ -861,23 +863,23 @@ app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
 // Link safety routes
 app.use('/api/link-safety', linkSafetyRoutes);
 
-// Admin routes
-app.use('/api/admin', adminRoutes);
+// Admin routes - Apply authMiddleware first to populate req.user
+app.use('/api/admin', authMiddleware, adminRoutes);
 
 // Admin dashboard routes
-app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/dashboard', authMiddleware, adminDashboardRoutes);
 
 // Admin AI routes
-app.use('/api/admin/ai', adminAIRoutes);
+app.use('/api/admin/ai', authMiddleware, adminAIRoutes);
 
 // System health monitoring routes
-app.use('/api/admin/system-health', systemHealthMonitoringRoutes);
+app.use('/api/admin/system-health', authMiddleware, systemHealthMonitoringRoutes);
 
 // Charity routes
-app.use('/api/admin', charityRoutes);
+app.use('/api/admin', authMiddleware, charityRoutes);
 
 // Workflow automation routes
-app.use('/api/admin/workflows', workflowAutomationRoutes);
+app.use('/api/admin/workflows', authMiddleware, workflowAutomationRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);
@@ -1052,19 +1054,19 @@ app.use('/api/referral', referralRoutes); // Also support singular form for comp
 
 // Report builder routes
 import reportBuilderRoutes from './routes/reportBuilderRoutes';
-app.use('/api/admin/report-builder', reportBuilderRoutes);
+app.use('/api/admin/report-builder', authMiddleware, reportBuilderRoutes);
 
 // Report scheduler routes
 import reportSchedulerRoutes from './routes/reportSchedulerRoutes';
-app.use('/api/admin/report-scheduler', reportSchedulerRoutes);
+app.use('/api/admin/report-scheduler', authMiddleware, reportSchedulerRoutes);
 
 // Report export routes
 import reportExportRoutes from './routes/reportExportRoutes';
-app.use('/api/admin/report-export', reportExportRoutes);
+app.use('/api/admin/report-export', authMiddleware, reportExportRoutes);
 
 // Report template library routes
 import reportTemplateLibraryRoutes from './routes/reportTemplateLibraryRoutes';
-app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
+app.use('/api/admin/report-library', authMiddleware, reportTemplateLibraryRoutes);
 
 // IPFS routes
 import { ipfsRoutes } from './routes/ipfsRoutes';

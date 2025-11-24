@@ -17,10 +17,13 @@ export const useSessionValidation = () => {
    */
   const validateSession = useCallback(async (address: string): Promise<SessionValidationResult> => {
     try {
+      // Normalize address for case-insensitive comparison
+      const normalizedAddress = address.toLowerCase();
+
       // 1. Check enhanced auth service first (highest priority)
       if (enhancedAuthService.isAuthenticated()) {
         const currentUser = await enhancedAuthService.getCurrentUser();
-        if (currentUser && currentUser.address === address) {
+        if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
           console.log('✅ Valid session found in enhanced auth service');
           return {
             isValid: true,
@@ -35,7 +38,7 @@ export const useSessionValidation = () => {
       if (existingToken && !existingToken.startsWith('mock_token_')) {
         try {
           const currentUser = await authService.getCurrentUser();
-          if (currentUser && currentUser.address === address) {
+          if (currentUser && currentUser.address?.toLowerCase() === normalizedAddress) {
             console.log('✅ Valid session found in regular auth service');
             return {
               isValid: true,
@@ -51,16 +54,17 @@ export const useSessionValidation = () => {
       // 3. Check localStorage for valid session data
       const storedAddress = localStorage.getItem('linkdao_wallet_address') || localStorage.getItem('wallet_address');
       const storedToken = localStorage.getItem('linkdao_access_token') ||
-                         localStorage.getItem('token') ||
-                         localStorage.getItem('authToken') ||
-                         localStorage.getItem('auth_token');
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('auth_token');
       const storedTimestamp = localStorage.getItem('linkdao_signature_timestamp') || localStorage.getItem('signature_timestamp');
-      
-      if (storedAddress === address && storedToken && storedTimestamp) {
+
+      // Case-insensitive address comparison
+      if (storedAddress?.toLowerCase() === normalizedAddress && storedToken && storedTimestamp) {
         const timestamp = parseInt(storedTimestamp);
         const now = Date.now();
         const TOKEN_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-        
+
         if (now - timestamp < TOKEN_EXPIRY_TIME) {
           console.log('✅ Valid session found in localStorage');
           return {
