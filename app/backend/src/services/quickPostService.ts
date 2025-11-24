@@ -9,6 +9,7 @@ import { getWebSocketService } from './webSocketService';
 interface QuickPostInput {
   authorId: string;
   contentCid: string; // This is now the CID, not the actual content
+  content?: string;   // Actual content as fallback
   parentId?: string;
   mediaCids?: string;
   tags?: string;
@@ -19,6 +20,7 @@ interface QuickPostInput {
 
 interface UpdateQuickPostInput {
   contentCid?: string; // This is now the CID, not the actual content
+  content?: string;    // Actual content as fallback
   tags?: string;
 }
 
@@ -44,6 +46,7 @@ export class QuickPostService {
       const [newPost] = await db.insert(quickPosts).values({
         authorId: postData.authorId,
         contentCid: postData.contentCid, // This is now the CID, not the actual content
+        content: postData.content || null,  // Store actual content as fallback if provided
         parentId: postData.parentId,
         mediaCids: postData.mediaCids,
         tags: postData.tags,
@@ -101,6 +104,9 @@ export class QuickPostService {
       const updateFields: any = {};
       if (updateData.contentCid !== undefined) {
         updateFields.contentCid = updateData.contentCid; // This is now the CID, not the actual content
+      }
+      if (updateData.content !== undefined) {
+        updateFields.content = updateData.content; // Store actual content as fallback if provided
       }
       if (updateData.tags !== undefined) {
         updateFields.tags = updateData.tags;

@@ -150,7 +150,8 @@ export class PostService {
           input.parentId ? parseInt(input.parentId) : undefined,
           mediaCids.length > 0 ? mediaCids : undefined,
           input.tags && input.tags.length > 0 ? input.tags : undefined,
-          input.onchainRef
+          input.onchainRef,
+          input.content  // Pass the actual content as fallback
         );
 
         // Update post with moderation metadata
@@ -399,6 +400,7 @@ export class PostService {
       // Update post in database
       const updateData = {
         contentCid,
+        content: input.content || existingPost.content,  // Store content as fallback if provided
         mediaCids: JSON.stringify(mediaCids),
         tags: JSON.stringify(input.tags || existingPost.tags)
       };

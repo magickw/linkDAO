@@ -7,10 +7,24 @@ const IPFS_CONFIG = {
   host: process.env.IPFS_HOST || 'api.pinata.cloud',
   port: parseInt(process.env.IPFS_PORT || '443', 10),
   protocol: process.env.IPFS_PROTOCOL || 'https',
-  projectId: process.env.IPFS_PROJECT_ID,
-  projectSecret: process.env.IPFS_PROJECT_SECRET,
+  // Pinata API key method (recommended)
+  pinataApiKey: process.env.PINATA_API_KEY,
+  pinataSecretApiKey: process.env.PINATA_API_KEY_SECRET,
+  // Pinata JWT method (when using JWT instead of API keys)
+  pinataJwt: process.env.PINATA_JWT,
   gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
 };
+
+// Validate configuration and log diagnostic info
+if (process.env.NODE_ENV !== 'test') {
+  if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
+    safeLogger.info('✅ Pinata API key configuration detected (recommended method)');
+  } else if (IPFS_CONFIG.pinataJwt) {
+    safeLogger.info('✅ Pinata JWT configuration detected');
+  } else {
+    safeLogger.warn('⚠️ No Pinata API configuration detected. IPFS functionality will be limited to gateway access only.');
+  }
+}
 
 // Arweave configuration
 const ARWEAVE_CONFIG = {
@@ -52,49 +66,63 @@ export class MetadataService {
         return null;
       }
       
-      // For Pinata, we need to use a different configuration
-      if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
-        // Configure for Pinata gateway (read-only operations)
-        safeLogger.info('Configuring IPFS client for Pinata gateway');
+      // For Pinata, try different authentication methods
+      if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
+        // Configure for Pinata API with proper authentication (recommended method)
+        safeLogger.info('Configuring IPFS client for Pinata API (recommended method)');
         try {
           const client = create({
-            host: 'api.pinata.cloud',
-            port: 443,
-            protocol: 'https',
+            host: IPFS_CONFIG.host,
+            port: IPFS_CONFIG.port,
+            protocol: IPFS_CONFIG.protocol,
             headers: {
-              Authorization: `Bearer ${IPFS_CONFIG.projectId}`
+              'pinata_api_key': IPFS_CONFIG.pinataApiKey,
+              'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
             }
-            // Remove apiPath to use default path
           });
           
-          // Test connection with a simple request
-          safeLogger.info('Testing Pinata connection...');
-          safeLogger.info('✅ Pinata client created successfully');
+          safeLogger.info('✅ Pinata API client created successfully');
           return client;
         } catch (pinataError) {
-          safeLogger.error('Pinata client creation failed:', pinataError);
-          safeLogger.warn('Pinata not available, using fallback storage');
-          return null;
+          safeLogger.error('Pinata API client creation failed:', pinataError);
+          safeLogger.warn('Pinata API not available, trying JWT method or fallback storage');
         }
-      } else if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret) {
-        // Generic IPFS with authentication
+      } 
+      
+      // Try Pinata JWT method if API key method failed
+      if (IPFS_CONFIG.pinataJwt) {
+        safeLogger.info('Configuring IPFS client for Pinata JWT method');
+        try {
+          const client = create({
+            host: IPFS_CONFIG.host,
+            port: IPFS_CONFIG.port,
+            protocol: IPFS_CONFIG.protocol,
+            headers: {
+              Authorization: `Bearer ${IPFS_CONFIG.pinataJwt}`
+            }
+          });
+          
+          safeLogger.info('✅ Pinata JWT client created successfully');
+          return client;
+        } catch (jwtError) {
+          safeLogger.error('Pinata JWT client creation failed:', jwtError);
+          safeLogger.warn('Pinata JWT method not available, using fallback storage');
+        }
+      }
+      
+      // Standard IPFS configuration (for local IPFS nodes)
+      try {
         const client = create({
           host: IPFS_CONFIG.host,
           port: IPFS_CONFIG.port,
           protocol: IPFS_CONFIG.protocol,
-          headers: {
-            Authorization: `Bearer ${IPFS_CONFIG.projectId}`
-          }
         });
+        safeLogger.info('✅ Standard IPFS client created');
         return client;
-      } else {
-        // Standard IPFS configuration
-        const client = create({
-          host: IPFS_CONFIG.host,
-          port: IPFS_CONFIG.port,
-          protocol: IPFS_CONFIG.protocol,
-        });
-        return client;
+      } catch (standardError) {
+        safeLogger.warn('Standard IPFS client creation failed:', standardError);
+        safeLogger.warn('Using fallback storage only');
+        return null;
       }
     } catch (error) {
       safeLogger.error('Failed to initialize IPFS client:', error);
@@ -104,33 +132,87 @@ export class MetadataService {
   }
 
   /**
-   * Upload content to IPFS
+   * Upload content to IPFS with retry logic and fallback mechanisms
    * @param content The content to upload
    * @returns The IPFS CID of the uploaded content
    */
   async uploadToIPFS(content: string | Buffer): Promise<string> {
     const ipfsClient = await this.ipfsClientPromise;
-    try {
-      if (!ipfsClient) {
-        // Use content hash as fallback CID when IPFS unavailable
-        const crypto = require('crypto');
-        const hash = crypto.createHash('sha256').update(content).digest('hex');
-        const fallbackCid = `Qm${hash.substring(0, 44)}`; // Valid CID format
-        safeLogger.warn(`IPFS unavailable, using fallback CID: ${fallbackCid}`);
-        return fallbackCid;
+    
+    // First, try using the IPFS client if available
+    if (ipfsClient) {
+      try {
+        // Try multiple times with exponential backoff
+        const maxRetries = 3;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const result = await ipfsClient.add(content);
+            const cid = result.path || result.cid?.toString() || result.IpfsHash;
+            if (cid) {
+              safeLogger.info(`Content uploaded to IPFS on attempt ${attempt}: ${cid}`);
+              return cid;
+            } else {
+              throw new Error('IPFS upload returned no valid CID');
+            }
+          } catch (uploadError) {
+            safeLogger.warn(`IPFS upload attempt ${attempt} failed:`, uploadError);
+            if (attempt === maxRetries) {
+              throw uploadError;
+            }
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          }
+        }
+      } catch (error) {
+        safeLogger.error('IPFS client upload failed:', error);
       }
-      
-      // For Pinata, use the add method
-      const { IpfsHash } = await ipfsClient.add(content);
-      safeLogger.info(`Content uploaded to IPFS: ${IpfsHash}`);
-      return IpfsHash;
-    } catch (error) {
-      safeLogger.error('Error uploading to IPFS:', error);
-      // Generate deterministic fallback CID
-      const crypto = require('crypto');
-      const hash = crypto.createHash('sha256').update(content).digest('hex');
-      return `Qm${hash.substring(0, 44)}`;
     }
+    
+    // If IPFS client failed or is not available, try direct Pinata API
+    if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
+      try {
+        const maxRetries = 3;
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const formData = new (require('form-data'))();
+            formData.append('file', Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8'));
+            
+            const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
+              maxBodyLength: 1000000000, // 1GB
+              headers: {
+                'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
+                'pinata_api_key': IPFS_CONFIG.pinataApiKey,
+                'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
+              },
+              timeout: 30000 // 30 second timeout
+            });
+            
+            if (response.data && response.data.IpfsHash) {
+              safeLogger.info(`Content uploaded to Pinata on attempt ${attempt}: ${response.data.IpfsHash}`);
+              return response.data.IpfsHash;
+            } else {
+              throw new Error('Pinata API returned no valid CID');
+            }
+          } catch (pinataError: any) {
+            safeLogger.warn(`Pinata API attempt ${attempt} failed:`, pinataError?.message || pinataError);
+            if (attempt === maxRetries) {
+              throw pinataError;
+            }
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          }
+        }
+      } catch (error) {
+        safeLogger.error('Pinata API upload failed:', error);
+      }
+    }
+    
+    // If both IPFS client and Pinata API failed, generate fallback CID
+    safeLogger.warn('All IPFS upload methods failed, using fallback CID');
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update(content).digest('hex');
+    const fallbackCid = `Qm${hash.substring(0, 44)}`; // Valid CID format
+    return fallbackCid;
   }
 
   /**
@@ -169,202 +251,125 @@ export class MetadataService {
   }
 
   /**
-   * Retrieve content from IPFS with memory optimization
+   * Retrieve content from IPFS with memory optimization and multiple fallbacks
    * @param cid The IPFS CID of the content
    * @returns The content
    */
   async getFromIPFS(cid: string): Promise<string> {
     const ipfsClient = await this.ipfsClientPromise;
+    
     try {
-      // In memory-constrained environments, use direct gateway access only
-      if (this.isMemoryConstrained || !ipfsClient) {
-        // Try to retrieve from public gateways as fallback
-        const gateways = [
-          `https://gateway.pinata.cloud/ipfs/${cid}`,
-          `https://ipfs.io/ipfs/${cid}`,
-          `https://cloudflare-ipfs.com/ipfs/${cid}`,
-          `https://dweb.link/ipfs/${cid}`
-        ];
-        
-        for (const gateway of gateways) {
-          try {
-            safeLogger.info(`Attempting to fetch content from gateway (memory-constrained): ${gateway}`);
-            const response = await axios.get(gateway, {
-              timeout: 10000, // Reduced timeout for memory-constrained environments
-              headers: {
-                'User-Agent': 'LinkDAO/1.0'
-              },
-              // More memory-efficient configuration
-              maxContentLength: 10 * 1024 * 1024, // 10MB max
-              maxBodyLength: 10 * 1024 * 1024, // 10MB max
-              responseType: 'text'
-            });
-
-            // Extract only the data we need to avoid circular reference issues
-            const { data, status } = response;
-            const responseDataType = typeof data;
-
-            // Check if data is a string before calling includes
-            const dataString = responseDataType === 'string' ? data : '';
-            const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
-
-            // Check if response is valid (not a Cloudflare challenge page)
-            if (status === 200 &&
-                data &&
-                (responseDataType === 'string' || responseDataType === 'object') &&
-                !hasCloudflareChallenge) {
-              // If it's an object, stringify it carefully
-              const content = responseDataType === 'string' ? data : JSON.stringify(data);
-              
-              // Check if content is valid
-              if (!content || content.length === 0) {
-                safeLogger.warn(`No content found from gateway: ${gateway}`);
-                throw new Error(`Content not available from gateway: ${gateway}`);
-              }
-              
-              safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { contentLength: content.length });
-              return content;
-            } else {
-              safeLogger.warn(`Gateway returned invalid response: ${gateway}`, {
-                status,
-                dataType: responseDataType,
-                hasCloudflareChallenge
-              });
-            }
-          } catch (gatewayError: any) {
-            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError?.message || 'Unknown error' });
-            // Continue to next gateway
-          }
-        }
-        
-        safeLogger.warn(`All IPFS gateways failed for CID: ${cid}`);
-        throw new Error(`Content not available: ${cid}`);
-      }
-      
-      // For Pinata, use the gateway URL directly instead of the API client
-      if (IPFS_CONFIG.host.includes('pinata')) {
+      // First, try IPFS client if available
+      if (ipfsClient && !this.isMemoryConstrained) {
         try {
-          safeLogger.info(`Attempting to fetch content from Pinata gateway for CID: ${cid}`);
-          const response = await axios.get(`https://gateway.pinata.cloud/ipfs/${cid}`, {
-            timeout: 10000, // Reduced timeout
-            headers: {
-              'Authorization': `Bearer ${IPFS_CONFIG.projectId}`,
-              'User-Agent': 'LinkDAO/1.0'
-            },
-            maxContentLength: 10 * 1024 * 1024, // 10MB max
-            maxBodyLength: 10 * 1024 * 1024, // 10MB max
-            responseType: 'text'
-          });
-
-          // Extract only the data we need to avoid circular reference issues
-          const { data, status } = response;
-          const responseDataType = typeof data;
-
-          // Check if data is a string before calling includes
-          const dataString = responseDataType === 'string' ? data : '';
-          const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
-
-          // Check if response is valid (not a Cloudflare challenge page)
-          if (status === 200 &&
-              data &&
-              (responseDataType === 'string' || responseDataType === 'object') &&
-              !hasCloudflareChallenge) {
-            // If it's an object, stringify it carefully
-            const content = responseDataType === 'string' ? data : JSON.stringify(data);
-            
-            // Check if content is valid
-            if (!content || content.length === 0) {
-              safeLogger.warn(`No content found from Pinata gateway`);
-              throw new Error(`Content not available from Pinata gateway`);
-            }
-            
-            safeLogger.info(`Successfully retrieved content from Pinata gateway`, { contentLength: content.length });
+          safeLogger.info(`Using IPFS client cat method for CID: ${cid}`);
+          const chunks = [];
+          for await (const chunk of ipfsClient.cat(cid)) {
+            chunks.push(chunk);
+          }
+          const content = Buffer.concat(chunks).toString();
+          
+          // Check if content is valid
+          if (content && content.length > 0) {
+            safeLogger.info(`Successfully retrieved content using IPFS client cat method`, { contentLength: content.length });
             return content;
           } else {
-            safeLogger.warn(`Pinata gateway returned invalid response`, {
-              status,
-              dataType: responseDataType,
-              hasCloudflareChallenge
-            });
+            safeLogger.warn(`IPFS client returned empty content for CID: ${cid}`);
           }
-        } catch (pinataError: any) {
-          safeLogger.warn(`Pinata gateway failed for CID: ${cid}`, { error: pinataError?.message || 'Unknown error' });
+        } catch (clientError) {
+          safeLogger.warn(`IPFS client retrieval failed for CID: ${cid}`, clientError);
         }
-
-        // Fallback to other gateways
-        const gateways = [
-          `https://ipfs.io/ipfs/${cid}`,
-          `https://cloudflare-ipfs.com/ipfs/${cid}`,
-          `https://dweb.link/ipfs/${cid}`
-        ];
-
-        for (const gateway of gateways) {
-          try {
-            safeLogger.info(`Attempting to fetch content from fallback gateway: ${gateway}`);
-            const response = await axios.get(gateway, {
-              timeout: 10000, // Reduced timeout
-              headers: {
-                'User-Agent': 'LinkDAO/1.0'
-              },
-              maxContentLength: 10 * 1024 * 1024, // 10MB max
-              maxBodyLength: 10 * 1024 * 1024, // 10MB max
-              responseType: 'text'
-            });
-
-            // Extract only the data we need to avoid circular reference issues
-            const { data, status } = response;
-            const responseDataType = typeof data;
-
-            // Check if data is a string before calling includes
-            const dataString = responseDataType === 'string' ? data : '';
-            const hasCloudflareChallenge = dataString.includes('Just a moment...') || dataString.includes('cf-chl-task');
-
-            // Check if response is valid (not a Cloudflare challenge page)
-            if (status === 200 &&
-                data &&
-                (responseDataType === 'string' || responseDataType === 'object') &&
-                !hasCloudflareChallenge) {
-              // If it's an object, stringify it carefully
-              const content = responseDataType === 'string' ? data : JSON.stringify(data);
-              
-              // Check if content is valid
-              if (!content || content.length === 0) {
-                safeLogger.warn(`No content found from fallback gateway: ${gateway}`);
-                throw new Error(`Content not available from fallback gateway: ${gateway}`);
-              }
-              
-              safeLogger.info(`Successfully retrieved content from fallback gateway: ${gateway}`, { contentLength: content.length });
-              return content;
-            } else {
-              safeLogger.warn(`Fallback gateway returned invalid response: ${gateway}`, {
-                status,
-                dataType: responseDataType,
-                hasCloudflareChallenge
+      }
+      
+      // If client retrieval failed or we're in memory-constrained env, try direct gateways
+      // Try with multiple gateways and retry logic
+      const gateways = [
+        `https://gateway.pinata.cloud/ipfs/${cid}`,
+        `https://ipfs.io/ipfs/${cid}`,
+        `https://cloudflare-ipfs.com/ipfs/${cid}`,
+        `https://dweb.link/ipfs/${cid}`,
+        `https://ipfs.eth.aragon.network/ipfs/${cid}`,
+        `https://ipfs.tribecap.co/ipfs/${cid}`
+      ];
+      
+      for (const gateway of gateways) {
+        try {
+          safeLogger.info(`Attempting to fetch content from gateway: ${gateway}`);
+          
+          // Try multiple times with exponential backoff
+          const maxRetries = 3;
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              const response = await axios.get(gateway, {
+                timeout: 15000, // Slightly longer timeout
+                headers: {
+                  'User-Agent': 'LinkDAO/1.0'
+                },
+                // More memory-efficient configuration
+                maxContentLength: 10 * 1024 * 1024, // 10MB max
+                maxBodyLength: 10 * 1024 * 1024, // 10MB max
+                responseType: 'text'
               });
+
+              // Extract only the data we need to avoid circular reference issues
+              const { data, status } = response;
+              const responseDataType = typeof data;
+
+              // Check if data is a string before calling includes
+              const dataString = responseDataType === 'string' ? data : '';
+              const hasCloudflareChallenge = dataString.includes('Just a moment...') || 
+                                            dataString.includes('cf-chl-task') || 
+                                            dataString.includes('Checking your browser');
+
+              // Check if response is valid (not a Cloudflare challenge page)
+              if (status === 200 &&
+                  data &&
+                  (responseDataType === 'string' || responseDataType === 'object') &&
+                  !hasCloudflareChallenge) {
+                // If it's an object, stringify it carefully
+                const content = responseDataType === 'string' ? data : JSON.stringify(data);
+                
+                // Check if content is valid
+                if (content && content.length > 0) {
+                  safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { 
+                    contentLength: content.length,
+                    attempt
+                  });
+                  return content;
+                } else {
+                  safeLogger.warn(`Gateway returned empty content: ${gateway}`, { attempt });
+                }
+              } else {
+                safeLogger.warn(`Gateway returned invalid response: ${gateway}`, {
+                  status,
+                  dataType: responseDataType,
+                  hasCloudflareChallenge,
+                  attempt
+                });
+              }
+            } catch (gatewayError: any) {
+              safeLogger.warn(`Gateway attempt ${attempt} failed for ${gateway}`, { 
+                error: gatewayError?.message || 'Unknown error' 
+              });
+              if (attempt === maxRetries) {
+                // Continue to next gateway after all retries for this gateway
+                break;
+              }
+              // Wait before retrying (exponential backoff)
+              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
             }
-          } catch (gatewayError: any) {
-            safeLogger.warn(`Gateway failed for CID: ${cid}`, { gateway, error: gatewayError?.message || 'Unknown error' });
-            // Continue to next gateway
           }
+        } catch (gatewayError: any) {
+          safeLogger.warn(`Gateway completely failed for CID: ${cid}`, { 
+            gateway, 
+            error: gatewayError?.message || 'Unknown error' 
+          });
+          // Continue to next gateway
         }
       }
       
-      // For other IPFS clients, use the cat method
-      safeLogger.info(`Using IPFS client cat method for CID: ${cid}`);
-      const chunks = [];
-      for await (const chunk of ipfsClient.cat(cid)) {
-        chunks.push(chunk);
-      }
-      const content = Buffer.concat(chunks).toString();
-      
-      // Check if content is valid
-      if (!content || content.length === 0) {
-        safeLogger.warn(`No content found for CID: ${cid}`);
-        throw new Error(`Content not available: ${cid}`);
-      }
-      
-      safeLogger.info(`Successfully retrieved content using IPFS client cat method`, { contentLength: content.length });
-      return content;
+      safeLogger.warn(`All IPFS gateways failed for CID: ${cid}`);
+      throw new Error(`Content not available: ${cid}`);
     } catch (error) {
       safeLogger.error('Error retrieving from IPFS:', error);
       throw new Error(`Failed to retrieve content: ${cid} - ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -429,6 +434,146 @@ export class MetadataService {
     } catch (error) {
       safeLogger.error('Error mirroring to Arweave:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if a CID exists on IPFS by attempting to retrieve its metadata
+   * @param cid The IPFS CID to check
+   * @returns Boolean indicating if the CID exists
+   */
+  async cidExists(cid: string): Promise<boolean> {
+    try {
+      // Try to get basic metadata about the CID from IPFS
+      const ipfsClient = await this.ipfsClientPromise;
+      if (ipfsClient) {
+        try {
+          const stat = await ipfsClient.stat(cid);
+          return !!stat && !!stat.cid;
+        } catch (error) {
+          safeLogger.warn(`IPFS client stat failed for CID: ${cid}`, error);
+          // Continue to try gateways
+        }
+      }
+      
+      // Try to fetch just the content length via gateway to check existence
+      const gateways = [
+        `https://gateway.pinata.cloud/ipfs/${cid}`,
+        `https://ipfs.io/ipfs/${cid}`,
+        `https://cloudflare-ipfs.com/ipfs/${cid}`
+      ];
+      
+      for (const gateway of gateways) {
+        try {
+          const response = await axios.head(gateway, {
+            timeout: 10000,
+            headers: {
+              'User-Agent': 'LinkDAO/1.0'
+            }
+          });
+          
+          if (response.status === 200) {
+            return true;
+          }
+        } catch (headError) {
+          safeLogger.warn(`HEAD request failed for gateway: ${gateway}`, headError);
+          // Continue to next gateway
+        }
+      }
+      
+      // If HEAD request fails, try GET with short timeout
+      for (const gateway of gateways) {
+        try {
+          const response = await axios.get(gateway, {
+            timeout: 5000, // Short timeout to just check existence
+            headers: {
+              'User-Agent': 'LinkDAO/1.0'
+            },
+            maxContentLength: 1 // We only need to know if it exists
+          });
+          
+          if (response.status === 200) {
+            return true;
+          }
+        } catch (getError) {
+          safeLogger.warn(`GET request failed for gateway: ${gateway}`, getError);
+          // Continue to next gateway
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      safeLogger.error('Error checking CID existence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Test Pinata API connection with the provided credentials
+   * @returns Boolean indicating if the Pinata connection is working
+   */
+  async testPinataConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      // Test Pinata API key method first
+      if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
+        const response = await axios.get('https://api.pinata.cloud/data/testAuthentication', {
+          headers: {
+            'pinata_api_key': IPFS_CONFIG.pinataApiKey,
+            'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
+          },
+          timeout: 10000
+        });
+
+        if (response.status === 200 && response.data) {
+          safeLogger.info('✅ Pinata API authentication successful');
+          return { 
+            success: true, 
+            message: 'Pinata API connection successful with API key method' 
+          };
+        }
+      }
+
+      // Test JWT method if API key method failed
+      if (IPFS_CONFIG.pinataJwt) {
+        const response = await axios.get('https://api.pinata.cloud/data/testAuthentication', {
+          headers: {
+            'Authorization': `Bearer ${IPFS_CONFIG.pinataJwt}`
+          },
+          timeout: 10000
+        });
+
+        if (response.status === 200 && response.data) {
+          safeLogger.info('✅ Pinata JWT authentication successful');
+          return { 
+            success: true, 
+            message: 'Pinata connection successful with JWT method' 
+          };
+        }
+      }
+
+      return { 
+        success: false, 
+        message: 'Pinata authentication failed - please check your API credentials' 
+      };
+    } catch (error: any) {
+      safeLogger.error('Pinata connection test failed:', error?.response?.data || error?.message || error);
+      
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return { 
+          success: false, 
+          message: `Pinata authentication failed (Status ${error?.response?.status}): Invalid credentials. Please verify your PINATA_API_KEY/PINATA_API_KEY_SECRET or PINATA_JWT values.` 
+        };
+      } else if (error?.code === 'ENOTFOUND' || error?.message?.includes('ENOTFOUND')) {
+        return { 
+          success: false, 
+          message: 'Cannot connect to Pinata API - check your internet connection and firewall settings' 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: `Pinata connection failed: ${error?.response?.data?.error || error?.message || 'Unknown error'}` 
+        };
+      }
     }
   }
 }
