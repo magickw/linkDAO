@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import crypto from 'crypto';
 import { QuickPostService } from '../services/quickPostService';
 import { MetadataService } from '../services/metadataService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
 export class QuickPostController {
   private quickPostService: QuickPostService;
@@ -17,7 +18,7 @@ export class QuickPostController {
     }
   }
 
-  async createQuickPost(req: Request, res: Response): Promise<Response> {
+  async createQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       console.log('POST /api/quick-posts - Creating quick post');
 
@@ -27,8 +28,10 @@ export class QuickPostController {
         return res.status(400).json(apiResponse.error('Content is required', 400));
       }
 
-      if (!authorId) {
-        return res.status(400).json(apiResponse.error('Author ID is required', 400));
+      // Extract authenticated user's ID from JWT token instead of trusting request body
+      const authenticatedUser = (req as any).user;
+      if (!authenticatedUser || !authenticatedUser.id) {
+        return res.status(401).json(apiResponse.error('User not authenticated', 401));
       }
 
       // Generate a temporary CID immediately for quick response
@@ -36,7 +39,7 @@ export class QuickPostController {
 
       // Prepare input for QuickPostService with temp CID
       const quickPostInput = {
-        authorId,
+        authorId: authenticatedUser.id,
         contentCid: tempCid,
         content,  // Store the actual content in the database
         parentId,
@@ -76,7 +79,7 @@ export class QuickPostController {
     }
   }
 
-  async getQuickPost(req: Request, res: Response): Promise<Response> {
+  async getQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
@@ -93,7 +96,7 @@ export class QuickPostController {
     }
   }
 
-  async updateQuickPost(req: Request, res: Response): Promise<Response> {
+  async updateQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { content, tags } = req.body;
@@ -131,7 +134,7 @@ export class QuickPostController {
     }
   }
 
-  async deleteQuickPost(req: Request, res: Response): Promise<Response> {
+  async deleteQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
@@ -148,7 +151,7 @@ export class QuickPostController {
     }
   }
 
-  async getQuickPostsByAuthor(req: Request, res: Response): Promise<Response> {
+  async getQuickPostsByAuthor(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { authorId } = req.params;
       const { page = 1, limit = 20 } = req.query;
@@ -166,7 +169,7 @@ export class QuickPostController {
     }
   }
 
-  async addQuickPostReaction(req: Request, res: Response): Promise<Response> {
+  async addQuickPostReaction(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { userId, type, amount } = req.body;
@@ -180,7 +183,7 @@ export class QuickPostController {
     }
   }
 
-  async addQuickPostTip(req: Request, res: Response): Promise<Response> {
+  async addQuickPostTip(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const { fromUserId, toUserId, token, amount, message } = req.body;
@@ -195,7 +198,7 @@ export class QuickPostController {
   }
 
   // Additional methods to match route expectations
-  async getAllQuickPosts(req: Request, res: Response): Promise<Response> {
+  async getAllQuickPosts(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { page = 1, limit = 20, sort = 'new' } = req.query;
 
@@ -214,7 +217,7 @@ export class QuickPostController {
     }
   }
 
-  async getQuickPostFeed(req: Request, res: Response): Promise<Response> {
+  async getQuickPostFeed(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { page = 1, limit = 20, sort = 'new', timeRange = 'day' } = req.query;
 
@@ -232,7 +235,7 @@ export class QuickPostController {
     }
   }
 
-  async getQuickPostsByTag(req: Request, res: Response): Promise<Response> {
+  async getQuickPostsByTag(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { tag } = req.params;
       const { page = 1, limit = 20 } = req.query;
@@ -254,7 +257,7 @@ export class QuickPostController {
     }
   }
 
-  async getCsrfToken(req: Request, res: Response): Promise<Response> {
+  async getCsrfToken(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       // In a real implementation, this would generate a CSRF token using csurf or similar
       // For now, we'll return a simple token based on the session ID or a random string

@@ -56,7 +56,6 @@ export class QuickPostService {
         },
         body: JSON.stringify({
           content: data.content,
-          authorId: data.author,
           parentId: data.parentId,
           media: data.media,
           tags: data.tags,

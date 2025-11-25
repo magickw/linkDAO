@@ -181,7 +181,7 @@ export default function Home() {
       if (!postData.communityId) {
         // Import QuickPostService dynamically to avoid circular dependencies
         const { QuickPostService } = await import('@/services/quickPostService');
-        newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
+        newPost = await QuickPostService.createQuickPost(postData);
       } else {
         // Otherwise, create a regular post
         newPost = await createPost({ ...postData, author: address.toLowerCase() });

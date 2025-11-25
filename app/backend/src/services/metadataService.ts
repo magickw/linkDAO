@@ -77,7 +77,7 @@ export class MetadataService {
             protocol: IPFS_CONFIG.protocol,
             headers: {
               'pinata_api_key': IPFS_CONFIG.pinataApiKey,
-              'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
+              'pinata_secret_api_key': IPFS_CONFIG.pinataSecretApiKey
             }
           });
           
@@ -182,7 +182,7 @@ export class MetadataService {
               headers: {
                 'Content-Type': `multipart/form-data; boundary=${formData.getBoundary()}`,
                 'pinata_api_key': IPFS_CONFIG.pinataApiKey,
-                'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
+                'pinata_secret_api_key': IPFS_CONFIG.pinataSecretApiKey
               },
               timeout: 30000 // 30 second timeout
             });
@@ -211,7 +211,7 @@ export class MetadataService {
     safeLogger.warn('All IPFS upload methods failed, using fallback CID');
     const crypto = require('crypto');
     const hash = crypto.createHash('sha256').update(content).digest('hex');
-    const fallbackCid = `Qm${hash.substring(0, 44)}`; // Valid CID format
+    const fallbackCid = `bafy${hash.substring(0, 42)}`; // Use modern CIDv1 format
     return fallbackCid;
   }
 
@@ -519,7 +519,7 @@ export class MetadataService {
         const response = await axios.get('https://api.pinata.cloud/data/testAuthentication', {
           headers: {
             'pinata_api_key': IPFS_CONFIG.pinataApiKey,
-            'PINATA_API_KEY_SECRET': IPFS_CONFIG.pinataSecretApiKey
+            'pinata_secret_api_key': IPFS_CONFIG.pinataSecretApiKey
           },
           timeout: 10000
         });
