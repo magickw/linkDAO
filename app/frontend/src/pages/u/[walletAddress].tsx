@@ -55,7 +55,7 @@ export default function PublicProfile() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following' | 'social' | 'comments' | 'upvotes' | 'downvotes'>('posts');
 
   // Follow/unfollow functionality
   const { follow, unfollow, isLoading: isFollowLoading } = useFollow();
@@ -356,11 +356,23 @@ export default function PublicProfile() {
     <Layout title={`${profile.displayName || profile.handle || 'User'} - LinkDAO`} fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         {/* Profile Header with Glassmorphism Effect */}
-        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 p-6 mb-6">
-          <div className="flex flex-col lg:flex-row items-center lg:items-start">
+        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 overflow-hidden mb-6">
+          {/* Banner Image */}
+          {profile.bannerCid && (
+            <div className="w-full h-48 md:h-64 overflow-hidden relative">
+              <img
+                src={profile.bannerCid}
+                alt="Profile Banner"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
+            </div>
+          )}
+
+          <div className={`flex flex-col lg:flex-row items-center lg:items-start p-6 ${profile.bannerCid ? '-mt-16' : ''}`}>
             <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
               <div className="relative">
-                <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white dark:border-gray-700 shadow-xl overflow-hidden">
+                <div className={`h-32 w-32 md:h-40 md:w-40 rounded-full border-4 ${profile.bannerCid ? 'border-white dark:border-gray-800' : 'border-white dark:border-gray-700'} shadow-xl overflow-hidden ${profile.bannerCid ? 'ring-4 ring-white/20' : ''}`}>
                   {(profile.avatarCid && !avatarError && typeof profile.avatarCid === 'string' && profile.avatarCid.startsWith('http')) ? (
                     <img
                       className="h-full w-full object-cover"
@@ -557,6 +569,42 @@ export default function PublicProfile() {
               >
                 Following
               </button>
+              <button
+                onClick={() => setActiveTab('social')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'social'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+              >
+                Social
+              </button>
+              <button
+                onClick={() => setActiveTab('comments')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'comments'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+              >
+                Comments
+              </button>
+              <button
+                onClick={() => setActiveTab('upvotes')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'upvotes'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+              >
+                Upvotes
+              </button>
+              <button
+                onClick={() => setActiveTab('downvotes')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'downvotes'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+              >
+                Downvotes
+              </button>
             </nav>
           </div>
 
@@ -626,6 +674,147 @@ export default function PublicProfile() {
                 isOwnProfile={false}
                 isPublicProfile={true}
               />
+            )}
+
+            {/* Social Tab */}
+            {activeTab === 'social' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Social Links & Website</h3>
+
+                {/* Website Section */}
+                {profile.website && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Website</h4>
+                    <a
+                      href={profile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg text-primary-700 dark:text-primary-300 hover:from-primary-100 hover:to-secondary-100 dark:hover:from-primary-900/30 dark:hover:to-secondary-900/30 transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                      </svg>
+                      {profile.website}
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
+
+                {/* Social Links Section */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Social Profiles</h4>
+                  {!profile.socialLinks || profile.socialLinks.length === 0 ? (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">No social links added yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {profile.socialLinks.map((link, index) => {
+                        const getPlatformIcon = (platform: string) => {
+                          const icons: Record<string, string> = {
+                            twitter: 'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z',
+                            github: 'M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22',
+                            linkedin: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z',
+                            instagram: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z',
+                          };
+                          return icons[platform.toLowerCase()] || '';
+                        };
+
+                        const getPlatformColor = (platform: string) => {
+                          const colors: Record<string, string> = {
+                            twitter: 'from-blue-400 to-blue-600',
+                            github: 'from-gray-700 to-gray-900',
+                            linkedin: 'from-blue-600 to-blue-800',
+                            instagram: 'from-pink-500 to-purple-600',
+                            facebook: 'from-blue-600 to-blue-700',
+                            youtube: 'from-red-600 to-red-700',
+                            discord: 'from-indigo-500 to-indigo-700',
+                            telegram: 'from-blue-400 to-blue-500',
+                            tiktok: 'from-black to-gray-900',
+                            medium: 'from-green-600 to-green-700',
+                            reddit: 'from-orange-500 to-orange-600',
+                          };
+                          return colors[platform.toLowerCase()] || 'from-gray-500 to-gray-700';
+                        };
+
+                        return (
+                          <a
+                            key={index}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center justify-between p-4 bg-gradient-to-r ${getPlatformColor(link.platform)} text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105`}
+                          >
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3">
+                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d={getPlatformIcon(link.platform)} />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-medium capitalize">{link.platform}</p>
+                                {link.username && (
+                                  <p className="text-xs text-white/80">@{link.username}</p>
+                                )}
+                              </div>
+                            </div>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Comments Tab */}
+            {activeTab === 'comments' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Comments</h3>
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Comments feature coming soon</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">User comments will be displayed here</p>
+                </div>
+              </div>
+            )}
+
+            {/* Upvotes Tab */}
+            {activeTab === 'upvotes' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Upvoted Content</h3>
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Upvotes feature coming soon</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">Content upvoted by this user will be displayed here</p>
+                </div>
+              </div>
+            )}
+
+            {/* Downvotes Tab */}
+            {activeTab === 'downvotes' && (
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Downvoted Content</h3>
+                <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">Downvotes feature coming soon</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-2">Content downvoted by this user will be displayed here</p>
+                </div>
+              </div>
             )}
           </div>
         </div>

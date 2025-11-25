@@ -85,8 +85,11 @@ export default function Profile() {
     ens: '',
     bio: '',
     avatar: '',
+    banner: '',
+    website: '',
+    socialLinks: [] as { platform: string; url: string; username?: string }[],
   });
-  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments' | 'edit'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'proposals' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments' | 'edit' | 'social'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [addresses, setAddresses] = useState({
     billing: {
@@ -135,6 +138,9 @@ export default function Profile() {
         ens: backendProfile.ens,
         bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: getAvatarUrl(backendProfile.avatarCid || backendProfile.profileCid), // Fallback to profileCid for backend compatibility
+        banner: getAvatarUrl(backendProfile.bannerCid) || '',
+        website: backendProfile.website || '',
+        socialLinks: backendProfile.socialLinks || [],
       });
       setAvatarError(false); // Reset avatar error when loading new profile
 
@@ -173,6 +179,9 @@ export default function Profile() {
         ens: contractProfileData.ens,
         bio: contractProfileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
         avatar: getAvatarUrl(contractProfileData.avatarCid || contractProfileData.profileCid), // Validate avatar URL
+        banner: '',
+        website: '',
+        socialLinks: [],
       });
       setAvatarError(false); // Reset avatar error when loading new profile
     }
@@ -467,6 +476,81 @@ export default function Profile() {
     }
   };
 
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+
+      try {
+        // Show loading state
+        setIsUpdating(true);
+        setUpdateError(null);
+
+        // Upload the image using the unified image service
+        const uploadResult = await unifiedImageService.uploadImage(file, 'banner');
+
+        // Update the profile state with the new banner URL
+        setProfile(prev => ({ ...prev, banner: uploadResult.cdnUrl }));
+
+        addToast('Banner uploaded successfully!', 'success');
+
+        // Automatically save the updated banner to the backend
+        if (backendProfile) {
+          try {
+            // Prepare update data with only the banner change
+            const updateData: UpdateUserProfileInput = {
+              bannerCid: uploadResult.cdnUrl
+            };
+
+            // Update the backend profile
+            await updateBackendProfile(updateData);
+
+            // Refresh the backend profile to ensure the changes are reflected
+            await refetch();
+
+            addToast('Banner saved to profile!', 'success');
+          } catch (saveError) {
+            console.error('Failed to save banner to backend:', saveError);
+            addToast('Banner uploaded but failed to save. Please save your profile manually.', 'warning');
+          }
+        }
+      } catch (error) {
+        console.error('Error uploading banner:', error);
+        setUpdateError(error instanceof Error ? error.message : 'Failed to upload banner');
+        addToast(`Failed to upload banner: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      } finally {
+        setIsUpdating(false);
+        // Reset the file input
+        e.target.value = '';
+      }
+    }
+  };
+
+  // Add a new social link
+  const handleAddSocialLink = () => {
+    setProfile(prev => ({
+      ...prev,
+      socialLinks: [...prev.socialLinks, { platform: '', url: '', username: '' }]
+    }));
+  };
+
+  // Remove a social link
+  const handleRemoveSocialLink = (index: number) => {
+    setProfile(prev => ({
+      ...prev,
+      socialLinks: prev.socialLinks.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Update a social link
+  const handleSocialLinkChange = (index: number, field: 'platform' | 'url' | 'username', value: string) => {
+    setProfile(prev => ({
+      ...prev,
+      socialLinks: prev.socialLinks.map((link, i) =>
+        i === index ? { ...link, [field]: value } : link
+      )
+    }));
+  };
+
   // Save profile
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -547,6 +631,9 @@ export default function Profile() {
         ens: profile.ens,
         bioCid: profile.bio,
         avatarCid: profile.avatar,
+        bannerCid: profile.banner,
+        website: profile.website,
+        socialLinks: profile.socialLinks,
         // Billing address
         billingFirstName: addresses.billing.firstName,
         billingLastName: addresses.billing.lastName,
@@ -904,11 +991,23 @@ export default function Profile() {
 
           {/* Profile Header with Glassmorphism Effect */}
           {!isLoading && !hasError && (
-            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 p-6 mb-6">
-              <div className="flex flex-col lg:flex-row items-center lg:items-start">
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 overflow-hidden mb-6">
+              {/* Banner Image */}
+              {profile.banner && (
+                <div className="w-full h-48 md:h-64 overflow-hidden relative">
+                  <img
+                    src={profile.banner}
+                    alt="Profile Banner"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
+                </div>
+              )}
+
+              <div className={`flex flex-col lg:flex-row items-center lg:items-start p-6 ${profile.banner ? '-mt-16' : ''}`}>
                 <div className="flex-shrink-0 mb-6 lg:mb-0 lg:mr-8">
                   <div className="relative">
-                    <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white dark:border-gray-700 shadow-xl overflow-hidden">
+                    <div className={`h-32 w-32 md:h-40 md:w-40 rounded-full border-4 ${profile.banner ? 'border-white dark:border-gray-800' : 'border-white dark:border-gray-700'} shadow-xl overflow-hidden ${profile.banner ? 'ring-4 ring-white/20' : ''}`}>
                       {(profile.avatar && !avatarError && typeof profile.avatar === 'string' && profile.avatar.startsWith('http')) ? (
                         <img
                           className="h-full w-full object-cover"
@@ -1192,6 +1291,22 @@ export default function Profile() {
                   Following
                 </button>
 
+                {/* Social Tab - Only for own profile */}
+                {currentUserAddress && targetUserAddress === currentUserAddress && (
+                  <button
+                    onClick={() => setActiveTab('social')}
+                    className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'social'
+                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Social
+                  </button>
+                )}
+
                 {/* Edit Profile Tab - Visible only when editing */}
                 {(activeTab === 'edit' || isEditing) && (
                   <button
@@ -1367,6 +1482,128 @@ export default function Profile() {
                       </div>
                     </div>
 
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Banner Image
+                      </label>
+                      {profile.banner && (
+                        <div className="mb-3">
+                          <img
+                            src={profile.banner}
+                            alt="Banner"
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        <label
+                          htmlFor="banner-upload"
+                          className="cursor-pointer bg-white dark:bg-gray-700 rounded-md px-4 py-2 border border-gray-300 dark:border-gray-600 font-medium text-sm text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 dark:focus:ring-offset-gray-800"
+                        >
+                          <span>Upload Banner</span>
+                          <input
+                            id="banner-upload"
+                            name="banner-upload"
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={handleBannerChange}
+                          />
+                        </label>
+                        <p className="ml-3 text-xs text-gray-500 dark:text-gray-400">
+                          PNG, JPG up to 10MB. Recommended: 1500x500px
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6">
+                      <label htmlFor="website" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Website
+                      </label>
+                      <input
+                        type="url"
+                        id="website"
+                        name="website"
+                        value={profile.website}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="https://yourwebsite.com"
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Social Links
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleAddSocialLink}
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-primary-600 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Link
+                        </button>
+                      </div>
+                      {profile.socialLinks.length === 0 ? (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          No social links added yet. Click "Add Link" to get started.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {profile.socialLinks.map((link, index) => (
+                            <div key={index} className="flex gap-2">
+                              <select
+                                value={link.platform}
+                                onChange={(e) => handleSocialLinkChange(index, 'platform', e.target.value)}
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                              >
+                                <option value="">Select Platform</option>
+                                <option value="twitter">Twitter/X</option>
+                                <option value="linkedin">LinkedIn</option>
+                                <option value="github">GitHub</option>
+                                <option value="instagram">Instagram</option>
+                                <option value="facebook">Facebook</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="discord">Discord</option>
+                                <option value="telegram">Telegram</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="medium">Medium</option>
+                                <option value="reddit">Reddit</option>
+                                <option value="website">Website</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <input
+                                type="url"
+                                value={link.url}
+                                onChange={(e) => handleSocialLinkChange(index, 'url', e.target.value)}
+                                placeholder="https://..."
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                              />
+                              <input
+                                type="text"
+                                value={link.username || ''}
+                                onChange={(e) => handleSocialLinkChange(index, 'username', e.target.value)}
+                                placeholder="Username (optional)"
+                                className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSocialLink(index)}
+                                className="px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex justify-end">
                       <button
                         type="submit"
@@ -1385,6 +1622,126 @@ export default function Profile() {
                       </button>
                     </div>
                   </form>
+                </div>
+              )}
+
+              {activeTab === 'social' && (
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Social Links & Website</h3>
+
+                  {/* Website Section */}
+                  {profile.website && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Website</h4>
+                      <a
+                        href={profile.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg text-primary-700 dark:text-primary-300 hover:from-primary-100 hover:to-secondary-100 dark:hover:from-primary-900/30 dark:hover:to-secondary-900/30 transition-colors"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        {profile.website}
+                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Social Links Section */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Social Profiles</h4>
+                    {profile.socialLinks.length === 0 ? (
+                      <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">No social links added yet</p>
+                        <button
+                          onClick={() => setActiveTab('edit')}
+                          className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-600 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400 dark:hover:bg-primary-900/30"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add Social Links
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {profile.socialLinks.map((link, index) => {
+                          const getPlatformIcon = (platform: string) => {
+                            const icons: Record<string, string> = {
+                              twitter: 'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z',
+                              github: 'M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22',
+                              linkedin: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z',
+                              instagram: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z',
+                            };
+                            return icons[platform.toLowerCase()] || '';
+                          };
+
+                          const getPlatformColor = (platform: string) => {
+                            const colors: Record<string, string> = {
+                              twitter: 'from-blue-400 to-blue-600',
+                              github: 'from-gray-700 to-gray-900',
+                              linkedin: 'from-blue-600 to-blue-800',
+                              instagram: 'from-pink-500 to-purple-600',
+                              facebook: 'from-blue-600 to-blue-700',
+                              youtube: 'from-red-600 to-red-700',
+                              discord: 'from-indigo-500 to-indigo-700',
+                              telegram: 'from-blue-400 to-blue-500',
+                              tiktok: 'from-black to-gray-900',
+                              medium: 'from-green-600 to-green-700',
+                              reddit: 'from-orange-500 to-orange-600',
+                            };
+                            return colors[platform.toLowerCase()] || 'from-gray-500 to-gray-700';
+                          };
+
+                          return (
+                            <a
+                              key={index}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center justify-between p-4 bg-gradient-to-r ${getPlatformColor(link.platform)} text-white rounded-lg hover:shadow-lg transition-all transform hover:scale-105`}
+                            >
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mr-3">
+                                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d={getPlatformIcon(link.platform)} />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="font-medium capitalize">{link.platform}</p>
+                                  {link.username && (
+                                    <p className="text-xs text-white/80">@{link.username}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Edit Button */}
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setActiveTab('edit')}
+                      className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 transition-all"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Social Links
+                    </button>
+                  </div>
                 </div>
               )}
 

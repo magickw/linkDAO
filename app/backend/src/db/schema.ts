@@ -50,6 +50,11 @@ export const users = pgTable("users", {
   shippingPhone: varchar("shipping_phone", { length: 20 }),
   shippingSameAsBilling: boolean("shipping_same_as_billing").default(true),
 
+  // Profile customization fields
+  bannerCid: text("banner_cid"), // Banner image IPFS CID or URL (public)
+  website: varchar("website", { length: 500 }), // Primary website URL (public)
+  socialLinks: jsonb("social_links").default('[]'), // Social media links array (public)
+
   // LDAO Token
   ldaoBalance: numeric("ldao_balance", { precision: 20, scale: 8 }).default('0'),
 

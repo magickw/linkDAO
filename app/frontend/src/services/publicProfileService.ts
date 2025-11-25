@@ -1,4 +1,4 @@
-import { UserProfile } from '@/models/UserProfile';
+import { UserProfile, SocialLink } from '@/models/UserProfile';
 
 export interface PublicProfileData {
   id: string;
@@ -7,7 +7,10 @@ export interface PublicProfileData {
   displayName: string;
   ens: string;
   avatarCid: string;
+  bannerCid?: string;
   bioCid: string;
+  website?: string;
+  socialLinks?: SocialLink[];
   createdAt: string;
   updatedAt: string;
 }
