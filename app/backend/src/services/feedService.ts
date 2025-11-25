@@ -1025,9 +1025,15 @@ export class FeedService {
 
       let whereClause;
       if (isIntegerId) {
-        whereClause = eq(comments.postId, parseInt(postId));
+        whereClause = and(
+          eq(comments.postId, parseInt(postId)),
+          isNull(comments.parentCommentId) // Only get top-level comments
+        );
       } else {
-        whereClause = eq(comments.quickPostId, postId);
+        whereClause = and(
+          eq(comments.quickPostId, postId),
+          isNull(comments.parentCommentId) // Only get top-level comments
+        );
       }
 
       // Build sort order
