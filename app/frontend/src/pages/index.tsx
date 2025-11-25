@@ -999,7 +999,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
 
           {/* Right Sidebar - Activity & Notifications */}
           <div className="hidden lg:block lg:col-span-3">
