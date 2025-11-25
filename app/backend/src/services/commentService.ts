@@ -108,6 +108,8 @@ export class CommentService {
    */
   async getCommentsByPost(postId?: number, quickPostId?: string, sortBy: 'best' | 'new' | 'top' | 'controversial' = 'best', limit: number = 100) {
     try {
+      safeLogger.info(`[CommentService] getCommentsByPost called with postId=${postId}, quickPostId=${quickPostId}, sortBy=${sortBy}, limit=${limit}`);
+
       // Build the where clause
       let whereClause;
       if (postId) {
@@ -115,11 +117,13 @@ export class CommentService {
           eq(comments.postId, postId),
           isNull(comments.parentCommentId) // Only get top-level comments
         );
+        safeLogger.info(`[CommentService] Using postId filter: ${postId}, filtering for NULL parentCommentId`);
       } else if (quickPostId) {
         whereClause = and(
           eq(comments.quickPostId, quickPostId),
           isNull(comments.parentCommentId)
         );
+        safeLogger.info(`[CommentService] Using quickPostId filter: ${quickPostId}, filtering for NULL parentCommentId`);
       } else {
         throw new Error('Either postId or quickPostId must be provided');
       }
@@ -170,6 +174,11 @@ export class CommentService {
         .where(whereClause)
         .orderBy(orderBy)
         .limit(limit);
+
+      safeLogger.info(`[CommentService] Query returned ${result.length} comments`);
+      if (result.length > 0) {
+        safeLogger.info(`[CommentService] First comment: id=${result[0].id}, postId=${result[0].postId}, quickPostId=${result[0].quickPostId}, parentCommentId=${result[0].parentCommentId}`);
+      }
 
       return result;
     } catch (error) {

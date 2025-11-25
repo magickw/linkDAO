@@ -28,7 +28,9 @@ router.post('/community-posts/:postId/comments', async (req: Request, res: Respo
       quickPostId: isQuickPost ? postId : undefined,
       authorAddress: author,
       content,
-      parentCommentId
+      // Explicitly set to undefined (not null) for top-level comments
+      // This ensures the database stores NULL and isNull() queries work correctly
+      parentCommentId: parentCommentId || undefined
     });
 
     return res.status(201).json({

@@ -1054,6 +1054,7 @@ export class FeedService {
           parentCommentId: comments.parentCommentId,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
           avatarCid: users.avatarCid
         })
         .from(comments)
@@ -1134,6 +1135,7 @@ export class FeedService {
         ...comment[0],
         walletAddress: user[0].walletAddress,
         handle: user[0].handle,
+        displayName: user[0].displayName,
         avatarCid: user[0].avatarCid
       };
     } catch (error) {
@@ -1518,7 +1520,9 @@ export class FeedService {
           updatedAt: comments.updatedAt,
           parentCommentId: comments.parentCommentId,
           walletAddress: users.walletAddress,
-          handle: users.handle
+          handle: users.handle,
+          displayName: users.displayName,
+          avatarCid: users.avatarCid
         })
         .from(comments)
         .leftJoin(users, eq(comments.authorId, users.id))

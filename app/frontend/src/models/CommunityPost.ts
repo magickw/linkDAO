@@ -25,7 +25,7 @@ export interface Comment {
   id: string;
   postId: string;
   parentId?: string;
-  author: string;
+  author: string; // Wallet address for backwards compatibility
   content: string;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +35,12 @@ export interface Comment {
   depth: number;
   isDeleted: boolean;
   isEdited: boolean;
+  // Author profile information from backend
+  walletAddress?: string;
+  handle?: string;
+  displayName?: string;
+  profileCid?: string;
+  avatarCid?: string;
 }
 
 export interface CreateCommunityPostInput {
