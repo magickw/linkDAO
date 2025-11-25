@@ -503,12 +503,12 @@ export class UnifiedSellerAPIClient {
       return await this.request<OnboardingStep[]>(this.endpoints.getOnboardingSteps(walletAddress), undefined, true);
     } catch (error) {
       if (error instanceof SellerAPIError && error.status === 404) {
-        // Return empty array for new sellers who haven't started onboarding
+        // Return default onboarding steps for new sellers who haven't started onboarding
         return [
-          { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Set up your seller profile' },
-          { id: 'verification', completed: false, title: 'Verification', description: 'Verify your identity' },
-          { id: 'payout_setup', completed: false, title: 'Payout Setup', description: 'Set up your payment methods' },
-          { id: 'first_listing', completed: false, title: 'First Listing', description: 'Create your first product listing' }
+          { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Set up your seller profile', component: 'ProfileSetup', required: true },
+          { id: 'verification', completed: false, title: 'Verification', description: 'Verify your identity', component: 'Verification', required: true },
+          { id: 'payout_setup', completed: false, title: 'Payout Setup', description: 'Set up your payment methods', component: 'PayoutSetup', required: true },
+          { id: 'first_listing', completed: false, title: 'First Listing', description: 'Create your first product listing', component: 'FirstListing', required: false }
         ];
       }
       throw error;
