@@ -7,6 +7,7 @@ import { InlinePreviewRenderer } from '@/components/InlinePreviews/InlinePreview
 import SocialProofIndicator from '@/components/SocialProof/SocialProofIndicator';
 import TrendingBadge from '@/components/TrendingBadge/TrendingBadge';
 import EnhancedReactionSystem from '@/components/EnhancedReactionSystem';
+import OptimizedImage from '@/components/OptimizedImage';
 import { EnhancedPost } from '@/types/feed';
 import { ReactionType } from '@/types/tokenReaction';
 
@@ -37,8 +38,8 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
 }) => {
   // Validate reaction emoji
   const validReactionEmojis = ['🔥', '🚀', '💎'] as const;
-  const validatedReactionEmoji = validReactionEmojis.includes(defaultReactionEmoji as any) 
-    ? defaultReactionEmoji 
+  const validatedReactionEmoji = validReactionEmojis.includes(defaultReactionEmoji as any)
+    ? defaultReactionEmoji
     : '🔥';
   const {
     triggerHapticFeedback,
@@ -115,7 +116,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
@@ -167,11 +168,11 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
       {/* Trending Badge */}
       {post.trendingStatus && (
         <div className="absolute top-3 right-3 z-10">
-          <TrendingBadge 
-            level={post.trendingStatus === 'trending' ? 'hot' : 
-                   post.trendingStatus === 'viral' ? 'viral' :
-                   post.trendingStatus === 'hot' ? 'hot' :
-                   post.trendingStatus === 'rising' ? 'rising' : 'hot'} 
+          <TrendingBadge
+            level={post.trendingStatus === 'trending' ? 'hot' :
+              post.trendingStatus === 'viral' ? 'viral' :
+                post.trendingStatus === 'hot' ? 'hot' :
+                  post.trendingStatus === 'rising' ? 'rising' : 'hot'}
           />
         </div>
       )}
@@ -236,7 +237,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
           <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
             {displayContent}
           </p>
-          
+
           {shouldTruncateContent && (
             <button
               onClick={handleToggleContent}
@@ -324,7 +325,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
             initialReactions={post.reactions.map(r => {
               // Map the reaction type to a valid type for EnhancedReactionSystem
               let reactionType: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art' | 'like' | 'love' | 'laugh' | 'angry' | 'sad' = 'like';
-              
+
               // Map common reaction types
               switch (r.type) {
                 case '🔥':
@@ -370,7 +371,7 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
                 default:
                   reactionType = 'like';
               }
-              
+
               return {
                 type: reactionType,
                 emoji: getReactionEmoji(r.type),
@@ -478,10 +479,10 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
             `}
             aria-label={post.isBookmarked ? "Remove bookmark" : "Bookmark"}
           >
-            <svg 
-              className="w-5 h-5" 
-              fill={post.isBookmarked ? "currentColor" : "none"} 
-              stroke="currentColor" 
+            <svg
+              className="w-5 h-5"
+              fill={post.isBookmarked ? "currentColor" : "none"}
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />

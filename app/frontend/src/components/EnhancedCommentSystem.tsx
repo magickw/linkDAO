@@ -97,6 +97,11 @@ export default function EnhancedCommentSystem({
     loadCommunity();
   }, [communityId, community]);
 
+  // Load comments on mount and when sort changes
+  useEffect(() => {
+    loadComments();
+  }, [postId, sortBy]);
+
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
