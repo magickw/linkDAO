@@ -14,6 +14,7 @@ import CommunityDeFiEmbed from '../CommunityDeFiEmbed';
 import WalletSnapshotEmbed from '../WalletSnapshotEmbed';
 import CommunityGovernance from '../CommunityGovernance';
 import PostInteractionBar from '../PostInteractionBar';
+import OptimizedImage from '../OptimizedImage';
 import { motion } from 'framer-motion';
 
 // Helper function to check if post is a community post
@@ -435,17 +436,21 @@ export default function CommunityPostCardEnhanced({
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">
                 {post.mediaCids.map((mediaUrl, index) => (
-                  <img
+                  <div 
                     key={index}
-                    src={mediaUrl}
-                    alt={`Post media ${index + 1}`}
                     className="rounded-lg max-h-96 object-cover w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
                     onClick={() => window.open(mediaUrl, '_blank')}
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && window.open(mediaUrl, '_blank')}
                     role="button"
                     aria-label={`View media ${index + 1}`}
-                  />
+                  >
+                    <OptimizedImage
+                      src={mediaUrl}
+                      alt={`Post media ${index + 1}`}
+                      className="rounded-lg max-h-96 object-cover w-full"
+                    />
+                  </div>
                 ))}
               </div>
             )}

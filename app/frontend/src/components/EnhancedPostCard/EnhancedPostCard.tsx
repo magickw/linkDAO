@@ -1,7 +1,11 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import PostActionsMenu from '../PostActionsMenu';
+import { getPostActionPermissions } from '@/utils/postPermissions';
+import { CommunityPostService } from '@/services/communityPostService';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import { ContentPreview } from '../../types/contentPreview';
 import SocialProofIndicator, { SocialProofData } from '../SocialProof/SocialProofIndicator';
@@ -65,8 +69,87 @@ const EnhancedPostCard = React.memo(({
 }: EnhancedPostCardProps) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [showAllPreviews, setShowAllPreviews] = useState(false);
+  const [isPinned, setIsPinned] = useState(post.pinnedUntil && new Date(post.pinnedUntil) > new Date());
+
+  // Get post action permissions
+  const permissions = useMemo(() => {
+    return getPostActionPermissions(post as any, address);
+  }, [post, address]);
+
+  // Action handlers
+  const handleEdit = useCallback(() => {
+    router.push(`/edit-post/${post.id}`);
+  }, [router, post.id]);
+
+  const handleDelete = useCallback(async () => {
+    try {
+      if (post.communityId) {
+        await CommunityPostService.deletePost(post.communityId, post.id);
+      }
+      addToast('Post deleted successfully', 'success');
+      // Optionally trigger a refresh or remove from UI
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      addToast('Failed to delete post', 'error');
+    }
+  }, [post.id, post.communityId, addToast]);
+
+  const handlePin = useCallback(async () => {
+    try {
+      await CommunityPostService.pinPost(post.id);
+      setIsPinned(true);
+      addToast('Post pinned successfully', 'success');
+    } catch (error) {
+      console.error('Error pinning post:', error);
+      addToast('Failed to pin post', 'error');
+    }
+  }, [post.id, addToast]);
+
+  const handleUnpin = useCallback(async () => {
+    try {
+      await CommunityPostService.unpinPost(post.id);
+      setIsPinned(false);
+      addToast('Post unpinned successfully', 'success');
+    } catch (error) {
+      console.error('Error unpinning post:', error);
+      addToast('Failed to unpin post', 'error');
+    }
+  }, [post.id, addToast]);
+
+  const handleShare = useCallback(async () => {
+    const url = `${window.location.origin}/post/${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.title || 'Check out this post',
+          text: post.content.substring(0, 100),
+          url: url
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        addToast('Link copied to clipboard', 'success');
+      }
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      addToast('Failed to share post', 'error');
+    }
+  }, [post.id, post.title, post.content, addToast]);
+
+  const handleReport = useCallback(() => {
+    // TODO: Implement report modal
+    addToast('Report functionality coming soon', 'info');
+  }, [addToast]);
+
+  const handleHide = useCallback(() => {
+    // TODO: Implement hide functionality
+    addToast('Post hidden from your feed', 'success');
+  }, [addToast]);
 
   // Calculate trending level if not provided - memoized
   const trendingLevel = useMemo(() => {
@@ -315,17 +398,34 @@ const EnhancedPostCard = React.memo(({
                   </div>
                 </div>
 
-                {/* Trending Badge */}
-                {showTrending && trendingLevel && (
-                  <div className="flex-shrink-0 ml-3">
-                    <TrendingBadge
-                      level={trendingLevel}
-                      score={post.engagementScore}
-                      showScore
-                      aria-label={`Trending level: ${trendingLevel}, Score: ${post.engagementScore}`}
-                    />
-                  </div>
-                )}
+                {/* Post Actions Menu */}
+                <div className="flex items-center space-x-2">
+                  {/* Trending Badge */}
+                  {showTrending && trendingLevel && (
+                    <div className="flex-shrink-0">
+                      <TrendingBadge
+                        level={trendingLevel}
+                        score={post.engagementScore}
+                        showScore
+                        aria-label={`Trending level: ${trendingLevel}, Score: ${post.engagementScore}`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Actions Menu */}
+                  <PostActionsMenu
+                    postId={post.id}
+                    isPinned={isPinned}
+                    permissions={permissions}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onPin={handlePin}
+                    onUnpin={handleUnpin}
+                    onShare={handleShare}
+                    onReport={handleReport}
+                    onHide={handleHide}
+                  />
+                </div>
               </div>
             </div>
 

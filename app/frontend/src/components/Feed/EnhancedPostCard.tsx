@@ -360,7 +360,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         {post.mediaCids && post.mediaCids.length > 0 && !imageError && (
           <div onClick={onExpand}>
             <OptimizedImage
-              src={`${ipfsGateways[ipfsGatewayIndex]}${post.mediaCids[0]}`}
+              src={post.mediaCids[0]}
               alt="Post media"
               width={600}
               height={300}
@@ -370,19 +370,10 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
                 console.error('Image failed to load:', {
                   postId: post.id,
                   mediaCid: post.mediaCids[0],
-                  gateway: ipfsGateways[ipfsGatewayIndex],
-                  fullUrl: `${ipfsGateways[ipfsGatewayIndex]}${post.mediaCids[0]}`,
                   error: e
                 });
-
-                // Try next gateway if available
-                if (ipfsGatewayIndex < ipfsGateways.length - 1) {
-                  console.log(`Trying next IPFS gateway: ${ipfsGateways[ipfsGatewayIndex + 1]}`);
-                  setIpfsGatewayIndex(ipfsGatewayIndex + 1);
-                } else {
-                  console.error('All IPFS gateways failed for this image');
-                  setImageError(true);
-                }
+                console.error('All IPFS gateways failed for this image');
+                setImageError(true);
               }}
             />
           </div>

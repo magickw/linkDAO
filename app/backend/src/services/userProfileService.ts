@@ -98,6 +98,8 @@ export class UserProfileService {
       avatarCid: input.avatarCid || null, // Avatar is public
       bioCid: input.bioCid || null, // Bio is public
       profileCid: null, // Legacy field, no longer used
+      socialLinks: input.socialLinks || [], // Social links are public
+      website: input.website || null, // Website is public
       physicalAddress: encryptedAddressData, // All encrypted private data
       createdAt: new Date()
     };
@@ -115,6 +117,8 @@ export class UserProfileService {
           ens: userData.ens,
           avatarCid: userData.avatarCid,
           bioCid: userData.bioCid,
+          socialLinks: userData.socialLinks,
+          website: userData.website,
           physicalAddress: userData.physicalAddress,
           updatedAt: new Date()
         }
@@ -144,6 +148,8 @@ export class UserProfileService {
       ens: dbUser.ens || '', // ENS is now stored in database column
       avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
       bioCid: dbUser.bioCid || '', // Bio is now stored in database column
+      socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
+      website: dbUser.website || '', // Website is now stored in database column
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
       // Billing Address (from decrypted data)
@@ -217,6 +223,8 @@ export class UserProfileService {
       ens: dbUser.ens || '', // ENS is now stored in database column
       avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
       bioCid: dbUser.bioCid || '', // Bio is now stored in database column
+      socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
+      website: dbUser.website || '', // Website is now stored in database column
       email: additionalData.email,
       physicalAddress: additionalData.physicalAddress,
       // Billing Address - read from database columns
@@ -241,6 +249,7 @@ export class UserProfileService {
       shippingZipCode: dbUser.shippingZipCode || additionalData.shippingZipCode || '',
       shippingCountry: dbUser.shippingCountry || additionalData.shippingCountry || '',
       shippingPhone: dbUser.shippingPhone || additionalData.shippingPhone || '',
+      shippingSameAsBilling: dbUser.shippingSameAsBilling !== null && dbUser.shippingSameAsBilling !== undefined ? dbUser.shippingSameAsBilling : (additionalData.shippingSameAsBilling ?? true),
       createdAt,
       updatedAt
     };
@@ -278,6 +287,8 @@ export class UserProfileService {
         ens: dbUser.ens || '', // ENS is now stored in database column
         avatarCid: dbUser.avatarCid || '', // Avatar is now stored in database column
         bioCid: dbUser.bioCid || '', // Bio is now stored in database column
+        socialLinks: dbUser.socialLinks || [], // Social links are now stored in database column
+        website: dbUser.website || '', // Website is now stored in database column
         physicalAddress: decryptedData,
         role: dbUser.role || 'user',
         email: decryptedData.email || '',
@@ -337,6 +348,8 @@ export class UserProfileService {
         ens: dbUser.ens || '',
         avatarCid: dbUser.avatarCid || '',
         bioCid: dbUser.bioCid || '',
+        socialLinks: dbUser.socialLinks || [], // Social links are public
+        website: dbUser.website || '', // Website is public
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt) : new Date(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt) : new Date()
       };
@@ -410,6 +423,8 @@ export class UserProfileService {
         ens: input.ens !== undefined ? input.ens : existingProfile.ens, // ENS is public
         avatarCid: input.avatarCid !== undefined ? input.avatarCid : existingProfile.avatarCid, // Avatar is public
         bioCid: input.bioCid !== undefined ? input.bioCid : existingProfile.bioCid, // Bio is public
+        socialLinks: input.socialLinks !== undefined ? input.socialLinks : existingProfile.socialLinks, // Social links are public
+        website: input.website !== undefined ? input.website : existingProfile.website, // Website is public
         // Billing address fields
         billingFirstName: input.billingFirstName !== undefined ? input.billingFirstName : existingProfile.billingFirstName,
         billingLastName: input.billingLastName !== undefined ? input.billingLastName : existingProfile.billingLastName,

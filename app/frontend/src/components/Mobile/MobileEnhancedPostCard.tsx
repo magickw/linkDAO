@@ -268,8 +268,8 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         {post.mediaCids && post.mediaCids.length > 0 && (
           <div className="mb-3 -mx-4">
             {post.mediaCids.length === 1 ? (
-              <img
-                src={`https://ipfs.io/ipfs/${post.mediaCids[0]}`}
+              <OptimizedImage
+                src={post.mediaCids[0]}
                 alt="Post media"
                 className="w-full max-h-96 object-cover"
               />
@@ -277,8 +277,8 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
               <div className="grid grid-cols-2 gap-1">
                 {post.mediaCids.slice(0, 4).map((cid, index) => (
                   <div key={cid} className="relative">
-                    <img
-                      src={`https://ipfs.io/ipfs/${cid}`}
+                    <OptimizedImage
+                      src={cid}
                       alt={`Post media ${index + 1}`}
                       className="w-full h-32 object-cover"
                     />
