@@ -158,16 +158,21 @@ export const useFollowing = (address: string | undefined) => {
  * @returns Object containing follow counts, loading state, and error
  */
 export const useFollowCount = (address: string | undefined) => {
-  return useQuery<{ followers: number, following: number }, Error>({
+  const query = useQuery<{ followers: number, following: number }, Error>({
     queryKey: ['followCount', address],
     queryFn: async () => {
       if (!address) return { followers: 0, following: 0 };
       return FollowService.getFollowCount(address);
     },
     enabled: !!address,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0, // Always refetch when invalidated
     gcTime: 10 * 60 * 1000,
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
   });
+
+  return {
+    ...query,
+    refetch: query.refetch,
+  };
 };

@@ -72,7 +72,7 @@ export default function PublicProfile() {
   );
 
   // Follow count data
-  const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(
+  const { data: followCount, isLoading: isFollowCountLoading, refetch: refetchFollowCount } = useFollowCount(
     typeof walletAddress === 'string' ? walletAddress : ''
   );
 
@@ -133,6 +133,8 @@ export default function PublicProfile() {
     try {
       await follow({ follower: currentUserAddress, following: walletAddress });
       addToast(`Successfully followed ${profile?.handle || walletAddress}`, 'success');
+      // Manually refetch follow count to ensure header updates
+      refetchFollowCount();
     } catch (error) {
       console.error('Error following user:', error);
       addToast(`Failed to follow user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -158,6 +160,8 @@ export default function PublicProfile() {
     try {
       await unfollow({ follower: currentUserAddress, following: walletAddress });
       addToast(`Successfully unfollowed ${profile?.handle || walletAddress}`, 'success');
+      // Manually refetch follow count to ensure header updates
+      refetchFollowCount();
     } catch (error) {
       console.error('Error unfollowing user:', error);
       addToast(`Failed to unfollow user: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -424,8 +428,8 @@ export default function PublicProfile() {
                         onClick={isFollowing ? handleUnfollow : handleFollow}
                         disabled={isFollowLoading || isFollowStatusLoading}
                         className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFollowing
-                            ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                            : 'bg-primary-500 hover:bg-primary-600 text-white'
+                          ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                          : 'bg-primary-500 hover:bg-primary-600 text-white'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isFollowLoading || isFollowStatusLoading
@@ -441,8 +445,8 @@ export default function PublicProfile() {
                         onClick={isBlocked ? handleUnblock : handleBlock}
                         disabled={isBlockLoading || isBlockStatusLoading}
                         className={`px-6 py-2 rounded-lg font-medium transition-colors ${isBlocked
-                            ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                            : 'bg-red-500 hover:bg-red-600 text-white'
+                          ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                          : 'bg-red-500 hover:bg-red-600 text-white'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isBlockLoading || isBlockStatusLoading
@@ -529,8 +533,8 @@ export default function PublicProfile() {
               <button
                 onClick={() => setActiveTab('posts')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'posts'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 Posts
@@ -538,8 +542,8 @@ export default function PublicProfile() {
               <button
                 onClick={() => setActiveTab('followers')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'followers'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 Followers
@@ -547,8 +551,8 @@ export default function PublicProfile() {
               <button
                 onClick={() => setActiveTab('following')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'following'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
               >
                 Following
