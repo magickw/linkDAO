@@ -24,6 +24,8 @@ interface EnhancedPostCardProps {
   onTip?: (postId: string, amount?: string, token?: string, message?: string) => Promise<void>;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onExpand?: () => void;
+  onUpvote?: (postId: string) => Promise<void>;
+  onDownvote?: (postId: string) => Promise<void>;
 }
 
 export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
@@ -34,6 +36,8 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   onTip,
   onReaction,
   onExpand,
+  onUpvote,
+  onDownvote,
   className = '',
   showPreviews = true,
   showSocialProof = true,
@@ -251,6 +255,34 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       await invalidateUserCache('current', ['bookmarks']);
     } catch (error) {
       console.warn('Failed to invalidate bookmark cache:', error);
+    }
+  };
+
+  const handleUpvote = async () => {
+    try {
+      if (onUpvote) {
+        await onUpvote(post.id);
+        safeAddToast('Post upvoted successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated vote counts
+        await invalidateFeedCache();
+      }
+    } catch (error) {
+      safeAddToast('Failed to upvote post', 'error');
+    }
+  };
+
+  const handleDownvote = async () => {
+    try {
+      if (onDownvote) {
+        await onDownvote(post.id);
+        safeAddToast('Post downvoted successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated vote counts
+        await invalidateFeedCache();
+      }
+    } catch (error) {
+      safeAddToast('Failed to downvote post', 'error');
     }
   };
 
@@ -473,6 +505,27 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         <button onClick={() => setShowShareModal(true)}>
           {post.shares || 'Share'}
         </button>
+
+        {/* Upvote/Downvote Buttons */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleUpvote}
+            className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
+            aria-label="Upvote post"
+          >
+            <span>↑</span>
+            <span>{post.upvotes || 0}</span>
+          </button>
+          
+          <button
+            onClick={handleDownvote}
+            className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"
+            aria-label="Downvote post"
+          >
+            <span>↓</span>
+            <span>{post.downvotes || 0}</span>
+          </button>
+        </div>
 
         <div>
           <span>{post.views} views</span>

@@ -23,6 +23,8 @@ interface MobileEnhancedPostCardProps {
   onComment: (postId: string) => void;
   onUserPress: (userId: string) => void;
   onViewReactors: (postId: string, type: ReactionType) => void;
+  onUpvote?: (postId: string) => void;
+  onDownvote?: (postId: string) => void;
   className?: string;
   defaultReactionEmoji?: string;
   defaultReactionIntensity?: number;
@@ -36,6 +38,8 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   onComment,
   onUserPress,
   onViewReactors,
+  onUpvote,
+  onDownvote,
   className = '',
   defaultReactionEmoji = '🔥',
   defaultReactionIntensity = 0.5
@@ -134,6 +138,22 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
       case 'sad': return '😢';
       case 'angry': return '😠';
       default: return '🔥';
+    }
+  };
+
+  const handleUpvote = () => {
+    if (onUpvote) {
+      onUpvote(post.id);
+      triggerHapticFeedback('light');
+      announceToScreenReader('Post upvoted');
+    }
+  };
+
+  const handleDownvote = () => {
+    if (onDownvote) {
+      onDownvote(post.id);
+      triggerHapticFeedback('light');
+      announceToScreenReader('Post downvoted');
     }
   };
 
@@ -455,6 +475,35 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
               {post.reactions.reduce((sum, reaction) => sum + reaction.totalAmount, 0)}
             </span>
           </button>
+
+          {/* Upvote/Downvote Buttons */}
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handleUpvote}
+              className={`
+                flex items-center space-x-1 px-3 py-2 rounded-lg
+                text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
+                ${touchTargetClasses} ${accessibilityClasses}
+              `}
+              aria-label="Upvote"
+            >
+              <span className="text-lg">↑</span>
+              <span className="text-sm font-medium">{(post as any).upvotes || 0}</span>
+            </button>
+          
+            <button
+              onClick={handleDownvote}
+              className={`
+                flex items-center space-x-1 px-3 py-2 rounded-lg
+                text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800
+                ${touchTargetClasses} ${accessibilityClasses}
+              `}
+              aria-label="Downvote"
+            >
+              <span className="text-lg">↓</span>
+              <span className="text-sm font-medium">{(post as any).downvotes || 0}</span>
+            </button>
+          </div>
 
           <button
             onClick={() => onShare(post.id)}

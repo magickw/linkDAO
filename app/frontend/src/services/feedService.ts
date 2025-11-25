@@ -1293,4 +1293,102 @@ export class FeedService {
   static clearAnalyticsEvents(): void {
     feedAnalytics.clearEvents();
   }
+
+  // Upvote a post
+  static async upvotePost(postId: string): Promise<any> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/upvote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to upvote post: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
+      }
+
+      const result = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'post_upvote',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return result;
+    } catch (error: any) {
+      console.error('Error upvoting post:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'post_upvote_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
+      throw error;
+    }
+  }
+
+  // Downvote a post
+  static async downvotePost(postId: string): Promise<any> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/downvote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to downvote post: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
+      }
+
+      const result = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'post_downvote',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return result;
+    } catch (error: any) {
+      console.error('Error downvoting post:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'post_downvote_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
+      throw error;
+    }
+  }
 }

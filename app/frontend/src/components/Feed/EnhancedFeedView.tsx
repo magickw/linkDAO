@@ -384,6 +384,24 @@ const EnhancedFeedView = React.memo(({
         onTip={async (postId, amount, token) => {
           console.log('Tip', postId, amount, token);
         }}
+        onUpvote={async (postId) => {
+          try {
+            const { FeedService } = await import('../../services/feedService');
+            await FeedService.upvotePost(postId);
+            console.log('Upvoted post', postId);
+          } catch (error) {
+            console.error('Error upvoting post:', error);
+          }
+        }}
+        onDownvote={async (postId) => {
+          try {
+            const { FeedService } = await import('../../services/feedService');
+            await FeedService.downvotePost(postId);
+            console.log('Downvoted post', postId);
+          } catch (error) {
+            console.error('Error downvoting post:', error);
+          }
+        }}
       />
     </div>
   ), [showSocialProof, showTrendingBadges]);

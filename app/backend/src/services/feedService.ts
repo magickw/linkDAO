@@ -1023,17 +1023,15 @@ export class FeedService {
       // Check if postId is an integer (regular post) or UUID (quick post)
       const isIntegerId = /^\d+$/.test(postId);
 
-      let whereClause;
+      const conditions = [
+        isNull(comments.parentCommentId),
+        sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
+      ];
+
       if (isIntegerId) {
-        whereClause = and(
-          eq(comments.postId, parseInt(postId)),
-          isNull(comments.parentCommentId) // Only get top-level comments
-        );
+        conditions.push(eq(comments.postId, parseInt(postId)));
       } else {
-        whereClause = and(
-          eq(comments.quickPostId, postId),
-          isNull(comments.parentCommentId) // Only get top-level comments
-        );
+        conditions.push(eq(comments.quickPostId, postId));
       }
 
       // Build sort order
@@ -1065,10 +1063,7 @@ export class FeedService {
         })
         .from(comments)
         .leftJoin(users, eq(comments.authorId, users.id))
-        .where(and(
-          whereClause,
-          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
-        ))
+        .where(and(...conditions))
         .orderBy(orderByClause)
         .limit(limit)
         .offset(offset);
@@ -1077,10 +1072,7 @@ export class FeedService {
       const totalCountResult = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(comments)
-        .where(and(
-          whereClause,
-          sql`${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked'`
-        ));
+        .where(and(...conditions));
 
       const totalCount = totalCountResult[0]?.count || 0;
 
@@ -1805,6 +1797,74 @@ export class FeedService {
       safeLogger.info('Updating engagement score for post:', postId);
     } catch (error) {
       safeLogger.error('Error updating engagement score:', error);
+    }
+  }
+
+  // Upvote post
+  async upvotePost(data: { postId: string; userAddress: string }) {
+    try {
+      const { postId, userAddress } = data;
+      
+      // First, check if this is a regular post or quick post
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const quickPost = post.length === 0 ? await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1) : [];
+      
+      if (post.length > 0) {
+        // It's a regular post
+        // Increment upvotes
+        await db.update(posts)
+          .set({ upvotes: sql`${posts.upvotes} + 1` })
+          .where(eq(posts.id, postId));
+        
+        return { success: true, message: 'Post upvoted successfully' };
+      } else if (quickPost.length > 0) {
+        // It's a quick post
+        // Increment upvotes
+        await db.update(quickPosts)
+          .set({ upvotes: sql`${quickPosts.upvotes} + 1` })
+          .where(eq(quickPosts.id, postId));
+        
+        return { success: true, message: 'Quick post upvoted successfully' };
+      } else {
+        throw new Error('Post not found');
+      }
+    } catch (error) {
+      safeLogger.error('Error upvoting post:', error);
+      throw error;
+    }
+  }
+
+  // Downvote post
+  async downvotePost(data: { postId: string; userAddress: string }) {
+    try {
+      const { postId, userAddress } = data;
+      
+      // First, check if this is a regular post or quick post
+      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const quickPost = post.length === 0 ? await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1) : [];
+      
+      if (post.length > 0) {
+        // It's a regular post
+        // Increment downvotes
+        await db.update(posts)
+          .set({ downvotes: sql`${posts.downvotes} + 1` })
+          .where(eq(posts.id, postId));
+        
+        return { success: true, message: 'Post downvoted successfully' };
+      } else if (quickPost.length > 0) {
+        // It's a quick post
+        // Increment downvotes
+        await db.update(quickPosts)
+          .set({ downvotes: sql`${quickPosts.downvotes} + 1` })
+          .where(eq(quickPosts.id, postId));
+        
+        return { success: true, message: 'Quick post downvoted successfully' };
+      } else {
+        throw new Error('Post not found');
+      }
+    } catch (error) {
+      safeLogger.error('Error downvoting post:', error);
+      throw error;
     }
   }
 }

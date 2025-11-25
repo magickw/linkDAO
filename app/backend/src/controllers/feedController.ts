@@ -615,6 +615,52 @@ export class FeedController {
       }
     }
   }
+
+  // Upvote post
+  async upvotePost(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const { id: postId } = req.params;
+
+      const result = await feedService.upvotePost({
+        postId,
+        userAddress
+      });
+
+      res.json(apiResponse.success(result, 'Post upvoted successfully'));
+    } catch (error) {
+      safeLogger.error('Error upvoting post:', error);
+      res.status(500).json(apiResponse.error('Failed to upvote post'));
+    }
+  }
+
+  // Downvote post
+  async downvotePost(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const { id: postId } = req.params;
+
+      const result = await feedService.downvotePost({
+        postId,
+        userAddress
+      });
+
+      res.json(apiResponse.success(result, 'Post downvoted successfully'));
+    } catch (error) {
+      safeLogger.error('Error downvoting post:', error);
+      res.status(500).json(apiResponse.error('Failed to downvote post'));
+    }
+  }
 }
 
 export const feedController = new FeedController();

@@ -262,4 +262,28 @@ router.get('/content/:cid',
   feedController.getContentFromIPFS
 );
 
+// Upvote post (requires authentication)
+router.post('/:id/upvote',
+  authMiddleware,
+  csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.upvotePost
+);
+
+// Downvote post (requires authentication)
+router.post('/:id/downvote',
+  authMiddleware,
+  csrfProtection,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  feedController.downvotePost
+);
+
 export default router;
