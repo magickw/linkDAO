@@ -115,13 +115,13 @@ class PriceFormatter {
   }
 
   /**
-   * Format dual pricing (crypto + fiat)
+   * Format dual pricing (crypto + fiat) - simplified for USD only
    */
   formatDualPrice(
     cryptoAmount: number | string,
     cryptoCurrency: string,
     fiatAmount: number | string,
-    fiatCurrency: string = 'USD',
+    fiatCurrency: string = 'USD', // Only support USD
     options: {
       layout?: 'horizontal' | 'vertical';
       showBoth?: boolean;
@@ -151,9 +151,9 @@ class PriceFormatter {
     if (!showBoth) {
       display = primary.display;
     } else if (layout === 'vertical') {
-      display = `${primary.display}\n≈ ${secondary.display}`;
+      display = `${primary.display}\n${secondary.display}`;
     } else {
-      display = `${primary.display} (≈ ${secondary.display})`;
+      display = `${primary.display} (${secondary.display})`;
     }
 
     return {

@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { DualPricing } from '../../../design-system/components/DualPricing';
+import { StablecoinPricing } from '../../../design-system/components/StablecoinPricing';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
@@ -460,7 +461,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     currentPrice.amount,
     currentPrice.currency,
     parseFloat(currentPrice.usdEquivalent || '0'),
-    'USD',
+    'USD', // Only support USD
     { layout: 'horizontal', primaryCurrency: 'crypto' }
   );
 
@@ -468,7 +469,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     crypto: currentPrice.amount.toString(),
     cryptoSymbol: currentPrice.currency,
     fiat: currentPrice.usdEquivalent || '0',
-    fiatSymbol: 'USD'
+    fiatSymbol: 'USD' // Only support USD
+  };
+
+  // Helper function to check if a currency is a stablecoin
+  const isStablecoin = (currency: string): boolean => {
+    const stablecoins = ['USDC', 'USDT', 'DAI', 'BUSD', 'FRAX'];
+    return stablecoins.includes(currency.toUpperCase());
   };
 
   if (variant === 'list') {
@@ -603,6 +610,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                       )}
                     </div>
                   </div>
+                ) : isStablecoin(priceDisplayData.cryptoSymbol) ? (
+                  <StablecoinPricing
+                    price={priceDisplayData.crypto}
+                    symbol={priceDisplayData.cryptoSymbol}
+                    size="sm"
+                    layout="horizontal"
+                  />
                 ) : (
                   <DualPricing
                     cryptoPrice={priceDisplayData.crypto}
@@ -827,15 +841,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Pricing */}
           <div className="mb-4">
-            <DualPricing
-              cryptoPrice={priceDisplayData.crypto}
-              cryptoSymbol={priceDisplayData.cryptoSymbol}
-              fiatPrice={priceDisplayData.fiat}
-              fiatSymbol={priceDisplayData.fiatSymbol}
-              size="md"
-              layout="vertical"
-              realTimeConversion
-            />
+            {isStablecoin(priceDisplayData.cryptoSymbol) ? (
+              <StablecoinPricing
+                price={priceDisplayData.crypto}
+                symbol={priceDisplayData.cryptoSymbol}
+                size="md"
+                layout="vertical"
+              />
+            ) : (
+              <DualPricing
+                cryptoPrice={priceDisplayData.crypto}
+                cryptoSymbol={priceDisplayData.cryptoSymbol}
+                fiatPrice={priceDisplayData.fiat}
+                fiatSymbol={priceDisplayData.fiatSymbol}
+                size="md"
+                layout="vertical"
+                realTimeConversion
+              />
+            )}
           </div>
 
           {/* Engagement metrics */}

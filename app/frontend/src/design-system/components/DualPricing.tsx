@@ -55,7 +55,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   cryptoPrice,
   cryptoSymbol = 'ETH',
   fiatPrice,
-  fiatSymbol = 'USD',
+  fiatSymbol = 'USD', // Only support USD
   realTimeConversion = true,
   size = 'md',
   layout = 'horizontal',
@@ -64,7 +64,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   showLastUpdated = false,
   updateInterval = 120000, // 2 minutes
   trackHistory = false,
-  supportedCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD'],
+  supportedCurrencies = ['USD'], // Only support USD
   conversionApi,
   showLoading = true,
   className = '',
@@ -100,19 +100,12 @@ export const DualPricing: React.FC<DualPricingProps> = ({
     conversionApiRef.current = conversionApi;
   });
 
-  // Mock conversion rates (in real app, these would come from API)
+  // Mock conversion rates (simplified for USD only)
   const mockRates = {
     'ETH-USD': 2400,
-    'ETH-EUR': 2200,
-    'ETH-GBP': 1900,
-    'ETH-JPY': 350000,
-    'ETH-CAD': 3200,
     'BTC-USD': 45000,
-    'BTC-EUR': 41000,
-    'BTC-GBP': 35000,
     'USDC-USD': 1,
-    'USDC-EUR': 0.91,
-    'USDC-GBP': 0.78,
+    'USDT-USD': 1,
   };
 
   // Enhanced conversion function with multiple currencies

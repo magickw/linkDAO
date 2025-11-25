@@ -11,11 +11,11 @@ import { API_BASE_URL } from '../config/api';
 const MOCK_PRODUCTS: Product[] = [
   {
     id: '550e8400-e29b-41d4-a716-446655440001',
-    sellerId: 'seller_001',
+    sellerId: '0xc4f4cb013c4121d2dbd5b063eefe074f0ebc03f3',
     title: 'Premium Digital Art Collection',
     description: 'A curated collection of digital artworks',
-    priceAmount: 0.1,
-    priceCurrency: 'ETH',
+    priceAmount: 299.99,
+    priceCurrency: 'USDC',
     categoryId: 'cat_001',
     images: ['https://placeholder.com/art1.jpg'],
     metadata: {},
@@ -24,6 +24,44 @@ const MOCK_PRODUCTS: Product[] = [
     tags: ['art', 'digital', 'premium'],
     views: 100,
     favorites: 50,
+    listingStatus: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440002',
+    sellerId: '0x72f58fe0e30a3f2fa96720d7ad85b4a8ef767d05',
+    title: 'Blockchain Development Course',
+    description: 'Comprehensive course on blockchain development',
+    priceAmount: 49.99,
+    priceCurrency: 'USDC',
+    categoryId: 'cat_002',
+    images: ['https://placeholder.com/course1.jpg'],
+    metadata: {},
+    inventory: 5,
+    status: 'active',
+    tags: ['education', 'blockchain', 'course'],
+    views: 250,
+    favorites: 75,
+    listingStatus: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: '550e8400-e29b-41d4-a716-446655440003',
+    sellerId: '0xc4f4cb013c4121d2dbd5b063eefe074f0ebc03f3',
+    title: 'Web3 Design Template Pack',
+    description: 'Professional design templates for Web3 projects',
+    priceAmount: 149.99,
+    priceCurrency: 'USDC',
+    categoryId: 'cat_003',
+    images: ['https://placeholder.com/template1.jpg'],
+    metadata: {},
+    inventory: 3,
+    status: 'active',
+    tags: ['design', 'web3', 'templates'],
+    views: 180,
+    favorites: 60,
     listingStatus: 'active',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -846,8 +884,11 @@ export class UnifiedMarketplaceService {
   }
 
   private convertToCrypto(amount: number, currency: string): string {
-    const ethPrice = 2400; // Placeholder ETH price in USD
-    if (currency === 'USD') {
+    // Since we're using stablecoins (USDC/USDT) which are pegged to USD,
+    // we can use the amount directly for crypto conversion
+    if (currency === 'USD' || currency === 'USDC' || currency === 'USDT') {
+      // For display purposes, we might want to show equivalent ETH value
+      const ethPrice = 2400; // Placeholder ETH price in USD
       return (amount / ethPrice).toFixed(4);
     }
     return amount.toString();

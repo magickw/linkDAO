@@ -518,7 +518,7 @@ export class EnhancedMarketplaceService {
       title: listing.title,
       description: listing.description,
       priceAmount: listing.price?.amount || listing.cryptoPrice || 0,
-      priceCurrency: listing.price?.currency || listing.cryptoCurrency || 'ETH',
+      priceCurrency: listing.price?.currency || listing.cryptoCurrency || 'USDC',
       categoryId: listing.category || '',
       images: listing.images || [],
       metadata: {

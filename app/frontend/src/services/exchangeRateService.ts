@@ -30,14 +30,10 @@ const SUPPORTED_CURRENCIES = {
     'MATIC': { name: 'Polygon', coingeckoId: 'matic-network', decimals: 18 },
     'BTC': { name: 'Bitcoin', coingeckoId: 'bitcoin', decimals: 8 }
   },
-  // Fiat currencies
+  // Fiat currencies - only USD for now
   fiat: {
-    'USD': { name: 'US Dollar', symbol: '$' },
-    'EUR': { name: 'Euro', symbol: '€' },
-    'GBP': { name: 'British Pound', symbol: '£' },
-    'JPY': { name: 'Japanese Yen', symbol: '¥' },
-    'CAD': { name: 'Canadian Dollar', symbol: 'C$' },
-    'AUD': { name: 'Australian Dollar', symbol: 'A$' }
+    'USD': { name: 'US Dollar', symbol: '$' }
+    // Removed other fiat currencies to reduce complexity
   }
 };
 

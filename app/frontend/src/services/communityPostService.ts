@@ -465,4 +465,27 @@ export class CommunityPostService {
       throw error;
     }
   }
+
+  static async getPostCommentCount(postId: string): Promise<number> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch post stats');
+      }
+
+      const result = await response.json();
+      return result.commentCount || 0;
+    } catch (error) {
+      console.error('Error fetching post comment count:', error);
+      return 0;
+    }
+  }
 }

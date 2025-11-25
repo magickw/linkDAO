@@ -15,6 +15,7 @@ interface EnhancedCommentSystemProps {
   userMembership?: CommunityMembership | null;
   isLocked?: boolean;
   onCommentAdded?: (comment: Comment) => void;
+  onCommentCountChange?: (count: number) => void; // Add callback for comment count changes
   className?: string;
 }
 
@@ -55,13 +56,19 @@ export default function EnhancedCommentSystem({
       });
 
       setComments(commentsData);
+      
+      // Update comment count
+      const commentCount = await CommunityPostService.getPostCommentCount(postId);
+      if (onCommentCountChange) {
+        onCommentCountChange(commentCount);
+      }
     } catch (err) {
       console.error('Error loading comments:', err);
       addToast('Failed to load comments', 'error');
     } finally {
       setCommentsLoading(false);
     }
-  }, [postId, sortBy, commentsLoading, addToast]);
+  }, [postId, sortBy, commentsLoading, addToast, onCommentCountChange]);
 
   // Load community information when communityId is provided
   useEffect(() => {
@@ -130,6 +137,12 @@ export default function EnhancedCommentSystem({
       setComments(prevComments => [newCommentObj, ...prevComments]);
       setNewComment('');
       setShowCommentForm(false);
+      
+      // Update comment count after adding a new comment
+      const commentCount = await CommunityPostService.getPostCommentCount(postId);
+      if (onCommentCountChange) {
+        onCommentCountChange(commentCount);
+      }
       
       if (onCommentAdded) {
         onCommentAdded(newCommentObj);

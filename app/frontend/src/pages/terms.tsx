@@ -35,6 +35,9 @@ export default function TermsOfService() {
               <li>Gas fees and transaction costs are determined by the blockchain network, not by LinkDAO</li>
               <li>Smart contract interactions carry inherent risks, including potential loss of funds</li>
               <li>LinkDAO does not have custody of your cryptocurrency or digital assets</li>
+              <li>Multi-signature and escrow smart contracts may be used for enhanced security</li>
+              <li>NFT transactions and token swaps involve additional risks and fees</li>
+              <li>DAO governance participation requires understanding of token-weighted voting</li>
             </ul>
           </section>
 
@@ -77,8 +80,10 @@ export default function TermsOfService() {
             <ul className="list-disc pl-6 space-y-2">
               <li>Sellers are responsible for the accuracy of product descriptions and fulfillment of orders</li>
               <li>Buyers acknowledge that transactions may be facilitated through smart contracts</li>
+              <li>Enhanced escrow protection is available for high-value transactions</li>
               <li>LinkDAO is not a party to transactions between buyers and sellers</li>
               <li>Disputes must be resolved between the parties involved; LinkDAO provides tools but does not arbitrate</li>
+              <li>DAO-governed dispute resolution may be available for community-verified transactions</li>
               <li>All transactions are subject to applicable taxes and fees</li>
             </ul>
           </section>
@@ -93,11 +98,32 @@ export default function TermsOfService() {
               <li>Voting rights are determined by token holdings at the time of proposal snapshots</li>
               <li>You agree to abide by the outcomes of governance votes</li>
               <li>You understand that governance tokens may have value and are subject to market forces</li>
+              <li>Multi-signature governance actions may require multiple approvals for high-impact proposals</li>
+              <li>Automated execution may occur for scheduled or recurring governance actions</li>
+              <li>Charity governance allows token holders to direct donations through smart contracts</li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">7. Intellectual Property</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">7. Charity Governance and Donations</h2>
+            <p>
+              LinkDAO includes features for decentralized charitable giving and governance:
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Charity governance proposals may be voted on by token holders</li>
+              <li>Burn-to-donate mechanisms allow tokens to trigger treasury donations</li>
+              <li>Proof-of-donation NFTs may be minted to verify charitable contributions</li>
+              <li>Regional charity SubDAOs may be created through the platform</li>
+              <li>You acknowledge that charitable contributions are irrevocable once processed</li>
+            </ul>
+            <p className="mt-4">
+              Participation in charity governance is voluntary and donations are processed through smart contracts. 
+              LinkDAO does not control the distribution of donated funds after they are processed via smart contracts.
+            </p>
+          </section>
+          
+          <section>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">8. Intellectual Property</h2>
             <p>
               The Platform and its original content, features, and functionality are owned by LinkDAO and are 
               protected by international copyright, trademark, patent, trade secret, and other intellectual 
@@ -107,7 +133,25 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">8. Disclaimers and Limitation of Liability</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">8. AI and Automated Systems</h2>
+            <p>
+              LinkDAO uses artificial intelligence and automated systems for various functions:
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Content recommendation and personalization</li>
+              <li>Fraud detection and security monitoring</li>
+              <li>Smart contract interaction analysis</li>
+              <li>Marketplace transaction risk assessment</li>
+              <li>Automated customer support features</li>
+            </ul>
+            <p className="mt-4">
+              While AI systems assist in platform operations, critical decisions remain under human oversight. 
+              You acknowledge and accept the use of these automated systems as part of your use of the Platform.
+            </p>
+          </section>
+          
+          <section>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">9. Disclaimers and Limitation of Liability</h2>
             <p>
               THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND. LinkDAO does 
               not guarantee:
@@ -126,7 +170,7 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">9. Indemnification</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">10. Indemnification</h2>
             <p>
               You agree to indemnify, defend, and hold harmless LinkDAO, its officers, directors, employees, 
               and agents from and against any claims, liabilities, damages, losses, and expenses arising out 
@@ -136,7 +180,20 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">10. Changes to Terms</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">10. Mobile Features</h2>
+            <p>
+              The LinkDAO mobile experience includes additional features and terms:
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Push notifications may be sent to keep you informed of platform activities</li>
+              <li>Mobile-specific governance interfaces may have different functionality than web interfaces</li>
+              <li>Biometric authentication may be used for certain sensitive actions</li>
+              <li>Mobile data usage is subject to your device's data plan and connectivity</li>
+            </ul>
+          </section>
+          
+          <section>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">11. Changes to Terms</h2>
             <p>
               LinkDAO reserves the right to modify these Terms at any time. Changes will be effective 
               immediately upon posting to the Platform. Your continued use of the Platform after changes 
@@ -145,7 +202,7 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">11. Termination</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">13. Termination</h2>
             <p>
               We may terminate or suspend your access to the Platform immediately, without prior notice or 
               liability, for any reason, including breach of these Terms. Upon termination, your right to 
@@ -154,7 +211,7 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">12. Governing Law</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">14. Governing Law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with the laws of the jurisdiction 
               in which LinkDAO operates, without regard to its conflict of law provisions.
@@ -162,7 +219,7 @@ export default function TermsOfService() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">13. Contact Information</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">15. Contact Information</h2>
             <p>
               If you have any questions about these Terms, please contact us through the Platform's support 
               channels or via our official communication channels.

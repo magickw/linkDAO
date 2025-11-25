@@ -41,6 +41,9 @@ export default function PrivacyPolicy() {
               <li>Token holdings and governance participation</li>
               <li>Marketplace transactions and interactions</li>
               <li>Community memberships and activity</li>
+              <li>Escrow and smart contract interactions</li>
+              <li>DAO governance votes and proposals</li>
+              <li>NFT ownership and transfers</li>
             </ul>
             <p className="mt-4">
               <strong>Important:</strong> Blockchain data is public, permanent, and cannot be deleted or modified 
@@ -57,6 +60,8 @@ export default function PrivacyPolicy() {
               <li>User preferences and settings</li>
               <li>Device and browser information</li>
               <li>IP addresses and usage analytics</li>
+              <li>Push notification tokens for mobile features</li>
+              <li>Marketplace order and escrow data</li>
               <li>Cookies and similar tracking technologies</li>
             </ul>
 
@@ -69,6 +74,7 @@ export default function PrivacyPolicy() {
               <li>We may access your token balances to verify eligibility for certain features</li>
               <li>We do not have access to your private keys or seed phrases</li>
               <li>We cannot initiate transactions without your explicit approval</li>
+              <li>Transaction signing occurs solely in your wallet application</li>
             </ul>
           </section>
 
@@ -84,6 +90,7 @@ export default function PrivacyPolicy() {
               <li><strong>Community Features:</strong> To enable social interactions, messaging, and community participation</li>
               <li><strong>Governance:</strong> To facilitate DAO voting and proposal management</li>
               <li><strong>Marketplace:</strong> To process transactions and manage buyer-seller interactions</li>
+              <li><strong>Smart Contract Interactions:</strong> To facilitate escrow, NFT transactions, and other blockchain-based features</li>
               <li><strong>Analytics:</strong> To understand usage patterns and improve the platform</li>
               <li><strong>Security:</strong> To detect and prevent fraud, abuse, and security threats</li>
               <li><strong>Communications:</strong> To send important updates, notifications, and announcements</li>
@@ -109,10 +116,22 @@ export default function PrivacyPolicy() {
               <li>Analytics and monitoring services</li>
               <li>Wallet connection providers (WalletConnect, RainbowKit)</li>
               <li>Blockchain data indexers and APIs</li>
+              <li>Smart contract verification services</li>
               <li>Customer support tools</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">4.3 Legal Requirements</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">4.3 Smart Contract Interactions</h3>
+            <p>
+              When you interact with smart contracts on the platform:
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Data may be shared with decentralized oracles and external protocols</li>
+              <li>Transaction data becomes permanently recorded on the blockchain</li>
+              <li>Smart contract events may be indexed by third-party services</li>
+              <li>Escrow and multi-signature transactions may involve additional parties</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">4.4 Legal Requirements</h3>
             <p>
               We may disclose your information if required by law or in response to:
             </p>
@@ -123,7 +142,7 @@ export default function PrivacyPolicy() {
               <li>Prevention of fraud or security threats</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">4.4 Business Transfers</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">4.5 Business Transfers</h3>
             <p>
               In the event of a merger, acquisition, or sale of assets, your information may be transferred to 
               the acquiring entity, subject to the same privacy protections outlined in this policy.
@@ -171,13 +190,19 @@ export default function PrivacyPolicy() {
               <li>Anonymized or aggregated data may be retained for analytics</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.4 Cookie Preferences</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.4 Push Notifications</h3>
+            <p>
+              You can manage push notification preferences through your device settings or within the platform. 
+              Note that disabling notifications may limit certain features of the mobile experience.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.5 Cookie Preferences</h3>
             <p>
               You can manage cookie preferences through your browser settings. Note that disabling cookies may 
               limit certain features of the platform.
             </p>
 
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.5 Marketing Communications</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3 mt-6">6.6 Marketing Communications</h3>
             <p>
               You can opt out of promotional communications by updating your notification preferences or using 
               the unsubscribe link in emails.
@@ -291,6 +316,24 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">14. AI and Automated Decision-Making</h2>
+            <p>
+              LinkDAO may use artificial intelligence and automated systems for the following purposes:
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Content recommendation and personalization</li>
+              <li>Fraud detection and security monitoring</li>
+              <li>Automated compliance checking</li>
+              <li>Smart contract interaction analysis</li>
+              <li>Marketplace transaction risk assessment</li>
+            </ul>
+            <p className="mt-4">
+              Our AI systems do not make solely automated decisions that significantly affect you. Human 
+              oversight is maintained for all significant decisions.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">15. European Economic Area (EEA) Rights</h2>
             <p>
               If you are located in the EEA, you have rights under the General Data Protection Regulation (GDPR):
@@ -316,6 +359,18 @@ export default function PrivacyPolicy() {
               seriously and implement protections for off-chain data, blockchain transactions are public by 
               design. We recommend using separate wallets for different activities and being mindful of what 
               information you share on-chain.
+            </p>
+          </div>
+
+          <div className="mt-6 p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <h3 className="text-lg font-semibold text-green-900 dark:text-green-200 mb-2">
+              Charity Governance and Token Features
+            </h3>
+            <p className="text-sm text-green-800 dark:text-green-300">
+              LinkDAO includes charity governance features that allow token holders to participate in 
+              decentralized charitable giving. Your token holdings and governance participation may be 
+              publicly visible on the blockchain. Proof-of-donation NFTs may be minted to your wallet to 
+              verify charitable contributions.
             </p>
           </div>
 

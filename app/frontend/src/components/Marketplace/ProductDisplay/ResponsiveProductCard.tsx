@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   DualPricing } from '../../../design-system/components/DualPricing';
+import { StablecoinPricing } from '../../../design-system/components/StablecoinPricing';
 import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
@@ -310,7 +311,13 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
     crypto: product.price.amount,
     cryptoSymbol: product.price.currency,
     fiat: product.price.usdEquivalent || '0',
-    fiatSymbol: 'USD'
+    fiatSymbol: 'USD' // Only support USD
+  };
+
+  // Helper function to check if a currency is a stablecoin
+  const isStablecoin = (currency: string): boolean => {
+    const stablecoins = ['USDC', 'USDT', 'DAI', 'BUSD', 'FRAX'];
+    return stablecoins.includes(currency.toUpperCase());
   };
 
   // Card layout based on screen size
@@ -355,15 +362,24 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               </div>
 
               {/* Pricing */}
-              <div className="mb-2">
-                <DualPricing
-                  cryptoPrice={priceData.crypto}
-                  cryptoSymbol={priceData.cryptoSymbol}
-                  fiatPrice={priceData.fiat}
-                  fiatSymbol={priceData.fiatSymbol}
-                  size="sm"
-                  layout="horizontal"
-                />
+              <div className="mb-4">
+                {isStablecoin(priceData.cryptoSymbol) ? (
+                  <StablecoinPricing
+                    price={priceData.crypto}
+                    symbol={priceData.cryptoSymbol}
+                    size="sm"
+                    layout="horizontal"
+                  />
+                ) : (
+                  <DualPricing
+                    cryptoPrice={priceData.crypto}
+                    cryptoSymbol={priceData.cryptoSymbol}
+                    fiatPrice={priceData.fiat}
+                    fiatSymbol={priceData.fiatSymbol}
+                    size="sm"
+                    layout="horizontal"
+                  />
+                )}
               </div>
 
               {/* Trust indicators */}
@@ -504,15 +520,24 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
             {/* Pricing */}
             <div className="mb-4">
-              <DualPricing
-                cryptoPrice={priceData.crypto}
-                cryptoSymbol={priceData.cryptoSymbol}
-                fiatPrice={priceData.fiat}
-                fiatSymbol={priceData.fiatSymbol}
-                size="md"
-                layout="vertical"
-                realTimeConversion
-              />
+              {isStablecoin(priceData.cryptoSymbol) ? (
+                <StablecoinPricing
+                  price={priceData.crypto}
+                  symbol={priceData.cryptoSymbol}
+                  size="md"
+                  layout="vertical"
+                />
+              ) : (
+                <DualPricing
+                  cryptoPrice={priceData.crypto}
+                  cryptoSymbol={priceData.cryptoSymbol}
+                  fiatPrice={priceData.fiat}
+                  fiatSymbol={priceData.fiatSymbol}
+                  size="md"
+                  layout="vertical"
+                  realTimeConversion
+                />
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -693,15 +718,24 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
           {/* Pricing */}
           <div className="mb-5">
-            <DualPricing
-              cryptoPrice={priceData.crypto}
-              cryptoSymbol={priceData.cryptoSymbol}
-              fiatPrice={priceData.fiat}
-              fiatSymbol={priceData.fiatSymbol}
-              size="lg"
-              layout="vertical"
-              realTimeConversion
-            />
+            {isStablecoin(priceData.cryptoSymbol) ? (
+              <StablecoinPricing
+                price={priceData.crypto}
+                symbol={priceData.cryptoSymbol}
+                size="lg"
+                layout="vertical"
+              />
+            ) : (
+              <DualPricing
+                cryptoPrice={priceData.crypto}
+                cryptoSymbol={priceData.cryptoSymbol}
+                fiatPrice={priceData.fiat}
+                fiatSymbol={priceData.fiatSymbol}
+                size="lg"
+                layout="vertical"
+                realTimeConversion
+              />
+            )}
           </div>
 
           {/* Engagement metrics */}
