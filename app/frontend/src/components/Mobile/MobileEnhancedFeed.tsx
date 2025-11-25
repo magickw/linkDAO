@@ -22,6 +22,8 @@ interface MobileEnhancedFeedProps {
   onPostComment: (postId: string) => void;
   onPostShare: (postId: string) => void;
   onPostBookmark: (postId: string) => void;
+  onPostUpvote?: (postId: string) => Promise<void>;
+  onPostDownvote?: (postId: string) => Promise<void>;
   onViewReactors: (postId: string, type: ReactionType) => void;
   onUserPress: (userId: string) => void;
   onSortChange: (sort: 'hot' | 'new' | 'top' | 'rising') => void;
@@ -41,6 +43,8 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
   onPostComment,
   onPostShare,
   onPostBookmark,
+  onPostUpvote,
+  onPostDownvote,
   onViewReactors,
   onUserPress,
   onSortChange,
@@ -118,11 +122,13 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
         onComment={onPostComment}
         onShare={onPostShare}
         onBookmark={onPostBookmark}
+        onUpvote={onPostUpvote}
+        onDownvote={onPostDownvote}
         onViewReactors={onViewReactors}
         onUserPress={onUserPress}
       />
     </div>
-  ), [onPostReact, onPostComment, onPostShare, onPostBookmark, onViewReactors, onUserPress]);
+  ), [onPostReact, onPostComment, onPostShare, onPostBookmark, onPostUpvote, onPostDownvote, onViewReactors, onUserPress]);
 
   const EmptyComponent = () => (
     <div className="flex flex-col items-center justify-center py-16 px-4">

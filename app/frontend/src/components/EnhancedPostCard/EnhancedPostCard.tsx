@@ -28,6 +28,10 @@ export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' 
   // Community context
   communityName?: string;
   media?: string[];
+  
+  // Voting
+  upvotes?: number;
+  downvotes?: number;
 }
 
 interface EnhancedPostCardProps {
@@ -39,6 +43,8 @@ interface EnhancedPostCardProps {
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
   onExpand?: () => void;
+  onUpvote?: (postId: string) => Promise<void>;
+  onDownvote?: (postId: string) => Promise<void>;
 }
 
 // Add proper comparison function for React.memo
@@ -65,7 +71,9 @@ const EnhancedPostCard = React.memo(({
   showTrending = true,
   onReaction,
   onTip,
-  onExpand
+  onExpand,
+  onUpvote,
+  onDownvote
 }: EnhancedPostCardProps) => {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
@@ -150,6 +158,32 @@ const EnhancedPostCard = React.memo(({
     // TODO: Implement hide functionality
     addToast('Post hidden from your feed', 'success');
   }, [addToast]);
+
+  // Handle upvote
+  const handleUpvote = useCallback(async () => {
+    if (!onUpvote) return;
+    
+    try {
+      await onUpvote(post.id);
+      analyticsService.trackUserEvent('post_upvote', { postId: post.id });
+    } catch (error) {
+      console.error('Error upvoting post:', error);
+      addToast('Failed to upvote post', 'error');
+    }
+  }, [onUpvote, post.id, addToast]);
+
+  // Handle downvote
+  const handleDownvote = useCallback(async () => {
+    if (!onDownvote) return;
+    
+    try {
+      await onDownvote(post.id);
+      analyticsService.trackUserEvent('post_downvote', { postId: post.id });
+    } catch (error) {
+      console.error('Error downvoting post:', error);
+      addToast('Failed to downvote post', 'error');
+    }
+  }, [onDownvote, post.id, addToast]);
 
   // Calculate trending level if not provided - memoized
   const trendingLevel = useMemo(() => {
@@ -566,7 +600,6 @@ const EnhancedPostCard = React.memo(({
                         addToast('Please connect your wallet to share posts', 'error');
                         return;
                       }
-
                       const response = await fetch('/api/posts/repost', {
                         method: 'POST',
                         headers: {
@@ -578,15 +611,12 @@ const EnhancedPostCard = React.memo(({
                           author: address.toLowerCase()
                         })
                       });
-
                       if (!response.ok) {
                         const error = await response.json();
                         throw new Error(error.error || 'Failed to repost');
                       }
-
                       const result = await response.json();
                       addToast('Post shared to your timeline!', 'success');
-
                       // Track repost event
                       analyticsService.trackUserEvent('post_repost', {
                         postId,
@@ -601,7 +631,6 @@ const EnhancedPostCard = React.memo(({
                     // External share (Twitter, etc.) - handled by SharePostModal
                     console.log('Sharing post:', postId, shareType, message);
                     addToast(`Post shared via ${shareType}!`, 'success');
-
                     // Track share event
                     analyticsService.trackUserEvent('post_share', {
                       postId,
@@ -613,6 +642,41 @@ const EnhancedPostCard = React.memo(({
                 }}
               />
 
+              {/* Upvote/Downvote Buttons */}
+              <div className="flex items-center justify-center space-x-6 mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                <button
+                  onClick={handleUpvote}
+                  disabled={!onUpvote}
+                  className={`flex items-center space-x-2 ${
+                    onUpvote 
+                      ? 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400' 
+                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  } transition-colors duration-200`}
+                  aria-label="Upvote post"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                  <span className="font-medium">{post.upvotes || 0}</span>
+                </button>
+                
+                <button
+                  onClick={handleDownvote}
+                  disabled={!onDownvote}
+                  className={`flex items-center space-x-2 ${
+                    onDownvote 
+                      ? 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400' 
+                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                  } transition-colors duration-200`}
+                  aria-label="Downvote post"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                  <span className="font-medium">{post.downvotes || 0}</span>
+                </button>
+              </div>
+
               {/* Comment System - Show when expanded */}
               {expanded && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -623,7 +687,6 @@ const EnhancedPostCard = React.memo(({
                     onCommentAdded={(comment) => {
                       console.log('New comment added:', comment);
                       addToast('Comment posted!', 'success');
-
                       // Track comment event
                       analyticsService.trackUserEvent('post_comment_added', {
                         postId: post.id,

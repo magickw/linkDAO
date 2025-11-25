@@ -67,6 +67,10 @@ export interface EnhancedPost {
   shares: number;
   views: number;
   engagementScore: number;
+  
+  // Voting data
+  upvotes?: number;
+  downvotes?: number;
 
   // Enhanced features
   previews: ContentPreview[]; // Required for consistency with components
