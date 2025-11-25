@@ -144,16 +144,16 @@ export class CommentService {
           orderBy = desc(comments.createdAt);
           break;
         case 'top':
-          orderBy = desc(sql`${comments.upvotes} - ${comments.downvotes}`);
+          orderBy = desc(sql`(${comments.upvotes} - ${comments.downvotes})`);
           break;
         case 'controversial':
           // Controversial = high engagement but close vote ratio
-          orderBy = desc(sql`${comments.upvotes} + ${comments.downvotes}`);
+          orderBy = desc(sql`(${comments.upvotes} + ${comments.downvotes})`);
           break;
         case 'best':
         default:
           // Best = highest net score
-          orderBy = desc(sql`${comments.upvotes} - ${comments.downvotes}`);
+          orderBy = desc(sql`(${comments.upvotes} - ${comments.downvotes})`);
           break;
       }
 
@@ -227,7 +227,7 @@ export class CommentService {
         .from(comments)
         .innerJoin(users, eq(comments.authorId, users.id))
         .where(eq(comments.parentCommentId, parentCommentId))
-        .orderBy(desc(sql`${comments.upvotes} - ${comments.downvotes}`))
+        .orderBy(desc(sql`(${comments.upvotes} - ${comments.downvotes})`))
         .limit(limit);
 
       return result;

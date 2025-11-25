@@ -23,6 +23,7 @@ import {
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { CommunityService } from '@/services/communityService';
 import { PostService } from '@/services/postService';
+import enhancedUserService from '@/services/enhancedUserService';
 import { useWeb3 } from '@/context/Web3Context';
 import { Community } from '@/models/Community';
 import CommunitySettingsModal from './CommunityManagement/CommunitySettingsModal';
@@ -48,6 +49,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const [error, setError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPostCreator, setShowPostCreator] = useState(false);
+  const [moderatorProfiles, setModeratorProfiles] = useState<Record<string, { handle?: string }>>({});
 
   // Use membership data from backend if available, otherwise fallback to moderators check
   const memberRole = communityData?.memberRole || ((communityData?.moderators || []).includes(address || '') ? 'admin' : 'member');
@@ -133,6 +135,35 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
       fetchCommunityData();
     }
   }, [communitySlug, address, isConnected]);
+
+  // Fetch moderator profiles when community data changes
+  useEffect(() => {
+    const fetchModeratorProfiles = async () => {
+      if (!communityData?.moderators || communityData.moderators.length === 0) {
+        setModeratorProfiles({});
+        return;
+      }
+
+      const profiles: Record<string, { handle?: string }> = {};
+
+      for (const modAddress of communityData.moderators) {
+        try {
+          const profile = await enhancedUserService.getUserProfileByAddress(modAddress);
+          if (profile) {
+            profiles[modAddress] = {
+              handle: profile.handle
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching profile for ${modAddress}:`, error);
+        }
+      }
+
+      setModeratorProfiles(profiles);
+    };
+
+    fetchModeratorProfiles();
+  }, [communityData?.moderators]);
 
   const handleVote = (postId: string, type: 'up' | 'down') => {
     setPosts(prev => prev.map(post => {
@@ -576,12 +607,21 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
             </h3>
             <div className="space-y-1">
               {Array.isArray(communityData?.moderators) && communityData.moderators.length > 0 ? (
-                communityData.moderators.map((mod, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-900 dark:text-white">u/{mod}</span>
-                    <span className="text-gray-500 dark:text-gray-400">Moderator</span>
-                  </div>
-                ))
+                communityData.moderators.map((modAddress, index) => {
+                  const profile = moderatorProfiles[modAddress];
+                  const displayName = profile?.handle
+                    ? `u/${profile.handle}`
+                    : `${modAddress.slice(0, 6)}...${modAddress.slice(-4)}`;
+
+                  return (
+                    <div key={index} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-900 dark:text-white truncate" title={modAddress}>
+                        {displayName}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400">Moderator</span>
+                    </div>
+                  );
+                })
               ) : (
                 <div className="text-xs text-gray-600 dark:text-gray-400">
                   No moderators assigned

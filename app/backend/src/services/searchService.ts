@@ -1349,7 +1349,7 @@ export class SearchService {
           orderByClause = desc(schema.posts.createdAt);
           break;
         case 'popular':
-          orderByClause = desc(sql`COALESCE(${schema.posts.upvotes}, 0) - COALESCE(${schema.posts.downvotes}, 0)`);
+          orderByClause = desc(sql`(COALESCE(${schema.posts.upvotes}, 0) - COALESCE(${schema.posts.downvotes}, 0))`);
           break;
         default:
           orderByClause = desc(schema.posts.createdAt);

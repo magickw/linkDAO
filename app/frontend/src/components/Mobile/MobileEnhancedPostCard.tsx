@@ -3,13 +3,17 @@ import { motion, PanInfo } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
 import { MobileTokenReactionSystem } from './MobileTokenReactionSystem';
+import OptimizedImage from '@/components/OptimizedImage';
+import { useWeb3 } from '@/context/Web3Context';
+import { useToast } from '@/context/ToastContext';
+import { CommunityPostService } from '@/services/communityPostService';
+import { formatDistanceToNow } from 'date-fns';
+import { EnhancedPost } from '@/types/feed';
+import { ReactionType } from '@/types/tokenReaction';
 import { InlinePreviewRenderer } from '@/components/InlinePreviews/InlinePreviewRenderer';
 import SocialProofIndicator from '@/components/SocialProof/SocialProofIndicator';
 import TrendingBadge from '@/components/TrendingBadge/TrendingBadge';
 import EnhancedReactionSystem from '@/components/EnhancedReactionSystem';
-import OptimizedImage from '@/components/OptimizedImage';
-import { EnhancedPost } from '@/types/feed';
-import { ReactionType } from '@/types/tokenReaction';
 
 interface MobileEnhancedPostCardProps {
   post: EnhancedPost;
@@ -17,8 +21,8 @@ interface MobileEnhancedPostCardProps {
   onBookmark: (postId: string) => void;
   onShare: (postId: string) => void;
   onComment: (postId: string) => void;
-  onViewReactors: (postId: string, type: ReactionType) => void;
   onUserPress: (userId: string) => void;
+  onViewReactors: (postId: string, type: ReactionType) => void;
   className?: string;
   defaultReactionEmoji?: string;
   defaultReactionIntensity?: number;
@@ -41,6 +45,10 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   const validatedReactionEmoji = validReactionEmojis.includes(defaultReactionEmoji as any)
     ? defaultReactionEmoji
     : '🔥';
+
+  const { address, isConnected } = useWeb3();
+  const { addToast, removeToast } = useToast();
+
   const {
     triggerHapticFeedback,
     createSwipeHandler,
@@ -114,15 +122,8 @@ const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
   };
 
   const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return 'now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
-    return `${Math.floor(diffInSeconds / 86400)}d`;
-  };
-
+    return formatDistanceToNow(date) + " ago"
+  }
   // Map emoji reactions to consistent emojis
   const getReactionEmoji = (type: string): string => {
     switch (type) {

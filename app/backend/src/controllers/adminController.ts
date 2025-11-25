@@ -347,33 +347,64 @@ export class AdminController {
     try {
       const db = databaseService.getDatabase();
       
-      // Get moderation statistics
-      const pendingModerationsResult = await db.select({ count: moderationCases.id })
-        .from(moderationCases)
-        .where(eq(moderationCases.status, 'pending'));
-      const pendingModerations = pendingModerationsResult.length > 0 ? pendingModerationsResult[0].count : 0;
+      let pendingModerations = 0;
+      let pendingSellerApplications = 0;
+      let openDisputes = 0;
+      let totalUsers = 0;
+      let totalSellers = 0;
       
-      // Get seller application statistics
-      const pendingSellersResult = await db.select({ count: sellerVerifications.id })
-        .from(sellerVerifications)
-        .where(eq(sellerVerifications.currentTier, 'unverified'));
-      const pendingSellerApplications = pendingSellersResult.length > 0 ? pendingSellersResult[0].count : 0;
+      try {
+        // Get moderation statistics
+        const pendingModerationsResult = await db.select({ count: moderationCases.id })
+          .from(moderationCases)
+          .where(eq(moderationCases.status, 'pending'));
+        pendingModerations = pendingModerationsResult.length > 0 ? pendingModerationsResult[0].count : 0;
+      } catch (moderationError) {
+        safeLogger.warn("Error fetching moderation stats:", moderationError);
+        pendingModerations = 0; // Default to 0 if table doesn't exist or query fails
+      }
       
-      // Get dispute statistics
-      const openDisputesResult = await db.select({ count: disputes.id })
-        .from(disputes)
-        .where(eq(disputes.status, 'open'));
-      const openDisputes = openDisputesResult.length > 0 ? openDisputesResult[0].count : 0;
+      try {
+        // Get seller application statistics
+        const pendingSellersResult = await db.select({ count: sellerVerifications.id })
+          .from(sellerVerifications)
+          .where(eq(sellerVerifications.currentTier, 'unverified'));
+        pendingSellerApplications = pendingSellersResult.length > 0 ? pendingSellersResult[0].count : 0;
+      } catch (sellerError) {
+        safeLogger.warn("Error fetching seller verification stats:", sellerError);
+        pendingSellerApplications = 0; // Default to 0 if table doesn't exist or query fails
+      }
       
-      // Get user statistics
-      const totalUsersResult = await db.select({ count: users.id })
-        .from(users);
-      const totalUsers = totalUsersResult.length > 0 ? totalUsersResult[0].count : 0;
+      try {
+        // Get dispute statistics
+        const openDisputesResult = await db.select({ count: disputes.id })
+          .from(disputes)
+          .where(eq(disputes.status, 'open'));
+        openDisputes = openDisputesResult.length > 0 ? openDisputesResult[0].count : 0;
+      } catch (disputeError) {
+        safeLogger.warn("Error fetching dispute stats:", disputeError);
+        openDisputes = 0; // Default to 0 if table doesn't exist or query fails
+      }
       
-      const totalSellersResult = await db.select({ count: marketplaceUsers.userId })
-        .from(marketplaceUsers)
-        .where(eq(marketplaceUsers.role, 'seller'));
-      const totalSellers = totalSellersResult.length > 0 ? totalSellersResult[0].count : 0;
+      try {
+        // Get user statistics
+        const totalUsersResult = await db.select({ count: users.id })
+          .from(users);
+        totalUsers = totalUsersResult.length > 0 ? totalUsersResult[0].count : 0;
+      } catch (userError) {
+        safeLogger.warn("Error fetching user stats:", userError);
+        totalUsers = 0; // Default to 0 if table doesn't exist or query fails
+      }
+      
+      try {
+        const totalSellersResult = await db.select({ count: marketplaceUsers.userId })
+          .from(marketplaceUsers)
+          .where(eq(marketplaceUsers.role, 'seller'));
+        totalSellers = totalSellersResult.length > 0 ? totalSellersResult[0].count : 0;
+      } catch (marketplaceError) {
+        safeLogger.warn("Error fetching marketplace user stats:", marketplaceError);
+        totalSellers = 0; // Default to 0 if table doesn't exist or query fails
+      }
       
       // Get suspended users (placeholder - would need actual suspension table)
       const suspendedUsers = 0;
@@ -391,7 +422,7 @@ export class AdminController {
         recentActions
       });
     } catch (error) {
-      safeLogger.error("Error fetching admin stats:", error);
+      safeLogger.error("Critical error fetching admin stats:", error);
       res.status(500).json({ error: "Failed to fetch admin stats" });
     }
   }
