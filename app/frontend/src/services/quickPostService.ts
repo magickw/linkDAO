@@ -8,7 +8,7 @@ const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 export class QuickPostService {
   static async createQuickPost(data: CreateQuickPostInput): Promise<QuickPost> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout (allows for IPFS uploads)
 
     // Get or create session ID
     let sessionId = localStorage.getItem('sessionId');
@@ -17,13 +17,20 @@ export class QuickPostService {
       localStorage.setItem('sessionId', sessionId);
     }
 
-    // Fetch CSRF token
+    // Fetch CSRF token with timeout
     let csrfToken = sessionStorage.getItem('csrfToken');
     if (!csrfToken) {
       try {
+        const csrfController = new AbortController();
+        const csrfTimeoutId = setTimeout(() => csrfController.abort(), 5000); // 5 second timeout for CSRF
+
         const tokenResponse = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/csrf-token`, {
-          headers: { 'x-session-id': sessionId }
+          headers: { 'x-session-id': sessionId },
+          signal: csrfController.signal
         });
+
+        clearTimeout(csrfTimeoutId);
+
         if (tokenResponse.ok) {
           const { data } = await tokenResponse.json();
           csrfToken = data.csrfToken;
@@ -31,6 +38,7 @@ export class QuickPostService {
         }
       } catch (e) {
         console.error('Failed to fetch CSRF token:', e);
+        // Continue without CSRF token - backend should handle this gracefully
       }
     }
 
