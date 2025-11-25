@@ -95,7 +95,7 @@ export default function PublicProfile() {
         setError(null);
 
         const profileData = await PublicProfileService.getPublicProfile(walletAddress);
-        
+
         if (!profileData) {
           throw new Error('Profile not found');
         }
@@ -397,7 +397,7 @@ export default function PublicProfile() {
                   {profile.ens && !profile.displayName && (
                     <p className="text-xl text-gray-600 dark:text-gray-300 mt-1">{profile.ens}</p>
                   )}
-                  
+
                   {/* Wallet Address */}
                   <div className="flex items-center justify-center lg:justify-start mt-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
@@ -423,17 +423,16 @@ export default function PublicProfile() {
                       <button
                         onClick={isFollowing ? handleUnfollow : handleFollow}
                         disabled={isFollowLoading || isFollowStatusLoading}
-                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                          isFollowing
+                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${isFollowing
                             ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
                             : 'bg-primary-500 hover:bg-primary-600 text-white'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isFollowLoading || isFollowStatusLoading
                           ? 'Loading...'
                           : isFollowing
-                          ? 'Following'
-                          : 'Follow'
+                            ? 'Following'
+                            : 'Follow'
                         }
                       </button>
 
@@ -441,22 +440,22 @@ export default function PublicProfile() {
                       <button
                         onClick={isBlocked ? handleUnblock : handleBlock}
                         disabled={isBlockLoading || isBlockStatusLoading}
-                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                          isBlocked
+                        className={`px-6 py-2 rounded-lg font-medium transition-colors ${isBlocked
                             ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
                             : 'bg-red-500 hover:bg-red-600 text-white'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {isBlockLoading || isBlockStatusLoading
                           ? 'Loading...'
                           : isBlocked
-                          ? 'Unblock'
-                          : 'Block'
+                            ? 'Unblock'
+                            : 'Block'
                         }
                       </button>
 
                       {/* Message Button */}
                       <button
+                        onClick={() => router.push(`/messages?to=${encodeURIComponent(profile.walletAddress)}`)}
                         className="inline-flex items-center justify-center px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -529,31 +528,28 @@ export default function PublicProfile() {
             <nav className="flex space-x-8 px-6" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab('posts')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'posts'
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'posts'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 Posts
               </button>
               <button
                 onClick={() => setActiveTab('followers')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'followers'
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'followers'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 Followers
               </button>
               <button
                 onClick={() => setActiveTab('following')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'following'
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'following'
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                  }`}
               >
                 Following
               </button>
@@ -596,7 +592,7 @@ export default function PublicProfile() {
                             <span>💬 {post.comments || 0}</span>
                             <span>🔄 {post.shares || 0}</span>
                           </div>
-                          <Link 
+                          <Link
                             href={`/post/${post.id}`}
                             className="text-primary-500 hover:text-primary-600 text-sm font-medium"
                           >
@@ -612,8 +608,8 @@ export default function PublicProfile() {
 
             {/* Followers Tab */}
             {activeTab === 'followers' && (
-              <FollowerList 
-                userAddress={profile.walletAddress} 
+              <FollowerList
+                userAddress={profile.walletAddress}
                 isOwnProfile={false}
                 isPublicProfile={true}
               />
@@ -621,8 +617,8 @@ export default function PublicProfile() {
 
             {/* Following Tab */}
             {activeTab === 'following' && (
-              <FollowingList 
-                userAddress={profile.walletAddress} 
+              <FollowingList
+                userAddress={profile.walletAddress}
                 isOwnProfile={false}
                 isPublicProfile={true}
               />

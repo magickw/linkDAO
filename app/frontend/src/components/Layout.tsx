@@ -233,7 +233,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
 
         <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-2 py-4 sm:px-3 lg:px-4 flex items-center gap-4">
+          <div className="max-w-screen-2xl mx-auto px-0 py-4 sm:px-2 lg:px-4 flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
               <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
               <span>LinkDAO</span>
@@ -438,7 +438,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
         {!hideFooter && (
           <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <div className="max-w-7xl mx-auto py-12 px-2 sm:px-3 lg:px-4">
+            <div className="max-w-screen-2xl mx-auto py-12 px-0 sm:px-2 lg:px-4">
               <div className="flex items-center gap-2 mb-8">
                 <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
                 <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>

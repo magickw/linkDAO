@@ -936,28 +936,25 @@ export default function Home() {
           Skip to feed content
         </a>
 
-        <div className="flex bg-gray-50 dark:bg-gray-900">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6 bg-gray-50 dark:bg-gray-900">
           {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
-          <div className="hidden lg:flex lg:flex-shrink-0">
-            <div className="flex flex-col w-64">
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24">
               <Suspense fallback={<SidebarSkeleton />}>
                 <NavigationSidebar className="h-full" />
               </Suspense>
             </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 flex flex-col min-h-screen">
-            {/* Main Feed Content */}
-            <div className="flex-1 flex">
-              {/* Center Feed */}
-              <div
-                id="main-feed-content"
-                ref={mainContentRef}
-                tabIndex={-1}
-                className="flex-1 overflow-y-auto pb-24 md:pb-6 focus:outline-none"
-              >
-                <div className="max-w-2xl mx-auto py-6 px-4">
+          {/* Center Feed */}
+          <div className="col-span-1 lg:col-span-6">
+            <div
+              id="main-feed-content"
+              ref={mainContentRef}
+              tabIndex={-1}
+              className="focus:outline-none"
+            >
+              <div className="py-6 px-4">
                   {/* Post Composer - Inline Facebook-style */}
                   <div className="mb-6">
                     <Suspense fallback={<FeedSkeleton />}>
@@ -1001,15 +998,15 @@ export default function Home() {
                   </Suspense>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Right Sidebar - Activity & Notifications */}
-              <div className="hidden xl:flex xl:flex-shrink-0">
-                <div className="flex flex-col w-80">
-                  <Suspense fallback={<SidebarSkeleton />}>
-                    <SmartRightSidebar context="feed" />
-                  </Suspense>
-                </div>
-              </div>
+          {/* Right Sidebar - Activity & Notifications */}
+          <div className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <SmartRightSidebar context="feed" />
+              </Suspense>
             </div>
           </div>
         </div>
