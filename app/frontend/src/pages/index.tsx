@@ -8,6 +8,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
+import { QuickPost } from '@/models/QuickPost';
 import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -175,7 +176,16 @@ export default function Home() {
     }
 
     try {
-      const newPost = await createPost({ ...postData, author: address.toLowerCase() });
+      let newPost;
+      // If no communityId is provided, create a quick post
+      if (!postData.communityId) {
+        // Import QuickPostService dynamically to avoid circular dependencies
+        const { QuickPostService } = await import('@/services/quickPostService');
+        newPost = await QuickPostService.createQuickPost({ ...postData, author: address.toLowerCase() });
+      } else {
+        // Otherwise, create a regular post
+        newPost = await createPost({ ...postData, author: address.toLowerCase() });
+      }
 
       // Check if component is still mounted before updating state
       if (!isMounted.current) return;
