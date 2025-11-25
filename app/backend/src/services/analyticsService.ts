@@ -91,12 +91,12 @@ export class AnalyticsService {
     try {
       const cacheKey = `analytics:overview:${startDate?.toISOString()}:${endDate?.toISOString()}`;
       const cached = await this.redis.get(cacheKey);
-      
+
       if (cached) {
         return JSON.parse(cached);
       }
 
-      const dateFilter = startDate && endDate 
+      const dateFilter = startDate && endDate
         ? and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate))
         : undefined;
 
@@ -122,11 +122,11 @@ export class AnalyticsService {
 
       const totalUsers = totalUsersResult[0]?.count || 0;
       const totalProducts = totalProductsResult[0]?.count || 0;
-      const metrics = orderMetrics[0] || { 
-        totalOrders: 0, 
-        totalRevenue: 0, 
-        averageOrderValue: 0, 
-        gmv: 0 
+      const metrics = orderMetrics[0] || {
+        totalOrders: 0,
+        totalRevenue: 0,
+        averageOrderValue: 0,
+        gmv: 0
       };
 
       const conversionRate = totalUsers > 0 ? (Number(metrics.totalOrders) / totalUsers) * 100 : 0;
@@ -157,14 +157,14 @@ export class AnalyticsService {
     try {
       const cacheKey = `analytics:behavior:${startDate?.toISOString()}:${endDate?.toISOString()}`;
       const cached = await this.redis.get(cacheKey);
-      
+
       if (cached) {
         return JSON.parse(cached);
       }
 
       // Get user behavior analytics from user_analytics table
       const behaviorData = await this.queryUserAnalytics(startDate, endDate);
-      
+
       const result: UserBehaviorData = {
         pageViews: behaviorData.totalPageViews,
         sessionDuration: behaviorData.avgSessionDuration,
@@ -187,12 +187,12 @@ export class AnalyticsService {
     try {
       const cacheKey = `analytics:sales:${startDate?.toISOString()}:${endDate?.toISOString()}`;
       const cached = await this.redis.get(cacheKey);
-      
+
       if (cached) {
         return JSON.parse(cached);
       }
 
-      const dateFilter = startDate && endDate 
+      const dateFilter = startDate && endDate
         ? and(gte(orders.createdAt, startDate), lte(orders.createdAt, endDate))
         : undefined;
 
@@ -231,14 +231,14 @@ export class AnalyticsService {
     try {
       const cacheKey = `analytics:seller:${sellerId}:${startDate?.toISOString()}:${endDate?.toISOString()}`;
       const cached = await this.redis.get(cacheKey);
-      
+
       if (cached) {
         return JSON.parse(cached);
       }
 
       // Get seller-specific analytics
       const sellerMetrics = await this.calculateSellerMetrics(sellerId, startDate, endDate);
-      
+
       await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(sellerMetrics));
       return sellerMetrics;
     } catch (error) {
@@ -251,13 +251,13 @@ export class AnalyticsService {
     try {
       const cacheKey = 'analytics:market-trends';
       const cached = await this.redis.get(cacheKey);
-      
+
       if (cached) {
         return JSON.parse(cached);
       }
 
       const trends = await this.analyzeMarketTrends();
-      
+
       await this.redis.setex(cacheKey, this.CACHE_TTL * 4, JSON.stringify(trends)); // Cache longer for trends
       return trends;
     } catch (error) {
@@ -327,7 +327,7 @@ export class AnalyticsService {
       // Convert "anonymous" to NULL for UUID column compatibility
       const userIdValue = userId === 'anonymous' ? null : userId;
 
-      // Insert into user_analytics table
+      // Insert into user_analytics table with proper null handling
       await db.execute(sql`
         INSERT INTO user_analytics (
           user_id, session_id, event_type, event_data,
@@ -335,9 +335,9 @@ export class AnalyticsService {
           device_type, browser, referrer, timestamp
         ) VALUES (
           ${userIdValue}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
-          ${metadata?.pageUrl}, ${metadata?.userAgent}, ${metadata?.ipAddress},
-          ${geoData.country}, ${geoData.city}, ${metadata?.deviceType},
-          ${metadata?.browser}, ${metadata?.referrer}, NOW()
+          ${metadata?.pageUrl || null}, ${metadata?.userAgent || null}, ${metadata?.ipAddress || null},
+          ${geoData.country || null}, ${geoData.city || null}, ${metadata?.deviceType || null},
+          ${metadata?.browser || null}, ${metadata?.referrer || null}, NOW()
         )
       `);
 
@@ -521,7 +521,7 @@ export class AnalyticsService {
 
   private async getTransactionSuccessRate(startDate?: Date, endDate?: Date): Promise<number> {
     try {
-      const dateFilter = startDate && endDate 
+      const dateFilter = startDate && endDate
         ? sql`WHERE timestamp >= ${startDate} AND timestamp <= ${endDate}`
         : sql`WHERE timestamp >= NOW() - INTERVAL '30 days'`;
 
@@ -536,7 +536,7 @@ export class AnalyticsService {
       const row = result[0];
       const total = Number(row?.total) || 0;
       const successful = Number(row?.successful) || 0;
-      
+
       return total > 0 ? (successful / total) * 100 : 0;
     } catch (error) {
       return 0;
@@ -544,7 +544,7 @@ export class AnalyticsService {
   }
 
   private async calculateUserAcquisitionRate(startDate?: Date, endDate?: Date): Promise<number> {
-    const dateFilter = startDate && endDate 
+    const dateFilter = startDate && endDate
       ? and(gte(users.createdAt, startDate), lte(users.createdAt, endDate))
       : gte(users.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
@@ -812,8 +812,8 @@ export class AnalyticsService {
     try {
       // Skip localhost and private IPs
       if (ipAddress === '127.0.0.1' || ipAddress === '::1' ||
-          ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.') ||
-          ipAddress.startsWith('172.')) {
+        ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.') ||
+        ipAddress.startsWith('172.')) {
         return { country: null, city: null };
       }
 
