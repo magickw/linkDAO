@@ -229,6 +229,18 @@ export default function CommentThread({
                 </div>
               )}
 
+              {/* Media Content */}
+              {!comment.isDeleted && comment.media && (
+                <div className="mb-3">
+                  <img
+                    src={comment.media.url}
+                    alt={comment.media.alt || 'Comment media'}
+                    className="max-h-64 rounded-lg border border-gray-200 dark:border-gray-600"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
               {/* Enhanced Reactions for Comments */}
               {!comment.isDeleted && (
                 <div className="mb-2">

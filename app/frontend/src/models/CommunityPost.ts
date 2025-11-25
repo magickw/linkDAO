@@ -13,7 +13,7 @@ export interface CommunityPost extends Omit<Post, 'parentId' | 'comments'> {
   parentId?: string; // For threaded discussions
   depth: number; // Thread depth for nested comments
   sortOrder: number; // For custom sorting
-  
+
   // Performance tracking fields
   viewCount?: number;
   engagementScore: number;
@@ -68,6 +68,13 @@ export interface CreateCommentInput {
   parentId?: string;
   author: string;
   content: string;
+  media?: {
+    type: 'image' | 'gif' | 'sticker';
+    url: string;
+    width?: number;
+    height?: number;
+    alt?: string;
+  };
 }
 
 export interface UpdateCommentInput {

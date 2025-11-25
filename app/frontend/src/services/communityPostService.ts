@@ -58,8 +58,9 @@ export class CommunityPostService {
 
   static async getPostStats(postId: string): Promise<{ commentCount: number }> {
     try {
+      // Use the same approach as getPostCommentCount to get the comment count
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -68,10 +69,14 @@ export class CommunityPostService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch post stats');
+        throw new Error('Failed to fetch post comments');
       }
 
-      return response.json();
+      const result = await response.json();
+      const comments = result.data || result;
+      const commentCount = Array.isArray(comments) ? comments.length : 0;
+      
+      return { commentCount };
     } catch (error) {
       console.error('Error fetching post stats:', error);
       return { commentCount: 0 };
@@ -297,7 +302,7 @@ export class CommunityPostService {
   static async createComment(data: CreateCommentInput): Promise<Comment> {
     try {
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/comments`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${data.postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -306,7 +311,8 @@ export class CommunityPostService {
         body: JSON.stringify({
           author: data.author,
           content: data.content,
-          parentCommentId: data.parentId
+          parentCommentId: data.parentId,
+          media: data.media
         })
       });
 
@@ -337,7 +343,7 @@ export class CommunityPostService {
 
       const authHeaders = authService.getAuthHeaders();
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/comments?${params}`,
+        `${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?${params}`,
         {
           method: 'GET',
           headers: {
@@ -468,8 +474,9 @@ export class CommunityPostService {
 
   static async getPostCommentCount(postId: string): Promise<number> {
     try {
+      // Use the same endpoint as getPostComments but with a small limit to just get the count
       const authHeaders = authService.getAuthHeaders();
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/${postId}/comments?limit=1`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -478,11 +485,12 @@ export class CommunityPostService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch post stats');
+        throw new Error('Failed to fetch post comments');
       }
 
       const result = await response.json();
-      return result.commentCount || 0;
+      const comments = result.data || result;
+      return Array.isArray(comments) ? comments.length : 0;
     } catch (error) {
       console.error('Error fetching post comment count:', error);
       return 0;

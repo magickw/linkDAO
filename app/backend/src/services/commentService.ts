@@ -9,6 +9,13 @@ interface CreateCommentInput {
   authorAddress: string;
   content: string;
   parentCommentId?: string;
+  media?: {
+    type: 'image' | 'gif' | 'sticker';
+    url: string;
+    width?: number;
+    height?: number;
+    alt?: string;
+  };
 }
 
 interface UpdateCommentInput {
@@ -47,6 +54,7 @@ export class CommentService {
           authorId,
           content: input.content,
           parentCommentId: input.parentCommentId,
+          media: input.media,
         })
         .returning();
 
@@ -73,6 +81,7 @@ export class CommentService {
           quickPostId: comments.quickPostId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
+          media: comments.media,
           upvotes: comments.upvotes,
           downvotes: comments.downvotes,
           moderationStatus: comments.moderationStatus,
@@ -155,6 +164,7 @@ export class CommentService {
           quickPostId: comments.quickPostId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
+          media: comments.media,
           upvotes: comments.upvotes,
           downvotes: comments.downvotes,
           moderationStatus: comments.moderationStatus,
@@ -199,6 +209,7 @@ export class CommentService {
           quickPostId: comments.quickPostId,
           content: comments.content,
           parentCommentId: comments.parentCommentId,
+          media: comments.media,
           upvotes: comments.upvotes,
           downvotes: comments.downvotes,
           moderationStatus: comments.moderationStatus,

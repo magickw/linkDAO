@@ -44,6 +44,13 @@ export default function EnhancedCommentSystem({
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [community, setCommunity] = useState<any>(null); // Store community information
   const [communityLoading, setCommunityLoading] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<{
+    type: 'image' | 'gif' | 'sticker';
+    url: string;
+    width?: number;
+    height?: number;
+    alt?: string;
+  } | null>(null);
 
   // Load comments with sorting
   const loadComments = useCallback(async (sortOption: SortOption = sortBy) => {
@@ -57,7 +64,7 @@ export default function EnhancedCommentSystem({
       });
 
       setComments(commentsData);
-      
+
       // Update comment count
       const commentCount = await CommunityPostService.getPostCommentCount(postId);
       if (onCommentCountChange) {
@@ -90,12 +97,36 @@ export default function EnhancedCommentSystem({
     loadCommunity();
   }, [communityId, community]);
 
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('Image size must be less than 5MB', 'error');
+      return;
+    }
+
+    // Create object URL for preview
+    // In a real app, you would upload this to IPFS/S3 here
+    const objectUrl = URL.createObjectURL(file);
+
+    // For now, we'll simulate an upload by using the object URL
+    // In production, this should be replaced with actual upload logic
+    setSelectedMedia({
+      type: 'image',
+      url: objectUrl,
+      alt: file.name
+    });
+  };
+
   // Handle comment submission
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newComment.trim()) return;
-    
+
+    if (!newComment.trim() && !selectedMedia) return;
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet to comment', 'error');
       return;
@@ -108,7 +139,7 @@ export default function EnhancedCommentSystem({
         addToast('You must join the community to comment', 'error');
         return;
       }
-      
+
       // Check for staking requirements
       if (community.settings && community.settings.stakingRequirements) {
         const commentStakingReq = community.settings.stakingRequirements.find(req => req.action === 'comment');
@@ -125,30 +156,31 @@ export default function EnhancedCommentSystem({
 
     try {
       setCommentSubmitting(true);
-      
+
       const commentData: CreateCommentInput = {
         postId,
         author: address,
-        content: newComment.trim()
+        content: newComment.trim(),
+        media: selectedMedia || undefined
       };
 
       const newCommentObj = await CommunityPostService.createComment(commentData);
-      
+
       // Add new comment to the list
       setComments(prevComments => [newCommentObj, ...prevComments]);
       setNewComment('');
       setShowCommentForm(false);
-      
+
       // Update comment count after adding a new comment
       const commentCount = await CommunityPostService.getPostCommentCount(postId);
       if (onCommentCountChange) {
         onCommentCountChange(commentCount);
       }
-      
+
       if (onCommentAdded) {
         onCommentAdded(newCommentObj);
       }
-      
+
       addToast('Comment posted!', 'success');
     } catch (err) {
       console.error('Error posting comment:', err);
@@ -183,7 +215,7 @@ export default function EnhancedCommentSystem({
   // Sort comments based on selected option
   const getSortedComments = () => {
     const sortedComments = [...comments];
-    
+
     switch (sortBy) {
       case 'best':
         return sortedComments.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
@@ -211,7 +243,7 @@ export default function EnhancedCommentSystem({
         <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
           Comments ({comments.length})
         </h4>
-        
+
         {/* Sort Options */}
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">Sort by:</span>
@@ -257,18 +289,80 @@ export default function EnhancedCommentSystem({
                       disabled={commentSubmitting}
                       maxLength={1000}
                     />
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {newComment.length}/1000 characters
+
+                    {/* Media Preview */}
+                    {selectedMedia && (
+                      <div className="mt-2 relative inline-block">
+                        <img
+                          src={selectedMedia.url}
+                          alt="Selected media"
+                          className="max-h-48 rounded-lg border border-gray-200 dark:border-gray-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMedia(null)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-sm"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center space-x-2">
+                        {/* Image Upload */}
+                        <label className="cursor-pointer p-2 text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageUpload}
+                            disabled={commentSubmitting}
+                          />
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </label>
+
+                        {/* GIF Button (Placeholder) */}
+                        <button
+                          type="button"
+                          onClick={() => addToast('GIF selection coming soon!', 'info')}
+                          className="p-2 text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+
+                        {/* Sticker Button (Placeholder) */}
+                        <button
+                          type="button"
+                          onClick={() => addToast('Stickers coming soon!', 'info')}
+                          className="p-2 text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {newComment.length}/1000 characters
+                      </div>
                     </div>
                   </div>
-                </div>
-                
+                </div >
+
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCommentForm(false);
                       setNewComment('');
+                      setSelectedMedia(null);
                     }}
                     disabled={commentSubmitting}
                     className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200 font-medium"
@@ -277,7 +371,7 @@ export default function EnhancedCommentSystem({
                   </button>
                   <button
                     type="submit"
-                    disabled={!newComment.trim() || commentSubmitting}
+                    disabled={(!newComment.trim() && !selectedMedia) || commentSubmitting}
                     className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 font-medium"
                   >
                     {commentSubmitting ? (
@@ -293,66 +387,71 @@ export default function EnhancedCommentSystem({
                     )}
                   </button>
                 </div>
-              </form>
-            )}
-          </div>
+              </form >
+            )
+            }
+          </div >
         )
       )}
 
       {/* Locked Message */}
-      {isLocked && (
-        <div className="flex items-center justify-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
-          <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-          </svg>
-          <span className="text-yellow-800 dark:text-yellow-200 font-medium">
-            Comments are locked for this post
-          </span>
-        </div>
-      )}
+      {
+        isLocked && (
+          <div className="flex items-center justify-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
+            <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            <span className="text-yellow-800 dark:text-yellow-200 font-medium">
+              Comments are locked for this post
+            </span>
+          </div>
+        )
+      }
 
       {/* Comments List */}
-      {commentsLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="animate-pulse flex space-x-3">
-              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-              <div className="flex-1">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+      {
+        commentsLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex space-x-3">
+                <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : sortedComments.length > 0 ? (
-        <div className="space-y-6">
-          {sortedComments.map((comment) => (
-            <CommentThread
-              key={comment.id}
-              comment={comment}
-              onVote={handleCommentVote}
-              userMembership={userMembership || null}
-              depth={0}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-          <h3 className="text-lg font-medium mb-2">No comments yet</h3>
-          <p className="text-sm">
-            {isLocked 
-              ? 'Comments are locked for this post.' 
-              : postType === 'community' && communityId && community && !community.isPublic && !userMembership
-                ? 'Join the community to start the conversation!'
-                : 'Be the first to share your thoughts!'
-            }
-          </p>
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        ) : sortedComments.length > 0 ? (
+          <div className="space-y-6">
+            {sortedComments.map((comment) => (
+              <CommentThread
+                key={comment.id}
+                comment={comment}
+                onVote={handleCommentVote}
+                userMembership={userMembership || null}
+                depth={0}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <svg className="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <h3 className="text-lg font-medium mb-2">No comments yet</h3>
+            <p className="text-sm">
+              {isLocked
+                ? 'Comments are locked for this post.'
+                : postType === 'community' && communityId && community && !community.isPublic && !userMembership
+                  ? 'Join the community to start the conversation!'
+                  : 'Be the first to share your thoughts!'
+              }
+            </p>
+          </div>
+        )
+      }
+    </div >
   );
 }

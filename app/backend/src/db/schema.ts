@@ -155,6 +155,7 @@ export const comments = pgTable("comments", {
   upvotes: integer("upvotes").default(0),
   downvotes: integer("downvotes").default(0),
   moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
+  media: jsonb("media"), // { type: 'image' | 'gif' | 'sticker', url: string, ... }
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
