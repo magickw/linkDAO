@@ -41,6 +41,13 @@ export interface Comment {
   displayName?: string;
   profileCid?: string;
   avatarCid?: string;
+  media?: {
+    type: 'image' | 'gif' | 'sticker';
+    url: string;
+    width?: number;
+    height?: number;
+    alt?: string;
+  };
 }
 
 export interface CreateCommunityPostInput {
