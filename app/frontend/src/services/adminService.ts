@@ -133,13 +133,14 @@ class AdminService {
     this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
   }
 
-  private getHeaders() {
+  // Public method to get auth headers
+  getAuthHeaders() {
     return authService.getAuthHeaders();
   }
 
-  // Public method to allow other components to access headers
-  getHeaders() {
-    return this.getHeaders();
+  // Private method for internal use
+  private getHeaders() {
+    return this.getAuthHeaders();
   }
 
   // Moderation Queue Management
