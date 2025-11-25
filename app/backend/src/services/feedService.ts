@@ -1117,7 +1117,7 @@ export class FeedService {
       const commentValues: any = {
         authorId: user[0].id,
         content,
-        parentCommentId,
+        parentCommentId: parentCommentId || null, // Explicitly set to null for top-level comments
         createdAt: new Date(),
         updatedAt: new Date()
       };

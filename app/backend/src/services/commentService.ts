@@ -53,7 +53,7 @@ export class CommentService {
           quickPostId: input.quickPostId,
           authorId,
           content: input.content,
-          parentCommentId: input.parentCommentId,
+          parentCommentId: input.parentCommentId || null, // Explicitly set to null for top-level comments
           media: input.media,
         })
         .returning();
