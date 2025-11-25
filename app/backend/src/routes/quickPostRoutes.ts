@@ -67,6 +67,13 @@ try {
         error: 'QuickPostController initialization failed',
         message: 'Service temporarily unavailable'
       });
+    },
+    getCsrfToken: async (req: any, res: any) => {
+      return res.status(500).json({
+        success: false,
+        error: 'QuickPostController initialization failed',
+        message: 'Service temporarily unavailable'
+      });
     }
   } as any;
 }
@@ -99,6 +106,7 @@ function safeBind(method: any, context: any) {
 router.post('/', safeBind(quickPostController.createQuickPost, quickPostController));
 router.get('/', safeBind(quickPostController.getAllQuickPosts, quickPostController));
 router.get('/feed', safeBind(quickPostController.getQuickPostFeed, quickPostController));
+router.get('/csrf-token', safeBind(quickPostController.getCsrfToken, quickPostController));
 router.get('/author/:authorId', safeBind(quickPostController.getQuickPostsByAuthor, quickPostController));
 router.get('/tag/:tag', safeBind(quickPostController.getQuickPostsByTag, quickPostController));
 router.get('/:id', safeBind(quickPostController.getQuickPost, quickPostController));

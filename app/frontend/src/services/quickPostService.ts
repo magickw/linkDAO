@@ -9,14 +9,14 @@ export class QuickPostService {
   static async createQuickPost(data: CreateQuickPostInput): Promise<QuickPost> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+
     // Get or create session ID
     let sessionId = localStorage.getItem('sessionId');
     if (!sessionId) {
       sessionId = crypto.randomUUID();
       localStorage.setItem('sessionId', sessionId);
     }
-    
+
     // Fetch CSRF token
     let csrfToken = sessionStorage.getItem('csrfToken');
     if (!csrfToken) {
@@ -33,11 +33,11 @@ export class QuickPostService {
         console.error('Failed to fetch CSRF token:', e);
       }
     }
-    
+
     try {
       // Get auth headers from authService to include JWT token
       const authHeaders = authService.getAuthHeaders();
-      
+
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
         method: 'POST',
         headers: {
@@ -48,7 +48,7 @@ export class QuickPostService {
         },
         body: JSON.stringify({
           content: data.content,
-          author: data.author,
+          authorId: data.author,
           parentId: data.parentId,
           media: data.media,
           tags: data.tags,
@@ -58,9 +58,9 @@ export class QuickPostService {
         }),
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -81,7 +81,7 @@ export class QuickPostService {
         const error = await response.json();
         throw new Error(error.error || `Failed to create quick post (HTTP ${response.status})`);
       }
-      
+
       const result = await response.json();
       return result.data || result;
     } catch (error) {
