@@ -53,9 +53,8 @@ export default function EnhancedCommentSystem({
   } | null>(null);
 
   // Load comments with sorting
+  // Load comments with sorting
   const loadComments = useCallback(async (sortOption: SortOption = sortBy) => {
-    if (commentsLoading) return;
-
     try {
       setCommentsLoading(true);
       const response = await CommunityPostService.getPostComments(postId, {
@@ -78,7 +77,7 @@ export default function EnhancedCommentSystem({
     } finally {
       setCommentsLoading(false);
     }
-  }, [postId, sortBy, commentsLoading, addToast]);
+  }, [postId, sortBy, onCommentCountChange, addToast]);
 
   // Load community information when communityId is provided
   useEffect(() => {
@@ -99,10 +98,10 @@ export default function EnhancedCommentSystem({
     loadCommunity();
   }, [communityId, community]);
 
-  // Load comments on mount and when sort changes
+  // Load comments on mount and when postId or sort changes
   useEffect(() => {
     loadComments();
-  }, [postId, sortBy]);
+  }, [loadComments]);
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

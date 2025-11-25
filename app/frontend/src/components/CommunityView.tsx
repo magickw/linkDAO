@@ -97,17 +97,19 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
 
         setCommunityData(processedCommunityData);
 
-        // Set joined status from backend data
-        if (processedCommunityData.isMember !== undefined) {
+        // Set joined status - creators are always members
+        const isCreator = processedCommunityData.creatorAddress === address;
+        const isMod = (processedCommunityData.moderators || []).includes(address || '');
+
+        // If user is creator or moderator, they are automatically joined
+        if (isCreator || isMod) {
+          setIsJoined(true);
+        } else if (processedCommunityData.isMember !== undefined) {
+          // Otherwise use backend data if available
           setIsJoined(processedCommunityData.isMember);
         } else {
-          // Fallback logic if backend doesn't provide isMember
-          // If user is creator or moderator, they are joined
-          const isMod = (processedCommunityData.moderators || []).includes(address || '');
-          const isCreator = processedCommunityData.creatorAddress === address;
-          if (isMod || isCreator) {
-            setIsJoined(true);
-          }
+          // Default to not joined
+          setIsJoined(false);
         }
 
         // Fetch real posts for the community
