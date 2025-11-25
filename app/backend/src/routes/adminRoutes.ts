@@ -5,6 +5,7 @@ import moderationRoutes from './moderationRoutes';
 import sellerRoutes from './sellerRoutes';
 import disputeRoutes from './disputeRoutes';
 import userRoutes from './userRoutes';
+import adminNewsletterRoutes from './adminNewsletterRoutes';
 import {
   validateAdminRole,
   requirePermission,
@@ -85,5 +86,8 @@ router.use('/disputes', requirePermission('disputes.view'), disputeRoutes);
 
 // User Management Routes (with users.view permission)
 router.use('/users', requirePermission('users.view'), userRoutes);
+
+// Newsletter Routes (with system.settings permission)
+router.use('/newsletter', requirePermission('system.settings'), adminNewsletterRoutes);
 
 export default router;

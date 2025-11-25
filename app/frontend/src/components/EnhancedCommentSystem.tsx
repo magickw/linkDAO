@@ -58,11 +58,13 @@ export default function EnhancedCommentSystem({
 
     try {
       setCommentsLoading(true);
-      const commentsData = await CommunityPostService.getPostComments(postId, {
+      const response = await CommunityPostService.getPostComments(postId, {
         sortBy: sortOption,
         limit: 100
       });
 
+      // Handle response structure: { comments: [...], pagination: {...} } or just [...]
+      const commentsData = Array.isArray(response) ? response : ((response as any).comments || []);
       setComments(commentsData);
 
       // Update comment count
