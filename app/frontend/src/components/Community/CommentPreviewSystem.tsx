@@ -85,7 +85,7 @@ export default function CommentPreviewSystem({
     } finally {
       setIsLoading(false);
     }
-  }, [postId, maxPreviewComments, isLoading, addToast, onCommentCountChange]);
+  }, [postId, maxPreviewComments, isLoading, addToast]);
 
   // Load previews on mount
   useEffect(() => {

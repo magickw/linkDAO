@@ -29,6 +29,7 @@ export default function EnhancedCommentSystem({
   userMembership,
   isLocked = false,
   onCommentAdded,
+  onCommentCountChange,
   className = ''
 }: EnhancedCommentSystemProps) {
   const { address, isConnected } = useWeb3();
@@ -68,7 +69,7 @@ export default function EnhancedCommentSystem({
     } finally {
       setCommentsLoading(false);
     }
-  }, [postId, sortBy, commentsLoading, addToast, onCommentCountChange]);
+  }, [postId, sortBy, commentsLoading, addToast]);
 
   // Load community information when communityId is provided
   useEffect(() => {
