@@ -31,23 +31,14 @@ export class QuickPostController {
         return res.status(400).json(apiResponse.error('Author ID is required', 400));
       }
 
-      // Upload content to IPFS to get CID
-      let contentCid: string;
-      try {
-        const metadataService = new MetadataService();
-        contentCid = await metadataService.uploadToIPFS(content);
-        console.log('Content uploaded to IPFS with CID:', contentCid);
-      } catch (uploadError) {
-        safeLogger.warn('Error uploading content to IPFS, using content as fallback:', uploadError);
-        // Fallback: Use a mock CID for development/testing when IPFS fails
-        contentCid = `mock_content_${Date.now()}_${Buffer.from(content).toString('base64').substring(0, 10)}`;
-      }
+      // Generate a temporary CID immediately for quick response
+      const tempCid = `temp_${Date.now()}_${crypto.randomBytes(16).toString('hex')}`;
 
-      // Prepare input for QuickPostService
+      // Prepare input for QuickPostService with temp CID
       const quickPostInput = {
         authorId,
-        contentCid,
-        content,  // Pass the actual content as fallback
+        contentCid: tempCid,
+        content,  // Store the actual content in the database
         parentId,
         mediaCids: media ? JSON.stringify(media) : undefined,
         tags: tags ? JSON.stringify(tags) : undefined,
@@ -56,10 +47,27 @@ export class QuickPostController {
         gatedContentPreview
       };
 
-      // Create quick post using QuickPostService
+      // Create quick post using QuickPostService (fast response)
       const quickPost = await this.quickPostService.createQuickPost(quickPostInput);
 
       console.log('Quick post created:', quickPost.id);
+
+      // Upload content to IPFS in the background (non-blocking)
+      // This allows the user to get immediate feedback
+      setImmediate(async () => {
+        try {
+          const metadataService = new MetadataService();
+          const contentCid = await metadataService.uploadToIPFS(content);
+          console.log(`Background IPFS upload completed for post ${quickPost.id}: ${contentCid}`);
+
+          // Update the post with the real IPFS CID
+          await this.quickPostService.updateQuickPost(quickPost.id, { contentCid });
+          console.log(`Updated post ${quickPost.id} with IPFS CID: ${contentCid}`);
+        } catch (uploadError) {
+          safeLogger.warn(`Background IPFS upload failed for post ${quickPost.id}:`, uploadError);
+          // Content is still stored in the database, so the post is still accessible
+        }
+      });
 
       return res.status(201).json(apiResponse.success(quickPost, 'Quick post created successfully'));
     } catch (error: any) {

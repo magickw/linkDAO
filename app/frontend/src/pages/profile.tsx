@@ -486,7 +486,7 @@ export default function Profile() {
         setUpdateError(null);
 
         // Upload the image using the unified image service
-        const uploadResult = await unifiedImageService.uploadImage(file, 'banner');
+        const uploadResult = await unifiedImageService.uploadImage(file, 'cover');
 
         // Update the profile state with the new banner URL
         setProfile(prev => ({ ...prev, banner: uploadResult.cdnUrl }));
