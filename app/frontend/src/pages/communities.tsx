@@ -628,7 +628,7 @@ const CommunitiesPage: React.FC = () => {
             <meta name="keywords" content="DAO communities, decentralized communities, Web3, blockchain, governance, LinkDAO" />
           </Head>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-4 lg:px-8 mx-auto max-w-7xl pt-0 lg:pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 w-full px-0 sm:px-2 lg:px-4 mx-auto max-w-screen-2xl pt-0 lg:pt-6">
             {/* Reddit-style Left Sidebar - Hidden on mobile */}
             <div className="hidden lg:block lg:col-span-3">
               <div className="sticky top-24 space-y-4">

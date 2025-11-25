@@ -193,7 +193,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   }
 
   return (
-    <div className={`grid grid-cols-12 gap-6 max-w-7xl mx-auto ${className}`}>
+    <div className={`grid grid-cols-12 gap-6 max-w-screen-2xl mx-auto ${className}`}>
       {/* Left Sidebar - Navigation */}
       <div className={`col-span-12 ${isMobile ? 'order-3' : 'lg:col-span-3'}`}>
         <div className="sticky top-6 space-y-4">

@@ -432,7 +432,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           )}
         </header>
 
-        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-2 sm:px-3 lg:px-4 py-6"}>
+        <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-screen-2xl mx-auto px-1 sm:px-2 lg:px-3 py-6"}>
           {children}
         </main>
 

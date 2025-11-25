@@ -610,7 +610,7 @@ const MarketplaceContent: React.FC = () => {
       </div>
 
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div ref={browseSectionRef} className="max-w-screen-2xl mx-auto px-2 sm:px-4 lg:px-6 py-8 space-y-6">
 
           {/* Token Acquisition Section */}
           <TokenAcquisitionSection />
