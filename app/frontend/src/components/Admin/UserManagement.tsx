@@ -273,7 +273,7 @@ export function UserManagement() {
       // This would typically be a call to get user statistics
       // For now, we'll use mock data or fetch from an actual API
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/stats`, {
-        headers: this.getHeaders()
+        headers: adminService.getHeaders()
       });
       
       if (response.ok) {
@@ -327,7 +327,7 @@ export function UserManagement() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/create`, {
         method: 'POST',
         headers: {
-          ...this.getHeaders(),
+          ...adminService.getHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

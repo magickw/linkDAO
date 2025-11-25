@@ -1014,28 +1014,42 @@ const CommunitiesPage: React.FC = () => {
                     </h3>
                   </div>
                   <div className="p-2">
-                    {[
-                      { id: '1', title: 'Ethereum Merge Anniversary', community: 'ethereum' },
-                      { id: '2', title: 'New DeFi Protocols', community: 'defi' },
-                      { id: '3', title: 'NFT Market Update', community: 'nft' },
-                      { id: '4', title: 'Web3 Development Tips', community: 'development' }
-                    ].map((item, index) => (
-                      <div key={item.id} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
-                        <div className="flex items-start space-x-2">
-                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-0.5">
-                            {index + 1}
-                          </span>
-                          <div>
-                            <div className="text-sm text-gray-900 dark:text-white font-medium">
-                              {item.title}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {item.community}
+                    {filteredPosts.slice(0, 4).map((post, index) => {
+                      if (!post || typeof post !== 'object') return null;
+                      
+                      const community = communityList.find(c => c.id === post.communityId);
+                      
+                      return (
+                        <div 
+                          key={post.id || `trending-${index}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const communityId = community?.slug || community?.name || post.communityId || 'unknown';
+                            router.push(`/communities/${communityId}?post=${post.id}`);
+                          }}
+                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer"
+                        >
+                          <div className="flex items-start space-x-2">
+                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-0.5">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-sm text-gray-900 dark:text-white font-medium truncate">
+                                {post.title || 'Untitled Post'}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {community?.name || post.communityId || 'Unknown Community'}
+                              </div>
                             </div>
                           </div>
                         </div>
+                      );
+                    })}
+                    {filteredPosts.length === 0 && (
+                      <div className="p-2 text-center text-gray-500 dark:text-gray-400 text-sm">
+                        No trending posts today
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
