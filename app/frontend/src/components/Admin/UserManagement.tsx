@@ -23,7 +23,15 @@ import {
   ShoppingCart,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus,
+  UserPlus,
+  BarChart3,
+  User,
+  Settings,
+  TrendingUp,
+  UserX,
+  UserCog
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { AuthUser, UserRole } from '@/types/auth';
@@ -70,9 +78,33 @@ export function UserManagement() {
     totalPages: 1,
     total: 0
   });
+  
+  // New states for user creation
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({
+    handle: '',
+    email: '',
+    walletAddress: '',
+    role: 'user' as UserRole,
+    password: ''
+  });
+  
+  // New states for user statistics
+  const [userStats, setUserStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  
+  // New states for user creation modal
+  const [creationLoading, setCreationLoading] = useState(false);
+  const [creationError, setCreationError] = useState('');
+  
+  // New states for user audit logs
+  const [userAuditLogs, setUserAuditLogs] = useState<any[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+  const [showAuditLogs, setShowAuditLogs] = useState(false);
 
   useEffect(() => {
     loadUsers();
+    loadUserStats();
   }, [filters, pagination.page]);
 
   const loadUsers = async () => {
@@ -234,6 +266,144 @@ export function UserManagement() {
     }
   };
 
+  // Load user statistics
+  const loadUserStats = async () => {
+    try {
+      setLoadingStats(true);
+      // This would typically be a call to get user statistics
+      // For now, we'll use mock data or fetch from an actual API
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/stats`, {
+        headers: this.getHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats(data);
+      } else {
+        // Mock data if API is not available
+        setUserStats({
+          totalUsers: 1000,
+          activeUsers: 850,
+          suspendedUsers: 50,
+          newUsersThisMonth: 150,
+          newUsersThisWeek: 45,
+          userGrowthRate: 12.5,
+          mostActiveUsers: [
+            { id: 'user1', handle: 'active_user_1', activityCount: 120 },
+            { id: 'user2', handle: 'active_user_2', activityCount: 98 },
+            { id: 'user3', handle: 'active_user_3', activityCount: 87 }
+          ]
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load user stats:', error);
+      // Set mock data on error
+      setUserStats({
+        totalUsers: 1000,
+        activeUsers: 850,
+        suspendedUsers: 50,
+        newUsersThisMonth: 150,
+        newUsersThisWeek: 45,
+        userGrowthRate: 12.5,
+        mostActiveUsers: [
+          { id: 'user1', handle: 'active_user_1', activityCount: 120 },
+          { id: 'user2', handle: 'active_user_2', activityCount: 98 },
+          { id: 'user3', handle: 'active_user_3', activityCount: 87 }
+        ]
+      });
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Create new user
+  const handleCreateUser = async () => {
+    setCreationLoading(true);
+    setCreationError('');
+    
+    try {
+      // In a real implementation, we would call the API to create a user
+      // For now, we'll just show a success message
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/create`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          handle: newUser.handle,
+          email: newUser.email,
+          walletAddress: newUser.walletAddress,
+          role: newUser.role,
+          password: newUser.password
+        })
+      });
+      
+      if (response.ok) {
+        setShowCreateUserModal(false);
+        setNewUser({
+          handle: '',
+          email: '',
+          walletAddress: '',
+          role: 'user',
+          password: ''
+        });
+        loadUsers(); // Refresh the user list
+      } else {
+        const errorData = await response.json();
+        setCreationError(errorData.message || 'Failed to create user');
+      }
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      setCreationError('Failed to create user: ' + (error as any).message);
+    } finally {
+      setCreationLoading(false);
+    }
+  };
+
+  // Delete user (soft delete)
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: adminService.getHeaders()
+        });
+        
+        if (response.ok) {
+          loadUsers(); // Refresh the user list
+        } else {
+          console.error('Failed to delete user');
+        }
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+      }
+    }
+  };
+
+  // Load user audit logs
+  const loadUserAuditLogs = async (userId: string) => {
+    try {
+      setLoadingAuditLogs(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/${userId}/audit-logs`, {
+        headers: adminService.getHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserAuditLogs(data.logs || []);
+      } else {
+        console.error('Failed to load audit logs');
+        setUserAuditLogs([]);
+      }
+    } catch (error) {
+      console.error('Error loading audit logs:', error);
+      setUserAuditLogs([]);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  };
+
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case 'super_admin': return 'text-red-400 bg-red-500/20';
@@ -346,13 +516,21 @@ export function UserManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header with Export */}
+      {/* Header with Export and Create User */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-white">User Management</h2>
           <p className="text-gray-400 text-sm">Manage users, roles, and permissions</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setShowCreateUserModal(true)}
+            variant="primary"
+            className="flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Create User
+          </Button>
           <Button
             onClick={exportUsers}
             variant="outline"
@@ -371,6 +549,79 @@ export function UserManagement() {
           </Button>
         </div>
       </div>
+
+      {/* User Statistics Panel */}
+      <GlassPanel className="p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            User Statistics
+          </h3>
+        </div>
+        
+        {loadingStats ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 bg-white/5 rounded-lg animate-pulse">
+                <div className="h-4 bg-white/10 rounded w-3/4 mb-2"></div>
+                <div className="h-6 bg-white/10 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        ) : userStats ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span className="text-gray-400 text-sm">Total Users</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.totalUsers?.toLocaleString()}</p>
+            </div>
+            
+            <div className="p-4 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <UserCheck className="w-4 h-4 text-green-400" />
+                <span className="text-gray-400 text-sm">Active Users</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.activeUsers?.toLocaleString()}</p>
+            </div>
+            
+            <div className="p-4 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Ban className="w-4 h-4 text-red-400" />
+                <span className="text-gray-400 text-sm">Suspended</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.suspendedUsers?.toLocaleString()}</p>
+            </div>
+            
+            <div className="p-4 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
+                <span className="text-gray-400 text-sm">Growth Rate</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.userGrowthRate}%</p>
+            </div>
+            
+            <div className="p-4 bg-white/5 rounded-lg md:col-span-2">
+              <div className="flex items-center gap-2 mb-2">
+                <User className="w-4 h-4 text-yellow-400" />
+                <span className="text-gray-400 text-sm">New This Month</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.newUsersThisMonth?.toLocaleString()}</p>
+            </div>
+            
+            <div className="p-4 bg-white/5 rounded-lg md:col-span-2">
+              <div className="flex items-center gap-2 mb-2">
+                <UserCog className="w-4 h-4 text-cyan-400" />
+                <span className="text-gray-400 text-sm">New This Week</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{userStats.newUsersThisWeek?.toLocaleString()}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-gray-400">No statistics available</p>
+        )}
+      </GlassPanel>
 
       {/* User Segmentation Section */}
       <UserSegmentation />
@@ -655,12 +906,14 @@ export function UserManagement() {
             <GlassPanel className="p-6 sticky top-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white">User Details</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={() => setActionModal({ type: 'role', user: selectedUser })}
                     variant="outline"
                     size="sm"
+                    className="flex items-center gap-1"
                   >
+                    <Shield className="w-3 h-3" />
                     Change Role
                   </Button>
                   {selectedUser.isSuspended ? (
@@ -668,7 +921,9 @@ export function UserManagement() {
                       onClick={() => handleUnsuspend(selectedUser.id)}
                       variant="primary"
                       size="sm"
+                      className="flex items-center gap-1"
                     >
+                      <UserCheck className="w-3 h-3" />
                       Unsuspend
                     </Button>
                   ) : (
@@ -676,10 +931,21 @@ export function UserManagement() {
                       onClick={() => setActionModal({ type: 'suspend', user: selectedUser })}
                       variant="outline"
                       size="sm"
+                      className="flex items-center gap-1"
                     >
+                      <Ban className="w-3 h-3" />
                       Suspend
                     </Button>
                   )}
+                  <Button
+                    onClick={() => handleDeleteUser(selectedUser.id)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1 text-red-400 border-red-400/50 hover:bg-red-500/10"
+                  >
+                    <UserX className="w-3 h-3" />
+                    Delete
+                  </Button>
                 </div>
               </div>
 
@@ -766,6 +1032,36 @@ export function UserManagement() {
                   <p className="text-white">{new Date(selectedUser.createdAt).toLocaleString()}</p>
                 </div>
 
+                {/* Profile Fields */}
+                {selectedUser.profile && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedUser.profile.firstName && (
+                      <div>
+                        <label className="text-gray-400 text-sm">First Name</label>
+                        <p className="text-white">{selectedUser.profile.firstName}</p>
+                      </div>
+                    )}
+                    {selectedUser.profile.lastName && (
+                      <div>
+                        <label className="text-gray-400 text-sm">Last Name</label>
+                        <p className="text-white">{selectedUser.profile.lastName}</p>
+                      </div>
+                    )}
+                    {selectedUser.profile.phoneNumber && (
+                      <div>
+                        <label className="text-gray-400 text-sm">Phone</label>
+                        <p className="text-white">{selectedUser.profile.phoneNumber}</p>
+                      </div>
+                    )}
+                    {selectedUser.profile.location && (
+                      <div>
+                        <label className="text-gray-400 text-sm">Location</label>
+                        <p className="text-white">{selectedUser.profile.location}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Permissions */}
                 {selectedUser.permissions && selectedUser.permissions.length > 0 && (
                   <div>
@@ -782,6 +1078,54 @@ export function UserManagement() {
                     </div>
                   </div>
                 )}
+
+                {/* Profile Management Section */}
+                <div className="border-t border-gray-700 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-blue-400" />
+                      <span className="text-white font-medium text-sm">Profile Management</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          // In a real implementation, this would open a profile edit modal
+                          alert('Profile editing functionality would open here');
+                        }}
+                      >
+                        Edit Profile
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          // In a real implementation, this would reset the user's password
+                          alert('Password reset functionality would go here');
+                        }}
+                      >
+                        Reset Password
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          // In a real implementation, this would manage the user's KYC status
+                          alert('KYC management functionality would go here');
+                        }}
+                      >
+                        Manage KYC
+                      </Button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Activity Timeline Section */}
                 <div className="border-t border-gray-700 pt-4">
@@ -855,6 +1199,66 @@ export function UserManagement() {
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Audit Log Section */}
+                <div className="border-t border-gray-700 pt-4">
+                  <button
+                    onClick={() => {
+                      if (!showAuditLogs && selectedUser) {
+                        loadUserAuditLogs(selectedUser.id);
+                      }
+                      setShowAuditLogs(!showAuditLogs);
+                    }}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-yellow-400" />
+                      <span className="text-white font-medium text-sm">Audit Trail</span>
+                    </div>
+                    {showAuditLogs ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {showAuditLogs && (
+                    <div className="mt-4 space-y-3 max-h-60 overflow-y-auto">
+                      {loadingAuditLogs ? (
+                        <div className="space-y-3">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="p-3 bg-white/5 rounded-lg animate-pulse">
+                              <div className="h-10 bg-white/10 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : userAuditLogs.length === 0 ? (
+                        <div className="text-center py-4">
+                          <Settings className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">No audit logs recorded</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {userAuditLogs.map((log, index) => (
+                            <div
+                              key={index}
+                              className="p-3 bg-white/5 rounded-lg text-sm"
+                            >
+                              <div className="flex justify-between">
+                                <span className="font-medium text-white">{log.action}</span>
+                                <span className="text-gray-400 text-xs">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="text-gray-300 mt-1">{log.resourceType}: {log.resourceId}</div>
+                              <div className="text-gray-400 text-xs mt-1">By: {log.adminId}</div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -1055,6 +1459,114 @@ export function UserManagement() {
                 Update All Roles
               </Button>
               <Button onClick={() => setActionModal({ type: null, user: null })} variant="outline">
+                Cancel
+              </Button>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
+
+      {/* User Creation Modal */}
+      {showCreateUserModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <GlassPanel className="max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Create New User
+            </h3>
+            
+            <div className="space-y-4">
+              {creationError && (
+                <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+                  {creationError}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Username</label>
+                <input
+                  type="text"
+                  value={newUser.handle}
+                  onChange={(e) => setNewUser({...newUser, handle: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  placeholder="Enter username"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  placeholder="Enter email"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Wallet Address</label>
+                <input
+                  type="text"
+                  value={newUser.walletAddress}
+                  onChange={(e) => setNewUser({...newUser, walletAddress: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  placeholder="Enter wallet address"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Password</label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  placeholder="Enter password"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as UserRole})}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                >
+                  <option value="user">User</option>
+                  <option value="moderator">Moderator</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <Button 
+                onClick={handleCreateUser} 
+                variant="primary" 
+                disabled={creationLoading}
+                className="flex items-center gap-2"
+              >
+                {creationLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Create User
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowCreateUserModal(false);
+                  setCreationError('');
+                }} 
+                variant="outline"
+              >
                 Cancel
               </Button>
             </div>

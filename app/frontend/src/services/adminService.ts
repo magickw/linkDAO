@@ -137,6 +137,11 @@ class AdminService {
     return authService.getAuthHeaders();
   }
 
+  // Public method to allow other components to access headers
+  getHeaders() {
+    return this.getHeaders();
+  }
+
   // Moderation Queue Management
   async getModerationQueue(filters?: {
     type?: string;

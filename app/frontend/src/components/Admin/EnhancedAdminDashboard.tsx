@@ -35,7 +35,8 @@ import {
   LogOut,
   Package,
   Activity,
-  Heart // Changed from HeartHandshake to Heart
+  Heart, // Changed from HeartHandshake to Heart
+  Mail // Added for Newsletter
 } from 'lucide-react';
 import { usePermissions, useAuth } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -63,6 +64,7 @@ import { CharityVerificationPanel } from './CharityVerificationPanel';
 import { CharityVerification } from './CharityVerification';
 import { CharityProposal } from '../Governance/CharityProposalCard';
 import { UserMonitoringDashboard } from './UserMonitoringDashboard';
+import { NewsletterManagement } from './NewsletterManagement';
 
 interface AdminStats {
   pendingModerations: number;
@@ -304,6 +306,7 @@ export function EnhancedAdminDashboard() {
     { id: 'audit', label: 'Audit System', icon: FileText, permission: 'system.audit', category: 'audit' },
     { id: 'security', label: 'Security & Compliance', icon: Shield, permission: 'system.security', category: 'security' },
     { id: 'notifications', label: 'Notifications', icon: Bell, permission: null, category: 'communications' },
+    { id: 'newsletter', label: 'Newsletter', icon: Mail, permission: null, category: 'communications' },
     { id: 'push-setup', label: 'Push Setup', icon: Phone, permission: null, category: 'communications' },
     { id: 'workflows', label: 'Workflows', icon: Settings, permission: null, category: 'automation' },
     { id: 'onboarding', label: 'Onboarding', icon: HelpCircle, permission: null, category: 'user' },
@@ -771,6 +774,10 @@ export function EnhancedAdminDashboard() {
 
             {activeTab === 'notifications' && (
               <NotificationCenter />
+            )}
+
+            {activeTab === 'newsletter' && (
+              <NewsletterManagement />
             )}
 
             {activeTab === 'push-setup' && (

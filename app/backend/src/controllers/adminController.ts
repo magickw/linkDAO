@@ -570,6 +570,32 @@ export class AdminController {
     }
   }
 
+  // Get user audit logs
+  async getUserAuditLogs(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { limit = 50, offset = 0 } = req.query;
+
+      // Get user audit logs from audit logging service
+      const auditLogs = await this.auditLogAnalysisService.searchAuditLogs({
+        resourceId: userId,
+        resourceType: 'user',
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+
+      res.json({
+        logs: auditLogs.logs,
+        total: auditLogs.total,
+        page: parseInt(offset as string) / parseInt(limit as string) + 1,
+        totalPages: Math.ceil(auditLogs.total / parseInt(limit as string))
+      });
+    } catch (error) {
+      safeLogger.error('Error fetching user audit logs:', error);
+      res.status(500).json({ error: "Failed to fetch user audit logs" });
+    }
+  }
+
   private mapActionToActivityType(actionType: string): string {
     if (actionType.includes('login')) return 'login';
     if (actionType.includes('post') || actionType.includes('content')) return 'post';
