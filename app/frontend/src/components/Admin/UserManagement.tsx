@@ -327,7 +327,7 @@ export function UserManagement() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/create`, {
         method: 'POST',
         headers: {
-          ...adminService.getHeaders(),
+          ...adminService.getAuthHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -367,7 +367,7 @@ export function UserManagement() {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/${userId}`, {
           method: 'DELETE',
-          headers: adminService.getHeaders()
+          headers: adminService.getAuthHeaders()
         });
         
         if (response.ok) {
@@ -386,7 +386,7 @@ export function UserManagement() {
     try {
       setLoadingAuditLogs(true);
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/${userId}/audit-logs`, {
-        headers: adminService.getHeaders()
+        headers: adminService.getAuthHeaders()
       });
       
       if (response.ok) {
