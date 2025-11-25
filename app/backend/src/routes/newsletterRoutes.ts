@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { newsletterService } from '../services/newsletterService';
 import { safeLogger } from '../utils/safeLogger';
 import { apiResponse } from '../utils/apiResponse';
-import { requireAdmin } from '../middleware/auth';
+import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
@@ -124,7 +124,7 @@ router.get('/stats', async (req: Request, res: Response) => {
  * GET /api/admin/newsletter/subscribers
  * Get all newsletter subscribers (Admin only)
  */
-router.get('/admin/subscribers', requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/subscribers', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const subscribers = await newsletterService.getAllSubscribers();
     return res.status(200).json(apiResponse.success(subscribers, 'Subscribers retrieved successfully'));
@@ -138,7 +138,7 @@ router.get('/admin/subscribers', requireAdmin, async (req: Request, res: Respons
  * GET /api/admin/newsletter/campaigns
  * Get all newsletter campaigns (Admin only)
  */
-router.get('/admin/campaigns', requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/campaigns', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const campaigns = await newsletterService.getAllCampaigns();
     return res.status(200).json(apiResponse.success(campaigns, 'Campaigns retrieved successfully'));
@@ -152,7 +152,7 @@ router.get('/admin/campaigns', requireAdmin, async (req: Request, res: Response)
  * GET /api/admin/newsletter/stats
  * Get detailed newsletter statistics (Admin only)
  */
-router.get('/admin/stats', requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/stats', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const stats = await newsletterService.getNewsletterStats();
     return res.status(200).json(apiResponse.success(stats, 'Stats retrieved successfully'));
@@ -166,7 +166,7 @@ router.get('/admin/stats', requireAdmin, async (req: Request, res: Response) => 
  * POST /api/admin/newsletter/send
  * Send newsletter to all active subscribers (Admin only)
  */
-router.post('/admin/send', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/send', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const { subject, content, htmlContent } = req.body;
 
@@ -191,7 +191,7 @@ router.post('/admin/send', requireAdmin, async (req: Request, res: Response) => 
  * POST /api/admin/newsletter/schedule
  * Schedule newsletter for later (Admin only)
  */
-router.post('/admin/schedule', requireAdmin, async (req: Request, res: Response) => {
+router.post('/admin/schedule', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const { subject, content, htmlContent, scheduledAt } = req.body;
 
@@ -221,7 +221,7 @@ router.post('/admin/schedule', requireAdmin, async (req: Request, res: Response)
  * DELETE /api/admin/newsletter/campaigns/:campaignId
  * Delete a campaign (Admin only)
  */
-router.delete('/admin/campaigns/:campaignId', requireAdmin, async (req: Request, res: Response) => {
+router.delete('/admin/campaigns/:campaignId', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const { campaignId } = req.params;
 
@@ -246,7 +246,7 @@ router.delete('/admin/campaigns/:campaignId', requireAdmin, async (req: Request,
  * GET /api/admin/newsletter/export
  * Export subscribers to CSV (Admin only)
  */
-router.get('/admin/export', requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/export', validateAdminRole, async (req: Request, res: Response) => {
   try {
     const csv = await newsletterService.exportSubscribers();
     res.setHeader('Content-Type', 'text/csv');
