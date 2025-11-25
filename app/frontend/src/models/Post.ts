@@ -50,6 +50,17 @@ export function convertBackendPostToPost(backendPost: any): Post {
     }
   }
   
+  // Helper function to safely convert to Date
+  const toDate = (value: any): Date => {
+    if (!value) return new Date();
+    if (value instanceof Date) return value;
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+    return new Date();
+  };
+
   return {
     id: backendPost.id?.toString() || '',
     author: backendPost.walletAddress || backendPost.authorId || '',
@@ -59,8 +70,8 @@ export function convertBackendPostToPost(backendPost: any): Post {
     contentCid: backendPost.contentCid || '',
     mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
     tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
-    createdAt: new Date(backendPost.createdAt || Date.now()),
-    updatedAt: new Date(backendPost.updatedAt || backendPost.createdAt || Date.now()),
+    createdAt: toDate(backendPost.createdAt),
+    updatedAt: toDate(backendPost.updatedAt || backendPost.createdAt),
     onchainRef: backendPost.onchainRef || '',
     stakedValue: parseFloat(backendPost.stakedValue || backendPost.staked_value || 0),
     reputationScore: parseInt(backendPost.reputationScore || backendPost.reputation_score || 0),

@@ -80,9 +80,11 @@ export class UnifiedSellerService {
         return cached.data;
       }
 
-      // Fetch from API
+      // Fetch from API without authentication (public profile access)
       const response = await unifiedSellerAPIClient.request<SellerProfile>(
-        unifiedSellerAPIClient['endpoints'].getProfile(walletAddress)
+        unifiedSellerAPIClient['endpoints'].getProfile(walletAddress),
+        undefined,
+        false // requireAuth = false for public access
       );
 
       if (!response) {
@@ -170,7 +172,8 @@ export class UnifiedSellerService {
         {
           method: 'PUT',
           body: JSON.stringify(legacyUpdates),
-        }
+        },
+        true // requireAuth = true for private access
       );
 
       // Transform response to unified format
@@ -208,9 +211,11 @@ export class UnifiedSellerService {
         return cached.data;
       }
 
-      // Fetch from API using the proper endpoint
+      // Fetch from API using the proper endpoint without authentication (public listings access)
       const response = await unifiedSellerAPIClient.request<SellerListing[]>(
-        unifiedSellerAPIClient['endpoints'].getListings(walletAddress)
+        unifiedSellerAPIClient['endpoints'].getListings(walletAddress),
+        undefined,
+        false // requireAuth = false for public access
       );
 
       if (!response || !Array.isArray(response)) {
@@ -273,7 +278,8 @@ export class UnifiedSellerService {
         {
           method: 'POST',
           body: JSON.stringify({ ...legacyListing, walletAddress }),
-        }
+        },
+        true // requireAuth = true for private access
       );
 
       // Transform response to unified format
@@ -312,7 +318,8 @@ export class UnifiedSellerService {
         {
           method: 'PUT',
           body: JSON.stringify(legacyUpdates),
-        }
+        },
+        true // requireAuth = true for private access
       );
 
       // Transform response to unified format
@@ -397,7 +404,9 @@ export class UnifiedSellerService {
   async getOrders(walletAddress: string): Promise<SellerOrder[]> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerOrder[]>(
-        unifiedSellerAPIClient['endpoints'].getOrders(walletAddress)
+        unifiedSellerAPIClient['endpoints'].getOrders(walletAddress),
+        undefined,
+        true // requireAuth = true for private access
       );
 
       return response || [];
@@ -418,7 +427,9 @@ export class UnifiedSellerService {
   async getAnalytics(walletAddress: string): Promise<SellerAnalytics> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerAnalytics>(
-        unifiedSellerAPIClient['endpoints'].getAnalytics(walletAddress)
+        unifiedSellerAPIClient['endpoints'].getAnalytics(walletAddress),
+        undefined,
+        true // requireAuth = true for private access
       );
 
       return response;
@@ -439,7 +450,9 @@ export class UnifiedSellerService {
   async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
     try {
       const response = await unifiedSellerAPIClient.request<SellerNotification[]>(
-        unifiedSellerAPIClient['endpoints'].getNotifications(walletAddress)
+        unifiedSellerAPIClient['endpoints'].getNotifications(walletAddress),
+        undefined,
+        true // requireAuth = true for private access
       );
 
       return response || [];
@@ -457,7 +470,8 @@ export class UnifiedSellerService {
     try {
       await unifiedSellerAPIClient.request(
         unifiedSellerAPIClient['endpoints'].markNotificationRead(notificationId),
-        { method: 'POST' }
+        { method: 'POST' },
+        true // requireAuth = true for private access
       );
     } catch (error) {
       console.error('Failed to mark notification as read:', error);

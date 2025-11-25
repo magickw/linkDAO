@@ -220,28 +220,42 @@ export class UnifiedSellerAPIClient {
     getTierUpgradeNotifications: (walletAddress: string) => `${this.baseURL}/tier/notifications/${walletAddress}`,
   };
 
-  async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  async request<T>(endpoint: string, options?: RequestInit, requireAuth: boolean = true): Promise<T> {
     try {
       // Log the request for debugging (especially useful in production)
       console.log('[SellerAPI] Request:', {
         endpoint,
         method: options?.method || 'GET',
-        baseURL: this.baseURL
+        baseURL: this.baseURL,
+        requireAuth
       });
 
-      // Get authentication token if available
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
 
-      // Get wallet address for authentication
-      const walletAddress = localStorage.getItem('linkdao_wallet_address');
+      // Add authentication headers only if required
+      if (requireAuth) {
+        // Get authentication token if available
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+
+        // Get wallet address for authentication
+        const walletAddress = localStorage.getItem('linkdao_wallet_address');
+
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        if (walletAddress) {
+          headers['X-Wallet-Address'] = walletAddress;
+        }
+      }
 
       const response = await fetch(endpoint, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(walletAddress ? { 'X-Wallet-Address': walletAddress } : {}),
+          ...headers,
           ...options?.headers,
         },
       });
@@ -432,7 +446,7 @@ export class UnifiedSellerAPIClient {
   // Profile API methods
   async getProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress));
+      return await this.request<SellerProfile>(this.endpoints.getProfile(walletAddress), undefined, false);
     } catch (error) {
       if (error instanceof SellerAPIError && error.status === 404) {
         return null;
@@ -445,14 +459,14 @@ export class UnifiedSellerAPIClient {
     return await this.request<SellerProfile>(this.endpoints.createProfile(), {
       method: 'POST',
       body: JSON.stringify(profileData),
-    });
+    }, true); // requireAuth = true for private access
   }
 
   async updateProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
     return await this.request<SellerProfile>(this.endpoints.updateProfile(walletAddress), {
       method: 'PUT',
       body: JSON.stringify(updates),
-    });
+    }, true); // requireAuth = true for private access
   }
 
   async updateProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
@@ -485,7 +499,20 @@ export class UnifiedSellerAPIClient {
 
   // Onboarding API methods
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
-    return await this.request<OnboardingStep[]>(this.endpoints.getOnboardingSteps(walletAddress));
+    try {
+      return await this.request<OnboardingStep[]>(this.endpoints.getOnboardingSteps(walletAddress), undefined, true);
+    } catch (error) {
+      if (error instanceof SellerAPIError && error.status === 404) {
+        // Return empty array for new sellers who haven't started onboarding
+        return [
+          { id: 'profile_setup', completed: false, title: 'Profile Setup', description: 'Set up your seller profile' },
+          { id: 'verification', completed: false, title: 'Verification', description: 'Verify your identity' },
+          { id: 'payout_setup', completed: false, title: 'Payout Setup', description: 'Set up your payment methods' },
+          { id: 'first_listing', completed: false, title: 'First Listing', description: 'Create your first product listing' }
+        ];
+      }
+      throw error;
+    }
   }
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
@@ -501,7 +528,7 @@ export class UnifiedSellerAPIClient {
 
   // Dashboard API methods
   async getDashboardStats(walletAddress: string): Promise<SellerDashboardStats> {
-    return await this.request<SellerDashboardStats>(this.endpoints.getDashboard(walletAddress));
+    return await this.request<SellerDashboardStats>(this.endpoints.getDashboard(walletAddress), undefined, true);
   }
 
   async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
@@ -517,18 +544,18 @@ export class UnifiedSellerAPIClient {
     return await this.request<SellerListing[]>(url);
   }
 
-  async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
+  async createListing(listingData: Partial<SellerListing>): Promise<SellerListing> {
     return await this.request<SellerListing>(this.endpoints.createListing(), {
       method: 'POST',
-      body: JSON.stringify({ ...listingData, sellerWalletAddress: walletAddress }),
-    });
+      body: JSON.stringify(listingData),
+    }, true); // requireAuth = true for private access
   }
 
   async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {
     return await this.request<SellerListing>(this.endpoints.updateListing(listingId), {
       method: 'PUT',
       body: JSON.stringify(updates),
-    });
+    }, true); // requireAuth = true for private access
   }
 
   async deleteListing(listingId: string): Promise<void> {
@@ -561,7 +588,7 @@ export class UnifiedSellerAPIClient {
 
   // Notifications API methods
   async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
-    return await this.request<SellerNotification[]>(this.endpoints.getNotifications(walletAddress));
+    return await this.request<SellerNotification[]>(this.endpoints.getNotifications(walletAddress), undefined, true);
   }
 
   async markNotificationRead(notificationId: string): Promise<void> {
@@ -629,74 +656,66 @@ export class UnifiedSellerAPIClient {
   }
 
   async getKYCStatus(walletAddress: string): Promise<{ status: string; documents: string[] }> {
-    return await this.request<{ status: string; documents: string[] }>(this.endpoints.getKYCStatus(walletAddress));
+    return await this.request<{ status: string; documents: string[] }>(this.endpoints.getKYCStatus(walletAddress), undefined, true);
   }
 
   // Payment API methods
   async getPaymentHistory(walletAddress: string): Promise<any[]> {
-    return await this.request<any[]>(this.endpoints.getPaymentHistory(walletAddress));
+    return await this.request<any[]>(this.endpoints.getPaymentHistory(walletAddress), undefined, true);
   }
 
   async requestWithdrawal(walletAddress: string, amount: number, currency: string, method: string): Promise<void> {
     await this.request<void>(this.endpoints.requestWithdrawal(), {
       method: 'POST',
       body: JSON.stringify({ walletAddress, amount, currency, method }),
-    });
+    }, true);
   }
 
   // Dispute API methods
   async getDisputes(walletAddress: string): Promise<any[]> {
-    return await this.request<any[]>(this.endpoints.getDisputes(walletAddress));
+    return await this.request<any[]>(this.endpoints.getDisputes(walletAddress), undefined, true);
   }
 
   async respondToDispute(disputeId: string, response: string, evidence?: string[]): Promise<void> {
     await this.request<void>(this.endpoints.respondToDispute(disputeId), {
       method: 'POST',
       body: JSON.stringify({ response, evidence }),
-    });
+    }, true);
   }
 
   // Tier API methods
   async getSellerTier(walletAddress: string): Promise<SellerTier> {
-    return await this.request<SellerTier>(this.endpoints.getSellerTier(walletAddress));
+    return await this.request<SellerTier>(this.endpoints.getSellerTier(walletAddress), undefined, true);
   }
 
   async getTierProgress(walletAddress: string): Promise<TierProgress> {
-    return await this.request<TierProgress>(this.endpoints.getTierProgress(walletAddress));
+    return await this.request<TierProgress>(this.endpoints.getTierProgress(walletAddress), undefined, true);
   }
 
   async getTierUpgradeEligibility(walletAddress: string): Promise<TierUpgradeInfo> {
-    return await this.request<TierUpgradeInfo>(this.endpoints.getTierUpgradeEligibility(walletAddress));
+    return await this.request<TierUpgradeInfo>(this.endpoints.getTierUpgradeEligibility(walletAddress), undefined, true);
   }
 
-  async refreshTierData(walletAddress: string): Promise<void> {
-    await this.request<void>(this.endpoints.refreshTierData(walletAddress), {
-      method: 'POST',
-    });
-  }
-
-  // Automated tier upgrade API methods
   async getTierProgressionTracking(walletAddress: string): Promise<any> {
-    return await this.request<any>(this.endpoints.getTierProgressionTracking(walletAddress));
+    return await this.request<any>(this.endpoints.getTierProgressionTracking(walletAddress), undefined, true);
   }
 
-  async triggerTierEvaluation(walletAddress: string, force: boolean = false): Promise<any> {
+  async triggerTierEvaluation(): Promise<any> {
     return await this.request<any>(this.endpoints.triggerTierEvaluation(), {
       method: 'POST',
-      body: JSON.stringify({ walletAddress, force }),
-    });
+    }, true);
   }
 
   async getTierCriteria(): Promise<any> {
-    return await this.request<any>(this.endpoints.getTierCriteria());
+    return await this.request<any>(this.endpoints.getTierCriteria(), undefined, true);
   }
 
   async getTierEvaluationHistory(walletAddress: string): Promise<any> {
-    return await this.request<any>(this.endpoints.getTierEvaluationHistory(walletAddress));
+    return await this.request<any>(this.endpoints.getTierEvaluationHistory(walletAddress), undefined, true);
   }
 
   async getTierUpgradeNotifications(walletAddress: string): Promise<any> {
-    return await this.request<any>(this.endpoints.getTierUpgradeNotifications(walletAddress));
+    return await this.request<any>(this.endpoints.getTierUpgradeNotifications(walletAddress), undefined, true);
   }
 }
 

@@ -372,13 +372,23 @@ class MarketplaceDataManager {
   // CACHE MANAGEMENT
   // ============================================================================
 
+  private getTimestamp(date: Date | string | number): number {
+    if (date instanceof Date) return date.getTime();
+    if (typeof date === 'number') return date;
+    if (typeof date === 'string') {
+      const parsed = new Date(date);
+      return isNaN(parsed.getTime()) ? Date.now() : parsed.getTime();
+    }
+    return Date.now();
+  }
+
   private isValidCacheEntry(entity: MarketplaceEntity): boolean {
-    const age = Date.now() - entity.lastUpdated.getTime();
+    const age = Date.now() - this.getTimestamp(entity.lastUpdated);
     return age < this.cacheConfig.ttl;
   }
 
   private isPriceDataValid(priceData: PriceData): boolean {
-    const age = Date.now() - priceData.lastUpdated.getTime();
+    const age = Date.now() - this.getTimestamp(priceData.lastUpdated);
     // Price data expires faster (1 minute)
     return age < 60 * 1000;
   }
@@ -387,8 +397,8 @@ class MarketplaceDataManager {
     if (cache.size > this.cacheConfig.maxSize) {
       // Remove oldest entries
       const entries = Array.from(cache.entries());
-      entries.sort((a, b) => a[1].lastUpdated.getTime() - b[1].lastUpdated.getTime());
-      
+      entries.sort((a, b) => this.getTimestamp(a[1].lastUpdated) - this.getTimestamp(b[1].lastUpdated));
+
       const toRemove = entries.slice(0, cache.size - this.cacheConfig.maxSize);
       toRemove.forEach(([key]) => cache.delete(key));
     }
