@@ -228,14 +228,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Check if wallet is already connected but no valid session exists
         if (typeof window !== 'undefined' && window.ethereum) {
           try {
+            // Create a fresh request object to avoid MetaMask frozen object issues
             const accounts = await window.ethereum.request({
               method: 'eth_accounts',
+            }).catch((err: any) => {
+              // Silently handle MetaMask requestId errors
+              if (err.message?.includes('requestId') || err.message?.includes('read only')) {
+                return [];
+              }
+              throw err;
             });
-            if (accounts.length > 0) {
+            if (accounts && accounts.length > 0) {
               console.log('👛 Wallet already connected, no valid session found - will require signature when needed');
             }
-          } catch (error) {
-            console.error('Error checking wallet connection:', error);
+          } catch (error: any) {
+            // Only log if it's not a MetaMask internal error
+            if (!error.message?.includes('requestId') && !error.message?.includes('read only')) {
+              console.error('Error checking wallet connection:', error);
+            }
           }
         }
       } catch (error) {

@@ -149,7 +149,7 @@ class WebSocketService {
     });
   }
 
-  connect() {
+  connect(): Promise<void> {
     if (this.socket?.connected) {
       return Promise.resolve();
     }
@@ -213,6 +213,8 @@ class WebSocketService {
         this.connectionPromise = null; // Clear the connection promise on error
       }
     });
+
+    return this.connectionPromise;
   }
 
   private setupSocketEventHandlers(resolve?: () => void, reject?: (error: Error) => void): void {
