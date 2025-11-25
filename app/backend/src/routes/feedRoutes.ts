@@ -192,8 +192,8 @@ router.get('/:id/comments',
     },
     query: {
       page: { type: 'number', optional: true, min: 1 },
-      limit: { type: 'number', optional: true, min: 1, max: 50 },
-      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'top'] }
+      limit: { type: 'number', optional: true, min: 1, max: 100 },
+      sortBy: { type: 'string', optional: true, enum: ['best', 'new', 'top', 'controversial'] }
     }
   }),
   feedController.getPostComments
