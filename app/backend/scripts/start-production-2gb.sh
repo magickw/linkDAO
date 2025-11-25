@@ -15,8 +15,14 @@ export RENDER_SERVICE_PLAN=standard
 export RENDER_PRO=true
 export MEMORY_LIMIT=2048
 
-# Set optimized Node.js options for 2GB RAM
-export NODE_OPTIONS="--max-old-space-size=1536 --expose-gc"
+# Set optimized Node.js options for 2GB RAM (only if not already set by Render)
+# Render.yaml sets --max-old-space-size=3072 for Pro plan
+if [ -z "$NODE_OPTIONS" ]; then
+  export NODE_OPTIONS="--max-old-space-size=1536 --expose-gc"
+  echo "   - Using default heap size: 1.5GB"
+else
+  echo "   - Using Render-configured heap size from NODE_OPTIONS: $NODE_OPTIONS"
+fi
 export NODE_ENV=production
 
 # Database configuration
@@ -39,7 +45,6 @@ export COMPRESSION_LEVEL=6
 export ENABLE_RESPONSE_CACHE=true
 
 echo "🔧 Production optimizations applied:"
-echo "   - Max heap size: 1.5GB (of 2GB available)"
 echo "   - DB pool: 5-20 connections"
 echo "   - Redis memory: 256MB"
 echo "   - All features: enabled"
