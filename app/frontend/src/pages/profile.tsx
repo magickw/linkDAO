@@ -576,6 +576,8 @@ export default function Profile() {
           ens: profile.ens,
           avatarCid: profile.avatar,
           bioCid: profile.bio,
+          socialLinks: profile.socialLinks,
+          website: profile.website,
         };
         await updateBackendProfile(updateData);
 

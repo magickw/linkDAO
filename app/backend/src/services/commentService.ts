@@ -82,7 +82,9 @@ export class CommentService {
             id: users.id,
             walletAddress: users.walletAddress,
             handle: users.handle,
+            displayName: users.displayName,
             profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
           },
         })
         .from(comments)
@@ -158,7 +160,9 @@ export class CommentService {
             id: users.id,
             walletAddress: users.walletAddress,
             handle: users.handle,
+            displayName: users.displayName,
             profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
           },
         })
         .from(comments)
@@ -195,7 +199,9 @@ export class CommentService {
             id: users.id,
             walletAddress: users.walletAddress,
             handle: users.handle,
+            displayName: users.displayName,
             profileCid: users.profileCid,
+            avatarCid: users.avatarCid,
           },
         })
         .from(comments)

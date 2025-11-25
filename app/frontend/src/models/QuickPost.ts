@@ -106,9 +106,9 @@ export function convertBackendQuickPostToQuickPost(backendPost: any): QuickPost 
     
     // Add author profile information including avatar
     authorProfile: {
-      handle: backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
+      handle: backendPost.displayName || backendPost.handle || backendPost.walletAddress?.slice(0, 8) || 'Unknown',
       verified: false,
-      avatar: getAvatarUrl(backendPost.profileCid),
+      avatar: getAvatarUrl(backendPost.avatarCid) || getAvatarUrl(backendPost.profileCid),  // Prefer avatarCid, fallback to profileCid
       reputationTier: undefined
     },
     

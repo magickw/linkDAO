@@ -327,7 +327,13 @@ export class AnalyticsService {
       // Convert "anonymous" to NULL for UUID column compatibility
       const userIdValue = userId === 'anonymous' ? null : userId;
 
-      // Insert into user_analytics table with proper null handling
+      // Truncate long strings to fit varchar constraints
+      const truncateString = (str: string | null | undefined, maxLength: number): string | null => {
+        if (!str) return null;
+        return str.length > maxLength ? str.substring(0, maxLength) : str;
+      };
+
+      // Insert into user_analytics table with proper null handling and string truncation
       await db.execute(sql`
         INSERT INTO user_analytics (
           user_id, session_id, event_type, event_data,
@@ -335,9 +341,15 @@ export class AnalyticsService {
           device_type, browser, referrer, timestamp
         ) VALUES (
           ${userIdValue}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
-          ${metadata?.pageUrl || null}, ${metadata?.userAgent || null}, ${metadata?.ipAddress || null},
-          ${geoData.country || null}, ${geoData.city || null}, ${metadata?.deviceType || null},
-          ${metadata?.browser || null}, ${metadata?.referrer || null}, NOW()
+          ${truncateString(metadata?.pageUrl, 500)},
+          ${truncateString(metadata?.userAgent, 500)},
+          ${metadata?.ipAddress || null},
+          ${truncateString(geoData.country, 100)},
+          ${truncateString(geoData.city, 100)},
+          ${truncateString(metadata?.deviceType, 50)},
+          ${truncateString(metadata?.browser, 100)},
+          ${truncateString(metadata?.referrer, 500)},
+          NOW()
         )
       `);
 

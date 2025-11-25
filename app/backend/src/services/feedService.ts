@@ -81,8 +81,9 @@ export class FeedService {
 
     const offset = (page - 1) * limit;
 
-    // Build time range filter
-    const timeFilter = this.buildTimeFilter(timeRange);
+    // Build time range filters for both tables
+    const timeFilter = this.buildTimeFilter(timeRange, posts);
+    const quickPostTimeFilter = this.buildTimeFilter(timeRange, quickPosts);
 
     // Build community filter
     let communityFilter = sql`1=1`;
@@ -232,7 +233,9 @@ export class FeedService {
           stakedValue: posts.stakedValue,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
           profileCid: users.profileCid,
+          avatarCid: users.avatarCid,
           // Moderation fields
           moderationStatus: posts.moderationStatus,
           moderationWarning: posts.moderationWarning,
@@ -289,7 +292,9 @@ export class FeedService {
           stakedValue: quickPosts.stakedValue,
           walletAddress: users.walletAddress,
           handle: users.handle,
+          displayName: users.displayName,
           profileCid: users.profileCid,
+          avatarCid: users.avatarCid,
           // Moderation fields
           moderationStatus: quickPosts.moderationStatus,
           moderationWarning: quickPosts.moderationWarning,
@@ -299,7 +304,7 @@ export class FeedService {
         .from(quickPosts)
         .leftJoin(users, eq(quickPosts.authorId, users.id))
         .where(and(
-          timeFilter,
+          quickPostTimeFilter, // Use quickPostTimeFilter instead of timeFilter
           finalQuickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only show top-level posts, not comments
@@ -1709,23 +1714,23 @@ export class FeedService {
   }
 
   // Helper methods
-  private buildTimeFilter(timeRange: string) {
+  private buildTimeFilter(timeRange: string, table: any = posts) {
     let timeFilter;
     switch (timeRange) {
       case 'hour':
-        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 hour'`;
+        timeFilter = sql`${table.createdAt} > NOW() - INTERVAL '1 hour'`;
         break;
       case 'day':
-        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 day'`;
+        timeFilter = sql`${table.createdAt} > NOW() - INTERVAL '1 day'`;
         break;
       case 'week':
-        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 week'`;
+        timeFilter = sql`${table.createdAt} > NOW() - INTERVAL '1 week'`;
         break;
       case 'month':
-        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 month'`;
+        timeFilter = sql`${table.createdAt} > NOW() - INTERVAL '1 month'`;
         break;
       case 'year':
-        timeFilter = sql`${posts.createdAt} > NOW() - INTERVAL '1 year'`;
+        timeFilter = sql`${table.createdAt} > NOW() - INTERVAL '1 year'`;
         break;
       default:
         timeFilter = sql`1=1`; // No time filter
