@@ -166,7 +166,7 @@ export function useSellerListings(
   const createListing = useMutation({
     mutationFn: async (listingData: Partial<SellerListing>) => {
       if (!walletAddress) throw new Error('Wallet address required');
-      return await unifiedSellerAPIClient.createListing(walletAddress, listingData);
+      return await unifiedSellerAPIClient.createListing(listingData);
     },
     onSuccess: (newListing) => {
       if (!walletAddress || !cacheManager) return;

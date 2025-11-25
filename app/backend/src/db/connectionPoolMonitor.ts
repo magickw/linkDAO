@@ -155,7 +155,7 @@ class ConnectionPoolMonitor {
         if (isConnectionError && this.connectionErrorCount > 3) {
             this.triggerAlert({
                 level: 'critical',
-                type: 'connection_error_rate',
+                type: 'high_error_rate',
                 message: `High connection error rate: ${this.connectionErrorCount} connection errors in the last 5 minutes`,
                 metrics: { ...this.metrics },
             });

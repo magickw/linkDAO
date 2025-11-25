@@ -486,7 +486,7 @@ class SellerService {
 
   async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
     console.log(`Creating listing for ${walletAddress}:`, listingData);
-    return await unifiedSellerAPIClient.createListing(walletAddress, listingData);
+    return await unifiedSellerAPIClient.createListing(listingData);
   }
 
   async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {

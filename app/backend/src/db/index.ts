@@ -1,9 +1,19 @@
+/// <reference types="node" />
+
+// Type declarations for Node.js globals
+declare var setInterval: (callback: (...args: any[]) => void, ms: number, ...args: any[]) => any;
+declare var clearInterval: (intervalId: any) => void;
+declare var setTimeout: (callback: (...args: any[]) => void, ms: number, ...args: any[]) => any;
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import { safeLogger } from '../utils/safeLogger';
 import postgres from "postgres";
 import * as schema from "./schema";
 import dotenv from "dotenv";
 import { initializeMonitor, getMonitor } from './connectionPoolMonitor';
+
+// Add type definitions for Node.js timer functions
+
 
 dotenv.config();
 
@@ -23,8 +33,8 @@ declare global {
 
 let client: postgres.Sql | undefined;
 let db: ReturnType<typeof drizzle> | undefined;
-let healthCheckInterval: NodeJS.Timeout | undefined;
-let metricsInterval: NodeJS.Timeout | undefined;
+let healthCheckInterval: ReturnType<typeof setInterval> | undefined;
+let metricsInterval: ReturnType<typeof setInterval> | undefined;
 
 if (connectionString) {
   try {
@@ -66,7 +76,7 @@ if (connectionString) {
 
         // Connection pool optimization
         // Keep connections alive to avoid reconnection overhead
-        keep_alive: !isResourceConstrained,
+        keep_alive: isResourceConstrained ? 0 : 30,
 
         // Error handling
         onclose: () => {

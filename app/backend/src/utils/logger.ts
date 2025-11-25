@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 // Enhanced logger implementation with structured logging and performance monitoring
 interface LogEntry {
   timestamp: string;
