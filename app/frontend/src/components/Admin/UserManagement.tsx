@@ -78,7 +78,7 @@ export function UserManagement() {
     totalPages: 1,
     total: 0
   });
-  
+
   // New states for user creation
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -88,15 +88,15 @@ export function UserManagement() {
     role: 'user' as UserRole,
     password: ''
   });
-  
+
   // New states for user statistics
   const [userStats, setUserStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-  
+
   // New states for user creation modal
   const [creationLoading, setCreationLoading] = useState(false);
   const [creationError, setCreationError] = useState('');
-  
+
   // New states for user audit logs
   const [userAuditLogs, setUserAuditLogs] = useState<any[]>([]);
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
@@ -144,7 +144,7 @@ export function UserManagement() {
 
   const handleSuspend = async () => {
     if (!actionModal.user) return;
-    
+
     try {
       await adminService.suspendUser(actionModal.user.id, suspensionData);
       setActionModal({ type: null, user: null });
@@ -275,7 +275,7 @@ export function UserManagement() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/stats`, {
         headers: adminService.getAuthHeaders()
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setUserStats(data);
@@ -320,7 +320,7 @@ export function UserManagement() {
   const handleCreateUser = async () => {
     setCreationLoading(true);
     setCreationError('');
-    
+
     try {
       // In a real implementation, we would call the API to create a user
       // For now, we'll just show a success message
@@ -338,7 +338,7 @@ export function UserManagement() {
           password: newUser.password
         })
       });
-      
+
       if (response.ok) {
         setShowCreateUserModal(false);
         setNewUser({
@@ -369,7 +369,7 @@ export function UserManagement() {
           method: 'DELETE',
           headers: adminService.getAuthHeaders()
         });
-        
+
         if (response.ok) {
           loadUsers(); // Refresh the user list
         } else {
@@ -388,7 +388,7 @@ export function UserManagement() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/admin/users/${userId}/audit-logs`, {
         headers: adminService.getAuthHeaders()
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setUserAuditLogs(data.logs || []);
@@ -558,7 +558,7 @@ export function UserManagement() {
             User Statistics
           </h3>
         </div>
-        
+
         {loadingStats ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
@@ -577,7 +577,7 @@ export function UserManagement() {
               </div>
               <p className="text-2xl font-bold text-white">{userStats.totalUsers?.toLocaleString()}</p>
             </div>
-            
+
             <div className="p-4 bg-white/5 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <UserCheck className="w-4 h-4 text-green-400" />
@@ -585,7 +585,7 @@ export function UserManagement() {
               </div>
               <p className="text-2xl font-bold text-white">{userStats.activeUsers?.toLocaleString()}</p>
             </div>
-            
+
             <div className="p-4 bg-white/5 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Ban className="w-4 h-4 text-red-400" />
@@ -593,7 +593,7 @@ export function UserManagement() {
               </div>
               <p className="text-2xl font-bold text-white">{userStats.suspendedUsers?.toLocaleString()}</p>
             </div>
-            
+
             <div className="p-4 bg-white/5 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-blue-400" />
@@ -601,7 +601,7 @@ export function UserManagement() {
               </div>
               <p className="text-2xl font-bold text-white">{userStats.userGrowthRate}%</p>
             </div>
-            
+
             <div className="p-4 bg-white/5 rounded-lg md:col-span-2">
               <div className="flex items-center gap-2 mb-2">
                 <User className="w-4 h-4 text-yellow-400" />
@@ -609,7 +609,7 @@ export function UserManagement() {
               </div>
               <p className="text-2xl font-bold text-white">{userStats.newUsersThisMonth?.toLocaleString()}</p>
             </div>
-            
+
             <div className="p-4 bg-white/5 rounded-lg md:col-span-2">
               <div className="flex items-center gap-2 mb-2">
                 <UserCog className="w-4 h-4 text-cyan-400" />
@@ -1032,35 +1032,7 @@ export function UserManagement() {
                   <p className="text-white">{new Date(selectedUser.createdAt).toLocaleString()}</p>
                 </div>
 
-                {/* Profile Fields */}
-                {selectedUser.profile && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {selectedUser.profile.firstName && (
-                      <div>
-                        <label className="text-gray-400 text-sm">First Name</label>
-                        <p className="text-white">{selectedUser.profile.firstName}</p>
-                      </div>
-                    )}
-                    {selectedUser.profile.lastName && (
-                      <div>
-                        <label className="text-gray-400 text-sm">Last Name</label>
-                        <p className="text-white">{selectedUser.profile.lastName}</p>
-                      </div>
-                    )}
-                    {selectedUser.profile.phoneNumber && (
-                      <div>
-                        <label className="text-gray-400 text-sm">Phone</label>
-                        <p className="text-white">{selectedUser.profile.phoneNumber}</p>
-                      </div>
-                    )}
-                    {selectedUser.profile.location && (
-                      <div>
-                        <label className="text-gray-400 text-sm">Location</label>
-                        <p className="text-white">{selectedUser.profile.location}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Additional user info can be added here */}
 
                 {/* Permissions */}
                 {selectedUser.permissions && selectedUser.permissions.length > 0 && (
@@ -1087,7 +1059,7 @@ export function UserManagement() {
                       <span className="text-white font-medium text-sm">Profile Management</span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -1280,7 +1252,7 @@ export function UserManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <GlassPanel className="max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-white mb-4">Suspend User</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Reason</label>
@@ -1292,7 +1264,7 @@ export function UserManagement() {
                   placeholder="Reason for suspension..."
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -1305,7 +1277,7 @@ export function UserManagement() {
                   Permanent suspension
                 </label>
               </div>
-              
+
               {!suspensionData.permanent && (
                 <div>
                   <label className="block text-gray-400 text-sm mb-1">Duration (days)</label>
@@ -1319,7 +1291,7 @@ export function UserManagement() {
                 </div>
               )}
             </div>
-            
+
             <div className="flex gap-2 mt-6">
               <Button onClick={handleSuspend} variant="primary">
                 Suspend User
@@ -1474,63 +1446,63 @@ export function UserManagement() {
               <UserPlus className="w-5 h-5" />
               Create New User
             </h3>
-            
+
             <div className="space-y-4">
               {creationError && (
                 <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
                   {creationError}
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Username</label>
                 <input
                   type="text"
                   value={newUser.handle}
-                  onChange={(e) => setNewUser({...newUser, handle: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, handle: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   placeholder="Enter username"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Email</label>
                 <input
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   placeholder="Enter email"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Wallet Address</label>
                 <input
                   type="text"
                   value={newUser.walletAddress}
-                  onChange={(e) => setNewUser({...newUser, walletAddress: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, walletAddress: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   placeholder="Enter wallet address"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Password</label>
                 <input
                   type="password"
                   value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                   placeholder="Enter password"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Role</label>
                 <select
                   value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value as UserRole})}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
                 >
                   <option value="user">User</option>
@@ -1540,11 +1512,11 @@ export function UserManagement() {
                 </select>
               </div>
             </div>
-            
+
             <div className="flex gap-2 mt-6">
-              <Button 
-                onClick={handleCreateUser} 
-                variant="primary" 
+              <Button
+                onClick={handleCreateUser}
+                variant="primary"
                 disabled={creationLoading}
                 className="flex items-center gap-2"
               >
@@ -1560,11 +1532,11 @@ export function UserManagement() {
                   </>
                 )}
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setShowCreateUserModal(false);
                   setCreationError('');
-                }} 
+                }}
                 variant="outline"
               >
                 Cancel
