@@ -40,7 +40,9 @@
     "strictNullChecks": false,
     "types": [],
     // Set baseUrl to help with module resolution
-    "baseUrl": "."
+    "baseUrl": ".",
+    // Skip all library checking to avoid Solana issues
+    "skipLibCheck": true
   },
   "include": [
     "next-env.d.ts",
