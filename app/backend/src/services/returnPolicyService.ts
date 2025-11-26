@@ -1,8 +1,8 @@
-import { db } from '../db/index.ts';
-import { returnPolicies } from '../db/schema.ts';
+import { db } from '../db/index';
+import { returnPolicies } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger.ts';
+import { safeLogger } from '../utils/logger';
 
 export interface ReturnPolicyData {
   sellerId: string;

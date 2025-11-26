@@ -1,15 +1,15 @@
-import { db } from '../db/index.ts';
+import { db } from '../db/index';
 import { 
   returns, 
   returnPolicies, 
   returnStatusHistory, 
   refundTransactions 
-} from '../db/schema.ts';
+} from '../db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger.ts';
-import { returnTrackingService } from './returnTrackingService.ts';
-import { returnInspectionService } from './returnInspectionService.ts';
+import { safeLogger } from '../utils/logger';
+import { returnTrackingService } from './returnTrackingService';
+import { returnInspectionService } from './returnInspectionService';
 
 export interface CreateReturnRequest {
   orderId: string;

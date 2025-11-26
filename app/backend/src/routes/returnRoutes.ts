@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { returnService } from '../services/returnService.ts';
-import { returnPolicyService } from '../services/returnPolicyService.ts';
-import { authMiddleware } from '../middleware/authMiddleware.ts';
-import { refundPaymentService } from '../services/refundPaymentService.ts';
-import { returnFraudDetectionService } from '../services/returnFraudDetectionService.ts';
-import { returnLabelService } from '../services/returnLabelService.ts';
-import { returnAnalyticsService } from '../services/returnAnalyticsService.ts';
+import { returnService } from '../services/returnService';
+import { returnPolicyService } from '../services/returnPolicyService';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { refundPaymentService } from '../services/refundPaymentService';
+import { returnFraudDetectionService } from '../services/returnFraudDetectionService';
+import { returnLabelService } from '../services/returnLabelService';
+import { returnAnalyticsService } from '../services/returnAnalyticsService';
 
 const router = Router();
 

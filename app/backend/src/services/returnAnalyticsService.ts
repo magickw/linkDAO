@@ -1,7 +1,7 @@
-import { db } from '../db/index.ts';
-import { returns, returnPolicies, refundTransactions } from '../db/schema.ts';
+import { db } from '../db/index';
+import { returns, returnPolicies, refundTransactions } from '../db/schema';
 import { eq, and, gte, lte, sql, desc, count } from 'drizzle-orm';
-import { safeLogger } from '../utils/logger.ts';
+import { safeLogger } from '../utils/logger';
 
 export interface AnalyticsPeriod {
   start: string; // ISO date string

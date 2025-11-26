@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { db } from '../db/index.ts';
-import { returns, returnStatusHistory } from '../db/schema.ts';
+import { db } from '../db/index';
+import { returns, returnStatusHistory } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { safeLogger } from '../utils/logger.ts';
+import { safeLogger } from '../utils/logger';
 
 export interface TrackingInfo {
   trackingNumber: string;
