@@ -12,11 +12,9 @@ echo "NPM: $(npm --version)"
 echo "📁 Creating dist directory..."
 mkdir -p dist
 
-# Use memory-optimized build approach with 4GB RAM
-# Run tsc directly with memory optimization but without invalid --optimize-for-size flag
 echo "🔨 Compiling TypeScript to JavaScript (4GB RAM optimized)..."
-export NODE_OPTIONS="--max-old-space-size=3500"
-npx tsc --project tsconfig.production.json --noEmitOnError false
+# Run the build:tsc script with memory allocation for the Node process
+NODE_OPTIONS="--max-old-space-size=3500" npm run build:tsc
 tsc_result=$?
 
 if [ $tsc_result -ne 0 ] && [ $tsc_result -ne 1 ]; then
