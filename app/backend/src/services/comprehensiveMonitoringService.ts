@@ -90,8 +90,8 @@ export class ComprehensiveMonitoringService {
   private static instance: ComprehensiveMonitoringService;
   private metrics: SystemMetrics[] = [];
   private alerts: AlertSummary[] = [];
-  private monitoringInterval: NodeJS.Timeout | null = null;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   // Memory optimization: Limit array sizes to prevent memory leaks
   private readonly MAX_METRICS_HISTORY = 100; // Keep last 100 metric snapshots (~100 minutes)
@@ -177,7 +177,7 @@ export class ComprehensiveMonitoringService {
    */
   private async collectMetrics(): Promise<void> {
     const timestamp = new Date().toISOString();
-    
+
     // System metrics
     const systemMetrics = {
       uptime: process.uptime(),
@@ -191,7 +191,7 @@ export class ComprehensiveMonitoringService {
     // Application metrics
     const errorStats = errorLoggingService.getErrorStats();
     const rateLimitStats = await enhancedRateLimitingService.getStatistics();
-    
+
     const applicationMetrics = {
       activeConnections: (global as any).activeConnections || 0,
       totalRequests: errorStats.totalErrors + (global as any).successfulRequests || 0,
@@ -246,13 +246,19 @@ export class ComprehensiveMonitoringService {
       }
     }
 
-    // Log metrics
+    // Log metrics with CORRECT memory percentage calculation
+    const os = require('os');
+    const totalSystemMemory = os.totalmem();
+    const memoryPercentage = (systemMetrics.memory.rss / totalSystemMemory) * 100;
+
     logger.info('System metrics collected', {
       timestamp,
       memory: {
-        used: Math.round(systemMetrics.memory.heapUsed / 1024 / 1024),
-        total: Math.round(systemMetrics.memory.heapTotal / 1024 / 1024),
-        percentage: Math.round((systemMetrics.memory.heapUsed / systemMetrics.memory.heapTotal) * 100)
+        heapUsed: Math.round(systemMetrics.memory.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(systemMetrics.memory.heapTotal / 1024 / 1024),
+        rss: Math.round(systemMetrics.memory.rss / 1024 / 1024),
+        systemTotal: Math.round(totalSystemMemory / 1024 / 1024),
+        percentage: Math.round(memoryPercentage * 10) / 10 // Actual system memory %
       },
       application: {
         errorRate: applicationMetrics.errorRate,
@@ -426,7 +432,7 @@ export class ComprehensiveMonitoringService {
       // Placeholder for actual database health check
       // In production, this would ping the database
       await new Promise(resolve => setTimeout(resolve, 10)); // Simulate DB check
-      
+
       return {
         status: 'up',
         responseTime: Date.now() - start,
@@ -447,7 +453,7 @@ export class ComprehensiveMonitoringService {
     try {
       // Placeholder for actual cache health check
       await new Promise(resolve => setTimeout(resolve, 5)); // Simulate cache check
-      
+
       return {
         status: 'up',
         responseTime: Date.now() - start,
@@ -468,7 +474,7 @@ export class ComprehensiveMonitoringService {
     try {
       // Placeholder for external API health checks
       await new Promise(resolve => setTimeout(resolve, 50)); // Simulate API check
-      
+
       return {
         status: 'up',
         responseTime: Date.now() - start,
@@ -489,7 +495,7 @@ export class ComprehensiveMonitoringService {
     try {
       const fs = require('fs').promises;
       await fs.access('./'); // Check if we can access current directory
-      
+
       return {
         status: 'up',
         responseTime: Date.now() - start,
@@ -510,10 +516,10 @@ export class ComprehensiveMonitoringService {
    */
   private calculateTrend(values: number[]): number {
     if (values.length < 2) return 0;
-    
+
     const first = values[0];
     const last = values[values.length - 1];
-    
+
     return first === 0 ? 0 : (last - first) / first;
   }
 
@@ -524,7 +530,7 @@ export class ComprehensiveMonitoringService {
     severity: 'low' | 'medium' | 'high' | 'critical'
   ): Promise<void> {
     const alertId = `alert_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    
+
     const alert: AlertSummary = {
       id: alertId,
       type,

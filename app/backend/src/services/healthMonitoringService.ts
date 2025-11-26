@@ -69,7 +69,7 @@ export class HealthMonitoringService {
   private serviceChecks: Map<string, () => Promise<ServiceHealth>> = new Map();
   private dependencyChecks: Map<string, () => Promise<DependencyStatus>> = new Map();
   private lastHealthCheck: SystemHealth | null = null;
-  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
   private requestCount = 0;
   private errorCount = 0;
   private startTime = Date.now();
@@ -98,18 +98,18 @@ export class HealthMonitoringService {
         // Try to import and use database connection
         const { db } = await import('../db');
         await db.execute('SELECT 1');
-        
+
         // Additional database health checks
         const connectionCount = await this.getDatabaseConnectionCount();
         const slowQueries = await this.getSlowQueryCount();
-        
+
         let status: HealthStatus = 'healthy';
-        const details: any = { 
+        const details: any = {
           connection: 'active',
           connectionCount,
           slowQueries
         };
-        
+
         // Check for degraded performance
         if (connectionCount > 80 || slowQueries > 5) {
           status = 'degraded';
@@ -117,9 +117,9 @@ export class HealthMonitoringService {
           if (connectionCount > 80) details.warnings.push('High connection count');
           if (slowQueries > 5) details.warnings.push('Slow queries detected');
         }
-        
+
         const impact: 'low' | 'medium' | 'high' | 'critical' = status === 'degraded' ? 'high' : 'low';
-        
+
         return {
           name: 'database',
           status,
@@ -172,7 +172,7 @@ export class HealthMonitoringService {
             responseTime: Date.now() - startTime,
             lastChecked: new Date().toISOString(),
             error: 'Cache service not configured',
-            details: { 
+            details: {
               connected: false,
               message: 'Cache service not configured - using fallback'
             },
@@ -185,7 +185,7 @@ export class HealthMonitoringService {
             dependencies: ['redis']
           };
         }
-        
+
         if (!cacheService) {
           return {
             name: 'cache',
@@ -193,7 +193,7 @@ export class HealthMonitoringService {
             responseTime: Date.now() - startTime,
             lastChecked: new Date().toISOString(),
             error: 'Cache service not available',
-            details: { 
+            details: {
               connected: false,
               message: 'Cache service not available - using fallback'
             },
@@ -206,9 +206,9 @@ export class HealthMonitoringService {
             dependencies: ['redis']
           };
         }
-        
+
         const healthCheck = await cacheService.healthCheck();
-        
+
         if (!healthCheck.connected) {
           return {
             name: 'cache',
@@ -216,7 +216,7 @@ export class HealthMonitoringService {
             responseTime: Date.now() - startTime,
             lastChecked: new Date().toISOString(),
             error: 'Redis connection failed',
-            details: { 
+            details: {
               connected: false,
               message: 'Cache service unavailable - using fallback'
             },
@@ -328,7 +328,7 @@ export class HealthMonitoringService {
           }),
           new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
         ]);
-    
+
         if ((response as any).ok) {
           services.push({ name: 'Ethereum_RPC', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
@@ -353,7 +353,7 @@ export class HealthMonitoringService {
             }),
             new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Fallback RPC timeout')), productionConfig.externalServices.rpcTimeout + 1000))
           ]);
-      
+
           if ((fallbackResponse as any).ok) {
             services.push({ name: 'Ethereum_RPC', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using fallback endpoint' });
           } else {
@@ -377,7 +377,7 @@ export class HealthMonitoringService {
           }),
           new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('IPFS timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
         ]);
-    
+
         if ((response as any).ok) {
           services.push({ name: 'IPFS_Gateway', status: 'healthy', responseTime: Date.now() - startTime });
         } else {
@@ -395,7 +395,7 @@ export class HealthMonitoringService {
             }),
             new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('Pinata timeout')), productionConfig.externalServices.ipfsTimeout + 2000))
           ]);
-      
+
           if ((pinataResponse as any).ok) {
             services.push({ name: 'IPFS_Gateway', status: 'degraded', responseTime: Date.now() - startTime, details: 'Using Pinata fallback' });
           } else {
@@ -415,7 +415,7 @@ export class HealthMonitoringService {
         status: overallStatus,
         responseTime: Date.now() - startTime,
         lastChecked: new Date().toISOString(),
-        details: { 
+        details: {
           services,
           failedServices,
           totalServices: services.length,
@@ -439,7 +439,7 @@ export class HealthMonitoringService {
       try {
         const { db } = await import('../db');
         await db.execute('SELECT version()');
-        
+
         return {
           name: 'postgresql',
           status: 'healthy' as HealthStatus,
@@ -466,7 +466,7 @@ export class HealthMonitoringService {
       try {
         const { cacheService } = await import('./cacheService');
         const healthCheck = await cacheService.healthCheck();
-        
+
         return {
           name: 'redis',
           status: healthCheck.connected ? 'healthy' as HealthStatus : 'degraded' as HealthStatus,
@@ -550,7 +550,7 @@ export class HealthMonitoringService {
   clearExpiredAlerts(): void {
     const now = Date.now();
     const alertTimeout = 30 * 60 * 1000; // 30 minutes
-    
+
     for (const [key, alert] of this.activeAlerts.entries()) {
       if (now - alert.timestamp > alertTimeout) {
         this.activeAlerts.delete(key);
@@ -561,7 +561,7 @@ export class HealthMonitoringService {
   // Response time tracking
   recordResponseTime(responseTime: number): void {
     this.responseTimes.push(responseTime);
-    
+
     // Keep only the last N response times
     if (this.responseTimes.length > this.maxResponseTimeHistory) {
       this.responseTimes.shift();
@@ -570,7 +570,7 @@ export class HealthMonitoringService {
 
   private calculatePercentile(percentile: number): number {
     if (this.responseTimes.length === 0) return 0;
-    
+
     const sorted = [...this.responseTimes].sort((a, b) => a - b);
     const index = Math.ceil((percentile / 100) * sorted.length) - 1;
     return sorted[Math.max(0, index)];
@@ -595,16 +595,16 @@ export class HealthMonitoringService {
       try {
         return await Promise.race([
           checkFn(),
-          new Promise<ServiceHealth>((_, reject) => 
+          new Promise<ServiceHealth>((_, reject) =>
             setTimeout(() => reject(new Error('Health check timeout')), 10000)
           )
         ]);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Health check failed';
-        
+
         // Add alert for failed service
         this.addAlert(`service_${name}`, 'critical', `Service ${name} health check failed: ${errorMessage}`);
-        
+
         return {
           name,
           status: 'unhealthy' as HealthStatus,
@@ -626,16 +626,16 @@ export class HealthMonitoringService {
       try {
         return await Promise.race([
           checkFn(),
-          new Promise<DependencyStatus>((_, reject) => 
+          new Promise<DependencyStatus>((_, reject) =>
             setTimeout(() => reject(new Error('Dependency check timeout')), 10000)
           )
         ]);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Dependency check failed';
-        
+
         // Add alert for failed dependency
         this.addAlert(`dependency_${name}`, 'critical', `Dependency ${name} check failed: ${errorMessage}`);
-        
+
         return {
           name,
           status: 'unhealthy' as HealthStatus,
@@ -660,9 +660,9 @@ export class HealthMonitoringService {
     const degradedServices = services.filter(s => s.status === 'degraded');
     const unhealthyDependencies = dependencies.filter(d => d.status === 'unhealthy');
     const degradedDependencies = dependencies.filter(d => d.status === 'degraded');
-    
+
     let systemStatus: HealthStatus = 'healthy';
-    
+
     // Critical dependencies or services make the system unhealthy
     if (unhealthyServices.length > 0 || unhealthyDependencies.some(d => d.impact === 'critical')) {
       systemStatus = 'unhealthy';
@@ -674,7 +674,7 @@ export class HealthMonitoringService {
     const uptime = Date.now() - this.startTime;
     const errorRate = this.requestCount > 0 ? (this.errorCount / this.requestCount) * 100 : 0;
     const throughput = this.requestCount / (uptime / 1000); // requests per second
-    
+
     // CPU usage calculation
     const cpuUsage = process.cpuUsage();
 
@@ -736,11 +736,27 @@ export class HealthMonitoringService {
       this.removeAlert('high_memory_usage');
     }
 
-    // Error rate alerts
+    // Error rate alerts with detailed logging
     if (health.metrics.errorRate > 10) {
       this.addAlert('high_error_rate', 'critical', `Error rate at ${health.metrics.errorRate}%`);
+
+      // Log detailed error information for diagnosis
+      logger.error('CRITICAL ALERT: High Error Rate', {
+        ruleId: 'high_error_rate',
+        message: `Error rate is ${health.metrics.errorRate}% (threshold: 5%)`,
+        metrics: {
+          errorRate: health.metrics.errorRate,
+          throughput: health.metrics.throughput,
+          requestCount: health.metrics.totalRequests
+        }
+      });
     } else if (health.metrics.errorRate > 5) {
       this.addAlert('high_error_rate', 'warning', `Error rate at ${health.metrics.errorRate}%`);
+
+      // Log warning with context
+      logger.warn('Warning Alert: Error rate at ' + health.metrics.errorRate + '%', {
+        alertKey: 'high_error_rate'
+      });
     } else {
       this.removeAlert('high_error_rate');
     }
@@ -767,7 +783,7 @@ export class HealthMonitoringService {
 
   async getPerformanceMetrics(): Promise<any> {
     const metrics = this.getMetrics();
-    
+
     return {
       responseTime: {
         avg: metrics.responseTime.avg,
@@ -812,7 +828,7 @@ export class HealthMonitoringService {
   async getDatabaseHealth(): Promise<any> {
     const health = await this.performHealthCheck();
     const dbService = health.services.find(s => s.name === 'database');
-    
+
     return {
       status: dbService?.status || 'unknown',
       connection: {
@@ -841,7 +857,7 @@ export class HealthMonitoringService {
   async getCacheHealth(): Promise<any> {
     const health = await this.performHealthCheck();
     const cacheService = health.services.find(s => s.name === 'cache');
-    
+
     return {
       status: cacheService?.status || 'unknown',
       connection: {
@@ -870,7 +886,7 @@ export class HealthMonitoringService {
   async getExternalServicesHealth(): Promise<any> {
     const health = await this.performHealthCheck();
     const externalService = health.services.find(s => s.name === 'external_services');
-    
+
     return {
       status: externalService?.status || 'unknown',
       services: [
@@ -925,7 +941,7 @@ export class HealthMonitoringService {
     if (process.env.NODE_ENV === 'test') {
       return;
     }
-    
+
     // Run health check every 30 seconds
     this.healthCheckInterval = setInterval(async () => {
       try {
@@ -1003,7 +1019,7 @@ export class HealthMonitoringService {
     recoveryActions: string[];
   }[]> {
     const health = await this.performHealthCheck();
-    
+
     return health.dependencies.map(dep => ({
       dependency: dep.name,
       status: dep.status,
@@ -1085,7 +1101,7 @@ export class HealthMonitoringService {
   async handleHealthCheck(req: Request, res: Response): Promise<void> {
     try {
       const health = await this.performHealthCheck();
-      
+
       if (health.status === 'healthy') {
         successResponse(res, health, 200);
       } else if (health.status === 'degraded') {
@@ -1290,7 +1306,7 @@ export class HealthMonitoringService {
     try {
       const health = await this.performHealthCheck();
       const metrics = this.getMetrics();
-      
+
       successResponse(res, {
         ...health,
         detailedMetrics: metrics

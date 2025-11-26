@@ -44,11 +44,12 @@ export class CacheService {
     totalRequests: 0,
     responseTimeSum: 0
   };
+  private statsResetInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     // Check if Redis is disabled or if we're in a memory-critical environment
     const isMemoryCritical = process.env.MEMORY_LIMIT && parseInt(process.env.MEMORY_LIMIT) < 512;
-    
+
     if (process.env.REDIS_ENABLED === 'false' || process.env.REDIS_ENABLED === '0' || isMemoryCritical) {
       this.useRedis = false;
       if (isMemoryCritical) {
@@ -60,6 +61,25 @@ export class CacheService {
       this.config = this.loadConfig();
       this.initializeRedis();
     }
+
+    // Reset stats every hour to prevent unbounded growth
+    this.statsResetInterval = setInterval(() => {
+      const oldStats = { ...this.stats };
+      this.stats = {
+        hits: 0,
+        misses: 0,
+        totalRequests: 0,
+        responseTimeSum: 0
+      };
+      safeLogger.info('Cache stats reset to prevent memory growth', {
+        previousStats: {
+          hits: oldStats.hits,
+          misses: oldStats.misses,
+          totalRequests: oldStats.totalRequests,
+          hitRate: oldStats.totalRequests > 0 ? (oldStats.hits / oldStats.totalRequests * 100).toFixed(2) + '%' : '0%'
+        }
+      });
+    }, 3600000); // 1 hour
   }
 
   private loadConfig(): CacheConfig {
@@ -90,12 +110,12 @@ export class CacheService {
       safeLogger.info('Redis is disabled, skipping initialization');
       return;
     }
-    
+
     try {
       // Use Redis URL if provided (for cloud services like Render)
       if (process.env.REDIS_URL) {
         safeLogger.info('🔗 Attempting Redis connection to:', process.env.REDIS_URL.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-        
+
         this.redis = new Redis(process.env.REDIS_URL, {
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
           connectTimeout: this.config.redis.connectTimeout,
@@ -195,7 +215,7 @@ export class CacheService {
     this.redis.on('reconnecting', (delay) => {
       safeLogger.info(`🔄 Redis reconnecting in ${delay}ms...`);
     });
-    
+
     // Add global error handler to prevent unhandled errors
     this.redis.on('node error', (error) => {
       safeLogger.error('❌ Redis node error:', {
@@ -211,11 +231,11 @@ export class CacheService {
       safeLogger.info('Redis is disabled, skipping connection attempt');
       return;
     }
-    
+
     if (this.isConnected) {
       return;
     }
-    
+
     try {
       // Check if redis client has connect method (ioredis)
       if (this.redis && typeof this.redis.connect === 'function') {
@@ -244,6 +264,12 @@ export class CacheService {
   }
 
   async disconnect(): Promise<void> {
+    // Clear stats reset interval
+    if (this.statsResetInterval) {
+      clearInterval(this.statsResetInterval);
+      this.statsResetInterval = null;
+    }
+
     if (this.isConnected && this.redis && this.useRedis) {
       try {
         await this.redis.quit();
@@ -265,7 +291,7 @@ export class CacheService {
       this.stats.misses++;
       return null;
     }
-    
+
     const startTime = performance.now();
     this.stats.totalRequests++;
 
@@ -307,7 +333,7 @@ export class CacheService {
       const endTime = performance.now();
       this.stats.responseTimeSum += (endTime - startTime);
       this.stats.misses++;
-      
+
       safeLogger.error(`Cache get error for key "${key}":`, error);
       this.useRedis = false; // Disable Redis on failure
       return null;
@@ -319,7 +345,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, skipping cache set for key:', key);
       return false;
     }
-    
+
     try {
       // Check if redis client exists
       if (!this.redis) {
@@ -337,6 +363,13 @@ export class CacheService {
       }
 
       const serializedValue = JSON.stringify(value);
+
+      // Add size limit check (1MB max per cache entry)
+      if (serializedValue.length > 1000000) {
+        safeLogger.warn(`Cache value too large for key ${key}: ${serializedValue.length} bytes, skipping cache`);
+        return false;
+      }
+
       const cacheTTL = ttl || this.config.ttl.DEFAULT;
 
       if (cacheTTL > 0) {
@@ -358,7 +391,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, skipping cache invalidation for key:', key);
       return false;
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -378,7 +411,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, skipping cache invalidation for pattern:', pattern);
       return 0;
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -402,7 +435,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, returning false for exists check:', key);
       return false;
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -422,7 +455,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, returning -1 for TTL check:', key);
       return -1;
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -516,7 +549,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, returning null array for mget');
       return keys.map(() => null);
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -536,7 +569,7 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, skipping mset operation');
       return false;
     }
-    
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -573,8 +606,8 @@ export class CacheService {
       safeLogger.warn('Redis is disabled, allowing rate limit check for key:', key);
       return { allowed: true, remaining: limit, resetTime: Date.now() + (windowSeconds * 1000) };
     }
-    
-    
+
+
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -606,10 +639,10 @@ export class CacheService {
     try {
       // Warm popular listings
       await this.warmPopularListings();
-      
+
       // Warm category data
       await this.warmCategoryData();
-      
+
       safeLogger.info('✅ Cache warming completed');
     } catch (error) {
       safeLogger.error('Cache warming error:', error);
@@ -643,7 +676,7 @@ export class CacheService {
         latency: -1
       };
     }
-    
+
     try {
       const startTime = performance.now();
       await this.redis.ping();
@@ -686,11 +719,11 @@ export class CacheService {
         connectedClients: 0
       };
     }
-    
+
     try {
       const info = await this.redis.info('memory');
       const clients = await this.redis.info('clients');
-      
+
       return {
         hits: this.stats.hits,
         misses: this.stats.misses,
@@ -718,7 +751,7 @@ export class CacheService {
   isRedisEnabled(): boolean {
     return this.useRedis;
   }
-  
+
   private generateFilterHash(filters: any): string {
     const crypto = require('crypto');
     const filterString = JSON.stringify(filters, Object.keys(filters).sort());

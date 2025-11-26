@@ -420,7 +420,7 @@ export class FeedService {
         .select({ count: sql<number>`COUNT(*)` })
         .from(quickPosts)
         .where(and(
-          timeFilter,
+          quickPostTimeFilter,
           finalQuickPostFollowingFilter, // Use the correct filter for quick posts
           sql`${quickPosts.moderationStatus} IS NULL OR ${quickPosts.moderationStatus} != 'blocked'`, // Quick post moderation filter
           isNull(quickPosts.parentId) // Only count top-level posts
