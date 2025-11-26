@@ -27,13 +27,8 @@ const nextConfig = {
   // Explicitly exclude node_modules from page discovery
   excludeDefaultMomentLocales: true,
 
-  // Move serverComponentsExternalPackages to the correct location
-  serverExternalPackages: [
-    'playwright',
-    'playwright-core',
-    '@playwright/test',
-    'playwright-core/lib/client'
-  ],
+  // Explicitly exclude node_modules from page discovery
+  excludeDefaultMomentLocales: true,
 
   // Disable ESLint during build
   eslint: {
