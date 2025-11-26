@@ -12,9 +12,18 @@ import { UnifiedImageUpload } from '../Seller';
 import { useToast } from '../../../context/ToastContext';
 import { countries } from '../../../utils/countries';
 import { PayoutSetupStep } from '../Seller/onboarding/PayoutSetupStep';
+import { paymentMethodService, CreatePaymentMethodInput } from '../../../services/paymentMethodService';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
+}
+
+interface BillingHistoryEntry {
+  id: string;
+  date: string;
+  description: string;
+  amount: string;
+  status: 'Paid' | 'Pending' | 'Failed' | 'Refunded';
 }
 
 function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
@@ -26,6 +35,18 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showAddPaymentMethodModal, setShowAddPaymentMethodModal] = useState(false);
+  const [billingHistory, setBillingHistory] = useState<BillingHistoryEntry[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [paymentMethodForm, setPaymentMethodForm] = useState<CreatePaymentMethodInput>({
+    type: 'card',
+    nickname: '',
+    cardNumber: '',
+    expiryMonth: undefined,
+    expiryYear: undefined,
+    cvv: '',
+  });
+  const [isAddingPaymentMethod, setIsAddingPaymentMethod] = useState(false);
   const { addToast } = useToast();
 
   // Profile editing state
@@ -83,6 +104,38 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
       window.removeEventListener('navigateToTab', handleNavigateToTab as EventListener);
     };
   }, []);
+
+  // Load payment methods and billing history when billing tab is active
+  useEffect(() => {
+    const loadBillingData = async () => {
+      if (activeTab === 'billing' && dashboardAddress) {
+        try {
+          // Load payment methods
+          const paymentMethodsData = await paymentMethodService.getPaymentMethods(dashboardAddress);
+          setPaymentMethods(paymentMethodsData);
+          
+          // Load billing history - we'll need to implement this based on the available APIs
+          // For now, we'll create a mock implementation that will be replaced later
+          // In a real implementation, we would fetch actual billing history
+          const billingHistoryData: BillingHistoryEntry[] = paymentMethodsData.map((method, index) => ({
+            id: method.id,
+            date: new Date(Date.now() - (index * 24 * 60 * 60 * 1000)).toISOString(), // Mock dates
+            description: `Payment Method Setup: ${method.nickname}`,
+            amount: '$0.00', // Setup doesn't have a cost, but billing history would have real data
+            status: 'Paid' as const
+          }));
+          
+          // Update state
+          setBillingHistory(billingHistoryData);
+        } catch (error) {
+          console.error('Error loading billing data:', error);
+          addToast('Error loading billing data', 'error');
+        }
+      }
+    };
+
+    loadBillingData();
+  }, [activeTab, dashboardAddress, addToast]);
 
   // Initialize form data from profile
   useEffect(() => {
@@ -188,6 +241,55 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
       setSaveError(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Handle adding a payment method
+  const handleAddPaymentMethod = async () => {
+    if (!dashboardAddress) {
+      addToast('Wallet address not available', 'error');
+      return;
+    }
+
+    setIsAddingPaymentMethod(true);
+    
+    try {
+      // Validate required fields
+      if (!paymentMethodForm.nickname) {
+        addToast('Please provide a nickname for your payment method', 'error');
+        return;
+      }
+      
+      if (paymentMethodForm.type === 'card') {
+        if (!paymentMethodForm.cardNumber || !paymentMethodForm.expiryMonth || !paymentMethodForm.expiryYear || !paymentMethodForm.cvv) {
+          addToast('Please fill in all card details', 'error');
+          return;
+        }
+      }
+
+      // Add the payment method using the service
+      const result = await paymentMethodService.addPaymentMethod(dashboardAddress, paymentMethodForm);
+      
+      // Add toast notification
+      addToast('Payment method added successfully', 'success');
+      
+      // Close the modal
+      setShowAddPaymentMethodModal(false);
+      
+      // Reset the form
+      setPaymentMethodForm({
+        type: 'card',
+        nickname: '',
+        cardNumber: '',
+        expiryMonth: undefined,
+        expiryYear: undefined,
+        cvv: '',
+      });
+    } catch (error) {
+      console.error('Failed to add payment method:', error);
+      addToast('Failed to add payment method. Please try again.', 'error');
+    } finally {
+      setIsAddingPaymentMethod(false);
     }
   };
 
@@ -1283,27 +1385,42 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         <p className="text-gray-400 text-sm mb-4">
                           Add a credit card or bank account to pay for listing fees
                         </p>
-                        <Button variant="primary">
+                        <Button 
+                          variant="primary"
+                          onClick={() => setShowAddPaymentMethodModal(true)}
+                        >
                           Add Payment Method
                         </Button>
                       </div>
-
-                      {/* Payment Method Cards (placeholder) */}
-                      <div className="bg-gray-800 rounded-lg p-4 opacity-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded mr-3"></div>
-                            <div>
-                              <p className="text-white font-medium">•••• •••• •••• 4242</p>
-                              <p className="text-gray-400 text-sm">Expires 12/25</p>
+                      
+                      {/* List existing payment methods */}
+                      {paymentMethods && paymentMethods.length > 0 ? (
+                        <div className="space-y-3">
+                          {paymentMethods.map((method) => (
+                            <div key={method.id} className="bg-gray-800 rounded-lg p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded mr-3"></div>
+                                  <div>
+                                    <p className="text-white font-medium">
+                                      {method.nickname || `${method.type} ending in ${method.lastFour}`}
+                                    </p>
+                                    {method.expiryMonth && method.expiryYear && (
+                                      <p className="text-gray-400 text-sm">Expires {method.expiryMonth}/{method.expiryYear}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  {method.isDefault && (
+                                    <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">Default</span>
+                                  )}
+                                  <Button variant="outline" size="sm">Edit</Button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="px-2 py-1 bg-green-600 text-white text-xs rounded">Default</span>
-                            <Button variant="outline" size="sm">Edit</Button>
-                          </div>
+                          ))}
                         </div>
-                      </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -1321,28 +1438,28 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         </div>
                       </div>
                       
-                      {/* Sample billing entries */}
-                      {[
-                        { date: '2024-01-15', desc: 'Listing fees (10 listings)', amount: '$1.00', status: 'Paid' },
-                        { date: '2024-01-01', desc: 'Transaction fees', amount: '$2.50', status: 'Paid' },
-                      ].map((entry, index) => (
-                        <div key={index} className="px-6 py-4 border-b border-gray-700 last:border-b-0">
-                          <div className="grid grid-cols-4 text-sm">
-                            <span className="text-gray-300">{entry.date}</span>
-                            <span className="text-white">{entry.desc}</span>
-                            <span className="text-white font-medium">{entry.amount}</span>
-                            <span className="text-green-400">{entry.status}</span>
+                      {/* Billing history will be loaded dynamically */}
+                      {billingHistory && billingHistory.length > 0 ? (
+                        billingHistory.map((entry, index) => (
+                          <div key={entry.id || index} className="px-6 py-4 border-b border-gray-700 last:border-b-0">
+                            <div className="grid grid-cols-4 text-sm">
+                              <span className="text-gray-300">{new Date(entry.date).toLocaleDateString()}</span>
+                              <span className="text-white">{entry.description}</span>
+                              <span className="text-white font-medium">{entry.amount}</span>
+                              <span className={`font-medium ${entry.status === 'Paid' ? 'text-green-400' : entry.status === 'Pending' ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {entry.status}
+                              </span>
+                            </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="px-6 py-8 text-center text-gray-400">
+                          <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="text-sm">No billing history yet</p>
                         </div>
-                      ))}
-                      
-                      {/* Empty state */}
-                      <div className="px-6 py-8 text-center text-gray-400">
-                        <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p className="text-sm">No billing history yet</p>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1356,6 +1473,190 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                   {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
                 </p>
               </GlassPanel>
+            )}
+
+            {/* Add Payment Method Modal */}
+            {showAddPaymentMethodModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-white">Add Payment Method</h3>
+                    <button 
+                      onClick={() => setShowAddPaymentMethodModal(false)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-1">Payment Method Type</label>
+                      <select
+                        value={paymentMethodForm.type}
+                        onChange={(e) => setPaymentMethodForm({
+                          ...paymentMethodForm,
+                          type: e.target.value as 'card' | 'bank' | 'crypto'
+                        })}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="bank">Bank Account</option>
+                        <option value="crypto">Crypto Wallet</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 text-sm mb-1">Nickname</label>
+                      <input
+                        type="text"
+                        value={paymentMethodForm.nickname}
+                        onChange={(e) => setPaymentMethodForm({
+                          ...paymentMethodForm,
+                          nickname: e.target.value
+                        })}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="e.g., Business Card, Personal Account"
+                      />
+                    </div>
+
+                    {paymentMethodForm.type === 'card' && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-1">Card Number</label>
+                          <input
+                            type="text"
+                            value={paymentMethodForm.cardNumber}
+                            onChange={(e) => setPaymentMethodForm({
+                              ...paymentMethodForm,
+                              cardNumber: e.target.value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim()
+                            })}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="1234 5678 9012 3456"
+                            maxLength={19}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-1">Expiry (MM/YY)</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                value={paymentMethodForm.expiryMonth || ''}
+                                onChange={(e) => setPaymentMethodForm({
+                                  ...paymentMethodForm,
+                                  expiryMonth: e.target.value ? parseInt(e.target.value, 10) : undefined
+                                })}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="MM"
+                                min="1"
+                                max="12"
+                                maxLength={2}
+                              />
+                              <input
+                                type="number"
+                                value={paymentMethodForm.expiryYear || ''}
+                                onChange={(e) => setPaymentMethodForm({
+                                  ...paymentMethodForm,
+                                  expiryYear: e.target.value ? parseInt(e.target.value, 10) : undefined
+                                })}
+                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="YY"
+                                min="24"
+                                max="99"
+                                maxLength={2}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-gray-300 text-sm mb-1">CVV</label>
+                            <input
+                              type="password"
+                              value={paymentMethodForm.cvv}
+                              onChange={(e) => setPaymentMethodForm({
+                                ...paymentMethodForm,
+                                cvv: e.target.value
+                              })}
+                              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              placeholder="123"
+                              maxLength={4}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {paymentMethodForm.type === 'bank' && (
+                      <>
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-1">Account Number</label>
+                          <input
+                            type="text"
+                            value={paymentMethodForm.accountNumber}
+                            onChange={(e) => setPaymentMethodForm({
+                              ...paymentMethodForm,
+                              accountNumber: e.target.value
+                            })}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="Account number"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-300 text-sm mb-1">Routing Number</label>
+                          <input
+                            type="text"
+                            value={paymentMethodForm.routingNumber}
+                            onChange={(e) => setPaymentMethodForm({
+                              ...paymentMethodForm,
+                              routingNumber: e.target.value
+                            })}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            placeholder="Routing number"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {paymentMethodForm.type === 'crypto' && (
+                      <div>
+                        <label className="block text-gray-300 text-sm mb-1">Wallet Address</label>
+                        <input
+                          type="text"
+                          value={paymentMethodForm.walletAddress}
+                          onChange={(e) => setPaymentMethodForm({
+                            ...paymentMethodForm,
+                            walletAddress: e.target.value
+                          })}
+                          className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          placeholder="0x..."
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end space-x-3 mt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAddPaymentMethodModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleAddPaymentMethod}
+                      loading={isAddingPaymentMethod}
+                      disabled={isAddingPaymentMethod}
+                    >
+                      {isAddingPaymentMethod ? 'Adding...' : 'Add Payment Method'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

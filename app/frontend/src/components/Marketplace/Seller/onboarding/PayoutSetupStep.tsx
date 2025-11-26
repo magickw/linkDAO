@@ -146,10 +146,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
           {cryptoOptions.map((option) => (
             <label
               key={option.value}
-              className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.defaultCrypto === option.value
-                ? 'border-purple-500 bg-purple-600 bg-opacity-20'
-                : 'border-gray-600 hover:border-gray-500'
-                }`}
+              className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.defaultCrypto === option.value ? 'border-purple-500 bg-purple-600 bg-opacity-20' : 'border-gray-600 hover:border-gray-500'}`}
             >
               <input
                 type="radio"
@@ -191,8 +188,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                   id={`${option.value}_address`}
                   value={formData.cryptoAddresses[option.value] || ''}
                   onChange={(e) => handleCryptoAddressChange(option.value, e.target.value)}
-                  className={`flex-1 px-3 py-2 bg-gray-800 border rounded-r-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`${option.value}_address`] ? 'border-red-500' : 'border-gray-600'
-                    }`}
+                  className={`flex-1 px-3 py-2 bg-gray-800 border rounded-r-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`${option.value}_address`] ? 'border-red-500' : 'border-gray-600'}`}
                   placeholder={`Enter your ${option.value} wallet address`}
                 />
               </div>
@@ -238,10 +234,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                 {offRampProviders.map((provider) => (
                   <label
                     key={provider.value}
-                    className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${formData.offRampProvider === provider.value
-                      ? 'border-purple-500 bg-purple-600 bg-opacity-20'
-                      : 'border-gray-600 hover:border-gray-500'
-                      }`}
+                    className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${formData.offRampProvider === provider.value ? 'border-purple-500 bg-purple-600 bg-opacity-20' : 'border-gray-600 hover:border-gray-500'}`}
                   >
                     <input
                       type="radio"
@@ -281,8 +274,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, accountNumber: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountNumber ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountNumber ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="1234567890"
                     />
                     {errors.accountNumber && (
@@ -302,8 +294,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, routingNumber: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.routingNumber ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.routingNumber ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="123456789"
                     />
                     {errors.routingNumber && (
@@ -323,8 +314,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, swiftCode: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.swiftCode ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.swiftCode ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="SWIFT123"
                     />
                     {errors.swiftCode && (
@@ -344,8 +334,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, bankName: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankName ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankName ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="Bank Name"
                     />
                     {errors.bankName && (
@@ -365,8 +354,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, accountHolderName: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountHolderName ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountHolderName ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="Account Holder Name"
                     />
                     {errors.accountHolderName && (
@@ -386,8 +374,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, bankAddress: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankAddress ? 'border-red-500' : 'border-gray-600'
-                        }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankAddress ? 'border-red-500' : 'border-gray-600'}`}
                       placeholder="Bank Address"
                     />
                     {errors.bankAddress && (

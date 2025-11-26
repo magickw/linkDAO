@@ -44,8 +44,8 @@ class PaymentMethodService {
    */
   async getPaymentMethods(userAddress: string): Promise<PaymentMethod[]> {
     try {
-      // Use the transaction history endpoint to get payment methods
-      const response = await fetch(`${this.baseUrl}/transactions/history/${userAddress}`, {
+      // Use the payment history endpoint to get payment methods
+      const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/history/${userAddress}`, {
         headers: this.getAuthHeaders(),
       });
 
@@ -64,10 +64,11 @@ class PaymentMethodService {
       }
 
       const data = await response.json();
-      // Transform transaction history to payment methods if needed
-      return data.transactions ? this.transformTransactionsToPaymentMethods(data.transactions) : [];
+      // Transform payment history to payment methods if needed
+      return data.paymentHistory ? this.transformPaymentHistoryToPaymentMethods(data.paymentHistory) : [];
     } catch (err) {
       // Network or CORS error — return an empty list to avoid crashing UI
+      console.error('Error fetching payment methods:', err);
       return [];
     }
   }
@@ -76,63 +77,144 @@ class PaymentMethodService {
    * Add new payment method (tokenizes sensitive data)
    */
   async addPaymentMethod(userAddress: string, paymentData: CreatePaymentMethodInput): Promise<PaymentMethod> {
-    // For now, we'll simulate adding a payment method since the backend doesn't have specific endpoints
-    // In a real implementation, this would integrate with the x402 payment system or transaction recording
-    console.warn('Payment method storage not implemented in backend, simulating...');
-    
-    return {
-      id: `pm_${Date.now()}`,
-      type: paymentData.type,
-      nickname: paymentData.nickname,
-      isDefault: paymentData.isDefault || false,
-      token: `token_${Date.now()}`,
-      lastFour: paymentData.cardNumber ? paymentData.cardNumber.slice(-4) : undefined,
-      expiryMonth: paymentData.expiryMonth,
-      expiryYear: paymentData.expiryYear,
-      brand: paymentData.type === 'card' ? 'Visa' : undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/setup-method`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          userAddress,
+          provider: 'stripe', // Default provider
+          methodType: paymentData.type,
+          methodData: {
+            cardNumber: paymentData.cardNumber,
+            expiryMonth: paymentData.expiryMonth,
+            expiryYear: paymentData.expiryYear,
+            cvv: paymentData.cvv,
+            accountNumber: paymentData.accountNumber,
+            routingNumber: paymentData.routingNumber,
+            walletAddress: paymentData.walletAddress,
+            nickname: paymentData.nickname,
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Return a payment method object based on the response
+      return {
+        id: data.id || `pm_${Date.now()}`,
+        type: paymentData.type,
+        nickname: paymentData.nickname,
+        isDefault: paymentData.isDefault || false,
+        token: data.token || `token_${Date.now()}`,
+        lastFour: paymentData.cardNumber ? paymentData.cardNumber.slice(-4) : 
+                  paymentData.accountNumber ? paymentData.accountNumber.slice(-4) : undefined,
+        expiryMonth: paymentData.expiryMonth,
+        expiryYear: paymentData.expiryYear,
+        brand: data.brand || (paymentData.type === 'card' ? 'Visa' : undefined),
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt || new Date().toISOString()
+      };
+    } catch (err) {
+      console.error('Error adding payment method:', err);
+      throw err;
+    }
   }
 
   /**
    * Update payment method
    */
   async updatePaymentMethod(paymentMethodId: string, updates: Partial<CreatePaymentMethodInput>): Promise<PaymentMethod> {
-    // Simulate updating a payment method
-    console.warn('Payment method update not implemented in backend, simulating...');
-    
-    return {
-      id: paymentMethodId,
-      type: updates.type || 'card',
-      nickname: updates.nickname || 'Updated Payment Method',
-      isDefault: updates.isDefault || false,
-      token: `token_${paymentMethodId}`,
-      lastFour: '1234',
-      expiryMonth: updates.expiryMonth || 12,
-      expiryYear: updates.expiryYear || 2025,
-      brand: 'Visa',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    try {
+      // Since the backend doesn't have a direct update endpoint, we'll use the setup-method endpoint
+      // to update the payment method data
+      const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/setup-method`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          methodId: paymentMethodId,
+          updates: updates
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        id: data.id || paymentMethodId,
+        type: updates.type || 'card',
+        nickname: updates.nickname || 'Updated Payment Method',
+        isDefault: updates.isDefault || false,
+        token: data.token || `token_${paymentMethodId}`,
+        lastFour: updates.cardNumber ? updates.cardNumber.slice(-4) : '****',
+        expiryMonth: updates.expiryMonth,
+        expiryYear: updates.expiryYear,
+        brand: data.brand || 'Visa',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    } catch (err) {
+      console.error('Error updating payment method:', err);
+      throw err;
+    }
   }
 
   /**
    * Delete payment method
    */
   async deletePaymentMethod(paymentMethodId: string): Promise<void> {
-    // Simulate deleting a payment method
-    console.warn('Payment method deletion not implemented in backend, simulating...');
-    return Promise.resolve();
+    try {
+      // Since there's no direct delete endpoint, we'll make a request to handle this
+      // This would need to be implemented in the backend with a proper delete endpoint
+      const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/methods/${paymentMethodId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+    } catch (err) {
+      console.error('Error deleting payment method:', err);
+      throw err;
+    }
   }
 
   /**
    * Set default payment method
    */
   async setDefaultPaymentMethod(userAddress: string, paymentMethodId: string): Promise<void> {
-    // Simulate setting default payment method
-    console.warn('Setting default payment method not implemented in backend, simulating...');
-    return Promise.resolve();
+    try {
+      // Since there's no direct set default endpoint in the routes provided, 
+      // we'll make an update request to change the default status
+      const response = await fetch(`${this.baseUrl}/enhanced-fiat-payment/setup-method`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          userAddress,
+          methodId: paymentMethodId,
+          isDefault: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+    } catch (err) {
+      console.error('Error setting default payment method:', err);
+      throw err;
+    }
   }
 
   /**
@@ -198,6 +280,34 @@ class PaymentMethodService {
             brand: transaction.paymentMethod.brand,
             createdAt: transaction.paymentMethod.createdAt || new Date().toISOString(),
             updatedAt: transaction.paymentMethod.updatedAt || new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    return Array.from(paymentMethodsMap.values());
+  }
+  
+  private transformPaymentHistoryToPaymentMethods(paymentHistory: any[]): PaymentMethod[] {
+    // Extract unique payment methods from payment history
+    const paymentMethodsMap = new Map<string, PaymentMethod>();
+    
+    paymentHistory.forEach(payment => {
+      if (payment.methodType) {
+        const key = `${payment.methodType}-${payment.last4 || payment.methodId}`;
+        if (!paymentMethodsMap.has(key)) {
+          paymentMethodsMap.set(key, {
+            id: payment.methodId || `pm_${payment.methodType}_${payment.last4 || 'unknown'}`,
+            type: payment.methodType,
+            nickname: payment.nickname || `${payment.methodType} ending in ${payment.last4 || '****'}`,
+            isDefault: payment.isDefault || false,
+            token: payment.token || payment.providerMethodId,
+            lastFour: payment.last4,
+            expiryMonth: payment.expiryMonth,
+            expiryYear: payment.expiryYear,
+            brand: payment.brand,
+            createdAt: payment.createdAt || new Date().toISOString(),
+            updatedAt: payment.updatedAt || new Date().toISOString()
           });
         }
       }
