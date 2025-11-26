@@ -352,6 +352,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           };
           
           setSeller(transformedSeller);
+        } else {
+          // If seller not found, use mock data instead of showing error
+          const { getDefaultMockSeller } = await import('@/mocks/sellerMockData');
+          const mockSeller = getDefaultMockSeller(sellerId);
+          setSeller(mockSeller);
         }
       } catch (error) {
         console.error('Failed to refresh seller data:', error);
@@ -505,17 +510,11 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           return;
         }
         
-        // If seller not found, show appropriate error
-        if (profileError instanceof Error && profileError.message.includes('not found')) {
-          setError('Seller store not found. This seller may not exist or may have deactivated their store.');
-          setLoading(false);
-          return;
-        }
-        
-        // For other errors, use fallback mock data to prevent complete failure
+        // For all errors (including not found), use fallback mock data to ensure page is always accessible
         const mockSeller: SellerInfo = getDefaultMockSeller(sellerId);
         
         setSeller(mockSeller);
+        setLoading(false);
       }
       
       // Fetch seller listings with error handling
