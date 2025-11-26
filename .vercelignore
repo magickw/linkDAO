@@ -1,0 +1,31 @@
+# Ignore test configurations
+test-configs/
+
+# Ignore test files
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.jsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
+
+# Ignore playwright files
+**/playwright*.ts
+**/playwright*.js
+playwright.config.ts
+playwright.config.js
+
+# Ignore test results
+test-results/
+coverage/
+
+# Ignore development files
+.env.local
+.env.development
+
+# Ignore build artifacts in subdirectories
+**/dist/
+**/build/
+**/.next/

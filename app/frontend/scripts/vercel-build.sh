@@ -42,6 +42,7 @@ mock_package() {
     # Specifically create empty page.js to prevent Next.js from trying to build it
     echo '// Mocked playwright file - not a Next.js page' > "$dir/lib/server/page.js"
     echo '// Mocked playwright file - not a Next.js page' > "$dir/page.js"
+    echo '// Mocked playwright file - not a Next.js page' > "$dir/lib/server/index.js"
     
     # Also mock any other common playwright files
     find "$dir" -name "*.js" -type f -exec rm -f {} \; 2>/dev/null || true
@@ -58,8 +59,14 @@ find . -name "playwright*.config.*" -type f | while read config_file; do
   echo "  Mocking config: $config_file"
   # Backup original and replace with empty module
   mv "$config_file" "$config_file.backup"
-  echo '// Mocked playwright config file' > "$config_file"
-  echo 'module.exports = {};' >> "$config_file"
+  # Handle both JS and TS files
+  if [[ "$config_file" == *.ts ]]; then
+    echo '// Mocked playwright config file' > "$config_file"
+    echo 'export default {};' >> "$config_file"
+  else
+    echo '// Mocked playwright config file' > "$config_file"
+    echo 'module.exports = {};' >> "$config_file"
+  fi
 done
 
 echo "Playwright packages mocked. Starting Next.js build..."

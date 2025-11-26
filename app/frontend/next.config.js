@@ -10,6 +10,17 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
+  // Exclude Playwright from server-side bundling
+  experimental: {
+    serverExternalPackages: [
+      "playwright",
+      "playwright-core",
+      "@playwright/test",
+    ],
+    // Optimize server-side rendering
+    optimizeServerReact: true,
+  },
+
   // TypeScript configuration
   typescript: {
     ignoreBuildErrors: false,
@@ -18,8 +29,10 @@ const nextConfig = {
   // Only look for pages in src/pages directory, not in node_modules
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 
-  // Exclude test files and playwright from build
+  // Ignore test-configs directory
   excludeDefaultMomentLocales: true,
+
+  // Exclude test files and playwright from build
 
   // Image optimization
   images: {
@@ -31,9 +44,13 @@ const nextConfig = {
 
   // Webpack configuration with Workbox integration
   webpack: (config, { isServer }) => {
-    // Exclude playwright files completely
+    // Add Playwright to externals to prevent bundling
+    config.externals = config.externals || [];
+    config.externals.push("playwright", "playwright-core", "@playwright/test");
+
+    // Exclude playwright files and test-configs completely
     config.module.rules.push({
-      test: /playwright|\.test\.|\.spec\./,
+      test: /playwright|\.test\.|\.spec\.|test-configs/,
       exclude: /node_modules/,
       use: 'null-loader',
     });
@@ -230,11 +247,7 @@ const nextConfig = {
   // Optimize for faster builds
   // swcMinify is now enabled by default in Next.js 13+
 
-  // Enable experimental features that improve SEO and performance
-  experimental: {
-    // Optimize server-side rendering
-    optimizeServerReact: true,
-  },
+  
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
