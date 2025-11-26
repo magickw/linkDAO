@@ -4,6 +4,12 @@ const nextConfig = {
 
   // Set the correct output file tracing root
   outputFileTracingRoot: require('path').join(__dirname),
+  
+  // Disable automatic page optimization for problematic directories
+  trailingSlash: false,
+  
+  // Add custom configuration to prevent scanning of problematic directories
+  distDir: '.next',
 
   // Enable experimental features that improve SEO and performance
   experimental: {
@@ -23,6 +29,12 @@ const nextConfig = {
 
   // Only look for pages in src/pages directory, not in node_modules
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  
+  // Experimental features to control Next.js behavior
+  experimental: {
+    // Optimize server-side rendering
+    optimizeServerReact: true,
+  },
 
   // Image optimization
   images: {
@@ -50,14 +62,6 @@ const nextConfig = {
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
-    // Add specific alias to redirect problematic Solana layout.js import
-    if (!config.resolve.alias) {
-      config.resolve.alias = {};
-    }
-    
-    // Handle the specific Solana import issue by providing an empty module
-    config.resolve.alias['@solana/web3.js/src/layout.js'] = false;
-
     // Add ignore plugin for playwright files and prevent Next.js from processing them
     const webpack = require('webpack');
     
@@ -71,6 +75,7 @@ const nextConfig = {
       });
     }
     
+    // Aggressive exclusion of playwright files
     config.plugins.push(
       new webpack.IgnorePlugin({
         checkResource: (resource) => {
@@ -98,6 +103,19 @@ const nextConfig = {
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^@playwright/,
+      })
+    );
+    
+    // Ignore playwright directories completely
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /node_modules\/playwright/,
+      })
+    );
+    
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /node_modules\/playwright-core/,
       })
     );
 
