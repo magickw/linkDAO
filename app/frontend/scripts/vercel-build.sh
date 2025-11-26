@@ -2,44 +2,10 @@
 echo "Cleaning .next..."
 rm -rf .next
 
-echo "Removing problematic playwright page.js files..."
+echo "Removing playwright directories from node_modules..."
+rm -rf node_modules/playwright
+rm -rf node_modules/playwright-core
+rm -rf node_modules/@playwright
 
-# Remove/overwrite ALL playwright page.js files that Next.js might detect
-find node_modules -path "*playwright*/lib/*/page.js" | while read file; do
-  echo "  Neutralizing $file"
-  cat > "$file" <<EOF
-// Stubbed to prevent Next.js from treating this as a page
-// This is NOT a Next.js page file
-module.exports = {};
-EOF
-done
-
-# Also handle any page.js files directly in playwright directories
-find node_modules -path "*playwright*/page.js" | while read file; do
-  echo "  Neutralizing $file"
-  cat > "$file" <<EOF
-// Stubbed to prevent Next.js from treating this as a page
-// This is NOT a Next.js page file
-module.exports = {};
-EOF
-done
-
-echo "Neutralizing nested testmode copies..."
-find node_modules -path "*/next/*/testmode/*/page.js" | while read file; do
-  echo "  Stub $file"
-  echo 'module.exports = {};' > "$file"
-done
-
-echo "Neutralizing playwright config files..."
-find . -maxdepth 3 -type f \( -name "playwright.config.js" -o -name "playwright.config.ts" \) | while read cfg; do
-  echo "  Stub config $cfg"
-  mv "$cfg" "$cfg.backup"
-  if [[ $cfg == *.ts ]]; then
-    echo "export default {};" > "$cfg"
-  else
-    echo "module.exports = {};" > "$cfg"
-  fi
-done
-
-echo "Finished patching. Running Next.js build..."
+echo "Running Next.js build..."
 npm run build

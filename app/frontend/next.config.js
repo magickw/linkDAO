@@ -6,29 +6,11 @@ const nextConfig = {
 
   eslint: { ignoreDuringBuilds: true },
 
-  // MUST NOT duplicate "experimental"
-  experimental: {
-    optimizeServerReact: true,
-    serverComponentsExternalPackages: [
-      "playwright",
-      "playwright-core",
-      "@playwright/test",
-    ],
-  },
-
   typescript: {
     ignoreBuildErrors: false,
   },
 
   pageExtensions: ["tsx", "ts", "jsx", "js"],
-
-  // Prevent Next.js from scanning node_modules for routes
-  onDemandEntries: {
-    ignore: [
-      /node_modules\/playwright-core\//,
-      /node_modules\/@playwright\//,
-    ],
-  },
 
   images: {
     domains: [
@@ -45,14 +27,6 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.externals.push({
-        playwright: "commonjs playwright",
-        "@playwright/test": "commonjs @playwright/test",
-        "playwright-core": "commonjs playwright-core",
-      });
-    }
-
     return config;
   },
 
