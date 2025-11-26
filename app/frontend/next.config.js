@@ -44,26 +44,32 @@ const nextConfig = {
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
-    // Exclude playwright from client-side bundling
-    if (!isServer) {
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push({
-          'playwright': 'commonjs playwright',
-          '@playwright/test': 'commonjs @playwright/test',
-          'playwright-core': 'commonjs playwright-core',
-        });
-      }
-
-      // Add ignore plugin for playwright files
-      const webpack = require('webpack');
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^playwright/,
-          contextRegExp: /node_modules/,
-        })
-      );
+    // Exclude playwright from bundling completely
+    config.externals = config.externals || [];
+    if (Array.isArray(config.externals)) {
+      config.externals.push({
+        'playwright': 'commonjs playwright',
+        '@playwright/test': 'commonjs @playwright/test',
+        'playwright-core': 'commonjs playwright-core',
+      });
     }
+
+    // Add ignore plugin for playwright files - enhanced for both server and client
+    const webpack = require('webpack');
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^playwright/,
+        contextRegExp: /node_modules/,
+      })
+    );
+    
+    // Additional ignore for specific playwright-core files that might cause issues
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /playwright-core\/lib\/server\/page/,
+        contextRegExp: /node_modules/,
+      })
+    );
 
     // Add Workbox webpack plugin for service worker generation
     if (!isServer) {
@@ -230,6 +236,14 @@ const nextConfig = {
   experimental: {
     // Optimize server-side rendering
     optimizeServerReact: true,
+    // Explicitly ignore problematic modules during tracing
+    outputFileTracingExcludes: {
+      '*': [
+        'playwright/**/*',
+        '@playwright/**/*',
+        'playwright-core/**/*',
+      ]
+    },
   },
 };
 
