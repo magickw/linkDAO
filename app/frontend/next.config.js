@@ -58,8 +58,19 @@ const nextConfig = {
     // Handle the specific Solana import issue by providing an empty module
     config.resolve.alias['@solana/web3.js/src/layout.js'] = false;
 
-    // Add ignore plugin for playwright files 
+    // Add ignore plugin for playwright files and prevent Next.js from processing them
     const webpack = require('webpack');
+    
+    // Completely ignore playwright modules
+    config.externals = config.externals || [];
+    if (Array.isArray(config.externals)) {
+      config.externals.push({
+        'playwright': 'commonjs playwright',
+        'playwright-core': 'commonjs playwright-core',
+        '@playwright/test': 'commonjs @playwright/test',
+      });
+    }
+    
     config.plugins.push(
       new webpack.IgnorePlugin({
         checkResource: (resource) => {
@@ -74,6 +85,19 @@ const nextConfig = {
           }
           return false;
         }
+      })
+    );
+    
+    // Additional ignore for playwright modules
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^playwright/,
+      })
+    );
+    
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^@playwright/,
       })
     );
 
@@ -243,12 +267,6 @@ const nextConfig = {
     // Optimize server-side rendering
     optimizeServerReact: true,
   },
-  // Explicitly ignore problematic modules during tracing (moved out of experimental)
-  outputFileTracingExcludes: [
-    'playwright/**/*',
-    '@playwright/**/*',
-    'playwright-core/**/*',
-  ],
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
