@@ -15,18 +15,17 @@ const nextConfig = {
   experimental: {
     // Optimize server-side rendering
     optimizeServerReact: true,
-    // Explicitly tell Next.js where to find pages
-    appDir: false, // We're using pages router, not app router
-    // Exclude playwright from file tracing
-    outputFileTracingExcludes: {
-      '*': [
-        'node_modules/playwright',
-        'node_modules/playwright-core',
-        'node_modules/@playwright',
-        'node_modules/playwright-core/lib/client',
-        'node_modules/playwright-core/lib/server',
-      ],
-    },
+  },
+
+  // Exclude playwright from file tracing (moved from experimental)
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/playwright',
+      'node_modules/playwright-core',
+      'node_modules/@playwright',
+      'node_modules/playwright-core/lib/client',
+      'node_modules/playwright-core/lib/server',
+    ],
   },
 
   // Prevent Next.js from scanning node_modules for pages
@@ -70,6 +69,39 @@ const nextConfig = {
 
   // Webpack configuration with Workbox integration
   webpack: (config, { isServer }) => {
+    // Use NormalModuleReplacementPlugin to completely block playwright modules
+    const webpack = require('webpack');
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^playwright$/,
+        require.resolve('./src/utils/empty.js')
+      )
+    );
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^playwright-core$/,
+        require.resolve('./src/utils/empty.js')
+      )
+    );
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /^@playwright\/test$/,
+        require.resolve('./src/utils/empty.js')
+      )
+    );
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /playwright-core\/lib\/client/,
+        require.resolve('./src/utils/empty.js')
+      )
+    );
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(
+        /playwright-core\/lib\/server/,
+        require.resolve('./src/utils/empty.js')
+      )
+    );
+
     // Completely ignore playwright modules by aliasing them to false
     config.resolve.alias = {
       ...config.resolve.alias,
