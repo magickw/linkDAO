@@ -27,6 +27,15 @@
       ],
       "@/contracts/*": [
         "./src/types/typechain/*"
+      ],
+      "@playwright/test": [
+        "./src/utils/empty.js"
+      ],
+      "playwright-core": [
+        "./src/utils/empty.js"
+      ],
+      "playwright": [
+        "./src/utils/empty.js"
       ]
     },
     "plugins": [
