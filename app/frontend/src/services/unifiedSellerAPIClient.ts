@@ -521,7 +521,8 @@ export class UnifiedSellerAPIClient {
     await this.request<void>(this.endpoints.updateOnboardingStep(walletAddress, stepId), {
       method: 'PUT',
       body: JSON.stringify({
-        completed: true
+        completed: true,
+        data: data
       }),
     });
   }

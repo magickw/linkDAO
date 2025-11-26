@@ -9,6 +9,7 @@ import {
   OnboardingStatus,
   OnboardingSteps
 } from '../types/sellerProfile';
+import { encrypt } from '../utils/encryption';
 
 export class SellerProfileService {
   /**
@@ -33,11 +34,11 @@ export class SellerProfileService {
       }
 
       const seller = result[0];
-      
+
       return this.mapSellerToProfile(seller);
     } catch (error) {
       safeLogger.error('Error fetching seller profile:', error);
-      
+
       // Handle database connection errors specifically
       if (error && typeof error === 'object' && 'code' in error) {
         const errorCode = (error as any).code;
@@ -48,7 +49,7 @@ export class SellerProfileService {
           return null;
         }
       }
-      
+
       throw error;
     }
   }
@@ -70,16 +71,19 @@ export class SellerProfileService {
 
       const defaultOnboardingSteps: OnboardingSteps = {
         profile_setup: false,
+        business_info: false,
         verification: false,
         payout_setup: false,
         first_listing: false
       };
 
+      // Encrypt Tax ID if provided
+      const taxIdEncrypted = profileData.taxId ? encrypt(profileData.taxId) : null;
+
       const result = await db
         .insert(sellers)
         .values({
           walletAddress: profileData.walletAddress,
-          displayName: profileData.displayName,
           storeName: profileData.storeName,
           bio: profileData.bio,
           description: profileData.description,
@@ -90,6 +94,17 @@ export class SellerProfileService {
           socialLinks: profileData.socialLinks ? JSON.stringify(profileData.socialLinks) : null,
           storeDescription: profileData.storeDescription,
           coverImageUrl: profileData.coverImageUrl,
+          // Business Information
+          legalBusinessName: profileData.legalBusinessName,
+          businessType: profileData.businessType,
+          registeredAddressStreet: profileData.registeredAddressStreet,
+          registeredAddressCity: profileData.registeredAddressCity,
+          registeredAddressState: profileData.registeredAddressState,
+          registeredAddressPostalCode: profileData.registeredAddressPostalCode,
+          registeredAddressCountry: profileData.registeredAddressCountry,
+          taxIdEncrypted: taxIdEncrypted,
+          taxIdType: profileData.taxIdType,
+
           isVerified: false,
           onboardingCompleted: false,
           onboardingSteps: defaultOnboardingSteps,
@@ -99,7 +114,7 @@ export class SellerProfileService {
         .returning();
 
       const seller = result[0];
-      
+
       return this.mapSellerToProfile(seller);
     } catch (error) {
       safeLogger.error('Error creating seller profile:', error);
@@ -137,10 +152,20 @@ export class SellerProfileService {
         };
       }
 
+      // Update business info step if business details are provided
+      if (updates.legalBusinessName || updates.businessType || updates.registeredAddressStreet) {
+        updatedOnboardingSteps = {
+          ...updatedOnboardingSteps,
+          business_info: true
+        };
+      }
+
+      // Encrypt Tax ID if provided
+      const taxIdEncrypted = updates.taxId ? encrypt(updates.taxId) : undefined;
+
       const result = await db
         .update(sellers)
         .set({
-          displayName: updates.displayName,
           storeName: updates.storeName,
           bio: updates.bio,
           description: updates.description,
@@ -151,6 +176,17 @@ export class SellerProfileService {
           socialLinks: updates.socialLinks ? JSON.stringify(updates.socialLinks) : undefined,
           storeDescription: updates.storeDescription,
           coverImageUrl: updates.coverImageUrl,
+          // Business Information
+          legalBusinessName: updates.legalBusinessName,
+          businessType: updates.businessType,
+          registeredAddressStreet: updates.registeredAddressStreet,
+          registeredAddressCity: updates.registeredAddressCity,
+          registeredAddressState: updates.registeredAddressState,
+          registeredAddressPostalCode: updates.registeredAddressPostalCode,
+          registeredAddressCountry: updates.registeredAddressCountry,
+          ...(taxIdEncrypted ? { taxIdEncrypted } : {}),
+          ...(updates.taxIdType ? { taxIdType: updates.taxIdType } : {}),
+
           onboardingSteps: updatedOnboardingSteps,
           onboardingCompleted: this.calculateOnboardingCompletion(updatedOnboardingSteps),
           updatedAt: new Date(),
@@ -159,7 +195,7 @@ export class SellerProfileService {
         .returning();
 
       const seller = result[0];
-      
+
       return this.mapSellerToProfile(seller);
     } catch (error) {
       safeLogger.error('Error updating seller profile:', error);
@@ -178,11 +214,12 @@ export class SellerProfileService {
       }
 
       const profile = await this.getProfile(walletAddress);
-      
+
       // If no profile exists, return default onboarding status
       if (!profile) {
         const defaultSteps: OnboardingSteps = {
           profile_setup: false,
+          business_info: false,
           verification: false,
           payout_setup: false,
           first_listing: false
@@ -216,10 +253,10 @@ export class SellerProfileService {
   /**
    * Update onboarding step completion
    */
-  async updateOnboardingStep(walletAddress: string, step: keyof OnboardingSteps, completed: boolean): Promise<OnboardingStatus> {
+  async updateOnboardingStep(walletAddress: string, step: keyof OnboardingSteps, completed: boolean, data?: any): Promise<OnboardingStatus> {
     try {
       safeLogger.info('Starting updateOnboardingStep:', { walletAddress, step, completed });
-      
+
       const profile = await this.getProfile(walletAddress);
       if (!profile) {
         throw new Error('Seller profile not found');
@@ -229,6 +266,52 @@ export class SellerProfileService {
         ...profile.onboardingSteps,
         [step]: completed
       };
+
+      // If data is provided, update the profile with that data
+      if (data && Object.keys(data).length > 0) {
+        // Map data to profile updates
+        const updates: UpdateSellerProfileRequest = {};
+
+        // Handle Business Info Step Data
+        if (step === 'business_info') {
+          if (data.businessType) updates.businessType = data.businessType;
+          if (data.legalBusinessName) updates.legalBusinessName = data.legalBusinessName;
+          if (data.taxId) updates.taxId = data.taxId;
+          if (data.taxIdType) updates.taxIdType = data.taxIdType;
+          if (data.registeredAddressStreet) updates.registeredAddressStreet = data.registeredAddressStreet;
+          if (data.registeredAddressCity) updates.registeredAddressCity = data.registeredAddressCity;
+          if (data.registeredAddressState) updates.registeredAddressState = data.registeredAddressState;
+          if (data.registeredAddressPostalCode) updates.registeredAddressPostalCode = data.registeredAddressPostalCode;
+          if (data.registeredAddressCountry) updates.registeredAddressCountry = data.registeredAddressCountry;
+          if (data.websiteUrl) updates.websiteUrl = data.websiteUrl;
+          if (data.ensHandle) updates.ensHandle = data.ensHandle;
+
+          // Handle social links
+          if (data.twitterHandle || data.linkedinHandle || data.facebookHandle || data.discordHandle || data.telegramHandle) {
+            updates.socialLinks = {
+              ...profile.socialLinks,
+              twitter: data.twitterHandle || profile.socialLinks?.twitter,
+              linkedin: data.linkedinHandle || profile.socialLinks?.linkedin,
+              facebook: data.facebookHandle || profile.socialLinks?.facebook,
+              discord: data.discordHandle || profile.socialLinks?.discord,
+              telegram: data.telegramHandle || profile.socialLinks?.telegram,
+            };
+          }
+        }
+
+        // Handle Profile Setup Step Data (if passed here)
+        if (step === 'profile_setup') {
+          if (data.displayName) updates.displayName = data.displayName;
+          if (data.storeName) updates.storeName = data.storeName;
+          if (data.bio) updates.bio = data.bio;
+          if (data.description) updates.description = data.description;
+        }
+
+        // If we have updates, apply them
+        if (Object.keys(updates).length > 0) {
+          await this.updateProfile(walletAddress, updates);
+        }
+      }
 
       const onboardingCompleted = this.calculateOnboardingCompletion(updatedSteps);
 
@@ -252,7 +335,7 @@ export class SellerProfileService {
           updatedAt: new Date(),
         })
         .where(eq(sellers.walletAddress, walletAddress));
-      
+
       safeLogger.info('Onboarding steps updated successfully:', { walletAddress, step, completed });
 
       return this.getOnboardingStatus(walletAddress);
@@ -265,7 +348,7 @@ export class SellerProfileService {
         step,
         completed
       });
-      
+
       // Create a simple error without circular references
       throw new Error(`Failed to update onboarding step: ${errorMessage}`);
     }
@@ -385,7 +468,6 @@ export class SellerProfileService {
     }
   }
 
-      
 
   private mapSellerToProfile(seller: any): SellerProfile {
     // Safely access date fields with null checks
@@ -427,6 +509,16 @@ export class SellerProfileService {
         joinDate: createdAtValue.toISOString(),
         lastActive: updatedAtValue.toISOString(),
       },
+      // Business Information
+      legalBusinessName: seller.legalBusinessName || undefined,
+      businessType: seller.businessType || undefined,
+      registeredAddressStreet: seller.registeredAddressStreet || undefined,
+      registeredAddressCity: seller.registeredAddressCity || undefined,
+      registeredAddressState: seller.registeredAddressState || undefined,
+      registeredAddressPostalCode: seller.registeredAddressPostalCode || undefined,
+      registeredAddressCountry: seller.registeredAddressCountry || undefined,
+      taxIdType: seller.taxIdType || undefined,
+
       createdAt: createdAtValue,
       updatedAt: updatedAtValue,
     };
@@ -454,19 +546,19 @@ export class SellerProfileService {
           return undefined;
         }
       }
-      
+
       // If it's already an object, return it
       if (typeof links === 'object' && links !== null) {
         return links;
       }
     } catch (error) {
-      safeLogger.error('Error parsing social links:', { 
-        links, 
+      safeLogger.error('Error parsing social links:', {
+        links,
         error: error instanceof Error ? error.message : String(error),
-        type: typeof links 
+        type: typeof links
       });
     }
-    
+
     // Return undefined if parsing fails
     return undefined;
   }
@@ -483,32 +575,35 @@ export class SellerProfileService {
           // Return default if the string is empty
           return {
             profile_setup: false,
+            business_info: false,
             verification: false,
             payout_setup: false,
             first_listing: false
           };
         }
       }
-      
+
       if (typeof parsedSteps === 'object' && parsedSteps !== null) {
         return {
           profile_setup: Boolean(parsedSteps.profile_setup),
+          business_info: Boolean(parsedSteps.business_info),
           verification: Boolean(parsedSteps.verification),
           payout_setup: Boolean(parsedSteps.payout_setup),
           first_listing: Boolean(parsedSteps.first_listing)
         };
       }
     } catch (error) {
-      safeLogger.error('Error parsing onboarding steps:', { 
-        steps, 
+      safeLogger.error('Error parsing onboarding steps:', {
+        steps,
         error: error instanceof Error ? error.message : String(error),
-        type: typeof steps 
+        type: typeof steps
       });
     }
 
     // Return default if parsing fails
     return {
       profile_setup: false,
+      business_info: false,
       verification: false,
       payout_setup: false,
       first_listing: false
@@ -516,17 +611,18 @@ export class SellerProfileService {
   }
 
   private calculateOnboardingCompletion(steps: OnboardingSteps): boolean {
-    return steps.profile_setup && steps.verification && steps.payout_setup && steps.first_listing;
+    return steps.profile_setup && steps.business_info && steps.verification && steps.payout_setup && steps.first_listing;
   }
 
   private calculateCompletionPercentage(steps: OnboardingSteps): number {
-    const totalSteps = 4;
+    const totalSteps = 5;
     const completedSteps = Object.values(steps).filter(Boolean).length;
     return Math.round((completedSteps / totalSteps) * 100);
   }
 
   private getNextOnboardingStep(steps: OnboardingSteps): string | undefined {
     if (!steps.profile_setup) return 'profile_setup';
+    if (!steps.business_info) return 'business_info';
     if (!steps.verification) return 'verification';
     if (!steps.payout_setup) return 'payout_setup';
     if (!steps.first_listing) return 'first_listing';
@@ -554,6 +650,10 @@ export class SellerProfileService {
       { name: 'coverImageCdn', weight: 8, label: 'Cover Image' },
       { name: 'websiteUrl', weight: 5, label: 'Website URL' },
       { name: 'ensHandle', weight: 7, label: 'ENS Handle' },
+      // Business Info
+      { name: 'legalBusinessName', weight: 10, label: 'Legal Name' },
+      { name: 'registeredAddressStreet', weight: 5, label: 'Address' },
+    ];
     ];
 
     let totalWeight = 0;
@@ -573,7 +673,7 @@ export class SellerProfileService {
     });
 
     const score = Math.round((completedWeight / totalWeight) * 100);
-    
+
     const recommendations = missingFields.slice(0, 3).map(field => ({
       action: `Add ${field}`,
       description: `Adding your ${field.toLowerCase()} will help buyers trust your store`,

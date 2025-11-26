@@ -1,11 +1,11 @@
-import { 
-  SellerProfile, 
-  SellerDashboardStats, 
-  SellerNotification, 
-  SellerOrder, 
-  SellerListing, 
-  SellerAnalytics, 
-  OnboardingStep, 
+import {
+  SellerProfile,
+  SellerDashboardStats,
+  SellerNotification,
+  SellerOrder,
+  SellerListing,
+  SellerAnalytics,
+  OnboardingStep,
   SellerTier,
   SellerProfileUpdateRequest,
   SellerProfileUpdateResponse,
@@ -25,7 +25,7 @@ class SellerService {
   // Legacy cache management (kept for backward compatibility)
   clearProfileCache(walletAddress?: string): void {
     const cacheManager = getSellerCacheManager();
-    
+
     if (cacheManager) {
       if (walletAddress) {
         // Use new cache manager
@@ -37,7 +37,7 @@ class SellerService {
         walletAddresses.forEach(address => cacheManager.clearSellerCache(address));
       }
     }
-    
+
     // Also clear legacy cache
     if (walletAddress) {
       this.profileCache.delete(walletAddress);
@@ -45,42 +45,42 @@ class SellerService {
       this.profileCache.clear();
     }
   }
-  
+
   // Method to check if a profile is cached (enhanced with new cache manager)
   isProfileCached(walletAddress: string): boolean {
     const cacheManager = getSellerCacheManager();
-    
+
     if (cacheManager) {
       return cacheManager.isCacheValid(walletAddress, 'profile');
     }
-    
+
     // Fallback to legacy cache
     const cached = this.profileCache.get(walletAddress);
     if (!cached) return false;
-    
+
     const now = Date.now();
     return now - cached.timestamp < this.CACHE_DURATION;
   }
-  
+
   // Method to get cached profile without making a request (enhanced with new cache manager)
   getCachedProfile(walletAddress: string): SellerProfile | null {
     const cacheManager = getSellerCacheManager();
-    
+
     if (cacheManager) {
       // Try to get from React Query cache via cache manager
       // This is a simplified approach - in practice, you'd use the React Query hooks
       console.log('[SellerService] Using cache manager for profile lookup');
     }
-    
+
     // Fallback to legacy cache
     const cached = this.profileCache.get(walletAddress);
     if (!cached) return null;
-    
+
     const now = Date.now();
     if (now - cached.timestamp < this.CACHE_DURATION) {
       return cached.data;
     }
-    
+
     // Cache expired, remove it
     this.profileCache.delete(walletAddress);
     return null;
@@ -101,6 +101,12 @@ class SellerService {
     { field: 'socialLinks.discord', required: false, weight: 3 },
     { field: 'socialLinks.telegram', required: false, weight: 3 },
     { field: 'ensHandle', required: false, weight: 7 }, // ENS is optional but valuable
+    // Business Information
+    { field: 'businessType', required: true, weight: 5 },
+    { field: 'legalBusinessName', required: true, weight: 10 },
+    { field: 'registeredAddressStreet', required: true, weight: 5 },
+    { field: 'registeredAddressCity', required: true, weight: 5 },
+    { field: 'registeredAddressCountry', required: true, weight: 5 },
   ];
 
   // Seller Tiers Configuration
@@ -190,6 +196,14 @@ class SellerService {
         completed: false,
       },
       {
+        id: 'business-info',
+        title: 'Business Information',
+        description: 'Provide your business details and address',
+        component: 'BusinessInfo',
+        required: true,
+        completed: false,
+      },
+      {
         id: 'verification',
         title: 'Verification',
         description: 'Verify your email and phone for enhanced features',
@@ -238,30 +252,30 @@ class SellerService {
       console.log(`Returning cached profile for ${walletAddress}`);
       return cachedProfile;
     }
-    
+
     try {
       console.log(`Fetching seller profile for: ${walletAddress}`);
       const profile = await unifiedSellerAPIClient.getProfile(walletAddress);
-      
+
       if (profile) {
         // Calculate profile completeness if not already calculated or outdated
         if (!profile.profileCompleteness || this.isCompletenessOutdated(profile.profileCompleteness.lastCalculated)) {
           profile.profileCompleteness = this.calculateProfileCompleteness(profile);
         }
-        
+
         // Ensure ENS verification status is properly set
         if (!profile.ensVerified) {
           profile.ensVerified = false;
         }
       }
-      
+
       // Cache the result
       this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
-      
+
       return profile;
     } catch (error) {
       console.error('Error fetching seller profile:', error);
-      
+
       // Handle specific error types gracefully
       if (error instanceof SellerAPIError) {
         if (error.status === 404) {
@@ -275,7 +289,7 @@ class SellerService {
           return null;
         }
       }
-      
+
       // For other errors, don't throw—gracefully return null so the UI can recover
       console.warn(`Failed to fetch seller profile. Returning null.`);
       this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
@@ -290,9 +304,9 @@ class SellerService {
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
     console.log(`Updating seller profile for ${walletAddress}:`, updates);
-    
+
     const result = await unifiedSellerAPIClient.updateProfile(walletAddress, updates);
-    
+
     // Trigger cache invalidation via cache manager
     const cacheManager = getSellerCacheManager();
     if (cacheManager) {
@@ -301,16 +315,16 @@ class SellerService {
         cascade: true,
         dependencies: ['profile']
       });
-      
+
       // Trigger profile update event for other components
       window.dispatchEvent(new CustomEvent('seller-profile-updated', {
         detail: { walletAddress, profile: result }
       }));
     }
-    
+
     // Clear legacy cache
     this.clearProfileCache(walletAddress);
-    
+
     return result;
   }
 
@@ -357,7 +371,7 @@ class SellerService {
       return this.getDefaultDashboardStats();
     }
   }
-  
+
   // Helper method to get default dashboard stats
   private getDefaultDashboardStats(): SellerDashboardStats {
     return {
@@ -437,7 +451,7 @@ class SellerService {
     try {
       console.log(`Fetching listings for: ${walletAddress}`, status ? `with status: ${status}` : '');
       const backendListings = await unifiedSellerAPIClient.getListings(walletAddress, status);
-      
+
       // Transform backend data to match SellerListing interface
       return backendListings.map((listing: any): SellerListing => {
         // Extract enhanced data if available
@@ -448,7 +462,7 @@ class SellerService {
         const tags = enhanced.tags || listing.tags || [];
         const condition = enhanced.condition || listing.condition || 'new';
         const category = enhanced.category || listing.category || 'general';
-        
+
         return {
           id: listing.id,
           title,
@@ -509,7 +523,7 @@ class SellerService {
       return this.getDefaultSellerAnalytics();
     }
   }
-  
+
   // Helper method to get default seller analytics
   private getDefaultSellerAnalytics(): SellerAnalytics {
     return {
@@ -671,7 +685,7 @@ class SellerService {
       totalWeight += rule.weight;
       const value = this.getNestedValue(profile, rule.field);
       const isCompleted = value && (typeof value !== 'string' || value.trim() !== '');
-      
+
       if (isCompleted) {
         completedWeight += rule.weight;
       } else {
@@ -685,7 +699,7 @@ class SellerService {
     });
 
     const score = Math.round((completedWeight / totalWeight) * 100);
-    
+
     const recommendations = this.generateRecommendations(missingFields, score);
 
     return {
@@ -722,7 +736,7 @@ class SellerService {
       discord: /^.{2,32}#[0-9]{4}$|^[A-Za-z0-9_.]{2,32}$/,
       telegram: /^@?[A-Za-z0-9_]{5,32}$/,
     };
-    
+
     const pattern = patterns[platform];
     return pattern ? pattern.test(handle) : true;
   }
@@ -742,8 +756,13 @@ class SellerService {
       'socialLinks.discord': 'Discord Handle',
       'socialLinks.telegram': 'Telegram Handle',
       'ensHandle': 'ENS Handle',
+      'businessType': 'Business Type',
+      'legalBusinessName': 'Legal Name',
+      'registeredAddressStreet': 'Street Address',
+      'registeredAddressCity': 'City',
+      'registeredAddressCountry': 'Country',
     };
-    
+
     return labels[field] || field;
   }
 

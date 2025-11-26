@@ -24,8 +24,19 @@ export interface SellerProfile {
     telegram?: string;
     linkedin?: string;
     website?: string;
+    facebook?: string;
   };
   storeDescription?: string;
+  // Business Information
+  legalBusinessName?: string;
+  businessType?: string;
+  registeredAddressStreet?: string;
+  registeredAddressCity?: string;
+  registeredAddressState?: string;
+  registeredAddressPostalCode?: string;
+  registeredAddressCountry?: string;
+  taxIdType?: string;
+  // Note: taxId is not exposed in the profile for security, only taxIdType
   tier?: string;
   isVerified: boolean;
   onboardingCompleted: boolean;
@@ -58,6 +69,7 @@ export interface SellerProfile {
 
 export interface OnboardingSteps {
   profile_setup: boolean;
+  business_info: boolean;
   verification: boolean;
   payout_setup: boolean;
   first_listing: boolean;
@@ -79,8 +91,19 @@ export interface CreateSellerProfileRequest {
     telegram?: string;
     linkedin?: string;
     website?: string;
+    facebook?: string;
   };
   storeDescription?: string;
+  // Business Information
+  legalBusinessName?: string;
+  businessType?: string;
+  registeredAddressStreet?: string;
+  registeredAddressCity?: string;
+  registeredAddressState?: string;
+  registeredAddressPostalCode?: string;
+  registeredAddressCountry?: string;
+  taxId?: string; // Plain text tax ID, will be encrypted on backend
+  taxIdType?: string;
   coverImageUrl?: string;
 }
 
@@ -99,8 +122,19 @@ export interface UpdateSellerProfileRequest {
     telegram?: string;
     linkedin?: string;
     website?: string;
+    facebook?: string;
   };
   storeDescription?: string;
+  // Business Information
+  legalBusinessName?: string;
+  businessType?: string;
+  registeredAddressStreet?: string;
+  registeredAddressCity?: string;
+  registeredAddressState?: string;
+  registeredAddressPostalCode?: string;
+  registeredAddressCountry?: string;
+  taxId?: string; // Plain text tax ID, will be encrypted on backend
+  taxIdType?: string;
   coverImageUrl?: string;
 }
 

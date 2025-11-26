@@ -12,6 +12,7 @@ import { UnifiedSellerProfile } from '../../../types/unifiedSeller';
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';
 import { ProfileSetupStep } from './onboarding/ProfileSetupStep';
+import { BusinessInfoStep } from './onboarding/BusinessInfoStep';
 import { VerificationStep } from './onboarding/VerificationStep';
 import { PayoutSetupStep } from './onboarding/PayoutSetupStep';
 import { FirstListingStep } from './onboarding/FirstListingStep';
@@ -144,7 +145,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
         // Create the actual seller profile
         await createProfile(data);
       }
-      
+
       await updateStep(currentStepData.id, data);
       setStepData(prev => ({ ...prev, [currentStepData.id]: data }));
 
@@ -175,6 +176,8 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
         return <WalletConnectStep {...props} />;
       case 'ProfileSetup':
         return <ProfileSetupStep {...props} />;
+      case 'BusinessInfo':
+        return <BusinessInfoStep {...props} />;
       case 'Verification':
         return <VerificationStep {...props} />;
       case 'PayoutSetup':
@@ -213,12 +216,12 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
 
   return (
     <TierProvider walletAddress={address!}>
-      <TierAwareComponent 
+      <TierAwareComponent
         requiredAction={TIER_ACTIONS.CREATE_LISTING}
         showUpgradePrompt={false}
         className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4"
       >
-        <SellerOnboardingContent 
+        <SellerOnboardingContent
           onComplete={onComplete}
           profile={profile}
           createProfile={createProfile}
@@ -255,20 +258,20 @@ interface SellerOnboardingContentProps {
   progress: number;
 }
 
-function SellerOnboardingContent({ 
-  onComplete, 
-  profile, 
-  createProfile, 
-  steps, 
-  currentStep, 
-  loading, 
-  error, 
-  updateStep, 
-  goToStep, 
-  nextStep, 
-  previousStep, 
-  isCompleted, 
-  progress 
+function SellerOnboardingContent({
+  onComplete,
+  profile,
+  createProfile,
+  steps,
+  currentStep,
+  loading,
+  error,
+  updateStep,
+  goToStep,
+  nextStep,
+  previousStep,
+  isCompleted,
+  progress
 }: SellerOnboardingContentProps) {
   const router = useRouter();
   const [stepData, setStepData] = useState<Record<string, any>>({});
@@ -373,7 +376,7 @@ function SellerOnboardingContent({
         // Create the actual seller profile
         await createProfile(data);
       }
-      
+
       await updateStep(currentStepData.id, data);
       setStepData(prev => ({ ...prev, [currentStepData.id]: data }));
 
@@ -404,6 +407,8 @@ function SellerOnboardingContent({
         return <WalletConnectStep {...props} />;
       case 'ProfileSetup':
         return <ProfileSetupStep {...props} />;
+      case 'BusinessInfo':
+        return <BusinessInfoStep {...props} />;
       case 'Verification':
         return <VerificationStep {...props} />;
       case 'PayoutSetup':
