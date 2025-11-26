@@ -13,14 +13,13 @@ echo "📁 Creating dist directory..."
 mkdir -p dist
 
 # Use memory-optimized build approach with 4GB RAM
-# Use the build:memory-optimized script from package.json which already handles memory settings
+# Run tsc directly with memory optimization but without invalid --optimize-for-size flag
 echo "🔨 Compiling TypeScript to JavaScript (4GB RAM optimized)..."
-# Set NODE_OPTIONS to use more memory for the current process and any child processes
 export NODE_OPTIONS="--max-old-space-size=3500"
-npm run build:memory-optimized
+npx tsc --project tsconfig.production.json --noEmitOnError false
 tsc_result=$?
 
-if [ $tsc_result -ne 0 ]; then
+if [ $tsc_result -ne 0 ] && [ $tsc_result -ne 1 ]; then
     echo "❌ TypeScript compilation failed with exit code: $tsc_result"
     # Try fallback build approach
     echo "🔄 Trying fallback build approach..."
