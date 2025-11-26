@@ -15,7 +15,7 @@ mock_package() {
   # Find all instances of the package
   find node_modules -name "$pkg_name" -type d -prune | while read dir; do
     echo "  Found at $dir"
-    rm -rf "$dir"/*
+    rm -rf "$dir"
     mkdir -p "$dir"
     echo '{"name": "'"$pkg_name"'", "version": "0.0.0", "main": "index.js"}' > "$dir/package.json"
     echo 'module.exports = {};' > "$dir/index.js"
@@ -24,6 +24,11 @@ mock_package() {
     echo 'module.exports = {};' > "$dir/lib/client/index.js"
     mkdir -p "$dir/lib/server"
     echo 'module.exports = {};' > "$dir/lib/server/index.js"
+    # Verify emptiness
+    if [ -f "$dir/lib/server/page.js" ]; then
+      echo "  ERROR: page.js still exists in $dir/lib/server!"
+      rm -f "$dir/lib/server/page.js"
+    fi
     # Create page.js to prevent "doesn't have a root layout" error if it's still scanned
     # But wait, if it's scanned as a page, it needs a default export.
     # If I make it empty, it might still fail.
