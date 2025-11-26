@@ -4,10 +4,10 @@ const nextConfig = {
 
   // Set the correct output file tracing root
   outputFileTracingRoot: require('path').join(__dirname),
-  
+
   // Disable automatic page optimization for problematic directories
   trailingSlash: false,
-  
+
   // Add custom configuration to prevent scanning of problematic directories
   distDir: '.next',
 
@@ -15,14 +15,37 @@ const nextConfig = {
   experimental: {
     // Optimize server-side rendering
     optimizeServerReact: true,
-    // Disable automatic page optimization to prevent scanning problematic directories
-    serverComponentsExternalPackages: [
-      'playwright', 
-      'playwright-core', 
-      '@playwright/test',
-      'playwright-core/lib/client'
-    ],
+    // Explicitly tell Next.js where to find pages
+    appDir: false, // We're using pages router, not app router
+    // Exclude playwright from file tracing
+    outputFileTracingExcludes: {
+      '*': [
+        'node_modules/playwright',
+        'node_modules/playwright-core',
+        'node_modules/@playwright',
+        'node_modules/playwright-core/lib/client',
+        'node_modules/playwright-core/lib/server',
+      ],
+    },
   },
+
+  // Prevent Next.js from scanning node_modules for pages
+  onDemandEntries: {
+    // Only scan src/pages directory
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
+
+  // Explicitly exclude node_modules from page discovery
+  excludeDefaultMomentLocales: true,
+
+  // Move serverComponentsExternalPackages to the correct location
+  serverExternalPackages: [
+    'playwright',
+    'playwright-core',
+    '@playwright/test',
+    'playwright-core/lib/client'
+  ],
 
   // Disable ESLint during build
   eslint: {
@@ -36,7 +59,7 @@ const nextConfig = {
 
   // Only look for pages in src/pages directory, not in node_modules
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  
+
   // Image optimization
   images: {
     domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com', 'linkdao.io', 'localhost', '127.0.0.1'],
@@ -47,6 +70,18 @@ const nextConfig = {
 
   // Webpack configuration with Workbox integration
   webpack: (config, { isServer }) => {
+    // Completely ignore playwright modules by aliasing them to false
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'playwright': false,
+      'playwright-core': false,
+      '@playwright/test': false,
+      'playwright-core/lib/client': false,
+      'playwright-core/lib/server': false,
+      '@react-native-async-storage/async-storage':
+        require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
+    };
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -65,7 +100,7 @@ const nextConfig = {
 
     // Add ignore plugin for playwright files and prevent Next.js from processing them
     const webpack = require('webpack');
-    
+
     // Completely ignore playwright modules
     config.externals = config.externals || [];
     if (Array.isArray(config.externals)) {
@@ -75,7 +110,7 @@ const nextConfig = {
         '@playwright/test': 'commonjs @playwright/test',
       });
     }
-    
+
     // Aggressive exclusion of playwright files
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -97,54 +132,54 @@ const nextConfig = {
         }
       })
     );
-    
+
     // Additional ignore for playwright modules
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^playwright/,
       })
     );
-    
+
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /^@playwright/,
       })
     );
-    
+
     // Ignore playwright directories completely
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /node_modules\/playwright/,
       })
     );
-    
+
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /node_modules\/playwright-core/,
       })
     );
-    
+
     // Ignore specific playwright paths that are causing issues
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /playwright-core\/lib\/client/,
       })
     );
-    
+
     // Ignore the specific error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /Failed to collect configuration for/,
       })
     );
-    
+
     // Ignore the specific error pattern for undefined definition
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp: /Cannot read properties of undefined \(reading 'definition'\)/,
       })
     );
-    
+
     // Ignore all node_modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -152,7 +187,7 @@ const nextConfig = {
         contextRegExp: /next\/dist\/build/,
       })
     );
-    
+
     // Ignore all playwright modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -160,7 +195,7 @@ const nextConfig = {
         contextRegExp: /next\/dist\/build/,
       })
     );
-    
+
     // Ignore all playwright-core modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -168,7 +203,7 @@ const nextConfig = {
         contextRegExp: /next\/dist\/build/,
       })
     );
-    
+
     // Ignore all @playwright modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -176,7 +211,7 @@ const nextConfig = {
         contextRegExp: /next\/dist\/build/,
       })
     );
-    
+
     // Ignore all client modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -184,7 +219,7 @@ const nextConfig = {
         contextRegExp: /playwright-core/,
       })
     );
-    
+
     // Ignore all lib modules during page collection
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -192,7 +227,7 @@ const nextConfig = {
         contextRegExp: /playwright-core/,
       })
     );
-    
+
     // Ignore all modules with undefined definition errors
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -205,21 +240,21 @@ const nextConfig = {
         }
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
         checkResource: (resource, context) => {
           // Check if this is the specific error pattern
-          if (context && context.includes('next/dist/build') && 
-              (resource.includes('playwright') || resource.includes('playwright-core'))) {
+          if (context && context.includes('next/dist/build') &&
+            (resource.includes('playwright') || resource.includes('playwright-core'))) {
             return true;
           }
           return false;
         }
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -227,7 +262,7 @@ const nextConfig = {
         contextRegExp: /next/,
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -235,7 +270,7 @@ const nextConfig = {
         contextRegExp: /node_modules/,
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -243,7 +278,7 @@ const nextConfig = {
         contextRegExp: /build/,
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -251,7 +286,7 @@ const nextConfig = {
         contextRegExp: /collect/,
       })
     );
-    
+
     // Ignore all modules during page collection that match the error pattern
     config.plugins.push(
       new webpack.IgnorePlugin({
@@ -259,7 +294,7 @@ const nextConfig = {
         contextRegExp: /configuration/,
       })
     );
-    
+
     // Add Workbox webpack plugin for service worker generation
     if (!isServer) {
       const WorkboxPlugin = require('workbox-webpack-plugin');
@@ -269,8 +304,8 @@ const nextConfig = {
           swSrc: './public/sw-simple.js',
           swDest: '../public/sw-precache.js',
           exclude: [
-            /\.map$/, 
-            /manifest$/, 
+            /\.map$/,
+            /manifest$/,
             /\.htaccess$/,
             /node_modules\/playwright/,
             /node_modules\/playwright-core/,

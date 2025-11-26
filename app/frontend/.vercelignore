@@ -1,0 +1,9 @@
+node_modules/playwright
+node_modules/playwright-core
+node_modules/@playwright
+tests
+e2e
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
