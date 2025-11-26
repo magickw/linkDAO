@@ -12,11 +12,6 @@ const nextConfig = {
 
   // Exclude Playwright from server-side bundling
   experimental: {
-    serverExternalPackages: [
-      "playwright",
-      "playwright-core",
-      "@playwright/test",
-    ],
     // Optimize server-side rendering
     optimizeServerReact: true,
   },
