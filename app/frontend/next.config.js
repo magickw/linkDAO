@@ -4,18 +4,12 @@ const nextConfig = {
 
   // Set the correct output file tracing root
   outputFileTracingRoot: require('path').join(__dirname),
-  
-  // Exclude problematic packages from output tracing
+
+  // Enable experimental features that improve SEO and performance
   experimental: {
+    // Optimize server-side rendering
     optimizeServerReact: true,
   },
-  
-  // Exclude specific packages from output file tracing
-  outputFileTracingExcludes: [
-    'playwright',
-    'playwright-core',
-    '@playwright/**/*'
-  ],
 
   // Disable ESLint during build
   eslint: {
@@ -56,7 +50,15 @@ const nextConfig = {
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
-    // Add ignore plugin for playwright files and problematic Solana layout.js file
+    // Add specific alias to redirect problematic Solana layout.js import
+    if (!config.resolve.alias) {
+      config.resolve.alias = {};
+    }
+    
+    // Handle the specific Solana import issue by providing an empty module
+    config.resolve.alias['@solana/web3.js/src/layout.js'] = false;
+
+    // Add ignore plugin for playwright files 
     const webpack = require('webpack');
     config.plugins.push(
       new webpack.IgnorePlugin({
