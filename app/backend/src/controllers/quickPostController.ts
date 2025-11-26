@@ -131,8 +131,9 @@ export class QuickPostController {
   async deleteQuickPost(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
+      const userId = req.user?.id;
 
-      const deleted = await this.quickPostService.deleteQuickPost(id);
+      const deleted = await this.quickPostService.deleteQuickPost(id, userId);
 
       if (!deleted) {
         return res.status(404).json(apiResponse.error('Quick post not found', 404));
@@ -141,6 +142,12 @@ export class QuickPostController {
       return res.json(apiResponse.success(null, 'Quick post deleted successfully'));
     } catch (error: any) {
       console.error('Error deleting quick post:', error);
+
+      // Handle authorization errors
+      if (error.message?.includes('Unauthorized')) {
+        return res.status(403).json(apiResponse.error(error.message, 403));
+      }
+
       return res.status(500).json(apiResponse.error(error.message || 'Failed to delete quick post', 500));
     }
   }

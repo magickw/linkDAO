@@ -17,7 +17,7 @@ import path from 'path';
  * All exceptions are caught and converted to proper JSON error responses.
  */
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // CRITICAL: Wrap entire handler in try-catch to prevent unhandled exceptions
   // that cause Next.js to return HTML error pages instead of JSON
   try {
@@ -48,10 +48,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log('[Docs API] Looking for file:', filename);
     console.log('[Docs API] Current working directory:', process.cwd());
 
-    // Build file path - try multiple possible locations
-    let docsDir: string | null = null;
+    // First try to read from filesystem (works in local dev and some deployments)
+    let fileContent: string | null = null;
     let filePath: string | null = null;
 
+    // Build file path - try multiple possible locations
     const possiblePaths = [
       // Local development from frontend directory
       path.join(process.cwd(), 'public', 'docs'),
@@ -59,10 +60,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       path.join(process.cwd(), 'app', 'frontend', 'public', 'docs'),
       // Direct relative path
       path.resolve('./public/docs'),
-      path.resolve('./app/frontend/public/docs')
+      path.resolve('./app/frontend/public/docs'),
+      // Vercel serverless function path
+      path.join(process.cwd(), '.next', 'server', 'pages', 'docs'),
     ];
 
-    console.log('[Docs API] Trying paths:', possiblePaths);
+    console.log('[Docs API] Trying filesystem paths:', possiblePaths);
 
     for (const possiblePath of possiblePaths) {
       try {
@@ -70,56 +73,62 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         console.log('[Docs API] Checking path:', tryPath);
 
         if (fs.existsSync(tryPath)) {
-          docsDir = possiblePath;
           filePath = tryPath;
+          fileContent = fs.readFileSync(tryPath, 'utf8');
           console.log('[Docs API] Found file at:', filePath);
           break;
         }
       } catch (error) {
         // Continue to next path if this one fails
-        console.error(`[Docs API] Error checking path ${possiblePath}:`, error);
+        console.log(`[Docs API] Path ${possiblePath} not accessible`);
         continue;
       }
     }
 
-    if (!filePath) {
+    // If filesystem read failed, try fetching from public URL (for serverless deployments)
+    if (!fileContent) {
+      console.log('[Docs API] Filesystem read failed, trying HTTP fetch...');
+
+      // Get the host from the request or use environment variable
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers.host || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL || 'localhost:3000';
+      const baseUrl = `${protocol}://${host}`;
+
+      // Try fetching the file from the public folder via HTTP
+      const publicUrl = `${baseUrl}/docs/${filename}`;
+      console.log('[Docs API] Fetching from:', publicUrl);
+
+      try {
+        const fetchResponse = await fetch(publicUrl);
+        if (fetchResponse.ok) {
+          const contentType = fetchResponse.headers.get('content-type') || '';
+          // Make sure we're getting markdown, not HTML
+          if (contentType.includes('text/') || contentType.includes('application/octet-stream') || !contentType.includes('html')) {
+            fileContent = await fetchResponse.text();
+            // Verify it's not an HTML error page
+            if (!fileContent.startsWith('<!DOCTYPE') && !fileContent.startsWith('<html')) {
+              console.log('[Docs API] Successfully fetched from public URL');
+            } else {
+              console.log('[Docs API] Received HTML instead of markdown');
+              fileContent = null;
+            }
+          }
+        } else {
+          console.log('[Docs API] HTTP fetch failed:', fetchResponse.status);
+        }
+      } catch (fetchError) {
+        console.error('[Docs API] HTTP fetch error:', fetchError);
+      }
+    }
+
+    if (!fileContent) {
       console.error('[Docs API] File not found:', filename);
       return res.status(404).json({
         success: false,
         error: 'Document not found',
         slug: sanitizedSlug,
-        message: `Could not find ${filename} in any of the expected locations`,
-        triedPaths: possiblePaths.map(p => path.join(p, filename))
-      });
-    }
-
-    // Read file content with error handling
-    let fileContent: string;
-    try {
-      fileContent = fs.readFileSync(filePath, 'utf8');
-      console.log('[Docs API] Successfully read file, length:', fileContent.length);
-    } catch (readError) {
-      console.error('[Docs API] Error reading file:', readError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to read document',
-        message: readError instanceof Error ? readError.message : 'Unknown error reading file',
-        slug: sanitizedSlug
-      });
-    }
-
-    // Get file stats for metadata with error handling
-    let stats: fs.Stats;
-    try {
-      stats = fs.statSync(filePath);
-    } catch (statsError) {
-      console.error('[Docs API] Error getting file stats:', statsError);
-      // Continue without stats - we have the content
-      return res.status(200).json({
-        success: true,
-        content: fileContent,
-        slug: sanitizedSlug,
-        title: extractTitle(fileContent) || sanitizedSlug
+        message: `Could not find ${filename}. The document may not exist or may not be accessible.`,
+        hint: 'Make sure the document file exists in the public/docs folder.'
       });
     }
 
@@ -134,14 +143,19 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       content: fileContent,
       slug: sanitizedSlug,
       title: extractTitle(fileContent) || sanitizedSlug,
-      lastUpdated: stats.mtime.toISOString(),
       wordCount,
       estimatedReadingTime,
-      fileSize: stats.size
+      fileSize: fileContent.length
     });
   } catch (error) {
     // This is the outermost catch - ensures we ALWAYS return JSON
     console.error(`[Docs API] Unhandled error in handler:`, error);
+    console.error(`[Docs API] Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
+    console.error(`[Docs API] Error details:`, {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+      slug: req.query.slug
+    });
 
     // Ensure we haven't already sent a response
     if (!res.headersSent) {
@@ -149,7 +163,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         success: false,
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
-        slug: req.query.slug
+        slug: req.query.slug,
+        hint: 'Check server logs for more details'
       });
     }
   }

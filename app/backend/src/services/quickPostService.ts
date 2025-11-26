@@ -126,15 +126,51 @@ export class QuickPostService {
     }
   }
 
-  async deleteQuickPost(id: string) {
+  async deleteQuickPost(id: string, userId?: string) {
     try {
+      // First, check if the post exists and get its author
+      const [existingPost] = await db
+        .select({
+          id: quickPosts.id,
+          authorId: quickPosts.authorId
+        })
+        .from(quickPosts)
+        .where(eq(quickPosts.id, id))
+        .limit(1);
+
+      if (!existingPost) {
+        safeLogger.warn(`Quick post not found: ${id}`);
+        return false;
+      }
+
+      // If userId is provided, check authorization
+      if (userId && existingPost.authorId !== userId) {
+        safeLogger.warn(`Unauthorized delete attempt: user ${userId} tried to delete post ${id} owned by ${existingPost.authorId}`);
+        throw new Error('Unauthorized: You can only delete your own posts');
+      }
+
+      // Delete the post (CASCADE should handle related records)
       const result = await db
         .delete(quickPosts)
         .where(eq(quickPosts.id, id));
 
-      return result.rowCount > 0;
+      if (result.rowCount > 0) {
+        safeLogger.info(`Quick post deleted successfully: ${id}`);
+
+        // Update trending cache
+        trendingCacheService.invalidatePost(id);
+
+        return true;
+      }
+
+      safeLogger.warn(`Quick post delete returned 0 rows: ${id}`);
+      return false;
     } catch (error) {
-      safeLogger.error('Error deleting quick post:', error);
+      safeLogger.error(`Error deleting quick post ${id}:`, error);
+      // Re-throw with more context
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to delete quick post');
     }
   }
@@ -292,21 +328,21 @@ export class QuickPostService {
     }
   }
 
-  async getQuickPostFeed(options: { 
-    page?: number; 
-    limit?: number; 
-    sort?: 'new' | 'hot' | 'top'; 
+  async getQuickPostFeed(options: {
+    page?: number;
+    limit?: number;
+    sort?: 'new' | 'hot' | 'top';
     timeRange?: 'hour' | 'day' | 'week' | 'month' | 'year' | 'all';
     authorId?: string;
   }) {
-    const { 
-      page = 1, 
-      limit = 20, 
-      sort = 'new', 
+    const {
+      page = 1,
+      limit = 20,
+      sort = 'new',
       timeRange = 'all',
       authorId
     } = options;
-    
+
     const offset = (page - 1) * limit;
 
     try {
