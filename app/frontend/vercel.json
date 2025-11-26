@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": ".next",
-  "installCommand": "npm install --legacy-peer-deps --omit=dev && npm install --legacy-peer-deps --save-dev @babel/preset-env @babel/preset-react @babel/preset-typescript",
+  "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.linkdao.io",
