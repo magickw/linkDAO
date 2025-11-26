@@ -34,6 +34,8 @@ const nextConfig = {
   experimental: {
     // Optimize server-side rendering
     optimizeServerReact: true,
+    // Disable automatic page optimization to prevent scanning problematic directories
+    serverComponentsExternalPackages: ['playwright', 'playwright-core', '@playwright/test'],
   },
 
   // Image optimization
