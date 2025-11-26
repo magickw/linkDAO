@@ -22,6 +22,7 @@ test-results
 playwright.config.ts
 playwright.config.js
 **/playwright*.config.*
+playwright.cache-enhancement.config.ts
 
 # Cache and build artifacts
 .cache

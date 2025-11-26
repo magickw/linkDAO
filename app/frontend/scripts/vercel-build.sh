@@ -52,5 +52,15 @@ mock_package "playwright"
 mock_package "playwright-core"
 mock_package "@playwright"
 
+# Also mock any playwright config files that might be scanned
+echo "Mocking playwright config files..."
+find . -name "playwright*.config.*" -type f | while read config_file; do
+  echo "  Mocking config: $config_file"
+  # Backup original and replace with empty module
+  mv "$config_file" "$config_file.backup"
+  echo '// Mocked playwright config file' > "$config_file"
+  echo 'module.exports = {};' >> "$config_file"
+done
+
 echo "Playwright packages mocked. Starting Next.js build..."
 npm run build

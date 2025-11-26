@@ -31,20 +31,21 @@ const nextConfig = {
 
   // Webpack configuration with Workbox integration
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-      };
-    }
+    // Exclude playwright files completely
+    config.module.rules.push({
+      test: /playwright|\.test\.|\.spec\./,
+      exclude: /node_modules/,
+      use: 'null-loader',
+    });
 
     // Add alias for @react-native-async-storage/async-storage to use our fallback
     config.resolve.alias = {
       ...config.resolve.alias,
       '@react-native-async-storage/async-storage':
-        require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
+        require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js'),
+      // Also exclude playwright config files
+      './playwright.cache-enhancement.config.ts': require('path').join(__dirname, 'src/utils/empty-module.js'),
+      './playwright.config.ts': require('path').join(__dirname, 'src/utils/empty-module.js'),
     };
 
     // Exclude playwright from client-side bundling
