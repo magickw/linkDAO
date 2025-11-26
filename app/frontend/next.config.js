@@ -4,6 +4,18 @@ const nextConfig = {
 
   // Set the correct output file tracing root
   outputFileTracingRoot: require('path').join(__dirname),
+  
+  // Exclude problematic packages from output tracing
+  experimental: {
+    optimizeServerReact: true,
+  },
+  
+  // Exclude specific packages from output file tracing
+  outputFileTracingExcludes: [
+    'playwright',
+    'playwright-core',
+    '@playwright/**/*'
+  ],
 
   // Disable ESLint during build
   eslint: {
@@ -58,16 +70,13 @@ const nextConfig = {
     const webpack = require('webpack');
     config.plugins.push(
       new webpack.IgnorePlugin({
-        resourceRegExp: /^playwright/,
-        contextRegExp: /node_modules/,
-      })
-    );
-    
-    // Additional ignore for specific playwright-core files that might cause issues
-    config.plugins.push(
-      new webpack.IgnorePlugin({
-        resourceRegExp: /playwright-core\/lib\/server\/page/,
-        contextRegExp: /node_modules/,
+        checkResource: (resource) => {
+          // Check if the resource path contains playwright references
+          if (resource.includes('playwright') || resource.includes('playwright-core')) {
+            return true;
+          }
+          return false;
+        }
       })
     );
 
@@ -236,15 +245,13 @@ const nextConfig = {
   experimental: {
     // Optimize server-side rendering
     optimizeServerReact: true,
-    // Explicitly ignore problematic modules during tracing
-    outputFileTracingExcludes: {
-      '*': [
-        'playwright/**/*',
-        '@playwright/**/*',
-        'playwright-core/**/*',
-      ]
-    },
   },
+  // Explicitly ignore problematic modules during tracing (moved out of experimental)
+  outputFileTracingExcludes: [
+    'playwright/**/*',
+    '@playwright/**/*',
+    'playwright-core/**/*',
+  ],
 };
 
 // const withBundleAnalyzer = require('@next/bundle-analyzer')({
