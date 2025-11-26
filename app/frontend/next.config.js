@@ -24,6 +24,14 @@ const nextConfig = {
   // Only look for pages in src/pages directory, not in node_modules
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 
+  // Disable file-system routing for node_modules
+  experimental: {
+    // Optimize server-side rendering
+    optimizeServerReact: true,
+    // Prevent Next.js from scanning node_modules for pages
+    serverAppPaths: false,
+  },
+
   // Ignore test-configs directory
   excludeDefaultMomentLocales: true,
 
