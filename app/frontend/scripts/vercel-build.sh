@@ -4,11 +4,22 @@ rm -rf .next
 
 echo "Removing problematic playwright page.js files..."
 
-# Remove/overwrite ONLY files that Next.js detects as pages
-find node_modules -path "*/playwright*/lib/client/page.js" | while read file; do
+# Remove/overwrite ALL playwright page.js files that Next.js might detect
+find node_modules -path "*playwright*/lib/*/page.js" | while read file; do
   echo "  Neutralizing $file"
   cat > "$file" <<EOF
 // Stubbed to prevent Next.js from treating this as a page
+// This is NOT a Next.js page file
+module.exports = {};
+EOF
+done
+
+# Also handle any page.js files directly in playwright directories
+find node_modules -path "*playwright*/page.js" | while read file; do
+  echo "  Neutralizing $file"
+  cat > "$file" <<EOF
+// Stubbed to prevent Next.js from treating this as a page
+// This is NOT a Next.js page file
 module.exports = {};
 EOF
 done

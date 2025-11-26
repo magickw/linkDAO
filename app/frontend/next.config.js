@@ -2,105 +2,55 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Set the correct output file tracing root
-  outputFileTracingRoot: require('path').join(__dirname),
+  outputFileTracingRoot: require("path").join(__dirname),
 
-  // Disable ESLint during build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  eslint: { ignoreDuringBuilds: true },
 
-  // Exclude Playwright from server-side bundling
+  // MUST NOT duplicate "experimental"
   experimental: {
-    // Optimize server-side rendering
     optimizeServerReact: true,
+    serverComponentsExternalPackages: [
+      "playwright",
+      "playwright-core",
+      "@playwright/test",
+    ],
   },
 
-  // TypeScript configuration
   typescript: {
     ignoreBuildErrors: false,
   },
 
-  // Only look for pages in src/pages directory, not in node_modules
-  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  pageExtensions: ["tsx", "ts", "jsx", "js"],
 
-  // Disable file-system routing for node_modules
-  experimental: {
-    // Optimize server-side rendering
-    optimizeServerReact: true,
-    // Prevent Next.js from scanning node_modules for pages
-    serverAppPaths: false,
+  // Prevent Next.js from scanning node_modules for routes
+  onDemandEntries: {
+    ignore: [
+      /node_modules\/playwright-core\//,
+      /node_modules\/@playwright\//,
+    ],
   },
 
-  // Ignore test-configs directory
-  excludeDefaultMomentLocales: true,
-
-  // Exclude test files and playwright from build
-
-  // Image optimization
   images: {
-    domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com', 'linkdao.io', 'localhost', '127.0.0.1'],
-    formats: ['image/avif', 'image/webp'],
+    domains: [
+      "ipfs.io",
+      "gateway.pinata.cloud",
+      "cloudflare-ipfs.com",
+      "linkdao.io",
+      "localhost",
+      "127.0.0.1",
+    ],
+    formats: ["image/avif", "image/webp"],
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https:; frame-src 'self' https:; worker-src 'self' blob:;",
   },
 
-  // Webpack configuration with Workbox integration
   webpack: (config, { isServer }) => {
-    // Add Playwright to externals to prevent bundling
-    config.externals = config.externals || [];
-    config.externals.push("playwright", "playwright-core", "@playwright/test");
-
-    // Exclude playwright files and test-configs completely
-    config.module.rules.push({
-      test: /playwright|\.test\.|\.spec\.|test-configs/,
-      exclude: /node_modules/,
-      use: 'null-loader',
-    });
-
-    // Add alias for @react-native-async-storage/async-storage to use our fallback
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@react-native-async-storage/async-storage':
-        require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js'),
-      // Also exclude playwright config files
-      './playwright.cache-enhancement.config.ts': require('path').join(__dirname, 'src/utils/empty-module.js'),
-      './playwright.config.ts': require('path').join(__dirname, 'src/utils/empty-module.js'),
-    };
-
-    // Exclude playwright from client-side bundling
     if (!isServer) {
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push({
-          'playwright': 'commonjs playwright',
-          '@playwright/test': 'commonjs @playwright/test',
-          'playwright-core': 'commonjs playwright-core',
-        });
-      }
-
-      // Add ignore plugin for playwright files
-      const webpack = require('webpack');
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^playwright/,
-          contextRegExp: /node_modules/,
-        })
-      );
-    }
-
-    // Add Workbox webpack plugin for service worker generation
-    if (!isServer) {
-      const WorkboxPlugin = require('workbox-webpack-plugin');
-
-      config.plugins.push(
-        new WorkboxPlugin.InjectManifest({
-          swSrc: './public/sw-simple.js',
-          swDest: '../public/sw-precache.js',
-          exclude: [/\.map$/, /manifest$/, /\.htaccess$/],
-          maximumFileSizeToCacheInBytes: 5000000, // 5MB
-        })
-      );
+      config.externals.push({
+        playwright: "commonjs playwright",
+        "@playwright/test": "commonjs @playwright/test",
+        "playwright-core": "commonjs playwright-core",
+      });
     }
 
     return config;
@@ -137,12 +87,6 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
           },
-          // HSTS - Enforce HTTPS (only enable in production with valid SSL)
-          // Uncomment in production after SSL is configured:
-          // {
-          //   key: 'Strict-Transport-Security',
-          //   value: 'max-age=31536000; includeSubDomains'
-          // },
           // Content Security Policy - allow localhost in development
           {
             key: 'Content-Security-Policy',
@@ -246,16 +190,6 @@ const nextConfig = {
 
   // Add trailing slash for SEO consistency
   trailingSlash: false,
-
-  // Optimize for faster builds
-  // swcMinify is now enabled by default in Next.js 13+
-
-  
 };
 
-// const withBundleAnalyzer = require('@next/bundle-analyzer')({
-//   enabled: process.env.ANALYZE === 'true',
-// });
-
-// module.exports = withBundleAnalyzer(nextConfig);
 module.exports = nextConfig;
