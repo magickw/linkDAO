@@ -131,7 +131,7 @@ const nextConfig = {
     };
 
     // Add ignore plugin for playwright files and prevent Next.js from processing them
-    const webpack = require('webpack');
+    // webpack is already declared above
 
     // Completely ignore playwright modules
     config.externals = config.externals || [];
