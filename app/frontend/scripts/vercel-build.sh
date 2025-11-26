@@ -15,27 +15,36 @@ mock_package() {
   # Find all instances of the package
   find node_modules -name "$pkg_name" -type d -prune | while read dir; do
     echo "  Found at $dir"
+    # Completely remove the directory
     rm -rf "$dir"
     mkdir -p "$dir"
     echo '{"name": "'"$pkg_name"'", "version": "0.0.0", "main": "index.js"}' > "$dir/package.json"
     echo 'module.exports = {};' > "$dir/index.js"
-    # Create specific paths that might be referenced
+    
+    # Create all possible subdirectories that might be referenced
+    mkdir -p "$dir/lib"
     mkdir -p "$dir/lib/client"
-    echo 'module.exports = {};' > "$dir/lib/client/index.js"
     mkdir -p "$dir/lib/server"
+    mkdir -p "$dir/dist"
+    mkdir -p "$dir/dist/experimental/testmode"
+    mkdir -p "$dir/experimental/testmode"
+    
+    # Create empty index.js files for all subdirectories
+    echo 'module.exports = {};' > "$dir/lib/index.js"
+    echo 'module.exports = {};' > "$dir/lib/client/index.js"
     echo 'module.exports = {};' > "$dir/lib/server/index.js"
-    # Verify emptiness
-    if [ -f "$dir/lib/server/page.js" ]; then
-      echo "  ERROR: page.js still exists in $dir/lib/server!"
-      rm -f "$dir/lib/server/page.js"
-    fi
-    # Create page.js to prevent "doesn't have a root layout" error if it's still scanned
-    # But wait, if it's scanned as a page, it needs a default export.
-    # If I make it empty, it might still fail.
-    # But if I make it NOT a page (e.g. index.js), Next.js won't treat it as a page?
-    # The error was specifically about page.js.
-    # My mock creates index.js. It does NOT create page.js.
-    # So Next.js won't find page.js! This is perfect.
+    echo 'module.exports = {};' > "$dir/dist/index.js"
+    echo 'module.exports = {};' > "$dir/dist/experimental/index.js"
+    echo 'module.exports = {};' > "$dir/dist/experimental/testmode/index.js"
+    echo 'module.exports = {};' > "$dir/experimental/index.js"
+    echo 'module.exports = {};' > "$dir/experimental/testmode/index.js"
+    
+    # Specifically create empty page.js to prevent Next.js from trying to build it
+    echo '// Mocked playwright file - not a Next.js page' > "$dir/lib/server/page.js"
+    echo '// Mocked playwright file - not a Next.js page' > "$dir/page.js"
+    
+    # Also mock any other common playwright files
+    find "$dir" -name "*.js" -type f -exec rm -f {} \; 2>/dev/null || true
   done
 }
 

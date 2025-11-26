@@ -1,9 +1,30 @@
+# Playwright packages
 node_modules/playwright
 node_modules/playwright-core
 node_modules/@playwright
+**/playwright*
+
+# Test directories
 tests
 e2e
-*.test.ts
-*.test.tsx
-*.spec.ts
-*.spec.tsx
+test-results
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.test.jsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.spec.js
+**/*.spec.jsx
+
+# Playwright config files
+playwright.config.ts
+playwright.config.js
+**/playwright*.config.*
+
+# Cache and build artifacts
+.cache
+.playwright
+test-results
+playwright-report

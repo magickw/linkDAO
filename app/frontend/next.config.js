@@ -18,6 +18,9 @@ const nextConfig = {
   // Only look for pages in src/pages directory, not in node_modules
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
 
+  // Exclude test files and playwright from build
+  excludeDefaultMomentLocales: true,
+
   // Image optimization
   images: {
     domains: ['ipfs.io', 'gateway.pinata.cloud', 'cloudflare-ipfs.com', 'linkdao.io', 'localhost', '127.0.0.1'],
