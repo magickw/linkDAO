@@ -17,17 +17,6 @@ const nextConfig = {
     optimizeServerReact: true,
   },
 
-  // Exclude playwright from file tracing (moved from experimental)
-  outputFileTracingExcludes: {
-    '*': [
-      'node_modules/playwright',
-      'node_modules/playwright-core',
-      'node_modules/@playwright',
-      'node_modules/playwright-core/lib/client',
-      'node_modules/playwright-core/lib/server',
-    ],
-  },
-
   // Prevent Next.js from scanning node_modules for pages
   onDemandEntries: {
     // Only scan src/pages directory
