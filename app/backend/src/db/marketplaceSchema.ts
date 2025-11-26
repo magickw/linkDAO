@@ -118,46 +118,46 @@ export const sellerVerifications = pgTable("seller_verifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   currentTier: varchar("current_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
-  status: varchar("status", { 
-    enum: ['pending', 'verified', 'rejected', 'expired'] 
+  status: varchar("status", {
+    enum: ['pending', 'verified', 'rejected', 'expired']
   }).notNull().default('pending'),
-  
+
   // Legal information
   legalName: varchar("legal_name", { length: 255 }),
   ein: varchar("ein", { length: 10 }), // Format: ##-#######
   businessAddress: text("business_address"),
-  
+
   // Document storage references
   einDocumentId: uuid("ein_document_id"), // Reference to encrypted document
   businessLicenseId: uuid("business_license_id"), // Reference to encrypted document
   addressProofId: uuid("address_proof_id"), // Reference to encrypted document
-  
+
   // Verification metadata
-  verificationMethod: varchar("verification_method", { 
-    enum: ['irs_tin_match', 'trulioo', 'manual_review', 'open_corporates'] 
+  verificationMethod: varchar("verification_method", {
+    enum: ['irs_tin_match', 'trulioo', 'manual_review', 'open_corporates']
   }),
   verificationReference: varchar("verification_reference", { length: 255 }), // External reference ID
-  
+
   // Risk assessment
   riskScore: varchar("risk_score", { enum: ['low', 'medium', 'high'] }),
   riskFactors: text("risk_factors"), // JSON array of risk factors
-  
+
   // Timestamps
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
   verifiedAt: timestamp("verified_at"),
   expiresAt: timestamp("expires_at"), // For periodic re-verification
-  
+
   // Audit trail
   reviewedBy: uuid("reviewed_by"), // Admin user ID for manual reviews
   rejectionReason: text("rejection_reason"),
   notes: text("notes"),
-  
+
   // Progress tracking
-  progressStatus: varchar("progress_status", { 
-    enum: ['submitted', 'documents_verified', 'manual_review', 'approved', 'rejected'] 
+  progressStatus: varchar("progress_status", {
+    enum: ['submitted', 'documents_verified', 'manual_review', 'approved', 'rejected']
   }).default('submitted'),
   progressUpdatedAt: timestamp("progress_updated_at").defaultNow(),
-  
+
   reputationScore: integer("reputation_score").default(0),
   totalVolume: numeric("total_volume", { precision: 20, scale: 8 }).default("0"),
   successfulTransactions: integer("successful_transactions").default(0),

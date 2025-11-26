@@ -204,6 +204,279 @@
       "when": 1761768993013,
       "tag": "0028_modern_microbe",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1761770000000,
+      "tag": "0029_seller_store_enhancements",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1761770000001,
+      "tag": "0030_newsletter_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1761770000002,
+      "tag": "0031_hybrid_payment_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1761770000003,
+      "tag": "0032_order_payment_integration",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1761770000004,
+      "tag": "0033_quick_polling_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1761770000005,
+      "tag": "0034_chat_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1761770000006,
+      "tag": "0035_seller_profile_api_endpoints",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1761770000007,
+      "tag": "0036_marketplace_listings_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1761770000008,
+      "tag": "0037_authentication_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1761770000009,
+      "tag": "0038_marketplace_reputation_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1761770000010,
+      "tag": "0039_performance_optimization_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1761770000011,
+      "tag": "0040_communities_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1761770000012,
+      "tag": "0041_governance_voting_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1761770000013,
+      "tag": "0042_enhanced_performance_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1761770000014,
+      "tag": "0043_seller_performance_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1761770000015,
+      "tag": "0044_ai_insights_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1761770000016,
+      "tag": "0045_workflow_automation_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1761770000017,
+      "tag": "0046_revenue_sharing",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1761770000018,
+      "tag": "0047_marketplace_messaging",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1761770000019,
+      "tag": "0048_community_badges_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1761770000020,
+      "tag": "0049_seller_performance_monitoring",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1761770000021,
+      "tag": "0050_enhanced_payment_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1761770000022,
+      "tag": "0051_ldao_token_acquisition",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1761770000023,
+      "tag": "0052_earn_to_own_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1761770000024,
+      "tag": "0053_referral_config_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1761770000025,
+      "tag": "0054_bridge_monitoring_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1761770000026,
+      "tag": "0055_returns_refunds_system",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1761770000027,
+      "tag": "0056_seller_verification_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1761770000028,
+      "tag": "0057_database_role_segregation",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1761770000029,
+      "tag": "0058_add_updated_at_to_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1761770000030,
+      "tag": "0059_add_moderation_columns_to_posts",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1761770000031,
+      "tag": "0060_extend_auth_sessions_token_length",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1761770000032,
+      "tag": "0061_add_slug_to_communities",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1761770000033,
+      "tag": "0062_add_updated_at_to_posts",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1761770000034,
+      "tag": "0065_convert_listings_to_uuid",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1761770000035,
+      "tag": "0066_add_avatar_bio_ens_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1761770000036,
+      "tag": "0067_seller_kyc_compliance",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1761770000037,
+      "tag": "0068_create_social_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1761770000038,
+      "tag": "0069_add_payout_settings_to_sellers",
+      "breakpoints": true
     }
   ]
 }

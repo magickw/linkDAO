@@ -307,6 +307,11 @@ export class SellerProfileService {
           if (data.description) updates.description = data.description;
         }
 
+        // Handle Payout Setup Step Data
+        if (step === 'payout_setup' && data) {
+          updates.payoutSettings = data;
+        }
+
         // If we have updates, apply them
         if (Object.keys(updates).length > 0) {
           await this.updateProfile(walletAddress, updates);
@@ -653,7 +658,6 @@ export class SellerProfileService {
       // Business Info
       { name: 'legalBusinessName', weight: 10, label: 'Legal Name' },
       { name: 'registeredAddressStreet', weight: 5, label: 'Address' },
-    ];
     ];
 
     let totalWeight = 0;

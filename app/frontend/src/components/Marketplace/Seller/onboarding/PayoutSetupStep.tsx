@@ -14,13 +14,16 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
     cryptoAddresses: data?.cryptoAddresses || {
       USDC: address || '',
       ETH: address || '',
-      BTC: '',
     },
     fiatEnabled: data?.fiatEnabled || false,
     offRampProvider: data?.offRampProvider || '',
     bankAccount: data?.bankAccount || {
       accountNumber: '',
       routingNumber: '',
+      swiftCode: '',
+      bankName: '',
+      accountHolderName: '',
+      bankAddress: '',
       accountType: 'checking',
     },
   });
@@ -30,8 +33,6 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
   const cryptoOptions = [
     { value: 'USDC', label: 'USDC (USD Coin)', icon: '💵' },
     { value: 'ETH', label: 'Ethereum (ETH)', icon: '⟠' },
-    { value: 'BTC', label: 'Bitcoin (BTC)', icon: '₿' },
-    { value: 'MATIC', label: 'Polygon (MATIC)', icon: '🔷' },
   ];
 
   const offRampProviders = [
@@ -42,15 +43,12 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
 
   const validateAddress = (address: string, crypto: string) => {
     if (!address) return false;
-    
+
     // Basic validation - in production, use proper address validation
     switch (crypto) {
       case 'ETH':
       case 'USDC':
-      case 'MATIC':
         return address.startsWith('0x') && address.length === 42;
-      case 'BTC':
-        return address.length >= 26 && address.length <= 35;
       default:
         return address.length > 0;
     }
@@ -102,6 +100,16 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
         if (!formData.bankAccount.routingNumber) {
           newErrors.routingNumber = 'Routing number is required';
         }
+        if (!formData.bankAccount.bankName) {
+          newErrors.bankName = 'Bank name is required';
+        }
+        if (!formData.bankAccount.accountHolderName) {
+          newErrors.accountHolderName = 'Account holder name is required';
+        }
+        // Swift code is optional for domestic withdrawals
+        // if (!formData.bankAccount.swiftCode) {
+        //   newErrors.swiftCode = 'Swift Code is required';
+        // }
       }
     }
 
@@ -111,7 +119,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -138,11 +146,10 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
           {cryptoOptions.map((option) => (
             <label
               key={option.value}
-              className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${
-                formData.defaultCrypto === option.value
-                  ? 'border-purple-500 bg-purple-600 bg-opacity-20'
-                  : 'border-gray-600 hover:border-gray-500'
-              }`}
+              className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.defaultCrypto === option.value
+                ? 'border-purple-500 bg-purple-600 bg-opacity-20'
+                : 'border-gray-600 hover:border-gray-500'
+                }`}
             >
               <input
                 type="radio"
@@ -158,8 +165,6 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                 <div className="text-gray-400 text-sm">
                   {option.value === 'USDC' && 'Stable, pegged to USD'}
                   {option.value === 'ETH' && 'Most widely accepted'}
-                  {option.value === 'BTC' && 'Digital gold standard'}
-                  {option.value === 'MATIC' && 'Low fees, fast transactions'}
                 </div>
               </div>
             </label>
@@ -186,9 +191,8 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                   id={`${option.value}_address`}
                   value={formData.cryptoAddresses[option.value] || ''}
                   onChange={(e) => handleCryptoAddressChange(option.value, e.target.value)}
-                  className={`flex-1 px-3 py-2 bg-gray-800 border rounded-r-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    errors[`${option.value}_address`] ? 'border-red-500' : 'border-gray-600'
-                  }`}
+                  className={`flex-1 px-3 py-2 bg-gray-800 border rounded-r-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors[`${option.value}_address`] ? 'border-red-500' : 'border-gray-600'
+                    }`}
                   placeholder={`Enter your ${option.value} wallet address`}
                 />
               </div>
@@ -234,11 +238,10 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                 {offRampProviders.map((provider) => (
                   <label
                     key={provider.value}
-                    className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${
-                      formData.offRampProvider === provider.value
-                        ? 'border-purple-500 bg-purple-600 bg-opacity-20'
-                        : 'border-gray-600 hover:border-gray-500'
-                    }`}
+                    className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${formData.offRampProvider === provider.value
+                      ? 'border-purple-500 bg-purple-600 bg-opacity-20'
+                      : 'border-gray-600 hover:border-gray-500'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -264,7 +267,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
             {formData.offRampProvider === 'circle' && (
               <div className="bg-gray-800 rounded-lg p-4 space-y-4">
                 <h4 className="text-white font-medium">Bank Account Details</h4>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="accountNumber" className="block text-sm font-medium text-gray-300 mb-2">
@@ -278,9 +281,8 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, accountNumber: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        errors.accountNumber ? 'border-red-500' : 'border-gray-600'
-                      }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountNumber ? 'border-red-500' : 'border-gray-600'
+                        }`}
                       placeholder="1234567890"
                     />
                     {errors.accountNumber && (
@@ -300,13 +302,96 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
                         ...prev,
                         bankAccount: { ...prev.bankAccount, routingNumber: e.target.value }
                       }))}
-                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        errors.routingNumber ? 'border-red-500' : 'border-gray-600'
-                      }`}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.routingNumber ? 'border-red-500' : 'border-gray-600'
+                        }`}
                       placeholder="123456789"
                     />
                     {errors.routingNumber && (
                       <p className="mt-1 text-sm text-red-400">{errors.routingNumber}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="swiftCode" className="block text-sm font-medium text-gray-300 mb-2">
+                      SWIFT Code
+                    </label>
+                    <input
+                      type="text"
+                      id="swiftCode"
+                      value={formData.bankAccount.swiftCode}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        bankAccount: { ...prev.bankAccount, swiftCode: e.target.value }
+                      }))}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.swiftCode ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      placeholder="SWIFT123"
+                    />
+                    {errors.swiftCode && (
+                      <p className="mt-1 text-sm text-red-400">{errors.swiftCode}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="bankName" className="block text-sm font-medium text-gray-300 mb-2">
+                      Bank Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="bankName"
+                      value={formData.bankAccount.bankName}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        bankAccount: { ...prev.bankAccount, bankName: e.target.value }
+                      }))}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankName ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      placeholder="Bank Name"
+                    />
+                    {errors.bankName && (
+                      <p className="mt-1 text-sm text-red-400">{errors.bankName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="accountHolderName" className="block text-sm font-medium text-gray-300 mb-2">
+                      Account Holder Name *
+                    </label>
+                    <input
+                      type="text"
+                      id="accountHolderName"
+                      value={formData.bankAccount.accountHolderName}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        bankAccount: { ...prev.bankAccount, accountHolderName: e.target.value }
+                      }))}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.accountHolderName ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      placeholder="Account Holder Name"
+                    />
+                    {errors.accountHolderName && (
+                      <p className="mt-1 text-sm text-red-400">{errors.accountHolderName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="bankAddress" className="block text-sm font-medium text-gray-300 mb-2">
+                      Bank Address
+                    </label>
+                    <input
+                      type="text"
+                      id="bankAddress"
+                      value={formData.bankAccount.bankAddress}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        bankAccount: { ...prev.bankAccount, bankAddress: e.target.value }
+                      }))}
+                      className={`w-full px-3 py-2 bg-gray-700 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${errors.bankAddress ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      placeholder="Bank Address"
+                    />
+                    {errors.bankAddress && (
+                      <p className="mt-1 text-sm text-red-400">{errors.bankAddress}</p>
                     )}
                   </div>
                 </div>

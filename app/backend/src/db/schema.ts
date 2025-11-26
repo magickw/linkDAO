@@ -730,7 +730,9 @@ export const sellers = pgTable("sellers", {
   registeredAddressState: varchar("registered_address_state", { length: 100 }),
   registeredAddressPostalCode: varchar("registered_address_postal_code", { length: 20 }),
   registeredAddressCountry: varchar("registered_address_country", { length: 100 }),
-  taxIdEncrypted: text("tax_id_encrypted"),
+  taxIdEncrypted: text("tax_id_encrypted"), // Encrypted tax ID for seller
+  // New payout settings JSON column
+  payoutSettings: jsonb("payout_settings"), // JSON with fiat withdrawal details
   taxIdType: varchar("tax_id_type", { length: 20 }).default("ssn"),
   kycStatus: varchar("kyc_status", { length: 30 }).default("pending"),
   kycSubmittedAt: timestamp("kyc_submitted_at"),

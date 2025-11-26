@@ -28,6 +28,7 @@ export interface SellerProfile {
   };
   storeDescription?: string;
   // Business Information
+  payoutSettings?: any; // JSON with fiat withdrawal details
   legalBusinessName?: string;
   businessType?: string;
   registeredAddressStreet?: string;
@@ -136,6 +137,7 @@ export interface UpdateSellerProfileRequest {
   taxId?: string; // Plain text tax ID, will be encrypted on backend
   taxIdType?: string;
   coverImageUrl?: string;
+  payoutSettings?: any; // JSON with fiat withdrawal details
 }
 
 export interface OnboardingStatus {
