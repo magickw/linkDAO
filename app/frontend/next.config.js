@@ -56,23 +56,18 @@ const nextConfig = {
         require('path').resolve(__dirname, 'src/utils/asyncStorageFallback.js')
     };
 
-    // Exclude playwright from bundling completely
-    config.externals = config.externals || [];
-    if (Array.isArray(config.externals)) {
-      config.externals.push({
-        'playwright': 'commonjs playwright',
-        '@playwright/test': 'commonjs @playwright/test',
-        'playwright-core': 'commonjs playwright-core',
-      });
-    }
-
-    // Add ignore plugin for playwright files - enhanced for both server and client
+    // Add ignore plugin for playwright files and problematic Solana layout.js file
     const webpack = require('webpack');
     config.plugins.push(
       new webpack.IgnorePlugin({
         checkResource: (resource) => {
           // Check if the resource path contains playwright references
           if (resource.includes('playwright') || resource.includes('playwright-core')) {
+            return true;
+          }
+          // Also check for the specific problematic Solana file
+          if (resource.includes('@solana') && resource.includes('layout.js')) {
+            console.log('Ignoring problematic Solana layout.js file:', resource);
             return true;
           }
           return false;

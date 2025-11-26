@@ -38,7 +38,9 @@
     "disableSizeLimit": true,
     "noImplicitAny": false,
     "strictNullChecks": false,
-    "types": []
+    "types": [],
+    // Set baseUrl to help with module resolution
+    "baseUrl": "."
   },
   "include": [
     "next-env.d.ts",
