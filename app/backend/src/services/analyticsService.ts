@@ -344,10 +344,10 @@ export class AnalyticsService {
           ${truncateString(metadata?.pageUrl, 500)},
           ${truncateString(metadata?.userAgent, 500)},
           ${metadata?.ipAddress || null},
-          ${truncateString(geoData.country, 100)},
+          ${truncateString(geoData.country, 2)},
           ${truncateString(geoData.city, 100)},
           ${truncateString(metadata?.deviceType, 50)},
-          ${truncateString(metadata?.browser, 100)},
+          ${truncateString(metadata?.browser, 50)},
           ${truncateString(metadata?.referrer, 500)},
           NOW()
         )
@@ -864,7 +864,7 @@ export class AnalyticsService {
 
     if (data && data.status === 'success') {
       return {
-        country: (data.country as string) || null,
+        country: (data.countryCode as string) || null, // Use 2-letter ISO code instead of full name
         city: (data.city as string) || null
       };
     }
@@ -901,9 +901,9 @@ export class AnalyticsService {
     const response = await fetch(`https://freegeoip.app/json/${ipAddress}`);
     const data: any = await response.json();
 
-    if (data && data.country_name) {
+    if (data && data.country_code) {
       return {
-        country: (data.country_name as string) || null,
+        country: (data.country_code as string) || null, // Use 2-letter ISO code instead of full name
         city: (data.city as string) || null
       };
     }

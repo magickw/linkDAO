@@ -11,6 +11,8 @@ export const usePermissions = () => {
 
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user) return false;
+    // Check for wildcard permission (super_admin has all permissions)
+    if (user.permissions?.includes('*')) return true;
     return user.permissions?.includes(permission) || false;
   }, [user]);
 

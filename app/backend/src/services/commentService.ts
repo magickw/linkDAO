@@ -226,7 +226,8 @@ export class CommentService {
         })
         .from(comments)
         .innerJoin(users, eq(comments.authorId, users.id))
-        .where(eq(comments.parentCommentId, parentCommentId))
+        // FIX: Cast string to UUID for proper PostgreSQL comparison
+        .where(sql`${comments.parentCommentId} = ${parentCommentId}::uuid`)
         .orderBy(desc(sql`(${comments.upvotes} - ${comments.downvotes})`))
         .limit(limit);
 

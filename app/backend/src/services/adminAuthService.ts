@@ -333,10 +333,16 @@ export class AdminAuthService {
         super_admin: ['*'],
         admin: [
           'content.moderate',
+          'users.view',
           'users.manage',
+          'disputes.view',
           'disputes.resolve',
           'marketplace.seller_review',
+          'marketplace.seller_view',
           'system.analytics',
+          'system.monitor',
+          'system.audit',
+          'system.settings',
         ],
         moderator: ['content.moderate', 'users.view', 'disputes.view'],
       };

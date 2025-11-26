@@ -6,6 +6,7 @@ import { useToast } from '@/context/ToastContext';
 import PostActionsMenu from '../PostActionsMenu';
 import { getPostActionPermissions } from '@/utils/postPermissions';
 import { CommunityPostService } from '@/services/communityPostService';
+import { QuickPostService } from '@/services/quickPostService';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import { ContentPreview } from '../../types/contentPreview';
 import SocialProofIndicator, { SocialProofData } from '../SocialProof/SocialProofIndicator';
@@ -28,7 +29,7 @@ export interface EnhancedPost extends Omit<SharedEnhancedPost, 'trendingStatus' 
   // Community context
   communityName?: string;
   media?: string[];
-  
+
   // Voting
   upvotes?: number;
   downvotes?: number;
@@ -94,10 +95,16 @@ const EnhancedPostCard = React.memo(({
 
   const handleDelete = useCallback(async () => {
     try {
+      // Determine if this is a community post or quick post
       if (post.communityId) {
+        // Community post
         await CommunityPostService.deletePost(post.communityId, post.id);
+      } else {
+        // Quick post (feed post)
+        await QuickPostService.deleteQuickPost(post.id);
       }
       addToast('Post deleted successfully', 'success');
+
       // Optionally trigger a refresh or remove from UI
       if (typeof window !== 'undefined') {
         window.location.reload();
@@ -162,7 +169,7 @@ const EnhancedPostCard = React.memo(({
   // Handle upvote
   const handleUpvote = useCallback(async () => {
     if (!onUpvote) return;
-    
+
     try {
       await onUpvote(post.id);
       analyticsService.trackUserEvent('post_upvote', { postId: post.id });
@@ -175,7 +182,7 @@ const EnhancedPostCard = React.memo(({
   // Handle downvote
   const handleDownvote = useCallback(async () => {
     if (!onDownvote) return;
-    
+
     try {
       await onDownvote(post.id);
       analyticsService.trackUserEvent('post_downvote', { postId: post.id });
@@ -647,11 +654,10 @@ const EnhancedPostCard = React.memo(({
                 <button
                   onClick={handleUpvote}
                   disabled={!onUpvote}
-                  className={`flex items-center space-x-2 ${
-                    onUpvote 
-                      ? 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400' 
-                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                  } transition-colors duration-200`}
+                  className={`flex items-center space-x-2 ${onUpvote
+                    ? 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
+                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                    } transition-colors duration-200`}
                   aria-label="Upvote post"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -659,15 +665,14 @@ const EnhancedPostCard = React.memo(({
                   </svg>
                   <span className="font-medium">{post.upvotes || 0}</span>
                 </button>
-                
+
                 <button
                   onClick={handleDownvote}
                   disabled={!onDownvote}
-                  className={`flex items-center space-x-2 ${
-                    onDownvote 
-                      ? 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400' 
-                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                  } transition-colors duration-200`}
+                  className={`flex items-center space-x-2 ${onDownvote
+                    ? 'text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400'
+                    : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                    } transition-colors duration-200`}
                   aria-label="Downvote post"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

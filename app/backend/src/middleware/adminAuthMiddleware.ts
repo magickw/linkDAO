@@ -47,7 +47,7 @@ export const requirePermission = (permission: string) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const user = req.user;
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -57,6 +57,11 @@ export const requirePermission = (permission: string) => {
 
       // Super admins have all permissions
       if (user.role === 'super_admin') {
+        return next();
+      }
+
+      // Check for wildcard permission
+      if (user.permissions && user.permissions.includes('*')) {
         return next();
       }
 

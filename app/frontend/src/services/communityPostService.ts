@@ -75,7 +75,7 @@ export class CommunityPostService {
       const result = await response.json();
       const comments = result.data || result;
       const commentCount = Array.isArray(comments) ? comments.length : 0;
-      
+
       return { commentCount };
     } catch (error) {
       console.error('Error fetching post stats:', error);
@@ -325,6 +325,30 @@ export class CommunityPostService {
       return result.data || result;
     } catch (error) {
       console.error('Error creating comment:', error);
+      throw error;
+    }
+  }
+
+  static async deleteComment(commentId: string, author: string): Promise<boolean> {
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({ author })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || `Failed to delete comment: ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting comment:', error);
       throw error;
     }
   }
