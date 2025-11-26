@@ -67,6 +67,10 @@
     "**/node_modules/playwright*/**/*",
     "**/node_modules/@playwright/**/*",
     "**/playwright.*.config.*",
-    "**/node_modules/@solana/**/*"
+    "**/node_modules/@solana/**/*",
+    "node_modules/playwright",
+    "node_modules/playwright-core",
+    "node_modules/@playwright/test",
+    "**/node_modules/playwright-core/lib/client/**/*"
   ]
 }
