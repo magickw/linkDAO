@@ -303,8 +303,8 @@ export class FeedService {
       // Transform backend posts to frontend posts
       // The enhanced feed API now returns both regular posts and quickPosts
       const posts = response_data.data.posts.map((post: any) => {
-        // Check if this is a quickPost (no DAO/communityId) or a regular post
-        if (!post.dao && !post.communityId) {
+        // Check if this is a quickPost using the isQuickPost flag from backend
+        if (post.isQuickPost === true) {
           // This is a quickPost (home/feed post)
           console.log('🔍 [FEED DEBUG] Converting quickPost:', { id: post.id, contentCid: post.contentCid, contentLength: post.content?.length });
           return convertBackendQuickPostToQuickPost(post);

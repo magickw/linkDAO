@@ -7,6 +7,7 @@ import PostActionsMenu from '../PostActionsMenu';
 import { getPostActionPermissions } from '@/utils/postPermissions';
 import { CommunityPostService } from '@/services/communityPostService';
 import { QuickPostService } from '@/services/quickPostService';
+import { PostService } from '@/services/postService';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import { ContentPreview } from '../../types/contentPreview';
 import SocialProofIndicator, { SocialProofData } from '../SocialProof/SocialProofIndicator';
@@ -95,13 +96,19 @@ const EnhancedPostCard = React.memo(({
 
   const handleDelete = useCallback(async () => {
     try {
-      // Determine if this is a community post or quick post
-      if (post.communityId) {
-        // Community post
-        await CommunityPostService.deletePost(post.communityId, post.id);
-      } else {
+      // Determine if this is a quick post or regular post using the isQuickPost flag
+      if (post.isQuickPost) {
         // Quick post (feed post)
         await QuickPostService.deleteQuickPost(post.id);
+      } else {
+        // Regular post or community post
+        if (post.communityId) {
+          // Community post
+          await CommunityPostService.deletePost(post.communityId, post.id);
+        } else {
+          // Regular post (not a community post)
+          await PostService.deletePost(post.id);
+        }
       }
       addToast('Post deleted successfully', 'success');
 
@@ -113,7 +120,7 @@ const EnhancedPostCard = React.memo(({
       console.error('Error deleting post:', error);
       addToast('Failed to delete post', 'error');
     }
-  }, [post.id, post.communityId, addToast]);
+  }, [post.id, post.communityId, post.isQuickPost, addToast]);
 
   const handlePin = useCallback(async () => {
     try {

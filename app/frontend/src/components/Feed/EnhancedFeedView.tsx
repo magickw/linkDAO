@@ -291,7 +291,7 @@ const EnhancedFeedView = React.memo(({
         verifiedUsersWhoEngaged: []
       },
       trendingStatus: feedPost.trendingStatus as any,
-      communityId: feedPost.communityId || (feedPost as any).dao,
+      communityId: feedPost.communityId,
       tags: (feedPost as any).tags || feedPost.tags
     };
   }, []);

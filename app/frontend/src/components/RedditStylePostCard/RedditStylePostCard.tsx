@@ -30,8 +30,8 @@ interface NormalizedPost {
 }
 
 const normalizePost = (post: EnhancedPost): NormalizedPost => {
-  // Check if it's a quickPost based on the isQuickPost flag or missing community fields
-  const isQuickPost = post.isQuickPost || (!post.dao && !post.communityId);
+  // Check if it's a quickPost based on the isQuickPost flag
+  const isQuickPost = post.isQuickPost === true;
   
   return {
     id: post.id,

@@ -89,8 +89,8 @@ export const generateBreadcrumbs = (
     if (communityId && communityName) {
       breadcrumbs.push({
         label: communityName,
-        href: `/dao/${communityId}`,
-        isActive: pathname === `/dao/${communityId}`,
+        href: `/communities/${communityId}`,
+        isActive: pathname === `/communities/${communityId}`,
         icon: '🏛️'
       });
     }

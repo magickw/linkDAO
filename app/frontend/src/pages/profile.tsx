@@ -315,7 +315,7 @@ export default function Profile() {
         title: post.title,
         content: post.contentCid,
         tags: post.tags ? post.tags.join(',') : '',
-        dao: post.dao || post.communityId || ''
+        dao: post.communityId || ''
       }
     });
   };
@@ -1765,7 +1765,7 @@ export default function Profile() {
                   ) : (
                     <div className="space-y-4">
                       {posts.map((post) => (
-                        <Link key={post.id} href={post.communityId || post.dao ? `/communities/${post.communityId || post.dao}` : `/profile?user=${post.author}`}>
+                        <Link key={post.id} href={post.communityId ? `/communities/${post.communityId}` : `/profile?user=${post.author}`}>
                           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <div className="flex justify-between items-start">
                               <Link href={post.communityId || post.dao ? `/communities/${post.communityId || post.dao}` : `/profile?user=${post.author}`} className="flex-grow">

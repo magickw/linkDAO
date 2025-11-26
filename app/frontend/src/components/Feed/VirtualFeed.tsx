@@ -123,7 +123,7 @@ const PostItem: React.FC<{
           },
           trendingStatus: trendingStatus,
           pinnedUntil: undefined,
-          communityId: post.communityId || post.dao,
+          communityId: post.communityId,
           communityName: undefined,
           tags: post.tags
         }}
