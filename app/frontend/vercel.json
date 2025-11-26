@@ -1,7 +1,7 @@
 {
-  "buildCommand": "rm -rf node_modules/playwright node_modules/playwright-core node_modules/@playwright && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install --legacy-peer-deps --omit=dev && npm install --legacy-peer-deps --save-dev @babel/preset-env @babel/preset-react @babel/preset-typescript",
   "framework": "nextjs",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.linkdao.io",
