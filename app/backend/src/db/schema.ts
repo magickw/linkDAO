@@ -83,6 +83,8 @@ export const posts = pgTable("posts", {
   moderationStatus: varchar("moderation_status", { length: 24 }).default('active'),
   moderationWarning: text("moderation_warning"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
@@ -114,6 +116,8 @@ export const quickPosts = pgTable("quick_posts", {
   moderationStatus: varchar("moderation_status", { length: 24 }).default('active'), // 'active' | 'limited' | 'pending_review' | 'blocked'
   moderationWarning: text("moderation_warning"),
   riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
@@ -571,6 +575,9 @@ export const governanceSettings = pgTable("governance_settings", {
   allowDelegation: boolean("allow_delegation").default(true),
   stakingEnabled: boolean("staking_enabled").default(false),
   stakingMultiplierMax: numeric("staking_multiplier_max", { precision: 5, scale: 2 }).default("2.0"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default('0'),
+  upvotes: integer("upvotes").default(0),
+  downvotes: integer("downvotes").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({

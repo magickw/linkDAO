@@ -12,7 +12,7 @@ const IPFS_CONFIG = {
   pinataSecretApiKey: process.env.PINATA_API_KEY_SECRET,
   // Pinata JWT method (when using JWT instead of API keys)
   pinataJwt: process.env.PINATA_JWT,
-  gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
+  gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/',
 };
 
 // Validate configuration and log diagnostic info

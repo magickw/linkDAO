@@ -68,12 +68,12 @@ export class IPFSContentService {
     }
 
     try {
-      // List of IPFS gateways to try
+      // List of IPFS gateways to try (prioritize more reliable gateways)
       const ipfsGateways = [
-        'https://gateway.pinata.cloud/ipfs/',
         'https://ipfs.io/ipfs/',
         'https://cloudflare-ipfs.com/ipfs/',
-        'https://dweb.link/ipfs/'
+        'https://dweb.link/ipfs/',
+        'https://gateway.pinata.cloud/ipfs/'
       ];
 
       // First, try our backend API
@@ -153,7 +153,7 @@ export class IPFSContentService {
 
           // Add a timeout using AbortController
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for faster fallback
 
           const response = await fetch(`${gateway}${cid}`, {
             method: 'GET',

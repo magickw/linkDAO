@@ -25,12 +25,12 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Handle IPFS CIDs with multiple gateway fallbacks
   const isIpfsCid = src.startsWith('Qm') || src.startsWith('baf');
   
-  // List of IPFS gateways to try in order
+  // List of IPFS gateways to try in order (prioritize more reliable gateways)
   const ipfsGateways = [
-    'https://gateway.pinata.cloud/ipfs/',
     'https://ipfs.io/ipfs/',
     'https://cloudflare-ipfs.com/ipfs/',
-    'https://dweb.link/ipfs/'
+    'https://dweb.link/ipfs/',
+    'https://gateway.pinata.cloud/ipfs/'
   ];
   
   // Generate URLs for all gateways if it's an IPFS CID

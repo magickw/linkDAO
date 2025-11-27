@@ -1670,42 +1670,76 @@ export class FeedService {
     const { postId, userAddress } = data;
 
     try {
-      const postIdInt = parseInt(postId);
-
-      // Get user - use case-insensitive matching
+      // Get user
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
         throw new Error('User not found');
       }
 
-      // Check if bookmark already exists
-      const existingBookmark = await db
-        .select()
-        .from(bookmarks)
-        .where(and(
-          eq(bookmarks.postId, postIdInt),
-          eq(bookmarks.userId, user[0].id)
-        ))
-        .limit(1);
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
 
       let result;
 
-      if (existingBookmark.length > 0) {
-        // Remove bookmark
-        await db.delete(bookmarks).where(and(
-          eq(bookmarks.postId, postIdInt),
-          eq(bookmarks.userId, user[0].id)
-        ));
-        result = { bookmarked: false };
+      if (isIntegerId) {
+        // Regular post bookmark logic
+        const postIdInt = parseInt(postId);
+
+        // Check if bookmark already exists
+        const existingBookmark = await db
+          .select()
+          .from(bookmarks)
+          .where(and(
+            eq(bookmarks.postId, postIdInt),
+            eq(bookmarks.userId, user[0].id)
+          ))
+          .limit(1);
+
+        if (existingBookmark.length > 0) {
+          // Remove bookmark
+          await db.delete(bookmarks).where(and(
+            eq(bookmarks.postId, postIdInt),
+            eq(bookmarks.userId, user[0].id)
+          ));
+          result = { bookmarked: false };
+        } else {
+          // Add bookmark
+          await db.insert(bookmarks).values({
+            postId: postIdInt,
+            userId: user[0].id,
+            createdAt: new Date()
+          });
+          result = { bookmarked: true };
+        }
       } else {
-        // Add bookmark
-        await db.insert(bookmarks).values({
-          postId: postIdInt,
-          userId: user[0].id,
-          createdAt: new Date()
-        });
-        result = { bookmarked: true };
+        // Quick post bookmark logic
+        // Check if bookmark already exists
+        const existingBookmark = await db
+          .select()
+          .from(quickPostBookmarks)
+          .where(and(
+            eq(quickPostBookmarks.quickPostId, postId),
+            eq(quickPostBookmarks.userId, user[0].id)
+          ))
+          .limit(1);
+
+        if (existingBookmark.length > 0) {
+          // Remove bookmark
+          await db.delete(quickPostBookmarks).where(and(
+            eq(quickPostBookmarks.quickPostId, postId),
+            eq(quickPostBookmarks.userId, user[0].id)
+          ));
+          result = { bookmarked: false };
+        } else {
+          // Add bookmark
+          await db.insert(quickPostBookmarks).values({
+            quickPostId: postId,
+            userId: user[0].id,
+            createdAt: new Date()
+          });
+          result = { bookmarked: true };
+        }
       }
 
       return result;
@@ -1765,13 +1799,12 @@ export class FeedService {
     return reactions + tips + shares;
   }
 
-  private calculateViralityScore(shares: number, reactions: number, ageInHours: number): number {
+  private calculateViralityScore(shares: number, comments: number, timeSinceCreation: number): number {
     // Simple virality score calculation
-    const totalInteractions = shares + reactions;
-    return totalInteractions / Math.max(ageInHours, 1);
+    return (shares * 0.5) + (comments * 0.3) + (timeSinceCreation * 0.2);
   }
 
-  private calculateContentQualityScore(tipAmount: number, reactionCount: number, viewCount: number): number {
+  private calculateQualityScore(tipAmount: number, reactionCount: number, viewCount: number): number {
     // Simple quality score calculation
     return (tipAmount * 0.5) + (reactionCount * 0.3) + (viewCount * 0.2);
   }
@@ -1804,29 +1837,38 @@ export class FeedService {
   async upvotePost(data: { postId: string; userAddress: string }) {
     try {
       const { postId, userAddress } = data;
-      
-      // First, check if this is a regular post or quick post
-      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-      const quickPost = post.length === 0 ? await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1) : [];
-      
-      if (post.length > 0) {
+
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
+
+      if (isIntegerId) {
         // It's a regular post
+        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+
+        if (post.length === 0) {
+          throw new Error('Post not found');
+        }
+
         // Increment upvotes
         await db.update(posts)
           .set({ upvotes: sql`${posts.upvotes} + 1` })
-          .where(eq(posts.id, postId));
-        
+          .where(eq(posts.id, parseInt(postId)));
+
         return { success: true, message: 'Post upvoted successfully' };
-      } else if (quickPost.length > 0) {
+      } else {
         // It's a quick post
+        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+
+        if (quickPost.length === 0) {
+          throw new Error('Post not found');
+        }
+
         // Increment upvotes
         await db.update(quickPosts)
           .set({ upvotes: sql`${quickPosts.upvotes} + 1` })
           .where(eq(quickPosts.id, postId));
-        
+
         return { success: true, message: 'Quick post upvoted successfully' };
-      } else {
-        throw new Error('Post not found');
       }
     } catch (error) {
       safeLogger.error('Error upvoting post:', error);
@@ -1838,29 +1880,38 @@ export class FeedService {
   async downvotePost(data: { postId: string; userAddress: string }) {
     try {
       const { postId, userAddress } = data;
-      
-      // First, check if this is a regular post or quick post
-      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
-      const quickPost = post.length === 0 ? await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1) : [];
-      
-      if (post.length > 0) {
+
+      // Check if postId is an integer (regular post) or UUID (quick post)
+      const isIntegerId = /^\d+$/.test(postId);
+
+      if (isIntegerId) {
         // It's a regular post
+        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+
+        if (post.length === 0) {
+          throw new Error('Post not found');
+        }
+
         // Increment downvotes
         await db.update(posts)
           .set({ downvotes: sql`${posts.downvotes} + 1` })
-          .where(eq(posts.id, postId));
-        
+          .where(eq(posts.id, parseInt(postId)));
+
         return { success: true, message: 'Post downvoted successfully' };
-      } else if (quickPost.length > 0) {
+      } else {
         // It's a quick post
+        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+
+        if (quickPost.length === 0) {
+          throw new Error('Post not found');
+        }
+
         // Increment downvotes
         await db.update(quickPosts)
           .set({ downvotes: sql`${quickPosts.downvotes} + 1` })
           .where(eq(quickPosts.id, postId));
-        
+
         return { success: true, message: 'Quick post downvoted successfully' };
-      } else {
-        throw new Error('Post not found');
       }
     } catch (error) {
       safeLogger.error('Error downvoting post:', error);
