@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import fs from 'fs';
-import { create } from 'ipfs-http-client';
+import axios from 'axios';
 
 export const config = {
   api: {
@@ -9,7 +9,7 @@ export const config = {
   },
 };
 
-const ipfs = create({ url: process.env.IPFS_URL || 'http://localhost:5001' });
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -27,20 +27,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const fileBuffer = fs.readFileSync(file.filepath);
-    const result = await ipfs.add(fileBuffer);
+    
+    // Use Pinata API directly
+    const formData = new FormData();
+    formData.append('file', new Blob([fileBuffer]), file.originalFilename || 'upload');
+    
+    const headers: Record<string, string> = {};
+    if (process.env.PINATA_API_KEY && process.env.PINATA_API_KEY_SECRET) {
+      headers['pinata_api_key'] = process.env.PINATA_API_KEY;
+      headers['pinata_secret_api_key'] = process.env.PINATA_API_KEY_SECRET;
+    } else if (process.env.PINATA_JWT) {
+      headers['Authorization'] = `Bearer ${process.env.PINATA_JWT}`;
+    }
+
+    const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
+      headers: {
+        ...headers,
+        'Content-Type': 'multipart/form-data',
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    });
 
     fs.unlinkSync(file.filepath);
 
     res.status(200).json({
       success: true,
       data: {
-        cid: result.cid.toString(),
-        url: `https://ipfs.io/ipfs/${result.cid.toString()}`,
-        size: result.size,
+        cid: response.data.IpfsHash,
+        url: `https://gateway.pinata.cloud/ipfs/${response.data.IpfsHash}`,
+        size: fileBuffer.length,
         type: file.mimetype,
       },
     });
   } catch (error) {
+    console.error('Upload error:', error);
     res.status(500).json({ success: false, message: 'Upload failed' });
   }
 }

@@ -27,6 +27,23 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
+    // Exclude playwright from the build
+    config.externals = config.externals || [];
+    if (isServer) {
+      config.externals.push({
+        'playwright-core': 'commonjs playwright-core',
+        'playwright': 'commonjs playwright',
+        '@playwright/test': 'commonjs @playwright/test',
+      });
+    }
+
+    // Ignore playwright modules during bundling
+    config.resolve = config.resolve || {};
+    config.resolve.alias = config.resolve.alias || {};
+    config.resolve.alias['playwright-core'] = false;
+    config.resolve.alias['playwright'] = false;
+    config.resolve.alias['@playwright/test'] = false;
+
     return config;
   },
 
