@@ -1,7 +1,7 @@
 {
   "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": ".next",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install --legacy-peer-deps && rm -rf node_modules/playwright node_modules/playwright-core node_modules/@playwright",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.linkdao.io",
     "NEXT_PUBLIC_BACKEND_URL": "https://api.linkdao.io",

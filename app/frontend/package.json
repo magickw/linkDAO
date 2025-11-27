@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "rm -rf node_modules/playwright node_modules/playwright-core node_modules/@playwright",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start",
     "lint": "next lint",
@@ -65,7 +66,6 @@
     "ethers": "^6.15.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.24",
-    
     "hono": "^4.10.3",
     "ioredis": "^5.8.2",
     "jspdf": "^3.0.3",
