@@ -141,5 +141,10 @@
   },
   "engines": {
     "node": "22.x"
+  },
+  "overrides": {
+    "playwright": "npm:@empty@1.0.0",
+    "playwright-core": "npm:@empty@1.0.0",
+    "@playwright/test": "npm:@empty@1.0.0"
   }
 }
