@@ -32,7 +32,8 @@ import {
   User,
   Home,
   X,
-  Check
+  Check,
+  Activity
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { useAuth } from '@/context/AuthContext';
@@ -56,6 +57,7 @@ import { WorkflowAutomationDashboard } from './WorkflowAutomation/WorkflowAutoma
 import { AdminOnboarding } from './Onboarding/AdminOnboarding';
 import { EnhancedAnalytics } from './EnhancedAnalytics';
 import { EnhancedAIModeration } from './EnhancedAIModeration';
+import { SystemHealthDashboard } from './SystemHealthDashboard';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { AdvancedSearchPanel } from './Search/AdvancedSearchPanel';
@@ -576,6 +578,7 @@ export function AdminDashboard() {
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics' },
     { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics' },
+    { id: 'system-health', label: 'System Health', icon: Activity, permission: 'system.monitor' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const StatCard = ({ title, value, icon: Icon, color, trend, onClick }: any) => (
@@ -1073,6 +1076,10 @@ export function AdminDashboard() {
 
         {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
           <EnhancedAnalytics />
+        )}
+
+        {activeTab === 'system-health' && (
+          <SystemHealthDashboard />
         )}
 
         {activeTab === 'workflows' && (

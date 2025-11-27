@@ -5,7 +5,7 @@ import { analyticsService } from "../services/analyticsService";
 import { databaseService } from "../services/databaseService";
 import AuditLoggingService from "../services/auditLoggingService";
 import { adminConfigurationService } from "../services/adminConfigurationService";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases } from "../db/schema";
 import { AuthenticatedRequest } from "../middleware/adminAuthMiddleware";
 
@@ -355,7 +355,7 @@ export class AdminController {
       
       try {
         // Get moderation statistics
-        const pendingModerationsResult = await db.select({ count: moderationCases.id })
+        const pendingModerationsResult = await db.select({ count: sql<number>`count(*)` })
           .from(moderationCases)
           .where(eq(moderationCases.status, 'pending'));
         pendingModerations = pendingModerationsResult.length > 0 ? pendingModerationsResult[0].count : 0;
@@ -366,7 +366,7 @@ export class AdminController {
       
       try {
         // Get seller application statistics
-        const pendingSellersResult = await db.select({ count: sellerVerifications.id })
+        const pendingSellersResult = await db.select({ count: sql<number>`count(*)` })
           .from(sellerVerifications)
           .where(eq(sellerVerifications.currentTier, 'unverified'));
         pendingSellerApplications = pendingSellersResult.length > 0 ? pendingSellersResult[0].count : 0;
@@ -377,7 +377,7 @@ export class AdminController {
       
       try {
         // Get dispute statistics
-        const openDisputesResult = await db.select({ count: disputes.id })
+        const openDisputesResult = await db.select({ count: sql<number>`count(*)` })
           .from(disputes)
           .where(eq(disputes.status, 'open'));
         openDisputes = openDisputesResult.length > 0 ? openDisputesResult[0].count : 0;
@@ -388,7 +388,7 @@ export class AdminController {
       
       try {
         // Get user statistics
-        const totalUsersResult = await db.select({ count: users.id })
+        const totalUsersResult = await db.select({ count: sql<number>`count(*)` })
           .from(users);
         totalUsers = totalUsersResult.length > 0 ? totalUsersResult[0].count : 0;
       } catch (userError) {
@@ -397,7 +397,7 @@ export class AdminController {
       }
       
       try {
-        const totalSellersResult = await db.select({ count: marketplaceUsers.userId })
+        const totalSellersResult = await db.select({ count: sql<number>`count(*)` })
           .from(marketplaceUsers)
           .where(eq(marketplaceUsers.role, 'seller'));
         totalSellers = totalSellersResult.length > 0 ? totalSellersResult[0].count : 0;
@@ -608,9 +608,8 @@ export class AdminController {
       const { limit = 50, offset = 0 } = req.query;
 
       // Get user audit logs from audit logging service
-      const auditLogs = await this.auditLogAnalysisService.searchAuditLogs({
-        resourceId: userId,
-        resourceType: 'user',
+      const auditLogs = await this.auditLoggingService.getAuditTrail({
+        actorId: userId,
         limit: parseInt(limit as string),
         offset: parseInt(offset as string)
       });
