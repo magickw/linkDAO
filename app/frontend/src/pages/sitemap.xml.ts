@@ -32,8 +32,8 @@ async function generateSiteMap() {
   let dynamicPages = [];
   
   try {
-    // Fetch marketplace listings for sitemap
-    const listings = await marketplaceService.getMarketplaceListings({ limit: 1000 });
+    // Fetch marketplace listings for sitemap (limited to 50 items)
+    const listings = await marketplaceService.getMarketplaceListings({ limit: 50 });
     if (Array.isArray(listings)) {
       dynamicPages = [...dynamicPages, ...listings.map(listing => ({
         url: `/marketplace/listing/${listing.id}`,
@@ -54,8 +54,8 @@ async function generateSiteMap() {
   }
 
   try {
-    // Fetch communities for sitemap
-    const communities = await CommunityService.getAllCommunities({ limit: 1000 });
+    // Fetch communities for sitemap (limited to 50 items)
+    const communities = await CommunityService.getAllCommunities({ limit: 50 });
     if (Array.isArray(communities)) {
       dynamicPages = [...dynamicPages, ...communities.map(community => ({
         url: `/communities/${community.slug || community.id}`,

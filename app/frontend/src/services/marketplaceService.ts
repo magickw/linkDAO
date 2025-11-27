@@ -385,8 +385,13 @@ export interface TrackingUpdate {
 }
 
 export class UnifiedMarketplaceService {
-  // Use port 10000 based on the start-services.sh script
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  // Use the correct backend API base URL from environment variables
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
+
+  constructor() {
+    // Log the baseUrl during initialization for debugging
+    console.log('[MarketplaceService] Initialized with baseUrl:', this.baseUrl);
+  }
 
   private createTimeoutSignal(timeoutMs: number): AbortSignal {
     const controller = new AbortController();
