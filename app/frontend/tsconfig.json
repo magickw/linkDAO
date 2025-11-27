@@ -27,6 +27,9 @@
       ],
       "@/contracts/*": [
         "./src/types/typechain/*"
+      ],
+      "@solana/web3.js": [
+        "./src/types/solana-mock.d.ts"
       ]
     },
     "plugins": [
