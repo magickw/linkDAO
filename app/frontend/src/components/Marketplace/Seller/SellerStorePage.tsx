@@ -10,7 +10,6 @@ import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSe
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { withSellerErrorBoundary } from './ErrorHandling';
 import { mapLegacyTierToUnified } from '@/utils/tierMapping';
-import { getDefaultMockSeller } from '@/mocks/sellerMockData';
 import { 
   Star, 
   Shield, 
@@ -353,13 +352,13 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           
           setSeller(transformedSeller);
         } else {
-          // If seller not found, use mock data instead of showing error
-          const { getDefaultMockSeller } = await import('@/mocks/sellerMockData');
-          const mockSeller = getDefaultMockSeller(sellerId);
-          setSeller(mockSeller);
+          // If seller not found, set error state instead of using mock data
+          setError('Seller profile not found or unavailable');
         }
       } catch (error) {
         console.error('Failed to refresh seller data:', error);
+        // Set error state instead of using mock data
+        setError('Failed to refresh seller data');
       } finally {
         setLoading(false);
       }
@@ -510,10 +509,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
           return;
         }
         
-        // For all errors (including not found), use fallback mock data to ensure page is always accessible
-        const mockSeller: SellerInfo = getDefaultMockSeller(sellerId);
-        
-        setSeller(mockSeller);
+        // Instead of using mock data, set error state to show appropriate message
+        setError('Seller profile not found or unavailable');
         setLoading(false);
       }
       
@@ -537,32 +534,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         setListings([]);
       }
       
-      // Mock reviews data for now
-      const mockReviews: Review[] = [
-        {
-          id: 'review1',
-          buyerAddress: '0x1234567890123456789012345678901234567890',
-          buyerENS: 'buyer1.eth',
-          rating: 5,
-          comment: 'Excellent seller! Fast shipping and exactly as described.',
-          transactionHash: '0xabcdef...',
-          isVerifiedPurchase: true,
-          createdAt: new Date('2024-01-10'),
-          listingId: 'listing1'
-        },
-        {
-          id: 'review2',
-          buyerAddress: '0x2345678901234567890123456789012345678901',
-          rating: 4,
-          comment: 'Great product, minor packaging issues but overall satisfied.',
-          transactionHash: '0x123456...',
-          isVerifiedPurchase: true,
-          createdAt: new Date('2024-01-05'),
-          listingId: 'listing2'
-        }
-      ];
-      
-      setReviews(mockReviews);
+      // Initialize reviews as empty array instead of mock data
+      setReviews([]);
       
     } catch (err) {
       console.error('Error fetching seller data:', err);

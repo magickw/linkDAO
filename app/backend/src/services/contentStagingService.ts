@@ -1,4 +1,3 @@
-import type { IPFSHTTPClient } from 'ipfs-http-client';
 import { safeLogger } from '../utils/safeLogger';
 import fs from 'fs/promises';
 import path from 'path';
@@ -27,7 +26,7 @@ export interface ContentValidationResult {
 }
 
 class ContentStagingService {
-  private ipfs: IPFSHTTPClient | undefined;
+  // IPFS client not used - we use Pinata REST API directly
   private stagingDir: string;
   private maxFileSize: number = 100 * 1024 * 1024; // 100MB
   private allowedMimeTypes: Set<string>;
@@ -70,16 +69,9 @@ class ContentStagingService {
     this.initializeStagingDirectory();
   }
 
-  private async getIpfsClient(): Promise<IPFSHTTPClient> {
-    if (!this.ipfs) {
-      const { create } = await import('ipfs-http-client');
-      this.ipfs = create({
-        host: process.env.IPFS_HOST || 'localhost',
-        port: parseInt(process.env.IPFS_PORT || '5001'),
-        protocol: process.env.IPFS_PROTOCOL || 'http'
-      });
-    }
-    return this.ipfs;
+  // IPFS client not used - we use Pinata REST API directly
+  private getIpfsClient(): never {
+    throw new Error('IPFS client not available - use Pinata REST API instead');
   }
 
   private async initializeStagingDirectory(): Promise<void> {

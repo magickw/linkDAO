@@ -50,85 +50,10 @@ export class MetadataService {
       return null;
     }
     
-    try {
-      // Use require instead of import for CommonJS compatibility
-      let create;
-      try {
-        const ipfsModule = require('ipfs-http-client');
-        create = ipfsModule.create;
-        if (!create) {
-          safeLogger.warn('ipfs-http-client module loaded but create function not found');
-          return null;
-        }
-      } catch (requireError) {
-        safeLogger.error('Failed to require ipfs-http-client:', requireError);
-        safeLogger.warn('IPFS module not available, using fallback storage');
-        return null;
-      }
-      
-      // For Pinata, try different authentication methods
-      if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
-        // Configure for Pinata API with proper authentication (recommended method)
-        safeLogger.info('Configuring IPFS client for Pinata API (recommended method)');
-        try {
-          const client = create({
-            host: IPFS_CONFIG.host,
-            port: IPFS_CONFIG.port,
-            protocol: IPFS_CONFIG.protocol,
-            headers: {
-              'pinata_api_key': IPFS_CONFIG.pinataApiKey,
-              'pinata_secret_api_key': IPFS_CONFIG.pinataSecretApiKey
-            }
-          });
-          
-          safeLogger.info('✅ Pinata API client created successfully');
-          return client;
-        } catch (pinataError) {
-          safeLogger.error('Pinata API client creation failed:', pinataError);
-          safeLogger.warn('Pinata API not available, trying JWT method or fallback storage');
-        }
-      } 
-      
-      // Try Pinata JWT method if API key method failed
-      if (IPFS_CONFIG.pinataJwt) {
-        safeLogger.info('Configuring IPFS client for Pinata JWT method');
-        try {
-          const client = create({
-            host: IPFS_CONFIG.host,
-            port: IPFS_CONFIG.port,
-            protocol: IPFS_CONFIG.protocol,
-            headers: {
-              Authorization: `Bearer ${IPFS_CONFIG.pinataJwt}`
-            }
-          });
-          
-          safeLogger.info('✅ Pinata JWT client created successfully');
-          return client;
-        } catch (jwtError) {
-          safeLogger.error('Pinata JWT client creation failed:', jwtError);
-          safeLogger.warn('Pinata JWT method not available, using fallback storage');
-        }
-      }
-      
-      // Standard IPFS configuration (for local IPFS nodes)
-      try {
-        const client = create({
-          host: IPFS_CONFIG.host,
-          port: IPFS_CONFIG.port,
-          protocol: IPFS_CONFIG.protocol,
-        });
-        safeLogger.info('✅ Standard IPFS client created');
-        return client;
-      } catch (standardError) {
-        safeLogger.warn('Standard IPFS client creation failed:', standardError);
-        safeLogger.warn('Using fallback storage only');
-        return null;
-      }
-    } catch (error) {
-      safeLogger.error('Failed to initialize IPFS client:', error);
-      safeLogger.warn('IPFS not available, using fallback storage');
-      return null;
-    }
+    // Since we use Pinata REST API directly, we don't need ipfs-http-client
+    // The IPFS client will be null and we'll use Pinata API for all operations
+    safeLogger.info('Using Pinata REST API directly for IPFS operations');
+    return null;
   }
 
   /**
@@ -137,36 +62,7 @@ export class MetadataService {
    * @returns The IPFS CID of the uploaded content
    */
   async uploadToIPFS(content: string | Buffer): Promise<string> {
-    const ipfsClient = await this.ipfsClientPromise;
-    
-    // First, try using the IPFS client if available
-    if (ipfsClient) {
-      try {
-        // Try multiple times with exponential backoff
-        const maxRetries = 3;
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            const result = await ipfsClient.add(content);
-            const cid = result.path || result.cid?.toString() || result.IpfsHash;
-            if (cid) {
-              safeLogger.info(`Content uploaded to IPFS on attempt ${attempt}: ${cid}`);
-              return cid;
-            } else {
-              throw new Error('IPFS upload returned no valid CID');
-            }
-          } catch (uploadError) {
-            safeLogger.warn(`IPFS upload attempt ${attempt} failed:`, uploadError);
-            if (attempt === maxRetries) {
-              throw uploadError;
-            }
-            // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-          }
-        }
-      } catch (error) {
-        safeLogger.error('IPFS client upload failed:', error);
-      }
-    }
+    // Since we use Pinata REST API directly, skip IPFS client and go straight to Pinata API
     
     // If IPFS client failed or is not available, try direct Pinata API
     if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
