@@ -1,0 +1,20 @@
+# Ignore playwright packages completely
+playwright*
+@playwright*
+
+# Ignore test configs
+playwright.config.*
+@playwright.config.*
+
+# Ignore test results
+test-results/
+coverage/
+
+# Ignore development files
+.env.local
+.env.development
+
+# Ignore build artifacts
+**/dist/
+**/build/
+**/.next/
