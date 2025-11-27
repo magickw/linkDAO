@@ -876,6 +876,10 @@ class AuthService {
   private clearToken(): void {
     this.token = null;
     if (typeof window !== 'undefined') {
+      // Clear all token storage keys for consistency
+      localStorage.removeItem('linkdao_access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('auth_token');
     }
     // Also clear CSRF service

@@ -367,22 +367,22 @@ export class FeedService {
           [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
             db.select({ count: sql<number>`COUNT(*)` })
               .from(isQuickPost ? quickPostReactions : reactions)
-              .where(eq(isQuickPost ? quickPostReactions.quickPostId : reactions.postId, post.id)),
+              .where(eq((isQuickPost ? quickPostReactions.quickPostId : reactions.postId) as any, post.id)),
             db.select({ count: sql<number>`COUNT(*)` })
               .from(isQuickPost ? quickPostTips : tips)
-              .where(eq(isQuickPost ? quickPostTips.quickPostId : tips.postId, post.id)),
+              .where(eq((isQuickPost ? quickPostTips.quickPostId : tips.postId) as any, post.id)),
             db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
               .from(isQuickPost ? quickPostTips : tips)
-              .where(eq(isQuickPost ? quickPostTips.quickPostId : tips.postId, post.id)),
+              .where(eq((isQuickPost ? quickPostTips.quickPostId : tips.postId) as any, post.id)),
             db.select({ count: sql<number>`COUNT(*)` })
               .from(comments)
               .where(and(
-                eq(isQuickPost ? comments.quickPostId : comments.postId, post.id),
+                eq((isQuickPost ? comments.quickPostId : comments.postId) as any, post.id),
                 sql`(${comments.moderationStatus} IS NULL OR ${comments.moderationStatus} != 'blocked')`
               )),
             db.select({ count: sql<number>`COUNT(*)` })
               .from(isQuickPost ? quickPostViews : views)
-              .where(eq(isQuickPost ? quickPostViews.quickPostId : views.postId, post.id))
+              .where(eq((isQuickPost ? quickPostViews.quickPostId : views.postId) as any, post.id))
           ]);
 
 

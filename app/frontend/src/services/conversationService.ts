@@ -10,6 +10,11 @@ const CONVERSATION_ENDPOINTS = [
   '/api/messaging/conversations'
 ];
 
+// Rate limiting for conversation requests to prevent 503 spam
+let lastConversationRequest = 0;
+const CONVERSATION_REQUEST_COOLDOWN = 30000; // 30 seconds between requests when getting 503s
+let isServiceUnavailable = false;
+
 export interface ConversationResponse {
   success: boolean;
   conversations: any[];
@@ -22,6 +27,12 @@ export interface ConversationResponse {
 
 export class ConversationService {
   static async getConversations(limit: number = 20, offset: number = 0): Promise<ConversationResponse> {
+    // Rate limiting check for service unavailable scenarios
+    const now = Date.now();
+    if (isServiceUnavailable && (now - lastConversationRequest) < CONVERSATION_REQUEST_COOLDOWN) {
+      throw new Error('Messaging service is temporarily unavailable. Please try again later.');
+    }
+
     let lastError: Error | null = null;
     
     for (const endpoint of CONVERSATION_ENDPOINTS) {
@@ -50,6 +61,8 @@ export class ConversationService {
           }
         );
         
+        // Reset service unavailable flag on successful request
+        isServiceUnavailable = false;
         return response;
       } catch (error) {
         console.debug(`Endpoint ${endpoint} failed:`, error);
@@ -64,6 +77,9 @@ export class ConversationService {
       // Check error name first (more reliable), then fallback to message content
       if (lastError.name === 'ServiceUnavailableError' || 
           (lastError.message && lastError.message.includes('503'))) {
+        // Mark service as unavailable and set cooldown
+        isServiceUnavailable = true;
+        lastConversationRequest = now;
         throw new Error('Messaging service is temporarily unavailable. Please check your connection and try again.');
       } else if (lastError.name === 'NetworkError' || 
                  lastError.name === 'TypeError' ||
