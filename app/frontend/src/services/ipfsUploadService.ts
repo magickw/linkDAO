@@ -68,6 +68,11 @@ class IPFSUploadService {
     });
 
     if (!response.ok) {
+      // Handle 413 Payload Too Large specifically
+      if (response.status === 413) {
+        throw new Error(`File "${file.name}" is too large. Maximum file size is ${this.maxFileSize / 1024 / 1024}MB. Your file is ${this.formatFileSize(file.size)}.`);
+      }
+
       let errorMessage = `Upload failed (${response.status})`;
       try {
         const errorData = await response.json();
@@ -199,6 +204,24 @@ class IPFSUploadService {
     if (!this.allowedDocumentTypes.includes(file.type)) {
       throw new Error(`Document type ${file.type} not allowed. Supported types: PDF, DOC, DOCX, images`);
     }
+  }
+
+  /**
+   * Format file size in human-readable format
+   */
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Get maximum file size in bytes
+   */
+  getMaxFileSize(): number {
+    return this.maxFileSize;
   }
 }
 

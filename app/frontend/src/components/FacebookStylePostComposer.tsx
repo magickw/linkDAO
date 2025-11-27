@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ipfsUploadService } from '@/services/ipfsUploadService';
 import { CreatePostInput } from '@/models/Post';
-import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X } from 'lucide-react';
+import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X, AlertCircle } from 'lucide-react';
 
 interface FacebookStylePostComposerProps {
   onSubmit: (postData: CreatePostInput) => Promise<void>;
@@ -34,9 +34,13 @@ const FacebookStylePostComposer = React.memo(({
   const [showFeelingInput, setShowFeelingInput] = useState(false);
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const [uploadError, setUploadError] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  // Get max file size from service
+  const maxFileSize = useMemo(() => ipfsUploadService.getMaxFileSize(), []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -85,6 +89,9 @@ const FacebookStylePostComposer = React.memo(({
     if (!content.trim()) return;
 
     try {
+      // Clear any previous errors
+      setUploadError('');
+
       // Extract hashtags from content
       const tagArray = extractHashtags(content);
 
@@ -98,7 +105,6 @@ const FacebookStylePostComposer = React.memo(({
       let mediaCids: string[] = [];
       if (selectedFiles.length > 0) {
         try {
-          // Show loading state or toast here if needed
           const uploadPromises = selectedFiles.map(async (file) => {
             const result = await ipfsUploadService.uploadFile(file);
             return result.cid;
@@ -106,8 +112,10 @@ const FacebookStylePostComposer = React.memo(({
           mediaCids = await Promise.all(uploadPromises);
         } catch (uploadError) {
           console.error('Error uploading files:', uploadError);
-          // You might want to show an error toast here
-          return;
+          // Show error in UI
+          const errorMessage = uploadError instanceof Error ? uploadError.message : 'Failed to upload files. Please try again.';
+          setUploadError(errorMessage);
+          return; // Don't proceed with post creation
         }
       }
 
@@ -120,7 +128,7 @@ const FacebookStylePostComposer = React.memo(({
 
       await onSubmit(postData);
 
-      // Reset form
+      // Reset form only after successful submission
       setContent('');
       setFeeling('');
       setLocation('');
@@ -131,14 +139,34 @@ const FacebookStylePostComposer = React.memo(({
       setShowFeelingInput(false);
       setShowLocationInput(false);
       setShowLinkInput(false);
+      setUploadError('');
     } catch (error) {
       console.error('Error submitting post:', error);
+      // Show error in UI
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create post. Please try again.';
+      setUploadError(errorMessage);
     }
-  }, [content, feeling, location, linkUrl, selectedFiles, onSubmit, extractHashtags]);
+  }, [content, feeling, location, linkUrl, selectedFiles, onSubmit, extractHashtags, userName]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+
+    // Validate file sizes
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => f.name).join(', ');
+      const maxSizeMB = maxFileSize / 1024 / 1024;
+      setUploadError(`The following files exceed the ${maxSizeMB}MB limit: ${fileNames}`);
+      // Reset the input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Clear any previous errors
+    setUploadError('');
 
     setSelectedFiles(prev => [...prev, ...files]);
 
@@ -152,11 +180,27 @@ const FacebookStylePostComposer = React.memo(({
       };
       reader.readAsDataURL(file);
     });
-  }, []);
+  }, [maxFileSize]);
 
   const handleVideoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+
+    // Validate file sizes
+    const oversizedFiles = files.filter(file => file.size > maxFileSize);
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => f.name).join(', ');
+      const maxSizeMB = maxFileSize / 1024 / 1024;
+      setUploadError(`The following videos exceed the ${maxSizeMB}MB limit: ${fileNames}`);
+      // Reset the input
+      if (videoInputRef.current) {
+        videoInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Clear any previous errors
+    setUploadError('');
 
     setSelectedFiles(prev => [...prev, ...files]);
 
@@ -170,11 +214,13 @@ const FacebookStylePostComposer = React.memo(({
       };
       reader.readAsDataURL(file);
     });
-  }, []);
+  }, [maxFileSize]);
 
   const removeFile = useCallback((index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
+    // Clear error when files are removed
+    setUploadError('');
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -188,6 +234,7 @@ const FacebookStylePostComposer = React.memo(({
     setShowFeelingInput(false);
     setShowLocationInput(false);
     setShowLinkInput(false);
+    setUploadError('');
   }, []);
 
   // Memoized hashtag preview
@@ -217,9 +264,12 @@ const FacebookStylePostComposer = React.memo(({
         {previews.map((preview, index) => {
           const file = selectedFiles[index];
           const isVideo = file?.type.startsWith('video/');
+          const fileSize = file ? ipfsUploadService.formatFileSize(file.size) : '';
+          const fileSizePercent = file ? (file.size / maxFileSize) * 100 : 0;
+          const sizeColor = fileSizePercent > 90 ? 'text-red-500' : fileSizePercent > 70 ? 'text-yellow-500' : 'text-green-500';
 
           return (
-            <div key={index} className="relative">
+            <div key={index} className="relative group">
               {isVideo ? (
                 <video
                   src={preview}
@@ -233,10 +283,15 @@ const FacebookStylePostComposer = React.memo(({
                   className="w-full h-32 object-cover rounded-lg"
                 />
               )}
+              {/* File info overlay */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2 rounded-b-lg">
+                <div className="text-white text-xs truncate">{file?.name}</div>
+                <div className={`text-xs font-medium ${sizeColor}`}>{fileSize}</div>
+              </div>
               <button
                 type="button"
                 onClick={() => removeFile(index)}
-                className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70"
+                className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -284,6 +339,24 @@ const FacebookStylePostComposer = React.memo(({
 
               {/* Hashtag preview */}
               {hashtagPreview}
+
+              {/* Upload error display */}
+              {uploadError && (
+                <div className="mt-3 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">Upload Error</p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">{uploadError}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUploadError('')}
+                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
 
               {/* File previews */}
               {filePreviews}
