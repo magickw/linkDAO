@@ -51,10 +51,19 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [moderatorProfiles, setModeratorProfiles] = useState<Record<string, { handle?: string }>>({});
 
-  // Use membership data from backend if available, otherwise fallback to moderators check
-  const memberRole = communityData?.memberRole || ((communityData?.moderators || []).includes(address || '') ? 'admin' : 'member');
-  const canEditCommunity = isConnected && address && memberRole === 'admin';
-  const isCommunityCreator = isConnected && address && communityData?.creatorAddress?.toLowerCase() === address.toLowerCase();
+  // Determine member role - creators are always admins
+  const isCreatorCheck = isConnected && address && communityData?.creatorAddress?.toLowerCase() === address.toLowerCase();
+  const isModeratorCheck = isConnected && address && (communityData?.moderators || []).some(
+    mod => mod.toLowerCase() === address.toLowerCase()
+  );
+
+  // Priority: creator > backend memberRole > moderator check > default member
+  const memberRole = isCreatorCheck
+    ? 'admin'
+    : communityData?.memberRole || (isModeratorCheck ? 'admin' : 'member');
+
+  const canEditCommunity = isConnected && address && (isCreatorCheck || memberRole === 'admin');
+  const isCommunityCreator = isCreatorCheck;
 
   useEffect(() => {
     const fetchCommunityData = async () => {

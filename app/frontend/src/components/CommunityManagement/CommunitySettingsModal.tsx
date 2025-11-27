@@ -3,6 +3,7 @@ import { Community, UpdateCommunityInput, PostType } from '@/models/Community';
 import { CommunityService } from '@/services/communityService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import { unifiedImageService } from '@/services/unifiedImageService';
 
 interface CommunitySettingsModalProps {
   isOpen: boolean;
@@ -12,23 +13,25 @@ interface CommunitySettingsModalProps {
 }
 
 const CATEGORIES = [
-  'Technology', 'Gaming', 'Art', 'Music', 'Sports', 'Education', 
+  'Technology', 'Gaming', 'Art', 'Music', 'Sports', 'Education',
   'Business', 'Science', 'Politics', 'Entertainment', 'Lifestyle', 'Other'
 ];
 
-export default function CommunitySettingsModal({ 
-  isOpen, 
-  onClose, 
-  community, 
-  onUpdate 
+export default function CommunitySettingsModal({
+  isOpen,
+  onClose,
+  community,
+  onUpdate
 }: CommunitySettingsModalProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  
+
   const [formData, setFormData] = useState<UpdateCommunityInput>({});
   const [currentTag, setCurrentTag] = useState('');
   const [currentRule, setCurrentRule] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'rules' | 'permissions' | 'moderation'>('general');
 
   // Initialize form data when community changes
@@ -53,8 +56,10 @@ export default function CommunitySettingsModal({
     }
   }, [community]);
 
-  // Check if user is moderator or admin
-  const canModerate = isConnected && address && community.moderators.includes(address);
+  // Check if user is moderator or admin (case-insensitive)
+  const canModerate = isConnected && address && community.moderators.some(
+    mod => mod.toLowerCase() === address.toLowerCase()
+  );
 
   const handleInputChange = (field: keyof UpdateCommunityInput, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -94,10 +99,44 @@ export default function CommunitySettingsModal({
   };
 
   const togglePostType = (postTypeId: string) => {
-    const updatedPostTypes = formData.settings?.allowedPostTypes?.map(pt => 
+    const updatedPostTypes = formData.settings?.allowedPostTypes?.map(pt =>
       pt.id === postTypeId ? { ...pt, enabled: !pt.enabled } : pt
     ) || [];
     handleSettingsChange('allowedPostTypes', updatedPostTypes);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingAvatar(true);
+      const result = await unifiedImageService.uploadImage(file, 'profile');
+      handleInputChange('avatar', result.cdnUrl);
+      addToast('Avatar uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      addToast(error instanceof Error ? error.message : 'Failed to upload avatar', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingBanner(true);
+      const result = await unifiedImageService.uploadImage(file, 'cover');
+      handleInputChange('banner', result.cdnUrl);
+      addToast('Banner uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      addToast(error instanceof Error ? error.message : 'Failed to upload banner', 'error');
+    } finally {
+      setUploadingBanner(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -181,11 +220,10 @@ export default function CommunitySettingsModal({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
+                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors ${activeTab === tab.id
+                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                 >
                   <span>{tab.icon}</span>
                   <span className="text-sm font-medium">{tab.label}</span>
@@ -202,7 +240,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Basic Information
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -313,6 +351,104 @@ export default function CommunitySettingsModal({
                         Public community (anyone can join)
                       </label>
                     </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Community Avatar
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        {formData.avatar && (
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-3xl">
+                              {formData.avatar.startsWith('http') ? (
+                                <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{formData.avatar}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex space-x-2">
+                            <label className="cursor-pointer px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 inline-flex items-center">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleAvatarUpload}
+                                disabled={uploadingAvatar}
+                                className="hidden"
+                              />
+                              {uploadingAvatar ? (
+                                <>
+                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Uploading...
+                                </>
+                              ) : (
+                                'Upload Image'
+                              )}
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.avatar || ''}
+                              onChange={(e) => handleInputChange('avatar', e.target.value)}
+                              placeholder="Or paste emoji/URL"
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            />
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Upload an image or use an emoji
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Community Banner
+                      </label>
+                      <div className="space-y-3">
+                        {formData.banner && (
+                          <div className="w-full h-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            <img src={formData.banner} alt="Banner" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <div className="flex space-x-2">
+                          <label className="cursor-pointer px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 inline-flex items-center">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleBannerUpload}
+                              disabled={uploadingBanner}
+                              className="hidden"
+                            />
+                            {uploadingBanner ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Uploading...
+                              </>
+                            ) : (
+                              'Upload Banner'
+                            )}
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.banner || ''}
+                            onChange={(e) => handleInputChange('banner', e.target.value)}
+                            placeholder="Or paste image URL"
+                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Recommended size: 1200x400px
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -320,7 +456,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Web3 Settings
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -358,7 +494,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Community Rules
                   </h3>
-                  
+
                   <div className="space-y-2 mb-4">
                     {formData.rules?.map((rule, index) => (
                       <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
@@ -380,7 +516,7 @@ export default function CommunitySettingsModal({
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="flex space-x-2">
                     <input
                       type="text"
@@ -408,7 +544,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Post Permissions
                   </h3>
-                  
+
                   <div className="space-y-3">
                     {formData.settings?.allowedPostTypes?.map((postType) => (
                       <div key={postType.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
@@ -419,14 +555,12 @@ export default function CommunitySettingsModal({
                         <button
                           type="button"
                           onClick={() => togglePostType(postType.id)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            postType.enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
-                          }`}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${postType.enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
+                            }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              postType.enabled ? 'translate-x-6' : 'translate-x-1'
-                            }`}
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${postType.enabled ? 'translate-x-6' : 'translate-x-1'
+                              }`}
                           />
                         </button>
                       </div>
@@ -438,7 +572,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Posting Requirements
                   </h3>
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -448,14 +582,12 @@ export default function CommunitySettingsModal({
                       <button
                         type="button"
                         onClick={() => handleSettingsChange('requireApproval', !formData.settings?.requireApproval)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          formData.settings?.requireApproval ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
-                        }`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.settings?.requireApproval ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
+                          }`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            formData.settings?.requireApproval ? 'translate-x-6' : 'translate-x-1'
-                          }`}
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.settings?.requireApproval ? 'translate-x-6' : 'translate-x-1'
+                            }`}
                         />
                       </button>
                     </div>
@@ -486,7 +618,7 @@ export default function CommunitySettingsModal({
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
                     Moderation Tools
                   </h3>
-                  
+
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
                     <div className="flex">
                       <div className="flex-shrink-0">
@@ -534,7 +666,7 @@ export default function CommunitySettingsModal({
           >
             Cancel
           </button>
-          
+
           <button
             onClick={handleSubmit}
             disabled={loading}

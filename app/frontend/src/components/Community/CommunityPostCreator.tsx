@@ -1,17 +1,18 @@
 import React, { useState, useRef } from 'react';
-import { 
-  PlusCircle, 
-  Image, 
-  Link, 
-  Hash, 
-  Send, 
-  X, 
+import {
+  PlusCircle,
+  Image,
+  Link,
+  Hash,
+  Send,
+  X,
   AlertCircle,
   FileText,
   MessageSquare,
   HelpCircle,
   Megaphone
 } from 'lucide-react';
+import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 import { useCommunityInteractions } from '../../hooks/useCommunityInteractions';
 
 interface CommunityPostCreatorProps {
@@ -40,7 +41,7 @@ export default function CommunityPostCreator({
   onCancel
 }: CommunityPostCreatorProps) {
   const { createPost, loading, error, clearError } = useCommunityInteractions();
-  
+
   const [postType, setPostType] = useState(allowedPostTypes.find(t => t.enabled)?.id || 'discussion');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -48,7 +49,7 @@ export default function CommunityPostCreator({
   const [tagInput, setTagInput] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaInput, setMediaInput] = useState('');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getPostTypeIcon = (type: string) => {
@@ -90,7 +91,7 @@ export default function CommunityPostCreator({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim() || !content.trim()) {
       return;
     }
@@ -182,11 +183,10 @@ export default function CommunityPostCreator({
                   key={type.id}
                   type="button"
                   onClick={() => setPostType(type.id)}
-                  className={`p-3 rounded-lg border-2 transition-colors ${
-                    postType === type.id
+                  className={`p-3 rounded-lg border-2 transition-colors ${postType === type.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center space-x-2">
                     {getPostTypeIcon(type.id)}
@@ -221,13 +221,11 @@ export default function CommunityPostCreator({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Content *
           </label>
-          <textarea
+          <RichTextEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
             placeholder="Share your thoughts, ask questions, or start a discussion..."
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-vertical"
-            required
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-y min-h-[200px]"
           />
         </div>
 
