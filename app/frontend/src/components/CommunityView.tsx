@@ -54,7 +54,7 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
   // Use membership data from backend if available, otherwise fallback to moderators check
   const memberRole = communityData?.memberRole || ((communityData?.moderators || []).includes(address || '') ? 'admin' : 'member');
   const canEditCommunity = isConnected && address && memberRole === 'admin';
-  const isCommunityCreator = isConnected && address && communityData?.creatorAddress === address;
+  const isCommunityCreator = isConnected && address && communityData?.creatorAddress?.toLowerCase() === address.toLowerCase();
 
   useEffect(() => {
     const fetchCommunityData = async () => {
@@ -100,8 +100,10 @@ export default function CommunityView({ communitySlug, highlightedPostId, classN
         setCommunityData(processedCommunityData);
 
         // Set joined status - creators are always members
-        const isCreator = processedCommunityData.creatorAddress === address;
-        const isMod = (processedCommunityData.moderators || []).includes(address || '');
+        const isCreator = processedCommunityData.creatorAddress?.toLowerCase() === address?.toLowerCase();
+        const isMod = (processedCommunityData.moderators || []).some(
+          mod => mod.toLowerCase() === address?.toLowerCase()
+        );
 
         // If user is creator or moderator, they are automatically joined
         if (isCreator || isMod) {
