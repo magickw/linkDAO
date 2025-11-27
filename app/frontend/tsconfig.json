@@ -65,6 +65,8 @@
     ".storybook/**/*",
     "**/node_modules/@types/react-native/**/*",
     "**/node_modules/playwright*/**/*",
-    "**/node_modules/@playwright/**/*"
+    "**/node_modules/@playwright/**/*",
+    "**/node_modules/@coinbase/**/*",
+    "**/node_modules/@farcaster/**/*"
   ]
 }
