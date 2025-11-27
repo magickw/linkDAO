@@ -56,34 +56,45 @@ export class MessagingService {
   // MEMORY OPTIMIZATION: Add cache and cleanup tracking
   private lastCleanup: number = Date.now();
   private activeConnections: Map<string, number> = new Map();
-  
+
   // Helper method to validate Ethereum addresses and prevent SQL injection
   private validateAddress(address: string): void {
     if (!/^0x[a-fA-F0-9]{40}$/i.test(address)) {
       throw new Error('Invalid Ethereum address format');
     }
   }
-  
+
   // MEMORY OPTIMIZATION: Periodic cleanup method
   private async performCleanup(): Promise<void> {
     const now = Date.now();
     if (now - this.lastCleanup < CLEANUP_INTERVAL) {
       return;
     }
-    
+
     try {
       // Clean up expired read status records (older than 30 days)
       const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-      await db.delete(messageReadStatus)
-        .where(lt(messageReadStatus.readAt, thirtyDaysAgo));
-      
+
+      try {
+        await db.delete(messageReadStatus)
+          .where(lt(messageReadStatus.readAt, thirtyDaysAgo));
+      } catch (tableError: any) {
+        // Handle case where message_read_status table doesn't exist
+        if (tableError.code === '42P01') {
+          safeLogger.warn('message_read_status table does not exist, skipping cleanup');
+        } else {
+          throw tableError;
+        }
+      }
+
       // Clean up active connections tracking
       this.activeConnections.clear();
-      
+
       this.lastCleanup = now;
       safeLogger.info('Messaging service cleanup completed');
     } catch (error) {
       safeLogger.error('Error during messaging service cleanup:', error);
+      // Don't throw - allow service to continue even if cleanup fails
     }
   }
   // Get user's conversations
@@ -93,22 +104,23 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
-      
+
       // MEMORY OPTIMIZATION: Perform cleanup periodically
       await this.performCleanup();
-      
+
       // MEMORY OPTIMIZATION: Check cache first
       const cacheKey = `conversations:${userAddress}:${page}:${limit}:${options.search || ''}`;
       const cached = await cacheService.get(cacheKey);
       if (cached) {
         return cached;
       }
-      
+
       // MEMORY OPTIMIZATION: Enforce limit and use transaction
       const actualLimit = Math.min(limit, MAX_CONVERSATIONS_PER_USER);
-      
+
       const userConversations = await db.transaction(async (tx) => {
-        const conversations = await tx
+        // Rename local variable to avoid shadowing the imported 'conversations' table
+        const userConversationsList = await tx
           .select({
             id: conversations.id,
             title: conversations.title,
@@ -135,8 +147,8 @@ export class MessagingService {
           .orderBy(desc(conversations.lastActivity))
           .limit(actualLimit)
           .offset(offset);
-        
-        return conversations;
+
+        return userConversationsList;
       });
 
       const result = {
@@ -147,10 +159,10 @@ export class MessagingService {
           total: userConversations.length
         }
       };
-      
+
       // MEMORY OPTIMIZATION: Cache the result
       await cacheService.set(cacheKey, result, DEFAULT_CACHE_TTL);
-      
+
       return result;
     } catch (error) {
       safeLogger.error('Error getting conversations:', error);
@@ -277,10 +289,10 @@ export class MessagingService {
 
     try {
       this.validateAddress(userAddress);
-      
+
       // MEMORY OPTIMIZATION: Track active connections
       this.activeConnections.set(userAddress, (this.activeConnections.get(userAddress) || 0) + 1);
-      
+
       // Validate UUID format for before/after parameters
       if (before && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
         throw new Error('Invalid before parameter format');
@@ -288,14 +300,14 @@ export class MessagingService {
       if (after && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
         throw new Error('Invalid after parameter format');
       }
-      
+
       // MEMORY OPTIMIZATION: Check cache first
       const cacheKey = `messages:${conversationId}:${userAddress}:${page}:${limit}:${before || ''}:${after || ''}`;
       const cached = await cacheService.get(cacheKey);
       if (cached) {
         return cached;
       }
-      
+
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
@@ -306,10 +318,10 @@ export class MessagingService {
       }
 
       const offset = (page - 1) * limit;
-      
+
       // MEMORY OPTIMIZATION: Enforce maximum limit
       const actualLimit = Math.min(limit, MAX_MESSAGES_PER_QUERY);
-      
+
       let whereConditions = [eq(chatMessages.conversationId, conversationId)];
 
       // Add pagination filters
@@ -336,7 +348,7 @@ export class MessagingService {
           .orderBy(desc(chatMessages.sentAt))
           .limit(actualLimit)
           .offset(offset);
-        
+
         return messages;
       });
 
@@ -351,10 +363,10 @@ export class MessagingService {
           }
         }
       };
-      
+
       // MEMORY OPTIMIZATION: Cache the result with shorter TTL for messages
       await cacheService.set(cacheKey, result, DEFAULT_CACHE_TTL / 2);
-      
+
       return result;
     } catch (error) {
       safeLogger.error('Error getting conversation messages:', error);
@@ -396,10 +408,10 @@ export class MessagingService {
       const sanitizedMessage = encryptedContent
         ? { content: encryptedContent, messageType: data.contentType, attachments: data.attachments }
         : sanitizeMessage({
-            content,
-            messageType: data.contentType,
-            attachments: data.attachments
-          });
+          content,
+          messageType: data.contentType,
+          attachments: data.attachments
+        });
 
       const messageContent = sanitizedMessage.content;
 
@@ -577,7 +589,7 @@ export class MessagingService {
       const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
       if (!archivedBy.includes(userAddress)) {
         archivedBy.push(userAddress);
-        
+
         await db
           .update(conversations)
           .set({ archivedBy: JSON.stringify(archivedBy) })
@@ -613,7 +625,7 @@ export class MessagingService {
       // Get current archived users and remove this user
       const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
       const updatedArchivedBy = archivedBy.filter((addr: string) => addr !== userAddress);
-      
+
       await db
         .update(conversations)
         .set({ archivedBy: JSON.stringify(updatedArchivedBy) })

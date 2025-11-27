@@ -133,10 +133,34 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
       /(\/etc\/passwd|\/etc\/shadow)/i,
     ];
 
+    // Filter out safe fields that shouldn't be validated (IPFS CIDs, IDs, etc.)
+    const safeFields = ['media', 'mediaCids', 'ipfsHash', 'cid', 'id', 'userId', 'authorId', 'communityId', 'parentId', 'replyToId'];
+
+    // Create a filtered copy of request data excluding safe fields
+    const filterSafeFields = (obj: any): any => {
+      if (typeof obj !== 'object' || obj === null) {
+        return obj;
+      }
+
+      if (Array.isArray(obj)) {
+        return obj.map(filterSafeFields);
+      }
+
+      const filtered: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Skip safe fields that contain IPFS CIDs or IDs
+        if (safeFields.includes(key)) {
+          continue;
+        }
+        filtered[key] = filterSafeFields(value);
+      }
+      return filtered;
+    };
+
     const requestData = JSON.stringify({
-      body: req.body,
-      query: req.query,
-      params: req.params,
+      body: filterSafeFields(req.body),
+      query: filterSafeFields(req.query),
+      params: filterSafeFields(req.params),
     });
 
     for (const pattern of suspiciousPatterns) {
@@ -153,9 +177,30 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
       }
     }
 
-    // Sanitize input data
-    req.body = sanitizeObject(req.body);
-    req.query = sanitizeObject(req.query);
+    // Sanitize input data (but preserve IPFS CIDs and IDs)
+    const sanitizeWithExclusions = (obj: any): any => {
+      if (typeof obj !== 'object' || obj === null) {
+        return sanitizeString(obj);
+      }
+
+      if (Array.isArray(obj)) {
+        return obj.map(sanitizeWithExclusions);
+      }
+
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Don't sanitize safe fields
+        if (safeFields.includes(key)) {
+          sanitized[key] = value;
+        } else {
+          sanitized[sanitizeString(key)] = sanitizeWithExclusions(value);
+        }
+      }
+      return sanitized;
+    };
+
+    req.body = sanitizeWithExclusions(req.body);
+    req.query = sanitizeWithExclusions(req.query);
 
     next();
   } catch (error) {
@@ -200,10 +245,10 @@ export const threatDetection = async (req: SecurityRequest, res: Response, next:
 
   // Update security context
   req.securityContext.riskScore = riskScore;
-  req.securityContext.threatLevel = 
+  req.securityContext.threatLevel =
     riskScore >= 70 ? 'critical' :
-    riskScore >= 50 ? 'high' :
-    riskScore >= 30 ? 'medium' : 'low';
+      riskScore >= 50 ? 'high' :
+        riskScore >= 30 ? 'medium' : 'low';
 
   // Block high-risk requests
   if (req.securityContext.threatLevel === 'critical') {
@@ -228,9 +273,9 @@ export const securityAuditLogging = async (req: SecurityRequest, res: Response, 
 
   // Override res.end to log response
   const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: any) {
+  res.end = function (chunk?: any, encoding?: any) {
     const responseTime = Date.now() - startTime;
-    
+
     // Log slow requests (potential DoS)
     if (responseTime > 5000) { // 5 seconds
       safeLogger.info(`Slow request: ${req.method} ${req.path} took ${responseTime}ms`);
@@ -253,7 +298,7 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
 
   // @ts-ignore
   const files = req.files ? (Array.isArray(req.files) ? req.files : Object.values(req.files).flat()) : [req.file];
-  
+
   for (const file of files) {
     if (!file) continue;
 
@@ -282,7 +327,7 @@ export const fileUploadSecurity = (req: Request, res: Response, next: NextFuncti
     const suspiciousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.php', '.jsp', '.asp'];
     // @ts-ignore
     const fileName = file.originalname || '';
-    
+
     if (suspiciousExtensions.some(ext => fileName.toLowerCase().endsWith(ext))) {
       return res.status(400).json({
         error: 'Malicious File',
