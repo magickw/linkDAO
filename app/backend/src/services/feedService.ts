@@ -1115,9 +1115,21 @@ export class FeedService {
       };
 
       if (isIntegerId) {
+        // Verify post exists
+        const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
+        if (post.length === 0) {
+          throw new Error('Post not found');
+        }
         commentValues.postId = parseInt(postId);
+        commentValues.quickPostId = null;
       } else {
+        // Verify quick post exists
+        const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
+        if (quickPost.length === 0) {
+          throw new Error('Post not found');
+        }
         commentValues.quickPostId = postId;
+        commentValues.postId = null;
       }
 
       const comment = await db
@@ -1136,9 +1148,9 @@ export class FeedService {
         displayName: user[0].displayName,
         avatarCid: user[0].avatarCid
       };
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error adding comment:', error);
-      throw new Error('Failed to add comment');
+      throw new Error(`Failed to add comment: ${error.message}`);
     }
   }
 

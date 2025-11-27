@@ -208,7 +208,8 @@ export class FeedController {
       });
 
       if (!deleted) {
-        res.status(404).json(apiResponse.error('Post not found or unauthorized', 404));
+        // Idempotent delete: if it's already gone, consider it a success
+        res.json(apiResponse.success(null, 'Post already deleted'));
         return;
       }
 

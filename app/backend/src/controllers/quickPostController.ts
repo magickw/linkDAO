@@ -136,7 +136,8 @@ export class QuickPostController {
       const deleted = await this.quickPostService.deleteQuickPost(id, userId);
 
       if (!deleted) {
-        return res.status(404).json(apiResponse.error('Quick post not found', 404));
+        // Idempotent delete: if it's already gone, consider it a success
+        return res.json(apiResponse.success(null, 'Quick post already deleted'));
       }
 
       return res.json(apiResponse.success(null, 'Quick post deleted successfully'));
