@@ -230,24 +230,50 @@ const CommunitiesPage: React.FC = () => {
         if (!isMounted.current) return;
         setCommunities(communitiesData);
 
+
         // Load user's community memberships if wallet is connected
         if (address && isConnected) {
-          const userMemberships = await CommunityService.getUserCommunityMemberships();
+          try {
+            // Fetch both memberships and created communities (same approach as /create-post page)
+            const [memberCommunitiesResponse, createdCommunitiesResponse] = await Promise.all([
+              CommunityService.getMyCommunities(1, 100).catch(() => ({ communities: [], pagination: null })),
+              CommunityService.getMyCreatedCommunities(1, 100).catch(() => ({ communities: [], pagination: null }))
+            ]);
 
-          if (!isMounted.current) return;
-          setJoinedCommunities(userMemberships);
+            if (!isMounted.current) return;
 
-          // Set admin roles for communities where user is admin
-          const adminRoles: Record<string, string> = {};
-          communitiesData.forEach(community => {
-            // Check if user is an admin/moderator of this community (based on moderators field)
-            if (community.moderators && Array.isArray(community.moderators) &&
-              address && community.moderators.includes(address)) {
-              adminRoles[community.id] = 'admin';
-            }
-          });
-          if (!isMounted.current) return;
-          setUserAdminRoles(adminRoles);
+            // Merge and deduplicate community IDs
+            const allUserCommunityIds = new Set<string>();
+            [...memberCommunitiesResponse.communities, ...createdCommunitiesResponse.communities].forEach(c => {
+              if (c && c.id) {
+                allUserCommunityIds.add(c.id);
+              }
+            });
+
+            setJoinedCommunities(Array.from(allUserCommunityIds));
+
+            // Set admin roles for communities where user is admin (case-insensitive)
+            const adminRoles: Record<string, string> = {};
+            communitiesData.forEach(community => {
+              // Check if user is an admin/moderator of this community (based on moderators field)
+              if (community.moderators && Array.isArray(community.moderators) &&
+                address && community.moderators.some(mod => mod.toLowerCase() === address.toLowerCase())) {
+                adminRoles[community.id] = 'admin';
+              }
+              // Also check if user is the creator (case-insensitive)
+              if (community.creatorAddress && address &&
+                community.creatorAddress.toLowerCase() === address.toLowerCase()) {
+                adminRoles[community.id] = 'admin';
+              }
+            });
+            if (!isMounted.current) return;
+            setUserAdminRoles(adminRoles);
+          } catch (error) {
+            console.error('Error loading user communities:', error);
+            // Continue with empty arrays on error
+            setJoinedCommunities([]);
+            setUserAdminRoles({});
+          }
         }
 
         // Load enhanced Web3 data
@@ -1016,11 +1042,11 @@ const CommunitiesPage: React.FC = () => {
                   <div className="p-2">
                     {filteredPosts.slice(0, 4).map((post, index) => {
                       if (!post || typeof post !== 'object') return null;
-                      
+
                       const community = communityList.find(c => c.id === post.communityId);
-                      
+
                       return (
-                        <div 
+                        <div
                           key={post.id || `trending-${index}`}
                           onClick={(e) => {
                             e.stopPropagation();

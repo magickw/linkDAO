@@ -232,4 +232,5 @@ router.post('/comments/:commentId/vote', async (req: Request, res: Response) => 
   }
 });
 
+export default router;
 export { router as commentRoutes };

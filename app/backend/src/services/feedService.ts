@@ -1096,15 +1096,19 @@ export class FeedService {
     const { postId, userAddress, content, parentCommentId } = data;
 
     try {
+      safeLogger.info('Adding comment:', { postId, userAddress, contentLength: content?.length });
+
       // Get user ID - use case-insensitive matching
       const normalizedAddress = userAddress.toLowerCase();
       const user = await db.select().from(users).where(sql`LOWER(${users.walletAddress}) = LOWER(${normalizedAddress})`).limit(1);
       if (user.length === 0) {
+        safeLogger.error('User not found for address:', normalizedAddress);
         throw new Error('User not found');
       }
 
       // Check if postId is an integer (regular post) or UUID (quick post)
       const isIntegerId = /^\d+$/.test(postId);
+      safeLogger.info('Post ID type check:', { postId, isIntegerId });
 
       const commentValues: any = {
         authorId: user[0].id,
@@ -1118,6 +1122,7 @@ export class FeedService {
         // Verify post exists
         const post = await db.select().from(posts).where(eq(posts.id, parseInt(postId))).limit(1);
         if (post.length === 0) {
+          safeLogger.error('Post not found for ID:', postId);
           throw new Error('Post not found');
         }
         commentValues.postId = parseInt(postId);
@@ -1126,16 +1131,20 @@ export class FeedService {
         // Verify quick post exists
         const quickPost = await db.select().from(quickPosts).where(eq(quickPosts.id, postId)).limit(1);
         if (quickPost.length === 0) {
+          safeLogger.error('Quick post not found for ID:', postId);
           throw new Error('Post not found');
         }
         commentValues.quickPostId = postId;
         commentValues.postId = null;
       }
 
+      safeLogger.info('Inserting comment with values:', commentValues);
       const comment = await db
         .insert(comments)
         .values(commentValues)
         .returning();
+
+      safeLogger.info('Comment inserted successfully:', comment[0]?.id);
 
       // Update post engagement score
       await this.updateEngagementScore(postId);
