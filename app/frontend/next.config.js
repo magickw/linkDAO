@@ -1,8 +1,19 @@
 /** @type {import('next').NextConfig} */
+const webpack = require('webpack');
+
 const nextConfig = {
   reactStrictMode: true,
 
   outputFileTracingRoot: require("path").join(__dirname),
+
+  // Exclude playwright from output file tracing
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/playwright-core/**/*',
+      'node_modules/playwright/**/*',
+      'node_modules/@playwright/**/*',
+    ],
+  },
 
   eslint: { ignoreDuringBuilds: true },
 
@@ -27,6 +38,13 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
+    // Use IgnorePlugin to completely ignore playwright modules
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^playwright(-core)?$|^@playwright\/test$/,
+      })
+    );
+
     // Exclude playwright from the build
     config.externals = config.externals || [];
     if (isServer) {
