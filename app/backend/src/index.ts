@@ -692,7 +692,7 @@ app.use('/api/conversations', messagingRoutes);
 
 // Use the compatibility chat routes instead for better frontend compatibility
 import compatChatRoutes from './routes/compatibilityChat';
-app.use(compatChatRoutes);
+app.use('/api', compatChatRoutes);
 
 // Import user profile API routes
 import userProfileRoutes from './routes/userProfileRoutes';

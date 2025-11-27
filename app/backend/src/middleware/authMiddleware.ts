@@ -35,7 +35,28 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+    let decoded: any;
+    
+    // Support development tokens
+    if (process.env.NODE_ENV === 'development' && token.startsWith('dev_session_')) {
+      // Parse development session token: dev_session_<walletAddress>_<timestamp>
+      const parts = token.split('_');
+      if (parts.length >= 4) {
+        const walletAddress = parts[2]; // walletAddress is parts[2]
+        decoded = {
+          walletAddress: walletAddress,
+          address: walletAddress,
+          userId: `user_${walletAddress}`,
+          id: `user_${walletAddress}`,
+          timestamp: parseInt(parts[3]) || Date.now()
+        };
+      } else {
+        throw new Error('Invalid development token format');
+      }
+    } else {
+      // Verify JWT token for production
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+    }
 
     // Get user role and other details from database
     let userRole = 'user';
