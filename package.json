@@ -15,6 +15,11 @@
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
+  "overrides": {
+    "playwright": "npm:@empty@1.0.0",
+    "playwright-core": "npm:@empty@1.0.0",
+    "@playwright/test": "npm:@empty@1.0.0"
+  },
   "dependencies": {
     "axios": "^1.13.2",
     "chart.js": "^4.5.0",
@@ -30,5 +35,10 @@
     "react-dom": "^19.1.1",
     "uuid": "^10.0.0",
     "ws": "^8.18.3"
+  },
+  "overrides": {
+    "playwright": "npm:@empty@1.0.0",
+    "playwright-core": "npm:@empty@1.0.0",
+    "@playwright/test": "npm:@empty@1.0.0"
   }
 }
