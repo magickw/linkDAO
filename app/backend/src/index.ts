@@ -453,6 +453,7 @@ import followRoutes from './routes/followRoutes';
 import blockRoutes from './routes/blockRoutes';
 import messagingRoutes from './routes/messagingRoutes';
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+import enhancedFiatPaymentRoutes from './routes/enhancedFiatPaymentRoutes';
 import mobileRoutes from './routes/mobileRoutes';
 import securityRoutes from './routes/securityRoutes';
 import searchRoutes from './routes/searchRoutes';
@@ -485,6 +486,8 @@ app.use('/api/health', healthRoutes);
 app.use('/api/docs', apiDocsRoutes);
 // Onboarding routes for user preferences
 app.use('/api/onboarding', onboardingRoutes);
+// Enhanced fiat payment routes
+app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
 
 // Add root-level health endpoint for frontend compatibility
 app.get('/health', async (req, res) => {

@@ -185,8 +185,9 @@ const nextConfig = {
         permanent: true,
       },
       // Redirect sub-paths to main pages if they don't exist (using :path+ instead of :path* to avoid loops)
+      // Exclude seller store paths to allow public access
       {
-        source: '/marketplace/:path+',
+        source: '/marketplace/:path((?!seller/store/).*)+',
         destination: '/marketplace',
         permanent: false, // Changed to false to allow recovery if this was a mistake
       },

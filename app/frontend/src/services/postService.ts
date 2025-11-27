@@ -67,6 +67,15 @@ export class PostService {
         })
       });
 
+      // Handle specific status codes
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      if (response.status === 403) {
+        throw new Error('You do not have permission to create a post.');
+      }
+
       return this.handleResponse(response, 'Failed to create post');
     } catch (error) {
       console.error('Error creating post:', error);
@@ -131,10 +140,28 @@ export class PostService {
         }
       });
 
-      await this.handleResponse(response, 'Failed to delete post');
+      // Handle specific status codes
+      if (response.status === 404) {
+        throw new Error('Post not found. It may have already been deleted or does not exist.');
+      }
+      
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      if (response.status === 403) {
+        throw new Error('You do not have permission to delete this post.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete post: ${response.statusText}`);
+      }
+
       return true;
     } catch (error) {
       console.error('Error deleting post:', error);
+      // Re-throw the error so it can be handled by the calling code
       throw error;
     }
   }

@@ -45,6 +45,11 @@ export class QuickPostService {
     try {
       // Get auth headers from authService to include JWT token
       const authHeaders = authService.getAuthHeaders();
+      
+      // Check if we have a valid token
+      if (!authHeaders['Authorization']) {
+        throw new Error('Authentication required. Please log in again.');
+      }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts`, {
         method: 'POST',
@@ -68,13 +73,17 @@ export class QuickPostService {
 
       clearTimeout(timeoutId);
 
+      // Handle specific status codes
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      if (response.status === 403) {
+        throw new Error('You do not have permission to create a quick post.');
+      }
+
       // Gracefully handle common non-success statuses
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          // Unauthenticated/Unauthorized — throw appropriate error
-          const error = await response.json();
-          throw new Error(error.error || 'Unauthorized to create quick post');
-        }
         if (response.status === 503) {
           // Service unavailable - throw appropriate error to prevent data loss
           console.warn('QuickPost service unavailable (503), cannot create quick post');
@@ -85,7 +94,7 @@ export class QuickPostService {
           console.warn('QuickPost service rate limited (429), cannot create quick post');
           throw new Error('Too many requests. Please wait before creating another quick post.');
         }
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.error || `Failed to create quick post (HTTP ${response.status})`);
       }
 
@@ -162,6 +171,12 @@ export class QuickPostService {
   static async deleteQuickPost(id: string): Promise<boolean> {
     try {
       const authHeaders = authService.getAuthHeaders();
+      
+      // Check if we have a valid token
+      if (!authHeaders['Authorization']) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts/${id}`, {
         method: 'DELETE',
         headers: {
@@ -170,8 +185,21 @@ export class QuickPostService {
         }
       });
 
+      // Handle specific status codes
+      if (response.status === 404) {
+        throw new Error('Post not found. It may have already been deleted or does not exist.');
+      }
+      
+      if (response.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      if (response.status === 403) {
+        throw new Error('You do not have permission to delete this post.');
+      }
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.error || `Failed to delete quick post: ${response.statusText}`);
       }
 

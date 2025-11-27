@@ -167,6 +167,7 @@ class ProductionServerManager {
 
       // Import newsletter routes
       const { default: newsletterRoutes } = await import('../routes/newsletterRoutes');
+      const { default: enhancedFiatPaymentRoutes } = await import('../routes/enhancedFiatPaymentRoutes');
 
       // Mount routes
       this.app.use('/api/marketplace', marketplaceSellerRoutes);
@@ -213,6 +214,8 @@ class ProductionServerManager {
       
       // Mount newsletter routes
       this.app.use('/api/newsletter', newsletterRoutes);
+      // Mount enhanced fiat payment routes
+      this.app.use('/api/enhanced-fiat-payment', enhancedFiatPaymentRoutes);
 
       safeLogger.info('✅ Application routes configured');
 

@@ -26,6 +26,12 @@ const TokenAcquisitionSection: React.FC = () => {
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
+      // Only fetch token info if wallet is connected
+      if (!isConnected) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const info = await tokenService.getTokenInfo('LDAO');
@@ -46,7 +52,7 @@ const TokenAcquisitionSection: React.FC = () => {
     };
 
     fetchTokenInfo();
-  }, []);
+  }, [isConnected]);
 
   const handleBuyTokens = () => {
     setIsPurchaseModalOpen(true);

@@ -1,6 +1,7 @@
 import express from 'express';
 import { QuickPostController } from '../controllers/quickPostController';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
 
 const router = express.Router();
 
@@ -104,14 +105,14 @@ function safeBind(method: any, context: any) {
 }
 
 // QuickPost routes with safe binding
-router.post('/', authMiddleware, safeBind(quickPostController.createQuickPost, quickPostController));
+router.post('/', authMiddleware, csrfProtection, safeBind(quickPostController.createQuickPost, quickPostController));
 router.get('/', safeBind(quickPostController.getAllQuickPosts, quickPostController));
 router.get('/feed', safeBind(quickPostController.getQuickPostFeed, quickPostController));
 router.get('/csrf-token', safeBind(quickPostController.getCsrfToken, quickPostController));
 router.get('/author/:authorId', safeBind(quickPostController.getQuickPostsByAuthor, quickPostController));
 router.get('/tag/:tag', safeBind(quickPostController.getQuickPostsByTag, quickPostController));
 router.get('/:id', safeBind(quickPostController.getQuickPost, quickPostController));
-router.put('/:id', authMiddleware, safeBind(quickPostController.updateQuickPost, quickPostController));
-router.delete('/:id', authMiddleware, safeBind(quickPostController.deleteQuickPost, quickPostController));
+router.put('/:id', authMiddleware, csrfProtection, safeBind(quickPostController.updateQuickPost, quickPostController));
+router.delete('/:id', authMiddleware, csrfProtection, safeBind(quickPostController.deleteQuickPost, quickPostController));
 
 export default router;

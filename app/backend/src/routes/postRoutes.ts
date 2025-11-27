@@ -1,5 +1,7 @@
 import express from 'express';
 import { PostController } from '../controllers/postController';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { csrfProtection } from '../middleware/csrfProtection';
 
 const router = express.Router();
 const postController = new PostController();
@@ -22,7 +24,7 @@ router.get('/author/:author', postController.getPostsByAuthor.bind(postControlle
 router.get('/tag/:tag', postController.getPostsByTag.bind(postController));
 router.get('/community/:communityId', postController.getPostsByCommunity.bind(postController));
 router.get('/:id', postController.getPostById.bind(postController));
-router.put('/:id', postController.updatePost.bind(postController));
-router.delete('/:id', postController.deletePost.bind(postController));
+router.put('/:id', authMiddleware, csrfProtection, postController.updatePost.bind(postController));
+router.delete('/:id', authMiddleware, csrfProtection, postController.deletePost.bind(postController));
 
 export default router;
