@@ -22,7 +22,7 @@ class TrendingCacheService {
       this.useRedis = false;
       safeLogger.warn('Redis functionality is disabled via REDIS_ENABLED environment variable for trending cache');
     }
-    
+
     if (this.useRedis) {
       this.initializeClient();
     } else {
@@ -33,7 +33,7 @@ class TrendingCacheService {
   private async initializeClient() {
     try {
       let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-      
+
       // Handle placeholder values
       if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {
         redisUrl = 'redis://localhost:6379';
@@ -56,7 +56,7 @@ class TrendingCacheService {
               this.useRedis = false;
               return false; // Stop reconnecting
             }
-            
+
             // Calculate delay with exponential backoff: 1s, 2s, 4s, 8s, 16s...
             const delay = Math.min(Math.pow(2, attempts - 1) * 1000, 30000); // Cap at 30 seconds
             safeLogger.warn(`Redis reconnection attempt ${attempts}/${this.maxReconnectAttempts}, next attempt in ${delay}ms for trending cache`, {
@@ -64,7 +64,7 @@ class TrendingCacheService {
               delay,
               redisUrl: redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
             });
-            
+
             return delay;
           }
         }
@@ -88,7 +88,7 @@ class TrendingCacheService {
           connected: this.connected
         });
         this.connected = false;
-        
+
         // If connection fails repeatedly, disable Redis functionality
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           this.useRedis = false;
@@ -115,7 +115,7 @@ class TrendingCacheService {
       this.client.on('end', () => {
         safeLogger.info('Redis connection closed for trending cache');
         this.connected = false;
-        
+
         // If we're disconnected and tried to reconnect too many times, disable Redis
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           this.useRedis = false;
@@ -330,7 +330,27 @@ class TrendingCacheService {
       }
     }
   }
-  
+
+  /**
+   * Update a post in the trending cache
+   * Currently invalidates the cache to force a refresh
+   */
+  async updatePost(postId: string): Promise<void> {
+    // In a more complex implementation, we would recalculate the score for this specific post
+    // and update it in the sorted set. For now, we'll just invalidate the trending cache
+    // so it gets rebuilt on the next request.
+    await this.invalidateTrendingCache();
+    await this.invalidateEngagementCache(parseInt(postId) || 0);
+  }
+
+  /**
+   * Invalidate a post in the trending cache
+   */
+  async invalidatePost(postId: string): Promise<void> {
+    await this.invalidateTrendingCache();
+    await this.invalidateEngagementCache(parseInt(postId) || 0);
+  }
+
   /**
    * Check if Redis is enabled for this service
    */

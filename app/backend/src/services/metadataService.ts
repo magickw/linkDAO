@@ -49,7 +49,7 @@ export class MetadataService {
       safeLogger.warn('IPFS client initialization skipped due to memory-constrained environment (<512MB)');
       return null;
     }
-    
+
     // Since we use Pinata REST API directly, we don't need ipfs-http-client
     // The IPFS client will be null and we'll use Pinata API for all operations
     safeLogger.info('Using Pinata REST API directly for IPFS operations');
@@ -63,7 +63,7 @@ export class MetadataService {
    */
   async uploadToIPFS(content: string | Buffer): Promise<string> {
     // Since we use Pinata REST API directly, skip IPFS client and go straight to Pinata API
-    
+
     // If IPFS client failed or is not available, try direct Pinata API
     if (IPFS_CONFIG.pinataApiKey && IPFS_CONFIG.pinataSecretApiKey) {
       try {
@@ -72,7 +72,7 @@ export class MetadataService {
           try {
             const formData = new (require('form-data'))();
             formData.append('file', Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf8'));
-            
+
             const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
               maxBodyLength: 1000000000, // 1GB
               headers: {
@@ -82,7 +82,7 @@ export class MetadataService {
               },
               timeout: 30000 // 30 second timeout
             });
-            
+
             if (response.data && response.data.IpfsHash) {
               safeLogger.info(`Content uploaded to Pinata on attempt ${attempt}: ${response.data.IpfsHash}`);
               return response.data.IpfsHash;
@@ -90,7 +90,15 @@ export class MetadataService {
               throw new Error('Pinata API returned no valid CID');
             }
           } catch (pinataError: any) {
-            safeLogger.warn(`Pinata API attempt ${attempt} failed:`, pinataError?.message || pinataError);
+            // Safely extract error message to avoid circular JSON issues
+            const errorMessage = pinataError?.response?.data?.error || pinataError?.message || 'Unknown Pinata error';
+            const statusCode = pinataError?.response?.status;
+
+            safeLogger.warn(`Pinata API attempt ${attempt} failed:`, {
+              message: errorMessage,
+              statusCode
+            });
+
             if (attempt === maxRetries) {
               throw pinataError;
             }
@@ -102,7 +110,7 @@ export class MetadataService {
         safeLogger.error('Pinata API upload failed:', error);
       }
     }
-    
+
     // If both IPFS client and Pinata API failed, generate fallback CID
     safeLogger.warn('All IPFS upload methods failed, using fallback CID');
     const crypto = require('crypto');
@@ -135,7 +143,7 @@ export class MetadataService {
       // await arweave.transactions.sign(transaction, wallet);
       // await arweave.transactions.post(transaction);
       // return transaction.id;
-      
+
       safeLogger.info('Arweave upload simulated:', content.substring(0, 50) + '...');
       const crypto = require('crypto');
       const hash = crypto.createHash('sha256').update(content).digest('hex');
@@ -153,7 +161,7 @@ export class MetadataService {
    */
   async getFromIPFS(cid: string): Promise<string> {
     const ipfsClient = await this.ipfsClientPromise;
-    
+
     try {
       // First, try IPFS client if available
       if (ipfsClient && !this.isMemoryConstrained) {
@@ -164,7 +172,7 @@ export class MetadataService {
             chunks.push(chunk);
           }
           const content = Buffer.concat(chunks).toString();
-          
+
           // Check if content is valid
           if (content && content.length > 0) {
             safeLogger.info(`Successfully retrieved content using IPFS client cat method`, { contentLength: content.length });
@@ -176,7 +184,7 @@ export class MetadataService {
           safeLogger.warn(`IPFS client retrieval failed for CID: ${cid}`, clientError);
         }
       }
-      
+
       // If client retrieval failed or we're in memory-constrained env, try direct gateways
       // Try with multiple gateways and retry logic
       const gateways = [
@@ -187,11 +195,11 @@ export class MetadataService {
         `https://ipfs.eth.aragon.network/ipfs/${cid}`,
         `https://ipfs.tribecap.co/ipfs/${cid}`
       ];
-      
+
       for (const gateway of gateways) {
         try {
           safeLogger.info(`Attempting to fetch content from gateway: ${gateway}`);
-          
+
           // Try multiple times with exponential backoff
           const maxRetries = 3;
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -213,21 +221,21 @@ export class MetadataService {
 
               // Check if data is a string before calling includes
               const dataString = responseDataType === 'string' ? data : '';
-              const hasCloudflareChallenge = dataString.includes('Just a moment...') || 
-                                            dataString.includes('cf-chl-task') || 
-                                            dataString.includes('Checking your browser');
+              const hasCloudflareChallenge = dataString.includes('Just a moment...') ||
+                dataString.includes('cf-chl-task') ||
+                dataString.includes('Checking your browser');
 
               // Check if response is valid (not a Cloudflare challenge page)
               if (status === 200 &&
-                  data &&
-                  (responseDataType === 'string' || responseDataType === 'object') &&
-                  !hasCloudflareChallenge) {
+                data &&
+                (responseDataType === 'string' || responseDataType === 'object') &&
+                !hasCloudflareChallenge) {
                 // If it's an object, stringify it carefully
                 const content = responseDataType === 'string' ? data : JSON.stringify(data);
-                
+
                 // Check if content is valid
                 if (content && content.length > 0) {
-                  safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, { 
+                  safeLogger.info(`Successfully retrieved content from gateway: ${gateway}`, {
                     contentLength: content.length,
                     attempt
                   });
@@ -244,8 +252,8 @@ export class MetadataService {
                 });
               }
             } catch (gatewayError: any) {
-              safeLogger.warn(`Gateway attempt ${attempt} failed for ${gateway}`, { 
-                error: gatewayError?.message || 'Unknown error' 
+              safeLogger.warn(`Gateway attempt ${attempt} failed for ${gateway}`, {
+                error: gatewayError?.message || 'Unknown error'
               });
               if (attempt === maxRetries) {
                 // Continue to next gateway after all retries for this gateway
@@ -256,14 +264,14 @@ export class MetadataService {
             }
           }
         } catch (gatewayError: any) {
-          safeLogger.warn(`Gateway completely failed for CID: ${cid}`, { 
-            gateway, 
-            error: gatewayError?.message || 'Unknown error' 
+          safeLogger.warn(`Gateway completely failed for CID: ${cid}`, {
+            gateway,
+            error: gatewayError?.message || 'Unknown error'
           });
           // Continue to next gateway
         }
       }
-      
+
       safeLogger.warn(`All IPFS gateways failed for CID: ${cid}`);
       throw new Error(`Content not available: ${cid}`);
     } catch (error) {
@@ -280,7 +288,7 @@ export class MetadataService {
   async getFromArweave(txId: string): Promise<string> {
     try {
       // Try to retrieve from Arweave gateway
-      const response = await axios.get(`https://arweave.net/${txId}`, { 
+      const response = await axios.get(`https://arweave.net/${txId}`, {
         timeout: 10000,
         headers: { 'Accept': 'text/plain, application/json' }
       });
@@ -303,7 +311,7 @@ export class MetadataService {
         safeLogger.warn('IPFS client not available, skipping pinning');
         return;
       }
-      
+
       await ipfsClient.pin.add(cid as any);
       safeLogger.info('Pinned to IPFS:', cid);
     } catch (error) {
@@ -321,10 +329,10 @@ export class MetadataService {
     try {
       // First, retrieve the content from IPFS
       const content = await this.getFromIPFS(cid);
-      
+
       // Then, upload it to Arweave
       const txId = await this.uploadToArweave(content);
-      
+
       safeLogger.info(`Mirrored ${cid} to Arweave as ${txId}`);
       return txId;
     } catch (error) {
@@ -351,14 +359,14 @@ export class MetadataService {
           // Continue to try gateways
         }
       }
-      
+
       // Try to fetch just the content length via gateway to check existence
       const gateways = [
         `https://gateway.pinata.cloud/ipfs/${cid}`,
         `https://ipfs.io/ipfs/${cid}`,
         `https://cloudflare-ipfs.com/ipfs/${cid}`
       ];
-      
+
       for (const gateway of gateways) {
         try {
           const response = await axios.head(gateway, {
@@ -367,7 +375,7 @@ export class MetadataService {
               'User-Agent': 'LinkDAO/1.0'
             }
           });
-          
+
           if (response.status === 200) {
             return true;
           }
@@ -376,7 +384,7 @@ export class MetadataService {
           // Continue to next gateway
         }
       }
-      
+
       // If HEAD request fails, try GET with short timeout
       for (const gateway of gateways) {
         try {
@@ -387,7 +395,7 @@ export class MetadataService {
             },
             maxContentLength: 1 // We only need to know if it exists
           });
-          
+
           if (response.status === 200) {
             return true;
           }
@@ -396,7 +404,7 @@ export class MetadataService {
           // Continue to next gateway
         }
       }
-      
+
       return false;
     } catch (error) {
       safeLogger.error('Error checking CID existence:', error);
@@ -422,9 +430,9 @@ export class MetadataService {
 
         if (response.status === 200 && response.data) {
           safeLogger.info('✅ Pinata API authentication successful');
-          return { 
-            success: true, 
-            message: 'Pinata API connection successful with API key method' 
+          return {
+            success: true,
+            message: 'Pinata API connection successful with API key method'
           };
         }
       }
@@ -440,34 +448,34 @@ export class MetadataService {
 
         if (response.status === 200 && response.data) {
           safeLogger.info('✅ Pinata JWT authentication successful');
-          return { 
-            success: true, 
-            message: 'Pinata connection successful with JWT method' 
+          return {
+            success: true,
+            message: 'Pinata connection successful with JWT method'
           };
         }
       }
 
-      return { 
-        success: false, 
-        message: 'Pinata authentication failed - please check your API credentials' 
+      return {
+        success: false,
+        message: 'Pinata authentication failed - please check your API credentials'
       };
     } catch (error: any) {
       safeLogger.error('Pinata connection test failed:', error?.response?.data || error?.message || error);
-      
+
       if (error?.response?.status === 401 || error?.response?.status === 403) {
-        return { 
-          success: false, 
-          message: `Pinata authentication failed (Status ${error?.response?.status}): Invalid credentials. Please verify your PINATA_API_KEY/PINATA_API_KEY_SECRET or PINATA_JWT values.` 
+        return {
+          success: false,
+          message: `Pinata authentication failed (Status ${error?.response?.status}): Invalid credentials. Please verify your PINATA_API_KEY/PINATA_API_KEY_SECRET or PINATA_JWT values.`
         };
       } else if (error?.code === 'ENOTFOUND' || error?.message?.includes('ENOTFOUND')) {
-        return { 
-          success: false, 
-          message: 'Cannot connect to Pinata API - check your internet connection and firewall settings' 
+        return {
+          success: false,
+          message: 'Cannot connect to Pinata API - check your internet connection and firewall settings'
         };
       } else {
-        return { 
-          success: false, 
-          message: `Pinata connection failed: ${error?.response?.data?.error || error?.message || 'Unknown error'}` 
+        return {
+          success: false,
+          message: `Pinata connection failed: ${error?.response?.data?.error || error?.message || 'Unknown error'}`
         };
       }
     }
