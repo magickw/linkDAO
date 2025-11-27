@@ -5,6 +5,7 @@ import { Community } from '@/models/Community';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import CommentThread from '../CommentThread';
 import StakingVoteButton from '../StakingVoteButton';
@@ -55,6 +56,7 @@ export default function CommunityPostCardEnhanced({
   isLoading = false
 }: CommunityPostCardEnhancedProps) {
   const { address, isConnected } = useWeb3();
+  const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   // Check if the post is a CommunityPost or a QuickPost
@@ -196,6 +198,13 @@ export default function CommunityPostCardEnhanced({
 
     if (!isConnected || !address) {
       addToast('Please connect your wallet to comment', 'error');
+      return;
+    }
+
+    // Ensure user is authenticated before submitting comment
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Please authenticate to comment', 'error');
       return;
     }
 
@@ -356,10 +365,10 @@ export default function CommunityPostCardEnhanced({
           {/* Vote Score */}
           <span
             className={`text-sm font-bold py-1 ${voteScore > 0
-                ? 'text-orange-500'
-                : voteScore < 0
-                  ? 'text-blue-500'
-                  : 'text-gray-500 dark:text-gray-400'
+              ? 'text-orange-500'
+              : voteScore < 0
+                ? 'text-blue-500'
+                : 'text-gray-500 dark:text-gray-400'
               }`}
             aria-label={`Vote score: ${voteScore > 0 ? '+' : ''}${voteScore}`}
           >
@@ -436,7 +445,7 @@ export default function CommunityPostCardEnhanced({
             {post.mediaCids && post.mediaCids.length > 0 && (
               <div className="mt-3 grid grid-cols-1 gap-2">
                 {post.mediaCids.map((mediaUrl, index) => (
-                  <div 
+                  <div
                     key={index}
                     className="rounded-lg max-h-96 object-cover w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
                     onClick={() => window.open(mediaUrl, '_blank')}

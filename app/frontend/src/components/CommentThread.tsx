@@ -3,6 +3,7 @@ import { Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import EnhancedReactionSystem from './EnhancedReactionSystem';
 import { getDisplayName, getDefaultAvatar } from '@/utils/userDisplay';
@@ -25,6 +26,7 @@ export default function CommentThread({
   className = ''
 }: CommentThreadProps) {
   const { address, isConnected } = useWeb3();
+  const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   // State
@@ -106,6 +108,13 @@ export default function CommentThread({
 
     if (!isConnected || !address) {
       addToast('Please connect your wallet to reply', 'error');
+      return;
+    }
+
+    // Ensure user is authenticated before submitting reply
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Please authenticate to reply', 'error');
       return;
     }
 

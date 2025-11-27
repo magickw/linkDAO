@@ -37,11 +37,13 @@ interface AuthContextType {
   isAdmin: boolean;
   isModerator: boolean;
   isSuperAdmin: boolean;
-  
+
   // Enhanced authentication with session recovery
   enhancedAuthenticate: (options?: { forceRefresh?: boolean }) => Promise<{ success: boolean; error?: string }>;
   recoverSession: () => Promise<boolean>;
   getSessionStatus: () => any;
+  // Ensure user is authenticated before performing an action
+  ensureAuthenticated: () => Promise<{ success: boolean; error?: string }>;
 }
 
 // Storage keys for session persistence
@@ -63,7 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [kycStatus, setKycStatus] = useState<KYCStatus | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  
+
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { validateSession } = useSessionValidation();
@@ -154,7 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize authentication state with comprehensive session checking
   // This should only run once on mount to avoid circular dependencies
   const initAuthRef = useRef(false);
-  
+
   useEffect(() => {
     const initAuth = async () => {
       // Prevent multiple initializations
@@ -162,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       initAuthRef.current = true;
-      
+
       setIsLoading(true);
 
       try {
@@ -267,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         handleLogout();
         return;
       }
-      
+
       // If wallet is connected but no user, try to restore session
       if (isConnected && address && !user && !isLoading) {
         console.log('🔗 Wallet connected, checking for existing session...');
@@ -279,7 +281,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return;
       }
-      
+
       // Handle wallet address changes more carefully (case-insensitive)
       if (isConnected && address && user) {
         // Check if this is a real address change vs. initial connection
@@ -395,7 +397,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Only request signature if we don't have a valid session
       console.log('🔐 Requesting new signature for authentication...');
       const result = await authService.authenticateWallet(walletAddress, null, 'connected');
-      
+
       if (result.success && result.user && result.token) {
         setUser(result.user);
         setAccessToken(result.token);
@@ -550,7 +552,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
 
       const result = await authService.authenticateWallet(walletAddress, connector, status);
-      
+
       if (result.success && result.user && result.token) {
         setUser(result.user);
         setAccessToken(result.token);
@@ -558,10 +560,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         storeSession(result.token, result.user);
         await loadKYCStatus();
         console.log('✅ Authentication successful for address:', walletAddress);
-        
+
         // Show success notification
         addToast('Successfully authenticated!', 'success', 3000);
-        
+
         return { success: true };
       } else {
         console.log('❌ Authentication failed for address:', walletAddress, 'error:', result.error);
@@ -569,11 +571,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error: any) {
       console.error('Login failed for address:', walletAddress, error);
-      
+
       // Provide more specific error messages based on error type
       let errorMessage = 'Login failed';
       let toastType: 'error' | 'warning' | 'info' = 'error';
-      
+
       if (error.message) {
         if (error.message.includes('403')) {
           errorMessage = 'Authentication blocked. Please try again later.';
@@ -590,10 +592,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           errorMessage = error.message;
         }
       }
-      
+
       // Show user-friendly notification
       addToast(errorMessage, toastType, 5000);
-      
+
       return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
@@ -611,9 +613,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
-      
+
       const result = await authService.register(userData);
-      
+
       if (result.success && result.user) {
         setUser(result.user);
         await loadKYCStatus();
@@ -637,7 +639,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAccessToken(null);
       setKycStatus(null);
       clearStoredSession();
-      
+
       // Disconnect wallet if connected
       if (isConnected) {
         disconnect();
@@ -652,14 +654,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updatePreferences = async (preferences: any): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await authService.updatePreferences(preferences);
-      
+
       if (result.success && user) {
         setUser({
           ...user,
           preferences: { ...user.preferences, ...preferences }
         });
       }
-      
+
       return result;
     } catch (error: any) {
       console.error('Failed to update preferences:', error);
@@ -671,14 +673,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updatePrivacySettings = async (privacySettings: any): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await authService.updatePrivacySettings(privacySettings);
-      
+
       if (result.success && user) {
         setUser({
           ...user,
           privacySettings: { ...user.privacySettings, ...privacySettings }
         });
       }
-      
+
       return result;
     } catch (error: any) {
       console.error('Failed to update privacy settings:', error);
@@ -690,12 +692,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const initiateKYC = async (tier: 'basic' | 'intermediate' | 'advanced'): Promise<{ success: boolean; error?: string }> => {
     try {
       const result = await authService.initiateKYC(tier);
-      
+
       if (result.success) {
         // Refresh KYC status
         await loadKYCStatus();
       }
-      
+
       return result;
     } catch (error: any) {
       console.error('Failed to initiate KYC:', error);
@@ -911,14 +913,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const result = await enhancedAuthService.recoverAuthentication(address);
-      
+
       if (result.success && result.user && result.token) {
         setUser(result.user);
         setAccessToken(result.token);
         await loadKYCStatus();
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Session recovery failed:', error);
@@ -933,6 +935,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       ...sessionManager.getSessionStatus()
     };
   }, []);
+
+  // Ensure user is authenticated - simple helper for components
+  const ensureAuthenticated = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    // If already authenticated with valid token, return success immediately
+    if (user && accessToken) {
+      console.log('✅ User already authenticated');
+      return { success: true };
+    }
+
+    // If wallet is not connected, return error
+    if (!isConnected || !address) {
+      return {
+        success: false,
+        error: 'Please connect your wallet first'
+      };
+    }
+
+    // If wallet is connected but not authenticated, trigger login
+    console.log('🔐 Wallet connected but not authenticated, triggering login...');
+    try {
+      const result = await login(address, connector, 'connected');
+      return result;
+    } catch (error: any) {
+      console.error('Authentication failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Authentication failed. Please try again.'
+      };
+    }
+  }, [user, accessToken, isConnected, address, connector, login]);
 
   // Auto-refresh token periodically (less aggressive)
   useEffect(() => {
@@ -981,6 +1013,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     enhancedAuthenticate,
     recoverSession,
     getSessionStatus,
+    ensureAuthenticated,
   };
 
   return (

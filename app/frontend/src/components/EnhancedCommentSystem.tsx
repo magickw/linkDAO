@@ -4,6 +4,7 @@ import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { CommunityService } from '@/services/communityService';
 import { useWeb3 } from '@/context/Web3Context';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import CommentThread from './CommentThread';
 
@@ -33,6 +34,7 @@ export default function EnhancedCommentSystem({
   className = ''
 }: EnhancedCommentSystemProps) {
   const { address, isConnected } = useWeb3();
+  const { ensureAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   // State
@@ -135,6 +137,13 @@ export default function EnhancedCommentSystem({
 
     if (!isConnected || !address) {
       addToast('Please connect your wallet to comment', 'error');
+      return;
+    }
+
+    // Ensure user is authenticated before submitting comment
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      addToast(authResult.error || 'Please authenticate to comment', 'error');
       return;
     }
 
