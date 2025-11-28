@@ -9,31 +9,80 @@ export class ModerationController {
   // Get moderation queue
   async getModerationQueue(req: Request, res: Response) {
     try {
-      const { page = 1, limit = 10 } = req.query;
+      const { page = 1, limit = 10, type, status, priority, search, dateFrom, dateTo, contentKeyword } = req.query;
       
       const db = databaseService.getDatabase();
       
-      // Get moderation cases
-      const cases = await db.select()
-        .from(moderationCases)
-        .orderBy(desc(moderationCases.createdAt))
-        .limit(parseInt(limit as string))
-        .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+      if (!db) {
+        return res.status(503).json({ 
+          error: "Database service unavailable",
+          message: "The database is currently not accessible. Please try again later."
+        });
+      }
       
-      // Get total count
-      const totalCountResult = await db.select({ count: moderationCases.id })
-        .from(moderationCases);
-      const totalCount = totalCountResult.length > 0 ? totalCountResult[0].count : 0;
-      
-      res.json({
-        items: cases,
-        total: totalCount,
-        page: parseInt(page as string),
-        totalPages: Math.ceil(totalCount / parseInt(limit as string))
-      });
+      try {
+        // Build query with filters
+        let query = db.select()
+          .from(moderationCases);
+        
+        // Apply filters if provided
+        const conditions = [];
+        if (type && type !== '') {
+          conditions.push(eq(moderationCases.contentType, type as string));
+        }
+        if (status && status !== '') {
+          conditions.push(eq(moderationCases.status, status as string));
+        }
+        
+        // Apply conditions
+        if (conditions.length > 0) {
+          query = query.where(and(...conditions));
+        }
+        
+        // Get moderation cases
+        const cases = await query
+          .orderBy(desc(moderationCases.createdAt))
+          .limit(parseInt(limit as string))
+          .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+        
+        // Get total count
+        let countQuery = db.select({ count: moderationCases.id }).from(moderationCases);
+        if (conditions.length > 0) {
+          countQuery = countQuery.where(and(...conditions));
+        }
+        const totalCountResult = await countQuery;
+        const totalCount = totalCountResult.length > 0 ? totalCountResult[0].count : 0;
+        
+        res.json({
+          items: cases,
+          total: totalCount,
+          page: parseInt(page as string),
+          totalPages: Math.ceil(totalCount / parseInt(limit as string))
+        });
+      } catch (dbError: any) {
+        // Check for specific database errors
+        if (dbError.code === '42P01') {
+          // Relation does not exist - table not created
+          safeLogger.error("Moderation cases table does not exist:", dbError);
+          return res.status(500).json({ 
+            error: "Database schema not initialized",
+            message: "The moderation_cases table has not been created. Please run database migrations."
+          });
+        } else if (dbError.code === 'ECONNREFUSED') {
+          return res.status(503).json({ 
+            error: "Database connection failed",
+            message: "Unable to connect to the database. Please try again later."
+          });
+        } else {
+          throw dbError; // Re-throw for general error handling
+        }
+      }
     } catch (error) {
       safeLogger.error("Error fetching moderation queue:", error);
-      res.status(500).json({ error: "Failed to fetch moderation queue" });
+      res.status(500).json({ 
+        error: "Failed to fetch moderation queue",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   }
 

@@ -61,30 +61,68 @@ export const authMiddleware: RequestHandler = async (req: Request, res: Response
     // Get user role and other details from database
     let userRole = 'user';
     let userEmail = null;
-    let userPermissions = [];
+    let userPermissions: string[] = [];
     let isAdmin = false;
-    
+
+    // Get the wallet address for admin check
+    const walletAddress = (decoded.walletAddress || decoded.address || '').toLowerCase();
+
+    // Check if this is the configured admin address
+    const configuredAdminAddress = (
+      process.env.NEXT_PUBLIC_ADMIN_ADDRESS ||
+      process.env.ADMIN_ADDRESS ||
+      '0xEe034b53D4cCb101b2a4faec27708be507197350'
+    ).toLowerCase();
+
+    const isConfiguredAdmin = walletAddress === configuredAdminAddress;
+
     if (decoded.userId) {
       try {
         const connectionString = process.env.DATABASE_URL!;
         const sql = postgres(connectionString, { ssl: 'require' });
         const db = drizzle(sql);
-        
+
         const userResult = await db
           .select()
           .from(users)
           .where(eq(users.id, decoded.userId))
           .limit(1);
-          
+
         if (userResult.length > 0) {
           userRole = userResult[0].role || 'user';
           userEmail = userResult[0].email;
-          userPermissions = userResult[0].permissions || [];
+          userPermissions = (userResult[0].permissions as string[]) || [];
           isAdmin = ['admin', 'super_admin', 'moderator'].includes(userRole);
         }
       } catch (dbError) {
         console.error('Database error when fetching user details:', dbError);
       }
+    }
+
+    // Override role for configured admin address
+    if (isConfiguredAdmin) {
+      userRole = 'super_admin';
+      isAdmin = true;
+      // Grant all permissions to configured admin
+      userPermissions = [
+        '*', // Wildcard permission
+        'admin_access',
+        'manage_users',
+        'manage_content',
+        'content.moderate',
+        'marketplace.seller_review',
+        'marketplace.seller_view',
+        'disputes.view',
+        'disputes.resolve',
+        'users.view',
+        'users.manage',
+        'system.analytics',
+        'system.audit',
+        'system.security',
+        'system.settings',
+        'system.monitor',
+        'governance.verify'
+      ];
     }
 
     // Normalize user object to match expected interface

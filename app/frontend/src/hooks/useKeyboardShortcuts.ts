@@ -80,6 +80,13 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     if (!enabled) return;
 
+    const { key, ctrlKey, shiftKey, altKey, metaKey } = event;
+
+    // Allow standard clipboard and browser shortcuts to work normally
+    if ((ctrlKey || metaKey) && ['c', 'v', 'x', 'a', 'z', 'y'].includes(key.toLowerCase())) {
+      return; // Let the browser handle copy, paste, cut, select all, undo, redo
+    }
+
     // Don't trigger shortcuts when typing in inputs
     const target = event.target as HTMLElement;
     if (
@@ -88,16 +95,12 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
       target.isContentEditable
     ) {
       // Allow Escape to work in inputs
-      if (event.key === 'Escape' && onEscape) {
+      if (key === 'Escape' && onEscape) {
         onEscape();
       }
-      // Prevent default behavior for ALL keys when typing in inputs/textareas
-      // This prevents any unwanted keyboard shortcuts from triggering
-      event.preventDefault();
+      // Don't process other shortcuts when typing in inputs/textareas
       return;
     }
-
-    const { key, ctrlKey, shiftKey, altKey, metaKey } = event;
 
     // Navigation shortcuts
     if (key === 'j' || key === 'ArrowDown') {

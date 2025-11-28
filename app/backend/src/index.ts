@@ -445,6 +445,7 @@ import { commentRoutes } from './routes/commentRoutes';
 import notificationRoutes from './routes/realTimeNotificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import healthRoutes from './routes/healthRoutes';
+import metricsRoutes from './routes/metricsRoutes';
 import sessionRoutes from './routes/sessionRoutes';
 import viewRoutes from './routes/viewRoutes';
 import bookmarkRoutes from './routes/bookmarkRoutes';
@@ -479,9 +480,9 @@ app.use('/api/communities', communityRoutes);
 app.use('/api', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
-import trackingRoutes from './routes/trackingRoutes';
 app.use('/api/track', trackingRoutes);
 app.use('/api/health', healthRoutes);
+app.use('/api/metrics', metricsRoutes);
 // API documentation routes
 app.use('/api/docs', apiDocsRoutes);
 // Onboarding routes for user preferences

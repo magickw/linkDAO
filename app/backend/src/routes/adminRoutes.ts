@@ -13,9 +13,13 @@ import {
   adminRateLimit,
   auditAdminAction
 } from '../middleware/adminAuthMiddleware';
-import { csrfProtection } from '../middleware/csrfProtection';
+import { csrfProtection } from '../middleware/csprfProtection';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
+
+// Apply authentication middleware first
+router.use(authMiddleware);
 
 // Apply admin authentication to all routes
 router.use(validateAdminRole);

@@ -14,40 +14,69 @@ export class SellerController {
       
       const db = databaseService.getDatabase();
       
-      // Get marketplace users with seller role
-      const sellers = await db.select({
-        id: marketplaceUsers.userId,
-        legalName: marketplaceUsers.legalName,
-        email: marketplaceUsers.email,
-        country: marketplaceUsers.country,
-        kycVerified: marketplaceUsers.kycVerified,
-        createdAt: marketplaceUsers.createdAt,
-        currentTier: sellerVerifications.currentTier,
-        reputationScore: sellerVerifications.reputationScore,
-        totalVolume: sellerVerifications.totalVolume
-      })
-      .from(marketplaceUsers)
-      .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
-      .where(eq(marketplaceUsers.role, 'seller'))
-      .orderBy(desc(marketplaceUsers.createdAt))
-      .limit(parseInt(limit as string))
-      .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+      if (!db) {
+        return res.status(503).json({ 
+          error: "Database service unavailable",
+          message: "The database is currently not accessible. Please try again later."
+        });
+      }
       
-      // Get total count
-      const totalCountResult = await db.select({ count: marketplaceUsers.userId })
+      try {
+        // Get marketplace users with seller role
+        const sellers = await db.select({
+          id: marketplaceUsers.userId,
+          legalName: marketplaceUsers.legalName,
+          email: marketplaceUsers.email,
+          country: marketplaceUsers.country,
+          kycVerified: marketplaceUsers.kycVerified,
+          createdAt: marketplaceUsers.createdAt,
+          currentTier: sellerVerifications.currentTier,
+          reputationScore: sellerVerifications.reputationScore,
+          totalVolume: sellerVerifications.totalVolume
+        })
         .from(marketplaceUsers)
-        .where(eq(marketplaceUsers.role, 'seller'));
-      const totalCount = totalCountResult.length > 0 ? totalCountResult[0].count : 0;
-      
-      res.json({
-        applications: sellers,
-        total: totalCount,
-        page: parseInt(page as string),
-        totalPages: Math.ceil(totalCount / parseInt(limit as string))
-      });
+        .leftJoin(sellerVerifications, eq(marketplaceUsers.userId, sellerVerifications.userId))
+        .where(eq(marketplaceUsers.role, 'seller'))
+        .orderBy(desc(marketplaceUsers.createdAt))
+        .limit(parseInt(limit as string))
+        .offset((parseInt(page as string) - 1) * parseInt(limit as string));
+        
+        // Get total count
+        const totalCountResult = await db.select({ count: marketplaceUsers.userId })
+          .from(marketplaceUsers)
+          .where(eq(marketplaceUsers.role, 'seller'));
+        const totalCount = totalCountResult.length > 0 ? totalCountResult[0].count : 0;
+        
+        res.json({
+          applications: sellers,
+          total: totalCount,
+          page: parseInt(page as string),
+          totalPages: Math.ceil(totalCount / parseInt(limit as string))
+        });
+      } catch (dbError: any) {
+        // Check for specific database errors
+        if (dbError.code === '42P01') {
+          // Relation does not exist - table not created
+          safeLogger.error("Marketplace tables do not exist:", dbError);
+          return res.status(500).json({ 
+            error: "Database schema not initialized",
+            message: "The marketplace tables have not been created. Please run database migrations."
+          });
+        } else if (dbError.code === 'ECONNREFUSED') {
+          return res.status(503).json({ 
+            error: "Database connection failed",
+            message: "Unable to connect to the database. Please try again later."
+          });
+        } else {
+          throw dbError; // Re-throw for general error handling
+        }
+      }
     } catch (error) {
       safeLogger.error("Error fetching seller applications:", error);
-      res.status(500).json({ error: "Failed to fetch seller applications" });
+      res.status(500).json({ 
+        error: "Failed to fetch seller applications",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   }
 
