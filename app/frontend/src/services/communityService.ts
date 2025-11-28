@@ -859,4 +859,497 @@ export class CommunityService {
       throw error;
     }
   }
+
+  /**
+   * Vote on a governance proposal
+   * @param communityId - Community ID
+   * @param proposalId - Proposal ID
+   * @param vote - Vote type ('yes', 'no', 'abstain')
+   * @param stakeAmount - Amount of tokens to stake
+   * @returns Vote result
+   */
+  static async voteOnProposal(
+    communityId: string,
+    proposalId: string,
+    vote: 'yes' | 'no' | 'abstain',
+    stakeAmount: number = 0
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/governance/${proposalId}/vote`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({ vote, stakeAmount }),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to cast vote');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a delegation
+   * @param communityId - Community ID
+   * @param delegatorAddress - Address of the delegator
+   * @param delegateAddress - Address of the delegate
+   * @param expiryDate - Optional expiry date
+   * @param metadata - Optional metadata
+   * @returns Delegation result
+   */
+  static async createDelegation(
+    communityId: string,
+    delegatorAddress: string,
+    delegateAddress: string,
+    expiryDate?: Date,
+    metadata?: any
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            delegatorAddress,
+            delegateAddress,
+            expiryDate: expiryDate?.toISOString(),
+            metadata
+          }),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to create delegation');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Revoke a delegation
+   * @param communityId - Community ID
+   * @param delegatorAddress - Address of the delegator
+   * @returns Revoke result
+   */
+  static async revokeDelegation(
+    communityId: string,
+    delegatorAddress: string
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({ delegatorAddress }),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to revoke delegation');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Get delegations received as a delegate
+   * @param communityId - Community ID
+   * @param delegateAddress - Address of the delegate
+   * @param page - Page number
+   * @param limit - Page limit
+   * @returns Delegations list
+   */
+  static async getDelegationsAsDelegate(
+    communityId: string,
+    delegateAddress: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/delegations?delegateAddress=${delegateAddress}&page=${page}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to get delegations');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a proxy vote
+   * @param proposalId - Proposal ID
+   * @param proxyAddress - Address of the proxy
+   * @param voterAddress - Address of the voter
+   * @param vote - Vote type
+   * @param reason - Optional reason
+   * @returns Proxy vote result
+   */
+  static async createProxyVote(
+    proposalId: string,
+    proxyAddress: string,
+    voterAddress: string,
+    vote: 'yes' | 'no' | 'abstain',
+    reason?: string
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/proxy-votes`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            proposalId,
+            proxyAddress,
+            voterAddress,
+            vote,
+            reason
+          }),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to create proxy vote');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a subscription tier
+   * @param communityId - Community ID
+   * @param tierData - Subscription tier data
+   * @returns Created tier
+   */
+  static async createSubscriptionTier(
+    communityId: string,
+    tierData: {
+      name: string;
+      description?: string;
+      price: string;
+      currency: string;
+      benefits: string[];
+      accessLevel: 'view' | 'interact' | 'full';
+      durationDays?: number;
+      metadata?: any;
+    }
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscription-tiers`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify(tierData),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to create subscription tier');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Get subscription tiers for a community
+   * @param communityId - Community ID
+   * @returns Subscription tiers
+   */
+  static async getSubscriptionTiers(communityId: string): Promise<any[]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscription-tiers`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to get subscription tiers');
+      }
+
+      return json.data || [];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe user to a tier
+   * @param communityId - Community ID
+   * @param tierId - Tier ID
+   * @param paymentTxHash - Optional payment transaction hash
+   * @param metadata - Optional metadata
+   * @returns Subscription result
+   */
+  static async subscribeUser(
+    communityId: string,
+    tierId: string,
+    paymentTxHash?: string,
+    metadata?: any
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          body: JSON.stringify({
+            tierId,
+            paymentTxHash,
+            metadata
+          }),
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to subscribe user');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user subscriptions
+   * @param communityId - Community ID
+   * @returns User subscriptions
+   */
+  static async getUserSubscriptions(communityId: string): Promise<any[]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const authHeaders = authService.getAuthHeaders();
+      
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/${communityId}/subscriptions`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to get user subscriptions');
+      }
+
+      return json.data || [];
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
+
+  /**
+   * Search communities
+   * @param query - Search query
+   * @param options - Search options
+   * @returns Search results
+   */
+  static async searchCommunities(
+    query: string,
+    options: {
+      page?: number;
+      limit?: number;
+      category?: string;
+      sort?: 'relevance' | 'newest' | 'members' | 'posts' | 'name';
+    } = {}
+  ): Promise<any> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        page: String(options.page || 1),
+        limit: String(options.limit || 10),
+        sort: options.sort || 'relevance',
+        ...(options.category && { category: options.category })
+      });
+
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}${API_ENDPOINTS.COMMUNITIES}/search/query?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        },
+        COMMUNITY_RETRY_OPTIONS
+      );
+
+      clearTimeout(timeoutId);
+
+      const json = await safeJson(response);
+
+      if (!response.ok) {
+        throw new Error((json && (json.error || json.message)) || 'Failed to search communities');
+      }
+
+      return json;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
+    }
+  }
 }

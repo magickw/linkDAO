@@ -62,14 +62,156 @@ export class CommunitySubscriptionController {
   }
 
   /**
+   * Create subscription tier
+   */
+  async createSubscriptionTier(req: Request, res: Response) {
+    try {
+      const { id: communityId } = req.params;
+      const {
+        name,
+        description,
+        price,
+        currency,
+        benefits,
+        accessLevel,
+        durationDays,
+        isActive = true,
+        metadata
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !price || !currency || !accessLevel) {
+        return res.status(400).json({
+          success: false,
+          error: 'Name, price, currency, and accessLevel are required'
+        });
+      }
+
+      // Validate access level
+      if (!['view', 'interact', 'full'].includes(accessLevel)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid access level. Must be view, interact, or full'
+        });
+      }
+
+      const result = await communityService.createSubscriptionTier({
+        communityId,
+        name,
+        description,
+        price: price.toString(),
+        currency,
+        benefits: benefits || [],
+        accessLevel,
+        durationDays: durationDays || 30,
+        isActive,
+        metadata
+      });
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.message || 'Failed to create subscription tier'
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        data: result.data
+      });
+    } catch (error) {
+      safeLogger.error('Error creating subscription tier:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to create subscription tier'
+      });
+    }
+  }
+
+  /**
+   * Subscribe user to a tier
+   */
+  async subscribeUser(req: Request, res: Response) {
+    try {
+      const { id: communityId } = req.params;
+      const { tierId, paymentTxHash, metadata } = req.body;
+
+      // Get user address from authenticated request
+      const userAddress = (req as any).user?.address;
+      if (!userAddress) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      // Validate required fields
+      if (!tierId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Tier ID is required'
+        });
+      }
+
+      const result = await communityService.subscribeUser({
+        communityId,
+        tierId,
+        userAddress,
+        paymentTxHash,
+        metadata
+      });
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.message || 'Failed to subscribe user'
+        });
+      }
+
+      res.status(201).json({
+        success: true,
+        data: result.data
+      });
+    } catch (error) {
+      safeLogger.error('Error subscribing user:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to subscribe user'
+      });
+    }
+  }
+
+  /**
    * Create Stripe checkout session
    */
   async createCheckoutSession(req: Request, res: Response) {
     try {
-      // Method not implemented yet
-      res.status(501).json({
-        success: false,
-        error: 'Method not implemented yet'
+      const { tierId, successUrl, cancelUrl } = req.body;
+
+      // Validate required fields
+      if (!tierId || !successUrl || !cancelUrl) {
+        return res.status(400).json({
+          success: false,
+          error: 'Tier ID, success URL, and cancel URL are required'
+        });
+      }
+
+      const result = await communityService.createCheckoutSession({
+        tierId,
+        successUrl,
+        cancelUrl
+      });
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.message || 'Failed to create checkout session'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result.data
       });
     } catch (error) {
       safeLogger.error('Error creating checkout session:', error);
@@ -85,10 +227,32 @@ export class CommunitySubscriptionController {
    */
   async processCryptoPayment(req: Request, res: Response) {
     try {
-      // Method not implemented yet
-      res.status(501).json({
-        success: false,
-        error: 'Method not implemented yet'
+      const { tierId, paymentTxHash, userAddress } = req.body;
+
+      // Validate required fields
+      if (!tierId || !paymentTxHash || !userAddress) {
+        return res.status(400).json({
+          success: false,
+          error: 'Tier ID, payment transaction hash, and user address are required'
+        });
+      }
+
+      const result = await communityService.processCryptoPayment({
+        tierId,
+        paymentTxHash,
+        userAddress
+      });
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.message || 'Failed to process crypto payment'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: result.data
       });
     } catch (error) {
       safeLogger.error('Error processing crypto payment:', error);

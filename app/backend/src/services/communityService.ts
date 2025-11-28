@@ -2117,7 +2117,1123 @@ export class CommunityService {
     }
   }
 
+  // Vote on governance proposal
+  async voteOnProposal(data: {
+    communityId: string;
+    proposalId: string;
+    voterAddress: string;
+    vote: string;
+    stakeAmount: number;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { communityId, proposalId, voterAddress, vote, stakeAmount } = data;
 
+    try {
+      // Check if proposal exists and is in voting period
+      const proposalResult = await db
+        .select()
+        .from(communityGovernanceProposals)
+        .where(
+          and(
+            eq(communityGovernanceProposals.id, proposalId),
+            eq(communityGovernanceProposals.communityId, communityId)
+          )
+        )
+        .limit(1);
+
+      if (proposalResult.length === 0) {
+        return { success: false, message: 'Proposal not found' };
+      }
+
+      const proposal = proposalResult[0];
+      const now = new Date();
+
+      // Check if proposal is in active voting period
+      if (proposal.status !== 'active' && proposal.status !== 'pending') {
+        return { success: false, message: 'Proposal is not in voting period' };
+      }
+
+      if (new Date(proposal.votingStartTime) > now) {
+        return { success: false, message: 'Voting has not started yet' };
+      }
+
+      if (new Date(proposal.votingEndTime) < now) {
+        return { success: false, message: 'Voting has ended' };
+      }
+
+      // Check if user is a community member
+      const membershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, voterAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (membershipResult.length === 0) {
+        return { success: false, message: 'Only community members can vote' };
+      }
+
+      // Check if user has already voted
+      const existingVoteResult = await db
+        .select()
+        .from(communityGovernanceVotes)
+        .where(
+          and(
+            eq(communityGovernanceVotes.proposalId, proposalId),
+            eq(communityGovernanceVotes.voterAddress, voterAddress)
+          )
+        )
+        .limit(1);
+
+      if (existingVoteResult.length > 0) {
+        return { success: false, message: 'You have already voted on this proposal' };
+      }
+
+      // Check if user meets minimum stake requirement
+      if (stakeAmount < Number(proposal.requiredStake)) {
+        return { success: false, message: `Minimum stake of ${proposal.requiredStake} tokens required` };
+      }
+
+      // Start transaction
+      await db.transaction(async (tx) => {
+        // Create the vote record
+        await tx
+          .insert(communityGovernanceVotes)
+          .values({
+            proposalId,
+            voterAddress,
+            vote,
+            stakeAmount: stakeAmount.toString(),
+            votingPower: stakeAmount.toString(), // For now, voting power equals stake amount
+            votedAt: new Date(),
+          });
+
+        // Update proposal vote counts
+        const voteColumn = vote === 'yes' ? communityGovernanceProposals.yesVotes :
+                          vote === 'no' ? communityGovernanceProposals.noVotes :
+                          communityGovernanceProposals.abstainVotes;
+
+        await tx
+          .update(communityGovernanceProposals)
+          .set({
+            [voteColumn]: sql`${voteColumn} + ${stakeAmount}`,
+            totalVotes: sql`${communityGovernanceProposals.totalVotes} + ${stakeAmount}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(communityGovernanceProposals.id, proposalId));
+
+        // Update proposal status to active if it was pending
+        if (proposal.status === 'pending') {
+          await tx
+            .update(communityGovernanceProposals)
+            .set({
+              status: 'active',
+              votingStartTime: now,
+              updatedAt: new Date(),
+            })
+            .where(eq(communityGovernanceProposals.id, proposalId));
+        }
+      });
+
+      // Get updated proposal data
+      const updatedProposalResult = await db
+        .select()
+        .from(communityGovernanceProposals)
+        .where(eq(communityGovernanceProposals.id, proposalId))
+        .limit(1);
+
+      const updatedProposal = updatedProposalResult[0];
+
+      // Check if quorum is reached and voting period has ended
+      const totalVotes = Number(updatedProposal.totalVotes);
+      const quorumReached = totalVotes >= Number(updatedProposal.quorum);
+      const votingEnded = new Date(updatedProposal.votingEndTime) <= now;
+
+      if (votingEnded && quorumReached) {
+        // Calculate if proposal passes
+        const yesVotes = Number(updatedProposal.yesVotes);
+        const noVotes = Number(updatedProposal.noVotes);
+        const totalYesNoVotes = yesVotes + noVotes;
+        const majorityPercentage = totalYesNoVotes > 0 ? (yesVotes / totalYesNoVotes) * 100 : 0;
+
+        const passes = majorityPercentage >= updatedProposal.requiredMajority;
+
+        await db
+          .update(communityGovernanceProposals)
+          .set({
+            status: passes ? 'passed' : 'rejected',
+            quorumReached: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(communityGovernanceProposals.id, proposalId));
+      }
+
+      return {
+        success: true,
+        data: {
+          proposalId,
+          voterAddress,
+          vote,
+          stakeAmount,
+          votingPower: stakeAmount,
+          votedAt: now,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error voting on proposal:', error);
+      return { success: false, message: 'Failed to cast vote' };
+    }
+  }
+
+  // Create delegation
+  async createDelegation(data: {
+    communityId: string;
+    delegatorAddress: string;
+    delegateAddress: string;
+    expiryDate?: Date;
+    metadata?: any;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { communityId, delegatorAddress, delegateAddress, expiryDate, metadata } = data;
+
+    try {
+      // Check if community exists
+      const communityResult = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        return { success: false, message: 'Community not found' };
+      }
+
+      // Check if delegator is a community member
+      const delegatorMembershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, delegatorAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (delegatorMembershipResult.length === 0) {
+        return { success: false, message: 'Delegator must be a community member' };
+      }
+
+      // Check if delegate is a community member
+      const delegateMembershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, delegateAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (delegateMembershipResult.length === 0) {
+        return { success: false, message: 'Delegate must be a community member' };
+      }
+
+      // Check if delegation already exists
+      const existingDelegationResult = await db
+        .select()
+        .from(communityDelegations)
+        .where(
+          and(
+            eq(communityDelegations.communityId, communityId),
+            eq(communityDelegations.delegatorAddress, delegatorAddress),
+            or(
+              isNull(communityDelegations.expiryDate),
+              gt(communityDelegations.expiryDate, new Date())
+            )
+          )
+        )
+        .limit(1);
+
+      if (existingDelegationResult.length > 0) {
+        return { success: false, message: 'Active delegation already exists' };
+      }
+
+      // Create the delegation
+      const delegationResult = await db
+        .insert(communityDelegations)
+        .values({
+          communityId,
+          delegatorAddress,
+          delegateAddress,
+          expiryDate: expiryDate || null,
+          metadata: metadata ? JSON.stringify(metadata) : null,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      const newDelegation = delegationResult[0];
+
+      return {
+        success: true,
+        data: {
+          id: newDelegation.id,
+          communityId: newDelegation.communityId,
+          delegatorAddress: newDelegation.delegatorAddress,
+          delegateAddress: newDelegation.delegateAddress,
+          expiryDate: newDelegation.expiryDate,
+          isActive: newDelegation.isActive,
+          metadata: newDelegation.metadata ? JSON.parse(newDelegation.metadata) : null,
+          createdAt: newDelegation.createdAt,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error creating delegation:', error);
+      return { success: false, message: 'Failed to create delegation' };
+    }
+  }
+
+  // Revoke delegation
+  async revokeDelegation(data: {
+    communityId: string;
+    delegatorAddress: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { communityId, delegatorAddress } = data;
+
+    try {
+      // Find and revoke the active delegation
+      const revokeResult = await db
+        .update(communityDelegations)
+        .set({
+          isActive: false,
+          revokedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(communityDelegations.communityId, communityId),
+            eq(communityDelegations.delegatorAddress, delegatorAddress),
+            eq(communityDelegations.isActive, true)
+          )
+        )
+        .returning();
+
+      if (revokeResult.length === 0) {
+        return { success: false, message: 'No active delegation found' };
+      }
+
+      return {
+        success: true,
+        data: {
+          revokedAt: new Date(),
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error revoking delegation:', error);
+      return { success: false, message: 'Failed to revoke delegation' };
+    }
+  }
+
+  // Get delegations as delegate
+  async getDelegationsAsDelegate(data: {
+    communityId: string;
+    delegateAddress: string;
+    page: number;
+    limit: number;
+  }): Promise<any> {
+    const { communityId, delegateAddress, page, limit } = data;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Get active delegations where user is the delegate
+      const delegationsResult = await db
+        .select({
+          id: communityDelegations.id,
+          delegatorAddress: communityDelegations.delegatorAddress,
+          delegateAddress: communityDelegations.delegateAddress,
+          expiryDate: communityDelegations.expiryDate,
+          isActive: communityDelegations.isActive,
+          createdAt: communityDelegations.createdAt,
+          revokedAt: communityDelegations.revokedAt,
+          metadata: communityDelegations.metadata,
+        })
+        .from(communityDelegations)
+        .where(
+          and(
+            eq(communityDelegations.communityId, communityId),
+            eq(communityDelegations.delegateAddress, delegateAddress),
+            eq(communityDelegations.isActive, true),
+            or(
+              isNull(communityDelegations.expiryDate),
+              gt(communityDelegations.expiryDate, new Date())
+            )
+          )
+        )
+        .orderBy(desc(communityDelegations.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalCountResult = await db
+        .select({ count: count() })
+        .from(communityDelegations)
+        .where(
+          and(
+            eq(communityDelegations.communityId, communityId),
+            eq(communityDelegations.delegateAddress, delegateAddress),
+            eq(communityDelegations.isActive, true),
+            or(
+              isNull(communityDelegations.expiryDate),
+              gt(communityDelegations.expiryDate, new Date())
+            )
+          )
+        );
+
+      const total = totalCountResult[0]?.count || 0;
+
+      const delegations = delegationsResult.map(delegation => ({
+        id: delegation.id,
+        delegatorAddress: delegation.delegatorAddress,
+        delegateAddress: delegation.delegateAddress,
+        expiryDate: delegation.expiryDate,
+        isActive: delegation.isActive,
+        metadata: delegation.metadata ? JSON.parse(delegation.metadata) : null,
+        createdAt: delegation.createdAt,
+        revokedAt: delegation.revokedAt,
+      }));
+
+      return {
+        delegations,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error getting delegations:', error);
+      throw new Error('Failed to get delegations');
+    }
+  }
+
+  // Create proxy vote
+  async createProxyVote(data: {
+    proposalId: string;
+    proxyAddress: string;
+    voterAddress: string;
+    vote: string;
+    reason?: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { proposalId, proxyAddress, voterAddress, vote, reason } = data;
+
+    try {
+      // Check if proposal exists and is in voting period
+      const proposalResult = await db
+        .select({
+          id: communityGovernanceProposals.id,
+          communityId: communityGovernanceProposals.communityId,
+          status: communityGovernanceProposals.status,
+          votingStartTime: communityGovernanceProposals.votingStartTime,
+          votingEndTime: communityGovernanceProposals.votingEndTime,
+        })
+        .from(communityGovernanceProposals)
+        .where(eq(communityGovernanceProposals.id, proposalId))
+        .limit(1);
+
+      if (proposalResult.length === 0) {
+        return { success: false, message: 'Proposal not found' };
+      }
+
+      const proposal = proposalResult[0];
+      const now = new Date();
+
+      // Check if proposal is in active voting period
+      if (proposal.status !== 'active' && proposal.status !== 'pending') {
+        return { success: false, message: 'Proposal is not in voting period' };
+      }
+
+      if (new Date(proposal.votingStartTime) > now) {
+        return { success: false, message: 'Voting has not started yet' };
+      }
+
+      if (new Date(proposal.votingEndTime) < now) {
+        return { success: false, message: 'Voting has ended' };
+      }
+
+      // Check if proxy is a community member
+      const proxyMembershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, proposal.communityId),
+            eq(communityMembers.userAddress, proxyAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (proxyMembershipResult.length === 0) {
+        return { success: false, message: 'Proxy must be a community member' };
+      }
+
+      // Check if voter is a community member
+      const voterMembershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, proposal.communityId),
+            eq(communityMembers.userAddress, voterAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (voterMembershipResult.length === 0) {
+        return { success: false, message: 'Voter must be a community member' };
+      }
+
+      // Check if delegation exists from voter to proxy
+      const delegationResult = await db
+        .select()
+        .from(communityDelegations)
+        .where(
+          and(
+            eq(communityDelegations.communityId, proposal.communityId),
+            eq(communityDelegations.delegatorAddress, voterAddress),
+            eq(communityDelegations.delegateAddress, proxyAddress),
+            eq(communityDelegations.isActive, true),
+            or(
+              isNull(communityDelegations.expiryDate),
+              gt(communityDelegations.expiryDate, new Date())
+            )
+          )
+        )
+        .limit(1);
+
+      if (delegationResult.length === 0) {
+        return { success: false, message: 'No active delegation found from voter to proxy' };
+      }
+
+      // Check if voter has already voted directly
+      const existingVoteResult = await db
+        .select()
+        .from(communityGovernanceVotes)
+        .where(
+          and(
+            eq(communityGovernanceVotes.proposalId, proposalId),
+            eq(communityGovernanceVotes.voterAddress, voterAddress)
+          )
+        )
+        .limit(1);
+
+      if (existingVoteResult.length > 0) {
+        return { success: false, message: 'Voter has already voted directly' };
+      }
+
+      // Check if proxy vote already exists
+      const existingProxyVoteResult = await db
+        .select()
+        .from(communityProxyVotes)
+        .where(
+          and(
+            eq(communityProxyVotes.proposalId, proposalId),
+            eq(communityProxyVotes.voterAddress, voterAddress)
+          )
+        )
+        .limit(1);
+
+      if (existingProxyVoteResult.length > 0) {
+        return { success: false, message: 'Proxy vote already exists for this voter' };
+      }
+
+      // Create the proxy vote record
+      const proxyVoteResult = await db
+        .insert(communityProxyVotes)
+        .values({
+          proposalId,
+          proxyAddress,
+          voterAddress,
+          vote,
+          reason: reason || null,
+          createdAt: new Date(),
+        })
+        .returning();
+
+      const newProxyVote = proxyVoteResult[0];
+
+      return {
+        success: true,
+        data: {
+          id: newProxyVote.id,
+          proposalId: newProxyVote.proposalId,
+          proxyAddress: newProxyVote.proxyAddress,
+          voterAddress: newProxyVote.voterAddress,
+          vote: newProxyVote.vote,
+          reason: newProxyVote.reason,
+          createdAt: newProxyVote.createdAt,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error creating proxy vote:', error);
+      return { success: false, message: 'Failed to create proxy vote' };
+    }
+  }
+
+  // Create subscription tier
+  async createSubscriptionTier(data: {
+    communityId: string;
+    name: string;
+    description?: string;
+    price: string;
+    currency: string;
+    benefits: string[];
+    accessLevel: string;
+    durationDays: number;
+    isActive?: boolean;
+    metadata?: any;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { communityId, name, description, price, currency, benefits, accessLevel, durationDays, isActive = true, metadata } = data;
+
+    try {
+      // Check if community exists
+      const communityResult = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        return { success: false, message: 'Community not found' };
+      }
+
+      // Create the subscription tier
+      const tierResult = await db
+        .insert(communitySubscriptionTiers)
+        .values({
+          communityId,
+          name,
+          description: description || null,
+          price,
+          currency,
+          benefits: JSON.stringify(benefits),
+          accessLevel,
+          durationDays,
+          isActive,
+          metadata: metadata ? JSON.stringify(metadata) : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      const newTier = tierResult[0];
+
+      return {
+        success: true,
+        data: {
+          id: newTier.id,
+          communityId: newTier.communityId,
+          name: newTier.name,
+          description: newTier.description,
+          price: newTier.price,
+          currency: newTier.currency,
+          benefits: JSON.parse(newTier.benefits),
+          accessLevel: newTier.accessLevel,
+          durationDays: newTier.durationDays,
+          isActive: newTier.isActive,
+          metadata: newTier.metadata ? JSON.parse(newTier.metadata) : null,
+          createdAt: newTier.createdAt,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error creating subscription tier:', error);
+      return { success: false, message: 'Failed to create subscription tier' };
+    }
+  }
+
+  // Get subscription tiers for a community
+  async getSubscriptionTiers(communityId: string): Promise<any[]> {
+    try {
+      const tiersResult = await db
+        .select()
+        .from(communitySubscriptionTiers)
+        .where(
+          and(
+            eq(communitySubscriptionTiers.communityId, communityId),
+            eq(communitySubscriptionTiers.isActive, true)
+          )
+        )
+        .orderBy(communitySubscriptionTiers.price);
+
+      return tiersResult.map(tier => ({
+        id: tier.id,
+        communityId: tier.communityId,
+        name: tier.name,
+        description: tier.description,
+        price: tier.price,
+        currency: tier.currency,
+        benefits: JSON.parse(tier.benefits),
+        accessLevel: tier.accessLevel,
+        durationDays: tier.durationDays,
+        isActive: tier.isActive,
+        metadata: tier.metadata ? JSON.parse(tier.metadata) : null,
+        createdAt: tier.createdAt,
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting subscription tiers:', error);
+      throw new Error('Failed to get subscription tiers');
+    }
+  }
+
+  // Subscribe user to a tier
+  async subscribeUser(data: {
+    communityId: string;
+    tierId: string;
+    userAddress: string;
+    paymentTxHash?: string;
+    metadata?: any;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { communityId, tierId, userAddress, paymentTxHash, metadata } = data;
+
+    try {
+      // Check if subscription tier exists and is active
+      const tierResult = await db
+        .select()
+        .from(communitySubscriptionTiers)
+        .where(
+          and(
+            eq(communitySubscriptionTiers.id, tierId),
+            eq(communitySubscriptionTiers.communityId, communityId),
+            eq(communitySubscriptionTiers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (tierResult.length === 0) {
+        return { success: false, message: 'Subscription tier not found or inactive' };
+      }
+
+      const tier = tierResult[0];
+
+      // Check if user is a community member
+      const membershipResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (membershipResult.length === 0) {
+        return { success: false, message: 'User must be a community member' };
+      }
+
+      // Check if user already has an active subscription
+      const existingSubscriptionResult = await db
+        .select()
+        .from(communityUserSubscriptions)
+        .where(
+          and(
+            eq(communityUserSubscriptions.tierId, tierId),
+            eq(communityUserSubscriptions.userAddress, userAddress),
+            eq(communityUserSubscriptions.status, 'active'),
+            gt(communityUserSubscriptions.expiresAt, new Date())
+          )
+        )
+        .limit(1);
+
+      if (existingSubscriptionResult.length > 0) {
+        return { success: false, message: 'User already has an active subscription' };
+      }
+
+      // Calculate expiry date
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + tier.durationDays * 24 * 60 * 60 * 1000);
+
+      // Create the subscription
+      const subscriptionResult = await db
+        .insert(communityUserSubscriptions)
+        .values({
+          tierId,
+          userAddress,
+          status: 'active',
+          startedAt: now,
+          expiresAt,
+          paymentTxHash: paymentTxHash || null,
+          metadata: metadata ? JSON.stringify(metadata) : null,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      const newSubscription = subscriptionResult[0];
+
+      return {
+        success: true,
+        data: {
+          id: newSubscription.id,
+          tierId: newSubscription.tierId,
+          userAddress: newSubscription.userAddress,
+          status: newSubscription.status,
+          startedAt: newSubscription.startedAt,
+          expiresAt: newSubscription.expiresAt,
+          paymentTxHash: newSubscription.paymentTxHash,
+          metadata: newSubscription.metadata ? JSON.parse(newSubscription.metadata) : null,
+          createdAt: newSubscription.createdAt,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error subscribing user:', error);
+      return { success: false, message: 'Failed to subscribe user' };
+    }
+  }
+
+  // Get user subscriptions
+  async getUserSubscriptions(userAddress: string, communityId?: string): Promise<any[]> {
+    try {
+      let whereConditions = [
+        eq(communityUserSubscriptions.userAddress, userAddress),
+        eq(communityUserSubscriptions.status, 'active'),
+        gt(communityUserSubscriptions.expiresAt, new Date())
+      ];
+
+      if (communityId) {
+        whereConditions.push(eq(communitySubscriptionTiers.communityId, communityId));
+      }
+
+      const subscriptionsResult = await db
+        .select({
+          subscription: communityUserSubscriptions,
+          tier: communitySubscriptionTiers,
+        })
+        .from(communityUserSubscriptions)
+        .innerJoin(communitySubscriptionTiers, eq(communityUserSubscriptions.tierId, communitySubscriptionTiers.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(communityUserSubscriptions.startedAt));
+
+      return subscriptionsResult.map(({ subscription, tier }) => ({
+        id: subscription.id,
+        tierId: subscription.tierId,
+        userAddress: subscription.userAddress,
+        status: subscription.status,
+        startedAt: subscription.startedAt,
+        expiresAt: subscription.expiresAt,
+        paymentTxHash: subscription.paymentTxHash,
+        metadata: subscription.metadata ? JSON.parse(subscription.metadata) : null,
+        tier: {
+          id: tier.id,
+          communityId: tier.communityId,
+          name: tier.name,
+          description: tier.description,
+          price: tier.price,
+          currency: tier.currency,
+          benefits: JSON.parse(tier.benefits),
+          accessLevel: tier.accessLevel,
+          durationDays: tier.durationDays,
+        },
+        createdAt: subscription.createdAt,
+      }));
+    } catch (error) {
+      safeLogger.error('Error getting user subscriptions:', error);
+      throw new Error('Failed to get user subscriptions');
+    }
+  }
+
+  // Create checkout session (placeholder for Stripe integration)
+  async createCheckoutSession(data: {
+    tierId: string;
+    successUrl: string;
+    cancelUrl: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { tierId, successUrl, cancelUrl } = data;
+
+    try {
+      // Get subscription tier details
+      const tierResult = await db
+        .select({
+          id: communitySubscriptionTiers.id,
+          name: communitySubscriptionTiers.name,
+          price: communitySubscriptionTiers.price,
+          currency: communitySubscriptionTiers.currency,
+        })
+        .from(communitySubscriptionTiers)
+        .where(eq(communitySubscriptionTiers.id, tierId))
+        .limit(1);
+
+      if (tierResult.length === 0) {
+        return { success: false, message: 'Subscription tier not found' };
+      }
+
+      const tier = tierResult[0];
+
+      // TODO: Integrate with Stripe API
+      // For now, return a mock session ID
+      const mockSessionId = `cs_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      return {
+        success: true,
+        data: {
+          sessionId: mockSessionId,
+          tier: {
+            id: tier.id,
+            name: tier.name,
+            price: tier.price,
+            currency: tier.currency,
+          },
+          successUrl,
+          cancelUrl,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error creating checkout session:', error);
+      return { success: false, message: 'Failed to create checkout session' };
+    }
+  }
+
+  // Process crypto payment (placeholder for blockchain integration)
+  async processCryptoPayment(data: {
+    tierId: string;
+    paymentTxHash: string;
+    userAddress: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    const { tierId, paymentTxHash, userAddress } = data;
+
+    try {
+      // Get subscription tier details
+      const tierResult = await db
+        .select({
+          id: communitySubscriptionTiers.id,
+          communityId: communitySubscriptionTiers.communityId,
+          price: communitySubscriptionTiers.price,
+          currency: communitySubscriptionTiers.currency,
+        })
+        .from(communitySubscriptionTiers)
+        .where(eq(communitySubscriptionTiers.id, tierId))
+        .limit(1);
+
+      if (tierResult.length === 0) {
+        return { success: false, message: 'Subscription tier not found' };
+      }
+
+      const tier = tierResult[0];
+
+      // TODO: Verify payment transaction on blockchain
+      // For now, assume payment is valid
+
+      // Create subscription
+      const subscriptionResult = await this.subscribeUser({
+        communityId: tier.communityId,
+        tierId,
+        userAddress,
+        paymentTxHash,
+      });
+
+      if (!subscriptionResult.success) {
+        return subscriptionResult;
+      }
+
+      return {
+        success: true,
+        data: {
+          ...subscriptionResult.data,
+          paymentTxHash,
+          verifiedAt: new Date(),
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error processing crypto payment:', error);
+      return { success: false, message: 'Failed to process crypto payment' };
+    }
+  }
+
+  // Search communities with advanced filtering
+  async searchCommunities(data: {
+    query: string;
+    page: number;
+    limit: number;
+    category?: string;
+    sort?: string;
+  }): Promise<any> {
+    const { query, page, limit, category, sort = 'relevance' } = data;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Build search conditions
+      const whereConditions = [];
+
+      // Search query - search in name, displayName, description, and tags
+      const searchTerm = `%${query.toLowerCase()}%`;
+      whereConditions.push(
+        or(
+          like(communities.name, searchTerm),
+          like(communities.displayName, searchTerm),
+          like(communities.description, searchTerm),
+          sql`EXISTS (
+            SELECT 1 FROM json_array_elements_text(${communities.tags}::json) AS tag 
+            WHERE LOWER(tag) LIKE ${searchTerm}
+          )`
+        )
+      );
+
+      // Category filter
+      if (category) {
+        whereConditions.push(eq(communities.category, category));
+      }
+
+      // Only public communities
+      whereConditions.push(eq(communities.isPublic, true));
+
+      const whereClause = and(...whereConditions);
+
+      // Determine sort order
+      let orderBy;
+      switch (sort) {
+        case 'newest':
+          orderBy = desc(communities.createdAt);
+          break;
+        case 'members':
+          orderBy = desc(communities.memberCount);
+          break;
+        case 'posts':
+          orderBy = desc(communities.postCount);
+          break;
+        case 'name':
+          orderBy = asc(communities.displayName);
+          break;
+        case 'relevance':
+        default:
+          // Relevance sorting: prioritize exact name matches, then display name matches
+          orderBy = [
+            // Exact name match first
+            sql`CASE WHEN LOWER(${communities.name}) = ${query.toLowerCase()} THEN 1 ELSE 2 END`,
+            // Display name match
+            sql`CASE WHEN LOWER(${communities.displayName}) = ${query.toLowerCase()} THEN 1 ELSE 2 END`,
+            // Member count as secondary sort
+            desc(communities.memberCount)
+          ];
+          break;
+      }
+
+      // Get communities with stats
+      const communityList = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          slug: communities.slug,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          treasuryAddress: communities.treasuryAddress,
+          governanceToken: communities.governanceToken,
+          // Get trending score from stats
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
+        })
+        .from(communities)
+        .leftJoin(communityStats, eq(communities.id, communityStats.communityId))
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count for pagination
+      const totalResult = await db
+        .select({ count: count() })
+        .from(communities)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform to expected format and calculate relevance score
+      const transformedCommunities = communityList.map(item => {
+        const name = item.name || '';
+        const displayName = item.displayName || '';
+        const description = item.description || '';
+        const tags = item.tags ? JSON.parse(item.tags) : [];
+
+        // Calculate relevance score
+        let relevanceScore = 0;
+        const queryLower = query.toLowerCase();
+
+        if (name.toLowerCase() === queryLower) relevanceScore += 100;
+        if (displayName.toLowerCase() === queryLower) relevanceScore += 90;
+        if (name.toLowerCase().startsWith(queryLower)) relevanceScore += 80;
+        if (displayName.toLowerCase().startsWith(queryLower)) relevanceScore += 70;
+        if (name.toLowerCase().includes(queryLower)) relevanceScore += 60;
+        if (displayName.toLowerCase().includes(queryLower)) relevanceScore += 50;
+        if (description && description.toLowerCase().includes(queryLower)) relevanceScore += 30;
+        if (tags.some((tag: string) => tag.toLowerCase().includes(queryLower))) relevanceScore += 40;
+
+        return {
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          displayName: item.displayName,
+          description: description || '',
+          category: item.category,
+          tags: tags,
+          avatar: item.avatar,
+          banner: item.banner,
+          memberCount: item.memberCount,
+          postCount: item.postCount,
+          isPublic: item.isPublic,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          treasuryAddress: item.treasuryAddress,
+          governanceToken: item.governanceToken,
+          trendingScore: item.trendingScore ? Number(item.trendingScore) : 0,
+          growthRate: item.growthRate7d ? Number(item.growthRate7d) : 0,
+          relevanceScore,
+        };
+      });
+
+      // Sort by relevance score if using relevance sort
+      if (sort === 'relevance') {
+        transformedCommunities.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      }
+
+      return {
+        communities: transformedCommunities,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        searchMeta: {
+          query,
+          category,
+          sort,
+          totalResults: total,
+        }
+      };
+    } catch (error) {
+      safeLogger.error('Error searching communities:', error);
+      throw new Error('Failed to search communities');
+    }
+  }
 
   // Check if user has access to token-gated content
   async checkContentAccess(contentId: string, userAddress: string): Promise<boolean> {

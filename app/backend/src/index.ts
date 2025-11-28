@@ -767,6 +767,8 @@ import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import cart routes
 import cartRoutes from './routes/cartRoutes';
+// Import checkout routes
+import checkoutRoutes from './routes/checkoutRoutes';
 // Import database schema
 import { users } from './db/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -942,6 +944,9 @@ app.use('/api/marketplace', marketplaceRoutes);
 // Cart routes
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/cart', cartRoutes);
+
+// Checkout routes
+app.use('/api/checkout', checkoutRoutes);
 
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);

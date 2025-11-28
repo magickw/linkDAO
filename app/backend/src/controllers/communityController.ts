@@ -734,15 +734,32 @@ export class CommunityController {
       const { id, proposalId } = req.params;
       const { vote, stakeAmount = 0 } = req.body;
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      // Validate vote type
+      if (!['yes', 'no', 'abstain'].includes(vote)) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Invalid vote type. Must be yes, no, or abstain', 400));
+        return;
+      }
 
-      // if (!result.success) {
-      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to cast vote', 400));
-      //   return;
-      // }
+      // Validate stake amount
+      if (typeof stakeAmount !== 'number' || stakeAmount < 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Invalid stake amount', 400));
+        return;
+      }
 
-      // res.json(createSuccessResponse((result as any).data || result, {}));
+      const result = await communityService.voteOnProposal({
+        communityId: id,
+        proposalId,
+        voterAddress: userAddress,
+        vote,
+        stakeAmount
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to cast vote', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error voting on proposal:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to cast vote'));
@@ -837,13 +854,25 @@ export class CommunityController {
         q,
         page = 1,
         limit = 10,
-        category
+        category,
+        sort = 'relevance'
       } = req.query;
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      // Validate search query
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Search query must be at least 2 characters long', 400));
+        return;
+      }
 
-      // res.json(createSuccessResponse(searchResults, {}));
+      const searchResults = await communityService.searchCommunities({
+        query: q.trim(),
+        page: Number(page),
+        limit: Number(limit),
+        category: category as string,
+        sort: sort as string
+      });
+
+      res.json(createSuccessResponse(searchResults, {}));
     } catch (error) {
       safeLogger.error('Error searching communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search communities'));
@@ -868,15 +897,42 @@ export class CommunityController {
         return;
       }
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      // Validate addresses
+      if (!delegatorAddress || !delegateAddress) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Both delegator and delegate addresses are required', 400));
+        return;
+      }
 
-      // if (!result.success) {
-      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create delegation', 400));
-      //   return;
-      // }
+      // Prevent self-delegation
+      if (delegatorAddress === delegateAddress) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Cannot delegate to yourself', 400));
+        return;
+      }
 
-      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      // Validate expiry date if provided
+      let expiryDateObj: Date | undefined;
+      if (expiryDate) {
+        expiryDateObj = new Date(expiryDate);
+        if (expiryDateObj <= new Date()) {
+          res.status(400).json(createErrorResponse('BAD_REQUEST', 'Expiry date must be in the future', 400));
+          return;
+        }
+      }
+
+      const result = await communityService.createDelegation({
+        communityId: id,
+        delegatorAddress,
+        delegateAddress,
+        expiryDate: expiryDateObj,
+        metadata
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create delegation', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create delegation'));
@@ -901,15 +957,22 @@ export class CommunityController {
         return;
       }
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      if (!delegatorAddress) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Delegator address is required', 400));
+        return;
+      }
 
-      // if (!result.success) {
-      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to revoke delegation', 400));
-      //   return;
-      // }
+      const result = await communityService.revokeDelegation({
+        communityId: id,
+        delegatorAddress
+      });
 
-      // res.json(createSuccessResponse(result, {}));
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to revoke delegation', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse(result, {}));
     } catch (error) {
       safeLogger.error('Error revoking delegation:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to revoke delegation'));
@@ -934,10 +997,19 @@ export class CommunityController {
         return;
       }
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      if (!delegateAddress) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Delegate address is required', 400));
+        return;
+      }
 
-      // res.json(createSuccessResponse(delegations, {}));
+      const delegations = await communityService.getDelegationsAsDelegate({
+        communityId: id,
+        delegateAddress: delegateAddress as string,
+        page: Number(page),
+        limit: Number(limit)
+      });
+
+      res.json(createSuccessResponse(delegations, {}));
     } catch (error) {
       safeLogger.error('Error getting delegations:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get delegations'));
@@ -961,15 +1033,31 @@ export class CommunityController {
         return;
       }
 
-      res.status(501).json(createErrorResponse('NOT_IMPLEMENTED', 'Method not implemented yet'));
-      return;
+      // Validate inputs
+      if (!proposalId || !voterAddress || !vote) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'proposalId, voterAddress, and vote are required', 400));
+        return;
+      }
 
-      // if (!result.success) {
-      //   res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create proxy vote', 400));
-      //   return;
-      // }
+      if (!['yes', 'no', 'abstain'].includes(vote)) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Invalid vote type. Must be yes, no, or abstain', 400));
+        return;
+      }
 
-      // res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+      const result = await communityService.createProxyVote({
+        proposalId,
+        proxyAddress,
+        voterAddress,
+        vote,
+        reason
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create proxy vote', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       safeLogger.error('Error creating proxy vote:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create proxy vote'));

@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { safeLogger } from '../utils/safeLogger';
-import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows, comments } from '../db/schema';
+import { posts, quickPosts, reactions, quickPostReactions, tips, quickPostTips, users, postTags, quickPostTags, views, quickPostViews, bookmarks, quickPostBookmarks, shares, quickPostShares, follows, comments, communityMembers, communities } from '../db/schema';
 import { eq, desc, and, or, inArray, sql, gt, isNull, asc } from 'drizzle-orm';
 import { trendingCacheService } from './trendingCacheService';
 import { getWebSocketService } from './webSocketService';
@@ -753,6 +753,61 @@ export class FeedService {
         const hash = crypto.createHash('sha256').update(content).digest('hex');
         contentCid = `Qm${hash.substring(0, 44)}`;
         safeLogger.warn(`IPFS upload failed, using fallback CID: ${contentCid}`);
+      }
+
+      // PERMISSION CHECK: If posting to a community, verify user is a member or creator
+      if (communityId) {
+        safeLogger.info(`Checking community membership for user ${userId} in community ${communityId}`);
+
+        // Check if user is a member of the community
+        const membershipCheck = await db
+          .select({
+            role: communityMembers.role,
+            isActive: communityMembers.isActive
+          })
+          .from(communityMembers)
+          .where(and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, normalizedAddress)
+          ))
+          .limit(1);
+
+        // Also check if user is the community creator
+        const communityCheck = await db
+          .select({
+            creatorAddress: communities.creatorAddress,
+            isPublic: communities.isPublic
+          })
+          .from(communities)
+          .where(eq(communities.id, communityId))
+          .limit(1);
+
+        if (communityCheck.length === 0) {
+          safeLogger.error(`Community not found: ${communityId}`);
+          throw new Error('Community not found');
+        }
+
+        const community = communityCheck[0];
+        const isCreator = community.creatorAddress?.toLowerCase() === normalizedAddress;
+        const isMember = membershipCheck.length > 0 && membershipCheck[0].isActive;
+
+        safeLogger.info(`Permission check results:`, {
+          userId,
+          communityId,
+          isCreator,
+          isMember,
+          membershipExists: membershipCheck.length > 0,
+          membershipActive: membershipCheck[0]?.isActive,
+          memberRole: membershipCheck[0]?.role
+        });
+
+        // Allow posting if user is creator OR an active member
+        if (!isCreator && !isMember) {
+          safeLogger.warn(`User ${userId} (${normalizedAddress}) attempted to post in community ${communityId} without membership`);
+          throw new Error('You must be a member of this community to post');
+        }
+
+        safeLogger.info(`✅ Permission granted for user ${userId} to post in community ${communityId} (isCreator: ${isCreator}, isMember: ${isMember})`);
       }
 
       // Create the post - store both content and CID
