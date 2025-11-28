@@ -2,8 +2,14 @@ import { Router } from 'express';
 import { csrfProtection } from '../middleware/csrfProtection';
 import { userController } from '../controllers/userController';
 import { adminController } from '../controllers/adminController';
+import { UserProfileController } from '../controllers/userProfileController';
+import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
+const userProfileController = new UserProfileController();
+
+// User profile routes (for backward compatibility)
+router.get('/profile/address/:address', asyncHandler(userProfileController.getProfileByAddress));
 
 // User Management Routes
 router.get('/', userController.getUsers.bind(userController));

@@ -52,12 +52,13 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           class: 'max-w-full h-auto rounded-lg my-2',
         },
       }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-500 hover:text-blue-700 underline',
-        },
-      }),
+      // Link extension is already included or causing duplicates
+      // Link.configure({
+      //   openOnClick: false,
+      //   HTMLAttributes: {
+      //     class: 'text-blue-500 hover:text-blue-700 underline',
+      //   },
+      // }),
       Youtube.configure({
         controls: true,
         nocookie: true,
@@ -132,9 +133,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('bold') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Bold"
         >
           <Bold size={18} />
@@ -144,9 +144,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('italic') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Italic"
         >
           <Italic size={18} />
@@ -156,9 +155,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleCode().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('code') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('code') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Code"
         >
           <Code size={18} />
@@ -170,9 +168,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('bulletList') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Bullet List"
         >
           <List size={18} />
@@ -182,9 +179,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('orderedList') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Numbered List"
         >
           <ListOrdered size={18} />
@@ -194,9 +190,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('blockquote') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('blockquote') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Quote"
         >
           <Quote size={18} />
@@ -208,9 +203,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => setShowImageDialog(true)}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`p-2 rounded hover:bg-gray-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           title="Insert Image"
         >
           <ImageIcon size={18} />
@@ -220,9 +214,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => setShowLinkDialog(true)}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            editor.isActive('link') ? 'bg-gray-300' : ''
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('link') ? 'bg-gray-300' : ''
+            } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           title="Insert Link"
         >
           <Link2 size={18} />
@@ -232,9 +225,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => setShowVideoDialog(true)}
           disabled={disabled}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`p-2 rounded hover:bg-gray-200 ${disabled ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           title="Insert Video"
         >
           <Video size={18} />
@@ -246,9 +238,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().undo().run()}
           disabled={disabled || !editor.can().undo()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            disabled || !editor.can().undo() ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`p-2 rounded hover:bg-gray-200 ${disabled || !editor.can().undo() ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           title="Undo"
         >
           <Undo size={18} />
@@ -258,9 +249,8 @@ const AdvancedRichTextEditor: React.FC<AdvancedRichTextEditorProps> = ({
           type="button"
           onClick={() => editor.chain().focus().redo().run()}
           disabled={disabled || !editor.can().redo()}
-          className={`p-2 rounded hover:bg-gray-200 ${
-            disabled || !editor.can().redo() ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`p-2 rounded hover:bg-gray-200 ${disabled || !editor.can().redo() ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           title="Redo"
         >
           <Redo size={18} />

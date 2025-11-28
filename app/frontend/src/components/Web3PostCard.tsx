@@ -52,7 +52,9 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
             <span className="mx-1 text-gray-300 dark:text-gray-600">·</span>
             <span className="text-sm text-gray-500 dark:text-gray-400">{timestamp}</span>
           </div>
-          <p className="mt-2 text-gray-700 dark:text-gray-300">{post.contentCid}</p>
+          <p className="mt-2 text-gray-700 dark:text-gray-300">
+            {typeof post.contentCid === 'string' ? post.contentCid : JSON.stringify(post.contentCid)}
+          </p>
 
           {post.tags && post.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">

@@ -1301,6 +1301,8 @@ export class CommunityService {
       // Create the post
       const postData = {
         authorId: userId,
+        title: null, // Explicitly set title to null since it's nullable but has no default
+        content: content, // Store content as fallback when IPFS unavailable
         contentCid: content, // In real implementation, this would be IPFS CID
         mediaCids: JSON.stringify(mediaUrls || []),
         tags: JSON.stringify(tags || []),

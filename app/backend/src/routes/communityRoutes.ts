@@ -143,7 +143,7 @@ router.get('/:id/posts',
     query: {
       page: { type: 'number', optional: true, min: 1 },
       limit: { type: 'number', optional: true, min: 1, max: 50 },
-      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'hot', 'top'] },
+      sort: { type: 'string', optional: true, enum: ['newest', 'new', 'oldest', 'hot', 'top'] },
       timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month', 'all'] }
     }
   }),
@@ -600,6 +600,18 @@ router.get('/my-communities',
 router.get('/user/memberships', 
   authRequired,
   communityController.getUserCommunityMemberships
+);
+
+// Get communities created by user (auth required)
+router.get('/user/created',
+  authRequired,
+  validateRequest({
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 100 }
+    }
+  }),
+  communityController.getUserCreatedCommunities
 );
 
 export default router;

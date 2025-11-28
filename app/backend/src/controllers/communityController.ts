@@ -331,11 +331,14 @@ export class CommunityController {
         timeRange = 'all'
       } = req.query;
 
+      // Map 'new' to 'newest' for backward compatibility
+      const normalizedSort = sort === 'new' ? 'newest' : sort;
+
       const posts = await communityService.getCommunityPosts({
         communityId: id,
         page: Number(page),
         limit: Number(limit),
-        sort: sort as string,
+        sort: normalizedSort as string,
         timeRange: timeRange as string
       });
 
@@ -1305,6 +1308,33 @@ export class CommunityController {
     } catch (error) {
       safeLogger.error('Error getting my communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve my communities'));
+    }
+  }
+
+  // Get communities created by the authenticated user
+  async getUserCreatedCommunities(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address || req.user?.walletAddress;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'User not authenticated'));
+        return;
+      }
+
+      const {
+        page = 1,
+        limit = 100
+      } = req.query;
+
+      const createdCommunities = await communityService.getCommunitiesCreatedByUser(
+        userAddress,
+        Number(page),
+        Number(limit)
+      );
+
+      res.json(createSuccessResponse(createdCommunities, {}));
+    } catch (error) {
+      safeLogger.error('Error getting user created communities:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve created communities'));
     }
   }
 }

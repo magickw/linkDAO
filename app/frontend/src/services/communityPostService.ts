@@ -200,7 +200,7 @@ export class CommunityPostService {
     communityId: string,
     page: number = 1,
     limit: number = 20,
-    sort: string = 'new'
+    sort: string = 'newest'
   ): Promise<{ posts: CommunityPost[]; pagination: any }> {
     try {
       const params = new URLSearchParams({
