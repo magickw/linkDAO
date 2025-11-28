@@ -113,7 +113,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           // Load payment methods
           const paymentMethodsData = await paymentMethodService.getPaymentMethods(dashboardAddress);
           setPaymentMethods(paymentMethodsData);
-          
+
           // Load billing history - we'll need to implement this based on the available APIs
           // For now, we'll create a mock implementation that will be replaced later
           // In a real implementation, we would fetch actual billing history
@@ -124,7 +124,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             amount: '$0.00', // Setup doesn't have a cost, but billing history would have real data
             status: 'Paid' as const
           }));
-          
+
           // Update state
           setBillingHistory(billingHistoryData);
         } catch (error) {
@@ -252,14 +252,14 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     }
 
     setIsAddingPaymentMethod(true);
-    
+
     try {
       // Validate required fields
       if (!paymentMethodForm.nickname) {
         addToast('Please provide a nickname for your payment method', 'error');
         return;
       }
-      
+
       if (paymentMethodForm.type === 'card') {
         if (!paymentMethodForm.cardNumber || !paymentMethodForm.expiryMonth || !paymentMethodForm.expiryYear || !paymentMethodForm.cvv) {
           addToast('Please fill in all card details', 'error');
@@ -269,13 +269,13 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
       // Add the payment method using the service
       const result = await paymentMethodService.addPaymentMethod(dashboardAddress, paymentMethodForm);
-      
+
       // Add toast notification
       addToast('Payment method added successfully', 'success');
-      
+
       // Close the modal
       setShowAddPaymentMethodModal(false);
-      
+
       // Reset the form
       setPaymentMethodForm({
         type: 'card',
@@ -1293,7 +1293,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 <p className="text-gray-400 mb-6">
                   Configure how you receive payments from your sales
                 </p>
-                
+
                 <div className="space-y-6">
                   {/* Use the PayoutSetupStep component directly */}
                   <PayoutSetupStep
@@ -1336,7 +1336,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         <p className="text-blue-200 text-sm">Transparent pricing for your listings</p>
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="bg-gray-800 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
@@ -1345,7 +1345,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         </div>
                         <p className="text-gray-500 text-xs">Per active listing</p>
                       </div>
-                      
+
                       <div className="bg-gray-800 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-gray-400 text-sm">Transaction Fee</span>
@@ -1372,7 +1372,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                   {/* Payment Methods Section */}
                   <div>
                     <h4 className="text-white font-semibold mb-4">Payment Methods</h4>
-                    
+
                     {/* Add Payment Method */}
                     <div className="space-y-4">
                       <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center">
@@ -1385,14 +1385,14 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                         <p className="text-gray-400 text-sm mb-4">
                           Add a credit card or bank account to pay for listing fees
                         </p>
-                        <Button 
+                        <Button
                           variant="primary"
                           onClick={() => setShowAddPaymentMethodModal(true)}
                         >
                           Add Payment Method
                         </Button>
                       </div>
-                      
+
                       {/* List existing payment methods */}
                       {paymentMethods && paymentMethods.length > 0 ? (
                         <div className="space-y-3">
@@ -1427,7 +1427,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                   {/* Billing History */}
                   <div>
                     <h4 className="text-white font-semibold mb-4">Billing History</h4>
-                    
+
                     <div className="bg-gray-800 rounded-lg overflow-hidden">
                       <div className="px-6 py-4 border-b border-gray-700">
                         <div className="grid grid-cols-4 text-sm font-medium text-gray-400">
@@ -1437,7 +1437,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                           <span>Status</span>
                         </div>
                       </div>
-                      
+
                       {/* Billing history will be loaded dynamically */}
                       {billingHistory && billingHistory.length > 0 ? (
                         billingHistory.map((entry, index) => (
@@ -1481,7 +1481,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 <div className="bg-gray-800 rounded-xl max-w-md w-full p-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-white">Add Payment Method</h3>
-                    <button 
+                    <button
                       onClick={() => setShowAddPaymentMethodModal(false)}
                       className="text-gray-400 hover:text-white"
                     >
@@ -1490,7 +1490,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                       </svg>
                     </button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-gray-300 text-sm mb-1">Payment Method Type</label>
@@ -1512,6 +1512,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                       <label className="block text-gray-300 text-sm mb-1">Nickname</label>
                       <input
                         type="text"
+                        name="payment-nickname"
+                        autoComplete="off"
                         value={paymentMethodForm.nickname}
                         onChange={(e) => setPaymentMethodForm({
                           ...paymentMethodForm,

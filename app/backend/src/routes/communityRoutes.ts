@@ -616,4 +616,319 @@ router.get('/user/created',
   communityController.getUserCreatedCommunities
 );
 
+// AI Moderation endpoints (auth required)
+router.post('/moderate', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      content: { type: 'string', required: true, minLength: 1 },
+      type: { type: 'string', required: true, enum: ['post', 'comment', 'message', 'profile'] },
+      communityId: { type: 'string', optional: true }
+    }
+  }),
+  communityController.moderateContent
+);
+
+// Get moderation statistics (auth required, moderator only)
+router.get('/:id/moderation/stats',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      timeRange: { type: 'string', optional: true, enum: ['day', 'week', 'month'] }
+    }
+  }),
+  communityController.getModerationStats
+);
+
+// Update moderation feedback (auth required)
+router.post('/moderation/feedback', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      contentId: { type: 'string', required: true },
+      moderationResult: { type: 'object', required: true },
+      feedback: { type: 'string', required: true, enum: ['approved', 'rejected', 'escalated'] }
+    }
+  }),
+  communityController.updateModerationFeedback
+);
+
+// Bulk Member Management Routes (auth required, moderator/admin only)
+
+// Bulk add members
+router.post('/:id/members/bulk-add', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      defaultRole: { type: 'string', optional: true, enum: ['member', 'moderator', 'admin'] },
+      defaultReputation: { type: 'number', optional: true, min: 0, max: 1000 },
+      sendWelcomeMessage: { type: 'boolean', optional: true },
+      skipExisting: { type: 'boolean', optional: true }
+    }
+  }),
+  communityController.bulkAddMembers
+);
+
+// Bulk remove members
+router.post('/:id/members/bulk-remove', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      reason: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.bulkRemoveMembers
+);
+
+// Bulk update member roles
+router.post('/:id/members/bulk-update-roles', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      newRole: { type: 'string', required: true, enum: ['member', 'moderator', 'admin'] },
+      reason: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.bulkUpdateMemberRoles
+);
+
+// Bulk update member reputation
+router.post('/:id/members/bulk-update-reputation', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      reputationChange: { type: 'number', required: true },
+      reason: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.bulkUpdateMemberReputation
+);
+
+// Bulk ban members
+router.post('/:id/members/bulk-ban', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      reason: { type: 'string', required: true, minLength: 10, maxLength: 500 },
+      banDuration: { type: 'number', optional: true, min: 1 } // Duration in days
+    }
+  }),
+  communityController.bulkBanMembers
+);
+
+// Bulk unban members
+router.post('/:id/members/bulk-unban', csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      memberAddresses: { type: 'array', required: true, items: { type: 'string' } },
+      reason: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.bulkUnbanMembers
+);
+
+// Export members
+router.get('/:id/members/export',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      format: { type: 'string', optional: true, enum: ['csv', 'json'] },
+      includeInactive: { type: 'boolean', optional: true },
+      fields: { type: 'array', optional: true, items: { type: 'string', enum: ['address', 'role', 'reputation', 'joinedAt', 'lastActivityAt', 'isActive'] } }
+    }
+  }),
+  communityController.exportMembers
+);
+
+// Import members from CSV (requires multer middleware for file upload)
+router.post('/:id/members/import', csrfProtection,
+  authRequired,
+  // Note: This would need multer middleware for file upload
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      defaultRole: { type: 'string', optional: true, enum: ['member', 'moderator', 'admin'] },
+      defaultReputation: { type: 'number', optional: true, min: 0, max: 1000 },
+      sendWelcomeMessage: { type: 'boolean', optional: true },
+      skipExisting: { type: 'boolean', optional: true }
+    }
+  }),
+  communityController.importMembers
+);
+
+// Get member statistics
+router.get('/:id/members/statistics',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  communityController.getMemberStatistics
+);
+
+// Push Notification Routes (auth required)
+
+// Get VAPID public key for client subscription
+router.get('/notifications/vapid-public-key',
+  communityController.getVapidPublicKey
+);
+
+// Register device subscription
+router.post('/notifications/register', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      subscription: { type: 'object', required: true }
+    }
+  }),
+  communityController.registerDeviceSubscription
+);
+
+// Unregister device subscription
+router.post('/notifications/unregister', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      endpoint: { type: 'string', required: true }
+    }
+  }),
+  communityController.unregisterDeviceSubscription
+);
+
+// Get notification preferences
+router.get('/notifications/preferences',
+  authRequired,
+  communityController.getNotificationPreferences
+);
+
+// Update notification preferences
+router.put('/notifications/preferences', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      communityUpdates: { type: 'boolean', optional: true },
+      newPosts: { type: 'boolean', optional: true },
+      mentions: { type: 'boolean', optional: true },
+      replies: { type: 'boolean', optional: true },
+      communityInvites: { type: 'boolean', optional: true },
+      governanceProposals: { type: 'boolean', optional: true },
+      proposalResults: { type: 'boolean', optional: true },
+      moderatorActions: { type: 'boolean', optional: true },
+      systemUpdates: { type: 'boolean', optional: true }
+    }
+  }),
+  communityController.updateNotificationPreferences
+);
+
+// Send test notification
+router.post('/notifications/test', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      title: { type: 'string', optional: true, maxLength: 100 },
+      message: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.sendTestNotification
+);
+
+// Get notification statistics
+router.get('/notifications/statistics',
+  authRequired,
+  validateRequest({
+    query: {
+      days: { type: 'number', optional: true, min: 1, max: 365 }
+    }
+  }),
+  communityController.getNotificationStatistics
+);
+
+// Community Health Dashboard Routes (auth required, moderator/admin only)
+
+// Get community health metrics
+router.get('/:id/health/metrics',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  communityController.getCommunityHealthMetrics
+);
+
+// Get community health alerts
+router.get('/:id/health/alerts',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  communityController.getCommunityHealthAlerts
+);
+
+// Get historical health metrics
+router.get('/:id/health/historical',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      days: { type: 'number', optional: true, min: 7, max: 365 }
+    }
+  }),
+  communityController.getHistoricalHealthMetrics
+);
+
+// Get community benchmark comparison
+router.get('/:id/health/benchmark',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  communityController.getCommunityBenchmarkComparison
+);
+
+// Get health metrics for all user communities (admin dashboard)
+router.get('/health/dashboard',
+  authRequired,
+  communityController.getAllCommunitiesHealthMetrics
+);
+
 export default router;

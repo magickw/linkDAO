@@ -4,6 +4,7 @@ import { posts, users, communities, communityMembers, communityStats, communityC
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt, count, avg, sum, isNull, ne } from 'drizzle-orm';
 import { feedService } from './feedService';
 import { sanitizeInput, sanitizeObject, validateLength } from '../utils/sanitizer';
+import { communityCacheService, CommunityCacheService } from './communityCacheService';
 
 interface ListCommunitiesOptions {
   page: number;
@@ -380,6 +381,16 @@ export class CommunityService {
     try {
       safeLogger.info(`Fetching community details for ID: ${communityId}, userAddress: ${userAddress || 'none'}`);
 
+      // Generate cache key
+      const cacheKey = CommunityCacheService.generateCommunityKey(communityId, 'details', userAddress || 'anonymous');
+      
+      // Try to get from cache first
+      const cached = await communityCacheService.get(cacheKey);
+      if (cached) {
+        safeLogger.info(`Community details found in cache for ID: ${communityId}`);
+        return cached;
+      }
+
       // Get community details
       const communityResult = await db
         .select({
@@ -491,6 +502,13 @@ export class CommunityService {
       };
 
       safeLogger.info(`Successfully retrieved community details for: ${community.displayName}`);
+      
+      // Cache the result
+      await communityCacheService.set(cacheKey, communityData, {
+        ttl: 600, // 10 minutes
+        tags: ['community', 'details', communityId]
+      });
+      
       return communityData;
     } catch (error) {
       safeLogger.error('Error getting community details for ID:', communityId, 'Error:', error);
@@ -1235,89 +1253,45 @@ export class CommunityService {
     }
   }
 
-  // Create post in community with validation
+  // Create community post
   async createCommunityPost(data: CreateCommunityPostData) {
     const { communityId, authorAddress, content, mediaUrls, tags, pollData } = data;
 
     try {
+      // Validate input
+      validateLength(content, 5000, 'Post content');
+
       // Check if user is a member of the community
-      const membership = await db
-        .select({
-          id: communityMembers.id,
-          role: communityMembers.role,
-          reputation: communityMembers.reputation,
-        })
+      const membershipResult = await db
+        .select({ role: communityMembers.role })
         .from(communityMembers)
-        .where(and(
-          eq(communityMembers.communityId, communityId),
-          eq(communityMembers.userAddress, authorAddress),
-          eq(communityMembers.isActive, true)
-        ))
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, authorAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
         .limit(1);
 
-      if (membership.length === 0) {
-        return { success: false, message: 'Must be a member to post in this community' };
+      if (membershipResult.length === 0) {
+        throw new Error('User is not a member of this community');
       }
-
-      // Get community settings to check posting requirements
-      const communityResult = await db
-        .select({
-          name: communities.name,
-          settings: communities.settings,
-          isPublic: communities.isPublic,
-        })
-        .from(communities)
-        .where(eq(communities.id, communityId))
-        .limit(1);
-
-      if (communityResult.length === 0) {
-        return { success: false, message: 'Community not found' };
-      }
-
-      const community = communityResult[0];
-      const settings = community.settings ? JSON.parse(community.settings) : null;
-
-      // Check minimum reputation requirement
-      if (settings?.minimumReputation && membership[0].reputation < settings.minimumReputation) {
-        return {
-          success: false,
-          message: `Minimum reputation of ${settings.minimumReputation} required to post`
-        };
-      }
-
-      // Get user ID for post creation
-      const userResult = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.walletAddress, authorAddress))
-        .limit(1);
-
-      if (userResult.length === 0) {
-        return { success: false, message: 'User not found' };
-      }
-
-      const userId = userResult[0].id;
 
       // Create the post
-      const postData = {
-        authorId: userId,
-        title: null, // Explicitly set title to null since it's nullable but has no default
-        content: content, // Store content as fallback when IPFS unavailable
-        contentCid: content, // In real implementation, this would be IPFS CID
-        mediaCids: JSON.stringify(mediaUrls || []),
-        tags: JSON.stringify(tags || []),
-        dao: community.name, // For backward compatibility
-        communityId: communityId,
-        reputationScore: membership[0].reputation,
-        stakedValue: "0", // Would be calculated based on staking requirements
-      };
-
-      const newPostResult = await db
+      const newPost = await db
         .insert(posts)
-        .values(postData)
+        .values({
+          communityId,
+          authorAddress,
+          content: sanitizeInput(content),
+          mediaUrls: mediaUrls ? JSON.stringify(mediaUrls) : null,
+          tags: tags ? JSON.stringify(tags) : null,
+          pollData: pollData ? JSON.stringify(pollData) : null,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
         .returning();
-
-      const newPost = newPostResult[0];
 
       // Update community post count
       await db
@@ -1328,37 +1302,92 @@ export class CommunityService {
         })
         .where(eq(communities.id, communityId));
 
-      // Update member contributions
+      // Update user's contribution count
       await db
         .update(communityMembers)
         .set({
           contributions: sql`${communityMembers.contributions} + 1`,
           lastActivityAt: new Date()
         })
-        .where(eq(communityMembers.id, membership[0].id));
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, authorAddress)
+          )
+        );
 
-      // Update community stats
-      await this.updateCommunityStats(communityId);
+      // Send push notifications to community members
+      try {
+        const { pushNotificationService } = await import('./pushNotificationService');
+        await pushNotificationService.notifyNewPost(
+          communityId,
+          newPost[0].id.toString(),
+          authorAddress,
+          content
+        );
+      } catch (notificationError) {
+        safeLogger.warn('Failed to send push notifications for new post:', notificationError);
+        // Don't fail the post creation if notifications fail
+      }
+
+      // Check for mentions in the post content and send mention notifications
+      try {
+        const mentionRegex = /@([a-zA-Z0-9_]+)/g;
+        const mentions = content.match(mentionRegex);
+        
+        if (mentions) {
+          const { pushNotificationService } = await import('./pushNotificationService');
+          
+          for (const mention of mentions) {
+            const mentionedAddress = mention.substring(1); // Remove @ symbol
+            
+            // Verify that the mentioned user is a community member
+            const mentionedMembership = await db
+              .select()
+              .from(communityMembers)
+              .where(
+                and(
+                  eq(communityMembers.communityId, communityId),
+                  eq(communityMembers.userAddress, mentionedAddress),
+                  eq(communityMembers.isActive, true)
+                )
+              )
+              .limit(1);
+
+            if (mentionedMembership.length > 0) {
+              await pushNotificationService.notifyMention(
+                mentionedAddress,
+                communityId,
+                newPost[0].id.toString(),
+                authorAddress
+              );
+            }
+          }
+        }
+      } catch (mentionError) {
+        safeLogger.warn('Failed to send mention notifications:', mentionError);
+        // Don't fail the post creation if mention notifications fail
+      }
 
       return {
         success: true,
         data: {
-          id: newPost.id.toString(),
-          authorId: newPost.authorId,
+          id: newPost[0].id,
+          communityId,
           authorAddress,
-          contentCid: newPost.contentCid,
-          mediaCids: JSON.parse(newPost.mediaCids || '[]'),
-          tags: JSON.parse(newPost.tags || '[]'),
-          communityId: newPost.communityId,
-          dao: newPost.dao,
-          createdAt: newPost.createdAt,
-          stakedValue: Number(newPost.stakedValue),
-          reputationScore: newPost.reputationScore,
+          content,
+          mediaUrls,
+          tags,
+          pollData,
+          createdAt: newPost[0].createdAt
         }
       };
     } catch (error) {
       safeLogger.error('Error creating community post:', error);
-      throw new Error('Failed to create community post');
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create post'
+      };
     }
   }
 
@@ -5052,6 +5081,72 @@ export class CommunityService {
     } catch (error) {
       safeLogger.error('Error executing rule change:', error);
       return { success: false, message: 'Failed to update rules' };
+    }
+  }
+
+  // Check if user has admin permission in community
+  async checkAdminPermission(communityId: string, userAddress: string): Promise<boolean> {
+    try {
+      const membership = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      return membership.length > 0 && membership[0].role === 'admin';
+    } catch (error) {
+      safeLogger.error('Error checking admin permission:', error);
+      return false;
+    }
+  }
+
+  // Check if user has moderator or admin permission in community
+  async checkModeratorPermission(communityId: string, userAddress: string): Promise<boolean> {
+    try {
+      const membership = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      return membership.length > 0 && 
+             (membership[0].role === 'admin' || membership[0].role === 'moderator');
+    } catch (error) {
+      safeLogger.error('Error checking moderator permission:', error);
+      return false;
+    }
+  }
+
+  // Check if user is a member of the community
+  async checkMembership(communityId: string, userAddress: string): Promise<boolean> {
+    try {
+      const membership = await db
+        .select({ isActive: communityMembers.isActive })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, userAddress)
+          )
+        )
+        .limit(1);
+
+      return membership.length > 0 && membership[0].isActive;
+    } catch (error) {
+      safeLogger.error('Error checking membership:', error);
+      return false;
     }
   }
 }

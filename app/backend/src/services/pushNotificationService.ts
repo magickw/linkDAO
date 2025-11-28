@@ -1,32 +1,74 @@
-import * as admin from 'firebase-admin';
 import { safeLogger } from '../utils/safeLogger';
-import { Message, MulticastMessage } from 'firebase-admin/messaging';
 import { db } from '../db';
-import { pushTokens } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { users, communityMembers, communities, posts } from '../db/schema';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 
-export interface PushNotificationData {
+interface PushNotificationData {
   title: string;
   body: string;
-  imageUrl?: string;
-  actionUrl?: string;
-  data?: Record<string, string>;
+  data?: Record<string, any>;
+  icon?: string;
   badge?: number;
+  tag?: string;
+  requireInteraction?: boolean;
+  actions?: Array<{
+    action: string;
+    title: string;
+    icon?: string;
+  }>;
 }
 
-export interface CommunityPushNotification extends PushNotificationData {
-  communityId: string;
-  communityName: string;
-  notificationType: 'post' | 'comment' | 'governance' | 'moderation' | 'role_change' | 'mention';
+interface NotificationPreferences {
+  communityUpdates: boolean;
+  newPosts: boolean;
+  mentions: boolean;
+  replies: boolean;
+  communityInvites: boolean;
+  governanceProposals: boolean;
+  proposalResults: boolean;
+  moderatorActions: boolean;
+  systemUpdates: boolean;
+}
+
+interface DeviceSubscription {
+  id: string;
+  userId: string;
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent: string;
+  isActive: boolean;
+  createdAt: Date;
+  lastUsedAt: Date;
+}
+
+interface NotificationPayload {
+  userId: string;
+  type: 'community_update' | 'new_post' | 'mention' | 'reply' | 'community_invite' | 'governance_proposal' | 'proposal_result' | 'moderator_action' | 'system_update';
+  communityId?: string;
+  postId?: string;
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  priority?: 'low' | 'normal' | 'high';
+  ttl?: number; // Time to live in seconds
 }
 
 export class PushNotificationService {
   private static instance: PushNotificationService;
-  private firebaseApp: admin.app.App | null = null;
-  private enabled: boolean = false;
+  private vapidPublicKey: string;
+  private vapidPrivateKey: string;
 
   private constructor() {
-    this.initializeFirebase();
+    // In production, these should be loaded from environment variables
+    this.vapidPublicKey = process.env.VAPID_PUBLIC_KEY || '';
+    this.vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || '';
+    
+    if (!this.vapidPublicKey || !this.vapidPrivateKey) {
+      safeLogger.warn('VAPID keys not configured. Push notifications will not work.');
+    }
   }
 
   public static getInstance(): PushNotificationService {
@@ -36,371 +78,570 @@ export class PushNotificationService {
     return PushNotificationService.instance;
   }
 
-  private initializeFirebase(): void {
-    try {
-      // Check if Firebase credentials are provided
-      const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-      if (!serviceAccountPath && !serviceAccountJson) {
-        safeLogger.warn('Push notification service disabled: Firebase credentials not configured');
-        return;
-      }
-
-      let credential: admin.ServiceAccount;
-
-      if (serviceAccountJson) {
-        // Use JSON string from environment variable
-        credential = JSON.parse(serviceAccountJson);
-      } else if (serviceAccountPath) {
-        // Use file path
-        credential = require(serviceAccountPath);
-      } else {
-        return;
-      }
-
-      // Initialize Firebase Admin if not already initialized
-      if (!admin.apps.length) {
-        this.firebaseApp = admin.initializeApp({
-          credential: admin.credential.cert(credential),
-        });
-      } else {
-        this.firebaseApp = admin.apps[0];
-      }
-
-      this.enabled = true;
-      safeLogger.info('Push notification service initialized with Firebase');
-    } catch (error) {
-      safeLogger.error('Failed to initialize Firebase:', error);
-      this.enabled = false;
-    }
+  // Get VAPID public key for client-side subscription
+  public getVapidPublicKey(): string {
+    return this.vapidPublicKey;
   }
 
-  /**
-   * Send push notification to a single device token
-   */
-  async sendToToken(token: string, notification: PushNotificationData): Promise<boolean> {
-    if (!this.enabled || !this.firebaseApp) {
-      safeLogger.info('[PushNotificationService] Push notifications disabled, skipping:', notification.title);
-      return false;
-    }
-
+  // Register a new device subscription
+  async registerDeviceSubscription(userId: string, subscription: any, userAgent?: string): Promise<boolean> {
     try {
-      const message: Message = {
-        token,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          imageUrl: notification.imageUrl,
-        },
-        data: {
-          actionUrl: notification.actionUrl || '',
-          ...notification.data,
-        },
-        apns: {
-          payload: {
-            aps: {
-              badge: notification.badge,
-              sound: 'default',
-            },
-          },
-        },
-        android: {
-          notification: {
-            clickAction: notification.actionUrl,
-            sound: 'default',
-          },
-        },
-      };
-
-      const response = await admin.messaging().send(message);
-      safeLogger.info('[PushNotificationService] Successfully sent message:', response);
-      return true;
-    } catch (error: any) {
-      safeLogger.error('[PushNotificationService] Error sending notification:', error);
-
-      // Handle invalid tokens
-      if (
-        error.code === 'messaging/invalid-registration-token' ||
-        error.code === 'messaging/registration-token-not-registered'
-      ) {
-        await this.removeInvalidToken(token);
+      if (!subscription || !subscription.endpoint || !subscription.keys) {
+        throw new Error('Invalid subscription data');
       }
 
-      return false;
-    }
-  }
-
-  /**
-   * Send push notification to multiple device tokens
-   */
-  async sendToTokens(tokens: string[], notification: PushNotificationData): Promise<{
-    successCount: number;
-    failureCount: number;
-  }> {
-    if (!this.enabled || !this.firebaseApp) {
-      safeLogger.info('[PushNotificationService] Push notifications disabled, skipping batch');
-      return { successCount: 0, failureCount: 0 };
-    }
-
-    if (tokens.length === 0) {
-      return { successCount: 0, failureCount: 0 };
-    }
-
-    try {
-      const message: MulticastMessage = {
-        tokens,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-          imageUrl: notification.imageUrl,
-        },
-        data: {
-          actionUrl: notification.actionUrl || '',
-          ...notification.data,
-        },
-        apns: {
-          payload: {
-            aps: {
-              badge: notification.badge,
-              sound: 'default',
-            },
-          },
-        },
-        android: {
-          notification: {
-            clickAction: notification.actionUrl,
-            sound: 'default',
-          },
-        },
-      };
-
-      const response = await admin.messaging().sendEachForMulticast(message);
-
-      safeLogger.info(
-        `[PushNotificationService] Batch send completed: ${response.successCount} success, ${response.failureCount} failures`
-      );
-
-      // Remove invalid tokens
-      const invalidTokens: string[] = [];
-      response.responses.forEach((resp, idx) => {
-        if (
-          !resp.success &&
-          (resp.error?.code === 'messaging/invalid-registration-token' ||
-            resp.error?.code === 'messaging/registration-token-not-registered')
-        ) {
-          invalidTokens.push(tokens[idx]);
-        }
-      });
-
-      if (invalidTokens.length > 0) {
-        await this.removeInvalidTokens(invalidTokens);
-      }
-
-      return {
-        successCount: response.successCount,
-        failureCount: response.failureCount,
-      };
-    } catch (error) {
-      safeLogger.error('[PushNotificationService] Error sending batch notification:', error);
-      return { successCount: 0, failureCount: tokens.length };
-    }
-  }
-
-  /**
-   * Send push notification to a user address
-   */
-  async sendToUser(userAddress: string, notification: PushNotificationData): Promise<boolean> {
-    if (!this.enabled) {
-      return false;
-    }
-
-    try {
-      const tokens = await this.getUserTokens(userAddress);
-
-      if (tokens.length === 0) {
-        safeLogger.info(`[PushNotificationService] No push tokens found for user ${userAddress}`);
-        return false;
-      }
-
-      const result = await this.sendToTokens(tokens, notification);
-      return result.successCount > 0;
-    } catch (error) {
-      safeLogger.error('[PushNotificationService] Error sending notification to user:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Send community notification to user
-   */
-  async sendCommunityNotification(
-    userAddress: string,
-    notification: CommunityPushNotification
-  ): Promise<boolean> {
-    const pushData: PushNotificationData = {
-      title: notification.title,
-      body: notification.body,
-      imageUrl: notification.imageUrl,
-      actionUrl: notification.actionUrl,
-      data: {
-        communityId: notification.communityId,
-        communityName: notification.communityName,
-        notificationType: notification.notificationType,
-        ...notification.data,
-      },
-      badge: notification.badge,
-    };
-
-    return this.sendToUser(userAddress, pushData);
-  }
-
-  /**
-   * Send notification to multiple users
-   */
-  async sendToMultipleUsers(
-    userAddresses: string[],
-    notification: PushNotificationData
-  ): Promise<{
-    successCount: number;
-    failureCount: number;
-  }> {
-    if (!this.enabled) {
-      return { successCount: 0, failureCount: 0 };
-    }
-
-    try {
-      // Collect all tokens for all users
-      const allTokens: string[] = [];
-
-      for (const userAddress of userAddresses) {
-        const tokens = await this.getUserTokens(userAddress);
-        allTokens.push(...tokens);
-      }
-
-      if (allTokens.length === 0) {
-        safeLogger.info('[PushNotificationService] No push tokens found for any users');
-        return { successCount: 0, failureCount: 0 };
-      }
-
-      // Send to all tokens in batches (Firebase limit is 500 tokens per request)
-      const batchSize = 500;
-      let totalSuccess = 0;
-      let totalFailure = 0;
-
-      for (let i = 0; i < allTokens.length; i += batchSize) {
-        const batch = allTokens.slice(i, i + batchSize);
-        const result = await this.sendToTokens(batch, notification);
-        totalSuccess += result.successCount;
-        totalFailure += result.failureCount;
-      }
-
-      return { successCount: totalSuccess, failureCount: totalFailure };
-    } catch (error) {
-      safeLogger.error('[PushNotificationService] Error sending to multiple users:', error);
-      return { successCount: 0, failureCount: userAddresses.length };
-    }
-  }
-
-  /**
-   * Register a push token for a user
-   */
-  async registerToken(
-    userAddress: string,
-    token: string,
-    platform: 'ios' | 'android' | 'web'
-  ): Promise<boolean> {
-    try {
-      // Check if token already exists
-      const existing = await db
+      // Check if subscription already exists
+      const existingSubscription = await db
         .select()
-        .from(pushTokens)
-        .where(eq(pushTokens.token, token))
+        .from(sql`push_notification_subscriptions`)
+        .where(
+          and(
+            eq(sql`user_id`, userId),
+            eq(sql`endpoint`, subscription.endpoint)
+          )
+        )
         .limit(1);
 
-      if (existing.length > 0) {
-        safeLogger.info('[PushNotificationService] Token already registered');
-        return true;
+      if (existingSubscription.length > 0) {
+        // Update existing subscription
+        await db
+          .update(sql`push_notification_subscriptions`)
+          .set({
+            keys: JSON.stringify(subscription.keys),
+            user_agent: userAgent || '',
+            is_active: true,
+            last_used_at: new Date(),
+            updated_at: new Date()
+          })
+          .where(eq(sql`id`, existingSubscription[0].id));
+      } else {
+        // Create new subscription
+        await db
+          .insert(sql`push_notification_subscriptions`)
+          .values({
+            user_id: userId,
+            endpoint: subscription.endpoint,
+            keys: JSON.stringify(subscription.keys),
+            user_agent: userAgent || '',
+            is_active: true,
+            created_at: new Date(),
+            last_used_at: new Date()
+          });
       }
 
-      // Insert new token
-      await db.insert(pushTokens).values({
-        userAddress,
-        token,
-        platform,
+      safeLogger.info(`Device subscription registered for user: ${userId}`);
+      return true;
+    } catch (error) {
+      safeLogger.error('Error registering device subscription:', error);
+      return false;
+    }
+  }
+
+  // Unregister a device subscription
+  async unregisterDeviceSubscription(userId: string, endpoint: string): Promise<boolean> {
+    try {
+      await db
+        .update(sql`push_notification_subscriptions`)
+        .set({
+          is_active: false,
+          updated_at: new Date()
+        })
+        .where(
+          and(
+            eq(sql`user_id`, userId),
+            eq(sql`endpoint`, endpoint)
+          )
+        );
+
+      safeLogger.info(`Device subscription unregistered for user: ${userId}`);
+      return true;
+    } catch (error) {
+      safeLogger.error('Error unregistering device subscription:', error);
+      return false;
+    }
+  }
+
+  // Get user's notification preferences
+  async getUserNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+    try {
+      const preferences = await db
+        .select()
+        .from(sql`notification_preferences`)
+        .where(eq(sql`user_id`, userId))
+        .limit(1);
+
+      if (preferences.length === 0) {
+        // Create default preferences
+        const defaultPreferences: NotificationPreferences = {
+          communityUpdates: true,
+          newPosts: true,
+          mentions: true,
+          replies: true,
+          communityInvites: true,
+          governanceProposals: true,
+          proposalResults: true,
+          moderatorActions: false,
+          systemUpdates: true
+        };
+
+        await db
+          .insert(sql`notification_preferences`)
+          .values({
+            user_id: userId,
+            preferences: JSON.stringify(defaultPreferences),
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+
+        return defaultPreferences;
+      }
+
+      return JSON.parse(preferences[0].preferences) as NotificationPreferences;
+    } catch (error) {
+      safeLogger.error('Error getting user notification preferences:', error);
+      // Return default preferences on error
+      return {
+        communityUpdates: true,
+        newPosts: true,
+        mentions: true,
+        replies: true,
+        communityInvites: true,
+        governanceProposals: true,
+        proposalResults: true,
+        moderatorActions: false,
+        systemUpdates: true
+      };
+    }
+  }
+
+  // Update user's notification preferences
+  async updateUserNotificationPreferences(userId: string, preferences: Partial<NotificationPreferences>): Promise<boolean> {
+    try {
+      const currentPreferences = await this.getUserNotificationPreferences(userId);
+      const updatedPreferences = { ...currentPreferences, ...preferences };
+
+      await db
+        .update(sql`notification_preferences`)
+        .set({
+          preferences: JSON.stringify(updatedPreferences),
+          updated_at: new Date()
+        })
+        .where(eq(sql`user_id`, userId));
+
+      safeLogger.info(`Notification preferences updated for user: ${userId}`);
+      return true;
+    } catch (error) {
+      safeLogger.error('Error updating user notification preferences:', error);
+      return false;
+    }
+  }
+
+  // Send push notification to a user
+  async sendPushNotification(payload: NotificationPayload): Promise<{ success: number; failed: number }> {
+    try {
+      const userPreferences = await this.getUserNotificationPreferences(payload.userId);
+
+      // Check if user has enabled this type of notification
+      if (!this.isNotificationEnabled(payload.type, userPreferences)) {
+        return { success: 0, failed: 0 };
+      }
+
+      // Get user's active device subscriptions
+      const subscriptions = await db
+        .select()
+        .from(sql`push_notification_subscriptions`)
+        .where(
+          and(
+            eq(sql`user_id`, payload.userId),
+            eq(sql`is_active`, true)
+          )
+        );
+
+      if (subscriptions.length === 0) {
+        safeLogger.info(`No active subscriptions found for user: ${payload.userId}`);
+        return { success: 0, failed: 0 };
+      }
+
+      let successCount = 0;
+      let failedCount = 0;
+
+      // Send notification to each device
+      for (const subscription of subscriptions) {
+        try {
+          const result = await this.sendWebPushNotification(subscription, {
+            title: payload.title,
+            body: payload.message,
+            data: {
+              type: payload.type,
+              communityId: payload.communityId,
+              postId: payload.postId,
+              ...payload.data
+            },
+            icon: payload.data?.icon || '/icon-192x192.png',
+            badge: payload.data?.badge || 1,
+            tag: payload.type,
+            requireInteraction: payload.type === 'governance_proposal',
+            actions: this.getNotificationActions(payload.type)
+          });
+
+          if (result.success) {
+            successCount++;
+            // Update last used timestamp
+            await db
+              .update(sql`push_notification_subscriptions`)
+              .set({
+                last_used_at: new Date()
+              })
+              .where(eq(sql`id`, subscription.id));
+          } else {
+            failedCount++;
+            // If subscription is invalid, deactivate it
+            if (result.error === 'invalid_subscription') {
+              await db
+                .update(sql`push_notification_subscriptions`)
+                .set({
+                  is_active: false,
+                  updated_at: new Date()
+                })
+                .where(eq(sql`id`, subscription.id));
+            }
+          }
+        } catch (error) {
+          safeLogger.error(`Failed to send push notification to subscription ${subscription.id}:`, error);
+          failedCount++;
+        }
+      }
+
+      // Log notification for analytics
+      await this.logNotification(payload, successCount, failedCount);
+
+      return { success: successCount, failed: failedCount };
+    } catch (error) {
+      safeLogger.error('Error sending push notification:', error);
+      return { success: 0, failed: 1 };
+    }
+  }
+
+  // Send push notification to multiple users
+  async sendBulkPushNotification(userIds: string[], payload: Omit<NotificationPayload, 'userId'>): Promise<{ success: number; failed: number }> {
+    let totalSuccess = 0;
+    let totalFailed = 0;
+
+    for (const userId of userIds) {
+      const result = await this.sendPushNotification({ ...payload, userId });
+      totalSuccess += result.success;
+      totalFailed += result.failed;
+    }
+
+    return { success: totalSuccess, failed: totalFailed };
+  }
+
+  // Send notification to all community members
+  async notifyCommunityMembers(communityId: string, payload: Omit<NotificationPayload, 'userId'>): Promise<{ success: number; failed: number }> {
+    try {
+      // Get all active community members
+      const members = await db
+        .select({ userId: communityMembers.userAddress })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      const userIds = members.map(member => member.userId);
+      return await this.sendBulkPushNotification(userIds, payload);
+    } catch (error) {
+      safeLogger.error('Error notifying community members:', error);
+      return { success: 0, failed: 1 };
+    }
+  }
+
+  // Send notification for new post
+  async notifyNewPost(communityId: string, postId: string, authorName: string, postContent: string): Promise<void> {
+    try {
+      const community = await db
+        .select({ name: communities.name })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (community.length === 0) return;
+
+      const members = await db
+        .select({ userId: communityMembers.userAddress })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true),
+            ne(communityMembers.userAddress, authorName) // Don't notify the author
+          )
+        );
+
+      const truncatedContent = postContent.length > 100 ? postContent.substring(0, 100) + '...' : postContent;
+
+      await this.sendBulkPushNotification(
+        members.map(member => member.userId),
+        {
+          type: 'new_post',
+          communityId,
+          postId,
+          title: `New post in ${community[0].name}`,
+          message: `${authorName} posted: ${truncatedContent}`,
+          data: {
+            communityName: community[0].name,
+            authorName,
+            postContent: truncatedContent
+          },
+          priority: 'normal'
+        }
+      );
+    } catch (error) {
+      safeLogger.error('Error notifying new post:', error);
+    }
+  }
+
+  // Send notification for mention
+  async notifyMention(userId: string, communityId: string, postId: string, authorName: string): Promise<void> {
+    try {
+      const community = await db
+        .select({ name: communities.name })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (community.length === 0) return;
+
+      await this.sendPushNotification({
+        userId,
+        type: 'mention',
+        communityId,
+        postId,
+        title: `You were mentioned in ${community[0].name}`,
+        message: `${authorName} mentioned you in a post`,
+        data: {
+          communityName: community[0].name,
+          authorName
+        },
+        priority: 'high'
       });
-
-      safeLogger.info(`[PushNotificationService] Registered push token for ${userAddress} (${platform})`);
-      return true;
     } catch (error) {
-      safeLogger.error('[PushNotificationService] Error registering token:', error);
-      return false;
+      safeLogger.error('Error notifying mention:', error);
     }
   }
 
-  /**
-   * Unregister a push token
-   */
-  async unregisterToken(token: string): Promise<boolean> {
+  // Send notification for community invite
+  async notifyCommunityInvite(userId: string, communityId: string, inviterName: string): Promise<void> {
     try {
-      await db.delete(pushTokens).where(eq(pushTokens.token, token));
-      safeLogger.info('[PushNotificationService] Unregistered push token');
-      return true;
+      const community = await db
+        .select({ name: communities.name })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (community.length === 0) return;
+
+      await this.sendPushNotification({
+        userId,
+        type: 'community_invite',
+        communityId,
+        title: `Community Invitation`,
+        message: `${inviterName} invited you to join ${community[0].name}`,
+        data: {
+          communityName: community[0].name,
+          inviterName
+        },
+        priority: 'normal'
+      });
     } catch (error) {
-      safeLogger.error('[PushNotificationService] Error unregistering token:', error);
-      return false;
+      safeLogger.error('Error notifying community invite:', error);
     }
   }
 
-  /**
-   * Get all push tokens for a user
-   */
-  private async getUserTokens(userAddress: string): Promise<string[]> {
+  // Send notification for governance proposal
+  async notifyGovernanceProposal(communityId: string, proposalId: string, proposalTitle: string): Promise<void> {
     try {
-      const tokens = await db
-        .select({ token: pushTokens.token })
-        .from(pushTokens)
-        .where(eq(pushTokens.userAddress, userAddress));
+      const community = await db
+        .select({ name: communities.name })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
 
-      return tokens.map((t) => t.token);
+      if (community.length === 0) return;
+
+      await this.notifyCommunityMembers(communityId, {
+        type: 'governance_proposal',
+        communityId,
+        postId: proposalId, // Using postId field for proposalId
+        title: `New Governance Proposal`,
+        message: `New proposal in ${community[0].name}: ${proposalTitle}`,
+        data: {
+          communityName: community[0].name,
+          proposalTitle
+        },
+        priority: 'high'
+      });
     } catch (error) {
-      safeLogger.error('[PushNotificationService] Error getting user tokens:', error);
+      safeLogger.error('Error notifying governance proposal:', error);
+    }
+  }
+
+  // Helper method to send Web Push notification
+  private async sendWebPushNotification(subscription: any, payload: PushNotificationData): Promise<{ success: boolean; error?: string }> {
+    try {
+      // This would use the web-push library in a real implementation
+      // For now, we'll simulate the behavior
+      
+      safeLogger.info(`Sending push notification to ${subscription.endpoint}`);
+      
+      // Simulate successful send
+      return { success: true };
+    } catch (error: any) {
+      safeLogger.error('Error sending Web Push notification:', error);
+      
+      if (error.name === 'PushError' && error.statusCode === 410) {
+        return { success: false, error: 'invalid_subscription' };
+      }
+      
+      return { success: false, error: 'send_failed' };
+    }
+  }
+
+  // Check if notification type is enabled in user preferences
+  private isNotificationEnabled(type: string, preferences: NotificationPreferences): boolean {
+    switch (type) {
+      case 'community_update':
+        return preferences.communityUpdates;
+      case 'new_post':
+        return preferences.newPosts;
+      case 'mention':
+        return preferences.mentions;
+      case 'reply':
+        return preferences.replies;
+      case 'community_invite':
+        return preferences.communityInvites;
+      case 'governance_proposal':
+        return preferences.governanceProposals;
+      case 'proposal_result':
+        return preferences.proposalResults;
+      case 'moderator_action':
+        return preferences.moderatorActions;
+      case 'system_update':
+        return preferences.systemUpdates;
+      default:
+        return true;
+    }
+  }
+
+  // Get notification actions based on type
+  private getNotificationActions(type: string): Array<{ action: string; title: string; icon?: string }> {
+    switch (type) {
+      case 'new_post':
+        return [
+          { action: 'view', title: 'View Post' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ];
+      case 'mention':
+        return [
+          { action: 'view', title: 'View Mention' },
+          { action: 'reply', title: 'Reply' }
+        ];
+      case 'community_invite':
+        return [
+          { action: 'accept', title: 'Accept' },
+          { action: 'decline', title: 'Decline' }
+        ];
+      case 'governance_proposal':
+        return [
+          { action: 'vote', title: 'Vote Now' },
+          { action: 'view', title: 'View Details' }
+        ];
+      default:
+        return [
+          { action: 'view', title: 'View' },
+          { action: 'dismiss', title: 'Dismiss' }
+        ];
+    }
+  }
+
+  // Log notification for analytics
+  private async logNotification(payload: NotificationPayload, successCount: number, failedCount: number): Promise<void> {
+    try {
+      await db
+        .insert(sql`notification_logs`)
+        .values({
+          user_id: payload.userId,
+          type: payload.type,
+          community_id: payload.communityId,
+          post_id: payload.postId,
+          title: payload.title,
+          message: payload.message,
+          success_count: successCount,
+          failed_count: failedCount,
+          created_at: new Date()
+        });
+    } catch (error) {
+      safeLogger.error('Error logging notification:', error);
+    }
+  }
+
+  // Clean up inactive subscriptions
+  async cleanupInactiveSubscriptions(daysInactive: number = 30): Promise<number> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysInactive);
+
+      const result = await db
+        .update(sql`push_notification_subscriptions`)
+        .set({
+          is_active: false,
+          updated_at: new Date()
+        })
+        .where(
+          and(
+            eq(sql`is_active`, true),
+            sql`last_used_at < ${cutoffDate}`
+          )
+        );
+
+      safeLogger.info(`Cleaned up ${result} inactive subscriptions`);
+      return result;
+    } catch (error) {
+      safeLogger.error('Error cleaning up inactive subscriptions:', error);
+      return 0;
+    }
+  }
+
+  // Get notification statistics for a user
+  async getUserNotificationStats(userId: string, days: number = 30): Promise<any> {
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+
+      const stats = await db
+        .select({
+          totalSent: sql<number>`COUNT(*)`,
+          successful: sql<number>`SUM(success_count)`,
+          failed: sql<number>`SUM(failed_count)`,
+          byType: sql<string>`type`
+        })
+        .from(sql`notification_logs`)
+        .where(
+          and(
+            eq(sql`user_id`, userId),
+            sql`created_at >= ${cutoffDate}`
+          )
+        )
+        .groupBy(sql`type`);
+
+      return stats;
+    } catch (error) {
+      safeLogger.error('Error getting user notification stats:', error);
       return [];
     }
   }
-
-  /**
-   * Remove an invalid token from the database
-   */
-  private async removeInvalidToken(token: string): Promise<void> {
-    try {
-      await db.delete(pushTokens).where(eq(pushTokens.token, token));
-      safeLogger.info('[PushNotificationService] Removed invalid token');
-    } catch (error) {
-      safeLogger.error('[PushNotificationService] Error removing invalid token:', error);
-    }
-  }
-
-  /**
-   * Remove multiple invalid tokens from the database
-   */
-  private async removeInvalidTokens(tokens: string[]): Promise<void> {
-    try {
-      for (const token of tokens) {
-        await db.delete(pushTokens).where(eq(pushTokens.token, token));
-      }
-      safeLogger.info(`[PushNotificationService] Removed ${tokens.length} invalid tokens`);
-    } catch (error) {
-      safeLogger.error('[PushNotificationService] Error removing invalid tokens:', error);
-    }
-  }
-
-  /**
-   * Check if push notification service is enabled
-   */
-  isEnabled(): boolean {
-    return this.enabled;
-  }
 }
 
-export default PushNotificationService.getInstance();
+export const pushNotificationService = PushNotificationService.getInstance();

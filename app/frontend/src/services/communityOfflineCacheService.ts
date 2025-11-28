@@ -1,10 +1,46 @@
 /**
  * Community Offline Cache Service
  * Implements IndexedDB-based caching for community data with offline support
+ * Enhanced with background sync, conflict resolution, and intelligent cache management
  */
 
 import { Community } from '../models/Community';
 import { EnhancedPost } from '../types/feed';
+
+// Background sync registration type
+declare global {
+  interface ServiceWorkerRegistration {
+    sync?: {
+      register(tag: string): Promise<void>;
+      getTags(): Promise<string[]>;
+    };
+  }
+}
+
+// Conflict resolution types
+export interface ConflictResolution {
+  type: 'local' | 'remote' | 'merge';
+  timestamp: Date;
+  reason: string;
+}
+
+export interface SyncConflict {
+  id: string;
+  entityType: 'community' | 'post' | 'member';
+  entityId: string;
+  localVersion: any;
+  remoteVersion: any;
+  conflictType: 'update' | 'delete';
+  resolution?: ConflictResolution;
+  timestamp: Date;
+}
+
+export interface BackgroundSyncOptions {
+  enabled: boolean;
+  intervalMinutes: number;
+  retryAttempts: number;
+  wifiOnly: boolean;
+}
 
 // Define types for cached data
 export interface CachedCommunity extends Community {
@@ -50,6 +86,15 @@ export class CommunityOfflineCacheService {
   private isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
   private syncInProgress: boolean = false;
   private retryTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private backgroundSyncOptions: BackgroundSyncOptions = {
+    enabled: true,
+    intervalMinutes: 15,
+    retryAttempts: 3,
+    wifiOnly: false
+  };
+  private syncInterval: NodeJS.Timeout | null = null;
+  private lastSyncTimestamp: Date | null = null;
+  private conflictResolutions: Map<string, ConflictResolution> = new Map();
 
   private constructor() {
     // Check if we're in a browser environment
@@ -128,6 +173,21 @@ export class CommunityOfflineCacheService {
           const syncStatusStore = db.createObjectStore('syncStatus', { keyPath: 'communityId' });
           syncStatusStore.createIndex('lastSyncTimestamp', 'lastSyncTimestamp');
           syncStatusStore.createIndex('pendingActions', 'pendingActions');
+        }
+
+        // Sync Conflicts Store
+        if (!db.objectStoreNames.contains('syncConflicts')) {
+          const conflictsStore = db.createObjectStore('syncConflicts', { keyPath: 'id' });
+          conflictsStore.createIndex('entityType', 'entityType');
+          conflictsStore.createIndex('entityId', 'entityId');
+          conflictsStore.createIndex('conflictType', 'conflictType');
+          conflictsStore.createIndex('timestamp', 'timestamp');
+        }
+
+        // Cache Metadata Store
+        if (!db.objectStoreNames.contains('cacheMetadata')) {
+          const metadataStore = db.createObjectStore('cacheMetadata', { keyPath: 'key' });
+          metadataStore.createIndex('lastUpdated', 'lastUpdated');
         }
       };
     });
@@ -836,5 +896,492 @@ export class CommunityOfflineCacheService {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+  }
+
+  // Enhanced Offline Functionality Methods
+
+  /**
+   * Initialize background sync
+   */
+  public initializeBackgroundSync(options?: Partial<BackgroundSyncOptions>): void {
+    if (options) {
+      this.backgroundSyncOptions = { ...this.backgroundSyncOptions, ...options };
+    }
+
+    if (!this.backgroundSyncOptions.enabled) {
+      this.stopBackgroundSync();
+      return;
+    }
+
+    // Register for background sync if service worker is available
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if (registration.sync) {
+          registration.sync.register('community-sync');
+        }
+      }).catch((error) => {
+        console.warn('Failed to register background sync:', error);
+      });
+    }
+
+    // Fallback to interval-based sync
+    this.startIntervalSync();
+  }
+
+  /**
+   * Start interval-based background sync
+   */
+  private startIntervalSync(): void {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+    }
+
+    this.syncInterval = setInterval(() => {
+      if (this.isOnline && this.backgroundSyncOptions.enabled) {
+        this.performBackgroundSync();
+      }
+    }, this.backgroundSyncOptions.intervalMinutes * 60 * 1000);
+  }
+
+  /**
+   * Stop background sync
+   */
+  public stopBackgroundSync(): void {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+  }
+
+  /**
+   * Perform background sync
+   */
+  private async performBackgroundSync(): Promise<void> {
+    if (this.syncInProgress) return;
+
+    this.syncInProgress = true;
+
+    try {
+      // Check network conditions
+      if (this.backgroundSyncOptions.wifiOnly && !this.isWifiConnection()) {
+        console.log('Skipping background sync - not on WiFi');
+        return;
+      }
+
+      // Sync pending actions
+      await this.syncPendingActions();
+
+      // Sync community data for recently accessed communities
+      await this.syncRecentCommunities();
+
+      // Update last sync timestamp
+      this.lastSyncTimestamp = new Date();
+      await this.updateCacheMetadata('lastSync', this.lastSyncTimestamp.toISOString());
+
+      console.log('Background sync completed successfully');
+    } catch (error) {
+      console.error('Background sync failed:', error);
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  /**
+   * Check if device is on WiFi connection (simplified check)
+   */
+  private isWifiConnection(): boolean {
+    if (!navigator.connection) return true; // Assume WiFi if API not available
+
+    const connection = (navigator as any).connection;
+    return connection.type === 'wifi' || connection.type === 'ethernet';
+  }
+
+  /**
+   * Sync recently accessed communities
+   */
+  private async syncRecentCommunities(): Promise<void> {
+    if (!this.db) return;
+
+    const recentCommunities = await this.getRecentCommunities(5); // Get 5 most recent
+
+    for (const community of recentCommunities) {
+      try {
+        // Fetch latest community data
+        const response = await fetch(`/api/communities/${community.id}`);
+        if (response.ok) {
+          const latestCommunity = await response.json();
+          
+          // Check for conflicts
+          const conflict = await this.detectConflict('community', community.id, community, latestCommunity);
+          
+          if (conflict) {
+            await this.handleConflict(conflict);
+          } else {
+            // Update cached community
+            await this.cacheCommunity(latestCommunity);
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to sync community ${community.id}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Get recently accessed communities
+   */
+  private async getRecentCommunities(limit: number): Promise<CachedCommunity[]> {
+    if (!this.db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['communities'], 'readonly');
+      const store = transaction.objectStore('communities');
+      const index = store.index('lastAccessed');
+      const request = index.openCursor(null, 'prev'); // Most recent first
+
+      const communities: CachedCommunity[] = [];
+      let count = 0;
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        
+        if (cursor && count < limit) {
+          communities.push(cursor.value);
+          count++;
+          cursor.continue();
+        } else {
+          resolve(communities);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Detect conflict between local and remote data
+   */
+  private async detectConflict(
+    entityType: 'community' | 'post' | 'member',
+    entityId: string,
+    localVersion: any,
+    remoteVersion: any
+  ): Promise<SyncConflict | null> {
+    // Simple conflict detection based on timestamps
+    const localTimestamp = new Date(localVersion.updatedAt || localVersion.cachedAt);
+    const remoteTimestamp = new Date(remoteVersion.updatedAt);
+
+    if (remoteTimestamp > localTimestamp) {
+      // Check if local has unsynced changes
+      const hasLocalChanges = await this.hasUnsyncedChanges(entityType, entityId);
+      
+      if (hasLocalChanges) {
+        return {
+          id: `${entityType}-${entityId}-${Date.now()}`,
+          entityType,
+          entityId,
+          localVersion,
+          remoteVersion,
+          conflictType: 'update',
+          timestamp: new Date()
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if entity has unsynced changes
+   */
+  private async hasUnsyncedChanges(entityType: string, entityId: string): Promise<boolean> {
+    if (!this.db) return false;
+
+    return new Promise((resolve) => {
+      const transaction = this.db!.transaction(['offlineActions'], 'readonly');
+      const store = transaction.objectStore('offlineActions');
+      const index = store.index('status');
+      const request = index.openCursor(IDBKeyRange.only('pending'));
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        let hasChanges = false;
+
+        while (cursor && !hasChanges) {
+          const action = cursor.value;
+          if (action.data.entityId === entityId || action.data.communityId === entityId) {
+            hasChanges = true;
+          }
+          cursor.continue();
+        }
+
+        resolve(hasChanges);
+      };
+
+      request.onerror = () => resolve(false);
+    });
+  }
+
+  /**
+   * Handle sync conflict
+   */
+  private async handleConflict(conflict: SyncConflict): Promise<void> {
+    if (!this.db) return;
+
+    // Store conflict for manual resolution
+    const transaction = this.db!.transaction(['syncConflicts'], 'readwrite');
+    const store = transaction.objectStore('syncConflicts');
+    await store.put(conflict);
+
+    // Try automatic resolution based on strategy
+    const resolution = await this.autoResolveConflict(conflict);
+    
+    if (resolution) {
+      conflict.resolution = resolution;
+      await this.applyConflictResolution(conflict);
+    }
+
+    // Notify user about conflict (in a real app, this would show a UI notification)
+    console.warn('Sync conflict detected:', conflict);
+  }
+
+  /**
+   * Automatically resolve conflict
+   */
+  private async autoResolveConflict(conflict: SyncConflict): Promise<ConflictResolution | null> {
+    // Simple resolution strategy: prefer remote version for most cases
+    // In a real app, this would be more sophisticated
+    
+    const remoteTimestamp = new Date(conflict.remoteVersion.updatedAt);
+    const localTimestamp = new Date(conflict.localVersion.updatedAt || conflict.localVersion.cachedAt);
+
+    if (remoteTimestamp.getTime() - localTimestamp.getTime() > 24 * 60 * 60 * 1000) {
+      // Remote is significantly newer, prefer it
+      return {
+        type: 'remote',
+        timestamp: new Date(),
+        reason: 'Remote version is significantly newer'
+      };
+    }
+
+    return null; // Require manual resolution
+  }
+
+  /**
+   * Apply conflict resolution
+   */
+  private async applyConflictResolution(conflict: SyncConflict): Promise<void> {
+    if (!conflict.resolution) return;
+
+    const { type } = conflict.resolution;
+
+    if (type === 'remote') {
+      // Apply remote version
+      switch (conflict.entityType) {
+        case 'community':
+          await this.cacheCommunity(conflict.remoteVersion);
+          break;
+        case 'post':
+          await this.cacheCommunityPost(conflict.remoteVersion);
+          break;
+        case 'member':
+          await this.cacheCommunityMember(conflict.remoteVersion);
+          break;
+      }
+    }
+
+    // Remove conflict from database
+    if (this.db) {
+      const transaction = this.db!.transaction(['syncConflicts'], 'readwrite');
+      const store = transaction.objectStore('syncConflicts');
+      await store.delete(conflict.id);
+    }
+  }
+
+  /**
+   * Get pending conflicts
+   */
+  public async getPendingConflicts(): Promise<SyncConflict[]> {
+    if (!this.db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['syncConflicts'], 'readonly');
+      const store = transaction.objectStore('syncConflicts');
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Manually resolve conflict
+   */
+  public async resolveConflict(conflictId: string, resolution: ConflictResolution): Promise<void> {
+    if (!this.db) return;
+
+    const conflict = await this.getConflictById(conflictId);
+    if (!conflict) return;
+
+    conflict.resolution = resolution;
+    await this.applyConflictResolution(conflict);
+  }
+
+  /**
+   * Get conflict by ID
+   */
+  private async getConflictById(conflictId: string): Promise<SyncConflict | null> {
+    if (!this.db) return null;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['syncConflicts'], 'readonly');
+      const store = transaction.objectStore('syncConflicts');
+      const request = store.get(conflictId);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update cache metadata
+   */
+  private async updateCacheMetadata(key: string, value: string): Promise<void> {
+    if (!this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['cacheMetadata'], 'readwrite');
+      const store = transaction.objectStore('cacheMetadata');
+      const request = store.put({
+        key,
+        value,
+        lastUpdated: new Date()
+      });
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get cache metadata
+   */
+  public async getCacheMetadata(key: string): Promise<string | null> {
+    if (!this.db) return null;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['cacheMetadata'], 'readonly');
+      const store = transaction.objectStore('cacheMetadata');
+      const request = store.get(key);
+
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(result ? result.value : null);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Intelligent cache cleanup based on usage patterns
+   */
+  public async intelligentCacheCleanup(): Promise<void> {
+    if (!this.db) return;
+
+    const stats = await this.getCacheStats();
+    const maxCacheSize = 100 * 1024 * 1024; // 100MB
+
+    // Estimate cache size (simplified)
+    const estimatedSize = (stats.communities + stats.posts + stats.members) * 1024; // Rough estimate
+
+    if (estimatedSize > maxCacheSize) {
+      // Remove least recently used items
+      await this.removeLeastRecentlyUsedItems(estimatedSize - maxCacheSize * 0.8);
+    }
+
+    // Remove old conflicts
+    await this.cleanupOldConflicts();
+  }
+
+  /**
+   * Remove least recently used items
+   */
+  private async removeLeastRecentlyUsedItems(bytesToRemove: number): Promise<void> {
+    // This is a simplified implementation
+    // In a real app, you'd track actual sizes and be more precise
+    const communitiesToRemove = Math.floor(bytesToRemove / 1024 / 10); // Rough estimate
+    
+    if (!this.db) return;
+
+    const transaction = this.db!.transaction(['communities'], 'readwrite');
+    const store = transaction.objectStore('communities');
+    const index = store.index('lastAccessed');
+    const request = index.openCursor(null, 'prev'); // Start from oldest
+
+    let removed = 0;
+    request.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest).result;
+      
+      if (cursor && removed < communitiesToRemove) {
+        store.delete(cursor.primaryKey);
+        removed++;
+        cursor.continue();
+      }
+    };
+  }
+
+  /**
+   * Cleanup old conflicts
+   */
+  private async cleanupOldConflicts(): Promise<void> {
+    if (!this.db) return;
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7); // Remove conflicts older than 7 days
+
+    const transaction = this.db!.transaction(['syncConflicts'], 'readwrite');
+    const store = transaction.objectStore('syncConflicts');
+    const index = store.index('timestamp');
+    const range = IDBKeyRange.upperBound(cutoffDate);
+    const request = index.openCursor(range);
+
+    request.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest).result;
+      if (cursor) {
+        store.delete(cursor.primaryKey);
+        cursor.continue();
+      }
+    };
+  }
+
+  /**
+   * Get sync status
+   */
+  public async getSyncStatus(): Promise<{
+    lastSync: Date | null;
+    pendingActions: number;
+    conflicts: number;
+    isOnline: boolean;
+    backgroundSyncEnabled: boolean;
+  }> {
+    const [pendingActions, conflicts] = await Promise.all([
+      this.getPendingActionsCount(),
+      this.getPendingConflicts().then(c => c.length)
+    ]);
+
+    return {
+      lastSync: this.lastSyncTimestamp,
+      pendingActions,
+      conflicts,
+      isOnline: this.isOnline,
+      backgroundSyncEnabled: this.backgroundSyncOptions.enabled
+    };
+  }
+
+  /**
+   * Force full sync
+   */
+  public async forceFullSync(): Promise<void> {
+    await this.performBackgroundSync();
   }
 }

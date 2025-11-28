@@ -4,6 +4,7 @@ import { safeLogger } from '../utils/safeLogger';
 import { communityService } from '../services/communityService';
 import { apiResponse, createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { openaiService } from '../services/ai/openaiService';
+import { aiModerationService } from '../services/aiModerationService';
 
 // Extend Request type to include user property
 interface AuthenticatedRequest extends Request {
@@ -360,6 +361,46 @@ export class CommunityController {
 
       const { id } = req.params;
       const { content, mediaUrls = [], tags = [], pollData } = req.body;
+
+      // Perform AI moderation before creating post
+      try {
+        const moderationResult = await aiModerationService.moderateContent({
+          type: 'post',
+          content,
+          authorAddress: userAddress,
+          communityId: id,
+          context: {
+            communityRules: await this.getCommunityRules(id),
+            userReputation: await this.getUserReputation(userAddress)
+          }
+        });
+
+        // If content is not approved, return moderation result
+        if (!moderationResult.isApproved) {
+          return res.status(403).json(createErrorResponse('CONTENT_REJECTED', 
+            `Content not approved: ${moderationResult.reasoning}`, 403, {
+              moderationResult,
+              suggestedActions: await aiModerationService.getSuggestedActions({
+                type: 'post',
+                content,
+                authorAddress: userAddress,
+                communityId: id
+              }, moderationResult)
+            }));
+        }
+
+        // Log successful moderation
+        safeLogger.info('Content approved by AI moderation', {
+          communityId: id,
+          authorAddress: userAddress,
+          riskScore: moderationResult.riskScore,
+          categories: moderationResult.categories.map(c => c.category)
+        });
+
+      } catch (moderationError) {
+        safeLogger.warn('AI moderation failed, proceeding with post creation:', moderationError);
+        // Continue with post creation if moderation fails
+      }
 
       const post = await communityService.createCommunityPost({
         communityId: id,
@@ -1425,6 +1466,832 @@ export class CommunityController {
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve created communities'));
     }
   }
+
+  // Get community rules for moderation
+  private async getCommunityRules(communityId: string): Promise<string[]> {
+    try {
+      const community = await communityService.getCommunityDetails(communityId);
+      return community?.rules || [];
+    } catch (error) {
+      safeLogger.error('Error getting community rules:', error);
+      return [];
+    }
+  }
+
+  // Get user reputation for moderation context
+  private async getUserReputation(userAddress: string): Promise<number> {
+    try {
+      // This would typically query your user reputation system
+      // For now, return a default value
+      return 50;
+    } catch (error) {
+      safeLogger.error('Error getting user reputation:', error);
+      return 50;
+    }
+  }
+
+  // Moderate content manually (for admins/moderators)
+  async moderateContent(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { content, type, communityId } = req.body;
+
+      if (!content || !type) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Content and type are required', 400));
+        return;
+      }
+
+      const moderationResult = await aiModerationService.moderateContent({
+        type,
+        content,
+        authorAddress: userAddress,
+        communityId,
+        context: {
+          communityRules: await this.getCommunityRules(communityId),
+          userReputation: await this.getUserReputation(userAddress)
+        }
+      });
+
+      // Get suggested actions
+      const suggestedActions = await aiModerationService.getSuggestedActions({
+        type,
+        content,
+        authorAddress: userAddress,
+        communityId
+      }, moderationResult);
+
+      res.json(createSuccessResponse({
+        ...moderationResult,
+        suggestedActions
+      }, {}));
+    } catch (error) {
+      safeLogger.error('Error moderating content:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to moderate content'));
+    }
+  }
+
+  // Get community moderation statistics
+  async getModerationStats(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { timeRange = 'week' } = req.query;
+
+      const stats = await aiModerationService.getCommunityModerationStats(
+        id,
+        timeRange as 'day' | 'week' | 'month'
+      );
+
+      res.json(createSuccessResponse(stats, {}));
+    } catch (error) {
+      safeLogger.error('Error getting moderation stats:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get moderation stats'));
+    }
+  }
+
+  // Update moderation feedback (auth required)
+router.post('/moderation/feedback', csrfProtection,
+  authRequired,
+  validateRequest({
+    body: {
+      contentId: { type: 'string', required: true },
+      moderationResult: { type: 'object', required: true },
+      feedback: { type: 'string', required: true, enum: ['approved', 'rejected', 'escalated'] }
+    }
+  }),
+  communityController.updateModerationFeedback
+);
+
+// Template endpoints
+router.get('/templates',
+  validateRequest({
+    query: {
+      category: { type: 'string', optional: true },
+      isPremium: { type: 'boolean', optional: true },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      offset: { type: 'number', optional: true, min: 0 }
+    }
+  }),
+  communityController.getTemplates
+);
+
+router.get('/templates/popular',
+  validateRequest({
+    query: {
+      limit: { type: 'number', optional: true, min: 1, max: 10 }
+    }
+  ),
+  communityController.getPopularTemplates
+);
+
+router.get('/templates/:id',
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    }
+  }),
+  communityController.getTemplateById
+);
+
+router.post('/templates/:id/create',
+  csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      name: { type: 'string', required: true, minLength: 3, maxLength: 50 },
+      displayName: { type: 'string', required: true, minLength: 3, maxLength: 100 },
+      description: { type: 'string', optional: true, maxLength: 1000 },
+      customizations: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createCommunityFromTemplate
+);
+
+router.post('/templates/:id/rate',
+  csrfProtection,
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      rating: { type: 'number', required: true, min: 1, max: 5 }
+    }
+  }),
+  communityController.rateTemplate
+);
+
+
+
+  // Bulk Member Management Methods
+
+  // Bulk add members to community
+  async bulkAddMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, defaultRole = 'member', defaultReputation = 50, sendWelcomeMessage = true, skipExisting = false } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      // Validate addresses format (basic check)
+      for (const address of memberAddresses) {
+        if (!address || typeof address !== 'string' || address.length < 10) {
+          res.status(400).json(createErrorResponse('BAD_REQUEST', 'Invalid wallet address format', 400));
+          return;
+        }
+      }
+
+      // Check if user has admin/moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can bulk add members', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.addMembersToCommunity(id, memberAddresses, {
+        defaultRole,
+        defaultReputation,
+        sendWelcomeMessage,
+        skipExisting
+      });
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk adding members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk add members'));
+    }
+  }
+
+  // Bulk remove members from community
+  async bulkRemoveMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, reason } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      // Check if user has admin/moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can bulk remove members', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.removeMembersFromCommunity(id, memberAddresses, reason);
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk removing members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk remove members'));
+    }
+  }
+
+  // Bulk update member roles
+  async bulkUpdateMemberRoles(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, newRole, reason } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      if (!newRole || !['member', 'moderator', 'admin'].includes(newRole)) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Valid role is required (member, moderator, or admin)', 400));
+        return;
+      }
+
+      // Check if user has admin permissions (role changes require admin)
+      const hasPermission = await communityService.checkAdminPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins can bulk update member roles', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.updateMemberRoles(id, memberAddresses, newRole, reason);
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk updating member roles:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk update member roles'));
+    }
+  }
+
+  // Bulk update member reputation
+  async bulkUpdateMemberReputation(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, reputationChange, reason } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      if (typeof reputationChange !== 'number') {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Reputation change must be a number', 400));
+        return;
+      }
+
+      // Check if user has moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can bulk update reputation', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.updateMemberReputation(id, memberAddresses, reputationChange, reason);
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk updating member reputation:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk update member reputation'));
+    }
+  }
+
+  // Bulk ban members
+  async bulkBanMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, reason, banDuration } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      if (!reason || reason.trim().length < 10) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Ban reason must be at least 10 characters', 400));
+        return;
+      }
+
+      // Check if user has moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can bulk ban members', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.banMembers(id, memberAddresses, reason, banDuration);
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk banning members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk ban members'));
+    }
+  }
+
+  // Bulk unban members
+  async bulkUnbanMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { memberAddresses, reason } = req.body;
+
+      if (!Array.isArray(memberAddresses) || memberAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Member addresses array is required', 400));
+        return;
+      }
+
+      // Check if user has moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can bulk unban members', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.unbanMembers(id, memberAddresses, reason);
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error bulk unbanning members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to bulk unban members'));
+    }
+  }
+
+  // Export members to CSV
+  async exportMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { format = 'csv', includeInactive = false, fields = ['address', 'role', 'reputation', 'joinedAt', 'isActive'] } = req.query;
+
+      // Check if user has admin/moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can export members', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const exportData = await bulkMemberManagementService.exportMembers(id, {
+        format: format as 'csv' | 'json' | 'xlsx',
+        includeInactive: includeInactive === 'true',
+        fields: fields as Array<'address' | 'role' | 'reputation' | 'joinedAt' | 'lastActivityAt' | 'isActive'>
+      });
+
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="community-${id}-members.csv"`);
+        res.send(exportData);
+      } else if (format === 'json') {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="community-${id}-members.json"`);
+        res.json(exportData);
+      } else {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Unsupported export format', 400));
+      }
+    } catch (error) {
+      safeLogger.error('Error exporting members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to export members'));
+    }
+  }
+
+  // Import members from CSV
+  async importMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { defaultRole = 'member', defaultReputation = 50, sendWelcomeMessage = true, skipExisting = false } = req.body;
+
+      // Check if user has admin/moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can import members', 403));
+        return;
+      }
+
+      // Check if file was uploaded
+      if (!req.file) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'CSV file is required', 400));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const result = await bulkMemberManagementService.importMembersFromCSV(id, req.file.buffer, {
+        defaultRole,
+        defaultReputation,
+        sendWelcomeMessage,
+        skipExisting
+      });
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      safeLogger.error('Error importing members:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to import members'));
+    }
+  }
+
+  // Get member statistics
+  async getMemberStatistics(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+
+      // Check if user has admin/moderator permissions
+      const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+      if (!hasPermission) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view member statistics', 403));
+        return;
+      }
+
+      const { bulkMemberManagementService } = await import('../services/bulkMemberManagementService');
+      const statistics = await bulkMemberManagementService.getMemberStatistics(id);
+
+      res.json(createSuccessResponse(statistics, {}));
+    } catch (error) {
+      safeLogger.error('Error getting member statistics:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get member statistics'));
+    }
+  }
+
+  // Push Notification Methods
+
+  // Register device subscription
+  async registerDeviceSubscription(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { subscription } = req.body;
+      const userAgent = req.headers['user-agent'];
+
+      if (!subscription) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Subscription data is required', 400));
+        return;
+      }
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const success = await pushNotificationService.registerDeviceSubscription(userAddress, subscription, userAgent);
+
+      if (success) {
+        res.json(createSuccessResponse({ message: 'Device subscription registered successfully' }, {}));
+      } else {
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to register device subscription'));
+      }
+    } catch (error) {
+      safeLogger.error('Error registering device subscription:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to register device subscription'));
+    }
+  }
+
+  // Unregister device subscription
+  async unregisterDeviceSubscription(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { endpoint } = req.body;
+
+      if (!endpoint) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Endpoint is required', 400));
+        return;
+      }
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const success = await pushNotificationService.unregisterDeviceSubscription(userAddress, endpoint);
+
+      if (success) {
+        res.json(createSuccessResponse({ message: 'Device subscription unregistered successfully' }, {}));
+      } else {
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to unregister device subscription'));
+      }
+    } catch (error) {
+      safeLogger.error('Error unregistering device subscription:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to unregister device subscription'));
+    }
+  }
+
+  // Get user notification preferences
+  async getNotificationPreferences(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const preferences = await pushNotificationService.getUserNotificationPreferences(userAddress);
+
+      res.json(createSuccessResponse(preferences, {}));
+    } catch (error) {
+      safeLogger.error('Error getting notification preferences:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get notification preferences'));
+    }
+  }
+
+  // Update user notification preferences
+  async updateNotificationPreferences(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const preferences = req.body;
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const success = await pushNotificationService.updateUserNotificationPreferences(userAddress, preferences);
+
+      if (success) {
+        res.json(createSuccessResponse({ message: 'Notification preferences updated successfully' }, {}));
+      } else {
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update notification preferences'));
+      }
+    } catch (error) {
+      safeLogger.error('Error updating notification preferences:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update notification preferences'));
+    }
+  }
+
+  // Send test notification
+  async sendTestNotification(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { title = 'Test Notification', message = 'This is a test notification from LinkDAO' } = req.body;
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const result = await pushNotificationService.sendPushNotification({
+        userId: userAddress,
+        type: 'system_update',
+        title,
+        message,
+        data: {
+          test: true,
+          timestamp: new Date().toISOString()
+        },
+        priority: 'normal'
+      });
+
+      res.json(createSuccessResponse({
+        message: 'Test notification sent',
+        success: result.success,
+        failed: result.failed
+      }, {}));
+    } catch (error) {
+      safeLogger.error('Error sending test notification:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to send test notification'));
+    }
+  }
+
+  // Get user notification statistics
+  async getNotificationStatistics(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { days = 30 } = req.query;
+
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const stats = await pushNotificationService.getUserNotificationStats(userAddress, Number(days));
+
+      res.json(createSuccessResponse(stats, {}));
+    } catch (error) {
+      safeLogger.error('Error getting notification statistics:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get notification statistics'));
+    }
+  }
+
+  // Get VAPID public key
+  async getVapidPublicKey(req: Request, res: Response): Promise<void> {
+    try {
+      const { pushNotificationService } = await import('../services/pushNotificationService');
+      const publicKey = pushNotificationService.getVapidPublicKey();
+
+      if (!publicKey) {
+        res.status(503).json(createErrorResponse('SERVICE_UNAVAILABLE', 'Push notifications not configured'));
+        return;
+      }
+
+      res.json(createSuccessResponse({ publicKey }, {}));
+    } catch (error) {
+      safeLogger.error('Error getting VAPID public key:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get VAPID public key'));
+    }
+  }
+
+  // Community Health Dashboard Methods
+
+  // Get community health metrics
+  async getCommunityHealthMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+
+      // Check if user has permission to view health metrics
+      if (userAddress) {
+        const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+        if (!hasPermission) {
+          res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view health metrics', 403));
+          return;
+        }
+      }
+
+      const { communityHealthService } = await import('../services/communityHealthService');
+      const metrics = await communityHealthService.calculateHealthMetrics(id);
+
+      res.json(createSuccessResponse(metrics, {}));
+    } catch (error) {
+      safeLogger.error('Error getting community health metrics:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get community health metrics'));
+    }
+  }
+
+  // Get community health alerts
+  async getCommunityHealthAlerts(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+
+      // Check if user has permission to view health alerts
+      if (userAddress) {
+        const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+        if (!hasPermission) {
+          res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view health alerts', 403));
+          return;
+        }
+      }
+
+      const { communityHealthService } = await import('../services/communityHealthService');
+      const alerts = await communityHealthService.generateHealthAlerts(id);
+
+      res.json(createSuccessResponse(alerts, {}));
+    } catch (error) {
+      safeLogger.error('Error getting community health alerts:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get community health alerts'));
+    }
+  }
+
+  // Get historical health metrics
+  async getHistoricalHealthMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { days = 30 } = req.query;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+
+      // Check if user has permission to view historical metrics
+      if (userAddress) {
+        const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+        if (!hasPermission) {
+          res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view historical metrics', 403));
+          return;
+        }
+      }
+
+      const { communityHealthService } = await import('../services/communityHealthService');
+      const historical = await communityHealthService.getHistoricalMetrics(id, Number(days));
+
+      res.json(createSuccessResponse(historical, {}));
+    } catch (error) {
+      safeLogger.error('Error getting historical health metrics:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get historical health metrics'));
+    }
+  }
+
+  // Get community benchmark comparison
+  async getCommunityBenchmarkComparison(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+
+      // Check if user has permission to view benchmark comparison
+      if (userAddress) {
+        const hasPermission = await communityService.checkModeratorPermission(id, userAddress);
+        if (!hasPermission) {
+          res.status(403).json(createErrorResponse('FORBIDDEN', 'Only admins or moderators can view benchmark comparison', 403));
+          return;
+        }
+      }
+
+      const { communityHealthService } = await import('../services/communityHealthService');
+      const comparison = await communityHealthService.compareWithBenchmarks(id);
+
+      res.json(createSuccessResponse(comparison, {}));
+    } catch (error) {
+      safeLogger.error('Error getting community benchmark comparison:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get community benchmark comparison'));
+    }
+  }
+
+  // Get health metrics for all user communities (for admin dashboard)
+  async getAllCommunitiesHealthMetrics(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      // Get user's communities where they are admin/moderator
+      const memberships = await communityService.getUserCommunityMemberships(userAddress);
+      const adminCommunities = memberships.filter(m => m.role === 'admin' || m.role === 'moderator');
+
+      if (adminCommunities.length === 0) {
+        res.json(createSuccessResponse([], {}));
+        return;
+      }
+
+      const { communityHealthService } = await import('../services/communityHealthService');
+      const metricsPromises = adminCommunities.map(membership => 
+        communityHealthService.calculateHealthMetrics(membership.communityId)
+      );
+
+      const allMetrics = await Promise.all(metricsPromises);
+
+      res.json(createSuccessResponse(allMetrics, {}));
+    } catch (error) {
+      safeLogger.error('Error getting all communities health metrics:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get all communities health metrics'));
+    }
+  }
 }
+
+export default router;
 
 export const communityController = new CommunityController();
