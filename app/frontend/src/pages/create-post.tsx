@@ -114,6 +114,33 @@ const CreatePostPage: React.FC = () => {
     fetchUserCommunities();
   }, [isConnected, address, community, addToast]);
 
+  // Add a refresh function for manual refetch
+  const refreshCommunities = async () => {
+    if (isConnected && address) {
+      setLoadingCommunities(true);
+      try {
+        const { communities: memberCommunities } = await CommunityService.getMyCommunities(1, 100);
+        const { communities: createdCommunities } = await CommunityService.getMyCreatedCommunities(1, 100);
+
+        // Merge and deduplicate using a Map
+        const communityMap = new Map();
+        [...memberCommunities, ...createdCommunities].forEach(c => {
+          if (c && c.id) {
+            communityMap.set(c.id, c);
+          }
+        });
+
+        const mergedCommunities = Array.from(communityMap.values());
+        setUserCommunities(mergedCommunities);
+      } catch (error) {
+        console.error('Error refreshing communities:', error);
+        addToast('Error refreshing communities.', 'error');
+      } finally {
+        setLoadingCommunities(false);
+      }
+    }
+  };
+
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
@@ -147,9 +174,33 @@ const CreatePostPage: React.FC = () => {
 
       addToast('Community created successfully!', 'success');
 
-      // Add to user communities and select it
-      setUserCommunities([...userCommunities, newCommunity]);
-      setSelectedCommunity(newCommunity.id);
+      // Refetch communities to get fresh membership data
+      try {
+        const { communities: memberCommunities } = await CommunityService.getMyCommunities(1, 100);
+        const { communities: createdCommunities } = await CommunityService.getMyCreatedCommunities(1, 100);
+
+        // Merge and deduplicate using a Map
+        const communityMap = new Map();
+        [...memberCommunities, ...createdCommunities].forEach(c => {
+          if (c && c.id) {
+            communityMap.set(c.id, c);
+          }
+        });
+
+        const mergedCommunities = Array.from(communityMap.values());
+        setUserCommunities(mergedCommunities);
+
+        // Select the newly created community
+        const createdCommunity = mergedCommunities.find(c => c.id === newCommunity.id);
+        if (createdCommunity) {
+          setSelectedCommunity(createdCommunity.id);
+        }
+      } catch (refetchError) {
+        console.error('Error refetching communities after creation:', refetchError);
+        // Fallback to adding the new community to existing list
+        setUserCommunities([...userCommunities, newCommunity]);
+        setSelectedCommunity(newCommunity.id);
+      }
 
       // Close modal and reset form
       setShowCreateCommunityModal(false);
@@ -263,22 +314,35 @@ const CreatePostPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {/* Dropdown */}
-                  <div className="relative">
-                    <select
-                      value={selectedCommunity || ''}
-                      onChange={(e) => setSelectedCommunity(e.target.value || null)}
-                      className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
-                      required
+                  {/* Dropdown with refresh button */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <select
+                        value={selectedCommunity || ''}
+                        onChange={(e) => setSelectedCommunity(e.target.value || null)}
+                        className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none cursor-pointer"
+                        required
+                      >
+                        <option value="">Choose a community...</option>
+                        {userCommunities.map(community => (
+                          <option key={community.id} value={community.id}>
+                            {community.avatar || '🏛️'} {community.displayName || community.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={refreshCommunities}
+                      disabled={loadingCommunities}
+                      className="px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                      title="Refresh communities"
                     >
-                      <option value="">Choose a community...</option>
-                      {userCommunities.map(community => (
-                        <option key={community.id} value={community.id}>
-                          {community.avatar || '🏛️'} {community.displayName || community.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                      <svg className={`w-5 h-5 ${loadingCommunities ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
                   </div>
 
                   {/* Selected Community Preview */}
