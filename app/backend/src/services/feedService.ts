@@ -1139,10 +1139,41 @@ export class FeedService {
       }
 
       safeLogger.info('Inserting comment with values:', commentValues);
-      const comment = await db
-        .insert(comments)
-        .values(commentValues)
-        .returning();
+      
+      // Handle potential database schema issues
+      let comment;
+      try {
+        comment = await db
+          .insert(comments)
+          .values(commentValues)
+          .returning();
+      } catch (dbError) {
+        safeLogger.error('Database error inserting comment:', dbError);
+        
+        // If it's a column error, try with minimal required fields
+        if (dbError.message && dbError.message.includes('column')) {
+          safeLogger.warn('Attempting insert with minimal fields due to schema mismatch');
+          const minimalCommentValues = {
+            authorId: commentValues.authorId,
+            content: commentValues.content,
+          };
+          
+          // Add postId or quickPostId if they exist
+          if (commentValues.postId !== null) {
+            minimalCommentValues.postId = commentValues.postId;
+          }
+          if (commentValues.quickPostId !== null) {
+            minimalCommentValues.quickPostId = commentValues.quickPostId;
+          }
+          
+          comment = await db
+            .insert(comments)
+            .values(minimalCommentValues)
+            .returning();
+        } else {
+          throw dbError;
+        }
+      }
 
       safeLogger.info('Comment inserted successfully:', comment[0]?.id);
 
