@@ -6,7 +6,7 @@ import { useCacheInvalidation } from '../../hooks/useCacheInvalidation';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import SocialProofIndicator from '../SocialProof/SocialProofIndicator';
 import TrendingBadge from '../TrendingBadge/TrendingBadge';
-import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
+import EnhancedReactionSystem from '../EnhancedReactionSystem';
 import OptimizedImage from '../OptimizedImage';
 import { ModerationWarning, ReportContentButton } from '../Moderation';
 import { IPFSContentService } from '../../services/ipfsContentService';
@@ -466,26 +466,29 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
         )}
       </div>
 
-      {/* Token Reactions */}
+      {/* Enhanced Reactions */}
       <div>
-        <TokenReactionSystem
+        <EnhancedReactionSystem
           postId={post.id}
-          initialReactions={post.reactions.map((r: any) => ({
+          postType="feed"
+          initialReactions={post.reactions?.map((r: any) => ({
             type: r.type,
-            totalAmount: r.totalAmount,
-            totalCount: r.users.length,
-            userAmount: 0,
-            topContributors: r.users.slice(0, 3).map((user: any) => ({
-              userId: user.address,
-              walletAddress: user.address,
-              handle: user.username,
-              avatar: user.avatar,
-              amount: user.amount
-            })),
-            milestones: []
-          }))}
-          onReaction={onReaction}
-          showAnalytics={true}
+            totalStaked: r.totalAmount || 0,
+            userStaked: r.userAmount || 0,
+            contributors: r.users?.map((user: any) => user.address) || [],
+            rewardsEarned: 0,
+            count: r.users?.length || 0
+          })) || []}
+          onReaction={async (postId, reactionType, amount) => {
+            try {
+              if (onReaction) {
+                await onReaction(postId, reactionType, amount);
+              }
+            } catch (error) {
+              console.error('Reaction error:', error);
+            }
+          }}
+          className="scale-75 origin-left"
         />
       </div>
 
