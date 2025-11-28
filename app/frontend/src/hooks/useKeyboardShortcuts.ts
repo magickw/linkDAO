@@ -91,6 +91,9 @@ export const useKeyboardShortcuts = (options: UseKeyboardShortcutsOptions) => {
       if (event.key === 'Escape' && onEscape) {
         onEscape();
       }
+      // Prevent default behavior for ALL keys when typing in inputs/textareas
+      // This prevents any unwanted keyboard shortcuts from triggering
+      event.preventDefault();
       return;
     }
 
