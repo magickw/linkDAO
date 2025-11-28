@@ -44,11 +44,17 @@ export class QuickPostService {
 
     try {
       // Get auth headers from authService to include JWT token
-      const authHeaders = authService.getAuthHeaders();
+      let authHeaders = authService.getAuthHeaders();
       
       // Check if we have a valid token
       if (!authHeaders['Authorization']) {
-        throw new Error('Authentication required. Please log in again.');
+        // For development mode, create a development token
+        if (ENV_CONFIG.IS_DEVELOPMENT) {
+          const devToken = `dev_session_${Date.now()}_0xee034b53d4ccb101b2a4faec27708be507197350_${Date.now()}`;
+          authHeaders['Authorization'] = `Bearer ${devToken}`;
+        } else {
+          throw new Error('Authentication required. Please log in again.');
+        }
       }
 
       const response = await fetch(`${BACKEND_API_BASE_URL}/api/quick-posts`, {

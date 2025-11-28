@@ -640,14 +640,6 @@ app.use('/api', sessionRoutes);
 // Use CSRF routes
 // app.use('/api', csrfRoutes); // TEMPORARILY DISABLED to avoid duplicate usage
 
-// Use post routes
-app.use('/api/posts', postRoutes);
-// Use quick post routes
-app.use('/api/quick-posts', quickPostRoutes);
-
-// Use feed routes
-app.use('/api/feed', feedRoutes);
-
 // Use view tracking routes
 app.use('/api/views', viewRoutes);
 
@@ -668,10 +660,6 @@ app.use('/api/block', blockRoutes);
 
 // Use community routes
 app.use('/api/communities', communityRoutes);
-
-// Frontend compatibility: Also mount community routes at /communities (without /api prefix)
-// This fixes the 404 errors from service worker trying to access /communities/trending
-app.use('/communities', communityRoutes);
 
 // Community treasury routes
 import communityTreasuryRoutes from './routes/communityTreasuryRoutes';

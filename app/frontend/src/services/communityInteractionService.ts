@@ -351,7 +351,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/join`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -408,7 +408,7 @@ export class CommunityInteractionService {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/leave`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/leave`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -468,7 +468,7 @@ export class CommunityInteractionService {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
       
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -535,7 +535,7 @@ export class CommunityInteractionService {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
       
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${request.communityId}/posts/ai-assisted`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${request.communityId}/posts/ai-assisted`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -600,7 +600,7 @@ export class CommunityInteractionService {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
       
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${action.communityId}/moderate`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${action.communityId}/moderate`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -662,7 +662,7 @@ export class CommunityInteractionService {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
       
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${settingsUpdate.communityId}/settings`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${settingsUpdate.communityId}/settings`, {
         method: 'PUT',
         headers: authHeaders,
         body: JSON.stringify({

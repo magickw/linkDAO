@@ -175,7 +175,7 @@ class ContentSharingService {
         title: community.displayName,
         description: community.description,
         imageUrl: (community as any).iconUrl || community.avatar, // Fix the property name
-        url: `/communities/${community.id}`,
+        url: `/api/communities/${community.id}`,
         metadata: {
           memberCount: community.memberCount,
           category: community.category,
@@ -192,7 +192,7 @@ class ContentSharingService {
           community: shareableContent,
           inviterAddress,
           message: customMessage || `Hey! I think you'd be interested in joining the ${community.displayName} community.`,
-          invitationUrl: `/communities/${communityId}/join?inviter=${inviterAddress}`,
+          invitationUrl: `/api/communities/${communityId}/join?inviter=${inviterAddress}`,
         },
         fromAddress: inviterAddress,
       };

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { 
+import {
   CommunityInteractionService,
   JoinCommunityRequest,
   LeaveCommunityRequest,
@@ -8,16 +8,17 @@ import {
   ModerationAction,
   UpdateCommunitySettingsParams
 } from '../services/communityInteractionService';
+import { useAuth } from '../context/AuthContext';
 
 export interface UseCommunityInteractionsReturn {
   // State
   loading: boolean;
   error: string | null;
-  
+
   // Join/Leave functions
   joinCommunity: (communityId: string) => Promise<boolean>;
   leaveCommunity: (communityId: string) => Promise<boolean>;
-  
+
   // Posting functions
   createPost: (params: {
     communityId: string;
@@ -27,7 +28,7 @@ export interface UseCommunityInteractionsReturn {
     tags?: string[];
     postType?: string;
   }) => Promise<boolean>;
-  
+
   // Moderation functions
   moderateContent: (params: {
     communityId: string;
@@ -37,22 +38,22 @@ export interface UseCommunityInteractionsReturn {
     reason?: string;
     duration?: number;
   }) => Promise<boolean>;
-  
+
   updateSettings: (params: {
     communityId: string;
     settings: any;
   }) => Promise<boolean>;
-  
+
   // Utility functions
   checkPermissions: (communityId: string) => Promise<{
     isModerator: boolean;
     isAdmin: boolean;
     permissions: string[];
   } | null>;
-  
+
   getModerationQueue: (communityId: string) => Promise<any[] | null>;
   getAnalytics: (communityId: string) => Promise<any | null>;
-  
+
   // Clear error
   clearError: () => void;
 }
@@ -62,6 +63,7 @@ export interface UseCommunityInteractionsReturn {
  */
 export function useCommunityInteractions(): UseCommunityInteractionsReturn {
   const { address } = useAccount();
+  const { ensureAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,6 +74,13 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
   const joinCommunity = useCallback(async (communityId: string): Promise<boolean> => {
     if (!address) {
       setError('Wallet not connected');
+      return false;
+    }
+
+    // Ensure user is authenticated with backend
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      setError(authResult.error || 'Authentication failed');
       return false;
     }
 
@@ -102,6 +111,13 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
   const leaveCommunity = useCallback(async (communityId: string): Promise<boolean> => {
     if (!address) {
       setError('Wallet not connected');
+      return false;
+    }
+
+    // Ensure user is authenticated with backend
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      setError(authResult.error || 'Authentication failed');
       return false;
     }
 
@@ -142,6 +158,13 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
       return false;
     }
 
+    // Ensure user is authenticated with backend
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      setError(authResult.error || 'Authentication failed');
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -179,6 +202,13 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
       return false;
     }
 
+    // Ensure user is authenticated with backend
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      setError(authResult.error || 'Authentication failed');
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -209,6 +239,13 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
   }): Promise<boolean> => {
     if (!address) {
       setError('Wallet not connected');
+      return false;
+    }
+
+    // Ensure user is authenticated with backend
+    const authResult = await ensureAuthenticated();
+    if (!authResult.success) {
+      setError(authResult.error || 'Authentication failed');
       return false;
     }
 
@@ -300,7 +337,7 @@ export function useCommunityInteractions(): UseCommunityInteractionsReturn {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, ensureAuthenticated]);
 
   return {
     loading,

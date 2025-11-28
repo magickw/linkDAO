@@ -306,7 +306,7 @@ export class CommunityMembershipService {
       // Get authentication headers
       const authHeaders = authService.getAuthHeaders();
       
-      const response = await fetch(`${BACKEND_API_BASE_URL}/communities/${communityId}/members/${userId}`, {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/members/${userId}`, {
         method: 'PUT',
         headers: authHeaders,
         body: JSON.stringify(data),
