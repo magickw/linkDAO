@@ -13,7 +13,7 @@ import {
   adminRateLimit,
   auditAdminAction
 } from '../middleware/adminAuthMiddleware';
-import { csrfProtection } from '../middleware/csprfProtection';
+import { csrfProtection } from '../middleware/csrfProtection';
 import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
