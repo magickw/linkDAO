@@ -464,6 +464,7 @@ import reputationRoutes from './routes/reputationRoutes';
 import onboardingRoutes from './routes/onboardingRoutes';
 // Import API documentation routes
 import apiDocsRoutes from './routes/apiDocsRoutes';
+import trackingRoutes from './routes/trackingRoutes';
 
 // Reputation routes
 app.use('/marketplace/reputation', reputationRoutes);
